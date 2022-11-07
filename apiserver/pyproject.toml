@@ -1,0 +1,143 @@
+[tool]
+
+[tool.poetry]
+authors = ["blueking <blueking@tencent.com>"]
+description = "bluekign PaaS platform"
+name = "apiserver"
+version = "0.0.1"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+aenum = "==2.1.2"
+apscheduler = "==3.6.0"
+arrow = "==0.12.1"
+bk-iam = "==1.1.20"
+bkpaas-auth = {version = ">=2.0.2"}
+apigw-manager = {version = ">=1.0.14"}
+bkstorages = {version = "==1.0.8"}
+bleach = "==2.0.0"
+blue-krill = {version = "==1.2.2"}
+bkapi-component-open = {version = ">=1.0.0"}
+boto = "==2.43.0"
+boto3 = "<1.15.0"
+botocore = "==1.17.63"
+celery = "==4.4.7"
+chardet = "==3.0.4"
+click = "==7.0"
+cryptography = ">=3.1"
+curlify = "==2.2.1"
+dataclasses = {version = "==0.7", python = ">=3.6.2,<3.7"}
+dj-static = "==0.0.6"
+django = "==3.2.12"
+django-bootstrap3 = "==21.2"
+django-cors-middleware = "==1.3.1"
+django-dynamic-fixture = "==3.1.2"
+django-filter = "==1.0.4"
+django-imagekit = "==4.0.1"
+django-redis = "==4.12.1"
+django-webpack-loader = "==0.5.0"
+djangorestframework = "==3.12.4"
+django-prometheus = "2.2.0"
+"dogpile.cache" = "==1.1.6"
+drf-yasg = "==1.20.0"
+elasticsearch = "==7.5.1"
+elasticsearch-dsl = "<8.0.0,>=7.0.0"
+future = ">=0.17.1"
+gevent = "21.12.0"
+gunicorn = "20.1.0"
+jinja2 = "==2.9.5"
+jsonfield = "==3.1.0"
+kombu = ">=4.6.10,<4.7"
+markdown = "==2.6.8"
+mypy-extensions = "==0.4.3"
+mysqlclient = "==2.0.1"
+markupsafe = "==2.0.1"
+oauthlib = "==2.1.0"
+prometheus-client = "==0.9.0"
+pydantic = "==1.8"
+pyjwt = "==1.7.1"
+pymysql = "==0.6.7"
+python-etcd = "==0.4.5"
+python-gitlab = "==1.6.0"
+python-logstash = "==0.4.6"
+pyyaml = ">=3.13,<6.0.0"
+redis = "==3.5.3"
+requests = ">=2.20.0"
+requests-oauthlib = "==1.0.0"
+sentry-sdk = "==0.19.4"
+sqlalchemy = "==1.2.14"
+sqlparse = "==0.4.1"
+svn = "==0.3.44"
+typing-extensions = "==3.10.0.2"
+tzlocal = "==2.1"
+unipath = "==1.1"
+werkzeug = "==0.12.1"
+whitenoise = "==5.3.0"
+xlwt = "==1.3.0"
+django-revproxy = "0.10.0"
+www-authenticate = "^0.9.2"
+bkapi-bk-apigateway = {version = ">=1.0.6"}
+moby-distribution = "0.5.2"
+pillow = "8.4"
+cattrs = "1.10.0"
+attrs = "==21.4.0"
+django-translated-fields = "^0.12.0"
+dynaconf = "^3.1.8"
+opentelemetry-api = "1.7.1"
+opentelemetry-sdk = "1.7.1"
+opentelemetry-exporter-otlp = "1.7.1"
+opentelemetry-exporter-jaeger = "1.7.1"
+opentelemetry-instrumentation-django = "0.26b1"
+opentelemetry-instrumentation-dbapi = "0.26b1"
+opentelemetry-instrumentation-redis = "0.26b1"
+opentelemetry-instrumentation-requests = "0.26b1"
+opentelemetry-instrumentation-logging = "0.26b1"
+opentelemetry-instrumentation-celery = "0.26b1"
+cookiecutter = "^2.1.1"
+semver = "^2.13.0"
+protobuf = ">=3.15.0,<4"
+
+[tool.poetry.dev-dependencies]
+black = "==20.8b0"
+flake8 = ">=3.6.0"
+mypy = "==0.910"
+pylint = "==2.13.4"
+pytest = "<5.0.0,>=4.0.2"
+pytest-cov = "*"
+pytest-django = "==3.9.0"
+pytest-mock = "==3.2.0"
+types-pyyaml = "^5"
+types-redis = "^4.1.18"
+types-dataclasses = "^0.6.4"
+types-pytz = "^2021.3.6"
+types-requests = "^2.27.15"
+types-six = "^1.16.12"
+types-bleach = "^4.1.5"
+types-pymysql = "^1.0.14"
+types-chardet = "^4.0.3"
+types-python-dateutil = "^2.8.10"
+
+[[tool.poetry.source]]
+default = true
+name = "tencent-mirror"
+url = "https://mirrors.tencent.com/pypi/simple/"
+
+[tool.black]
+exclude = '''
+/(
+  node_modules/.*
+  | .*/migrations
+  | .*/paasng/platform/mgrlegacy/data
+  | .*/tests/platform/mgrlegacy/assets
+)/
+'''
+line-length = 119
+skip-string-normalization = 'true'
+
+[tool.isort]
+force_grid_wrap = 0
+include_trailing_comma = true
+line_length = 119
+multi_line_output = 3
+use_parentheses = true
+known_local_folder = ["tests", "paasng"]

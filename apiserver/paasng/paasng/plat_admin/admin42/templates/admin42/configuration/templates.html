@@ -1,0 +1,363 @@
+{% extends "admin42/configuration/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-tmpl-list" style="width: 100%;" class="p20">
+    <bk-button theme="primary" class="mr10" @click="handleCreate">
+        创建模板配置
+    </bk-button>
+    <bk-table :data="data" style="margin-top: 20px;">
+        <bk-table-column label="模板名称" prop="name"></bk-table-column>
+        <bk-table-column label="模板类型">
+            <template slot-scope="props">
+                <span v-if="props.row.type === 'normal'">普通应用</span>
+                <span v-if="props.row.type === 'scene'">场景模板</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="展示用名称（中）">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.display_name_zh_cn">
+                    $[ props.row.display_name_zh_cn ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="展示用名称（英）">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.display_name_en">
+                    $[ props.row.display_name_en ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="模板描述（中）">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.description_zh_cn">
+                    $[ props.row.description_zh_cn ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="模板描述（英）">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.description_en">
+                    $[ props.row.description_en ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="开发语言" prop="language"></bk-table-column>
+        <bk-table-column label="能否发布到应用集市">
+            <template slot-scope="props">
+                <span v-if="props.row.market_ready">✅</span>
+                <span v-else>❌</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="预设增强服务配置" prop="preset_services_config" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.preset_services_config" show-length highlight-mouseover-node :deep="4"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="不同版本二进制包存储路径" prop="url" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.blob_url" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="允许被使用的版本" prop="enabled_regions" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.enabled_regions" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="必须的构建工具" prop="required_buildpacks" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.required_buildpacks" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="进程配置" prop="processes" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.processes" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="标签" prop="tags" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.tags" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="代码仓库信息">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.repo_url">
+                    $[ props.row.repo_url ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="100">
+            <template slot-scope="props">
+                <bk-button theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button theme="primary" text @click="handleDelete(props.row)" style="color: rgb(234,54,54);">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]模板配置
+        </div>
+        <bk-form :label-width="175" :model="dialog.form" :rules="rules">
+            <bk-form-item label="模板名称" :property="name" :required="true" :desc="dialog.type !== 'create'?'创建后不可变更':''">
+                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="模板类型" :required="true">
+                <bk-select v-model="dialog.form.type" searchable>
+                   <bk-option v-for="choice in getChoices(typeChoices)"
+                        :key="choice.id"
+                        :id="choice.id"
+                        :name="choice.name">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="展示用名称（中）" :required="true">
+                <bk-input v-model="dialog.form.display_name_zh_cn"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="展示用名称（英）" :required="true">
+                <bk-input v-model="dialog.form.display_name_en"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="描述（中）" :required="true">
+                <bk-input v-model="dialog.form.description_zh_cn"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="描述（英）" :required="true">
+                <bk-input v-model="dialog.form.description_en"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="开发语言" :required="true">
+                <bk-select v-model="dialog.form.language" searchable>
+                   <bk-option v-for="choice in getChoices(langChoices)"
+                        :key="choice.id"
+                        :id="choice.id"
+                        :name="choice.name">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="能否发布到应用集市">
+                <bk-switcher v-model="dialog.form.market_ready"></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="预设增强服务配置">
+                <json-editor v-model="dialog.form.preset_services_config"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="不同版本二进制包存储路径" :required="true">
+                <json-editor v-model="dialog.form.blob_url"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="允许被使用的版本" :required="true">
+                <json-editor v-model="dialog.form.enabled_regions"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="必须的构建工具">
+                <json-editor v-model="dialog.form.required_buildpacks"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="进程配置">
+                <json-editor v-model="dialog.form.processes"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="标签">
+                <json-editor v-model="dialog.form.tags"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="代码仓库信息">
+                <bk-input v-model="dialog.form.repo_url"></bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+const typeChoices = {{ type_choices | to_json }}
+const langChoices = {{ language_choices | to_json }}
+
+const URLRouter = {
+    create: decodeURI("{% url 'admin.configuration.tmpl' %}"),
+    list: decodeURI("{% url 'admin.configuration.tmpl' %}"),
+    detail: decodeURI("{% url 'admin.configuration.tmpl.detail' '${id}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-tmpl-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            return {
+                data: [],
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        name: '',
+                        type: '',
+                        display_name_zh_cn: '',
+                        display_name_en: '',
+                        description_zh_cn: '',
+                        description_en: '',
+                        language: '',
+                        market_ready: false,
+                        preset_services_config: {},
+                        blob_url: {},
+                        enabled_regions: [],
+                        required_buildpacks: {},
+                        processes: {},
+                        tags: {},
+                        repo_url: {}
+                    },
+                    row: undefined
+                },
+                rules: {
+                    name: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                        {
+                            max: 32,
+                            message: '不能多于32个字符',
+                            trigger: 'blur'
+                        },
+                       {
+                            validator: function (val) {
+                                let regex = new RegExp("^[a-zA-Z0-9-_]{1,128}$","");
+                                return val.match(regex) !== null
+                            },
+                            message: '只能由字符 [a-zA-Z0-9-_] 组成',
+                            trigger: 'blur'
+                        }
+                    ],
+                    type: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    display_name_zh_cn: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    display_name_en: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    description_zh_cn: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        }
+                    ],
+                    description_en: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        }
+                    ],
+                    language: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        }
+                    ],
+                    blob_url: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        }
+                    ],
+                    enabled_regions: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        }
+                    ],
+                }
+            }
+        },
+        mounted: function () {
+            this.fetchTmplConfList()
+        },
+        methods: {
+            fillUrlTemplate: function (url_template, {row}) {
+                if (!row)
+                    row = {}
+                return url_template.replace("${id}", row.id)
+            },
+            cancelDialog: function () {},
+            processData: function (data) {
+                return new Promise(resolve => {
+                  resolve(data)
+                }
+              )
+            },
+            fetchTmplConfList: async function () {
+                const el = this.$bkLoading({title: '加载中'})
+                try {
+                    await this.$http.get(URLRouter['list']).then(res => {
+                        this.data = res.results
+                    })
+                } finally {
+                    el.hide = true
+                }
+            },
+            submitCallback: function () {
+                return this.fetchTmplConfList()
+            },
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.row = undefined
+
+                this.dialog.form.id = undefined
+                this.dialog.form.name = ''
+                this.dialog.form.type = ''
+                this.dialog.form.display_name_zh_cn = ''
+                this.dialog.form.display_name_en = ''
+                this.dialog.form.description_zh_cn = ''
+                this.dialog.form.description_en = ''
+                this.dialog.form.language = ''
+                this.dialog.form.market_ready = false
+                this.dialog.form.preset_services_config = {}
+                this.dialog.form.blob_url = {}
+                this.dialog.form.enabled_regions = []
+                this.dialog.form.required_buildpacks = []
+                this.dialog.form.processes = {}
+                this.dialog.form.tags = []
+                this.dialog.form.repo_url = ''
+                this.dialog.visible = true
+            },
+            handleEdit: function (row){
+                this.dialog.type = "edit"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            handleDelete: function (row) {
+                this.dialog.type = "delete"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            getChoices: function (choices) {
+                return Object.keys(choices).map(key => {
+                    return {
+                        id: key,
+                        name: choices[key],
+                    }
+                })
+            },
+        },
+    })
+})
+
+</script>
+{% endblock %}

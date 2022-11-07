@@ -1,0 +1,20 @@
+[flake8]
+ignore = F405,F403,W504,E741,E125,W503,F841,E203,E231,F541
+exclude =
+    *migrations*,
+    *.pyc,
+    .git,
+    __pycache__,
+    venv,
+    node_modules/*,
+    */templates_module*,
+    */bin/*,
+    */settings/*,
+    *paasng/platform/mgrlegacy/data/*,
+    ./paasng/tests/platform/mgrlegacy/assets/*,
+max-line-length=119
+max-complexity=12
+format=pylint
+show_source = True
+statistics = True
+count = True

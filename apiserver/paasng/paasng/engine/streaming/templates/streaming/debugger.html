@@ -1,0 +1,67 @@
+{% verbatim %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script src="https://unpkg.com/vue/dist/vue.js"></script>
+  <style type="text/css" media="screen">
+    body {
+      width: 600px;
+      margin: auto;
+      padding-top: 20px;
+      font-family: Helvetica, Arial, Sans-Serif;
+    } 
+    div.console-like {
+      margin-top: 18px;
+      font-size: 13px; 
+      font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <div>
+      <input type="text" style="width: 400px;" v-model="channelId" />
+      <button id="view_logs" v-on:click="viewLogs">View logs</button>
+    </div>
+    <div class="console-like">
+      <div v-for="message in messages">{{ message.line.replace(/ /g, '&nbsp;') }}</div>
+      <div v-if="hasError">Unable to get logs</div>
+    </div>
+  </div>
+  <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        channelId: null,
+        messages: [],
+        hasError: false
+      },
+      methods: {
+        viewLogs: function() {
+          var self = this;
+          self.messages = [];
+          self.hasError = false;
+
+          var source = new EventSource('/streams/' + this.channelId);
+          source.onmessage = function(e) {
+            self.messages.push(JSON.parse(e.data));
+          };
+          source.onerror = function(e) {
+            self.hasError = true;
+            console.log(e)
+          };
+          source.addEventListener('EOF', function (e) {
+            source.close();
+          }, false);
+        } 
+      }
+    });
+
+
+  </script>
+</body>
+</html>
+
+{% endverbatim %}

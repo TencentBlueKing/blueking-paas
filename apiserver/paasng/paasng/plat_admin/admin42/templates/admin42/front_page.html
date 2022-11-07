@@ -1,0 +1,123 @@
+{% extends "admin42/base.html" %}
+
+{% block container %}
+<div class="flex-panel-container" id="flex-panel-container">
+    <div v-for="(panel, idx) in panelList "class="flex-item">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <a v-if="panel.url" class="panel-title" :href="panel.url" style="font-family: inherit;font-weight: 500;line-height: 1.1;">$[ panel.name ]</a>
+                <h3 v-else class="panel-title">$[ panel.name ]</h3>
+            </div>
+            <div class="panel-body common-links">
+                <a :href="item.url" v-for="item in panel.children">$[ item.name ]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#flex-panel-container",
+        delimiters: ['$[', ']'],
+        data: function () {
+            return {
+                panelList: [
+                    {
+                        name: "平台管理",
+                        url: "{% url 'admin.platform.index' %}",
+                        children: [
+                            {
+                                name: "应用列表",
+                                url: "{% url 'admin.applications.list' %}"
+                            },
+                            {
+                                name: "部署概览",
+                                url: "{% url 'admin.deployments.list' %}"
+                            },
+                            {
+                                name: "增强服务列表",
+                                url: "{% url 'admin.services.manage' %}",
+                            },
+                            {
+                                name: "运行时管理",
+                                url: "{% url 'admin.buildpack.list' %}",
+                            },
+                          {
+                                name: "应用集群管理",
+                                url: "{% url 'admin.clusters.manage' %}",
+                            },
+                            {
+                                name: "应用资源方案",
+                                url: "{% url 'admin.process_spec_plan.manage' %}",
+                            },
+                            {
+                                name: "共享证书管理",
+                                url: "{% url 'admin.shared.certs.manage' %}",
+                            },
+                            {
+                                name: "代码库配置",
+                                url: "{% url 'admin.sourcectl.source_type_spec.manage' %}"
+                            }
+                        ]
+                    },
+                    {
+                        name: "应用配置管理",
+                        url: "{% url 'admin.configuration.tmpl.manage' %}",
+                        children: [
+                            {
+                                name: "模板配置",
+                                url: "{% url 'admin.configuration.tmpl.manage' %}",
+                            },
+                            {
+                                name: "插件分类配置",
+                                url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}"
+                            },
+                            {
+                                name: "插件使用方配置",
+                                url: "{% url 'admin.configuration.bk_plugins.distributors.manage' %}"
+                            }
+                        ]
+                    },
+                    {% url 'admin.operation.index' as operation_index_view %}
+                    {% if operation_index_view %}
+                    {
+                        name: "运营数据",
+                        url: "{% url 'admin.operation.index' %}",
+                        children: [
+                            {
+                                name: "应用迁移进展",
+                                url: "{% url 'admin.operation.mgrlegacy.progress' %}"
+                            },
+                            {
+                                name: "应用部署统计",
+                                url: "{% url 'admin.operation.statistics.deploy.apps' %}"
+                            },
+                            {
+                                name: "开发者部署统计",
+                                url: "{% url 'admin.operation.statistics.deploy.developers' %}"
+                            },
+                        ]
+                    },
+                    {% endif %}
+                    {
+                        name: "用户管理",
+                        url: "{% url 'admin.accountmgr.index' %}",
+                        children: [
+                            {
+                                name: "用户列表",
+                                url: "{% url 'admin.accountmgr.userprofiles.index' %}"
+                            },
+                            {
+                                name: "用户特性管理",
+                                url: "{% url 'admin.accountmgr.account_feature_flags.index' %}",
+                            },
+                        ]
+                    }
+                ]
+            }
+        },
+    })
+})
+</script>
+{% endblock %}

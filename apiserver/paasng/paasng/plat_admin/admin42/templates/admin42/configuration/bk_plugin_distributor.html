@@ -1,0 +1,198 @@
+{% extends "admin42/configuration/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-shared-tag-list" style="width: 100%;" class="p20">
+    <bk-button :theme="'primary'" :title="'创建插件使用方'" class="mr10" @click="handleCreate">
+        创建插件使用方
+    </bk-button>
+    <bk-table :data="data" style="margin-top: 20px;">
+        <bk-table-column label="英文名称" prop="code_name"></bk-table-column>
+        <bk-table-column label="名称" prop="name"></bk-table-column>
+        <bk-table-column label="蓝鲸应用ID" prop="bk_app_code"></bk-table-column>
+        <bk-table-column label="使用方简介" prop="introduction"></bk-table-column>
+        <bk-table-column label="操作">
+            <template slot-scope="props">
+                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+                <bk-button theme="primary" text @click="handleDelete(props.row)" style="color: rgb(234, 54, 54);">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]插件使用方
+        </div>
+        <bk-form :label-width="120" :model="dialog.form" :rules="rules">
+            <bk-form-item label="英文名称" :property="'code_name'" :required="true">
+                <bk-input
+                    placeholder="请直接输入分类英文名称"
+                    v-model="dialog.form.code_name">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="名称" :property="'name'" :required="true">
+                <bk-input
+                    placeholder="请直接输入分类名称"
+                    v-model="dialog.form.name">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="蓝鲸应用ID" :property="'bk_app_code'" :required="true">
+                <bk-input
+                    placeholder="请直接输入蓝鲸应用ID"
+                    v-model="dialog.form.bk_app_code">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="使用方简介" :property="'introduction'" :required="false">
+                <bk-input
+                    placeholder="请直接输入使用方简介"
+                    :type="'textarea'"
+                    :rows="3"
+                    v-model="dialog.form.introduction">
+                </bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+
+const URLRouter = {
+    create: decodeURI("{% url 'admin.configuration.bk_plugins.distributors' %}"),
+    list: decodeURI("{% url 'admin.configuration.bk_plugins.distributors' %}"),
+    detail: decodeURI("{% url 'admin.configuration.bk_plugins.distributors.detail' '${distributor_id}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-shared-tag-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            return {
+                data: [],
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        id: '',
+                        name: '',
+                        code_name: '',
+                    },
+                    row: undefined
+                },
+                rules: {
+                    name: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                        {
+                            max: 30,
+                            message: '不能多于30个字符',
+                            trigger: 'blur'
+                        }
+                    ],
+                    code_name: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                        {
+                            max: 30,
+                            message: '不能多于30个字符',
+                            trigger: 'blur'
+                        }
+                    ],
+                    bk_app_code: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                        {
+                            max: 20,
+                            message: '不能多于20个字符',
+                            trigger: 'blur'
+                        }
+                    ]
+                }
+            }
+        },
+        mounted: function () {
+            this.fetchTagList()
+        },
+        methods: {
+            fillUrlTemplate: function (url_template, {row}) {
+                if (!row)
+                    row = {}
+              return url_template.replace("${distributor_id}", row.id)
+            },
+            cancelDialog: function () {
+
+            },
+            processData: function (data) {
+              return new Promise(resolve => {
+                  resolve(data)
+              })
+            },
+            fetchTagList: async function () {
+                const el = this.$bkLoading({title: '加载中'})
+                try {
+                    await this.$http.get(URLRouter['list']).then(res => {
+                        this.data = res.results
+                    })
+                } finally {
+                    el.hide = true
+                }
+            },
+            submitCallback: function () {
+                return this.fetchTagList()
+            },
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.row = undefined
+
+                this.dialog.form.id = undefined
+                this.dialog.form.name = undefined
+                this.dialog.form.code_name = undefined
+                this.dialog.form.bk_app_code = undefined
+                this.dialog.form.introduction = undefined
+                this.dialog.visible = true
+            },
+            handleEdit: function (row){
+                this.dialog.type = "edit"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            handleDelete: function (row) {
+                this.dialog.type = "delete"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+        },
+    })
+})
+
+</script>
+
+<style>
+.bk-table-empty-block{
+    display: none;
+}
+.bk-table-append-block{
+    margin-bottom: 10px;
+}
+.bk-table-append-block:hover {
+    cursor: pointer;
+    background-color: #f0f1f5;
+}
+</style>
+{% endblock %}

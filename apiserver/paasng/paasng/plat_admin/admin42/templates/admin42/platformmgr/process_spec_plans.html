@@ -1,0 +1,345 @@
+{% extends "../platformmgr/base.html" %}
+
+{% load admin_utils %}
+
+{% block main_content %}
+<div id="proc-spec-plan-list" style="width: 100%;" class="p20">
+    <bk-button :theme="'primary'" :title="'新建方案'" class="mr10" @click="handleCreate">
+        新建方案
+    </bk-button>
+    <bk-table
+        :data="data"
+        :cell-class-name="cellStyleCallback"
+        @expand-change="handleExpandRowChange"
+        >
+        <bk-table-column type="expand" width="30">
+            <template slot-scope="props">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 7px;background-color: inherit; "></th>
+                                <th class="is-center" style="padding: 15px;background-color: inherit; width: 33%;">应用id</th>
+                                <th class="is-center" style="padding: 15px;background-color: inherit; width: 33%;">目标副本数</th>
+                                <th class="is-center" style="padding: 15px;background-color: inherit; width: 33%;">进程状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style=";background-color: inherit" colspan="4" class="is-center">
+                                    <bk-virtual-scroll :ref="'virtual-scroll-' + props.row.id"
+                                        class="number-virtual-scroll"
+                                        :show-index="true"
+                                        :show-min-map="false"
+                                        :item-height="16"
+                                        @change="virtualScrollChange(props.row)"
+                                    >
+                                        <template slot-scope="item">
+                                            <div style="display: flex;">
+                                                <span style="width: 33%;"><a :href="AppDetailUrl(item.data.app_code)">$[ item.data.app_code ]</a></span>
+                                                <span style="width: 33%;">$[ item.data.target_replicas ]</span>
+                                                <span style="width: 33%;">$[ item.data.target_status ]</span>
+                                            </div>
+                                        </template>
+                                    </bk-virtual-scroll>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="方案名称" prop="name"></bk-table-column>
+        <bk-table-column label="最大资源限制">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.limits" show-length highlight-mouseover-node :deep="1"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="最小资源需求">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.requests" show-length highlight-mouseover-node :deep="1"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="最大副本数" prop="max_replicas" width="80" align="center"></bk-table-column>
+        <bk-table-column label="更新时间" prop="updated" align="center">
+            <template slot-scope="props">
+                <span v-bk-tooltips="{content: props.row.updated }">$[props.row.updated_humanized] </span>
+            </template>
+        </bk-table-column>
+
+        <bk-table-column label="是否可用" prop="is_active" align="center">
+            <template slot-scope="props">
+                <span v-if="props.row.is_active" style="color: #13ce66;">是</span>
+                <span v-else>否</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="实例数量" prop="instance_cnt"></bk-table-column>
+        <bk-table-column label="操作">
+            <template slot-scope="props">
+                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+                <template v-if="props.row.is_active">
+                    <a class="bk-text-button mr10" href="javascript:void(0);" style="color: rgb(234, 54, 54);" @click="deactivate(props.row)">停用</a>
+                </template>
+                <template v-else>
+                    <a class="bk-text-button mr10" href="javascript:void(0);" style="color: #13ce66;" @click="activate(props.row)">启用</a>
+                </template>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]应用资源方案
+        </div>
+        <bk-form :label-width="120" :model="dialog.form">
+            <bk-form-item label="方案名称" :required="true">
+                <bk-input v-model="dialog.form.name"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="最大副本数" :required="true">
+                <bk-input v-model="dialog.form.max_replicas" type="number"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="最大资源限制" :required="true">
+                <json-editor v-model="dialog.form.limits" :schema="ResourceSchema"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="最小资源需求" :required="true">
+                <json-editor v-model="dialog.form.requests" :schema="ResourceSchema"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="是否可用" :required="true">
+                <bk-switcher v-model="dialog.form.is_active" :disabled="dialog.type === 'delete'"></bk-switcher>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <pagination
+        class="mt15"
+        :current.sync="pagination.curPage"
+        :limit="pagination.limit"
+        :count="pagination.count"
+        :align="'right'"
+    />
+</div>
+
+{% endblock %}
+
+{% block main_script %}
+<script>
+const pagination = {{ pagination | to_json }}
+
+const data = {{ process_spec_plan_list | to_json }}
+
+const URLRouter = {
+    create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/process_spec_plan/' %}"),
+    detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/process_spec_plan/id/${id}/' %}"),
+}
+
+const ResourceSchema = {
+    type: "object",
+    properties: {
+        cpu: { type: "string"},
+        memory: { type: "string"},
+    },
+    required: ["cpu", "memory"],
+    additionalProperties: false
+}
+
+
+function throttle(fn, gapTime = 1000) {
+  let _lastTime = null;
+
+  return function (...args) {
+    let _nowTime = + new Date()
+    if (_nowTime - _lastTime > gapTime || !_lastTime) {
+      fn(...args);
+      _lastTime = _nowTime
+    }
+  }
+}
+
+
+class ProcessSpecPlanBindingDetail {
+    constructor(that) {
+        this.end = false
+        this.data = []
+        this.page = 0
+        this.that = that
+        this.loading = false
+    }
+
+    nextPage (ref, row) {
+        if (this.end || this.loading) return
+        this.loading = true
+        this.page += 1
+        this.that.fetchBindingAppList(row, this.page).then(data => {
+            this.loading = false
+            if (data.length === 0) {
+                this.end = true
+                return
+            }
+            this.data.push(...data)
+            this.updateView(ref)
+        })
+    }
+    updateView (ref) {
+        ref.setListData(this.data)
+        // 刷新当前页面显示的数据
+        ref.getListData()
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#proc-spec-plan-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            return {
+                data,
+                pagination,
+                SEARCH_PARAM: 'search_term',
+                filterKey: undefined,
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        name: '',
+                        region: 'ieod',
+                        environment: 'stag',
+                        max_replicas: 5,
+                        limits: {},
+                        requests: {},
+                        is_active: true,
+                    },
+                    row: undefined
+                },
+                ResourceSchema,
+                AppBaseUrl: '{% url "admin.applications.engine.process_specs" "--placeholder--" %}',
+                bindingAppListMap: {
+
+                }
+            }
+        },
+        mounted: function () {
+            let prefix = window.location.href
+            if (prefix.indexOf("?") === -1) {
+                return
+            }
+            let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
+            if (window.opener !== null) {
+                let form = window.opener.form
+                this.dialog.fullscreen = true
+                switch (query.mode) {
+                    case 'create':
+                        this.handleCreate()
+                        this.dialog.form = {...this.dialog.form, ...form}
+                        break
+                    case 'edit':
+                        this.handleEdit(form)
+                        break
+                }
+            }
+        },
+        methods: {
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.visible = true
+                this.dialog.form.id = undefined
+                this.dialog.form.max_replicas = 1
+                this.dialog.form.is_active = true
+            },
+            handleEdit: function (row){
+                this.dialog.row = row
+
+                this.dialog.type = "edit"
+                this.dialog.visible = true
+                this.dialog.form.id = row.id
+                this.dialog.form.name = row.name
+                this.dialog.form.region = row.region
+                this.dialog.form.environment = row.environment
+                this.dialog.form.max_replicas = row.max_replicas
+                this.dialog.form.limits = row.limits
+                this.dialog.form.requests = row.requests
+                this.dialog.form.is_active = row.is_active
+            },
+            handleExpandRowChange: function (row) {
+                this.$nextTick(() => {
+                    if (this.$refs[`virtual-scroll-${row.id}`] === undefined) {
+                        return
+                    }
+                    let ref = this.$refs[`virtual-scroll-${row.id}`]
+                    if (this.bindingAppListMap[row.id] === undefined) {
+                        this.bindingAppListMap[row.id] = new ProcessSpecPlanBindingDetail(this)
+                        this.bindingAppListMap[row.id].nextPage(ref, row)
+                    } else {
+                        this.bindingAppListMap[row.id].updateView(ref)
+                    }
+
+                })
+            },
+            fetchBindingAppList: function (row, page = 1, size = 10) {
+                let url = this.fillUrlTemplate(URLRouter['detail'], {form: row})
+                return this.$http.get(url, {
+                    params: {
+                        limit: size,
+                        offset: (page - 1) * size
+                    }
+                })
+            },
+            deactivate: function (row) {
+                this.handleEdit(row)
+                this.dialog.visible = false
+                this.dialog.form.is_active = false
+                this.submitDialog()
+            },
+            activate: function (row) {
+                this.handleEdit(row)
+                this.dialog.visible = false
+                this.dialog.form.is_active = true
+                this.submitDialog()
+            },
+            cellStyleCallback: function ({row, column, rowIndex, columnIndex}) {
+                if (["最小资源需求", "最大资源限制"].indexOf(column.label) !== -1)
+                    return 'json-view'
+            },
+            fillUrlTemplate: function (url_template, {form}) {
+              return url_template.replace("${id}", form.id)
+            },
+            submitCallback: function () {
+                this.dialog.row.name = this.dialog.form.name
+                this.dialog.row.region = this.dialog.form.region
+                this.dialog.row.environment = this.dialog.form.environment
+                this.dialog.row.max_replicas = this.dialog.form.max_replicas
+                this.dialog.row.limits = this.dialog.form.limits
+                this.dialog.row.requests = this.dialog.form.requests
+                this.dialog.row.is_active = this.dialog.form.is_active
+            },
+            AppDetailUrl(code) {
+                return this.AppBaseUrl.replace("--placeholder--", code)
+            },
+            cancelDialog: function () {
+
+            },
+            virtualScrollChange: function (row) {
+                let ref = this.$refs[`virtual-scroll-${row.id}`]
+                this.bindingAppListMap[row.id].nextPage(ref, row)
+            }
+        },
+    })
+})
+
+</script>
+<style>
+    .number-virtual-scroll {
+        height: 100px;
+        color: rgb(99, 101, 110);
+        font-family: Consolas, "Courier New", monospace;
+        font-weight: normal;
+        cursor: text;
+        white-space: nowrap;
+        letter-spacing: 0px;
+        font-size: 12px;
+        line-height: 16px;
+    }
+
+    .bk-scroll-item {
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-shared-certs-list" style="width: 100%;" class="p20">
+    <bk-alert type="info" title="更新证书内容后，请运行 refresh_cert 工具更新各应用已创建的证书 Secret 资源（耗时较长）。"></bk-alert>
+    <bk-button :theme="'primary'" :title="'创建共享证书'" class="mr10" @click="handleCreate">
+        创建共享证书
+    </bk-button>
+    <bk-table :data="data" :cell-class-name="cellStyleCallback" style="margin-top: 20px;">
+        <bk-table-column type="expand" width="30">
+            <template slot-scope="props">
+                <bk-form>
+                    <bk-form-item label="证书内容">
+                        <bk-input v-model="props.row.cert_data" type="textarea" disabled :rows="10"></bk-input>
+                    </bk-form-item>
+                    <bk-form-item label="密钥内容">
+                        <bk-input v-model="props.row.key_data" type="textarea" disabled :rows="10"></bk-input>
+                    </bk-form-item>
+                </bk-form>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="证书名称" prop="name"></bk-table-column>
+        <bk-table-column label="所属区域" prop="region"></bk-table-column>
+        <bk-table-column label="证书通配符" prop="auto_match_cns"></bk-table-column>
+        <bk-table-column label="操作">
+            <template slot-scope="props">
+                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+                <bk-button theme="primary" text @click="handleDelete(props.row)" style="color: rgb(234, 54, 54);">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]共享证书
+        </div>
+        <bk-form :label-width="120" :model="dialog.form" :rules="rules">
+            <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
+                <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
+                    <bk-option v-for="region in regionList"
+                        :key="region.value"
+                        :id="region.value"
+                        :name="region.text">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="证书名称" :property="'name'" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
+                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="证书通配符" :property="'auto_match_cns'" :required="true">
+                <bk-input v-model="dialog.form.auto_match_cns" :disabled="dialog.type === 'delete'" placeholder='# Multiple CN are seperated by ";", for example: "foo.com;*.bar.com"'></bk-input>
+            </bk-form-item>
+            <bk-form-item label="证书内容" :property="'cert_data'" :required="true">
+                <bk-input
+                    placeholder="请直接输入的证书内容"
+                    :type="'textarea'"
+                    :rows="3"
+                    v-model="dialog.form.cert_data">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="密钥内容" :property="'key_data'" :required="true">
+                <bk-input
+                    placeholder="请直接输入的密钥内容"
+                    :type="'textarea'"
+                    :rows="3"
+                    v-model="dialog.form.key_data">
+                </bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+const regionList = {{ region_list | to_json }}
+
+const URLRouter = {
+    create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/app_certs/shared/' %}"),
+    list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/app_certs/shared/' %}"),
+    detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/app_certs/shared/${cert_name}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-shared-certs-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            return {
+                data: [],
+                regionList: regionList,
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        id: '',
+                        region: '',
+                        name: '',
+                        auto_match_cns: '',
+                        cert_data: undefined,
+                        key_data: undefined,
+                    },
+                    row: undefined
+                },
+                rules: {
+                    name: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                        {
+                            max: 128,
+                            message: '不能多于128个字符',
+                            trigger: 'blur'
+                        },
+                       {
+                            validator: function (val) {
+                                let regex = new RegExp("^[a-zA-Z0-9-_]{1,128}$","");
+                                return val.match(regex) !== null
+                            },
+                            message: '只能由字符 [a-zA-Z0-9-_] 组成',
+                            trigger: 'blur'
+                        }
+                    ],
+                    auto_match_cns: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    key_data: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    cert_data: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ]
+                }
+            }
+        },
+        mounted: function () {
+            this.fetchCertList()
+        },
+        methods: {
+            fillUrlTemplate: function (url_template, {row}) {
+                if (!row)
+                    row = {}
+              return url_template.replace("${cert_name}", row.name)
+            },
+            cancelDialog: function () {
+
+            },
+            processData: function (data) {
+              return new Promise(resolve => {
+                  resolve(data)
+              })
+            },
+            fetchCertList: async function () {
+                const el = this.$bkLoading({title: '加载中'})
+                try {
+                    await this.$http.get(URLRouter['list']).then(res => {
+                        this.data = res
+                    })
+                } finally {
+                    el.hide = true
+                }
+            },
+            submitCallback: function () {
+                return this.fetchCertList()
+            },
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.row = undefined
+
+                this.dialog.form.id = undefined
+                this.dialog.form.region = this.regionList[0].value
+                this.dialog.form.name = undefined
+                this.dialog.form.auto_match_cns = undefined
+                this.dialog.form.cert_data = undefined
+                this.dialog.form.key_data = undefined
+                this.dialog.visible = true
+            },
+            handleEdit: function (row){
+                this.dialog.type = "edit"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            handleDelete: function (row) {
+                this.dialog.type = "delete"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            cellStyleCallback: function ({row, column, rowIndex, columnIndex}) {
+                if (column.label === "接入层配置" || column.label === '注解')
+                    return 'json-view'
+            },
+
+        },
+    })
+})
+
+</script>
+
+<style>
+.bk-table-empty-block{
+    display: none;
+}
+.bk-table-append-block{
+    margin-bottom: 10px;
+}
+.bk-table-append-block:hover {
+    cursor: pointer;
+    background-color: #f0f1f5;
+}
+</style>
+{% endblock %}

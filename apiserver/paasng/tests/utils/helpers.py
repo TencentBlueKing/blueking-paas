@@ -1,0 +1,468 @@
+# -*- coding: utf-8 -*-
+"""
+Tencent is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017-2022THL A29 Limited,
+a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at http://opensource.org/licenses/MIT
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on
+an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+
+to the current version of the project delivered to anyone in the future.
+"""
+import copy
+import datetime
+import random
+from contextlib import ExitStack, contextmanager
+from typing import Any, Callable, ContextManager, Dict, List, Optional
+from unittest import mock
+
+from django.conf import settings
+from django.test import TestCase
+from django.test.utils import override_settings
+from django_dynamic_fixture import G
+
+from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application
+from paasng.platform.applications.signals import post_create_application
+from paasng.platform.applications.utils import create_default_module
+from paasng.platform.core.region import load_regions_from_settings
+from paasng.platform.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.manager import ModuleInitializer
+from paasng.platform.oauth2.utils import create_oauth2_client
+from paasng.publish.market.constant import ProductSourceUrlType
+from paasng.publish.market.models import MarketConfig
+from paasng.utils.configs import RegionAwareConfig
+from tests.utils.mocks.engine import StubControllerClient, replace_cluster_service
+
+from .auth import create_user
+
+try:
+    from paasng.platform.legacydb_te.models import LApplication, LApplicationTag
+except ImportError:
+    from paasng.platform.legacydb.models import LApplication, LApplicationTag
+
+
+def initialize_application(application, *args, **kwargs):
+    """Initialize an application"""
+    module = create_default_module(application)
+    create_oauth2_client(application.code, application.region)
+
+    initialize_module(module, *args, **kwargs)
+
+    # Disable market config by default
+    MarketConfig.objects.create(
+        region=application.region,
+        application=application,
+        enabled=False,
+        source_module=module,
+        source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
+        source_tp_url=None,
+    )
+
+
+create_mocked_engine_apps = initialize_application
+
+
+def initialize_module(module, repo_type=None, repo_url='', additional_modules=[]):
+    """Mocked function for initializing new module."""
+
+    # Use a random sourcectl_type as default
+    repo_type = repo_type or get_sourcectl_types().names.get_default()
+
+    default_mockers: List[ContextManager] = [
+        mock.patch('paasng.platform.modules.manager.make_app_metadata'),
+        mock.patch('paasng.dev_resources.sourcectl.connector.SvnRepositoryClient'),
+        replace_cluster_service(),
+    ]
+    # 通过 Mock 被跳过的应用流程（性能原因）
+    optional_mockers = {
+        # 初始化模块代码，同步到 SVN 等后端
+        'sourcectl': mock.patch('paasng.platform.modules.manager.ModuleInitializer.initialize_with_template'),
+    }
+    for mod in additional_modules:
+        optional_mockers.pop(mod, None)
+
+    with ExitStack() as stack:
+        [stack.enter_context(mocker) for mocker in default_mockers]
+        [stack.enter_context(mocker) for mocker in optional_mockers.values()]
+
+        with contextmanager(_mock_current_engine_client)():
+            module_initializer = ModuleInitializer(module)
+            module_initializer.create_engine_apps()
+
+            # Set-up the repository data
+            if repo_url:
+                module.source_origin = SourceOrigin.AUTHORIZED_VCS
+                module.source_init_template = settings.DUMMY_TEMPLATE_NAME
+                module.save()
+                module_initializer.initialize_with_template(repo_type, repo_url)
+
+
+class BaseTestCaseWithApp(TestCase):
+    """Base class with an application was pre-created"""
+
+    application: Application
+    app_region = settings.DEFAULT_REGION_NAME
+    app_code = 'utest-app'
+    app_extra_fields: Dict[str, Any] = {}
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = create_user()
+
+        name = cls.app_code.replace('-', '')
+        fields = dict(name=name, language='Python', region=cls.app_region)
+        fields.update(cls.app_extra_fields)
+
+        cls.application = G(Application, owner=cls.user.pk, code=cls.app_code, **fields)
+        cls.default_repo_url = 'svn://svn.localhost:1773/app'
+        initialize_application(cls.application, repo_url=cls.default_repo_url)
+        cls.module = cls.application.get_default_module()
+
+        # Update the region field after initialize to avoide exceptions
+        cls.application.region = cls.app_region
+        cls.application.save()
+        cls.module.region = cls.app_region
+        cls.module.save()
+
+
+def create_app(
+    owner_username: Optional[str] = None,
+    additional_modules=[],
+    repo_type: str = '',
+    region: Optional[str] = None,
+    force_info: Optional[dict] = None,
+):
+    """Create a simple application, for testing purpose only
+
+    :param additional_modules: enable additional applications modules, choose from ['deploy_phases', 'sourcectl']
+    :param owner_username: username of owner
+    """
+    if owner_username:
+        user = create_user(username=owner_username)
+    else:
+        user = create_user()
+
+    region = region or settings.DEFAULT_REGION_NAME
+
+    force_info = force_info or {}
+    app_code = force_info.get("app_code") or 'ut' + generate_random_string(length=6)
+    name = app_code.replace('-', '')
+    fields = dict(name=name, name_en=name, language='Python', region=region)
+
+    application = G(Application, owner=user.pk, creator=user.pk, code=app_code, logo=None, **fields)
+
+    # First try Svn, then GitLab, then Default
+    if not repo_type:
+        try:
+            try:
+                sourcectl_name = get_sourcectl_types().names.bk_svn
+            except KeyError:
+                sourcectl_name = get_sourcectl_types().names.git_lab
+        except KeyError:
+            sourcectl_name = get_sourcectl_types().names.get_default()
+    else:
+        sourcectl_name = get_sourcectl_types().names.get(repo_type)
+
+    basic_type = get_sourcectl_types().get(sourcectl_name).basic_type
+    default_repo_url = f'{basic_type}://127.0.0.1:8080/app'
+
+    initialize_application(
+        application, repo_type=sourcectl_name, repo_url=default_repo_url, additional_modules=additional_modules
+    )
+    module = application.get_default_module()
+
+    # Send post-creation signal
+    post_create_application.send(sender=create_app, application=application)
+
+    # Update the region field after initialize to avoid exceptions
+    application.region = region
+    application.save()
+    module.region = region
+    module.save()
+    return application
+
+
+def create_legacy_application():
+    """Create a simple legacy application, for testing purpose only"""
+    session = legacy_db.get_scoped_session()
+    app_code = generate_random_string(length=12)
+    app_name = app_code
+    values = dict(
+        code=app_code,
+        name=app_name,
+        from_paasv3=0,
+        migrated_to_paasv3=0,
+        logo='',
+        introduction='',
+        creater='',
+        created_date=datetime.datetime.now(),
+        created_state=0,
+        app_type=1,
+        state=1,  # 开发中
+        width=890,
+        height=550,
+        deploy_env=102,
+        init_svn_version=0,
+        is_already_online=1,
+        is_already_test=1,
+        is_code_private=1,
+        first_test_time=datetime.datetime.now(),
+        first_online_time=datetime.datetime.now(),
+        dev_time=0,
+        app_cate=0,
+        is_offical=0,
+        is_base=0,
+        audit_state=0,
+        isneed_reaudit=1,
+        svn_domain="",  # SVN域名, 真正注册的时候完善
+        use_celery=0,  # app是否使用celery，确定一下是否需要
+        use_celery_beat=0,  # app是否使用celery beat，确定一下是否需要
+        usecount_ied=0,
+        is_select_svn_dir=1,
+        is_lapp=0,  # 是否是轻应用
+        use_mobile_test=0,
+        use_mobile_online=0,
+        is_display=1,
+        is_mapp=0,
+        is_default=0,
+        is_open=0,
+        is_max=0,
+        display_type='app',
+        issetbar=1,
+        isflash=0,
+        isresize=1,
+        usecount=0,
+        starnum=0,  # 星级评分
+        starnum_ied=0,  # 星级评分
+        deploy_ver=settings.DEFAULT_REGION_NAME,
+        cpu_limit=1024,  # 上线或提测CPU限制
+        mem_limit=512,  # 上线或提测内存限制
+        open_mode="desktop",
+    )
+    values = adaptive_lapplication_fields(values)
+    app = LApplication(**values)
+    session.add(app)
+    session.commit()
+    return app
+
+
+def adaptive_lapplication_fields(field_values: Dict[str, Any]) -> Dict[str, Any]:
+    """Update a pair of LApplication field values, make it suitable for current environment
+    by removing and adding some fields.
+    """
+    # Remove fields which were absent in open-source version
+    field_values = filter_field_values(LApplication, field_values)
+    # Add fields which were required for open-source version only
+    if has_column(LApplication, 'is_saas'):
+        field_values.update(
+            is_saas=True,
+            is_sysapp=True,
+            is_third=False,
+            is_platform=False,
+            migrated_to_paasv3=False,
+            is_resize=True,
+            is_setbar=True,
+            is_use_celery=False,
+            is_use_celery_beat=False,
+            use_count=0,
+        )
+    return field_values
+
+
+def adaptive_lapplicationtag_fields(field_values: Dict[str, Any]) -> Dict[str, Any]:
+    """Update a pair of LApplicationTag field values, make it suitable for current environment
+    by removing and adding some fields.
+    """
+    # Remove fields which were absent in open-source version
+    return filter_field_values(LApplicationTag, field_values)
+
+
+@contextmanager
+def override_region_configs(region: str, update_conf_func: Callable):
+    """Override region configs during testing"""
+    new_region_configs: Dict[str, List] = {'regions': []}
+    for _orig_config in settings.REGION_CONFIGS['regions']:
+        region_config = copy.deepcopy(_orig_config)
+
+        # Call hook function to modify the original region config
+        if region_config['name'] == region:
+            update_conf_func(region_config)
+        new_region_configs['regions'].append(region_config)
+
+    with override_settings(REGION_CONFIGS=new_region_configs):
+        load_regions_from_settings()
+        yield
+
+    # Restore original settings
+    load_regions_from_settings()
+
+
+@contextmanager
+def configure_regions(regions: List[str]):
+    """Configure multi regions with default template"""
+    new_region_configs: Dict[str, List] = {'regions': []}
+    for region in regions:
+        config = copy.deepcopy(settings.DEFAULT_REGION_TEMPLATE)
+        config['name'] = region
+        new_region_configs['regions'].append(config)
+
+    region_aware_names = ['ACCESS_CONTROL_CONFIG']
+    region_aware_changes = {}
+    for name in region_aware_names:
+        value = getattr(settings, name)
+        config = RegionAwareConfig(value)
+        if not config.lookup_with_region:
+            continue
+
+        # Set value for new region
+        _tmpl_value = next(iter(config.data.values()))
+        for region in regions:
+            value['data'][region] = _tmpl_value
+        region_aware_changes[name] = value
+
+    with override_settings(REGION_CONFIGS=new_region_configs, **region_aware_changes):
+        load_regions_from_settings()
+        yield
+
+    # Restore original settings
+    load_regions_from_settings()
+
+
+DFT_RANDOM_CHARACTER_SET = 'abcdefghijklmnopqrstuvwxyz' '0123456789'
+
+
+def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
+    """Generates a non-guessable OAuth token
+
+    OAuth (1 and 2) does not specify the format of tokens except that they
+    should be strings of random characters. Tokens should not be guessable
+    and entropy when generating the random characters is important. Which is
+    why SystemRandom is used instead of the default random.choice method.
+    """
+    rand = random.SystemRandom()
+    return ''.join(rand.choice(chars) for x in range(length))
+
+
+def _mock_current_engine_client():
+    """Mock current engine client to return fake engine app infos"""
+    with mock.patch('paasng.engine.controller.client.ControllerClient', new=StubControllerClient), mock.patch(
+        'paasng.engine.controller.shortcuts.ControllerClient', new=StubControllerClient
+    ):
+        yield
+
+
+def create_scene_tmpls():
+    """创建单元测试用的场景 SaaS 模板"""
+    from paasng.dev_resources.templates.constants import TemplateType
+    from paasng.dev_resources.templates.models import Template
+
+    repo_url = 'http://git.com/owner/scene_tmpl_proj'
+    blob_url = f'file://{settings.BASE_DIR}/tests/extensions/scene_app/contents/scene-tmpl.tar.gz'
+
+    Template.objects.get_or_create(
+        name='scene_tmpl1',
+        defaults={
+            'type': TemplateType.SCENE,
+            'display_name_zh_cn': '场景模板1',
+            'display_name_en': 'scene_tmpl1',
+            'description_zh_cn': '场景模板1描述',
+            'description_en': 'scene_tmpl1_desc',
+            'language': 'Python',
+            'market_ready': True,
+            'preset_services_config': {},
+            'blob_url': {settings.DEFAULT_REGION_NAME: blob_url},
+            'enabled_regions': [settings.DEFAULT_REGION_NAME],
+            'required_buildpacks': [],
+            'processes': {},
+            'tags': ['Python'],
+            'repo_url': repo_url,
+        },
+    )
+
+    Template.objects.get_or_create(
+        name='scene_tmpl2',
+        defaults={
+            'type': TemplateType.SCENE,
+            'display_name_zh_cn': '场景模板2',
+            'display_name_en': 'scene_tmpl2',
+            'description_zh_cn': '场景模板2描述',
+            'description_en': 'scene_tmpl2_desc',
+            'language': 'Go',
+            'market_ready': True,
+            'preset_services_config': {},
+            'blob_url': {settings.DEFAULT_REGION_NAME: blob_url},
+            'enabled_regions': [settings.DEFAULT_REGION_NAME],
+            'required_buildpacks': [],
+            'processes': {},
+            'tags': ['Go'],
+            'repo_url': repo_url,
+        },
+    )
+
+    Template.objects.get_or_create(
+        name='scene_tmpl3',
+        defaults={
+            'type': TemplateType.SCENE,
+            'display_name_zh_cn': '场景模板3',
+            'display_name_en': 'scene_tmpl3',
+            'description_zh_cn': '场景模板3描述',
+            'description_en': 'scene_tmpl3_desc',
+            'language': 'PHP',
+            'market_ready': True,
+            'preset_services_config': {},
+            'blob_url': {settings.DEFAULT_REGION_NAME: blob_url},
+            'enabled_regions': [settings.DEFAULT_REGION_NAME],
+            'required_buildpacks': [],
+            'processes': {},
+            'tags': ['PHP', 'legacy'],
+            'repo_url': repo_url,
+        },
+    )
+
+
+def create_cnative_app(
+    owner_username: Optional[str] = None, region: Optional[str] = None, force_info: Optional[dict] = None
+):
+    """Create a cloud-native application, for testing purpose only
+
+    :param owner_username: username of owner
+    """
+    if owner_username:
+        user = create_user(username=owner_username)
+    else:
+        user = create_user()
+    region = region or settings.DEFAULT_REGION_NAME
+
+    # Create the Application object
+    force_info = force_info or {}
+    app_code = force_info.get("app_code") or 'ut' + generate_random_string(length=6)
+    name = app_code.replace('-', '')
+    application = G(
+        Application,
+        type=ApplicationType.CLOUD_NATIVE,
+        region=region,
+        owner=user.pk,
+        creator=user.pk,
+        code=app_code,
+        logo=None,
+        name=name,
+        name_en=name,
+    )
+
+    create_default_module(application)
+
+    # Send post-creation signal
+    post_create_application.send(sender=create_app, application=application)
+    return application

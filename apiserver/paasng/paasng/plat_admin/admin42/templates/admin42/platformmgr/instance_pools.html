@@ -1,0 +1,186 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-plans-list" style="width: 100%;" class="p20">
+    <bk-table :data="data" :cell-class-name="cellStyleCallback">
+       <bk-table-column type="expand" width="30">
+            <template slot-scope="props">
+                <bk-table :data="props.row.pre_created_instances" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}" :cell-class-name="cellStyleCallback">
+                    <bk-table-column prop="credentials" label="实例配置">
+                        <template slot-scope="subProps">
+                            <json-pretty :data="JSON.parse(subProps.row.credentials)" show-length highlight-mouseover-node :deep="2"></json-pretty>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column prop="is_allocated" label="已分配">
+                        <template slot-scope="subProps">
+                            $[ subProps.row.is_allocated ? '是': '否' ]
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column prop="config.recyclable" label="可回收复用" width="165">
+                        <template slot-scope="subProps">
+                            $[ (JSON.parse(props.row.config)?.recyclable || subProps.row.config?.recyclable) ? '是': '否' ]
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="操作" width="130">
+                        <template slot-scope="subProps">
+                            <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEditInstance(subProps.row, props.row)">编辑实例</a>
+                            <bk-button theme="primary" text @click="handelDeleteInstance(subProps.row, props.row)" style="color: rgb(234, 54, 54);">删除</bk-button>
+                        </template>
+                    </bk-table-column>
+                </bk-table>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="方案名称" prop="name">
+        </bk-table-column>
+        <bk-table-column label="方案配置" prop="config" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="JSON.parse(props.row.config)" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="所属服务" prop="service_name"></bk-table-column>
+        <bk-table-column label="可用区" prop="region"></bk-table-column>
+        <bk-table-column label="是否启用" prop="is_active">
+            <template slot-scope="props">
+                <span v-if="props.row.is_active">是</span>
+                <span v-else>否</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作">
+            <template slot-scope="props">
+                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleCreateInstance(props.row)">添加实例</a>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]实例
+        </div>
+        <bk-alert v-if="dialog.form.plan && getPlanByID(dialog.form.plan) !== undefined" type="info" :title="`实例配置将以环境变量方式注入至应用运行时环境(每个配置项将添加 ${getPlanByID(dialog.form.plan).service_name.toUpperCase()}_' 前缀, 且会转换成全大写字母)`"></bk-alert>
+        <bk-form :label-width="120" :model="dialog.row">
+            <bk-form-item label="可回收复用" :required="true" v-if="dialog.form.plan">
+                <bk-switcher :value="true" :disabled="true" v-if="(JSON.parse(dialog.row.config)?.recyclable)"></bk-switcher>
+                <bk-switcher v-model="dialog.form.config.recyclable" v-else></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="实例配置" :required="true">
+                <json-editor v-model="dialog.form.credentials" :disabled="dialog.type === 'delete'" :schema="instanceSchemas[dialog.row?.uuid]"></json-editor>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <pagination
+        class="mt15"
+        :current.sync="pagination.curPage"
+        :limit="pagination.limit"
+        :count="pagination.count"
+        :align="'right'"
+    />
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+const pagination = {{ pagination | to_json }}
+const plans = {{ plans | to_json }}
+const services = {{ services | to_json }}
+const regionList = {{ region_list | to_json }}
+const instanceSchemas = {{ instance_schemas | to_json }}
+
+
+const URLRouter = {
+    create: decodeURI("{% url 'admin.pre_created_instances' %}"),
+    list: decodeURI("{% url 'admin.pre_created_instances' %}"),
+    detail: decodeURI("{% url 'admin.pre_created_instances.detail' '${plan_id}' '${instance_id}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-plans-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            let include_inactive = false
+            let market_enabled = undefined
+            return {
+                data: plans,
+                services,
+                pagination,
+                instanceSchemas,
+                regionList: regionList,
+                advancedFilterForm: {
+                    include_inactive,
+                    market_enabled,
+                },
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        plan: undefined,
+                        credentials: {},
+                        config: {},
+                    },
+                    schema: undefined,
+                    row: undefined
+                },
+                advancedFilterShow: false
+            }
+        },
+        methods: {
+            fillUrlTemplate: function (url_template, {row, form}) {
+              return url_template.replace("${plan_id}", row.uuid).replace("${instance_id}", form?.uuid)
+            },
+            cancelDialog: function () {
+
+            },
+            processData: function (data) {
+              return new Promise(resolve => {
+                  data.credentials = JSON.stringify(data.credentials)
+                  resolve(data)
+              })
+            },
+            submitCallback: function () {
+                this.$http.get(URLRouter['list']).then(res => {
+                    this.data = res
+                })
+            },
+            handleCreateInstance: function (plan) {
+                this.dialog.type = "create"
+                this.dialog.row = plan
+
+                this.dialog.form.uuid = undefined
+                this.dialog.form.plan = plan.uuid
+                this.dialog.form.credentials = {}
+                this.dialog.visible = true
+            },
+            handleEditInstance: function (instance, plan) {
+                this.dialog.type = "edit"
+                this.dialog.row = plan
+
+                this.dialog.form.uuid = instance.uuid
+                this.dialog.form.plan = plan.uuid
+                this.dialog.form.credentials = JSON.parse(instance.credentials)
+                this.dialog.visible = true
+            },
+            handelDeleteInstance: function (instance, plan) {
+                this.dialog.type = "delete"
+                this.dialog.row = plan
+
+                this.dialog.form.uuid = instance.uuid
+                this.dialog.form.plan = plan.uuid
+                this.dialog.form.credentials = JSON.parse(instance.credentials)
+                this.dialog.visible = true
+            },
+            cellStyleCallback: function ({row, column, rowIndex, columnIndex}) {
+                if (["实例配置", "方案配置"].indexOf(column.label) !== -1)
+                    return 'json-view'
+            },
+            getPlanByID: function (uuid) {
+                return this.data.find(item=> item.uuid === uuid)
+            }
+        },
+    })
+})
+
+</script>
+{% endblock %}

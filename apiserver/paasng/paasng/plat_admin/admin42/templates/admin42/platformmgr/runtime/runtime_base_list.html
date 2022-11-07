@@ -1,0 +1,159 @@
+{% extends "./runtime_base.html" %}
+{% load admin_utils %}
+
+{% block main_content %}
+<div id="table">
+    {% block main_content_header %}
+    <h2 class="paas-header">
+        {% block content_title %}镜像管理{% endblock %}
+        <a href="{% block create_link %}{% endblock %}" class="bk-button bk-primary fr"><i
+                class="bk-icon icon-plus-circle mr5"></i>新建</a>
+    </h2>
+    {% endblock %}
+
+    <bk-table :data="data" :size="size" @page-change="handlePageChange" @page-limit-change="handlePageLimitChange"
+        :cell-class-name="cellStyleCallback">
+        <bk-table-column type="expand" width="30">
+            <template slot-scope="props">
+                <bk-form :label-width="200">
+                    <bk-form-item label="id">
+                        <span> $[ props.row.id ] </span>
+                    </bk-form-item>
+                    <bk-form-item label="名称">
+                        <span> $[ props.row.name ] </span>
+                    </bk-form-item>
+                    <bk-form-item label="展示名称">
+                        <span> $[ props.row.display_name || '--' ] </span>
+                    </bk-form-item>
+                    <bk-form-item label="可用区域">
+                        <span> $[ props.row.region ] </span>
+                    </bk-form-item>
+                    <bk-form-item label="是否隐藏">
+                        <span>$[ props.row.is_hidden ? '是' : '否' ]</span>
+                    </bk-form-item>
+                    <bk-form-item label="描述">
+                        <span> $[ props.row.description || '这个家伙很懒，什么都没有留下。' ] </span>
+                    </bk-form-item>
+                    <!-- 仅展示在 SlugBuilder 管理页 -->
+                    <bk-form-item label="支持的构建工具" v-if="props.row.buildpacks !== undefined">
+                        <template v-if="props.row.buildpacks.length != 0">
+                            <li v-for="bid in props.row.buildpacks" > $[ getBuildPackVisibleNameById(bid) ] </li>
+                        </template>
+                        <p v-else>不支持任何构建工具</p>
+                    </bk-form-item>
+
+                    <bk-form-item label="环境变量">
+                        <json-pretty :data="props.row.environments" show-length highlight-mouseover-node :deep="1"></json-pretty>
+                    </bk-form-item>
+                    <bk-form-item label="镜像标记">
+                        <json-pretty :data="props.row.labels" show-length highlight-mouseover-node :deep="1"></json-pretty>
+                    </bk-form-item>
+                </bk-form>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="名称" prop="name"></bk-table-column>
+        <bk-table-column label="展示名称" prop="display_name">
+            <template slot-scope="props">
+                $[ props.row.display_name || '--' ]
+            </template>
+        </bk-table-column>
+        <bk-table-column label="可用区域" prop="region" width="80"></bk-table-column>
+        <bk-table-column label="是否隐藏" prop="is_hidden" width="80">
+            <template slot-scope="props">
+                $[props.row.is_hidden ? '是' : '否']
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="250">
+            <template slot-scope="props">
+                {% block table-functional-area %}
+                <bk-button text icon="edit" @click="open(`{% block update_link %}{% endblock %}?id=${props.row.id}`, '_self')">编辑</bk-button>
+                <bk-button text style="color: red" @click="remove(props.row)" icon="delete">移除</bk-button>
+                {% endblock %}
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <pagination
+        class="mt15"
+        :current.sync="pagination.curPage"
+        :limit="pagination.limit"
+        :count="pagination.count"
+        :align="'right'"
+    ></pagination>
+
+    <form action="{% block delete_link %}{% endblock %}" method="POST" ref="deleteForm">
+        {% csrf_token %}
+        <input name="id" :value="curImage.id" type="hidden" />
+    </form>
+
+    {% block main_content_dialog %}
+    {% endblock %}
+</div>
+{% endblock %}
+
+{% block main_script %}
+<script type="text/javascript">
+    const tableData = {{ data | to_json }}
+    const pagination = {{ pagination | to_json }}
+
+    let ViewInstance = Vue.extend({
+        data() {
+            let fields = [{
+                id: 'id',
+                label: 'id',
+                disabled: true
+            }]
+            return {
+                size: 'small',
+                data: tableData,
+                pagination,
+                curImage: {
+                    id: 0
+                },
+            }
+        },
+        methods: {
+            remove(data) {
+                const that = this
+                this.$bkInfo({
+                    title: `确认要删除 ${data.name} ？`,
+                    width: 800,
+                    type: 'warning',
+                    confirmFn (image) {
+                        that.curImage = data
+                        that.$nextTick(() => {
+                            that.$refs.deleteForm.submit()
+                        })
+                    }
+                })
+            },
+            handlePageLimitChange() {
+
+            },
+            toggleTableSize() {
+                const size = ['small', 'medium', 'large']
+                const index = (size.indexOf(this.size) + 1) % 3
+                this.size = size[index]
+            },
+            handlePageChange(page) {
+                this.pagination.current = page
+            },
+            cellStyleCallback: function ({ row, column, rowIndex, columnIndex }) {
+                if (["镜像标记", "环境变量"].indexOf(column.label) !== -1)
+                    return 'json-view'
+            },
+            handleSettingChange ({fields, size}) {
+
+            }
+        }
+    })
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new ViewInstance({
+            el: '#table',
+            delimiters: ['$[', ']'],
+        })
+    })
+
+</script>
+{% endblock %}

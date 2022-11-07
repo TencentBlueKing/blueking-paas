@@ -1,0 +1,106 @@
+{% extends "./base.html" %}
+{% load admin_utils %}
+
+
+{% block container %}
+<div class="paas-container bk-navigation-wrapper">
+    <div class="paas-side-bar" id="paas-side-bar">
+        {% block navigation_header %}
+        {% endblock %}
+        <bk-navigation-menu
+            ref="menu"
+            @select="handleSelect"
+            item-default-bg-color="#fafbfd"
+            sub-menu-open-bg-color="#fafbfd"
+            item-hover-bg-color="#e1ecff"
+            item-active-bg-color="#e1ecff"
+            item-active-color="#3a84ff"
+            item-default-color="#63656e"
+            item-hover-color="#63656e"
+            :default-active="active">
+            <bk-navigation-menu-item
+                v-for="item in navList"
+                :key="item.name"
+                :has-child="item.children && !!item.children.length"
+                :group="item.group"
+                :icon="item.icon"
+                :disabled="item.disabled"
+                :url="item.url"
+                :id="item.name">
+                <span>$[item.name]</span>
+                <div slot="child">
+                    <bk-navigation-menu-item
+                        :key="child.name"
+                        v-for="child in item.children"
+                        :id="child.name"
+                        :disabled="child.disabled"
+                        :icon="child.icon"
+                        :url="child.url"
+                        :default-active="child.active">
+                        <span>$[child.name]</span>
+                    </bk-navigation-menu-item>
+                </div>
+            </bk-navigation-menu-item>
+        </bk-navigation-menu>
+    </div>
+    <div class="navigation-container" style="width: 100%; min-width: 540px; overflow-x: visible;">
+        <div class="container-header" id="paas-header" style="flex-basis: 0px; justify-content: flex-start;margin:2px 0px 3px 0px;">
+            <div class="monitor-navigation-header">
+                <div class="header-title">
+                    {% block content_header %}
+                    <!-- 这里需要被重载 -->
+                    <ul class="paas-breadcrumb">
+                        <li><a href="{% url 'admin.front_page' %}">首页</a></li>
+                        <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
+                        <li class="active">{{ view.name }}</li>
+                    </ul>
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+        <div class="monitor-navigation-content" style="width: 100%; overflow-x: visible;">
+            <div >
+            {% block main_content %}
+            {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+    {% block nav_list %}
+    <script>
+        var navList = undefined;
+    </script>
+    {% endblock %}
+
+    {% block init_nav %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new Vue({
+                el: "#paas-side-bar",
+                delimiters: ['$[', ']'],
+                data: function () {
+                    return {
+                        active: '{{ view.name }}',
+                        navList: navList,
+                    }
+                },
+                methods: {
+                    handleSelect: function (name, obj) {
+                        if (obj.url !== undefined && "{{ view.name }}" !== name) {
+                            this.$bkLoading({title: '加载中'})
+                            window.location.href = obj.url
+                        }
+                    },
+                },
+            })
+        })
+    </script>
+    {% endblock %}
+
+    {% block main_script %}
+
+    {% endblock %}
+{% endblock %}

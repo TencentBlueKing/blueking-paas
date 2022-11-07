@@ -1,0 +1,280 @@
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.318664+00:00
+    finished_patterns: '[]'
+    name: 解析应用进程信息
+    display_name_zh_cn: 解析应用进程信息
+    display_name_en: Parse app process
+    phase: preparation
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.318727+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.325721+00:00
+    finished_patterns: '[]'
+    name: 上传仓库代码
+    display_name_zh_cn: 上传仓库代码
+    display_name_en: Upload repository code
+    phase: preparation
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.325745+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.331793+00:00
+    finished_patterns: '[]'
+    name: 配置资源实例
+    display_name_zh_cn: 配置资源实例
+    display_name_en: Config resource instance
+    phase: preparation
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.331817+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.336559+00:00
+    finished_patterns: '["\\s+Step setup done"]'
+    name: 初始化构建环境
+    display_name_zh_cn: 初始化构建环境
+    display_name_en: Initialize build environment
+    phase: build
+    started_patterns: '["-----> Step setup begin"]'
+    updated: 2021-04-27 03:12:15.336583+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.341442+00:00
+    finished_patterns: '["\\s+Step detect done"]'
+    name: 检测构建工具
+    display_name_zh_cn: 检测构建工具
+    display_name_en: Detect buildpack
+    phase: build
+    started_patterns: '["-----> Step detect begin"]'
+    updated: 2021-04-27 03:12:15.341464+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.346245+00:00
+    finished_patterns: '["\\s+Step analysis done"]'
+    name: 分析构建方案
+    display_name_zh_cn: 分析构建方案
+    display_name_en: Analyze build solutions
+    phase: build
+    started_patterns: '["-----> Step analysis begin"]'
+    updated: 2021-04-27 03:12:15.346268+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.351491+00:00
+    finished_patterns: '[]'
+    name: 调用 pre-compile
+    display_name_zh_cn: 调用 pre-compile
+    display_name_en: Calling pre-compile
+    phase: build
+    started_patterns: '["-----> Running pre-compile hook"]'
+    updated: 2021-04-27 03:12:15.351517+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.356590+00:00
+    finished_patterns: '["\\s+Step build done"]'
+    name: 构建应用
+    display_name_zh_cn: 构建应用
+    display_name_en: Building Applications
+    phase: build
+    started_patterns: '["-----> Step build begin"]'
+    updated: 2021-04-27 03:12:15.356615+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.361733+00:00
+    finished_patterns: '[]'
+    name: 调用 post-compile
+    display_name_zh_cn: 调用 post-compile
+    display_name_en: Calling post-compile
+    phase: build
+    started_patterns: '["-----> Running post-compile hook"]'
+    updated: 2021-04-27 03:12:15.361757+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.366889+00:00
+    finished_patterns: '["\\s+Step export done"]'
+    name: 生成构建结果
+    display_name_zh_cn: 生成构建结果
+    display_name_en: Generate build results
+    phase: build
+    started_patterns: '["-----> Step export begin"]'
+    updated: 2021-04-27 03:12:15.366913+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.372004+00:00
+    finished_patterns: '["\\s+Step finish done"]'
+    name: 清理构建环境
+    display_name_zh_cn: 清理构建环境
+    display_name_en: Clean build environment
+    phase: build
+    started_patterns: '["-----> Step finish begin"]'
+    updated: 2021-04-27 03:12:15.372029+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 下载代码
+    display_name_zh_cn: 下载代码
+    display_name_en: Downloading code
+    phase: build
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 加载缓存
+    display_name_zh_cn: 加载缓存
+    display_name_en: Restoring cache
+    phase: build
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 检测进程类型
+    display_name_zh_cn: 检测进程类型
+    display_name_en: Discover process types
+    phase: build
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 制作打包构件
+    display_name_zh_cn: 制作打包构件
+    display_name_en: Making slug package
+    phase: build
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 上传缓存
+    display_name_zh_cn: 上传缓存
+    display_name_en: Upload Cache
+    phase: build
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.376855+00:00
+    finished_patterns: '[]'
+    name: 部署应用
+    display_name_zh_cn: 部署应用
+    display_name_en: Deploying the app
+    phase: release
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.376878+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 检测部署结果
+    display_name_zh_cn: 检测部署结果
+    display_name_en: View Deploy results
+    phase: release
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    builder_provider:
+    - blueking
+    buildpack_provider: null
+    created: 2021-04-27 03:12:15.381758+00:00
+    finished_patterns: '[]'
+    name: 执行部署前置命令
+    display_name_zh_cn: 执行部署前置命令
+    display_name_en: Execute Pre-release cmd
+    phase: release
+    started_patterns: '[]'
+    updated: 2021-04-27 03:12:15.381779+00:00
+  model: engine.deploystepmeta
+- fields:
+    created: 2021-04-27 03:12:15.388464+00:00
+    is_default: true
+    metas:
+    - - preparation
+      - 解析应用进程信息
+    - - preparation
+      - 上传仓库代码
+    - - preparation
+      - 配置资源实例
+    - - build
+      - 初始化构建环境
+    - - build
+      - 检测构建工具
+    - - build
+      - 分析构建方案
+    - - build
+      - 调用 pre-compile
+    - - build
+      - 构建应用
+    - - build
+      - 调用 post-compile
+    - - build
+      - 生成构建结果
+    - - build
+      - 清理构建环境
+    - - release
+      - 部署应用
+    - - release
+      - 检测部署结果
+    name: slug-pilot
+    updated: 2021-04-27 03:12:15.388489+00:00
+  model: engine.stepmetaset

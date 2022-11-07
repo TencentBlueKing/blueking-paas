@@ -1,0 +1,399 @@
+# -*- coding: utf-8 -*-
+"""
+Tencent is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017-2022THL A29 Limited,
+a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at http://opensource.org/licenses/MIT
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on
+an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+
+to the current version of the project delivered to anyone in the future.
+"""
+from string import ascii_uppercase
+from textwrap import dedent
+from typing import List
+
+import pytest
+from django.conf import settings
+from django.utils.crypto import get_random_string
+from django_dynamic_fixture import G
+from rest_framework.exceptions import ValidationError
+
+from paasng.engine.constants import AppRunTimeBuiltinEnv, ConfigVarEnvName
+from paasng.engine.models.config_var import (
+    ENVIRONMENT_ID_FOR_GLOBAL,
+    ENVIRONMENT_NAME_FOR_GLOBAL,
+    ConfigVar,
+    generate_builtin_env_vars,
+    get_config_vars,
+)
+from paasng.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
+from paasng.engine.serializers import ConfigVarFormatSLZ
+from paasng.platform.modules.models import Module
+from tests.utils.helpers import initialize_module, override_region_configs
+
+pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture()
+def config_var_maker():
+    def maker(environment_name, module, **kwargs):
+        kwargs["module"] = module
+        if environment_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            kwargs["environment"] = None
+            kwargs["is_global"] = True
+            kwargs["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
+        else:
+            kwargs["environment"] = module.get_envs(environment_name)
+            kwargs["is_global"] = False
+
+        var = G(ConfigVar, **kwargs)
+        # G 不支持设置 environment_id
+        if environment_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            var.environment_id = ENVIRONMENT_ID_FOR_GLOBAL
+            var.save()
+        return var
+
+    return maker
+
+
+class TestGetConfigVars:
+    def test_get_config_vars_normal(self, bk_module, config_var_maker):
+        config_var_maker(
+            environment_name="prod", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="proj.settings"
+        )
+        config_var_maker(environment_name="_global_", module=bk_module, key="NAME", value="global")
+        result = get_config_vars(bk_module, 'prod')
+        assert result == {'DJANGO_SETTINGS_MODULE': 'proj.settings', 'NAME': 'global'}
+
+    def test_get_config_vars_conflict_name(self, bk_module, config_var_maker):
+        config_var_maker(
+            environment_name="prod", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="proj.settings"
+        )
+        config_var_maker(
+            environment_name="_global_", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="global.settings"
+        )
+
+        result = get_config_vars(bk_module, 'prod')
+        assert result == {u'DJANGO_SETTINGS_MODULE': u'proj.settings'}
+
+        result = get_config_vars(bk_module, 'stag')
+        assert result == {u'DJANGO_SETTINGS_MODULE': u'global.settings'}
+
+    def test_invalid_env_name(self, bk_module):
+        with pytest.raises(ValueError):
+            get_config_vars(bk_module, '__invalid_env_name')
+
+    def test_empty(self, bk_module):
+        assert get_config_vars(bk_module, 'prod') == {}
+
+
+class TestFilterByEnvironmentName:
+    """TestCases for ConfigVar.objects.filter_by_environment_name"""
+
+    @pytest.mark.parametrize(
+        'environment_name,length,keys',
+        [
+            (ConfigVarEnvName.GLOBAL, 1, {'G1'}),
+            (ConfigVarEnvName.STAG, 2, {'S1', 'S2'}),
+            (ConfigVarEnvName.PROD, 1, {'P1'}),
+        ],
+    )
+    def test_global(self, bk_module, config_var_maker, environment_name: ConfigVarEnvName, length: int, keys: List):
+        config_var_maker(key="S1", value="foo", environment_name="stag", module=bk_module)
+        config_var_maker(key="S2", value="foo", environment_name="stag", module=bk_module)
+        config_var_maker(key="P1", value="foo", environment_name="prod", module=bk_module)
+        config_var_maker(key="G1", value="foo", environment_name=ENVIRONMENT_NAME_FOR_GLOBAL, module=bk_module)
+
+        qs = ConfigVar.objects.filter(module=bk_module).filter_by_environment_name(environment_name)
+        assert qs.count() == length
+        assert set(x.key for x in qs) == keys
+
+
+@pytest.fixture
+def dest_module(bk_app):
+    """Return another module if current application fixture"""
+    module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+    initialize_module(module)
+    return module
+
+
+@pytest.fixture
+def dest_prod_env(dest_module):
+    return dest_module.envs.get(environment='prod')
+
+
+@pytest.fixture()
+def random_config_var_maker():
+    def maker(environment_name, **kwargs):
+        kwargs.setdefault("key", get_random_string(allowed_chars=ascii_uppercase))
+        kwargs.setdefault("value", get_random_string())
+        kwargs.setdefault("description", get_random_string())
+        kwargs["environment_name"] = environment_name
+        return kwargs
+
+    return maker
+
+
+class TestConfigVarManager:
+    @pytest.mark.parametrize(
+        "source_vars, dest_vars, expected_result, expected_vars",
+        [
+            (
+                [
+                    dict(
+                        key='A',
+                        value=2,
+                    )
+                ],
+                [],
+                (1, 0, 0),
+                {"A": "2"},
+            ),
+            ([dict(key='A', value=2)], [dict(key='B', value=2)], (1, 0, 0), {"A": "2", "B": "2"}),
+            (
+                [dict(key='B', value=1)],
+                [dict(key='B', value=2)],
+                (0, 1, 0),
+                {"B": "1"},
+            ),
+            (
+                [dict(key='B', value=2, description="???")],
+                [dict(key='B', value=2, description="!!!")],
+                (0, 1, 0),
+                {"B": "2"},
+            ),
+            (
+                [dict(key='B', value=2, description="")],
+                [dict(key='B', value=2, description="???")],
+                (0, 1, 0),
+                {"B": "2"},
+            ),
+            (
+                [dict(key='B', value=2, description='aa')],
+                [dict(key='B', value=2, description='aa')],
+                (0, 0, 1),
+                {"B": "2"},
+            ),
+            (
+                [dict(key='A', value=2, description='A'), dict(key='B', value='d'), dict(key='C', value='d')],
+                [dict(key='A', value=2, description='A'), dict(key='B', description='s')],
+                (1, 1, 1),
+                {"A": "2", "B": "d", "C": "d"},
+            ),
+        ],
+    )
+    def test_clone(
+        self, config_var_maker, bk_module, dest_module, source_vars, dest_vars, expected_result, expected_vars
+    ):
+        for var in source_vars:
+            config_var_maker(environment_name="prod", module=bk_module, **var)
+        for var in dest_vars:
+            config_var_maker(environment_name="prod", module=dest_module, **var)
+        ret = ConfigVarManager().clone_vars(bk_module, dest_module)
+        assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == expected_result
+        assert get_config_vars(dest_module, 'prod') == expected_vars
+
+    @pytest.mark.parametrize("maker_params", [{}, {"description": None}])
+    def test_apply_vars_to_module(self, bk_module, random_config_var_maker, maker_params):
+        serializer = ConfigVarFormatSLZ(
+            data=[random_config_var_maker(environment_name="prod", **maker_params) for i in range(10)],
+            context={'module': bk_module},
+            many=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        config_vars = serializer.validated_data
+
+        # 测试导入.
+        ret = ConfigVarManager().apply_vars_to_module(bk_module, config_vars)
+        assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == (10, 0, 0)
+
+        # 测试重复导入.
+        ret = ConfigVarManager().apply_vars_to_module(bk_module, config_vars)
+        assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == (0, 0, 10)
+
+        # 测试覆盖.
+        another_list = [
+            random_config_var_maker(
+                environment_name="prod",
+                key=var.key,
+                value=get_random_string(length=len(var.value) - 1),
+                **maker_params,
+            )
+            for var in config_vars
+        ]
+        serializer = ConfigVarFormatSLZ(data=another_list, context={'module': bk_module}, many=True)
+        serializer.is_valid(raise_exception=True)
+        another_config_vars = serializer.validated_data
+
+        ret = ConfigVarManager().apply_vars_to_module(bk_module, another_config_vars)
+        assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == (0, 10, 0)
+
+    @pytest.mark.parametrize(
+        "config_vars, order_by, expected",
+        [
+            (
+                [
+                    dict(key='A', value='1', environment_name='prod', description='first'),
+                    dict(key='B', value='2', environment_name='stag', description='second'),
+                    dict(key='C', value='3', environment_name='stag', description=None),
+                ],
+                "-created",
+                [
+                    PlainConfigVar(key="C", value="3", environment_name='stag', description=''),
+                    PlainConfigVar(key="B", value="2", environment_name='stag', description='second'),
+                    PlainConfigVar(key="A", value="1", environment_name='prod', description='first'),
+                ],
+            ),
+            (
+                [
+                    dict(key='C', value='3', environment_name='stag', description=None),
+                    dict(key='B', value='2', environment_name='stag', description='second'),
+                    dict(key='A', value='1', environment_name='prod', description='first'),
+                ],
+                "-created",
+                [
+                    PlainConfigVar(key="A", value="1", environment_name='prod', description='first'),
+                    PlainConfigVar(key="B", value="2", environment_name='stag', description='second'),
+                    PlainConfigVar(key="C", value="3", environment_name='stag', description=''),
+                ],
+            ),
+            (
+                [
+                    dict(key='A', value='1', environment_name='prod', description='first'),
+                    dict(key='B', value='2', environment_name='stag', description='second'),
+                    dict(key='C', value='3', environment_name='stag', description=None),
+                ],
+                "-key",
+                [
+                    PlainConfigVar(key="C", value="3", environment_name='stag', description=''),
+                    PlainConfigVar(key="B", value="2", environment_name='stag', description='second'),
+                    PlainConfigVar(key="A", value="1", environment_name='prod', description='first'),
+                ],
+            ),
+        ],
+    )
+    def test_export_config_vars(self, bk_module, config_var_maker, config_vars, order_by, expected):
+        for var in config_vars:
+            config_var_maker(module=bk_module, **var)
+
+        all_config_vars = list(bk_module.configvar_set.all().order_by(order_by))
+        exported = ExportedConfigVars.from_list(all_config_vars)
+        assert exported.env_variables == expected
+
+
+class TestConfigVarFormatSLZ:
+    @pytest.mark.parametrize(
+        "params",
+        [{"key": "foo"}, {"key": "KUBERNETES_FOO"}, {"key": "BKPAAS_FOO"}, {"description": "x" * 201}],
+    )
+    def test_key_error(self, bk_module, random_config_var_maker, params):
+        serializer = ConfigVarFormatSLZ(
+            data=random_config_var_maker(**params, environment_name="stag"), context={'module': bk_module}
+        )
+        with pytest.raises(ValidationError):
+            serializer.is_valid(raise_exception=True)
+
+
+class TestExportedConfigVars:
+    @pytest.mark.parametrize(
+        "env_variables, expected",
+        [
+            (
+                [],
+                dedent(
+                    """\
+            # 环境变量文件字段说明：
+            #   - key: 变量名称，仅支持大写字母、数字、下划线
+            #   - value: 变量值
+            #   - description: 描述文字
+            #   - environment_name: 生效环境
+            #     - 可选值:
+            #       - stag: 预发布环境
+            #       - prod: 生产环境
+            #       - _global_: 所有环境
+            env_variables: []
+            """
+                ),
+            ),
+            (
+                [
+                    PlainConfigVar(key="STAG", value="example", description="example", environment_name="stag"),
+                    PlainConfigVar(key="PROD", value="example", description="example", environment_name="prod"),
+                    PlainConfigVar(key="GLOBAL", value="example", description="example", environment_name="_global_"),
+                ],
+                dedent(
+                    """\
+            # 环境变量文件字段说明：
+            #   - key: 变量名称，仅支持大写字母、数字、下划线
+            #   - value: 变量值
+            #   - description: 描述文字
+            #   - environment_name: 生效环境
+            #     - 可选值:
+            #       - stag: 预发布环境
+            #       - prod: 生产环境
+            #       - _global_: 所有环境
+            env_variables:
+            - description: example
+              environment_name: stag
+              key: STAG
+              value: example
+            - description: example
+              environment_name: prod
+              key: PROD
+              value: example
+            - description: example
+              environment_name: _global_
+              key: GLOBAL
+              value: example
+            """
+                ),
+            ),
+        ],
+    )
+    def test_to_file_content(self, env_variables, expected):
+        assert ExportedConfigVars(env_variables=env_variables).to_file_content() == expected
+
+
+class TestBuiltInEnvVars:
+    @pytest.mark.parametrize("provide_env_vars_platform, contain_bk_envs", [(True, True), (False, True)])
+    def test_bk_platform_envs(self, bk_app, provide_env_vars_platform, contain_bk_envs):
+        def update_region_hook(config):
+            config['provide_env_vars_platform'] = provide_env_vars_platform
+
+        with override_region_configs(bk_app.region, update_region_hook):
+            bk_module = bk_app.get_default_module()
+            bk_stag_env = bk_module.envs.get(environment='stag')
+            config_vars = generate_builtin_env_vars(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+
+            # 这些环境变量在所有版本都有
+            assert ('BK_COMPONENT_API_URL' in config_vars) == contain_bk_envs
+            assert ('BK_PAAS2_URL' in config_vars) == contain_bk_envs
+            assert ('BK_API_URL_TMPL' in config_vars) == contain_bk_envs
+
+            # BK_LOGIN_URL 只在特殊开启的版本才写入
+            assert ('BK_LOGIN_URL' in config_vars) == provide_env_vars_platform
+            # 应用是需要写入蓝鲸体系其他系统访问地址的环境变量
+            if provide_env_vars_platform:
+                assert set(settings.BK_PLATFORM_URLS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
+
+    def test_builtin_env_keys(self, bk_app):
+        bk_module = bk_app.get_default_module()
+        bk_stag_env = bk_module.envs.get(environment='stag')
+        config_vars = generate_builtin_env_vars(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+
+        assert {'BKPAAS_LOGIN_URL', 'BKPAAS_APP_CODE', 'BKPAAS_APP_ID', 'BKPAAS_APP_SECRET'}.issubset(
+            config_vars.keys()
+        )
+
+        # 运行时相关的环境变量
+        runtime_env_keys = [f'{settings.CONFIGVAR_SYSTEM_PREFIX}{key}' for key in AppRunTimeBuiltinEnv.get_values()]
+        assert set(runtime_env_keys).issubset(config_vars.keys())

@@ -1,0 +1,393 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-services-list" style="width: 100%;" class="p20">
+    <bk-button :theme="'primary'" :title="'创建增强服务'" class="mr10" @click="handleCreate">
+        创建增强服务
+    </bk-button>
+    <bk-table :data="data" style="margin-top: 20px;">
+        <bk-table-column width="80" align="center">
+            <template slot-scope="props">
+                <template v-if="props.row.origin === 'local'">
+                    <bk-popover content="本地增强服务" placement="left">
+                        <i class="bk-icon icon-info-circle-shape" style="visibility: hidden;"></i><img :src="props.row.logo" width="30"/>
+                    </bk-popover>
+                </template>
+
+                <template v-else>
+                    <bk-popover content="远程增强服务" placement="left">
+                        <i class="bk-icon icon-info-circle-shape"></i><img :src="props.row.logo" width="30"/>
+                    </bk-popover>
+                </template>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="服务code" prop="name">
+        </bk-table-column>
+        <bk-table-column label="服务名称" prop="display_name"></bk-table-column>
+        <bk-table-column label="可用区" prop="region"></bk-table-column>
+        <bk-table-column label="服务分类" prop="category_id">
+            <template slot-scope="props">
+                <span > $[ props.row.category_id | category2zh ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="是否启用" prop="is_active">
+            <template slot-scope="props">
+                <span v-if="props.row.is_active">是</span>
+                <span v-else>否</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="是否可见" prop="is_visible">
+            <template slot-scope="props">
+                <span v-if="props.row.is_visible">是</span>
+                <span v-else>否</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作">
+            <template slot-scope="props">
+                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+                <bk-button theme="primary" text @click="handleDelete(props.row)" style="color: rgb(234, 54, 54);">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]增强服务
+        </div>
+        <bk-form :label-width="120" :model="dialog.form">
+            <bk-form-item label="服务名称" :required="true">
+                <bk-input v-model="dialog.form.name" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="服务全称" :required="true">
+                <bk-input v-model="dialog.form.display_name" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="供应商类型" :required="false">
+                <bk-select v-model="dialog.form.provider_name" :disabled="dialog.type === 'delete'" searchable>
+                   <bk-option v-for="choice in getProviderChoices()"
+                        :key="choice.id"
+                        :id="choice.id"
+                        :name="choice.name"
+                        :disabled="choice.id !== dialog.form.name && choice.id !== 'pool'">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="logo" :required="true" height="300">
+            <bk-upload
+                theme="picture"
+                :files=dialog.logo
+                :multiple="false" url=""
+                :custom-request="setFormLogo"
+            ></bk-upload>
+            </bk-form-item>
+            <bk-form-item label="服务简介" :required="true">
+                <bk-input v-model="dialog.form.description" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="支持语言" :required="true">
+                <bk-input v-model="dialog.form.available_languages" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="可用区" :required="true">
+                <bk-select v-model="dialog.form.region" :disabled="dialog.type === 'delete'">
+                    <bk-option v-for="region in regionList"
+                        :key="region.value"
+                        :id="region.value"
+                        :name="region.text">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="是否可用" :required="true">
+                <bk-switcher v-model="dialog.form.is_active" :disabled="dialog.type === 'delete'"></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="是否可见" :required="true">
+                <bk-switcher v-model="dialog.form.is_visible" :disabled="dialog.type === 'delete'"></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="服务分类" :required="true">
+                <bk-select v-model="dialog.form.category_id" :disabled="dialog.type === 'delete'">
+                    <bk-option v-for="region in categoryList"
+                        :key="region.value"
+                        :id="region.value"
+                        :name="region.text">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="服务详细介绍" :required="true">
+                <bk-input v-model="dialog.form.long_description" type="textarea" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="服务markdown介绍" :required="true">
+                <vue-simple-mde v-model="dialog.form.instance_tutorial" type="textarea" :disabled="dialog.type === 'delete'"></vue-simple-mde>
+            </bk-form-item>
+            <bk-form-item label="规格定义" :required="false">
+                <div>
+                    <template v-for="specification in dialog.form.specifications">
+                        <bk-popover placement="top" width="120">
+                            <div slot="content">
+                                推荐值: $[ specification.recommended_value ]
+                            </div>
+                            <bk-tag closable :key="specification.name" @close="delSpecification(specification)">$[ specification.name ]($[ specification.display_name ])</bk-tag>
+                        </bk-popover>
+                    </template>
+                    <bk-button icon="plus" size="small" @click="createSpecification"></bk-button>
+                </div>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <bk-dialog v-model="specificationDialog.visible" header-position="left" width="600" @confirm="handleSpecDialog" >
+        <div slot="header">
+            $[ specificationDialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]服务规格
+        </div>
+        <bk-form :label-width="120" :model="specificationDialog.form">
+            <bk-form-item label="字段名" :required="true">
+                <bk-input v-model="specificationDialog.form.name" :disabled="specificationDialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="展示名" :required="true">
+                <bk-input v-model="specificationDialog.form.display_name" :disabled="specificationDialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="简介" :required="true">
+                <bk-input v-model="specificationDialog.form.description" :disabled="specificationDialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="推荐值">
+                <bk-input v-model="specificationDialog.form.recommended_value" :disabled="specificationDialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+const data = {{ services | to_json }}
+const regionList = {{ region_list | to_json }}
+const categoryList = {{ category_list | to_json }}
+const providerChoices = {{ provider_choices | to_json }}
+
+
+const URLRouter = {
+    create: decodeURI("{% url 'admin.services' %}"),
+    list: decodeURI("{% url 'admin.services' %}"),
+    detail: decodeURI("{% url 'admin.services.detail' '${id}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-services-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            let include_inactive = false
+            let market_enabled = undefined
+            return {
+                data,
+                detailUrl: '{% url "admin.applications.detail.overview" "--placeholder--" %}',
+                regionList: regionList,
+                categoryList: categoryList,
+                providerChoices: providerChoices,
+                advancedFilterForm: {
+                    include_inactive,
+                    market_enabled,
+                },
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        region: 'ieod',
+                        name: '',
+                        display_name: '',
+                        logo: '',
+                        description: '',
+                        long_description: '',
+                        instance_tutorial: '',
+                        category: '',
+                        is_active: true,
+                        is_visible: true,
+                        provider_name: '',
+                        config: {}
+                    },
+                    logo: [],
+                    row: undefined
+                },
+                specificationDialog: {
+                    form: {},
+                    visible: false,
+                    type: 'create',
+                },
+                advancedFilterShow: false
+            }
+        },
+        methods: {
+            fillUrlTemplate: function (url_template, {row}) {
+                if (!row)
+                    row = {}
+              return url_template.replace("${id}", row.uuid)
+            },
+            cancelDialog: function () {
+
+            },
+            processData: function (data) {
+                // 将 data 转换成 FormData
+                return new Promise((resolve, reject) => {
+                    if (data.logo === null) {
+                        if (this.dialog.type === "create") {
+                            reject("Logo is required")
+                        } else {
+                            delete data.logo
+                        }
+                    }
+                    resolve(data)
+                })
+            },
+            submitCallback: function () {
+                // 更新列表
+                this.$http.get(URLRouter['list']).then(res => {
+                    this.data = res
+                })
+            },
+            setFormLogo: function (options) {
+                options.onDone(options.fileObj)
+                let reader = new FileReader()
+                reader.onload = event => {
+                    this.dialog.form.logo = event.target.result
+                }
+                reader.readAsDataURL(options.fileObj.origin)
+            },
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.row = undefined
+                this.dialog.logo.splice(0, 1)
+
+                this.dialog.form.region = undefined
+                this.dialog.form.uuid = undefined
+                this.dialog.form.name = undefined
+                this.dialog.form.display_name = undefined
+                // 不设置 logo, 不传 logo 时表示不更新 logo
+                this.dialog.form.logo = null
+                this.dialog.form.specifications = []
+
+                this.dialog.form.description = undefined
+                this.dialog.form.available_languages = undefined
+                this.dialog.form.long_description = undefined
+
+                this.dialog.form.category_id = undefined
+                this.dialog.form.is_active = false
+                this.dialog.form.is_visible = true
+
+                this.dialog.visible = true
+                this.$nextTick().then(() => {
+                    // SimpleMDE 的 bug, 只有 display 时修改值, 才会修改 dom 中渲染的值
+                    this.dialog.form.instance_tutorial = ""
+                })
+            },
+            handleEdit: function (row){
+                this.dialog.type = "edit"
+                this.dialog.row = row
+
+                if (row.logo) {
+                    this.dialog.logo.splice(0, 1, {
+                        name: 'image.png',
+                        status: 'done',
+                        url: row.logo
+                    })
+                }
+
+                this.dialog.form = JSON.parse(JSON.stringify(row))
+                this.dialog.form.instance_tutorial = ''
+                this.dialog.visible = true
+                this.$nextTick().then(() => {
+                    // SimpleMDE 的 bug, 只有 display 时修改值, 才会修改 dom 中渲染的值
+                    this.dialog.form.instance_tutorial = row.instance_tutorial
+                })
+            },
+            handleDelete: function (row) {
+                this.dialog.type = "delete"
+                this.dialog.row = row
+
+                if (row.logo) {
+                    this.dialog.logo.splice(0, 1, {
+                        name: 'image.png',
+                        status: 'done',
+                        url: row.logo
+                    })
+                }
+
+                this.dialog.form = JSON.parse(JSON.stringify(row))
+                this.dialog.form.instance_tutorial = ''
+                this.dialog.visible = true
+                this.$nextTick().then(() => {
+                    // SimpleMDE 的 bug, 只有 display 时修改值, 才会修改 dom 中渲染的值
+                    this.dialog.form.instance_tutorial = row.instance_tutorial
+                })
+            },
+            getProviderChoices: function () {
+                return Object.keys(this.providerChoices).map(key => {
+                    const that = this
+                    return {
+                        id: key,
+                        name: this.providerChoices[key],
+                    }
+                })
+            },
+            // 规格管理
+            createSpecification: function () {
+                this.specificationDialog.visible = true
+                this.specificationDialog.type = 'create'
+
+                this.specificationDialog.form = {}
+            },
+            delSpecification: function (spec) {
+                this.specificationDialog.visible = true
+                this.specificationDialog.type = 'delete'
+
+                this.specificationDialog.form = spec
+            },
+            handleSpecDialog: function () {
+                switch (this.specificationDialog.type) {
+                    case "create":
+                        this.addSpecificationToService(this.specificationDialog.form)
+                        this.specificationDialog.form = {}
+                        break
+                    case "delete":
+                        this.removeSpecificationFromService(this.specificationDialog.form)
+                        break
+                }
+            },
+            addSpecificationToService: function (spec) {
+                for (let specification of this.dialog.form.specifications) {
+                        if (specification.name === spec.name) {
+                            return this.$paasMessage({
+                            theme: 'error',
+                            message: `字段名为 '${spec.name}' 的规格已定义.`
+                        })
+                    }
+                }
+                this.dialog.form.specifications.push({...{recommended_value: ''}, ...spec, })
+            },
+            removeSpecificationFromService: function (spec) {
+                let target = -1
+                for (let idx in this.dialog.form.specifications) {
+                    let specification = this.dialog.form.specifications[idx]
+                    if (specification.name === spec.name) {
+                        target = idx
+                        break
+                    }
+                }
+                if (target !== -1) {
+                    this.dialog.form.specifications.splice(target, 1)
+                }
+            }
+        },
+        filters: {
+            category2zh (category_id) {
+                let category = categoryList.find(item=>item.value === category_id)
+                if (category === undefined) {
+                    return "unknown"
+                } else {
+                    return category.text
+                }
+            }
+        }
+    })
+})
+
+</script>
+
+{% endblock %}

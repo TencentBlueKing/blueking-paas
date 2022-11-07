@@ -1,0 +1,372 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-source-type-spec-list" style="width: 100%;" class="p20">
+    <bk-alert type="warning" title="新增/编辑/删除代码库配置, 需要重启所有 apiserver 进程才能生效" style="margin-bottom: 15px;"></bk-alert>
+    <bk-button theme="primary" class="mr10" @click="handleCreate">
+        创建代码库配置
+    </bk-button>
+    <bk-table :data="data" style="margin-top: 20px;">
+        <bk-table-column label="服务名称（例如 github）" prop="name"></bk-table-column>
+        <bk-table-column label="标签（中）" prop="label_zh_cn"></bk-table-column>
+        <bk-table-column label="标签（英）" prop="label_en"></bk-table-column>
+        <bk-table-column label="是否默认开放">
+            <template slot-scope="props">
+                <span v-if="props.row.enabled">✅</span>
+                <span v-else>❌</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="配置类路径">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.spec_cls">
+                    $[ props.row.spec_cls ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="服务配置" prop="server_config" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.server_config" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="展示信息（中）" prop="display_info_zh_cn" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.display_info_zh_cn" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="展示信息（英）" prop="display_info_en" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.display_info_en" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="OAuth 授权链接">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.authorization_base_url">
+                    $[ props.row.authorization_base_url ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="ClientID">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.client_id">
+                    $[ props.row.client_id ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="ClientSecret">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.client_secret">
+                    $[ props.row.client_secret ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="回调地址">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.redirect_uri">
+                    $[ props.row.redirect_uri ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="获取 Token 链接">
+            <template slot-scope="props">
+                <span v-bk-tooltips="props.row.token_base_url">
+                    $[ props.row.token_base_url ]
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="OAuth 展示信息（中）" prop="oauth_display_info_zh_cn" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.oauth_display_info_zh_cn" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="OAuth 展示信息（英）" prop="oauth_display_info_en" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.oauth_display_info_en" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="100">
+            <template slot-scope="props">
+                <bk-button theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button theme="primary" text @click="handleDelete(props.row)" style="color: rgb(234,54,54);">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]代码库配置
+        </div>
+        <div style="text-align: right; padding: 10px 0">
+            <span v-bk-tooltips="'填充默认配置后，需要手动填写 OAuth ClientID & ClientSecret !'" class="top-start">
+                <bk-button theme="primary" text v-if="dialog.type === 'create'" @click="fillDefaultConf('github')">填充 Github 默认配置 ｜</bk-button>
+                <bk-button theme="primary" text v-if="dialog.type === 'create'" @click="fillDefaultConf('gitee')">填充 Gitee 默认配置</bk-button>
+            </span>
+        </div>
+        <bk-form :label-width="175" :model="dialog.form" :rules="rules">
+            <bk-form-item label="服务名称" :property="name" :required="true" :desc="dialog.type !== 'create'?'创建后不可变更':''">
+                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="标签（中）" :required="true">
+                <bk-input v-model="dialog.form.label_zh_cn"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="标签（英）" :required="true">
+                <bk-input v-model="dialog.form.label_en"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="是否默认开放" :desc="'设置为 False 后，用户将无法创建关联该源码类型仓库的新应用，可以通过 FeatureFlag 对某一用户单独开启'">
+                <bk-switcher v-model="dialog.form.enabled"></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="配置类" :required="true">
+                <bk-select v-model="dialog.form.spec_cls" searchable>
+                   <bk-option v-for="choice in getSpecClsChoices()"
+                        :key="choice.id"
+                        :id="choice.id"
+                        :name="choice.name">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="服务配置">
+                <json-editor v-model="dialog.form.server_config"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="展示信息（中）" :desc="'若填写该项则必须包含字段：name，description'">
+                <json-editor v-model="dialog.form.display_info_zh_cn"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="展示信息（英）" :desc="'若填写该项则必须包含字段：name，description'">
+                <json-editor v-model="dialog.form.display_info_en"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="OAuth 授权链接">
+                <bk-input v-model="dialog.form.authorization_base_url"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="ClientID">
+                <bk-input v-model="dialog.form.client_id"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="ClientSecret">
+                <bk-input v-model="dialog.form.client_secret"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="回调地址">
+                <bk-input v-model="dialog.form.redirect_uri"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="获取 Token 链接">
+                <bk-input v-model="dialog.form.token_base_url"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="OAuth 展示信息（中）" :desc="'可用字段：icon，display_name，address，description，auth_docs'">
+                <json-editor v-model="dialog.form.oauth_display_info_zh_cn"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="OAuth 展示信息（英）" :desc="'可用字段：icon，display_name，address，description，auth_docs'">
+                <json-editor v-model="dialog.form.oauth_display_info_en" ></json-editor>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+const bkDocsUrlPrefix = "{{ bk_docs_url_prefix }}"
+const bkPaaSUrl = "{{ bk_paas_url }}"
+const specClsChoices = {{ spec_cls_choices | to_json }}
+
+const URLRouter = {
+    create: decodeURI("{% url 'admin.sourcectl.source_type_spec' %}"),
+    list: decodeURI("{% url 'admin.sourcectl.source_type_spec' %}"),
+    detail: decodeURI("{% url 'admin.sourcectl.source_type_spec.detail' '${id}' %}"),
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Vue({
+        el: "#platform-source-type-spec-list",
+        delimiters: ['$[', ']'],
+        mixins: [SubmitMixin],
+        data: function () {
+            return {
+                data: [],
+                dialog: {
+                    fullscreen: false,
+                    form: {
+                        name: '',
+                        label_zh_cn: '',
+                        label_en: '',
+                        enabled: true,
+                        spec_cls: '',
+                        server_config: {},
+                        display_info_zh_cn: {},
+                        display_info_en: {},
+                        authorization_base_url: '',
+                        client_id: '',
+                        client_secret: '',
+                        redirect_uri: '',
+                        token_base_url: '',
+                        oauth_display_info_zh_cn: {},
+                        oauth_display_info_en: {}
+                    },
+                    row: undefined
+                },
+                rules: {
+                    name: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                        {
+                            max: 32,
+                            message: '不能多于32个字符',
+                            trigger: 'blur'
+                        },
+                       {
+                            validator: function (val) {
+                                let regex = new RegExp("^[a-zA-Z0-9-_]{1,128}$","");
+                                return val.match(regex) !== null
+                            },
+                            message: '只能由字符 [a-zA-Z0-9-_] 组成',
+                            trigger: 'blur'
+                        }
+                    ],
+                    label_zh_cn: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    label_en: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                    spec_cls: [
+                        {
+                            required: true,
+                            message: '必填项',
+                            trigger: 'blur'
+                        },
+                    ],
+                }
+            }
+        },
+        mounted: function () {
+            this.fetchSourceTypeSpecList()
+        },
+        methods: {
+            fillUrlTemplate: function (url_template, {row}) {
+                if (!row)
+                    row = {}
+                return url_template.replace("${id}", row.id)
+            },
+            cancelDialog: function () {},
+            processData: function (data) {
+                return new Promise(resolve => {
+                  resolve(data)
+                }
+              )
+            },
+            fetchSourceTypeSpecList: async function () {
+                const el = this.$bkLoading({title: '加载中'})
+                try {
+                    await this.$http.get(URLRouter['list']).then(res => {
+                        this.data = res.results
+                    })
+                } finally {
+                    el.hide = true
+                }
+            },
+            submitCallback: function () {
+                return this.fetchSourceTypeSpecList()
+            },
+            handleCreate: function () {
+                this.dialog.type = "create"
+                this.dialog.row = undefined
+
+                this.dialog.form.id = undefined
+                this.dialog.form.name = ''
+                this.dialog.form.label_zh_cn = ''
+                this.dialog.form.label_en = ''
+                this.dialog.form.enabled = true
+                this.dialog.form.spec_cls = ''
+                this.dialog.form.server_config = {}
+                this.dialog.form.display_info_zh_cn = {}
+                this.dialog.form.display_info_en = {}
+                this.dialog.form.authorization_base_url = undefined
+                this.dialog.form.client_id = undefined
+                this.dialog.form.client_secret = undefined
+                this.dialog.form.redirect_uri = undefined
+                this.dialog.form.token_base_url = undefined
+                this.dialog.form.oauth_display_info_zh_cn = {}
+                this.dialog.form.oauth_display_info_en = {}
+                this.dialog.visible = true
+            },
+            handleEdit: function (row){
+                this.dialog.type = "edit"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            handleDelete: function (row) {
+                this.dialog.type = "delete"
+                this.dialog.row = row
+
+                this.dialog.form = {...row}
+                this.dialog.visible = true
+            },
+            fillDefaultConf: function (kind) {
+                // 仅创建时候可用，支持填充 Github，Gitee 默认配置
+                if (this.dialog.type !== "create") {
+                    return
+                }
+                if (kind === "github") {
+                    this.dialog.form.name = "github"
+                    this.dialog.form.label_zh_cn = "Github"
+                    this.dialog.form.label_en = "Github"
+                    this.dialog.form.spec_cls = "paasng.dev_resources.sourcectl.type_specs.GitHubSourceTypeSpec"
+                    this.dialog.form.server_config = {"api_url":"https://api.github.com/"}
+                    this.dialog.form.display_info_zh_cn = {"name":"Github", "description":"开源社区"}
+                    this.dialog.form.display_info_en = {"name":"Github", "description":"OpenSource Community"}
+                    this.dialog.form.authorization_base_url = "https://github.com/login/oauth/authorize"
+                    this.dialog.form.client_id = ""
+                    this.dialog.form.client_secret = ""
+                    this.dialog.form.redirect_uri = bkPaaSUrl + "/backend/api/oauth/complete/github"
+                    this.dialog.form.token_base_url = "https://github.com/login/oauth/access_token"
+                    this.dialog.form.oauth_display_info_zh_cn = {
+                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS3.0/topics/paas/github_oauth"
+                    }
+                    this.dialog.form.oauth_display_info_en = {
+                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS3.0/topics/paas/github_oauth"
+                    }
+                } else if (kind === "gitee") {
+                    this.dialog.form.name = "gitee"
+                    this.dialog.form.label_zh_cn = "Gitee"
+                    this.dialog.form.label_en = "Gitee"
+                    this.dialog.form.spec_cls = "paasng.dev_resources.sourcectl.type_specs.GiteeSourceTypeSpec"
+                    this.dialog.form.server_config = {"api_url":"https://gitee.com/api/v5/"}
+                    this.dialog.form.display_info_zh_cn = {"name":"Gitee", "description":"开源社区"}
+                    this.dialog.form.display_info_en = {"name":"Gitee", "description":"OpenSource Community"}
+                    this.dialog.form.authorization_base_url = "https://gitee.com/oauth/authorize"
+                    this.dialog.form.client_id = ""
+                    this.dialog.form.client_secret = ""
+                    this.dialog.form.redirect_uri = bkPaaSUrl + "/backend/api/oauth/complete/gitee"
+                    this.dialog.form.token_base_url = "https://gitee.com/oauth/token"
+                    this.dialog.form.oauth_display_info_zh_cn = {
+                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS3.0/topics/paas/gitee_oauth"
+                    }
+                    this.dialog.form.oauth_display_info_en = {
+                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS3.0/topics/paas/gitee_oauth"
+                    }
+                }
+            },
+            getSpecClsChoices: function () {
+                return Object.keys(specClsChoices).map(key => {
+                    return {
+                        id: key,
+                        name: specClsChoices[key],
+                    }
+                })
+            },
+        },
+    })
+})
+
+</script>
+{% endblock %}

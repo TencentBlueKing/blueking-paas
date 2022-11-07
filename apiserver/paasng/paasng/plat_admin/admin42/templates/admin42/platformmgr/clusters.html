@@ -1,0 +1,428 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+{% block main_content %}
+<div id="platform-clusters-list" style="width: 100%;" class="p20">
+    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效"></bk-alert>
+    <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
+        创建集群
+    </bk-button>
+    <bk-table :data="data" :cell-class-name="cellStyleCallback" style="margin-top: 20px;">
+        <bk-table-column type="expand" width="30">
+            <template slot-scope="props">
+                <bk-table :data="props.row.api_servers" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
+                    <bk-table-column type="index" label="序列" width="60"></bk-table-column>
+                    <bk-table-column prop="host" label="主机地址"></bk-table-column>
+                    <bk-table-column prop="overridden_hostname" label="DNS覆写域名"></bk-table-column>
+                    <bk-table-column label="操作">
+                        <template slot-scope="subProps">
+                            <a class="bk-text-button mr10" style="color: red;" href="javascript:void(0);" @click="unbindApiServer(props.row, subProps.row)">删除</a>
+                        </template>
+                    </bk-table-column>
+                    <div slot="empty">/*隐藏 empty block*/</div>
+                    <div slot="append" style="text-align: center;padding: 10px 0;" class="bk-table-append-block" @click="upsertApiServer(props.row)">
+                        <div style="display: flex; flex-direction: column;">
+                            <i class="bk-icon icon-plus-circle" style="font-size: 16px"></i>
+                            <span>添加 APIServer</span>
+                        </div>
+                    </div>
+                </bk-table>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="集群名称" prop="name"></bk-table-column>
+        <bk-table-column label="所属区域" prop="region"></bk-table-column>
+        <bk-table-column label="默认集群" prop="is_default">
+            <template slot-scope="props">
+                <span v-if="props.row.is_default">是</span>
+                <span v-else>否</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="集群信息" prop="description"></bk-table-column>
+        <bk-table-column label="接入层配置" prop="ingress_config" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.ingress_config" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="注解" prop="annotations" width="300">
+            <template slot-scope="props">
+                <json-pretty :data="props.row.annotations" show-length highlight-mouseover-node :deep="2"></json-pretty>
+            </template>
+        </bk-table-column>
+
+        <bk-table-column label="操作">
+            <template slot-scope="props">
+                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+        <div slot="header">
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]应用集群
+        </div>
+        <bk-form :label-width="120" :model="dialog.form">
+            <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
+                <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
+                    <bk-option v-for="region in regionList"
+                               :key="region.value"
+                               :id="region.value"
+                               :name="region.text">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="集群名称" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
+                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="默认集群" required :desc="dialog.type !== 'create'?'不支持通过编辑切换默认集群':''">
+                <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type !== 'create'"></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="集群信息" required>
+                <bk-input v-model="dialog.form.description" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="子路径根域名" desc="在拼接应用子路径访问地址时遵循以下规则: 'http(s)://{子路径根域名}/{应用子路径}/'">
+                <json-editor v-model="dialog.form.ingress_config.sub_path_domains" :disabled="dialog.type === 'delete'" :schema="DomainSchema"></json-editor>
+                <bk-alert type="info" title="支持填写多个域名，每个域名必须有 3 个属性: 域名(name,str)、开启HTTPS(https_enabled,bool)、保留域名(即不推荐再使用的域名,reserved,bool)。
+                  如：[{&quot;name&quot;: &quot;example.com&quot;, &quot;https_enabled&quot;: false, &quot;reserved&quot;: false}]">
+                </bk-alert>
+            </bk-form-item>
+            <bk-form-item label="子域名根域名" desc="在拼接应用子域名访问地址时遵循以下规则: 'http(s)://{应用子域名}.{子域名根域名}/', 如果不配置该值, 默认与 子路径根域名 一致">
+                <json-editor v-model="dialog.form.ingress_config.app_root_domains" :disabled="dialog.type === 'delete'" :schema="DomainSchema"></json-editor>
+                <bk-alert type="info" title="支持填写多个域名，每个域名必须有 3 个属性: 域名(name,str)、开启HTTPS(https_enabled,bool)、保留域名(即不推荐再使用的域名,reserved,bool)。
+                  如：[{&quot;name&quot;: &quot;example.com&quot;, &quot;https_enabled&quot;: false, &quot;reserved&quot;: false}]">
+                </bk-alert>
+            </bk-form-item>
+            <bk-form-item label="集群出口IP" required desc="用于指引用户配置独立域名的解析, 如果集群使用云厂商的 clb 做流量控制, 那么这里应当填对应的 vip">
+                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="注解" required>
+                <json-editor v-model="dialog.form.annotations" :disabled="dialog.type === 'delete'"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="数字证书认证机构（cert-authority）">
+                <bk-input
+                          placeholder="请输入 Base64 编码后的证书"
+                          :type="'textarea'"
+                          :rows="3"
+                          v-model="dialog.form.ca_data">
+                </bk-input>
+            </bk-form-item>
+            <div style="line-height: 28px; margin: 14px 0;">客户端证书秘钥与集群 Token 选择一项填写即可</div>
+            <bk-form-item label="客户端证书（client-cert）">
+                <bk-input
+                          placeholder="请输入 Base64 编码后的证书"
+                          :type="'textarea'"
+                          :rows="3"
+                          v-model="dialog.form.cert_data">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="客户端密钥（client-key）">
+                <bk-input
+                          placeholder="请输入 Base64 编码后的证书"
+                          :type="'textarea'"
+                          :rows="3"
+                          v-model="dialog.form.key_data">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="集群 Token" :required="false">
+                <bk-input
+                          placeholder="请输入可通过集群校验的 Token"
+                          :type="'textarea'"
+                          :rows="2"
+                          v-model="dialog.form.token_value">
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="端口配置">
+                <bk-alert type="info" title="用于生成应用访问地址，当应用网关（BkIngressController）通过非标准端口号暴露时，修改本设置。"></bk-alert>
+
+                <bk-input
+                    placeholder="使用 http 协议访问 SaaS 时, 使用的端口号"
+                    type="number"
+                    v-model="dialog.form.ingress_config.port_map.http">
+                    <template slot="prepend">
+                        <div class="group-text">HTTP</div>
+                    </template>
+                </bk-input>
+
+                <bk-input
+                    placeholder="使用 https 协议访问 SaaS 时, 使用的端口号"
+                    type="number"
+                    v-model="dialog.form.ingress_config.port_map.https">
+                    <template slot="prepend">
+                        <div class="group-text">HTTPS</div>
+                    </template>
+                </bk-input>
+            </bk-form-item>
+            <div style="line-height: 28px; margin: 14px 0;">
+                以下参数为集群与应用相关的默认参数，可控制应用调度策略等。修改这些值后，需重新部署应用方能生效。
+            </div>
+            <bk-form-item label="默认 nodeSelector" :required="false">
+                <json-editor v-model="dialog.form.default_node_selector" :disabled="dialog.type === 'delete'" nullable></json-editor>
+                <bk-alert type="info" title="限制应用的构建、运行均使用此 nodeSelector 来筛选节点。
+                  格式：包含键值对的 JSON 对象，如：{&quot;key&quot;: &quot;value&quot;}"></bk-alert>
+            </bk-form-item>
+            <bk-form-item label="默认 tolerations" :required="false">
+                <json-editor v-model="dialog.form.default_tolerations" :disabled="dialog.type === 'delete'" nullable></json-editor>
+                <bk-alert type="info" title="让应用的构建、运行使用此 tolerations 来容忍节点的“污点（taints）”。
+                  格式：元素为 toleration 对象的 JSON 列表，如：[{&quot;key&quot;: &quot;app&quot;, &quot;operator&quot;: &quot;Equal&quot;, &quot;value&quot;: &quot;value1&quot;, &quot;effect&quot;: &quot;NoSchedule&quot;}]"></bk-alert>
+            </bk-form-item>
+            <bk-form-item label="默认 Ingress 域名模板（保留选项）" desc="保留高级选项，默认留空即可">
+                <bk-input placeholder="保留高级选项，默认留空即可" v-model="dialog.form.ingress_config.default_ingress_domain_tmpl" :disabled="dialog.type === 'delete'"></bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <bk-dialog v-model="subDialog.visible" width="800"
+               theme="primary"
+               :mask-close="false"
+               @confirm="submitSubDialog"
+               :title="subDialog.title">
+        <bk-form>
+            <bk-form-item label="主机地址" required>
+                <bk-input type="url" placeholder="主机地址, 形如 scheme://host:port, 例如 https://127.0.0.1:6443" v-model="subDialog.form.host"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="DNS覆写域名">
+                <bk-input placeholder="DNS覆写域名, 不需要则留空" v-model="subDialog.form.overridden_hostname"></bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+</div>
+
+{% endblock %}
+
+
+{% block main_script %}
+<script>
+    /* beautify preserve:start */
+    const regionList = {{ region_list | to_json }}
+    /* beautify preserve:end */
+    const DomainSchema = {
+        type: "array",
+        items: {
+            type: "object",
+            properties: {
+                name: { type: "string"},
+                reserved: { type: "boolean"},
+                https_enabled: { type: "boolean"}
+            },
+            required: ["name", "reserved", "https_enabled"],
+        },
+        uniqueItems: true
+    }
+
+    const URLRouter = {
+        create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
+        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
+        detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/' %}"),
+        apiServer: {
+            upsert: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers' %}"),
+            delete: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers/${api_server_id}' %}"),
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#platform-clusters-list",
+            delimiters: ['$[', ']'],
+            mixins: [SubmitMixin],
+            data: function() {
+                return {
+                    data: [],
+                    regionList: regionList,
+                    dialog: {
+                        fullscreen: false,
+                        form: {
+                            uuid: '',
+                            region: '',
+                            name: '',
+                            is_default: false,
+                            description: '',
+                            ingress_config: {
+                                port_map: {
+
+                                },
+                                sub_path_domains: [],
+                                app_root_domains: [],
+                                default_ingress_domain_tmpl: ''
+                            },
+                            annotations: {},
+                            ca_data: undefined,
+                            cert_data: undefined,
+                            key_data: undefined,
+                            token_value: undefined,
+                            default_node_selector: {},
+                            default_tolerations: [],
+                        },
+                        row: undefined
+                    },
+                    subDialog: {
+                        visible: false,
+                        title: '',
+                        parent: {
+                            name: '',
+                            uuid: '',
+                        },
+                        form: {
+                            cluster_id: '',
+                            host: '',
+                            overridden_hostname: '',
+                            uuid: ''
+                        }
+                    },
+                    advancedFilterShow: false
+                }
+            },
+            mounted: function () {
+                this.fetchClusterList()
+            },
+            methods: {
+                fillUrlTemplate: function(url_template, { row }) {
+                    if (!row)
+                        row = {}
+                    return url_template.replace("${cluster_id}", row.uuid)
+                },
+                cancelDialog: function() {
+
+                },
+                processData: function(data) {
+                    return new Promise(resolve => {
+                        resolve(data)
+                    })
+                },
+                fetchClusterList: async function () {
+                    const el = this.$bkLoading({title: '加载中'})
+                    try {
+                        await this.$http.get(URLRouter['list']).then(res => {
+                            this.data = res
+                        })
+                    } finally {
+                        el.hide = true
+                    }
+                },
+                submitCallback: function() {
+                    this.fetchClusterList()
+                },
+                handleCreate: function() {
+                    this.dialog.type = "create"
+                    this.dialog.row = undefined
+
+                    this.dialog.form.uuid = undefined
+                    this.dialog.form.region = this.regionList[0].value
+                    this.dialog.form.name = undefined
+                    this.dialog.form.is_default = false
+                    this.dialog.form.description = undefined
+                    this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}
+                    this.dialog.form.annotations = {}
+                    this.dialog.form.ca_data = undefined
+                    this.dialog.form.cert_data = undefined
+                    this.dialog.form.key_data = undefined
+                    this.dialog.form.token_value = undefined
+                    this.dialog.form.default_node_selector = {}
+                    this.dialog.form.default_tolerations = []
+                    this.dialog.visible = true
+                },
+                handleEdit: function(row) {
+                    this.dialog.type = "edit"
+                    this.dialog.row = row
+
+                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
+                    this.dialog.visible = true
+                },
+                handleDelete: function(row) {
+                    this.dialog.type = "delete"
+                    this.dialog.row = row
+
+                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
+                    this.dialog.visible = true
+                },
+                cellStyleCallback: function({ row, column, rowIndex, columnIndex }) {
+                    if (column.label === "接入层配置" || column.label === '注解')
+                        return 'json-view'
+                },
+                // 子表单
+                submitSubDialog: function() {
+                    let url_template = this.subDialog.type === "upsert" ? URLRouter['apiServer']['upsert'] : URLRouter['apiServer']['delete']
+                    let form = this.subDialog.form
+                    let url = url_template.replace("${cluster_id}", this.subDialog.parent.uuid)
+                    let method = this.$http.get
+                    switch (this.subDialog.type) {
+                        case "upsert":
+                            method = this.$http.post
+                            break
+                        case "delete":
+                            method = this.$http.delete
+                            url = url.replace("${api_server_id}", form.uuid)
+                            break
+                    }
+
+                    const el = this.$bkLoading({
+                        title: '处理中'
+                    })
+                    method(url, form).then(res => {
+                        this.$paasMessage({
+                            message: '处理完毕'
+                        })
+                        this.submitCallback()
+                    }, res => {
+                        if (res.response.status === 400) {
+                            this.$paasMessage({
+                                theme: 'error',
+                                message: res.detail
+                            })
+                        } else if (res.response.status === 404) {
+                            this.$paasMessage({
+                                theme: 'error',
+                                message: '资源不存在或登录态已失效'
+                            })
+                        } else {
+                            this.$paasMessage({
+                                theme: 'error',
+                                message: `程序异常, 状态码: ${res.response.status}`
+                            })
+                            console.error(res)
+                        }
+                    }).finally(() => {el.hide = true})
+                },
+                upsertApiServer: function(cluster, api_server) {
+                    let isUpdate = api_server !== undefined ? true : false
+                    this.subDialog.title = isUpdate ? `变更 ${cluster.name} 集群的 APIServer` : `为 ${cluster.name} 集群添加 APIServer`
+                    this.subDialog.parent = cluster
+                    this.subDialog.type = 'upsert'
+                    this.subDialog.form = {
+                        cluster_id: cluster.uuid,
+                        host: isUpdate ? api_server.host : '',
+                        overridden_hostname: isUpdate ? api_server.overridden_hostname : '',
+                        uuid: isUpdate ? api_server.uuid : '',
+                    }
+                    this.subDialog.visible = true
+                },
+                unbindApiServer: function(cluster, api_server) {
+                    this.subDialog.title = `移除 ${cluster.name} 集群中的 APIServer`
+                    this.subDialog.parent = cluster
+                    this.subDialog.type = 'delete'
+                    this.subDialog.form = {
+                        cluster_id: cluster.uuid,
+                        host: api_server.host,
+                        overridden_hostname: api_server.overridden_hostname,
+                        uuid: api_server.uuid,
+                    }
+                    this.subDialog.visible = true
+                },
+                handleRequestError: function (res) {
+                    console.error(res)
+                }
+            },
+        })
+    })
+</script>
+
+<style>
+    .bk-table-empty-block {
+        display: none;
+    }
+    .bk-table-append-block {
+        margin-bottom: 10px;
+    }
+    .bk-table-append-block:hover {
+        cursor: pointer;
+        background-color: #f0f1f5;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,280 @@
+{% extends "./base.html" %}
+
+{% load admin_utils %}
+
+{% block main_content %}
+<div id="app-memberships-wrapper">
+    <bk-dialog v-model="form.visible" theme="primary" width="720" :ok-text="'添加用户'" :confirm-fn="bulkCreate">
+        <bk-form>
+            <bk-form-item label="用户名">
+                <user-selector style="min-width: 400px;" v-model="form.usernameList" v-if="form.provider_type === '2' || form.provider_type === '3'"></user-selector>
+                <bk-tag-input style="min-width: 400px;"  v-model="form.usernameList" allow-create v-else></bk-tag-input>
+            </bk-form-item>
+            <bk-form-item label="角色">
+                <bk-select v-model="form.role" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" searchable>
+                    <bk-option v-for="(value, key) in SITE_ROLE"
+                        :key="key"
+                        :id="key"
+                        :name="value">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="用户类型">
+                <bk-select v-model="form.provider_type" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" searchable>
+                    <bk-option v-for="(value, key) in PROVIDER_TYPE"
+                        :key="key"
+                        :id="key"
+                        :name="value">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="已开启的 region" ext-cls="select-custom" ext-popover-cls="select-popover-custom" >
+                <bk-select multiple display-tag v-model="form.enable_regions">
+                    <bk-option v-for="region in allRegionList"
+                        :key="region"
+                        :id="region"
+                        :name="region">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <div class="toolbar">
+        <bk-button theme="default" title="添加用户" icon="plus" class="mr10" @click="form.visible = true">添加用户</bk-button>
+        <div class="toolbar">
+            <bk-checkbox v-model="hideRegularUsers" @change="fetchData">隐藏所有普通用户</bk-checkbox>
+            <div class="paas-search">
+                <bk-input
+                    placeholder="输入用户名，按Enter搜索"
+                    :clearable="true"
+                    :right-icon="'bk-icon icon-search'"
+                    v-model="filterKey"
+                    @enter="fetchData">
+                </bk-input>
+            </div>
+        </div>
+    </div>
+    <bk-table style="margin-top: 15px;"
+        :data="userProfileList">
+        <bk-table-column label="用户类型" prop="user.provider_type" width="100">
+            <template slot-scope="props">
+                <span>$[ getTypeName(props.row.user.provider_type) ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="用户名" prop="user.username">
+            <template slot-scope="props">
+                <span>$[ props.row.user.username ]</span>
+                <span v-bk-tooltips="{content: 'private_token: ' + props.row.user.private_token, placements: ['right']}" v-if="props.row.user.private_token">
+                    <i class="bk-icon icon-info-circle-shape"></i>
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="角色">
+            <template slot-scope="props">
+                <bk-select v-model="props.row.role" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom" @selected="handleChange(props.row)">
+                    <bk-option v-for="(value, key) in SITE_ROLE"
+                        :key="key"
+                        :id="key"
+                        :name="value">
+                    </bk-option>
+                </bk-select>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="已开启的 region">
+            <template slot-scope="props">
+                <bk-select multiple display-tag v-model="props.row.enable_regions" @selected="handleChange(props.row)">
+                    <bk-option v-for="region in allRegionList"
+                        :key="region"
+                        :id="region"
+                        :name="region">
+                    </bk-option>
+                </bk-select>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="状态">
+            <template slot-scope="props">
+                <button v-if="props.row.role === 5 || props.row.banned" class="btn btn-link" @click="handleSwitcher(props.row)">
+                    <span>恢复访问</span>
+                </button>
+                <button v-else class="btn btn-link" @click="handleSwitcher(props.row)">
+                    <span style="color: red;">禁止访问</span>
+                </button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+    <pagination
+        class="mt15"
+        :current.sync="pagination.curPage"
+        :limit="pagination.limit"
+        :count="pagination.count"
+        :align="'right'"
+    />
+</div>
+{% endblock %}
+
+{% block main_script %}
+<script type="text/javascript" charset="utf-8">
+    var URLRouter = {
+        list: "{% url 'admin.accountmgr.userprofile.api' %}",
+        bulk_create: "{% url 'admin.accountmgr.userprofile.api' %}",
+        update: "{% url 'admin.accountmgr.userprofile.api' %}",
+        destroy: "{% url 'admin.accountmgr.userprofile.api' %}",
+    }
+
+    const SITE_ROLE = {{ SITE_ROLE | to_json }}
+
+    const PROVIDER_TYPE = {{ PROVIDER_TYPE | to_json }}
+
+    const ALL_REGIONS = {{ ALL_REGIONS | to_json }}
+
+    const userProfileList = {{ user_profile_list | to_json }}
+
+    const pagination = {{ pagination | to_json }}
+
+    const getRoleName = function (value) {
+        for(key of Object.keys(SITE_ROLE)){
+            if(key === String(value)){
+                return SITE_ROLE[key]
+            }
+        }
+        return undefined
+    }
+
+    const getTypeName = function (value) {
+        for(key of Object.keys(PROVIDER_TYPE)){
+            if(key === String(value)){
+                return PROVIDER_TYPE[key]
+            }
+        }
+        return undefined
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#app-memberships-wrapper",
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    loading: false,
+                    loaded: false,
+                    hideRegularUsers: true,
+                    filterKey: '',
+                    form: {
+                        usernameList: undefined,
+                        role: 2,
+                        provider_type: '2',
+                        visible: false,
+                    },
+                    userProfileList: userProfileList,
+                    SITE_ROLE,
+                    PROVIDER_TYPE,
+                    pagination,
+                    allRegionList: ALL_REGIONS,
+                }
+            },
+            methods: {
+                fetchData: function () {
+                    if (this.loading) {
+                        // 報錯
+                        return
+                    }
+                    this.loading = true
+                    this.loaded = false
+                    this.$http.get(URLRouter.list, {
+                        params: {
+                            hide_regular_users: this.hideRegularUsers,
+                            limit: this.pagination.limit,
+                            offset: (this.pagination.curPage - 1) * this.pagination.limit,
+                            filter_key: this.filterKey,
+                        }
+                    }).then(resp => {
+                        this.userProfileList = resp
+                        this.$bkMessage({message: "数据刷新成功", limit: 1})
+                        this.loaded = true
+                    }).finally(err => {
+                        this.loading = false
+                    })
+                },
+                handleSwitcher: function (row) {
+                    if (row.role === 5 || row.banned) {
+                        if (row.user.provider_type === 9) {
+                            row.role = 50
+                        } else {
+                            row.role = 2
+                        }
+                        this.handleChange(row)
+                    } else {
+                        // 禁止用户访问
+                       this.$http.delete(URLRouter.destroy,
+                            {
+                                params: {
+                                    username: row.user.username,
+                                    provider_type: row.user.provider_type,
+                                }
+                            }
+                        ).then(() => {
+                            this.fetchData()
+                        })
+                    }
+                },
+                bulkCreate: function () {
+                    if (this.form.enable_regions.length === 0) {
+                        this.$bkMessage({message: "至少设置 1 个 region", limit: 1, theme: 'error'})
+                        return
+                    }
+                    this.$http.post(URLRouter.bulk_create,
+                        {
+                            username_list: this.form.usernameList,
+                            provider_type: this.form.provider_type,
+                            role: this.form.role,
+                            enable_regions: this.form.enable_regions,
+                        }
+                    ).then(() => {
+                        this.fetchData()
+                    })
+                },
+                handleChange: function (row) {
+                    if (row.role === "") {
+                        row.banned = true
+                        return
+                    }
+                    if (row.enable_regions.length === 0) {
+                        this.$bkMessage({message: "至少设置 1 个 region", limit: 1, theme: 'error'})
+                        return
+                    }
+                    this.$http.put(URLRouter.update, {
+                        username: row.user.username,
+                        provider_type: row.user.provider_type,
+                        role: row.role,
+                        enable_regions: row.enable_regions,
+                    }).then(() => {
+                        this.fetchData()
+                    })
+                },
+                getRoleName,
+                getTypeName,
+                searchUser: function () {
+
+                }
+            }
+        })
+    })
+</script>
+<style>
+    .toolbar{
+        justify-content: space-between;
+        display: flex;
+        align-items:center;
+    }
+    .paas-search {
+        width: 400px;
+        margin-left: 15px;
+    }
+    .avatar{
+        width: 36px;
+        height: 36px;
+        border: 1px solid #efefef;
+    }
+</style>
+{% endblock %}

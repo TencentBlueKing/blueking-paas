@@ -1,0 +1,187 @@
+- model: accounts.userprofile
+  fields: {region: '', created: !!timestamp '2021-02-23 09:52:25.673235+00:00', updated: !!timestamp '2021-02-23
+      12:36:58.096001+00:00', user: 0335cce79c92, role: 4, feature_flags: null, enable_regions: default}
+# Database user and privatetoken for apigw service
+# LEGACY: replaced with "authenticated app as user"
+- model: accounts.userprofile
+  fields:
+    region: ''
+    created: 2021-04-21 03:53:10.928623+00:00
+    updated: 2021-04-21 03:53:10.928675+00:00
+    # user: apigw
+    user: 0935d8e3928b
+    role: 50
+    feature_flags: null
+    enable_regions: default
+- model: accounts.user
+  fields:
+    password: ''
+    last_login: null
+    username: apigw
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: false
+    is_active: true
+- model: accounts.userprivatetoken
+  fields:
+    user:
+    - apigw
+    token: ${BK_PAAS3_PRIVATE_TOKEN_FOR_APIGW}
+    expires_at: null
+    is_active: true
+
+# Database user setup for app_code: bk_apigateway, based on "authenticated app as user"
+- model: accounts.userprofile
+  fields:
+    region: ''
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+    # user: authed-app-bk_apigateway
+    user: 0935ddfe9d994fd3a1dbee9bf0f734a4b8230d077e54835fda
+    # role: system_api_basic_read
+    role: 50
+    feature_flags: null
+    enable_regions: default
+- model: accounts.user
+  fields:
+    password: ''
+    last_login: null
+    username: authed-app-bk_apigateway
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: false
+    is_active: true
+- model: accounts.authenticatedappasuser
+  fields:
+    user:
+    - authed-app-bk_apigateway
+    bk_app_code: bk_apigateway
+    is_active: true
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+
+# Database user setup for app_code: bk_sops, based on "authenticated app as user"
+- model: accounts.userprofile
+  fields:
+    region: ''
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+    # user: authed-app-bk_sops
+    user: 0935ddfe9d994fd3a1dbee9bf0f734b6a73a19
+    # role: SYSTEM_API_LIGHT_APP_MAINTAIN
+    role: 70
+    feature_flags: null
+    enable_regions: default
+- model: accounts.user
+  fields:
+    password: ''
+    last_login: null
+    username: authed-app-bk_sops
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: false
+    is_active: true
+- model: accounts.authenticatedappasuser
+  fields:
+    user:
+    - authed-app-bk_sops
+    bk_app_code: bk_sops
+    is_active: true
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+
+# Database user setup for app_code: bk_log_search, based on "authenticated app as user"
+- model: accounts.userprofile
+  fields:
+    region: ''
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+    # user: authed-app-bk_log_search
+    user: 0935ddfe9d994fd3a1dbee9bf0f734a9a72d35156f50865dcb
+    # role: system_api_basic_read
+    role: 50
+    feature_flags: null
+    enable_regions: default
+- model: accounts.user
+  fields:
+    password: ''
+    last_login: null
+    username: authed-app-bk_log_search
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: false
+    is_active: true
+- model: accounts.authenticatedappasuser
+  fields:
+    user:
+    - authed-app-bk_log_search
+    bk_app_code: bk_log_search
+    is_active: true
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+
+# Database user setup for app_code: bk_monitorv3, based on "authenticated app as user"
+- model: accounts.userprofile
+  fields:
+    region: ''
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+    # user: authed-app-bk_monitorv3
+    user: 0935ddfe9d994fd3a1dbee9bf0f734a8a72403126543820d
+    # role: system_api_basic_read
+    role: 50
+    feature_flags: null
+    enable_regions: default
+- model: accounts.user
+  fields:
+    password: ''
+    last_login: null
+    username: authed-app-bk_monitorv3
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: false
+    is_active: true
+- model: accounts.authenticatedappasuser
+  fields:
+    user:
+    - authed-app-bk_monitorv3
+    bk_app_code: bk_monitorv3
+    is_active: true
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+
+# Database user setup for app_code: bk_lesscode, based on "authenticated app as user"
+- model: accounts.userprofile
+  fields:
+    region: ''
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00
+    # user: authed-app-bk_lesscode
+    user: 0935ddfe9d994fd3a1dbee9bf0f734a9ad391905655591
+    # role: SYSTEM_API_LESSCODE
+    role: 80
+    feature_flags: null
+    enable_regions: default
+- model: accounts.user
+  fields:
+    password: ''
+    last_login: null
+    username: authed-app-bk_lesscode
+    first_name: ''
+    last_name: ''
+    email: ''
+    is_staff: false
+    is_active: true
+- model: accounts.authenticatedappasuser
+  fields:
+    user:
+    - authed-app-bk_lesscode
+    bk_app_code: bk_lesscode
+    is_active: true
+    created: 2021-09-01 00:00:00+00:00
+    updated: 2021-09-01 00:00:00+00:00

@@ -1,0 +1,4490 @@
+# A Swagger 2.0 (a.k.a. OpenAPI) definition of the PaaS API.
+#
+# This is used for generating API documentation and the types used by the
+# client/server. See api/README.md for more information.
+#
+# Some style notes:
+# - This file is used by ReDoc, which allows GitHub Flavored Markdown in
+#   descriptions.
+# - There is no maximum line length, for ease of editing and pretty diffs.
+# - operationIds are in the format "NounVerb", with a singular noun.
+
+swagger: "2.0"
+schemes:
+  - "http"
+produces:
+  - "application/json"
+  - "text/plain"
+consumes:
+  - "application/json"
+  - "text/plain"
+basePath: "/"
+info:
+  title: "蓝鲸 PaaS 平台 API 文档"
+  version: "1.0"
+  x-logo:
+    url: "http://bk.tencent.com/static/bk-os-v2/images/common/logo.png"
+  description: |
+
+    蓝鲸 PaaS API
+
+    # 安全说明
+    
+    - 用户身份：使用 API 需要先完成登录，登录成功后方可调用。
+    - 跨域保护：所有 API 均需要传递 CSRF Token 方可访问。请在 request 头信息中携带 `X-CSRFToken`，
+      参数值请在 Cookie 中获取，详情参考 [文档](https://docs.djangoproject.com/en/1.11/ref/csrf/#setting-the-token-on-the-ajax-request)
+
+paths:
+  /api/bkapps/applications/:
+    post:
+      summary: "创建新的蓝鲸应用"
+      description: |
+        调用该接口将会创建一个新的蓝鲸应用，同时为其在代码托管服务中初始化项目代码。
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "创建应用参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  code:
+                    description: 应用代号，只能由小写字母和数字以及连接符组成，不能超过 16 个字符 `[a-z0-9-]{1,16}`
+                    required: true
+                    type: string
+                  name:
+                    description: 应用名称，不能超过20个字符
+                    requried: true
+                    type: string
+                  source_init_template:
+                    description: 项目初始化模板，目前支持：`dj18_with_auth`
+                    required: true
+                    type: string
+                  region:
+                    description: 部署区域，比如内部版为`ieod`, 前端可以先用全局变量写死
+                    required: true
+                    type: string
+                  source_control_type:
+                    description: 源码控制 目前支持 `bk_svn`
+                    required: true
+                    type: string
+            example:
+              code: awesome-app
+              name: Awesome App
+              language: Python
+              source_init_template: dj18_with_auth
+              region: ieod
+              source_control_type: bk_svn
+      tags:
+        - Application
+      responses:
+        201:
+          description: 新应用详情
+          schema:
+            type: "object"
+            properties:
+              application:
+                $ref: '#/definitions/Application'
+              repo:
+                $ref: '#/definitions/Repo'
+              source_init_result:
+                type: "object"
+                properties:
+                  code:
+                    description: 仅当项目代码初始化失败时存在，`ALREADY_INITIALIZED` 代表已初始化过
+                    type: string
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/v2/:
+    post:
+      summary: "创建新的蓝鲸应用（v2）"
+      description: |
+        调用该接口将会创建一个新的蓝鲸应用，并支持用户选择是否开启应用引擎、蓝鲸市场等功能。
+
+        - `type` 参数非必选，但当其值为 `engineless_app` 时，`engine_enabled` 值必须为 false，否则无法通过校验
+
+        注意：其中的“高级选项（advanced_options）”并非通用，需要有特殊权限的用户才能使用。
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "创建应用参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  type:
+                    description: 应用类型，目前支持：`default`（默认）、`engineless_app`（无引擎应用）、`bk_plugin`（蓝鲸插件）
+                    required: false
+                    type: string
+                  region:
+                    description: 部署区域，比如内部版为 `ieod`
+                    required: true
+                    type: string
+                  code:
+                    description: 应用代号，只能由小写字母和数字以及连接符组成，不能超过 16 个字符 `[a-z0-9-]{1,16}`
+                    required: true
+                    type: string
+                  name:
+                    description: 应用名称，不能超过20个字符
+                    required: true
+                    type: string
+                  engine_enabled:
+                    description: 是否开启应用引擎
+                    required: true
+                    type: boolean
+                  engine_params:
+                    type: "object"
+                    description: "应用引擎相关参数"
+                    properties:
+                      source_init_template:
+                        description: 项目初始化模板
+                        required: true
+                        type: string
+                      source_origin:
+                        description: 源码来源，目前支持 `1`（代码仓库，默认选项）、`2`（蓝鲸 LessCode）
+                        required: false
+                        type: int
+                      source_control_type:
+                        description: 源码控制 目前支持 `bk_svn`、`bk_gitlab`、`tc_git`
+                        required: true
+                        type: string
+                      source_repo_url:
+                        description: 源码仓库地址，仅当类型为 git 时需要提供
+                        required: false
+                        type: string
+                  market_params:
+                    type: "object"
+                    description: "蓝鲸市场相关参数"
+                    properties:
+                      source_url_type:
+                        description: 访问地址类型，可选值：1(为开启), 2(与正式部署环境一致), 3(第三方)
+                        required: true
+                        type: int
+                      source_tp_url:
+                        description: 第三方访问地址
+                        required: false
+                        type: url
+                  advanced_options:
+                    type: "object"
+                    description: "高级选项"
+                    required: false
+                    properties:
+                      cluster_name:
+                        description: 集群名称，region 下可用集群请通过 API 查询
+                        required: false
+                        type: string
+      tags:
+        - Application
+      responses:
+        201:
+          description: 新应用详情
+          schema:
+            type: "object"
+            properties:
+              application:
+                $ref: '#/definitions/Application'
+              source_init_result:
+                type: "object"
+                properties:
+                  code:
+                    description: 仅当项目代码初始化失败时存在，`ALREADY_INITIALIZED` 代表已初始化过
+                    type: string
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/lists/detailed:
+    get:
+      summary: "查看用户蓝鲸应用列表（详细）"
+      description: |
+        查看用户的蓝鲸应用列表，将返回比较详细的应用内容。
+      parameters:
+        - name: "limit"
+          in: "query"
+          description: "结果数量"
+          type: number
+        - name: "offset"
+          in: "query"
+          description: "翻页跳过数量"
+          type: number
+        - name: "exclude_collaborated"
+          in: "query"
+          description: "是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的"
+          default: false
+          type: boolean
+        - name: "include_inactive"
+          in: "query"
+          description: "是否包含已下架应用，默认不包含"
+          default: false
+          type: boolean
+        - name: "language"
+          in: "query"
+          description: "APP 编程语言"
+          type: string
+        - name: "search_term"
+          in: "query"
+          description: "搜索关键字"
+          type: string
+        - name: "source_origin"
+          in: "query"
+          required: false
+          description: 源码来源，目前支持 `1`（代码仓库）、`2`（蓝鲸 LessCode）
+          type: int
+        - name: "type"
+          in: "query"
+          required: false
+          description: 按应用类型筛选，目前支持：`default`（默认）、`engineless_app`（无引擎应用）、`bk_plugin`（蓝鲸插件）
+          type: str
+        - name: "order_by"
+          in: "query"
+          description: "排序，可选值：`code`、`created`、`latest_operated_at`，默认为升序，前面加 `-` 后为降序，如 `-created`"
+          type: string
+      tags:
+        - Application
+      responses:
+        200:
+          description: 应用列表，带翻页
+          schema:
+            type: "object"
+            properties:
+              count:
+                type: "number"
+                description: 总数
+              next:
+                type: "string"
+                description: 下一页地址
+              previous:
+                type: "string"
+                description: 上一页地址
+              results:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    application:
+                      type: "object"
+                      $ref: '#/definitions/Application'
+                    product:
+                      type: "object"
+                      $ref: '#/definitions/Product'
+                    marked:
+                      type: "boolean"
+                      descripton: 是否关注
+                      example: true
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/lists/minimal:
+    get:
+      summary: "查看用户蓝鲸应用列表（摘要）"
+      description: |
+        查看用户的蓝鲸应用列表，将返回比较简单的应用内容。
+      tags:
+        - Application
+      responses:
+        200:
+          description: 应用列表
+          schema:
+            type: "object"
+            properties:
+              count:
+                type: "number"
+                description: 总数
+              results:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    application:
+                      type: "object"
+                      $ref: '#/definitions/ApplicationAbstract'
+                    product:
+                      type: "object"
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/{code}/:
+    get:
+      summary: "查看应用详情"
+      description: |
+        查看单个应用的详细信息。
+        
+        - 客户端可通过 `application.web_config` 字段判断是否开启关闭某些功能
+        - 可通过 `product`  字段判断应用关联的 Product 是否存在
+      parameters:
+        - name: "code"
+          in: "url"
+          description: "应用编码"
+          type: string
+      tags:
+        - Application
+      responses:
+        200:
+          description: 获取成功返回
+          schema:
+            type: "object"
+            properties:
+              application:
+                type: "object"
+                $ref: '#/definitions/Application'
+              product:
+                type: "object"
+                $ref: '#/definitions/Product'
+              marked:
+                type: "boolean"
+                descripton: 是否关注
+                example: true
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/{code}/protections/:
+    get:
+      summary: "查看应用的资源保护情况"
+      description: |
+        查看应用资源保护情况。目前的资源类型：
+
+        - BASIC_INFO_MODIFICATIONS：修改基本信息保护，激活后无法修改
+        - SERVICES_MODIFICATIONS：操作增强服务保护，激活后不能手动修改增强服务
+
+        当前某些特殊应用，比如通过 S-mart 配置文件定义的应用，会激活上面的保护。
+      parameters:
+        - name: "code"
+          in: "url"
+          description: "应用编码"
+          type: string
+      tags:
+        - Application
+      responses:
+        200:
+          description: 获取成功返回
+          schema:
+            type: "object"
+            properties:
+              EXAMPLE_PROTECTION:
+                type: "object"
+                description: 具体的保护类型，"EXAMPLE_PROTECTION" 为示例值，真实值为 "BASIC_INFO_MODIFICATIONS" 等
+                properties:
+                  activated:
+                    type: "boolean"
+                    description: 是否激活保护
+                  reason:
+                    type: "string"
+                    description: 保护原因
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/lists/latest/:
+    get:
+      summary: "查看用户最近操作的应用列表"
+      description: |
+        查看最近操作应用列表，默认按照最近操作时间倒序，同一应用只会出现一次。
+      tags:
+        - Application
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: 限制应用个数，默认为 4，最大不超过 10
+        type: integer
+      responses:
+        200:
+          description: 应用列表
+          schema:
+            type: "object"
+            properties:
+              results:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    application:
+                      type: "object"
+                      $ref: '#/definitions/ApplicationAbstract'
+                    operate: 
+                      type: "str"
+                      description: 动作文字描述
+                    represent_info:
+                      type: "object"
+                      description: 用于驱动前端展示的字段
+                      properties:
+                        props:
+                          type: "object"
+                          properties:
+                            display_module:
+                              type: "boolean"
+                              description: 是否应该在操作信息处展示模块名，比如 “[backend] 成功部署生产环境”，为 False 时不展示模块
+                            provide_links:
+                              type: "boolean"
+                              description: 是否应该展示“访问”链接，为 True 时提供 links 对象
+                            provide_actions:
+                              type: "boolean"
+                              description: 是否应该展示模块的动作链接，比如 “部署”、“查看日志”等，链接地址应该以 module_name 值为准
+                        module_name:
+                          type: "str"
+                          description: "操作模块名"
+                        links:
+                          type: "object"
+                          description: "模块在 stag/prod 环境下的访问链接，仅 props.provide_links 为 True 时提供"
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  api/bkapps/applications/creation/options/:
+    get:
+      summary: "查看应用创建的选项"
+      description: |
+        查看创建应用时可用的选项信息。
+
+        - 以 "adv_" 开头的所有内容都属于高级选项，仅当 allow_adv_options 为 true 时才会有值
+        - 【客户端】当allow_adv_options 为 true 时，展示“高级选项”板块（包含选择集群等内容）
+        - 【客户端】当 `bk_plugins_configs[:].allow_creation` 为 false 时，隐藏对应 region 下的“插件应用”选项
+      tags:
+        - Application
+      responses:
+        200:
+          description: 选项内容
+          schema:
+            type: "object"
+            properties:
+              bk_plugins_configs:
+                type: "array"
+                description: "各 region 下有关插件的配置信息"
+                items:
+                  type: "object"
+                  properties:
+                    region:
+                      type: "string"
+                      description: "region 名称"
+                    allow_creation:
+                      type: boolean
+                      description: "是否允许创建插件类型应用"
+              allow_adv_options:
+                type: boolean
+                description: "当前用户是否被允许使用高级选项（advanced_options）"
+              adv_region_clusters:
+                type: "array"
+                description: "各 region 下集群名称信息"
+                items:
+                  type: "object"
+                  properties:
+                    region:
+                      type: "string"
+                      description: "region 名称"
+                    cluster_names:
+                      type: "array"
+                      description: "所有可选的集群名称"
+                      items:
+                        type: string
+                        description: "集群名称"
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+
+  # Process start
+  /api/bkapps/applications/{code}/modules/{module}/envs/{env}/processes/list/:
+    get:
+      summary: "获取应用环境所有进程与实例信息"
+      description: |
+        该接口主要用于获取应用进程与实例信息。建议配置 processes/watch 接口使用。
+
+        ### 响应说明
+
+        响应主要由 3 部分组成：
+
+        #### processes
+
+        - items 里面的信息主要用于展示进程当前副本数状态，可使用  `success` 表示成功副本数
+        - 调用 processes/watch 接口返回的实时更新结构与 items 一致
+        - extra_infos 里面的信息主要用于展示额外信息，如命令等
+        
+        #### instances
+
+        - 返回的进程实例信息，结构与 watch 接口返回一致
+
+        #### process_packages
+
+        - 该字段展示的主要是与进程当前状态无关的配置信息
+        - target_replicas 可用于展示进程的目标副本数
+        
+        ### 常见问题
+
+        #### 如何判断进程当前是否为操作中（繁忙状态）？
+
+        主要根据 process_packages 里面的 target_status 判断：
+
+        - 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 时正常，否则为操作中
+        - 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+      parameters:
+        - name: code
+          required: true
+          in: path
+          description: App Code
+          type: string
+        - name: module_name
+          required: true
+          in: path
+          description: 模块名称
+          type: string
+        - name: environment
+          required: true
+          in: path
+          description: 运行环境
+          type: string
+        - name: only_latest_version
+          required: false
+          in: query
+          description: 是否仅展示最后一个版本的进程
+          type: boolean
+          x-nullable: true
+      tags:
+        - Processes
+      responses:
+        200:
+          description: 获取成功
+          schema:
+            type: "object"
+            properties:
+              processes:
+                type: object
+                description: 进程当前状态
+                properties:
+                  items:
+                    type: array
+                    items: 
+                      $ref: '#/definitions/ProcSpecsObject'
+                  extra_infos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          description: 进程类型
+                        command:
+                          type: string
+                          description: 进程命令
+                        cluster_link:
+                          type: string
+                          description: 进程集群内访问地址
+                  metadata:
+                    type: object
+                    description: 元信息
+                    properties:
+                      resource_version:
+                        type: string
+                        description: 本地资源版本号，可用于 watch 请求的 rv_proc 参数
+              instances:
+                type: object
+                description: 所有实例状态
+                properties:
+                  items:
+                    type: array
+                    items: 
+                      $ref: '#/definitions/ProcInstObject'
+                  metadata:
+                    type: object
+                    description: 元信息
+                    properties:
+                      resource_version:
+                        type: string
+                        description: 本地资源版本号，可用于 watch 请求的 rv_inst 参数
+              process_packages:
+                type: array
+                description: 进程在平台的配置状态
+                items: 
+                  type: object
+                  description: 进程配置状态
+                  properties:
+                    name:
+                      type: string
+                      description: 进程类型，如 "web"
+                    target_replicas:
+                      type: int
+                      description: 用户设置的目标副本数
+                    target_status:
+                      type: int
+                      description: 用户设置的目标状态
+                    max_replicas:
+                      type: int
+                      description: 后台允许的最大实例数
+                    resource_limit:
+                      type: string
+                      description: CPU 与内存限制信息
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/{code}/modules/{module}/envs/{env}/processes/watch/:
+    get:
+      summary: "监听应用环境所有进程与实例变化"
+      description: |
+        该接口主要用于获取进程与实例的实时变化。
+
+        ### 接口协议说明
+
+        本接口的所有内容均使用 [SSE](https://hpbn.co/server-sent-events-sse/) 协议返回，普通事件类型为 "message"，响应样例：
+
+        ```raw
+        event: message
+        data: {"type": "ADDED", "object_type": "process", "object": {...}, "resource_version": "7498190"}
+
+        event: message
+        data: {"type": "ADDED", "object_type": "instance", "object": {...}, "resource_version": "7498184"}
+        ```
+
+        请使用浏览器提供的 SSE 接口调用。
+
+        ### 如何在“进程管理”页面使用接口
+
+        在“进程管理”页面，用户需要实时查看环境下的所有进程与实例信息。该页面功能主要由以下两个 API 共同支撑：
+
+        - 获取进程信息 `（/processes/list/）`
+        - 实时监听进程变化 `（/processes/watch/）`
+        
+        ### 数据获取与更新流程：
+
+        - 首先调用 `/processes/list` 接口获取应用基本信息，更新页面
+        - 使用结果返回的 metadata.resource_version 作为 rv_inst 与 rv_proc 参数，调用本接口开始实时监听
+        - 将接口返回的 process/instance 信息更新到页面
+        - 当本次实时监听 API 调用结束后，应重新发起新请求
+
+        出现以下情况时，应该重新开始上面的流程：
+
+        - 接收到进程 ADDED 或 DELETED 时
+        - 请求 watch 接口出错时
+
+        ### 如何处理事件
+
+        `process`
+
+        对于进程事件：
+
+        - `type: MODIFIED`：使用 object 里面的 `success` 数量更新进程的实例数量展示
+        - `type: ADDED/DELETED`：有进程被添加或删除，此时需要重新开始整个流程
+
+        `instance`
+
+        对于实例事件：
+
+        - `type: ADDED`: 新实例被创建，应该将实例追加到进程对应的下拉列表中
+        - `type: MODIFIED`：实例的状态发生变化，比如变为 ready，state 改变等等，应该更新实例展示状态
+        - `type: DELETED`: 实例被删除，前端应该同步删除
+
+        > 注意事项：后端同时监听了 process / instance 两种类型的资源，但缺没有办法保证这两条监听链路的有序性。所以，有可能会出现
+        > 接口先返回了 type 为 web 类型的 instance 被创建，随后才返回 web 类型的进程被创建的事件。
+        > 
+        > 为了应对这种情况，前端在处理 instance 数据时，不能以现有的 process 作为标准。而是按照 instance 自身所指定的 type 将
+        > 所有数据都一视同仁维护起来。这样，当对应的 Process 信息延后出现时，就可以正常展示之前保存好的 instance 数据。
+
+        ### 如何确定 rv_* 字段的值
+
+        - 首次请求接口，从 `/processes/list` 接口获取 resource_version 的值
+        - 调用 `/processes/watch` 接口，获取进程与实例的变动
+        - 视 object_type 不同，将结果中最新的 resource_version 更新成本地的 rv_* 参数
+        - 本地请求结束后，使用新的 rv_* 参数请求接口
+
+      parameters:
+        - name: timeout_seconds
+          required: false
+          in: query
+          description: 本次长连接维持时间（秒），默认 30，最大值 120。
+          type: integer
+        - name: rv_proc
+          required: true
+          in: query
+          description: 进程类型当前资源版本号，新请求请传 "0"。
+          type: string
+        - name: rv_inst
+          required: true
+          in: query
+          description: 实例类型当前资源版本号，新请求请传 "0"。
+          type: string
+      tags:
+        - Processes
+      responses:
+        200:
+          description: 获取成功
+          schema:
+            type: "object"
+            properties:
+              type:
+                type: string
+                description: 事件类型，值可能为："ADDED" / "MODIFIED" / "DELETED"
+              object_type:
+                type: string
+                description: 对象类型，值可能为："process（进程）" / "instance（实例）"
+              resource_version:
+                type: string
+                description: 资源版本号，用于更新本地下次发起请求的 rv_* 参数
+              object:
+                type: object
+                description: 对象内容，具体结构随 `object_type` 不同而变化，请参考 `_object_instance`, `_object_process`
+              _object_process:
+                $ref: '#/definitions/ProcInstObject'
+              _object_instance:
+                $ref: '#/definitions/ProcSpecsObject'
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  # Process end
+
+  # Modules start
+  /api/bkapps/applications/{app_code}/modules/:
+    get:
+      summary: "查看应用所有模块"
+      description: 查看应用下所有的模块
+      parameters:
+        - name: "code"
+          in: "url"
+          description: "应用编码"
+          type: string
+        - name: "source_origin"
+          in: "query"
+          required: false
+          description: 源码来源，目前展示所有来源。支持 `1`（代码仓库）、`2`（蓝鲸 LessCode）
+          type: int
+      tags:
+        - Module
+      responses:
+        200:
+          description: 成功获取列表
+          schema:
+            type: array
+            items:
+                $ref: '#/definitions/ModuleMinimal'
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: "创建新的应用模块"
+      description: |
+        调用该接口将会创建一个新的应用模块。
+
+        同一个蓝鲸应用下可以拥有多个应用模块，这可以方便开发者构建出更复杂的微服务架构应用。每一个应用模块都拥有独立的
+        代码库、部署环境、增强服务。
+        
+        绝大部分 API 都已经在路径中支持了多模块，假设应用 `demo` 申请了名称为 `backend-api` 的模块，
+        那么以下这些访问路径都可以成立：
+
+        - 访问默认模块：/api/bkapps/applications/demo/stag/processes/
+        - 访问默认模块（手动指定）：/api/bkapps/applications/demo/modules/default/stag/processes/
+        - 访问 backend-api 模块：/api/bkapps/applications/demo/modules/backend-api/stag/processes/
+
+        其他相关 API 支持多模块的方式与上面相同，均为在 `/applications/{code}/` 后面插入 `/modules/{module_name}`。
+
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "创建模块参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  name:
+                    description: 模块名称，只能由小写字母和数字以及连接符组成，不能超过 16 个字符 `[a-z0-9-]{1,16}`
+                    required: true
+                    type: string
+                  language:
+                    description: 编程语言类型，目前支持：`Python`、`PHP`
+                    required: true
+                    type: string
+                  source_init_template:
+                    description: 项目初始化模板，目前支持：`dj18_with_auth`
+                    required: true
+                    type: string
+                  source_control_type:
+                    description: 源码控制 目前支持 `bk_svn`、`bk_gitlab`、`tc_git`
+                    required: true
+                    type: string
+                  source_repo_url:
+                    description: 源码托管地址，仅当源码控制类型非 `bk_svn` 时可用
+                    required: false
+                    type: string
+            example:
+              name: backend-api
+              language: Python
+              source_init_template: dj18_with_auth
+              source_control_type: tc_git
+              source_repo_url: 'https://git.code.bking.com/username/repo.git'
+      tags:
+        - Module
+      responses:
+        201:
+          description: 新模块详情
+          schema:
+            type: "object"
+            properties:
+              module:
+                $ref: '#/definitions/Module'
+              source_init_result:
+                type: "object"
+                properties:
+                  code:
+                    description: 仅当项目代码初始化失败时存在，`ALREADY_INITIALIZED` 代表已初始化过
+                    type: string
+                  extra_info:
+                    type: object
+                    description: 额外信息，当源码托管类型为蓝鲸 SVN 时，将包含新仓库地址
+                  dest_type:
+                    type: string
+                    description: 目标同步类型
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  # Modules end
+
+  # Process Services/Ingress start
+  /api/bkapps/applications/{code}/modules/{module}/envs/{env}/process_services/:
+    get:
+      summary: "获取应用进程服务"
+      description: |
+        获取所有某个部署环境下的所有进程服务
+
+        如果应用没有在环境部署过，将返回：
+
+        ```json
+        {
+          "default_ingress": null,
+          "proc_services": []
+        }
+        ```
+      parameters:
+        - $ref: '#/definitions/PathVarCode'
+        - $ref: '#/definitions/PathVarModule'
+        - $ref: '#/definitions/PathVarEnv'
+      tags:
+        - ProcService
+      responses:
+        200:
+          description: 访问入口与进程服务详情
+          schema:
+            type: "object"
+            properties:
+              default_ingress:
+                $ref: '#/definitions/ProcIngress'
+              proc_services:
+                type: array
+                items:
+                  $ref: '#/definitions/ProcService'
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  "/api/bkapps/applications/{code}/modules/{module}/envs/{env}/process_services/{proc_service_name}":
+    post:
+      summary: "修改进程服务"
+      description: |
+        修改进程服务的端口列表
+      parameters:
+        - $ref: '#/definitions/PathVarCode'
+        - $ref: '#/definitions/PathVarModule'
+        - $ref: '#/definitions/PathVarEnv'
+        - name: proc_service_name
+          required: true
+          in: path
+          description: '进程服务名称'
+          type: string
+        - name: "body"
+          in: "body"
+          description: "进程服务参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  ports:
+                    description: 端口列表
+                    required: true
+                    type: array
+                    items:
+                      $ref: '#/definitions/ProcServicePortPair'
+      tags:
+        - ProcService
+      responses:
+        "200":
+          description: 进程服务详情
+          schema:
+            $ref: '#/definitions/ProcService'
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/{code}/modules/{module}/envs/{env}/process_ingresses/default:
+    post:
+      summary: "修改模块主入口"
+      description: |
+        修改应用模块的主访问入口，默认主入口为 web 进程服务的 http 端口
+      parameters:
+        - $ref: '#/definitions/PathVarCode'
+        - $ref: '#/definitions/PathVarModule'
+        - $ref: '#/definitions/PathVarEnv'
+        - name: "body"
+          in: "body"
+          description: "主入口参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  service_name:
+                    type: string
+                    description: 所指向的服务名称
+                    example: ieod-bkapp-backend-app-stag-web
+                  service_port_name:
+                    type: string
+                    description: 所指向的服务端口名称
+                    example: http
+      tags:
+        - ProcService
+      responses:
+        200:
+          description: 主入口详情
+          schema:
+            $ref: '#/definitions/ProcIngress'
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  /api/bkapps/applications/{code}/modules/{module}/exposed_url_type/:
+    put:
+      summary: "修改模块访问地址类型"
+      description: |
+        修改某个应用模块的访问地址类型，可选值：
+
+        - 1. 子路径
+        - 2. 子域名
+
+        当前只支持“子域名”类型。
+      parameters:
+        - $ref: '#/definitions/PathVarCode'
+        - $ref: '#/definitions/PathVarModule'
+        - name: "body"
+          in: "body"
+          description: "请求参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  exposed_url_type:
+                    type: integer
+                    description: 访问地址类型，可选值： 2（子域名）
+                    example: 2
+      tags:
+        - ProcService
+      responses:
+        200:
+          description: 修改成功
+          schema:
+            type: "object"
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  # Process Services/Ingress end
+
+  # Process Metrics start
+  /api/bkapps/applications/{code}/modules/{module}/envs/{env}/metrics:
+    get:
+      summary: "查询应用进程资源 metrics"
+      description: |
+        查看应用进程 CPU / Memory 使用量
+      parameters:
+        - $ref: '#/definitions/PathVarCode'
+        - $ref: '#/definitions/PathVarModule'
+        - $ref: '#/definitions/PathVarEnv'
+        - name: "body"
+          in: "body"
+          description: "主入口参数"
+          schema:
+            allOf:
+              - type: "object"
+                properties:
+                  process_type:
+                    type: string
+                    description: Process Type
+                    example: web
+                  instance_name:
+                    type: string
+                    description: 进程实例名
+                    example: ieod-bkapp-xxxx-stag-web-gunicorn-deployment-7665c68869-7qh22
+                  start_time:
+                    type: string
+                    description: 开始时间，当 time_range_str 不为空时非必填
+                    example: "2019-07-16 18:03:00"
+                  end_time:
+                    type: string
+                    description: 结束时间，当 time_range_str 不为空时非必填
+                    example: "2019-07-16 18:03:00"
+                  time_range_str:
+                    type: string
+                    description: 时间短语，当 start_time & end_time 均为空时必填
+                    example: 10s / 5m / 2h / 7d
+      tags:
+        - ProcMetrics
+      responses:
+        200:
+          description: 主入口详情
+          schema:
+            $ref: '#/definitions/ProcMetrics'
+  # Process Metrics end
+
+  "/api/accounts/userinfo/":
+    get:
+      operationId: accounts_userinfo_list
+      responses:
+        '200':
+          description: 获取SVN账户列表成功
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                description: 用户名
+                format: string
+                example: admin
+              bkpaas_user_id:
+                type: string
+                description: 用户ID
+                format: string
+                example: 023cc7ec93995993a5c2
+              avatar_url:
+                type: string
+                description: 用户头像URL
+                format: string
+                example: ''
+              chinese_name:
+                type: string
+                description: 中文名
+                format: string
+                example: 梅海峰
+      parameters: []
+      description: |
+        当前登录用户信息
+        - [测试地址](/api/accounts/userinfo/)
+        - 注意：该资源访问路径已经由原来的 `/api/user/` 变更到 `/api/accounts/userinfo/`
+      summary: 当前登录用户信息
+      tags:
+      - api
+  "/api/accounts/verification/generation/":
+    post:
+      operationId: accounts_verification_generation_create
+      responses:
+        '201':
+          description: 生成验证码成功
+          schema:
+            type: object
+            description: ''
+            properties:
+              method:
+                type: string
+                description: 验证码发送通知方式
+                example: sms
+              receiver:
+                type: string
+                description: 验证码接着账户信息
+                example: 177****0753
+        '429':
+          description: 接口调用超过频率限制
+          schema:
+            type: object
+            description: ''
+            properties:
+              code:
+                type: string
+                description: 错误码
+                example: ERROR
+              detail:
+                type: string
+                description: 超时描述
+                example: 请求超过了限速。 Expected available in 45.0 seconds.
+      parameters: []
+      description: |
+        验证码-生成并发送验证码到用户的手机
+        - 注意：接口调用有频率限制 6/min
+      summary: 验证码-生成并发送验证码到用户的手机
+      tags:
+      - api
+  "/api/accounts/verification/validation/":
+    put:
+      operationId: accounts_verification_validation_update
+      responses:
+        '200':
+          description: 检查验证码成功
+          schema:
+            type: object
+            description: 测试结果信息
+            properties:
+              is_valid:
+                type: boolean
+                description: 检查结果
+                example: true
+      parameters: []
+      description: |
+        验证码-测试验证码
+        - 验证成功后，可以带上验证码发起最终操作
+      summary: 验证码-测试验证码
+      tags:
+      - api
+  "/api/bkapps/accounts/marked_applications/":
+    get:
+      operationId: bkapps_accounts_marked_applications_list
+      responses:
+        '200':
+          description: 应用访问量成功
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                application_code:
+                  type: string
+                  description: 应用编码
+                  example: awesome-app
+                application_name:
+                  type: string
+                  description: 应用名称
+                  example: Awesome App
+                application:
+                  type: string
+                  description: PAAS 应用链接
+                  example: http://paasng.bking.com/api/bkapps/applications/awesome-app
+                url:
+                  type: string
+                  description: 本记录链接
+                  example: http://paasng.bking.com/api/bkapps/user/mark/applications/app2590
+      parameters: []
+      description: |
+        获取用户标记的应用列表
+        - [测试地址](/api/bkapps/accounts/marked_applications/)
+      summary: 获取用户标记的应用列表
+      tags:
+      - api
+    post:
+      operationId: bkapps_accounts_marked_applications_create
+      responses:
+        '201':
+          description: 添加标记成功
+          schema:
+            type: object
+            properties:
+              application_code:
+                type: string
+                description: 应用编码
+                example: awesome-app
+              application_name:
+                type: string
+                description: 应用名称
+                example: Awesome App
+              application:
+                type: string
+                description: PAAS 应用链接
+                example: http://paasng.bking.com/api/bkapps/applications/awesome-app
+              url:
+                type: string
+                description: 本记录链接
+                example: http://paasng.bking.com/api/bkapps/user/mark/applications/app2590
+      parameters:
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            application:
+              description: PAAS应用链接，比如http://paasng.bking.com/api/bkapps/applications/awesome-app
+              type: string
+          required:
+          - application
+      description: |
+        添加标记应用
+        - [测试地址](/api/bkapps/accounts/marked_applications/)
+      summary: 添加标记应用
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/bkapps/accounts/marked_applications/{code}/":
+    get:
+      operationId: bkapps_accounts_marked_applications_read
+      responses:
+        '200':
+          description: 添加标记成功
+          schema:
+            type: object
+            properties:
+              application_code:
+                type: string
+                description: 应用编码
+                example: awesome-app
+              application_name:
+                type: string
+                description: 应用名称
+                example: Awesome App
+              application:
+                type: string
+                description: PAAS 应用链接
+                example: http://paasng.bking.com/api/bkapps/applications/awesome-app
+              url:
+                type: string
+                description: 本记录链接
+                example: http://paasng.bking.com/api/bkapps/user/mark/applications/app2590
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        获取标记详情
+        - [测试地址](/api/bkapps/accounts/marked_applications/)
+      summary: 获取标记详情
+      tags:
+      - api
+    delete:
+      operationId: bkapps_accounts_marked_applications_delete
+      responses:
+        '204':
+          description: 删除标记成功，无返回内容
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        删除标记
+        - [测试地址](/api/bkapps/accounts/marked_applications/)
+      summary: 删除标记
+      tags:
+      - api
+  "/api/bkapps/applications/statistics/group_by_state/":
+    get:
+      operationId: bkapps_applications_statistics_group_by_state_list
+      responses:
+        '200':
+          description: 添加标记成功
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 分类名称
+                  example: 预发布环境
+                count:
+                  type: integer
+                  description: 数量
+                  example: 23
+      parameters: []
+      description: |
+        应用视图接口-按应用状态分组
+        - [测试地址](/api/bkapps/applications/statistics/group_by_state/)
+      summary: 应用视图接口-按应用状态分组
+      tags:
+      - api
+  "/api/bkapps/applications/statistics/pv/top5":
+    get:
+      operationId: bkapps_applications_statistics_pv_top5_list
+      responses:
+        '200':
+          description: 获取应用访问量成功
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    application_code:
+                      type: string
+                      description: 应用编码
+                      example: awesome-app
+                    application_name:
+                      type: string
+                      description: 应用名称
+                      example: Awesome App
+                    pv:
+                      type: integer
+                      description: 访问量
+                      example: 88
+      parameters: []
+      description: |
+        获取应用访问量
+        - [测试地址](/api/bkapps/applications/statistics/pv/top5)
+      summary: 获取应用访问量
+      tags:
+      - api
+  "/api/bkapps/applications/summary/group_by_field/":
+    get:
+      operationId: bkapps_applications_summary_group_by_field_list
+      responses:
+        '200':
+          description: ''
+      parameters: []
+      description: |
+        应用概览-按某个App字段聚合分类
+        - [测试地址](/api/bkapps/applications/summary/group_by_field/)
+      summary: 应用概览-按某个App字段聚合分类
+      tags:
+      - api
+  "/api/bkapps/applications/{app_code}/access_control/apply_record/approval_type/{approval_type}/": {}
+  "/api/bkapps/applications/{app_code}/access_control/apply_record/filter_type/{filter_type}/": {}
+  "/api/bkapps/applications/{app_code}/access_control/restriction_type/{restriction_type}/strategy/": {}
+  "/api/bkapps/applications/{app_code}/access_control/restriction_type/{restriction_type}/strategy/{strategy_id}/": {}
+  "/api/bkapps/applications/{app_code}/access_control/restriction_type/{restriction_type}/switch/": {}
+  "/api/bkapps/applications/{app_code}/cloudapi/api_type/{api_type}/api_packages/{package_id}/cloud_apis/": {}
+  "/api/bkapps/applications/{app_code}/cloudapi/api_type/{api_type}/api_packages/{package_id}/unauthorized_cloud_apis/": {}
+  "/api/bkapps/applications/{app_code}/services/categories/{category_id}/":
+    get:
+      operationId: bkapps_applications_services_list_by_category
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: category_id
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取应用的服务(已安装&未安装)
+        返回参数:
+        ```js
+        {
+            "count": 2,
+            "results": {
+                "unbound": [
+                    {
+                        "uuid": "1f80d0b7-97ac-462f-9059-839666c971bc",
+                        "name": "sentry",
+                        "display_name": "Sentry",
+                        "logo": "",
+                        "description": "sdfsdf",
+                        "category": {
+                            "id": 1,
+                            "name": "数据存储",
+                            "sort_priority": 0
+                        }
+                    }
+                ],
+                "bound": [
+                    {
+                        "uuid": "73f77c3a-dbc8-44cf-a6c5-3b1d656c4206",
+                        "name": "gcs_mysql",
+                        "display_name": "GCSMySQL",
+                        "logo": "",
+                        "description": "xxxxxx",
+                        "category": {
+                            "id": 1,
+                            "name": "数据存储",
+                            "sort_priority": 0
+                        }
+                    }
+                ]
+            }
+        }
+        ```
+      summary: 获取应用的服务(已安装&未安装)
+      tags:
+      - api
+  "/api/bkapps/applications/{app_code}/services/{service_id}/":
+    delete:
+      operationId: services_destroy
+      responses:
+        '200':
+          description: ''
+      parameters: []
+      description: 蓝鲸应用和服务的删除
+      summary: 蓝鲸应用和服务的删除
+      tags:
+        - api
+    get:
+      operationId: bkapps_applications_services_read
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: service_id
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        蓝鲸应用某服务详情
+        返回参数:
+        ```js
+        {
+            "count": 1,
+            "results": [
+                {
+                    "service_instance": {
+                        "uuid": "bef6bdfb-f45f-4e83-bb42-32153a8bb0f5",
+                        "created": "2017-06-12 03:56:18",
+                        "updated": "2017-06-12 03:56:18",
+                        "config": "{}",
+                        "credentials": "{"GCS_MYSQL_PASSWORD": "7S0w6Aw8gg2", "GCS_MYSQL_USER": "bkapps-zelda-dHj", "GCS_MYSQL_HOST": "127.0.0.1", "GCS_MYSQL_PORT": 3306, "GCS_MYSQL_NAME": "bkapps-zelda-dHj"}",
+                        "service": "73f77c3a-dbc8-44cf-a6c5-3b1d656c4206",
+                        "plan": "068dea4e-c1e8-4f3d-a636-575152d12d2f"
+                    },
+                    "environment": "stag",
+                    "environment_name": "预发布环境",
+                    "usage": "{"description": "MB", "value": 300}"
+                }
+            ]
+        }
+        ```
+      summary: 蓝鲸应用某服务详情
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/log/filters/":
+    get:
+      operationId: bkapps_applications_log_filters_list
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取日志筛选条件列表
+        - [测试地址](/api/bkapps/applications/{code}/log/filters/)
+        - get param: time_range "5m", "1h", "3h", "6h", "12h", "1d", "3d", "7d" or customized
+        - get param: start_time  开始时间 time_range=customized 时必须
+        - get param: end_time  结束时间 time_range=customized 时必须
+        - get param: environment 环境(stag/prod)
+        - get param: process_id 进程唯一类型, 等于process_type(web)
+        - get param: stream 流(stdout/stderr/django/component)
+        - get param: keyword 查询关键字
+
+        default params:
+        - region 区域
+        - app_code 应用编码
+      summary: 获取日志筛选条件列表
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/log/list/":
+    get:
+      operationId: bkapps_applications_log_list_list
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取日志列表, 带分页
+        - [测试地址](/api/bkapps/applications/{code}/log/list/)
+        - get param: time_range "5m", "1h", "3h", "6h", "12h", "1d", "3d", "7d" or customized
+        - get param: start_time  开始时间 time_range=customized 时必须
+        - get param: end_time  结束时间 time_range=customized 时必须
+        - get param: environment 环境(stag/prod)
+        - get param: process_id 进程唯一类型, 等于process_type(web)
+        - get param: stream 流(stdout/stderr/django/component)
+        - get param: keyword 查询关键字
+
+        default params:
+        - region 区域
+        - app_code 应用编码
+      summary: 获取日志列表, 带分页
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/log/timechart/":
+    get:
+      operationId: bkapps_applications_log_timechart_list
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取日志数量时间序列统计图表
+        - [测试地址](/api/bkapps/applications/{code}/log/timechart/)
+        - get param: time_range "5m", "1h", "3h", "6h", "12h", "1d", "3d", "7d" or customized
+        - get param: start_time  开始时间 time_range=customized 时必须
+        - get param: end_time  结束时间 time_range=customized 时必须
+        - get param: environment 环境(stag/prod)
+        - get param: process_id 进程唯一类型, 等于process_type(web)
+        - get param: stream 流(stdout/stderr/django/component)
+        - get param: keyword 查询关键字
+
+        default params:
+        - region 区域
+        - app_code 应用编码
+      summary: 获取日志数量时间序列统计图表
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/operations/":
+    get:
+      operationId: bkapps_applications_operations_list
+      responses:
+        '200':
+          description: 单应用的操作记录
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: 操作记录ID
+                  format: string
+                  example: 1
+                application:
+                  type: object
+                  description: PAAS应用
+                  properties:
+                    id:
+                      type: string
+                      description: 主键
+                      format: string
+                      example: aa2d910b-0d66-4fa4-aa4c-6a384c2c808c
+                    code:
+                      type: string
+                      description: 应用编码
+                      format: string
+                      example: awesome-app
+                    name:
+                      type: string
+                      description: 应用名称
+                      format: string
+                      example: Awesome App
+                at:
+                  type: string
+                  description: 操作时间
+                  format: string
+                  example: '2017-05-31 10:40:01'
+                operator:
+                  type: string
+                  description: 操作用户
+                  format: string
+                  example: 023cc7ec93995993a5c2
+                region:
+                  type: string
+                  description: 部署区域，如内部版是ieod
+                  format: string
+                  example: ieod
+                operate_type:
+                  type: integer
+                  description: 操作类型
+                  format: string
+                  example: 1
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        type: integer
+      description: |
+        单应用的操作记录
+        - [测试地址](/api/bkapps/applications/awesome-app/operations/)
+        - 接口返回的顺序为按操作时间逆序
+        - 返回记录条数通过limit设置，默认值5，比如: http://paasng.bking.com/api/bkapps/applications/awesome-app/operations/?limit=5&format=json
+      summary: 单应用的操作记录
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/repo/commit-diff-external/{from_revision}/{to_revision}/":
+    get:
+      operationId: bkapps_applications_repo_get_compare_url
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: from_revision
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: to_revision
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: 获取外部 Git 系统提供的 compare url
+      summary: 获取外部 Git 系统提供的 compare url
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/repo/commit-diff/{from_revision}/{to_revision}/logs/":
+    get:
+      operationId: bkapps_applications_repo_commit-diff_get_diff_commit_logs
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: from_revision
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: to_revision
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        获取蓝鲸应用2个代码版本之间的提交记录(大于from_revision，小于等于to_revision之间的提交纪录)
+        - /api/bkapps/applications/{code}/repo/commit-diff/{from_revision}/{to_revision}/
+        - path param: code, app名
+        - path param: from_revision, 代码版本号
+        - path param: to_revision, 代码分支信息, look like `version_type:version_name`
+      summary: 获取蓝鲸应用2个代码版本之间的提交记录(大于from_revision，小于等于to_revision之间的提交纪录)
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/repo/tags/":
+    post:
+      operationId: bkapps_applications_repo_tags_create
+      responses:
+        '201':
+          description: 代码仓库制作Tag包成功
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                description: 代码仓库的的返回结果
+                items:
+                  type: string
+                  description: 代码仓库的返回结果
+                  example: Committed revision 186129.
+        '501':
+          description: 目前还没实现改代码托管系统的打tag操作
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: 错误详情
+                example: 目前还没实现代码托管类型是bk_git的打包操作
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: '对代码镜像打tag包
+
+'
+      summary: 对代码镜像打tag包
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/secret_verifications/": {}
+  "/api/bkapps/applications/{code}/statistics/pv/":
+    get:
+      operationId: bkapps_applications_statistics_pv_list
+      responses:
+        '200':
+          description: 单个应用访问量统计
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    time:
+                      type: string
+                      description: 访问时间
+                    pv:
+                      type: integer
+                      description: 时间段内的访问量
+                      example: 8
+              total:
+                type: integer
+                example: 99
+                description: 时间段内的访问总量
+              user_count:
+                type: integer
+                example: 27
+                description: 时间段内的访问总人数
+              message:
+                type: string
+                example: 该数据由后端随机生成，仅用测试生成图表
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        单个应用访问量统计
+        - 测试链接：`/api/bkapps/applications/(?P<code>[^/]+)/statistics/pv/?start=2014-01-01+00%3A00%3A00&end=2017-07-01+00%3A00%3A00&interval=3600`
+      summary: 单个应用访问量统计
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/statistics/visit_record/":
+    get:
+      operationId: bkapps_applications_statistics_visit_record_list
+      responses:
+        '200':
+          description: 单个应用访问记录成功
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    use_time:
+                      type: string
+                      description: 访问时间
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        单个应用访问记录
+        - [测试地址](/api/bkapps/applications/awesome-app/statistics/visit_record/)
+      summary: 单个应用访问记录
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/{environment}/logs/":
+    get:
+      operationId: bkapps_applications_logs_list
+      responses:
+        '200':
+          description: 查询日志成功
+          schema:
+            type: object
+            properties:
+              count:
+                type: int
+                description: 结果总数, 用于分页
+                example: 120
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      description: 日志信息
+                      example: 127.0.0.1 - - [12/May/2017:15:53:58 +0800]
+                    fields:
+                      type: object
+                      properties:
+                        levelname:
+                          type: string
+                          description: 日志级别
+                          example: INFO
+                        ts:
+                          type: string
+                          description: 时间
+                          example: '2017-05-02 12:00:00'
+                        pathname:
+                          type: string
+                          description: 路径
+                          example: "/data/xxx.py"
+                        lineno:
+                          type: string
+                          description: 行号
+                          example: '56'
+                        funcName:
+                          type: string
+                          description: 函数名
+                          example: test
+                        exc_info:
+                          type: string
+                          description: 异常信息
+                          example: traceback......xxxxx
+                        resp_time:
+                          type: string
+                          description: 响应时间ms(gunicorn日志)
+                          example: '120'
+                        uri:
+                          type: string
+                          description: URL
+                          example: "/api/test"
+                        method:
+                          type: string
+                          description: HTTP Method
+                          example: GET
+                        status_code:
+                          type: string
+                          description: 状态码
+                          example: '500'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |+
+        日志查询
+        get: 日志查询
+        - [测试地址](/api/bkapps/applications/{code}/{environment}/logs/)
+        - get param: process_type, 进程类型, 可选, e.g. 'web'
+        - get param: process_name, 进程名称, 必须, django/gunicorn/component/celery
+        - get param: keywords, 关键字, 可选, 关键字列表, e.g. ['error', 'info']
+        - get param: levels, 日志级别, 可选, 列表 传入 e.g. ["20x", "50x"] or ["info"]
+        - get param: page, 页码, 可选, 默认1
+        - get param: page_size, 页大小, 可选, 默认20
+        - get param: order_by, 排序, 可选, 默认不传, gunicorn按响应时间排序是传入'resp_time'
+        - get param: log_time_short, 值("5m", "1h", "3h", "6h", "12h", "1d", "3d", "7d") 或者 'customized', 当值为'customized'时, 需要传递另外两个参数log_time_begin/log_time_end
+        - get param: log_time_begin, 开始时间, 可选, 格式 '2017-05-01 12:00:00'
+        - get param: log_time_end, 开始时间, 可选, 格式 '2017-05-01 12:00:00'
+
+      summary: 日志查询
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/{environment}/logs/500/":
+    get:
+      operationId: bkapps_applications_logs_500_list
+      responses:
+        '200':
+          description: 查询日志成功
+          schema:
+            type: object
+            properties:
+              count:
+                type: int
+                description: 结果总数, 对概览页没用
+                example: 120
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      description: 日志信息
+                      example: 127.0.0.1 - - [12/May/2017:15:53:58 +0800]
+                    fields:
+                      type: object
+                      properties:
+                        resp_time:
+                          type: int
+                          description: 响应时间
+                          example: 120
+                        method:
+                          type: string
+                          description: HTTP Method
+                          example: GET
+                        uri:
+                          type: string
+                          description: 路径
+                          example: "/api/doc/test"
+                        status_code:
+                          type: string
+                          description: 状态码
+                          example: '500'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        概览500日志, 默认取1小时内的最新10条
+
+        get: 概览500日志
+        - 调用地址: /api/bkapps/applications/{code}/prod/logs/500
+        - [测试地址](/api/bkapps/applications/{code}/prod/logs/500)
+      summary: 概览500日志, 默认取1小时内的最新10条
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/{environment}/process_instances/{process_instance_name}/logs/":
+    get:
+      operationId: bkapps_applications_process_instances_logs_list
+      responses:
+        '200':
+          logs:
+          - "[2018-09-11 09:24:51 +0000] [25] [INFO] Worker exiting (pid: 25)"
+          - "[2018-09-11 09:24:52 +0000] [27] [INFO] Booting worker with pid: 27"
+          - "[2018-09-12 09:34:20 +0000] [1] [CRITICAL] WORKER TIMEOUT (pid:27)"
+          - "[2018-09-12 09:34:20 +0000] [27] [INFO] Worker exiting (pid: 27)"
+          - "[2018-09-12 09:34:22 +0000] [29] [INFO] Booting worker with pid: 29"
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: process_instance_name
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: '查询process instance日志
+
+'
+      summary: 查询process instance日志
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/{environment}/realtimelogs/":
+    get:
+      operationId: bkapps_applications_realtimelogs_list
+      responses:
+        '200':
+          description: 查询实时日志成功
+          schema:
+            type: object
+            properties:
+              count:
+                type: int
+                description: 总数,对实时日志来说没有用
+                example: 120
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      description: 日志信息
+                      example: 127.0.0.1 - - [12/May/2017:15:53:58 +0800]
+                    process_name:
+                      type: string
+                      description: 进程名
+                      example: gunicorn
+                    id:
+                      type: string
+                      description: 日志id
+                      example: AVv7pzQsn6kqhqd-vq9y
+                    container_id:
+                      type: string
+                      description: 容器id
+                      example: 95e71714e97e336e6f06e851bca26d2a16d2d305cd4e7e7838ce56f15e706b20
+                    ts:
+                      type: string
+                      description: 日期
+                      example: '2017-05-12 15:53:58'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        实时日志
+        get: 获取实时日志
+        - [测试地址](/api/bkapps/applications/{code}/{environment}/realtimelogs/)
+        - get param: process_type, 进程类型, 必须, e.g 'web'
+        - get param: process_name, 进程名称, 可选, e.g 'gunicorn', 'django', 'component'
+        - get param: keyword, 关键字, 可选, 过滤关键字
+      summary: 实时日志
+      tags:
+      - api
+  "/api/bkapps/applications/{code}/{var}{environment}/processes/":
+    get:
+      operationId: bkapps_applications_processes_read
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取应用的进程信息
+        （每次对进程操作后，前端需要不断轮询该接口，判断进程的总体状态，是否达到期望状态，并设置超时时间）
+        ```js
+        {
+            "count": 2,
+            "results": [
+                {"web": {
+                    # 每个进程的总体状态，前端直接判断该字段
+                    "status": "Running",
+                    "name": "bkapp-web-stag",
+                    "target_replicas": 2,
+                    "max_replicas": 2,
+                    "desired_replicas": 2,
+                    "command": "gunicorn wsgi --logfile -",
+                    "replicas": [
+                        {"status": "Running"},
+                        {"status": "Running"},
+                    ]}
+                },
+                {"worker": {
+                    # 每个进程的总体状态，前端直接判断该字段
+                    "status": "Running",
+                    "name": "bkapp-worker-stag",
+                    "target_replicas": 2,
+                    "max_replicas": 3,
+                    "desired_replicas": 2,
+                    "command": "celery -A controller worker -l info",
+                    "replicas": [
+                        {"status": "Running"},
+                        {"status": "Pending"},
+                    ]}
+                }
+            ]
+        }
+        ```
+      summary: 获取应用的进程信息
+      tags:
+      - api
+    post:
+      operationId: bkapps_applications_processes_create
+      responses:
+        '201':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            application:
+              description: ''
+              type: object
+            user:
+              description: ''
+              type: string
+            role:
+              description: ''
+              type: string
+          required:
+          - application
+          - user
+          - role
+      description: |-
+        操作进程
+        ```js
+        process_type 进程类型
+        - 示例: "web"
+        operate_type 操作类型
+        - 示例: "start"或"stop"
+        ```
+        返回内容:
+        ```
+        HTTP/1.1 201 No Content
+        ```
+      summary: 操作进程
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/deployments/lists/":
+    get:
+      operationId: bkapps_applications_deployments_lists_list
+      responses:
+        '200':
+          description: 查询成功
+          schema:
+            type: object
+            properties:
+              count:
+                type: integer
+                description: 总数
+              next:
+                type: string
+                description: 下一页地址
+              previous:
+                type: string
+                description: 上一页地址
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    deployment_id:
+                      type: string
+                      description: 部署任务id
+                    environment:
+                      type: string
+                      description: 环境
+                      example: 预发布
+                    operator:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                          description: 部署任务的发起者的名字
+                          example: admin
+                        id:
+                          type: string
+                          description: 部署任务的发起者的id
+                          example: ec9e7908
+                    status:
+                      type: string
+                      description: 任务状态
+                      example: 成功
+                    created:
+                      type: string
+                      description: 部署时间
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        查询部署历史
+        - /api/bkapps/applications/{code}/deployments/lists/
+        - get param: environment, 发布的环境, string
+        - get param: operator, 操作者, string
+        - get param: limit, 结果数量, integer
+        - get param: offset, 翻页跳过数量, integer
+      summary: 查询部署历史
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/deployments/{uuid}/result/":
+    get:
+      operationId: bkapps_applications_deployments_get_deployment_result
+      responses:
+        '200':
+          description: 查询部署日志成功
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: 部署任务状态(successful, pending或failed)
+                example: failed
+              error_detail:
+                type: string
+                description: 错误信息
+                example: failed
+              error_tips:
+                type: object
+                properties:
+                  possible_reason:
+                    type: string
+                    description: 错误解决方法
+                    example: 查看requirements是否格式有误
+                  help_text:
+                    type: string
+                    description: 错误提示
+                    example: 查看如何解决该问题
+                  help_link:
+                    type: string
+                    description: 错误提示链接
+                    example: http://docs.bking.com/
+              logs:
+                type: string
+                description: 部署日志
+                example: |-
+                  Starting build app: bkapp-test4deploy-stag...
+                  download
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: uuid
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: "查询部署任务结果\n        - /api/bkapps/applications/{code})/deployments/{uuid}/result/\n
+        \       - path param: code, app名\n        - path param: uuid, 部署任务的uuid(即deployment_id)\n
+        \       "
+      summary: 查询部署任务结果
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/deployments/":
+    post:
+      operationId: bkapps_applications_envs_deploy
+      responses:
+        '201':
+          description: 返回部署任务uuid
+          schema:
+            type: object
+            properties:
+              deployment_id:
+                type: string
+                description: 部署任务的uuid
+                example: 9859656d-37d1-44e3-9b69-5a6b9e659276
+              stream_url:
+                type: string
+                description: 日志stream流的url
+                example: "/streams/9859656d-37d1-44e3-9b69-5a6b9e659276"
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        发起部署请求
+        - /api/bkapps/applications/{code}/envs/{environment}/deployments/
+        - post param: url, string, 分支url, 必须
+        - post param: revision, integer, 分支版本号, 必须
+      summary: 发起部署请求
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/deployments/latest/":
+    get:
+      operationId: bkapps_applications_envs_deployments_get_latest_deployment
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        获取应用某环境线上详情
+
+        **该接口将下线，请使用 /released_info/ 接口来替换**
+
+        - /api/bkapps/applications/{code}/envs/{environment}/deployments/latest/
+        - path param: code, app名, 必须
+        - path param: environment, 部署环境(stag或者prod), 必须
+
+        响应样例：
+
+        ```json
+        {
+            "id": "66e5d4fe-89d3-45bd-aa93-4d213815cc42",
+            "status": "successful",
+            "operator": {
+                "username": "admin",                       // 部署发起人
+                "id": "0226c9f39893459abac3eb"
+            },
+            "created": "2017-06-14 11:22:06",
+            "environment": "stag",
+            "deployment_id": "66e5d4fe-89d3-45bd-aa93-4d213815cc42",
+            "repo": {
+                "url": "svn://svn.bking.com:80/apps/ngdemo/trunk/__apps/go-piglei/trunk",
+                "comment": "",
+                "type": "trunk",
+                "name": "trunk",
+                "revision": "183362"
+            },
+            "link_address": "http://apps.bking.com/bkapp-go-piglei-stag/"
+        }
+        ```
+      summary: 获取应用某环境线上详情
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/deployments/resumable/":
+    get:
+      operationId: bkapps_applications_envs_deployments_get_resumable_deployment
+      responses:
+        '200':
+          description: 部署详情
+          schema:
+            $ref: '#/definitions/Deployment'
+
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取当前环境下，正处于“部署进行中……”状态的 Deployment 详情。
+
+        有关 `has_requested_int` 字段：
+
+        - 为 `false` 时，展示普通的部署中状态
+        - 为 `true` 时，展示点击了停止按钮后的“停止中”状态
+
+      summary: 获取进行中的部署对象
+      tags:
+      - 部署阶段
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/egress_gateway_infos/":
+    post:
+      operationId: bkapps_applications_envs_egress_gateway_infos_create
+      responses:
+        '201':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: 获取应用在该部署环境下的出口网关信息
+      summary: 获取应用在该部署环境下的出口网关信息
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/egress_gateway_infos/default/":
+    get:
+      operationId: bkapps_applications_envs_egress_gateway_infos_default_read
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: 返回已获取的出口网关信息
+      summary: 返回已获取的出口网关信息
+      tags:
+      - api
+    delete:
+      operationId: bkapps_applications_envs_egress_gateway_infos_default_delete
+      responses:
+        '204':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: 清除已获取的出口网关信息
+      summary: 清除已获取的出口网关信息
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/offlines/":
+    post:
+      operationId: bkapps_applications_envs_offline
+      responses:
+        '201':
+          description: 返回下线任务uuid
+          schema:
+            type: object
+            properties:
+              offline_operation_id:
+                type: string
+                description: 下线任务的uuid
+                example: 9859656d-37d1-44e3-9b69-5a6b9e659276
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        发起下线请求
+        - /api/bkapps/applications/{code}/envs/{environment}/offlines/
+      summary: 发起下线请求
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/operations/resumable/":
+    get:
+      operationId: bkapps_applications_envs_operations_get_resumable_operations
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        应用操作记录相关API
+        比如：部署记录和下线记录
+      summary: 应用操作记录相关API
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/released_info/": {}
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/released_state/":
+    get:
+      operationId: bkapps_applications_envs_get_current_state
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        note: deprecated, this one just used for not offlined, plz use get_current_state
+        获取应用某环境当前线上详情
+
+        - /api/bkapps/applications/{code}/envs/{environment}/deployments/latest/
+        - path param: code, app名, 必须
+        - path param: environment, 部署环境(stag或者prod), 必须
+        - get param: with_processes, 是否返回进程信息，传递 true 时返回，默认不返回
+
+        如果应用未在该环境部署，返回错误：
+
+        ```json
+        {
+            "code": "APP_NOT_RELEASED",
+            "detail": "应用尚未在该环境发布过"
+        }
+        ```
+
+        正常响应：
+
+        ```json
+        {
+            // 进程信息仅当传递 with_processes 时提供
+            "processes":[
+                {
+                    "web":{
+                        "command":"gunicorn go_piglei.wsgi -b :$PORT --log-file -",
+                        "replicas":[                                            // 进程详情
+                            {
+                                "status":"Running"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "exposed_link":{
+                "url":"http://apps.bking.com/bkapp-go-piglei-stag/"           // 访问地址
+            },
+            "deployment":{
+                "id":"66e5d4fe-89d3-45bd-aa93-4d213815cc42",
+                "status":"successful",
+                "operator":{
+                    "username":"admin",                                    // 部署发起人
+                    "id":"0226c9f39893459abac3eb"
+                },
+                "created":"2017-06-14 11:22:06",
+                "environment":"stag",
+                "deployment_id":"66e5d4fe-89d3-45bd-aa93-4d213815cc42",
+                "repo":{
+                    "url":"svn://svn.bking.com:80/apps/ngdemo/trunk/__apps/go-piglei/trunk",
+                    "comment":"",
+                    "type":"trunk",
+                    "name":"trunk",
+                    "revision":"183362"
+                }
+            },
+            "feature_flag":{
+                "release_to_bk_market": True/False,         # 是否发布到蓝鲸应用市场
+                "release_to_wx_miniprogram": True/False,    # 是否发布到微信小程序
+                "release_to_wx_qiye": True/False            # 是否发布到微信企业端
+            },
+            "module_mobile_config_enabled": True/False,     # 移動端功能是否开启(对应region的总开关)
+            "mobile_config": {
+                "is_enabled": True/False,                   # 是否开启微信企业号端,
+                "access_domain": "https://balabala"         # 访问入口
+            }
+        }
+
+        ```
+      summary: 'note: deprecated, this one just used for not offlined, plz use get_current_state'
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/envs/{environment}/releases/":
+    post:
+      operationId: bkapps_applications_envs_release
+      responses:
+        '201':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: environment
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        单纯的release
+        - /api/bkapps/applications/{code}/envs/{environment}/release/
+        - param: env, 选择发布环境
+      summary: 单纯的release
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/offlines/{uuid}/result/":
+    get:
+      operationId: bkapps_applications_offlines_get_offline_result
+      responses:
+        '200':
+          description: 查询下线日志成功
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: 下线任务状态(successful, pending或failed)
+                example: failed
+              error_detail:
+                type: string
+                description: 错误信息
+                example: failed
+              logs:
+                type: string
+                description: 下线日志
+                example: Starting stop `web` process
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: uuid
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        查询下线任务结果
+        - /api/bkapps/applications/{code})/offline_operations/{uuid}/result/
+        - path param: code, app名
+        - path param: uuid, 部署任务的uuid(即deployment_id)
+      summary: 查询下线任务结果
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/operations/lists/":
+    get:
+      operationId: bkapps_applications_operations_lists_list
+      responses:
+        '200':
+          description: 查询成功
+          schema:
+            type: object
+            properties:
+              count:
+                type: integer
+                description: 总数
+              next:
+                type: string
+                description: 下一页地址
+              previous:
+                type: string
+                description: 上一页地址
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    deployment_id:
+                      type: string
+                      description: 部署任务id
+                    environment:
+                      type: string
+                      description: 环境
+                      example: 预发布
+                    operator:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                          description: 部署任务的发起者的名字
+                          example: admin
+                        id:
+                          type: string
+                          description: 部署任务的发起者的id
+                          example: ec9e7908
+                    status:
+                      type: string
+                      description: 任务状态
+                      example: 成功
+                    created:
+                      type: string
+                      description: 部署时间
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        查询部署历史
+        - /api/bkapps/applications/{code}/operations/lists/
+        - get param: environment, 发布的环境, string
+        - get param: operator, 操作者, string
+        - get param: limit, 结果数量, integer
+        - get param: offset, 翻页跳过数量, integer
+      summary: 查询部署历史
+      tags:
+      - api
+  "/api/bkapps/applications/{code}{var}/repo/branches/":
+    get:
+      operationId: bkapps_applications_repo_get_repo_branches
+      responses:
+        '200':
+          description: 查询成功
+          schema:
+            type: object
+            properties:
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: 分支名
+                      example: tags20170525
+                    url:
+                      type: string
+                      description: 分支全路径
+                      example: svn://svn.bking.com:80/apps/ngdemo/trunk/__apps/test4deploy/tags/tags20170525
+                    revision:
+                      type: integer
+                      description: repo版本号
+                      example: 183601
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: var
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |
+        获取蓝鲸应用的代码分支信息
+        - /api/bkapps/applications/{code}/repo/branches/
+        - path param: code, app名
+      summary: 获取蓝鲸应用的代码分支信息
+      tags:
+      - api
+  "/api/document/search/":
+    get:
+      operationId: document_search
+      responses:
+        '200':
+          description: ''
+      parameters: []
+      description: |-
+        :param request:
+        :param format:
+        :return:
+            [
+                {
+                    "url": "/xxx/xxx",
+                    "title": "xxxx"
+                },
+            ]
+      summary: ":param request:"
+      tags:
+      - api
+  "/api/market/products":
+    get:
+      operationId: market_products_list
+      responses:
+        '200':
+          description: 获取产品列表成功
+          schema:
+            type: object
+            properties:
+              count:
+                type: integer
+                example: 11
+                description: 总数
+              next:
+                type: integer
+                example: http://paasng.bking.com/api/market/products/?format=json&limit=3&offset=8
+                description: 上一页地址
+              previous:
+                type: integer
+                example: http://paasng.bking.com/api/market/products/?format=json&limit=3&offset=2
+                description: 下一页地址
+              result:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    application:
+                      type: string
+                      description: 对应的PAAS应用访问地址，非必填项
+                      example: http://paasng.bking.com/api/market/products/awesome-app
+                    code:
+                      type: string
+                      description: 应用编码，如果有对应的PAAS应用，两个应用编码必须一致
+                      example: awesome-app
+                    name:
+                      type: string
+                      description: 应用名称
+                      example: Awesome App
+                    introduction:
+                      type: string
+                      description: 父节点的访问路径，如果没有父节点，则值为本身的url
+                      example: http://paasng.bking.com/api/market/tags/2
+                    tag:
+                      type: string
+                      description: 按用途分类, 通过 GET /api/market/tags 获取
+                      example: http://paasng.bking.com/api/market/tags/9
+                    type:
+                      type: string
+                      description: 应用类型（按实现方式分类）
+                      example: '1'
+                    resizable:
+                      type: boolean
+                      description: 是否允许调整窗口大小
+                      example: 'true'
+                    width:
+                      type: integer
+                      description: 窗口宽度
+                      example: 800
+                    height:
+                      type: integer
+                      description: 窗口高度
+                      example: 500
+                    is_win_maximize:
+                      type: boolean
+                      description: 是否默认最大化
+                      example: 'true'
+                    win_bars:
+                      type: boolean
+                      description: 是否显示评分栏
+                      example: 'true'
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        type: integer
+      description: |
+        获取产品列表
+        - [测试地址](/api/market/products)
+      summary: 获取产品列表
+      tags:
+      - api
+    post:
+      operationId: market_products_create
+      responses:
+        '201':
+          description: 注册桌面产品成功
+          schema:
+            type: object
+            properties:
+              application:
+                type: string
+                description: 对应的PAAS应用访问地址，非必填项
+                example: http://paasng.bking.com/api/market/products/awesome-app
+              code:
+                type: string
+                description: 应用编码，如果有对应的PAAS应用，两个应用编码必须一致
+                example: awesome-app
+              name:
+                type: string
+                description: 应用名称
+                example: Awesome App
+              introduction:
+                type: string
+                description: 父节点的访问路径，如果没有父节点，则值为本身的url
+                example: http://paasng.bking.com/api/market/tags/2
+              tag:
+                type: string
+                description: 按用途分类, 通过 GET /api/market/tags 获取
+                example: http://paasng.bking.com/api/market/tags/9
+              type:
+                type: string
+                description: 应用类型（按实现方式分类）
+                example: '1'
+              resizable:
+                type: boolean
+                description: 是否允许调整窗口大小
+                example: 'true'
+              width:
+                type: integer
+                description: 窗口宽度
+                example: 800
+              height:
+                type: integer
+                description: 窗口高度
+                example: 500
+              is_win_maximize:
+                type: boolean
+                description: 是否默认最大化
+                example: 'true'
+              win_bars:
+                type: boolean
+                description: 是否显示评分栏
+                example: 'true'
+      parameters:
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            application:
+              description: PAAS应用，如果注册的PAAS应用，该项必填，第三方应用不需要填写
+              type: string
+            name:
+              description: 应用名称，不能超过20个字符
+              type: string
+            introduction:
+              description: 应用简介
+              type: string
+            tag:
+              description: 应用分类（按用途）
+              type: string
+            type:
+              description: 按实现方式分类
+              type: string
+            resizable:
+              description: 是否允许调整窗口大小
+              type: boolean
+            width:
+              description: 窗口宽度
+              type: integer
+            height:
+              description: 窗口高度
+              type: integer
+            is_win_maximize:
+              description: 是否默认最大化
+              type: boolean
+            win_bars:
+              description: 是否显示评分栏
+              type: boolean
+            description:
+              description: 应用描述
+              type: string
+            logo:
+              description: ''
+              type: string
+            contact:
+              description: 应用联系人
+              type: string
+          required:
+          - application
+          - name
+          - introduction
+          - tag
+          - type
+          - resizable
+          - is_win_maximize
+          - win_bars
+          - description
+          - contact
+      description: |
+        注册桌面产品
+        - [测试地址](/api/market/products)
+      summary: 注册桌面产品
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/market/products/(P{code}[/]+)":
+    get:
+      operationId: market_products_]+)_read
+      responses:
+        '200':
+          description: 获取应用属性成功
+          schema:
+            type: object
+            properties:
+              application:
+                type: string
+                description: 对应的PAAS应用访问地址，非必填项
+                example: http://paasng.bking.com/api/market/products/awesome-app
+              code:
+                type: string
+                description: 应用编码，如果有对应的PAAS应用，两个应用编码必须一致
+                example: awesome-app
+              name:
+                type: string
+                description: 应用名称
+                example: Awesome App
+              introduction:
+                type: string
+                description: 父节点的访问路径，如果没有父节点，则值为本身的url
+                example: http://paasng.bking.com/api/market/tags/2
+              tag:
+                type: string
+                description: 按用途分类, 通过 GET /api/market/tags 获取
+                example: http://paasng.bking.com/api/market/tags/9
+              type:
+                type: string
+                description: 应用类型（按实现方式分类）
+                example: '1'
+              resizable:
+                type: boolean
+                description: 是否允许调整窗口大小
+                example: 'true'
+              width:
+                type: integer
+                description: 窗口宽度
+                example: 800
+              height:
+                type: integer
+                description: 窗口高度
+                example: 500
+              is_win_maximize:
+                type: boolean
+                description: 是否默认最大化
+                example: 'true'
+              win_bars:
+                type: boolean
+                description: 是否显示评分栏
+                example: 'true'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: 应用编码
+        type: string
+      description: |
+        获取产品属性
+        - [测试地址](/api/market/products/awesome-app)
+      summary: 获取产品属性
+      tags:
+      - api
+    put:
+      operationId: market_products_]+)_update
+      responses:
+        '200':
+          description: 修改应用属性成功
+          schema:
+            type: object
+            properties:
+              application:
+                type: string
+                description: 对应的PAAS应用访问地址，非必填项
+                example: http://paasng.bking.com/api/market/products/awesome-app
+              code:
+                type: string
+                description: 应用编码，如果有对应的PAAS应用，两个应用编码必须一致
+                example: awesome-app
+              name:
+                type: string
+                description: 应用名称
+                example: Awesome App
+              introduction:
+                type: string
+                description: 父节点的访问路径，如果没有父节点，则值为本身的url
+                example: http://paasng.bking.com/api/market/tags/2
+              tag:
+                type: string
+                description: 按用途分类, 通过 GET /api/market/tags 获取
+                example: http://paasng.bking.com/api/market/tags/9
+              type:
+                type: string
+                description: 应用类型（按实现方式分类）
+                example: '1'
+              resizable:
+                type: boolean
+                description: 是否允许调整窗口大小
+                example: 'true'
+              width:
+                type: integer
+                description: 窗口宽度
+                example: 800
+              height:
+                type: integer
+                description: 窗口高度
+                example: 500
+              is_win_maximize:
+                type: boolean
+                description: 是否默认最大化
+                example: 'true'
+              win_bars:
+                type: boolean
+                description: 是否显示评分栏
+                example: 'true'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: 应用编码
+        type: string
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            name:
+              description: 应用名称
+              type: string
+            introduction:
+              description: 应用简介
+              type: string
+            tag:
+              description: 应用分类（按用途）, 通过接口 GET /api/market/tags 获取可用选项
+              type: string
+            type:
+              description: 按实现方式分类
+              type: string
+            state:
+              description: 应用状态
+              type: string
+            resizable:
+              description: 是否可调整窗口大小
+              type: boolean
+            width:
+              description: 窗口宽度
+              type: integer
+            height:
+              description: 窗口高度
+              type: integer
+            is_win_maximize:
+              description: 窗口是否默认最大化
+              type: boolean
+            win_bars:
+              description: 是否显示评分栏
+              type: boolean
+            description:
+              description: 应用描述
+              type: string
+            contact:
+              description: 应用联系人
+              type: string
+          required:
+          - name
+          - introduction
+          - tag
+          - type
+          - is_win_maximize
+          - win_bars
+          - description
+          - contact
+      description: |
+        修改产品属性
+        - [测试地址](/api/market/products/awesome-app){:target="_blank"}
+      summary: 修改产品属性
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/market/products/{code}/logo":
+    get:
+      operationId: market_products_logo_read
+      responses:
+        '200':
+          description: 获取Logo地址成功
+          schema:
+            type: object
+            properties:
+              logo:
+                type: string
+                description: Logo文件，改字段仅用于上传，返回时为空
+                format: string
+                example: 'null'
+              logo_url:
+                type: string
+                description: 应用Logo地址
+                format: string
+                example: http://radosgw.bking.com/app-logo/awesome-app.png
+              code:
+                type: string
+                description: 应用编码
+                format: string
+                example: awesome-app
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: 应用编码
+        type: string
+      description: |
+        获取产品Logo地址
+        - [测试地址](/api/market/products/awesome-app/logo)
+      summary: 获取产品Logo地址
+      tags:
+      - api
+    put:
+      operationId: market_products_logo_update
+      responses:
+        '200':
+          description: 上传Logo成功
+          schema:
+            type: object
+            properties:
+              logo:
+                type: string
+                description: Logo文件，改字段仅用于上传，返回时为空
+                format: string
+                example: 'null'
+              logo_url:
+                type: string
+                description: 应用Logo地址
+                format: string
+                example: http://radosgw.bking.com/app-logo/awesome-app.png
+              code:
+                type: string
+                description: 应用编码
+                format: string
+                example: awesome-app
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: 应用编码
+        type: string
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            logo:
+              description: ''
+              type: string
+          required:
+          - logo
+      description: |
+        上传产品Logo
+        - [测试地址](/api/market/products/awesome-app/logo)
+      summary: 上传产品Logo
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/market/products/{code}/offline": {}
+  "/api/market/products/{code}/state":
+    get:
+      operationId: market_products_state_read
+      responses:
+        '200':
+          description: 获取上线状态成功
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                description: 应用编码
+                format: string
+                example: awesome-app
+              state:
+                type: string
+                description: '应用状态, 1: 开发中，2：已发布'
+                format: string
+                example: '2'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: 应用编码
+        type: string
+      description: |
+        获取产品上线状态
+        - [测试地址](/api/market/products/awesome-app/state)
+      summary: 获取产品上线状态
+      tags:
+      - api
+    put:
+      operationId: market_products_state_update
+      responses:
+        '200':
+          description: 修改成功
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                description: 应用编码
+                format: string
+                example: awesome-app
+              state:
+                type: string
+                description: '应用状态, 1: 开发中，2：已发布'
+                format: string
+                example: '1'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: 应用编码
+        type: string
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            state:
+              description: 应用状态
+              type: string
+      description: |
+        修改产品上线状态
+        - [测试地址](/api/market/products/awesome-app/state)
+      summary: 修改产品上线状态
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/market/tags":
+    get:
+      operationId: market_tags_list
+      responses:
+        '200':
+          description: 获取分类成功
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: 该项的访问url
+                  format: string
+                  example: http://paasng.bking.com/api/market/tags/2
+                id:
+                  type: string
+                  description: 该项的主键
+                  format: string
+                  example: '2'
+                name:
+                  type: string
+                  description: 分类名称，比如发布变更
+                  format: string
+                  example: 发布变更
+                parent:
+                  type: string
+                  description: 父节点的ID, 如果没有父节点为null
+                  format: string
+                  example: '2'
+                remark:
+                  type: string
+                  description: 备注
+                  format: string
+                  example: 用于表示发布变更这类应用
+                index:
+                  type: string
+                  description: 排序字段
+                  format: string
+                  example: '1'
+                region:
+                  type: string
+                  description: 部署区域，如内部版是ieod
+                  format: string
+                  example: ieod
+      parameters: []
+      description: |
+        获取分类列表
+        - [测试地址](/api/market/tags)
+      summary: 获取分类列表
+      tags:
+      - api
+  "/api/market/applications/{code}/config/":
+    get:
+      operationId: market_applications_config_read
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/MarketConfig'
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: "获取某个应用的市场相关配置"
+      summary: "获取某个应用的市场相关配置"
+      tags:
+      - api
+    put:
+      operationId: market_applications_config_update
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            source_url_type:
+              description: '访问地址类型, 1:未开启, 2:与正式部署环境一致, 3:第三方'
+              type: string
+            source_tp_url:
+              description: '当 source_url_type ==3 时必填，第三方访问地址'
+              type: string
+            source_module_id:
+              description: '访问目标模块，需调用接口 api/bkapps/applications/(?P<code>[^/]+)/modules/ 获取当前应用的所有模块'
+              type: string
+      description: "用于修改某个应用的市场相关配置, 该接口不允许修改应用市场服务开关"
+      summary: "用于修改某个应用的市场相关配置, 该接口不允许修改应用市场服务开关"
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/market/applications/{code}/switch/":
+    post:
+      operationId: market_applications_switch
+      responses:
+        '201':
+          description: ''
+        '400':
+          description: '当前发布的准备条件未满足'
+          schema:
+            type: object
+            properties:
+              code:
+                description: 'RELEASED_MARKET_CONDITION_NOT_MET'
+                type: string
+              message:
+                description: '未满足应用市场服务开启条件'
+                type: string
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            enabled:
+              required: true
+              type: boolean
+              description: '是否开启应用市场服务开关'
+      description: "应用市场服务开关"
+      summary: "应用市场服务开关"
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/market/applications/{code}/publish/preparations/":
+    get:
+      operationId: market_applications_publish_check_preparations
+      responses:
+        '200':
+          description: ''
+          schema:
+            $ref: '#/definitions/MarketPublishPreparations'
+      parameters:
+        - name: code
+          required: true
+          in: path
+          description: ''
+          type: string
+      description: "检查当前发布的准备条件是否已经满足"
+      summary: "检查当前发布的准备条件是否已经满足"
+      tags:
+        - api
+  "/api/market/tags/(P{id}[/]+)":
+    get:
+      operationId: market_tags_]+)_read
+      responses:
+        '200':
+          description: 获取分类详细成功
+          schema:
+            type: object
+            properties:
+              url:
+                type: string
+                description: 该项的访问url
+                format: string
+                example: http://paasng.bking.com/api/market/tags/2
+              id:
+                type: string
+                description: 该项的主键
+                format: string
+                example: '2'
+              name:
+                type: string
+                description: 分类名称，比如发布变更
+                format: string
+                example: 发布变更
+              parent:
+                type: string
+                description: 父节点的ID, 如果没有父节点为null
+                format: string
+                example: '2'
+              remark:
+                type: string
+                description: 备注
+                format: string
+                example: 用于表示发布变更这类应用
+              index:
+                type: string
+                description: 排序字段
+                format: string
+                example: '1'
+              region:
+                type: string
+                description: 部署区域，如内部版是ieod
+                format: string
+                example: ieod
+      parameters:
+      - name: id
+        required: true
+        in: path
+        description: A unique integer value identifying this tag.
+        type: integer
+      description: |
+        获取分类详细
+        - [测试地址](/api/market/tags)
+      summary: 获取分类详细
+      tags:
+      - api
+  "/api/oauth/backends/":
+    get:
+      operationId: oauth_backends_list
+      responses:
+        '200':
+          description: ''
+      parameters: []
+      description: mainly for showing auth link to users
+      summary: mainly for showing auth link to users
+      tags:
+      - api
+  "/api/oauth/backends/{backend}":
+    delete:
+      operationId: oauth_disconnect
+      responses:
+        '204':
+          description: ''
+      parameters:
+      - name: backend
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: delete access token which is bind to user
+      summary: delete access token which is bind to user
+      tags:
+      - api
+  "/api/oauth/complete/{backend}/":
+    get:
+      operationId: oauth_bind
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: backend
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: get access token from provider and bind to userProfile
+      summary: get access token from provider and bind to userProfile
+      tags:
+      - api
+  "/api/services/regions/{region}/":
+    get:
+      operationId: services_list_by_region
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: region
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        根据region获取所有增强服务
+        返回参数:
+        ```js
+        {
+            "count": 1,
+            "results": [
+                {
+                    "category": {
+                        "id": 1,
+                        "name": "数据存储",
+                        "sort_priority": 0
+                    },
+                    "services": [
+                        {
+                            "uuid": "73f77c3a-dbc8-44cf-a6c5-3b1d656c4206",
+                            "name": "gcs_mysql",
+                            "display_name": "GCSMySQL",
+                            "logo": "",
+                            "description": "xxxxxx",
+                        }
+                    ]
+                },
+            ]
+        }
+        ```
+      summary: 根据region获取所有增强服务
+      tags:
+      - api
+  "/api/services/service-attachments/":
+    post:
+      operationId: services_bind
+      responses:
+        '201':
+          description: ''
+      parameters: []
+      description: 蓝鲸应用和服务的绑定
+      summary: 蓝鲸应用和服务的绑定
+      tags:
+      - api
+  "/api/services/{service_id}/":
+    get:
+      operationId: services_read
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: service_id
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取服务详细信息
+        返回参数:
+        ```js
+        {
+            "result": {
+                "uuid": "73f77c3adbc844cfa6c53b1d656c4206",
+                "region": "ieod",
+                "name": "gcs_mysql",
+                "available_languages": "python,php",
+                "display_name": "GCSMySQL",
+                "logo": "",
+                "description": "xxxxxx",
+                "long_description": "# markdown",
+                "category": {
+                    "id": 1,
+                    "name": "数据存储",
+                    "sort_priority": 0
+                }
+            }
+        }
+        ```
+      summary: 获取服务详细信息
+      tags:
+      - api
+  "/api/services/{service_id}/application-attachments/":
+    get:
+      operationId: services_list_related_apps
+      responses:
+        '200':
+          description: ''
+      parameters:
+      - name: service_id
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: |-
+        获取服务绑定的所有应用
+        返回参数：
+        ```js
+        {
+            "count": 3,
+            "next": "http://appdev.bking.com:8000/api/services/6e876510c9c5436bb09f6c984bfc5c21/application-attachments/?limit=5&offset=5&order_by=-created",
+            "previous": null,
+            "results": [
+                {
+                    "id": 11,
+                    "application": {
+                        "id": "3c814c2b-cf7e-4d14-8c1d-4c62cc4b2a3f",
+                        "name": "just5",
+                        "code": "just5",
+                        "language": "Python",
+                        "product": null
+                    },
+                    "region": "",
+                    "created": "2017-06-20 16:35:42",
+                    "updated": "2017-06-20 16:35:42",
+                    "owner": null,
+                    "service": "6e876510-c9c5-436b-b09f-6c984bfc5c21"
+                },
+            ]
+        }
+        ```
+      summary: 获取服务绑定的所有应用
+      tags:
+      - api
+  "/api/sourcectl/bksvn/accounts/":
+    get:
+      operationId: sourcectl_bksvn_accounts_list
+      responses:
+        '200':
+          description: 获取SVN账户列表成功
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                account:
+                  type: string
+                  description: SVN账户名称
+                  format: string
+                  example: admin_v2
+                region:
+                  type: string
+                  description: 部署区域, 比如内部版为ieod
+                  format: string
+                  example: ieod
+                user:
+                  type: string
+                  description: 用户名
+                  format: string
+                  example: admin
+      parameters: []
+      description: |
+        账户列表
+        - [测试地址](/api/users/source/svn/accounts)
+        - 创建SVN账户不需要传validation_code字段(不需要短信验证码)
+      summary: 账户列表
+      tags:
+      - api
+    post:
+      operationId: sourcectl_bksvn_accounts_create
+      responses:
+        '201':
+          description: 注册SVN账户成功
+          schema:
+            properties:
+              account:
+                type: string
+                description: SVN账户名称
+                example: admin_v2
+              region:
+                type: string
+                description: 部署区域, 比如内部版为ieod
+                example: ieod
+              user:
+                type: string
+                description: 用户名
+                example: admin
+              notify:
+                type: object
+                description: 密码内容通知方式和通知账户等信息
+                properties:
+                  method:
+                    type: string
+                    description: 通知方式
+                    example: sms
+                  receiver:
+                    type: string
+                    description: 接收账号
+                    example: 177****0753
+        '400':
+          description: 请求参数错误
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                description: 错误码
+                example: VALIDATION_ERROR
+              detail:
+                type: string
+                description: 错误详情
+                example: 用户在当前Region的SVN账号已经存在
+              fields_detail:
+                type: object
+                description: key为校验不通过的字段，value为失败原因，`non_field_errors`表示非单个字段校验失败
+                properties:
+                  non_field_errors:
+                    type: string
+                    description: 表单整体校验失败
+                    example: 用户在当前Region的SVN账号已经存在
+      parameters:
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            region:
+              description: 部署区域, 比如内部版为ieod
+              type: string
+            verification_code:
+              description: 操作验证码
+              type: string
+          required:
+          - region
+          - verification_code
+      description: |
+        注册账户
+        - 注册完成后密码直接通过短信或微信的形式发送到用户的手机上，后台不记录密码
+        - [测试地址](/api/users/source/svn/accounts)
+      summary: 注册账户
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/sourcectl/bksvn/accounts/{id}/reset/":
+    put:
+      operationId: sourcectl_bksvn_accounts_reset_update
+      responses:
+        '200':
+          description: 重置SVN密码成功
+          schema:
+            properties:
+              account:
+                type: string
+                description: SVN账户名称
+                example: admin_v2
+              region:
+                type: string
+                description: 部署区域, 比如内部版为ieod
+                example: ieod
+              user:
+                type: string
+                description: 用户名
+                example: admin
+              notify:
+                type: object
+                description: 密码内容通知方式和通知账户等信息
+                properties:
+                  method:
+                    type: string
+                    description: 通知方式
+                    example: sms
+                  receiver:
+                    type: string
+                    description: 接收账号
+                    example: 177****0753
+      parameters:
+      - name: id
+        required: true
+        in: path
+        description: A unique integer value identifying this svn account.
+        type: integer
+      - name: data
+        in: body
+        schema:
+          type: object
+          properties:
+            region:
+              description: 部署区域, 比如内部版为ieod
+              type: string
+            verification_code:
+              description: 操作验证码
+              type: string
+          required:
+          - region
+          - verification_code
+      description: |
+        重置密码
+        - 重置后密码直接通过短信或微信的形式发送到用户的手机上，后台不记录密码
+        - [测试地址](/api/sourcectl/bksvn/accounts/(?P<id>\d+)/reset/)
+      summary: 重置密码
+      consumes:
+      - application/json
+      tags:
+      - api
+  "/api/sourcectl/gitlab/repos/":
+    get:
+      operationId: sourcectl_gitlab_get_gitlab_repo_list
+      responses:
+        '200':
+          description: ''
+      parameters: []
+      description: 获取蓝鲸 GITLAB 项目仓库信息
+      summary: 获取蓝鲸 GITLAB 项目仓库信息
+      tags:
+      - api
+  "/api/sourcectl/init_templates/{code}/":
+    post:
+      operationId: sourcectl_init_templates_create
+      responses:
+        '201':
+          description: ''
+      parameters:
+      - name: code
+        required: true
+        in: path
+        description: ''
+        type: string
+      description: 导出 app 模板的接口
+      summary: 导出 app 模板的接口
+      tags:
+      - api
+  "/api/user/":
+    get:
+      operationId: user_list
+      responses:
+        '200':
+          description: 获取SVN账户列表成功
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: 用户名
+                  format: string
+                  example: admin
+                bkpaas_user_id:
+                  type: string
+                  description: 用户ID
+                  format: string
+                  example: 023cc7ec93995993a5c2
+                avatar_url:
+                  type: string
+                  description: 用户头像URL
+                  format: string
+                  example: ''
+                chinese_name:
+                  type: string
+                  description: 中文名
+                  format: string
+                  example: 梅海峰
+      parameters: []
+      description: |
+        当前登录用户信息
+        - [测试地址](/api/accounts/userinfo/)
+        - 注意：该资源访问路径已经由原来的 `/api/user/` 变更到 `/api/accounts/userinfo/`
+      summary: 当前登录用户信息
+      tags:
+      - api
+  "/healthz/": {}
+  "/streams/__void__": {}
+  "/streams/__void_with_content__": {}
+
+  # System API start
+  # TE version only
+  /sys/api/applications/query/by_username/:
+    get:
+      summary: "根据用户名查询应用列表"
+      description: |
+        根据用户名查询应用列表
+      parameters:
+        - name: "limit"
+          in: "query"
+          description: "结果数量"
+          type: number
+        - name: "offset"
+          in: "query"
+          description: "翻页跳过数量"
+          type: number
+        - name: "provider_type"
+          in: "query"
+          description: "用户类型"
+          type: integer
+        - name: "username"
+          in: "query"
+          description: "用户名"
+          type: string
+      tags:
+        - SystemAPI
+      responses:
+        200:
+          description: 应用列表，带翻页
+          schema:
+            type: "object"
+            properties:
+              count:
+                type: "number"
+                description: 总数
+              next:
+                type: "string"
+                description: 下一页地址
+              previous:
+                type: "string"
+                description: 上一页地址
+              results:
+                type: "array"
+                items:
+                  type: "object"
+                  $ref: '#/definitions/ApplicationAbstract'
+        default:
+          description: 错误信息
+          schema:
+            $ref: '#/definitions/Error'
+  # System API end
+
+
+securityDefinitions:
+  basic:
+    type: basic
+
+definitions:
+  PathVarCode:
+    name: code
+    required: true
+    in: path
+    description: '应用 Code'
+    type: string
+  PathVarModule:
+    name: module
+    required: true
+    in: path
+    description: '应用模块名，默认为 default'
+    type: string
+  PathVarEnv:
+    name: env
+    required: true
+    in: path
+    description: '应用部署环境 stag/prod'
+    type: string
+  ApplicationAbstract:
+    type: "object"
+    description: "蓝鲸应用"
+    properties:
+      id:
+        type: string
+        description: 应用 UUID
+      code:
+        type: string
+        description: 应用 Code
+      name:
+        type: string
+        description: 应用名称
+      default_module_name:
+        type: string
+        description: 默认模块名称
+  Application:
+    type: "object"
+    description: "蓝鲸应用"
+    properties:
+      id:
+        type: string
+        description: 应用 UUID
+        example: 87ce9623-39e9-4d10-bfc4-c6827d781fc7
+      region:
+        type: string
+        description: 应用区域
+        example: ieod
+      region_name:
+        type: string
+        description: region对应的中文名称
+        example: 腾讯内部版
+      source_type:
+        type: string
+        description: 应用源码托管类型
+      source_repo_id:
+        type: string
+        description: 应用源码托管 id
+      is_active:
+        type: boolean
+        description: 应用是否活跃
+      last_deployed_date:
+        type: boolean
+        description: 应用最近部署时间
+      code:
+        type: string
+        description: 应用 Code
+      name:
+        type: string
+        descrition: 应用名称
+      logo_url:
+        type: string
+        descrition: 应用Logo地址
+        example: "http://radosgw.bking.com/app-logo/blueking_app_default.png"
+      language:
+        type: string
+        description: 应用使用的编程语言
+      source_init_template:
+        type: string
+        description: 应用初始化时使用的模板名称
+      created:
+        type: string
+        description: 应用创建时间
+        format: dateTime
+      updated:
+        type: string
+        description: 应用修改时间
+        format: dateTime
+      web_config:
+        type: object
+        properties:
+          engine_enabled:
+            type: boolean
+            description: "是否开启了应用引擎"
+          can_create_extra_modules:
+            type: boolean
+            description: "是否允许创建新模块"
+          require_templated_source:
+            type: boolean
+            description: "创建时是否必须选择应用源码模板"
+          confirm_required_when_publish:
+            type: boolean
+            description: "发布到市场时是否需要二次确认"
+          market_published:
+            type: boolean
+            description: "是否已发布到市场"
+      deploy_info:
+        type: object
+        properties:
+          stag:
+            type: object
+            properties:
+              deployed:
+                type: bool
+                description: 是否部署
+                example: true
+              url:
+                type: string
+                description: 访问链接
+                example: http://paasng.bking.com/s/stag/awesome-app/
+          prod:
+            type: object
+            properties:
+              deployed:
+                type: bool
+                description: 是否部署
+                example: false
+              url:
+                type: string
+                description: 访问链接
+                example: http://paasng.bking.com/s/prod/awesome-app/
+  ModuleMinimal:
+    type: "object"
+    description: "应用模块（精简）"
+    properties:
+      id:
+        type: string
+        description: 模块 UUID
+      name:
+        type: string
+        description: 模块名称，比如 default
+      is_default:
+        type: bool
+        description: 是否为默认模块
+  Product:
+    type: "object"
+    description: "应用市场应用"
+    properties:
+      name:
+        type: string
+        description: 应用 UUID
+        example: "Awesome App"
+      logo:
+        type: string
+        description: 应用的logo地址
+        example: "http://radosgw.bking.com/app-logo/awesome-app.png"
+  Repo:
+    type: "object"
+    description: "代码托管服务中的一份代码"
+    properties:
+      type:
+        type: string
+        description: 代码托管系统类型
+      trunk_url:
+        type: string
+        description: 主分支代码地址
+  Error:
+    properties:
+      code:
+        type: integer
+        description: 错误代码
+        format: string
+      detail:
+        type: string
+        description: 错误详情
+      fields_detail:
+        type: object
+        description: 仅当错误类型为 `VALIDATION_ERROR` 时存在，内容为各字段错误详情
+  ProcIngress:
+    type: "object"
+    description: "应用访问入口信息"
+    properties:
+      name:
+        type: string
+        description: ingress 对象名称
+        example: ieod-bkapp-backend-app-stag
+      domain:
+        type: string
+        description: ingress 访问域名
+        example: ieod-bkapp-backend-app-stag.apps.bking.com
+      service_name:
+        type: string
+        description: 所指向的服务名称
+        example: ieod-bkapp-backend-app-stag-web
+      service_port_name:
+        type: string
+        description: 所指向的服务端口名称
+        example: http
+  ProcServicePortPair:
+    type: "object"
+    properties:
+      name:
+        type: string
+        description: 端口名称
+        example: http
+      protocol:
+        type: string
+        description: 协议
+        example: TCP
+      port:
+        type: int
+        description: 端口号
+        example: 80
+      target_port:
+        type: int
+        description: 目标端口号
+        example: 5000
+  ProcService:
+    type: "object"
+    description: "应用内部进程服务"
+    properties:
+      name:
+        type: string
+        description: service 对象名称
+        example: ieod-bkapp-backend-app-stag-web
+      process_type:
+        type: string
+        description: 进程类型
+        example: web
+      ports:
+        type: array
+        description: 端口列表
+        items:
+          $ref: '#/definitions/ProcServicePortPair'
+  Module:
+    type: "object"
+    description: "应用模块"
+    properties:
+      id:
+        type: string
+        description: 模块 UUID
+        example: 87ce9623-39e9-4d10-bfc4-c6827d781fc7
+      region:
+        type: string
+        description: 模块应用所属区域
+        example: ieod
+      owner:
+        type: string
+        description: 创建者用户 ID
+        example: 0226c9f39893459abac3eb
+      name:
+        type: string
+        descrition: 模块名称
+        example: backend-api
+      language:
+        type: string
+        description: 编程语言
+      source_type:
+        type: string
+        description: 源码托管类型
+      source_repo_id:
+        type: string
+        description: 源码托管 id
+      source_init_template:
+        type: string
+        description: 初始化时使用的模板名称
+      last_deployed_date:
+        type: string
+        description: 模块最近部署时间
+        format: dateTime
+      is_default:
+        type: boolean
+        description: 是否为默认模块
+        example: false
+      created:
+        type: string
+        description: 创建时间
+        format: dateTime
+      updated:
+        type: string
+        description: 修改时间
+        format: dateTime
+  ProcMetrics:
+    type: "object"
+    description: "应用进程资源 metrics"
+    properties:
+      instance_name:
+        type: string
+        description: 应用进程实例名称
+        example: ieod-bkapp-sealog-stag-web-gunicorn-deployment-7665c68869-7qh22
+      results:
+        type: array
+        items:
+          $ref: '#/definitions/SeriesMetrics'
+  SeriesMetrics:
+    type: "object"
+    properties:
+      type_name:
+        type: string
+        description: series 类型名称
+        example: current / request / limit
+      results:
+        type: array
+        description: (时间,值) 列表
+        example: [[1563264780, '15699968'], [1563264790, '15699968'], [1563264800, '15699968']]
+  MarketConfig:
+    type: object
+    properties:
+      enabled:
+        description: '是否开启蓝鲸应用市场'
+        type: boolean
+      source_url_type:
+        description: '访问地址类型'
+        type: string
+      source_tp_url:
+        description: '第三方访问地址'
+        type: string
+      source_module_id:
+        description: '访问目标模块'
+        type: string
+  MarketPublishPreparations:
+    type: object
+    properties:
+      all_conditions_matched:
+        description: '是否所有条件都匹配'
+        type: bool
+      failed_conditions:
+        description: '匹配失败的条件'
+        type: array
+        items:
+          type: object
+          properties:
+            message:
+              description: 'fill_product_info: 未完善应用基本信息, deploy_prod_env: 应用未在生产环境成功部署'
+              type: string
+            action_name:
+              description: '匹配失败操作的名称, 例如 `fill_product_info`, `deploy_prod_env`'
+              type: string
+  ProcSpecsObject:
+    type: object
+    description: 对象类型为 process 时的结构，仅做说明用，内容任通过 `object` 字段提供。
+    properties:
+      name:
+        type: string
+        description: 进程名称
+      type:
+        type: string
+        description: 进程类型
+      replicas:
+        type: int
+        description: 进程设置（预期）实例数
+      success:
+        type: int
+        description: 正常实例数
+      failed:
+        type: int
+        description: 错误（失败）实例数
+      version:
+        type: int
+        description: 进程 release 版本号
+  ProcInstObject:
+    type: object
+    description: 对象类型为 instance 时的结构，仅做说明用，内容任通过 `object` 字段提供。
+    properties:
+      name:
+        type: string
+        description: 实例名称
+      process_type:
+        type: string
+        description: 进程类型名称
+      display_name:
+        type: string
+        description: 用于展示的短名字
+      start_time:
+        type: datetime
+        description: 实例启动时间
+      state:
+        type: string
+        description: 实例状态，可能的值："Running" / "Starting" 等
+      ready:
+        type: bool
+        description: 实例是否就绪
+      version:
+        type: int
+        description: 实例 release 版本号，客户端可使用该值与 Process 进行对比，判断实例是否为最新版
+  Deployment:
+    type: object
+    description: 部署对象，代表一次完整的部署过程
+    properties:
+      id:
+        type: uuid
+        description: 部署 UUID
+      status:
+        type: string
+        description: 状态，可选值：`pending` / `successful` / 'failed' / `interrupted`
+      build_int_requested_at:
+        type: string
+        format: dateTime
+        description: 构建阶段，用户发起停止请求的时间
+      release_int_requested_at:
+        type: string
+        format: dateTime
+        description: 发布阶段，用户发起停止请求的时间
+      has_requested_int:
+        type: boolean
+        description: 用户是否已发送“停止”请求

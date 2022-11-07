@@ -1,0 +1,25 @@
+server {
+    root /var/www;
+    index index.html index.htm;
+
+    # Make site accessible from http://localhost/
+    server_name localhost;
+
+    # Enlarge this value to avoid "Request Header Or Cookie Too Large" error
+    large_client_header_buffers 4 512k;
+
+    # Add 1 week expires header for static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+        expires 1w;
+    }
+
+    location / {
+        # Disable cache control related header entirely
+        expires off;
+        etag off;
+        add_header Last-Modified "";
+
+        try_files $uri $uri/ /index.html;
+    }
+
+}

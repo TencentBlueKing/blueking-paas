@@ -1,0 +1,393 @@
+.form-label {
+    color: #63656e;
+    font-weight: bold;
+    line-height: 36px;
+    font-size: 14px;
+    padding-top: 10px;
+}
+
+.card-container {
+    position: relative;
+    height: 208px;
+    overflow: hidden;
+}
+
+.type-card {
+    width: 100%;
+    background: #fafafa;
+    padding: 20px;
+    margin-left: 0;
+}
+
+.type-card span.f12 {
+    color: #666;
+    font-size: 12px;
+    line-height: 20px;
+    margin-right: 20px;
+}
+
+.options-card {
+    width: 100%;
+    min-height: 190px;
+    background: #fafafa;
+    padding: 0 20px 5px 20px;
+    margin-left: 0;
+    position: absolute;
+    left: 0;
+}
+
+.options-card h2 {
+    color: #52525d;
+    font-size: 14px;
+    font-weight: normal;
+    line-height: 50px;
+}
+
+.lang-card-to-left-enter-active,
+.lang-card-to-left-leave-active {
+    transition: left .75s
+}
+
+.lang-card-to-left-leave-to {
+    left: -600px;
+}
+
+.lang-card-to-left-enter {
+    left: 600px;
+}
+
+.lang-card-to-right-enter-active,
+.lang-card-to-right-leave-active {
+    transition: left .75s
+}
+
+.lang-card-to-right-leave-to {
+    left: 600px;
+}
+
+.lang-card-to-right-enter {
+    left: -600px;
+}
+
+input.ps-form-control {
+    padding: 4px 10px;
+}
+
+.form-group {
+    // margin-bottom: 10px;
+    &.mt {
+        margin-top: 10px;
+    }
+    &.mt-negative {
+        margin-top: -8px;
+    }
+    .form-info {
+        color: #979ba5;
+        line-height: 30px;
+        font-size: 12px;
+    }
+}
+
+.form-actions {
+    text-align: center;
+    margin: 24px 0 18px;
+}
+
+.form-actions {
+    button {
+        width: 118px;
+        margin-left: 10px;
+    }
+}
+
+.form-loading {
+    margin: 24px 0 18px;
+    line-height: 16px;
+    color: #666;
+    text-align: center;
+
+    img {
+        margin-bottom: -2px;
+        margin-left: 8px;
+    }
+
+    p:nth-child(2) {
+        margin-top: 16px;
+        color: #313238;
+        font-size: 16px;
+        font-weight: bold;
+    }
+}
+
+#form-create-app {
+    input[type="radio"] {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+}
+
+.paas-application-tit {
+    height: 36px;
+    padding: 15px 0 11px 0;
+    color: #666;
+    line-height: 36px;
+    position: relative;
+}
+
+.establish-title {
+    position: relative;
+    line-height: 34px;
+    text-align: center;
+}
+
+.establish-title:before,
+.establish-title:after {
+    content: "";
+    position: absolute;
+    width: 528px;
+    height: 1px;
+    background: #e9edee;
+    left: 0;
+    top: 32px;
+}
+
+.establish-title:after {
+    left: auto;
+    right: 0
+}
+
+.establish-title span {
+    display: inline-block;
+    padding: 0 24px;
+    background: #fff;
+    line-height: 34px;
+    font-size: 18px;
+    color: #333;
+    z-index: 9;
+}
+
+.establish {
+    width: 643px;
+    margin: 0 auto;
+    padding-bottom: 32px;
+    box-sizing: border-box;
+    .basic-info {
+        padding: 27px 30px;
+        border: 1px solid #dddfe6;
+        .title {
+            color: #52525d;
+            font-size: 16px;
+            .paasng-icon {
+                position: relative;
+                top: 1px;
+            }
+        }
+    }
+    .app-engine {
+        padding: 27px 30px;
+        margin-top: 32px;
+        border: 1px solid #dddfe6;
+        .title {
+            color: #52525d;
+            font-size: 16px;
+            .paasng-icon {
+                position: relative;
+                top: 1px;
+            }
+        }
+    }
+}
+
+.establish-tab {
+    &.mt {
+        margin-top: 10px;
+    }
+}
+
+.establish .text1 {
+    color: #666;
+    font-weight: bold;
+    line-height: 36px;
+    font-size: 14px;
+    padding-top: 10px;
+}
+
+.establish .text2 {
+    color: #c2c2c2;
+    line-height: 30px;
+    font-size: 12px;
+}
+
+.establishtext {
+    padding: 0 15px;
+    border: solid 1px #ccc;
+    border-radius: 2px;
+    width: 100%;
+    line-height: 40px;
+    font-size: 12px;
+    color: #333;
+    box-sizing: border-box;
+}
+
+input::-webkit-input-placeholder {
+    color: #ccc;
+}
+
+input::-moz-input-placeholder {
+    color: #ccc;
+}
+
+input::-ms-input-placeholder {
+    color: #ccc;
+}
+
+input::-webkit-input-placeholder {
+    color: #ccc;
+}
+
+.establish-list {
+    margin-left: -10px;
+    overflow: hidden;
+    margin-right: -10px;
+}
+
+.establish-list li {
+    float: left;
+    width: 276px;
+    height: 56px;
+    background: #f1f3f4;
+    border-radius: 2px;
+    border: solid 2px #f1f3f4;
+    text-align: center;
+    cursor: pointer;
+    margin: 0 10px;
+    -webkit-transition: all .5s;
+    -moz-transition: all .5s;
+    -ms-transition: all .5s;
+    transition: all .5s;
+}
+
+.establish-list li.active,
+.establish-list li:hover {
+    background: #fff;
+    border: solid 2px #3A84FF;
+}
+
+.establish-list li img {
+    position: relative;
+    vertical-align: middle;
+    top: 13px;
+}
+
+.establish-list li img.establish-img2,
+.establish-list li.active img.establish-img1,
+.establish-list li:hover img.establish-img1 {
+    display: none;
+}
+
+.establish-list li.active img.establish-img2,
+.establish-list li:hover img.establish-img2 {
+    display: inline-block;
+}
+
+.establish-main {
+    margin: 14px 0;
+    -moz-transition: all .5s;
+    -ms-transition: all .5s;
+    -webkit-transition: all .5s;
+    transition: all .5s;
+}
+
+.establish-main-list li {
+    padding-bottom: 10px;
+}
+
+.establish-main-list li p {
+    position: relative;
+    line-height: 26px;
+    padding-left: 25px;
+    color: #333;
+    -moz-transition: all .5s;
+    -ms-transition: all .5s;
+    -webkit-transition: all .5s;
+    transition: all .5s;
+}
+
+.establish-main-list li p.cursor:hover {
+    color: #50a6ff;
+}
+
+.establish-main-list li .radio {
+    position: absolute;
+    left: 0;
+    top: 6px;
+}
+
+.establish-main-list li p.f12 {
+    color: #666;
+    font-size: 12px;
+    line-height: 20px;
+}
+
+.establish-choose {
+    border-top: none;
+    padding-top: 14px;
+}
+
+.establish-choose a {
+    width: 118px;
+    height: 40px;
+    line-height: 40px;
+    border: solid 1px #e5e5e5;
+}
+
+.establish-choose a:hover {
+    background: #e5e5e5;
+}
+
+.establish-li {
+    margin-bottom: 8px;
+    color: #999999;
+    background: none;
+    cursor: pointer;
+}
+
+.establish-li.on {
+    border: solid 2px #3A84FF;
+    padding: 0 16px 0 14px;
+}
+
+.paasng-check-1 {
+    float: right;
+    font-size: 18px;
+    font-weight: bold;
+    position: relative;
+    top: 13px;
+}
+
+.establish-li span {
+    font-size: 14px;
+    color: #333;
+    font-weight: bold;
+}
+
+.language-list {
+    margin: 0;
+    margin-right: -20px;
+
+    li {
+        margin: 0 20px 20px 0;
+    }
+
+    :nth-child(2n) {
+        margin-right: 0
+    }
+}
+
+.ps-region-list {
+    margin-right: 25px;
+}
+
+.unbinded-prompt {
+    font-size: 13px;
+}

@@ -1,0 +1,10 @@
+/*
+ * @file mixins
+ */
+
+@mixin box-shadow($h-shadow, $v-shadow-1, $v-shadow-2, $blur, $spread, $color, $inset) {
+    -webkit-box-shadow: $h-shadow $v-shadow-1 $blur $spread $color $inset, $h-shadow $v-shadow-2 $blur $spread $color $inset;
+    -moz-box-shadow: $h-shadow $v-shadow-1 $blur $spread $color $inset, $h-shadow $v-shadow-2 $blur $spread $color $inset;
+    -ms-box-shadow: $h-shadow $v-shadow-1 $blur $spread $color $inset, $h-shadow $v-shadow-2 $blur $spread $color $inset;
+    box-shadow: $h-shadow $v-shadow-1 $blur $spread $color $inset, $h-shadow $v-shadow-2 $blur $spread $color $inset;
+}

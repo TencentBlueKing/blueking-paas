@@ -1,0 +1,7 @@
+build/*.js
+config/*.js
+node_modules/*
+src/assets/lib/*
+src/components/paas-header.vue
+src/components/loader/*
+src/components/user-selector/*

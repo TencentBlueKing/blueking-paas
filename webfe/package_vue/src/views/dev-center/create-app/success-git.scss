@@ -1,0 +1,159 @@
+.biz-create-success {
+    padding: 120px 0 20px 0;
+}
+.success-wrapper {
+    width: 100%;
+    border: 1px solid #dcdee5;
+    border-radius: 2px;
+    .info {
+        padding-top: 45px;
+        height: 200px;
+        border-bottom: 1px solid #dcdee5;
+        p:nth-child(1) {
+            text-align: center;
+            .text-success {
+                font-size: 49px;
+                color: #2dcb56;
+            }
+        }
+        p:nth-child(2) {
+            margin-top: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #313238;
+            text-align: center;
+        }
+        p:nth-child(3) {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #63656e;
+            text-align: center;
+            .link {
+                color: #3a84ff;
+                cursor: pointer;
+                &:hover {
+                    color: #699df4;
+                }
+            }
+        }
+    }
+    .content {
+        padding: 40px 60px;
+        .input-wrapper {
+            display: table;
+            width: 100%;
+            .input-item {
+                display: table-cell;
+                width: 80%;
+                .svn-input {
+                    box-sizing: border-box;
+                    position: relative;
+                    top: -1px;
+                    width: calc(100% - 144px);
+                    height: 31px;
+                    border-right: 0;
+                }
+                .svn-input-en {
+                    width: calc(100% - 245px);
+                }
+            }
+            .btn-item {
+                display: table-cell;
+                position: relative;
+                left: -1px;
+                top: -1px;
+                width: 15%;
+                .btn-checkout {
+                    width: 100%;
+                    box-sizing: border-box;
+                    border-radius: 0 2px 2px 0;
+                }
+            }
+        }
+        .help-doc {
+            margin: 37px 0 10px 0;
+            color: #63656e;
+            font-weight: bold;
+        }
+        .log-title {
+            margin-bottom: 10px;
+            color: #63656e;
+            font-weight: bold;
+        }
+    }
+}
+
+.url-label {
+    font-weight: bold;
+    color: #333;
+    line-height: 30px;
+}
+
+.tips-wrapper {
+    background-color: #f7f7f7;
+    border-radius: 3px;
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    .tips {
+        position: relative;
+        &:first-child {
+            margin-bottom: 16px;
+            .copy-icon {
+                left: 165px;
+            }
+            .copy-icon-en {
+                left: 390px;
+            }
+        }
+        code {
+            display: inline;
+            max-width: initial;
+            padding: 0;
+            margin: 0;
+            overflow: initial;
+            line-height: 22px;
+            word-wrap: normal;
+            background-color: transparent;
+            border: 0;
+            font-size: 100%;
+            word-break: normal;
+            white-space: pre-line;
+            background: 0 0;
+            box-sizing: inherit;
+            color: #24292e;
+        }
+        .copy-icon,
+        .copy-icon-en {
+            position: absolute;
+            left: 175px;
+            cursor: pointer;
+            font-size: 20px;
+            top: 1px;
+            &:hover {
+                color: #3a84ff;
+            }
+        }
+        .copy-icon-two {
+            left: 360px !important;
+        }
+    }
+}
+
+.svn-input {
+    position: relative;
+    top: 0;
+    height: 32px !important;
+    line-height: 32px;
+}
+
+.btn-checkout {
+    padding: 0;
+    line-height: 32px;
+    border: none !important;
+}
+
+.success-git.scss {
+    display: flex;
+}

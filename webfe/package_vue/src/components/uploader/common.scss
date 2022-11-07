@@ -1,0 +1,74 @@
+$seriousColor: #de6573;
+$unsetColor: #DCDEE5;
+$normalColor: #85cfb7;
+$slightColor: #febf81;
+
+$seriousFontColor: #de6573;
+$normalFontColor: #699df4;
+$slightFontColor: #DCDEE5;
+$defaultFontColor: #63656e;
+$primaryFontColor: #3a84ff;
+
+$seriousIconColor: #ea3636;
+$slightIconColor: #ff9c01;
+$unsetIconColor: #979ba5;
+$normalIconColor: #2dcb56;
+
+$defaultBorderColor: #dcdee5;
+
+$fontLgSize: 24px;
+$fontNormalSize: 16px;
+$fontSmSize: 14px;
+
+$defaultBgColor: #fafbfd;
+
+$successFontColor: #2dcb56;
+$failFontColor: #ea3636;
+$deadlyAlarmColor: #ea3636;
+$warningAlarmColor: #ff8000;
+$remindAlarmColor: #ffd000;
+
+$whiteColor: #fff;
+
+$icons: arrow-down arrow-left arrow-right arrow-up aix back-down back-left back-right back-up check check-circle cluster custom database hint http inform inform-circle linux message-queue default performance remind setting warning windows;
+
+@mixin border-1px($color: $defaultBorderColor) {
+  border: 1px solid $color;
+}
+@mixin border-dashed-1px($color: $defaultBorderColor) {
+  border: 1px dashed $color;
+}
+@mixin common-svg($h: 92px, $t: -92px, $w: 55px, $r: 62px) {
+  position: absolute;
+  width: $w;
+  height: $h;
+  right: $r;
+  top: $t;
+}
+@mixin hover($cursor: pointer) {
+  &:hover {
+    cursor: $cursor;
+  }
+}
+@mixin ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@mixin box-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  /* stylelint-disable-next-line value-no-vendor-prefix */
+  display: -webkit-box;
+
+  /* stylelint-disable-next-line property-no-vendor-prefix */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  word-break: break-all;
+}
+@mixin content-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

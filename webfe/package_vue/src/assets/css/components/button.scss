@@ -1,0 +1,352 @@
+/*
+ * @file button
+ */
+
+.ps-btn {
+    font-size: 13px;
+    line-height: 13px;
+    text-align: center;
+    border: solid 1px #e5e5e5;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color .3s;
+    padding: 8px 12px;
+
+    +.ps-btn {
+        margin-left: 7px;
+    }
+
+    .paasng-icon {
+        margin-right: 3px;
+    }
+
+    img {
+        vertical-align: middle;
+    }
+
+    // Button sizes
+    &-xl,
+    &.ps-btn-xl {
+        font-size: 15px;
+        line-height: 1.2;
+        padding: 14px 28px;
+
+        +.ps-btn-xl {
+            margin-left: 7px;
+        }
+    }
+
+    &-l,
+    &.ps-btn-l {
+        font-size: 14px;
+        line-height: 1.1;
+        padding: 10px 18px;
+
+        +.ps-btn-l {
+            margin-left: 7px;
+        }
+    }
+
+    &-xs,
+    &.ps-btn-xs {
+        padding: 0 4px;
+
+        +.ps-btn-xs {
+            margin-left: 7px;
+        }
+    }
+
+    // Button styles
+    &-default {
+        color: #555;
+        background-color: white;
+
+        &:hover {
+            background-color: #e5e5e5;
+            color: #555;
+        }
+    }
+
+    &[disabled],
+    &:disabled,
+    &-disabled {
+        background-color: #fff;
+        border-color: #e7e7e7;
+        cursor: not-allowed;
+        color: rgba(204, 204, 204, 1);
+
+        &:hover {
+            color: rgba(204, 204, 204, 1);
+            background-color: #fff;
+        }
+    }
+
+    // Button colors
+    &-primary {
+        background-color: #3A84FF;
+        border: solid 1px #3A84FF;
+        color: #fff;
+
+        &:hover {
+            background-color: #3a84ff;
+            color: #ffffff;
+        }
+    }
+
+    &-success {
+        background-color: #5bd18b;
+        color: #ffffff;
+        border-color: #5bd18b;
+
+        &:hover {
+            background-color: #51b87a;
+            color: #ffffff;
+        }
+    }
+
+    &-link {
+        border-color: transparent;
+        background: transparent;
+        color: #3A84FF;
+
+        &:hover {
+            color: #3a84ff;
+        }
+    }
+
+    &-rounded {
+        border-radius: 16px;
+    }
+
+    /* Special buttons */
+    &-visit {
+        padding: 8px 14px;
+        color: #5bd18b;
+        background-color: #eefaf3;
+        border-color: #eefaf3;
+    }
+
+    &-visit-disabled,
+    &-visit:disabled,
+    &-visit[disabled] {
+        color: #d7eadf !important;
+    }
+
+    &-visit-disabled:hover,
+    &-visit:disabled:hover,
+    &-visit[disabled]:hover {
+        background-color: #eefaf3;
+    }
+
+    // Ghost button colors
+    &-primary-ghost {
+        border: solid 1px #3A84FF;
+        background: #fff;
+        color: #3A84FF;
+
+        &:hover {
+            color: #ffffff;
+            background: #3A84FF;
+        }
+    }
+
+    &-primary {
+        color: #fff;
+        background: #3A84FF;
+        border-color: #3A84FF;
+
+        &:hover {
+            background: #4e93d9;
+        }
+    }
+
+    &-danger {
+        color: #fff;
+        background-color: #a96464;
+        border-color: #a96464;
+
+        &:hover {
+            background-color: #a94442;
+        }
+    }
+
+
+    // Special buttons
+    &-service-try-now {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        margin-top: -15px;
+    }
+
+    &-checkout {
+        width: 198px;
+        margin: 40px 14px;
+        float: left;
+        color: #666666;
+
+        &:hover {
+            background: #e6e9ea;
+            color: #666666;
+        }
+    }
+
+    &-icon {
+        border: 0;
+        cursor: pointer;
+    }
+
+    &-fail {
+        color: #cccccc;
+        border-color: #cccccc;
+        background-color: #ffffff;
+
+        &:hover {
+            background-color: #cccccc;
+            color: #ffffff;
+            border-color: #cccccc;
+        }
+    }
+
+    &-dropdown {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+}
+
+.ps-btn-group {
+    .ps-btn {
+        position: relative;
+        float: left;
+        margin-left: -1px;
+    }
+
+    &>.btn:first-child {
+        margin-left: 0px;
+    }
+}
+
+.ps-text-btn {
+    font-size: 12px;
+    color: #3C96FF;
+    text-decoration: none;
+
+    +.ps-text-btn {
+        margin-left: 10px;
+    }
+}
+
+.ps-text-button {
+    color: #3A84FF;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+
+.ps-btn-icon-only {
+    width: 32px;
+    height: 32px;
+    line-height: 30px !important;
+    border: 1px solid #FFF;
+    padding: 0;
+    vertical-align: top;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    box-sizing: border-box;
+
+    &.btn-ms-primary {
+        &:hover {
+            background: #ebf4ff;
+            border: 1px solid #3a84ff;
+            color: #3a84ff;
+        }
+    }
+
+}
+
+
+.ps-icon-btn {
+    width: 22px;
+    height: 22px;
+    line-height: 26px;
+    text-align: center;
+    background: #ffffff;
+    border-radius: 2px;
+    border: solid 1px #e9edee;
+    margin: 0 5px 0 0;
+    float: left;
+    -webkit-transition: all .5s;
+    -moz-transition: all .5s;
+    -ms-transition: all .5s;
+    transition: all .5s;
+    position: relative;
+    cursor: pointer;
+}
+
+.ps-icon-btn-circle {
+    width: 22px;
+    height: 22px;
+    line-height: 26px;
+    text-align: center;
+    background: #fff;
+    border-radius: 50%;
+    border: solid 1px #dcdee5;
+    // margin: 0 5px 0 0;
+    float: left;
+    -webkit-transition: all .5s;
+    -moz-transition: all .5s;
+    -ms-transition: all .5s;
+    transition: all .5s;
+    position: relative;
+    cursor: pointer;
+
+    &.start {
+        border-color: #2dcb56;
+    }
+
+    &.stop {
+        border-color: #ea3636;
+    }
+
+    &.no-border {
+        border: none;
+    }
+}
+
+.ps-block-btn {
+    width: 100%;
+    height: 42px;
+    line-height: 42px;
+    text-align: center;
+    font-size: 14px;
+    color: #63656E;
+    border: 1px dashed #C4C6CC;
+    border-radius: 2px;
+    box-sizing: border-box;   
+}
+
+.ps-more-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    font-size: 18px;
+    text-align: center;
+    line-height: 36px;
+    color: #3A84FF;
+    background: #FFF;
+
+    &:hover,
+    &.hover {
+        background-color: #F0F1F5;
+    }
+}
+
+.bk-dropdown-menu {
+    &:hover {
+        .ps-more-btn {
+            background-color: #F0F1F5;
+        }
+    }
+}

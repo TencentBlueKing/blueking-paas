@@ -1,0 +1,27 @@
+{
+    "presets": [
+        [
+            "env",
+            {
+                "modules": false
+            }
+        ],
+        "stage-2",
+    ],
+    "plugins": [
+        "transform-runtime",
+        "transform-vue-jsx",
+        ["babel-plugin-import-bk-magic-vue", {
+            "baseLibName": "bk-magic-vue"
+        }]
+    ],
+    "comments": false,
+    "env":
+    {
+        "test":
+        {
+            "presets": ["env", "stage-2"],
+            "plugins": ["istanbul"]
+        }
+    }
+}

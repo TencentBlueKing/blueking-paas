@@ -1,0 +1,236 @@
+/*
+ * @file 表单
+ */
+
+.ps-form {
+    label {
+        color: #333;
+        font-weight: bold;
+    }
+
+    &.ps-form-horizontal {
+        label {
+            font-size: 14px;
+            padding: 7px 8px 0 0;
+        }
+    }
+}
+
+.ps-tip {
+    margin-top: 7px;
+    font-size: 12px;
+    color: rgba(153, 153, 153, 1) !important;
+    line-height: 1;
+}
+
+.ps-addon-group {
+    display: flex;
+
+    .ps-addon-left {
+        border-right: none;
+
+        +input.ps-form-control {
+            border-radius-top: 0;
+            border-radius-left: 0;
+        }
+    }
+
+    .ps-addon-right {
+        border-left: none;
+
+        +input.ps-form-control {
+            border-radius-right: 0;
+            border-radius-bottom: 0;
+        }
+    }
+}
+
+.ps-span {
+    height: 1px;
+    background-color: #DCDEE5;
+    display: block;
+    margin: 30px 0;
+}
+
+.ps-addon {
+    height: 36px;
+    text-align: center;
+    line-height: 34px;
+    display: inline-block;
+    vertical-align: middle;
+    background: #fafbfd;
+    border: 1px solid #c3cdd7;
+    color: #737987;
+    font-size: 14px;
+    border-radius: 0 2px 2px 0;
+    padding: 0 13px;
+}
+
+.ps-search-input {
+    display: inline-block;
+    width: 300px;
+    position: relative;
+
+    >.paasng-icon {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+    }
+}
+
+.ps-form-control,
+.ps-form-control {
+    color: #666;
+    cursor: initial;
+    line-height: 32px;
+    padding: 0 10px;
+    border: solid 1px #c3cdd7;
+    font-size: 13px;
+    box-sizing: border-box;
+    width: 100%;
+    border-radius: 2px;
+
+    &:focus {
+        outline: none;
+        border-color: #3a84ff;
+    }
+
+    &:read-only {
+        background-color: #f4f4f4;
+    }
+
+    &.parsley-error {
+        border: 1px solid #ff3737;
+    }
+
+    &.error {
+        border: 1px solid #ff3737;
+    }
+
+    &::-webkit-input-placeholder {
+        color: #ccc;
+    }
+}
+
+/* checkbox */
+.ps-checkbox-default {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #ffffff;
+    border: 1px solid #cdcdcd;
+    padding: 7px !important;
+    border-radius: 2px;
+    display: inline-block;
+    position: relative;
+    line-height: 30px;
+    vertical-align: middle;
+    cursor: pointer;
+    margin-right: 4px;
+}
+
+.ps-checkbox-default:checked,
+.ps-checkbox-default:visited,
+.ps-checkbox-default:hover,
+.ps-checkbox-default:active {
+    background-color: #ffffff;
+    border: 1px solid #cdcdcd;
+    color: #99a1a7;
+}
+
+.ps-checkbox-default:checked:after {
+    content: " ";
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    border-color: #3A84FF !important;
+    border-width: 0 2px 2px 0;
+    border-style: solid;
+    width: 4px;
+    height: 8px;
+    -webkit-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+.ps-checkbox-default:disabled {
+    cursor: not-allowed;
+    color: #cdcdcd;
+}
+
+.ps-checkbox-default:checked:disabled:after {
+    border-color: #cdcdcd !important;
+}
+
+/* radio */
+.ps-radio-default {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #ffffff;
+    border: 1px solid #cdcdcd;
+    padding: 7px !important;
+    border-radius: 50px;
+    display: inline-block;
+    position: relative;
+    line-height: 30px;
+    vertical-align: middle;
+    cursor: pointer;
+    margin-right: 4px;
+}
+
+.ps-radio-default:checked:after {
+    content: ' ';
+    width: 6px;
+    height: 6px;
+    border-radius: 50px;
+    position: absolute;
+    top: 4px;
+    background: #3A84FF;
+    left: 4px;
+    font-size: 12px;
+}
+
+.ps-radio-default:checked,
+.ps-radio-default:visited,
+.ps-radio-default:hover,
+.ps-radio-default:active {
+    background-color: #ffffff;
+    border: 1px solid #cdcdcd;
+    color: #99a1a7;
+}
+
+.ps-radio-default:disabled {
+    cursor: not-allowed;
+    color: #cdcdcd;
+}
+
+.ps-radio-default:checked:disabled:after {
+    border-color: #cdcdcd !important;
+}
+
+/*富文本编辑器选中样式*/
+.ps-data-focus {
+    -webkit-transition: all .35s;
+    -moz-transition: all .35s;
+    -ms-transition: all .35s;
+    transition: all .35s;
+}
+
+.ps-data-focus .bk-data-wrapper {
+    border: 1px solid #3a84ff;
+}
+
+.ps-data-focus .w-e-toolbar {
+    border: none !important;
+    border: 1px solid #3a84ff !important;
+    border-bottom: 1px solid #ccc !important;
+}
+
+.ps-data-focus .w-e-text-container {
+    border: 1px solid #3a84ff !important;
+    border-top: none !important;
+    -webkit-transition: all .35s;
+    -moz-transition: all .35s;
+    -ms-transition: all .35s;
+    transition: all .35s;
+}

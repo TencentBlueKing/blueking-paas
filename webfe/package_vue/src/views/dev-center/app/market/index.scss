@@ -1,0 +1,97 @@
+.inline-select {
+    display: inline-block;
+    width: 200px;
+}
+
+.logo-uploader {
+    margin-bottom: 15px;
+    overflow: hidden;
+
+    .preview {
+        img {
+            width: 64px;
+            height: 64px;
+            border-radius: 2px;
+        }
+    }
+
+    .upload-btn {
+        width: 100px;
+        overflow: hidden;
+        margin-bottom: 10px;
+        input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 10;
+            height: 100%;
+            min-height: 40px;
+            width: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+    }
+}
+
+.tip {
+    font-size: 12px;
+    color: #979BA5;
+}
+
+.flash {
+    &::after {
+        content: '';
+        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        margin: auto;
+        bottom: 0;
+        top: 0;
+        visibility: visible;
+        border-radius: 2px;
+        animation: 1000ms linear 0s infinite alternate flash;
+    }
+}
+
+.view-risk {
+    &:hover {
+        color: #699df4;
+    }
+}
+
+.reset-mt {
+    margin: 5px 0 0 0 !important;
+    display: block !important;
+}
+
+.visit-link {
+    display: inline-block;
+    margin-left: 20px;
+    color: #3a84ff;
+    cursor: pointer;
+    &:hover {
+        color: #699df4;
+    }
+}
+
+.wrap {
+    width: 1180px;
+}
+
+@keyframes flash {
+    0% {
+        background-color: #3A84FF;
+        opacity: 0;
+    }
+
+    50% {
+        background-color: #3A84FF;
+        opacity: 0.2;
+    }
+
+    100% {
+        background-color: #3A84FF;
+        opacity: 0;
+    }
+}

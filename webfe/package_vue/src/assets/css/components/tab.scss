@@ -1,0 +1,51 @@
+/**
+ * tab 选项卡
+ */
+.ps-tab {
+    padding: 0 5px;
+    border-bottom: 1px solid #DCDEE5;
+
+    &::after {
+		display: block;
+		clear: both;
+		content: "";
+		font-size: 0;
+		height: 0;
+		visibility: hidden;
+	}
+}
+
+.ps-tab > a,
+.ps-tab > .item {
+    line-height: 1;
+    margin: 0 15px;
+    padding: 15px 0;
+    text-align: center;
+    font-size: 14px;
+    color: #63656E;
+    float: left;
+    box-sizing: border-box;
+    cursor: pointer;
+    position: relative;
+
+    a {
+        color: #63656E;
+    }
+}
+
+.ps-tab a.active,
+.ps-tab .item.active {
+    &:after {
+        content: '';
+        height: 2px;
+        width: 100%;
+        position: absolute;
+        left: 0;
+        bottom: -1px;
+        background: #3A84FF;
+    }
+
+    a {
+        color: #3A84FF;
+    }
+}

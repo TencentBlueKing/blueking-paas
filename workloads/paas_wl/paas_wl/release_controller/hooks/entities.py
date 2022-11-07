@@ -1,0 +1,209 @@
+# -*- coding: utf-8 -*-
+import datetime
+import logging
+from dataclasses import dataclass
+from typing import Dict, Optional
+
+import arrow
+import cattr
+from django.conf import settings
+from kubernetes.dynamic import ResourceField, ResourceInstance
+from typing_extensions import Literal
+
+from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
+from paas_wl.release_controller.entities import Runtime
+from paas_wl.release_controller.hooks.models import Command as CommandModel
+from paas_wl.resources.base import kres
+from paas_wl.resources.kube_res.base import (
+    AppEntity,
+    AppEntityDeserializer,
+    AppEntityManager,
+    AppEntitySerializer,
+    Schedule,
+)
+from paas_wl.resources.kube_res.envs import decode_envs, encode_envs
+from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations
+from paas_wl.utils.constants import CommandType
+from paas_wl.utils.kubestatus import check_pod_health_status, parse_pod
+from paas_wl.workloads.images.constants import PULL_SECRET_NAME
+from paas_wl.workloads.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
+from paas_wl.workloads.resource_templates.utils import AddonManager
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CommandKubeAdaptor:
+    command: CommandModel
+
+    def get_pod_name(self):
+        """Get A k8s friendly pod name."""
+        if self.command.type == CommandType.PRE_RELEASE_HOOK.value:
+            return "pre-release-hook"
+        return f"command-{str(self.command.pk)}"
+
+
+class CommandDeserializer(AppEntityDeserializer['Command']):
+    api_version = "v1"
+
+    def deserialize(self, app: App, kube_data: ResourceInstance) -> 'Command':
+        main_container = self._get_main_container(kube_data)
+        annotations = kube_data.metadata.get('annotations', {})
+
+        status = kube_data.status
+        health_status = check_pod_health_status(parse_pod(kube_data))
+
+        if hasattr(status, "startTime"):
+            start_time = arrow.get(status.startTime)
+        else:
+            logger.warning(
+                "Pod<%s/%s> missing start_time field!", kube_data.metadata.namespace, kube_data.metadata.name
+            )
+            start_time = None
+
+        return Command(
+            # Pod 描述性信息
+            app=app,
+            name=kube_data.metadata.name,
+            runtime=Runtime(
+                image=main_container.image,
+                command=main_container.command,
+                args=main_container.args,
+                envs=decode_envs(main_container.env),
+                image_pull_policy=main_container.imagePullPolicy,
+                image_pull_secrets=getattr(kube_data.spec, "imagePullSecrets", None) or [],
+            ),
+            schedule=Schedule(
+                cluster_name=annotations["cluster_name"],
+                node_selector=getattr(kube_data.spec, "node_selector", {}),
+                tolerations=getattr(kube_data.spec, "tolerations", []),
+            ),
+            # 持久化字段(annotations)
+            pk=annotations["pk"],
+            type_=annotations["type"],
+            version=int(annotations["version"]),
+            # 运行时信息
+            start_time=start_time,
+            status=status.phase,
+            status_message=health_status.message,
+        )
+
+    @staticmethod
+    def _get_main_container(pod_info: ResourceInstance) -> ResourceField:
+        """获取 Pod 中声明的主容器信息.
+        Note: 根据约定, 与 Pod 命名一致的容器为主容器"""
+        pod_name = pod_info.metadata.name
+        for c in pod_info.spec.containers:
+            if c.name == pod_name:
+                return c
+        raise RuntimeError("container not found.")
+
+
+class CommandSerializer(AppEntitySerializer['Command']):
+    api_version = "v1"
+
+    def serialize(self, obj: 'Command', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+        addon_mgr = AddonManager(obj.app)
+        containers = [
+            {
+                'command': obj.runtime.command,
+                'args': obj.runtime.args,
+                'env': encode_envs(obj.runtime.envs),
+                'image': obj.runtime.image,
+                'name': obj.name,
+                'imagePullPolicy': obj.runtime.image_pull_policy,
+                'resources': self._get_pod_resources(obj),
+                'volumeMounts': cattr.unstructure(
+                    get_app_logging_volume_mounts(obj.app) + addon_mgr.get_volume_mounts()
+                ),
+            }
+        ] + cattr.unstructure(addon_mgr.get_sidecars())
+
+        pod_template = {
+            'apiVersion': self.api_version,
+            'kind': 'Pod',
+            'metadata': {
+                'name': obj.name,
+                'namespace': obj.app.namespace,
+                'labels': self._get_kube_labels(obj),
+                'annotations': self._get_kube_annotations(obj),
+            },
+            'spec': {
+                'containers': containers,
+                'volumes': cattr.unstructure(get_app_logging_volume(obj.app) + addon_mgr.get_volumes()),
+                'restartPolicy': 'Never',
+                'nodeSelector': obj.schedule.node_selector,
+                'tolerations': obj.schedule.tolerations,
+                'imagePullSecrets': obj.runtime.image_pull_secrets,
+            },
+        }
+        return pod_template
+
+    def _get_kube_labels(self, obj: 'Command') -> Dict:
+        return {'pod_selector': obj.name, 'category': "command"}
+
+    def _get_kube_annotations(self, obj: 'Command') -> Dict:
+        return {
+            "type": obj.type_,
+            "version": str(obj.version),
+            "pk": obj.pk,
+            "cluster_name": obj.schedule.cluster_name,
+        }
+
+    def _get_pod_resources(self, obj: 'Command'):
+        return settings.SLUGBUILDER_RESOURCES_SPEC
+
+
+@dataclass
+class Command(AppEntity):
+    runtime: Runtime
+    schedule: Schedule
+    # 持久化字段(annotations)
+    pk: str
+    type_: str
+    version: int
+
+    # 运行时状态
+    start_time: Optional[datetime.datetime]
+    status: Literal["Pending", "Running", "Succeeded", "Failed", "Unknown"] = "Unknown"
+    status_message: Optional[str] = None
+
+    class Meta:
+        kres_class = kres.KPod
+        deserializer = CommandDeserializer
+        serializer = CommandSerializer
+
+    @classmethod
+    def from_db_obj(cls, command: 'CommandModel', extra_envs: Optional[Dict] = None) -> 'Command':
+        envs = command.get_envs()
+        envs.update(AppConfigVarManager(command.app).get_envs())
+        envs.update(extra_envs or {})
+
+        return cls(
+            app=command.app,
+            name=CommandKubeAdaptor(command).get_pod_name(),
+            runtime=Runtime(
+                image=command.config.get_image(),
+                # 平台镜像默认的 command 应当是 bash /runner/init, 这里应该如何兼容用户自定义镜像呢？
+                # 例如, 将 command 覆盖为 exec ?
+                command=command.config.runtime.get_entrypoint(),
+                args=command.split_command,
+                envs=envs,
+                image_pull_policy=command.config.runtime.get_image_pull_policy(),
+                image_pull_secrets=[{"name": PULL_SECRET_NAME}],
+            ),
+            schedule=Schedule(
+                cluster_name=get_cluster_by_app(command.app).name,
+                node_selector=get_full_node_selector(command.app, command.config),
+                tolerations=get_full_tolerations(command.app, command.config),
+            ),
+            pk=str(command.pk),
+            type_=command.type,
+            version=command.version,
+            start_time=None,
+        )
+
+
+command_kmodel: AppEntityManager[Command] = AppEntityManager(Command)

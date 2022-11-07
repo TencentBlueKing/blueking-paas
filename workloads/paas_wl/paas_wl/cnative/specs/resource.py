@@ -1,0 +1,140 @@
+import logging
+from typing import Dict, Optional
+
+from attrs import define
+
+from paas_wl.cnative.specs import credentials
+from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
+from paas_wl.cnative.specs.constants import (
+    IMAGE_CREDENTIALS_REF_ANNO_KEY,
+    ConditionStatus,
+    DeployStatus,
+    MResConditionType,
+    MResPhaseType,
+)
+from paas_wl.cnative.specs.models import EnvResourcePlanner
+from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, MetaV1Condition
+from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.struct_models import ModuleEnv
+from paas_wl.resources.base import crd
+from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.resources.base.exceptions import ResourceMissing
+from paas_wl.resources.base.kres import KNamespace
+from paas_wl.workloads.images.entities import ImageCredentials
+
+logger = logging.getLogger(__name__)
+
+
+def get_mres_from_cluster(env: ModuleEnv) -> Optional[BkAppResource]:
+    """Get the application's model resource in given environment, if no resource
+    can be found, return `None`.
+    """
+    planer = EnvResourcePlanner(env)
+    with get_client_by_cluster_name(planer.cluster.name) as client:
+        # TODO: Provide apiVersion or using AppEntity(after some adapting works) to make
+        # code more robust.
+        try:
+            data = crd.BkApp(client).get(planer.default_app_name, namespace=planer.namespace)
+        except ResourceMissing:
+            logger.info('BkApp not found in %s, app: %s', planer.namespace, env.application)
+            return None
+    return BkAppResource(**data)
+
+
+def deploy(env: ModuleEnv, manifest: Dict) -> Dict:
+    """
+    Create or update(replace) bkapp manifest in cluster
+
+    :param env: The env to be deployed.
+    :param manifest: Application manifest data.
+    :raises: CreateServiceAccountTimeout 当创建 SA 超时（含无默认 token 的情况）时抛出异常
+    """
+    engine_app = EngineApp.objects.get_by_env(env)
+    planer = EnvResourcePlanner(env)
+    with get_client_by_cluster_name(planer.cluster.name) as client:
+        # 若命名空间不存在，则提前创建（若为新建命名空间，需要等待 ServiceAccount 就绪）
+        namespace_client = KNamespace(client)
+        _, created = namespace_client.get_or_create(name=planer.namespace)
+        if created:
+            namespace_client.wait_for_default_sa(namespace=planer.namespace)
+
+        if manifest["metadata"]["annotations"].get(IMAGE_CREDENTIALS_REF_ANNO_KEY) == "true":
+            # 下发镜像访问凭证(secret)
+            image_credentials = ImageCredentials.load_from_app(engine_app)
+            credentials.ImageCredentialsManager(client).upsert(image_credentials)
+
+        # 创建或更新 BkApp
+        bkapp, _ = crd.BkApp(client).create_or_update(
+            planer.default_app_name,
+            namespace=planer.namespace,
+            body=manifest,
+            update_method='patch',
+            content_type='application/merge-patch+json',
+        )
+
+    # Deploy other dependencies
+    deploy_networking(env)
+    return bkapp.to_dict()
+
+
+def deploy_networking(env: ModuleEnv) -> None:
+    """Deploy the networking related resources for env, such as Ingress and etc."""
+    save_addresses(env)
+    mapping = AddrResourceManager(env).build_mapping()
+
+    planer = EnvResourcePlanner(env)
+    with get_client_by_cluster_name(planer.cluster.name) as client:
+        crd.DomainGroupMapping(client).create_or_update(
+            mapping.metadata.name,
+            namespace=planer.namespace,
+            body=mapping.dict(),
+            update_method='patch',
+            content_type='application/merge-patch+json',
+        )
+
+
+@define
+class ModelResState:
+    """State of deployed app model resource
+
+    :param status: "ready", "pending" etc.
+    :param reason: Reason for current status
+    :param message: Detailed message
+    """
+
+    status: DeployStatus
+    reason: str
+    message: str
+
+
+class MresConditionParser:
+    """Parse "conditions" in BkApp resource's status field"""
+
+    def __init__(self, mres: BkAppResource):
+        self.mres = mres
+
+    def detect_state(self) -> ModelResState:
+        """Detect the final state from status.conditions"""
+        if self.mres.metadata.generation > self.mres.status.observedGeneration:
+            return ModelResState(DeployStatus.PENDING, "Pending", "waiting for the controller to process this BkApp")
+
+        if not self.mres.status.conditions:
+            return ModelResState(DeployStatus.PENDING, "Pending", "state not initialized")
+
+        available = self._find_condition(MResConditionType.APP_AVAILABLE)
+        if available and available.status == ConditionStatus.TRUE:
+            return ModelResState(DeployStatus.READY, available.reason, available.message)
+
+        if self.mres.status.phase == MResPhaseType.AppFailed:
+            for cond in self.mres.status.conditions:
+                if cond.status == ConditionStatus.FALSE and cond.message:
+                    return ModelResState(DeployStatus.ERROR, cond.reason, cond.message)
+            return ModelResState(DeployStatus.ERROR, "Unknown", "")
+
+        return ModelResState(DeployStatus.PROGRESSING, "Progressing", "progressing")
+
+    def _find_condition(self, type_: MResConditionType) -> Optional[MetaV1Condition]:
+        for condition in self.mres.status.conditions:
+            if condition.type == type_:
+                return condition
+        return None

@@ -1,0 +1,20 @@
+# permissions for end users to view domaingroupmappings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: domaingroupmapping-viewer-role
+rules:
+- apiGroups:
+  - paas.bk.tencent.com
+  resources:
+  - domaingroupmappings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - paas.bk.tencent.com
+  resources:
+  - domaingroupmappings/status
+  verbs:
+  - get

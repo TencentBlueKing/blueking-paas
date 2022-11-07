@@ -1,0 +1,52 @@
+apiVersion: paas.bk.tencent.com/v1alpha1
+kind: BkApp
+metadata:
+  name: bkapp-sample
+spec:
+  processes:
+    - name: web
+      replicas: 2
+      image: nginx:latest
+      targetPort: 8080
+      cpu: 100m
+      memory: 50Mi
+    - name: hello
+      replicas: 2
+      image: busybox:latest
+      command:
+        - /bin/sh
+      args:
+        - "-c"
+        - "echo hello; sleep 20"
+      cpu: 100m
+      memory: 20Mi
+    - name: hi
+      replicas: 2
+      image: busybox:latest
+      command:
+        - /bin/sh
+      args:
+        - "-c"
+        - "echo hi; sleep 20"
+      cpu: 100m
+      memory: 20Mi
+  hooks:
+    preRelease:
+      command:
+        - "/bin/sh"
+      args:
+        - "-c"
+        - "echo hello; sleep 10;"
+  configuration:
+    env:
+      - name: ENV_VAR_KEY
+        value: env_var_value
+  envOverlay:
+    replicas:
+      - envName: stag
+        process: web
+        count: 0
+    envVariables:
+      - envName: prod
+        name: ENV_ONLY_FOR_STAG
+        value: foo

@@ -1,0 +1,24 @@
+resources:
+- manager.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- files:
+  - controller_manager_config.yaml
+  name: manager-config
+
+# [PRIVATE_DOCKER_REGISTER] 去除 docker-register 的注释以在 `make deploy` 时能够创建 ImagePullSecrets 供 controller Deployment 使用
+# 需要注意的是，需保证 ./manager/.dockerconfigjson 文件存在（可通过 make dockerconfigjson 生成）
+secretGenerator:
+- files:
+  - .dockerconfigjson
+  name: docker-registry
+  type: kubernetes.io/dockerconfigjson
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: controller
+  newTag: latest

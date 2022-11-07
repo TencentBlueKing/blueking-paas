@@ -1,0 +1,23 @@
+apiVersion: paas.bk.tencent.com/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: projectconfig-sample
+health:
+  healthProbeBindAddress: :8081
+metrics:
+  bindAddress: 127.0.0.1:8080
+webhook:
+  port: 9443
+leaderElection:
+  leaderElect: true
+  resourceName: e56dbef1.bk.tencent.com
+platformConfig:
+  bkAppCode: ""
+  bkAppSecret: ""
+  bkAPIGatewayURL: ""
+experimentalFeatures:
+  useNetworkingV1Beta1: false
+resLimitConfig:
+  procDefaultCPULimits: "4"
+  procDefaultMemLimits: "1Gi"
+  maxReplicas: 5

@@ -18,8 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import List, Protocol, Tuple
 
+from django.conf import settings
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl.response import Response
+from elasticsearch_dsl.aggs import DateHistogram
+from elasticsearch_dsl.response import AggResponse, Response
+from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.pluginscenter.definitions import BKLogConfig, ElasticSearchHost, PluginBackendAPIResource, PluginLogConfig
 from paasng.pluginscenter.thirdparty.log.search import SmartSearch
@@ -31,6 +34,9 @@ class LogClientProtocol(Protocol):
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with search"""
+
+    def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
+        """aggregate time-based histogram"""
 
 
 class BKLogClient:
@@ -49,12 +55,34 @@ class BKLogClient:
             "scenario_id": self.config.scenarioID,
             "body": search.to_dict(),
         }
+        resp = self._call_api(data, timeout)
+        return Response(search.search, resp["data"]), resp["data"]["hits"]["total"]
+
+    def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
+        """aggregate time-based histogram"""
+        agg = DateHistogram(
+            field=search.time_field,
+            interval=search.time_range.detect_date_histogram_interval(),
+            time_zone=settings.TIME_ZONE,
+            min_doc_count=1,
+        )
+        search.search.aggs.bucket('histogram', agg)
+        search.limit_offset(0, 0)
+        data = {
+            "indices": index,
+            "scenario_id": self.config.scenarioID,
+            "body": search.to_dict(),
+        }
+        resp = self._call_api(data, timeout)
+
+        return AggResponse(search.search.aggs, search.search, resp["data"]["aggregations"]).histogram
+
+    def _call_api(self, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:
             data["bkdata_data_token"] = self.config.bkdataDataToken
-        resp = self.client.call(data=data, timeout=timeout)
-        return Response(search.search, resp["data"]), resp["data"]["hits"]["total"]
+        return self.client.call(data=data, timeout=timeout)
 
 
 class ESLogClient:
@@ -72,6 +100,24 @@ class ESLogClient:
         )
         return (response, self._get_response_count(index, search, timeout, response))
 
+    def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
+        """aggregate time-based histogram"""
+        agg = DateHistogram(
+            field=search.time_field,
+            interval=search.time_range.detect_date_histogram_interval(),
+            time_zone=settings.TIME_ZONE,
+            min_doc_count=1,
+        )
+        search.search.aggs.bucket('histogram', agg)
+        search.limit_offset(0, 0)
+        return AggResponse(
+            search.search.aggs,
+            search.search,
+            self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout})[
+                "aggregations"
+            ],
+        ).histogram
+
     def _get_response_count(self, index: str, search: SmartSearch, timeout: int, response: Response) -> int:
         """get total field from es response if it had, or send a count response to es"""
         if response.hits.total.relation == "eq":
@@ -83,10 +129,10 @@ class ESLogClient:
 
 def instantiate_log_client(log_config: PluginLogConfig, bk_username: str) -> LogClientProtocol:
     """实例化 log client 实例"""
-    if log_config.backend_type == "bkLog":
+    if log_config.backendType == "bkLog":
         assert log_config.bkLogConfig
         return BKLogClient(log_config.bkLogConfig, bk_username=bk_username)
-    elif log_config.backend_type == "es":
+    elif log_config.backendType == "es":
         assert log_config.elasticSearchHosts
         return ESLogClient(log_config.elasticSearchHosts)
-    raise NotImplementedError(f"unsupported backend_type<{log_config.backend_type}>")
+    raise NotImplementedError(f"unsupported backend_type<{log_config.backendType}>")

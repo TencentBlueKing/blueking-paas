@@ -238,7 +238,7 @@ class BKLogConfig(BaseModel):
 class PluginLogConfig(BaseModel):
     """插件日志配置"""
 
-    backend_type: Literal["es", "bkLog"] = Field(description="插件后端类型")
+    backendType: Literal["es", "bkLog"] = Field(description="插件后端类型")
     elasticSearchHosts: Optional[List[ElasticSearchHost]] = Field(
         min_items=1, description="required when backend_type is 'es'"
     )

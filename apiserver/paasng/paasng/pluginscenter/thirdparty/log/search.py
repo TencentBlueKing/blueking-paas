@@ -27,6 +27,7 @@ class SmartSearch:
     search: Search
 
     def __init__(self, time_field: str, time_range: SmartTimeRange):
+        self.time_field = time_field
         self.time_range = time_range
         self.search = Search().filter("range", **time_range.get_time_range_filter(time_field))
         self.search = self.search.sort({time_field: {"order": "desc"}})

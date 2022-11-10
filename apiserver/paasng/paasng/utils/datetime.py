@@ -51,7 +51,7 @@ def get_time_delta(time_delta_string: str):
     return datetime.timedelta(**{unit: int(count)})
 
 
-def calculate_interval(start_time, end_time, wide=False):
+def calculate_interval(start_time, end_time, wide=False) -> str:
     """
     interval via the gap of query time
     fit for graph width >= 40%
@@ -70,30 +70,30 @@ def calculate_interval(start_time, end_time, wide=False):
     return calculate_gap_seconds_interval(gap_seconds, wide)
 
 
-def calculate_gap_seconds_interval(gap_seconds, wide=False):
-    gap_min = abs(math.ceil(gap_seconds / 60))
+def calculate_gap_seconds_interval(gap_seconds, wide=False) -> str:
+    gap_minutes = abs(math.ceil(gap_seconds / 60))
     if not wide:
         interval_options = ["1s", "10s", "30s", "1m", "5m", "10m", "30m", "1h", "3h", "1d"]
     else:
         interval_options = ["10s", "30s", "1m", "5m", "10m", "30m", "1h", "3h", "6h", "1d"]
 
-    if gap_min <= 1:
+    if gap_minutes <= 1:
         index = 0
-    elif gap_min <= 10:
+    elif gap_minutes <= 10:
         index = 1
-    elif gap_min <= 30:
+    elif gap_minutes <= 30:
         index = 2
-    elif gap_min <= 60:
+    elif gap_minutes <= 60:
         index = 3
-    elif gap_min <= 360:
+    elif gap_minutes <= 360:
         index = 4
-    elif gap_min <= 720:
+    elif gap_minutes <= 720:
         index = 5
-    elif gap_min <= 1440:
+    elif gap_minutes <= 1440:
         index = 6
-    elif gap_min <= 4320:
+    elif gap_minutes <= 4320:
         index = 7
-    elif gap_min <= 10080:
+    elif gap_minutes <= 10080:
         index = 8
     else:
         index = 9

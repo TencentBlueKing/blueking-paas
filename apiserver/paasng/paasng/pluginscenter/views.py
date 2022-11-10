@@ -16,7 +16,7 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import cattr
 import semver
@@ -577,6 +577,35 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             offset=query_params["offset"],
         )
         return Response(data=serializers.IngressLogSLZ(logs).data)
+
+    @swagger_auto_schema(
+        query_serializer=serializers.PluginLogQueryParamsSLZ,
+        request_body=serializers.PluginLogQueryBodySLZ,
+        responses={200: serializers.DateHistogramSLZ},
+    )
+    def aggregate_date_histogram(
+        self, request, pd_id, plugin_id, log_type: Literal["standard_output", "structure", "ingress"]
+    ):
+        """查询日志基于时间分布的直方图"""
+        plugin = self.get_plugin_instance()
+
+        slz = serializers.PluginLogQueryBodySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        slz = serializers.PluginLogQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        date_histogram = log_api.aggregate_date_histogram(
+            pd=plugin.pd,
+            instance=plugin,
+            log_type=log_type,
+            operator=request.user.username,
+            time_range=query_params["smart_time_range"],
+            query_string=data["query_string"],
+        )
+        return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
 
 # System API

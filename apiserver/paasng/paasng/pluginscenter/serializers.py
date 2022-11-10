@@ -45,13 +45,14 @@ class ApprovalConfigSLZ(serializers.Serializer):
 
 
 class PluginDefinitionSLZ(serializers.ModelSerializer):
-
+    id = serializers.CharField(source="identifier")
     name = TranslatedCharField()
+    description = TranslatedCharField()
     approval_config = ApprovalConfigSLZ()
 
     class Meta:
         model = PluginDefinition
-        exclude = ("uuid", "created", "updated", "release_revision", "release_stages", "log_config")
+        exclude = ("uuid", "identifier", "created", "updated", "release_revision", "release_stages", "log_config")
 
 
 class PlainReleaseStageSLZ(serializers.Serializer):
@@ -370,6 +371,14 @@ class IngressLogSLZ(serializers.Serializer):
 
     logs = IngressLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
+    dsl = serializers.CharField(help_text="日志查询语句")
+
+
+class DateHistogramSLZ(serializers.Serializer):
+    """插件日志基于时间分布的直方图"""
+
+    series = serializers.ListField(child=serializers.IntegerField(), help_text="按时间排序的值(文档数)")
+    timestamps = serializers.ListField(child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳")
     dsl = serializers.CharField(help_text="日志查询语句")
 
 

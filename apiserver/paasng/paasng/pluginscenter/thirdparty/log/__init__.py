@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
+from typing import Literal, Optional
 
 import cattr
 
@@ -26,10 +27,12 @@ from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.thirdparty.log.client import instantiate_log_client
 from paasng.pluginscenter.thirdparty.log.filters import ElasticSearchFilter
 from paasng.pluginscenter.thirdparty.log.models import (
+    DateHistogram,
     IngressLogLine,
     Logs,
     StandardOutputLogLine,
     StructureLogLine,
+    clean_histogram_buckets,
     clean_logs,
 )
 from paasng.pluginscenter.thirdparty.log.search import SmartSearch
@@ -132,6 +135,40 @@ def query_ingress_logs(
             "dsl": json.dumps(search.to_dict()),
         },
         Logs[IngressLogLine],
+    )
+
+
+def aggregate_date_histogram(
+    pd: PluginDefinition,
+    instance: PluginInstance,
+    log_type: Literal["standard_output", "structure", "ingress"],
+    operator: str,
+    time_range: SmartTimeRange,
+    query_string: str,
+) -> DateHistogram:
+    """查询日志的直方图"""
+    log_client = instantiate_log_client(pd.log_config, operator)
+    search_params: Optional[ElasticSearchParams] = None
+    if log_type == "standard_output":
+        search_params = pd.log_config.stdout
+    elif log_type == "structure":
+        search_params = pd.log_config.json_
+    elif log_type == "ingress":
+        search_params = pd.log_config.ingress
+    if not search_params:
+        raise ValueError(f"this plugin does not support query {log_type} logs")
+    search = make_base_search(plugin=instance, search_params=search_params, time_range=time_range, limit=0, offset=0)
+    if query_string:
+        search = search.filter("query_string", query=query_string, analyze_wildcard=True)
+    response = log_client.aggregate_date_histogram(
+        index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
+    )
+    return cattr.structure(
+        {
+            **clean_histogram_buckets(response),
+            "dsl": json.dumps(search.to_dict()),
+        },
+        DateHistogram,
     )
 
 

@@ -222,7 +222,7 @@ class LogClient:
             "date_histogram",
             field="@timestamp",
             interval=self.smart_time_range.get_interval(),
-            time_zone="Asia/Shanghai",
+            time_zone=settings.TIME_ZONE,
             min_doc_count=1,
         )
         q.aggs.bucket('histogram', aggs_by_dh)

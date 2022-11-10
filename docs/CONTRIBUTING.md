@@ -1,6 +1,6 @@
 # Contributing to bk-PaaS
 
-我们欢迎[report Issues](https://github.com/Tencent/bk-PaaS/issues) 或者 [pull requests](https://github.com/Tencent/bk-PaaS/pulls)。 在贡献代码之前请阅读以下指引。
+我们欢迎[report Issues](https://github.com/TencentBlueKing/bk-paas/issues) 或者 [pull requests](https://github.com/TencentBlueKing/bk-paas/pulls)。 在贡献代码之前请阅读以下指引。
 
 ## 问题管理
 
@@ -30,5 +30,5 @@
 
 ## 代码协议
 
-[MIT LICENSE](https://github.com/Tencent/bk-PaaS/blob/master/LICENSE) 为bk-PaaS的开源协议，您贡献的代码也会受此协议保护。
+[MIT LICENSE](https://github.com/TencentBlueKing/bk-paas/blob/main/LICENSE.txt) 为bk-PaaS的开源协议，您贡献的代码也会受此协议保护。
 

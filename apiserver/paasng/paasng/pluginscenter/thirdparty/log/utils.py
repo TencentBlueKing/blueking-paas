@@ -19,6 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 from typing import Tuple, Union
 
+from paasng.utils.datetime import calculate_gap_seconds_interval, calculate_interval
+
 
 def get_time_delta(time_delta_string) -> datetime.timedelta:
     """
@@ -109,3 +111,14 @@ class SmartTimeRange:
         if self.is_absolute:
             time_range_filter[field_name]["format"] = "epoch_millis"
         return time_range_filter
+
+    def detect_date_histogram_interval(self):
+        """Detect the best interval be used in aggregate date histogram"""
+        if self.is_absolute:
+            # currently, use narrow interval,
+            # if the design of apm UI make each graph width > 40% then use wide interval
+            start_time, end_time = self.get_head_and_tail()
+            return calculate_interval(start_time, end_time)
+        else:
+            # NOTE: replace `seconds` with `total_seconds`
+            return calculate_gap_seconds_interval(get_time_delta(self.time_range).total_seconds())

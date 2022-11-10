@@ -69,6 +69,10 @@ urlpatterns = [
         views.PluginLogViewSet.as_view({"post": "query_ingress_logs"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/aggregate_date_histogram/<str:log_type>/",
+        views.PluginLogViewSet.as_view({"post": "aggregate_date_histogram"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/",
         views.PluginMembersViewSet.as_view({"get": "list", "post": "create"}),
     ),

@@ -22,9 +22,17 @@ from unittest import mock
 
 import cattrs
 import pytest
+from elasticsearch_dsl.aggs import DateHistogram
 from elasticsearch_dsl.response import Hit
+from elasticsearch_dsl.response.aggs import FieldBucketData
+from elasticsearch_dsl.search import Search
 
-from paasng.pluginscenter.thirdparty.log import query_ingress_logs, query_standard_output_logs, query_structure_logs
+from paasng.pluginscenter.thirdparty.log import (
+    aggregate_date_histogram,
+    query_ingress_logs,
+    query_standard_output_logs,
+    query_structure_logs,
+)
 from paasng.pluginscenter.thirdparty.log.client import LogClientProtocol
 from paasng.pluginscenter.thirdparty.log.search import SmartTimeRange
 
@@ -171,3 +179,21 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
             'http_version': '1.1',
         },
     ]
+
+
+def test_aggregate_date_histogram(pd, plugin, log_client, time_range):
+    log_client.aggregate_date_histogram.return_value = FieldBucketData(
+        DateHistogram(),
+        Search(),
+        {
+            "buckets": [
+                {"key": 1000, "doc_count": 12345},
+                {"key": 2000, "doc_count": 54321},
+                {"key": 1668064461002071000, "doc_count": 1},
+            ]
+        },
+    )
+
+    logs = aggregate_date_histogram(pd, plugin, "ingress", "nobody", time_range, "")
+    assert logs.series == [12345, 54321, 1]
+    assert logs.timestamps == [1, 2, 1668064461002071]

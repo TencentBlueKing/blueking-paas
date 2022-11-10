@@ -20,6 +20,7 @@ from typing import Dict, Generic, List, Literal, Optional, TypeVar, Union
 
 import arrow
 from attrs import converters, define, field, fields
+from elasticsearch_dsl.aggs import FieldBucketData
 from elasticsearch_dsl.response import Hit
 from rest_framework.fields import get_attribute
 
@@ -76,6 +77,20 @@ class Logs(Generic[MLine]):
     dsl: str
 
 
+@define
+class DataBucket:
+    count: str
+
+
+@define
+class DateHistogram:
+    # 按时间排序的值
+    series: List[int]
+    # Series 中对应位置记录的时间点
+    timestamps: List[int]
+    dsl: str
+
+
 def clean_logs(
     logs: List[Hit],
     search_params: ElasticSearchParams,
@@ -93,6 +108,19 @@ def clean_logs(
             }
         )
     return cleaned
+
+
+def clean_histogram_buckets(buckets: FieldBucketData) -> Dict:
+    """从 ES 聚合桶中提取插件开发中心关心的字段"""
+    series = []
+    timestamps = []
+    for bucket in buckets:
+        timestamps.append(format_timestamp(bucket["key"], input_format="timestamp[ns]"))
+        series.append(bucket["doc_count"])
+    return {
+        "timestamps": timestamps,
+        "series": series,
+    }
 
 
 def format_timestamp(

@@ -54,7 +54,7 @@ def pd():
             "release_revision": {"revisionType": "master", "versionNo": "automatic"},
             "release_stages": [{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
             "log_config": {
-                "backend_type": "es",
+                "backendType": "es",
                 "stdout": log_params,
                 "json": log_params,
                 "ingress": log_params,

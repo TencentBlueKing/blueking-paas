@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{%  block main-layout %}
+
+<!-- content start -->
+{% if app_info %}
+<div class="dev_center_module">
+    <h4 class="dev_module_title">应用信息</h4>
+    <table cellspacing="0" cellpadding="0" border="0" class="paas-table bk-table bk-table-fit bk-table-outer-border bk-table-row-border bk-table-enable-row-transition bk-table-small">
+        <thead>
+            <tr style="height: 50px;">
+                <th width="240px">应用 ID</th>
+                <th width="240px">应用名称</th>
+                <th width="120px">模块名称</th>
+                <th width="120px">环境类型</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ app_info.app_code }}</td>
+                <td>{{ app_info.app_name }}</td>
+                <td>{{ app_info.module }}</td>
+                <td>{{ app_info.environment }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+
+<div class="dev_center_module">
+    <h4 class="dev_module_title">实例信息</h4>
+    <table cellspacing="0" cellpadding="0" border="0" class="paas-table bk-table bk-table-fit bk-table-outer-border bk-table-row-border bk-table-enable-row-transition bk-table-small">
+        <thead>
+            <tr style="height: 50px;">
+                <th style="width: 300px;">KEY</th>
+                <th>VALUE</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="key">数据库实例 ID</td>
+                <td>{{ instance.uuid }}</td>
+            </tr>
+            <tr>
+                <td class="key">MYSQL_HOST</td>
+                <td>{{ instance.credentials.host }}</td>
+            </tr>
+            <tr>
+                <td class="key">MYSQL_PORT</td>
+                <td>{{ instance.credentials.port }}</td>
+            </tr>
+            <tr>
+                <td class="key">MYSQL_NAME</td>
+                <td>{{ instance.credentials.name }}</td>
+            </tr>
+            <tr>
+                <td class="key">MYSQL_USER</td>
+                <td>{{ instance.credentials.user }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<!-- content end -->
+
+{% endblock %}
+
+
+{% block end_of_body %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let uid = Cookies.get("bk_uid");
+        new Vue({
+            el: "#operations",
+            delimiters: ['$[', ']'],
+            data: function () {
+                    return {
+                        uid: uid,
+                        credentials: {
+                            h_dbs: "{{ instance.credentials.host }}",
+                            u_dbs: "{{ instance.credentials.user }}",
+                            p_dbs: "{{ instance.credentials.port }}",
+                            pe_dbs: "{{ instance.credentials.password }}",
+                        },
+                    }
+            },
+            methods: {
+            }
+        })
+    })
+</script>
+{% endblock %}

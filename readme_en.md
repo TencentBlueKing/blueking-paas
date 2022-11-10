@@ -37,9 +37,8 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 
 ## Support
 
-- [Wiki(In Chinese)](https://github.com/Tencent/bk-PaaS/wiki)
-- [FAQ(In Chinese)](https://github.com/Tencent/bk-PaaS/wiki/FAQ)
-- [white paper(In Chinese)](http://docs.bk.tencent.com/product_white_paper/paas/)
+- [FAQ(In Chinese)](https://bk.tencent.com/docs/markdown/PaaS平台/产品白皮书/常见问题/FAQ.md)
+- [white paper(In Chinese)](https://bk.tencent.com/docs/markdown/PaaS平台/产品白皮书/产品简介/README.md)
 - [bk forum](https://bk.tencent.com/s-mart/community)
 - [bk DevOps online video tutorial(In Chinese)](https://bk.tencent.com/s-mart/video)
 - Contact us, technical exchange QQ group:
@@ -51,7 +50,6 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 
 - [BK-CI](https://github.com/Tencent/bk-ci): a continuous integration and continuous delivery system that can easily present your R & D process to you.
 - [BK-BCS](https://github.com/Tencent/bk-bcs): a basic container service platform which provides orchestration and management for micro-service business.
-- [BK-PaaS](https://github.com/Tencent/bk-PaaS): an development platform that allows developers to create, develop, deploy and manage SaaS applications easily and quickly.
 - [BK-SOPS](https://github.com/Tencent/bk-sops): an lightweight scheduling SaaS  for task flow scheduling and execution through a visual graphical interface.
 - [BK-CMDB](https://github.com/Tencent/bk-cmdb): an enterprise-level configuration management platform for assets and applications.
 - [BK-JOB](https://github.com/Tencent/bk-job): BlueKing JOB is a set of operation and maintenance script management platform with the ability to handle a large number of tasks concurrently.

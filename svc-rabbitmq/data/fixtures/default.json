@@ -1,0 +1,42 @@
+[
+    {
+        "model": "paas_service.service",
+        "pk": "ba71b099-c185-445c-8fba-4f7e426351e4",
+        "fields": {
+            "created": "2021-04-10T06:23:37.252Z",
+            "updated": "2021-04-10T06:23:37.252Z",
+            "name": "rabbitmq",
+            "category": 1,
+            "display_name_zh_cn": "RabbitMQ",
+            "display_name_en": "RabbitMQ",
+            "logo_url": null,
+            "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOAAAADgCAMAAAAt85rTAAAAtFBMVEX/////ZgD/WwD/9e3/lGX//Pn/sIr/VwD/8+z/gSv/ezH/YQD/+vX/hUf/xaP/VgD/TgD/eT//3cr/ah3/qXT/t5X/llv/0LP/Xxb/RwD/4tP/tZf/fjn/qYL/WBb/dDj/klL/vZb/hT3/zKv/ahH/3MX/pHn/zbb/ybD/n2n/7eP/r4P/mWX/1Lv/YhT/vqL/hFP/bDD/pGz/YSL/OwD/j1r/wqj/jGH/iE3/gEv/bgn/eRYX3CDBAAADaElEQVR4nO3dYVPaMByA8aYIYatSwCEUVhW1iGyCjk3d9v2/19C92Clp0qM2JN3zvPTuf+Z3qccdbWoQEBEREREREREREdF2TVXWxquu0X+YtLYbPGTtIuPt7EEx3ZrM+42qV16s7HEZylDV8vHWPH55t1QOP49n1a/e3PRURkJdJEcr43g3zB9fD20I9N1+z1vfyxqTuX58mmimRRhf21Hk1z4LdSsUoTjUjY8N4/Ko0J9xhXVi7QKFSDq68ZXUT0fxni/S5sywQhGfaMYbP0zj3RtrFmXtA/0ltrlGjzTXaPujaTz+YA+jqlE1UAKsNoAAAdrDqAIIEKA9jCqAAAHaw6gCCBCgPYwqgAAB2sOoAggQoD2MKoAAAdrDqAIIEKA9jCqAAAHaw6gCCNB7oNQ9ylUHoPZZNYAAqw4gQIDWLMoAAgRozaIMIMD/Hej7wZBfxh38bQ+jygwUa80px6HpaJeI4v0eAy0AlAe5S2xGxmnR1V3i1VcAKORsoZxtjp+MG/g8nqrH7VQEKGRvOnxV56X03nS27qUo/Dno7FhW+vouBBShHL3q7xnk3KO/2+M5p5iNrXva45nvBtxfYfJU7jy+60Ahki81B0a6j6k6AEXcqjkwzP8cBgjQhQACdDyAAB0PIEDHAwjQ8QACdDyAAB0PIEDHAwjQ8bwBRtsVmvMDGMrw+G1Xmx8WGfUBGF/NrvtbXadXsXkXPQBGyc1CeSO6ufjaNQrdB0Zymr+A+cgkdB8YDnQr6HR9B5oWeGF4msh5oLzUL6FveN7GdWDU075LfrOEC/0DU64DY9Or0g9n+mvUdWD3k2EJzYHfO1gAqF9CDYC130GAAAECBAgQIECAAAECVAG/mYCp30DzdzJHfgPFyPBvNseGmzDOA+VMv4Unvn8vGoXaLcxMdyecB4pQaoS3S//vTWyEq5xjvIvV0vj7PQCKSN4NskXjTYusc1fgFqgPwOdNXJ/13nR2XJ87vM/teIveH+CuAQToeAABOh5AgI4HEKDjAQToeAABOh5AgI4HEKDjAQToeOWAQVrkNb17LU7L+ILh6b4Bpk6HpYDBebJvgb7kvJwvCD6bzyjur6j7uawvaKT3u75Eufru03d40XpzPJ+0nGwyH5d7R/M/o6O9j46IiIiIiIiIiIioXv0BaxOXALZOBCMAAAAASUVORK5CYII=",
+            "description_zh_cn": "RabbitMQ 增强服务",
+            "description_en": "RabbitMQ",
+            "long_description_zh_cn": "",
+            "long_description_en": "",
+            "instance_tutorial_zh_cn": "# 使用说明\n## 作为 celery 后端队列服务使用\n\nRabbitMQ 服务最常见的用法是作为 celery 服务的后端消息队列，使用下面的代码片段来获取已申请的实例信息：\n\n```python\nRABBITMQ_VHOST = os.getenv('RABBITMQ_VHOST')\nRABBITMQ_PORT = os.getenv('RABBITMQ_PORT')\nRABBITMQ_HOST = os.getenv('RABBITMQ_HOST')\nRABBITMQ_USER = os.getenv('RABBITMQ_USER')\nRABBITMQ_PASSWORD = os.getenv('RABBITMQ_PASSWORD')\n\n# 设置为 celery 后端消息队列\nBROKER_URL = 'amqp://{user}:{password}@{host}:{port}/{vhost}'.format(\n    user=RABBITMQ_USER,\n    password=RABBITMQ_PASSWORD,\n    host=RABBITMQ_HOST,\n    port=RABBITMQ_PORT,\n    vhost=RABBITMQ_VHOST,\n)\n```",
+            "instance_tutorial_en": "# Instructions\n## Use as a celery backend queue service\n\nThe most common usage of the RabbitMQ service is as a backend message queue for the celery service. Use the following code snippet to get the requested instance information:\n\n ```python\nRABBITMQ_VHOST = os.getenv('RABBITMQ_VHOST')\nRABBITMQ_PORT = os.getenv('RABBITMQ_PORT')\nRABBITMQ_HOST = os.getenv('RABBITMQ_HOST')\nRABBITMQ_USER = os.getenv('RABBITMQ_USER')\nRABBITMQ_PASSWORD = os.getenv('RABBITMQ_PASSWORD')\n\n# Set to celery backend message queue\nBROKER_URL = 'amqp://{user}:{password}@{host}:{port}/{vhost}'. format(\n user=RABBITMQ_USER,\n password=RABBITMQ_PASSWORD,\n host=RABBITMQ_HOST,\n port=RABBITMQ_PORT,\n vhost=RABBITMQ_VHOST,\n)\n```",
+            "available_languages": "python",
+            "config": "{}",
+            "is_active": true,
+            "is_visible": true,
+            "specifications": []
+        }
+    },
+    {
+        "model": "paas_service.plan",
+        "pk": "843127a9-d7a2-4485-b985-076a9b6695d8",
+        "fields": {
+            "created": "2021-04-10T06:25:27.338Z",
+            "updated": "2021-04-10T06:25:27.338Z",
+            "name": "default",
+            "properties": "{\"region\":\"default\"}",
+            "description": "default cluster",
+            "config": "{}",
+            "is_active": true,
+            "service": "ba71b099-c185-445c-8fba-4f7e426351e4",
+            "specifications": []
+        }
+    }
+]

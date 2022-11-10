@@ -170,7 +170,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 			bkapp.Spec.Processes[0].CPU = "1C"
 			err = bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("unsupported"))
+			Expect(err.Error()).To(ContainSubstring("must match the regular"))
 		})
 	})
 
@@ -189,19 +189,26 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).ShouldNot(HaveOccurred())
 		})
-		It("Invalid envName", func() {
+		It("[replicas] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.Replicas = []ReplicasOverlay{
 				{EnvName: "invalid-env", Process: "web", Count: 1},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
-		It("Invalid process name", func() {
+		It("[replicas] invalid process name", func() {
 			bkapp.Spec.EnvOverlay.Replicas = []ReplicasOverlay{
 				{EnvName: "stag", Process: "invalid-proc", Count: 1},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
+		})
+		It("[replicas] invalid count", func() {
+			bkapp.Spec.EnvOverlay.Replicas = []ReplicasOverlay{
+				{EnvName: "stag", Process: "web", Count: 100},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("count can't be greater than "))
 		})
 	})
 })

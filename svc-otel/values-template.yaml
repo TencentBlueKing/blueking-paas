@@ -1,0 +1,193 @@
+# 该 values 旨在提供一个部署接口释义
+
+# 全局变量，通常用于多个 Chart 之间共享
+global:
+  imageCredential:
+    password: ""
+    registry: ""
+    username: ""
+    name: ""
+    # 当且仅当 enabled 为 true 时，会生成 pullSecret
+    enabled: false
+
+# 缺省实例数
+replicaCount: 1
+
+image:
+  repository: mirrors.tencent.com/bkpaas/svc-otel
+  pullPolicy: Always
+  tag: "${TAG}"
+
+# 用来覆盖 Chart 名
+nameOverride: ""
+# 用来覆盖 fullName （通常是 release-chart 拼接）
+fullnameOverride: ""
+
+# 是否自动创建 serviceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+# 支持定义 labels
+podLabels: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+#---------------
+# 调度
+#---------------
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+#---------------
+# 自定义变量
+#---------------
+
+# key-value 结构渲染
+env:
+  # 增强服务与 PaaS3.0 通信签名算法的 key, 必须与 PaaS3.0 中配置一致
+  PAAS_SERVICE_JWT_CLIENTS_KEY: "your-jwt-client-key-settings-at-paas-v3"
+  # 数据库配置, 生产环境必须替换成高可用的数据库配置
+  DATABASE_URL: "sqlite:///db.sqlite3"
+  # sentry 配置[可选]
+  # SENTRY_DSN: ""
+  # METRIC_CLIENT_TOKEN[可选]
+  # METRIC_CLIENT_TOKEN: "随机字符串即可"
+
+envFrom: []
+
+# 提供原生的 env 写法
+extrasEnv:
+- name: NODE_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.hostIP
+
+httpPort: 80
+
+# 定义应用内的多个进程
+processes:
+  web:
+    # 如果进程需要额外的 ingress，请设置为 true
+    ingress:
+      enabled: true
+      hosts:
+        - host: svc-otel.local
+          paths: ["/"]
+      tls: []
+    replicas: 1
+    resources: {}
+      # limits:
+      #   cpu: 200m
+      #   memory: 1024Mi
+    readinessProbe:
+      failureThreshold: 15
+      periodSeconds: 10
+      timeoutSeconds: 10
+      httpGet:
+        path: /healthz/
+        port: http
+    livenessProbe:
+      initialDelaySeconds: 90
+      failureThreshold: 15
+      periodSeconds: 10
+      timeoutSeconds: 10
+      httpGet:
+        path: /healthz/
+        port: http
+    # 默认使用针对于 Procfile 的启动命令
+    # 如果有其他需求，请覆盖 command & args 变
+    command:
+    - "/tini"
+    - --
+    args:
+    - ./start.sh
+    hostAliases: []
+      # - ip: "127.0.0.1"
+      #   hostnames:
+      #   - "foo.local"
+      #   - "bar.local"
+
+
+# 部署前钩子
+preRunHooks:
+  hooks: []
+    # - name: on-migrate
+    #   enabled: false
+    #   position: "pre-upgrade"
+    #   command:
+    #     - bash
+    #   args:
+    #     - on_migrate
+
+# 支持定义多个 cronJobs
+cronJobs:
+  jobs: []
+    # - name: example-script
+    #   enabled: false
+    #   schedule: "*/30 * * * *"
+    #   command: ["echo"]
+    #   args:
+    #     - "hello"
+    #   failedJobsHistoryLimit: 1
+    #   successfulJobsHistoryLimit: 3
+    #   concurrencyPolicy: Forbid
+
+# 挂载配置
+volumes:
+  - name: fixtures
+    configMap:
+      name: svc-otel-fixtures-${ENV_NAME}
+
+
+volumeMounts:
+  - name: fixtures
+    mountPath: "/data/fixtures"
+    readOnly: true
+
+# 支持定义 configmaps
+configMaps:
+  - name: fixtures-${ENV_NAME}
+    files:
+      - name: "services.json"
+        data: |
+          [{
+              "model": "paas_service.service",
+              "pk": "a31e476d-5ec0-29b0-564e-5f81b5a5ef32",
+              "fields": {
+                  "name": "svc_otel",
+                  "display_name": "svc-otel",
+                  "logo": "data:image/svg+xml;base64,PHN2ZyBjbGFzcz0iYmstaWNvbiIgc3R5bGU9ImZpbGw6ICM1Rjk4RjU7IiB2aWV3Qm94PSIwIDAgNjQgNjQiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjNUY5OEY1IiBkPSJNMTggMTBjNC40IDAgOCAzLjYgOCA4djhoLThjLTQuNCAwLTgtMy42LTgtOHMzLjYtOCA4LThtMC00QzExLjQgNiA2IDExLjQgNiAxOHM1LjQgMTIgMTIgMTJoMTJWMThjMC02LjYtNS40LTEyLTEyLTEyem0yOCA0YzQuNCAwIDggMy42IDggOHMtMy42IDgtOCA4aC04di04YzAtNC40IDMuNi04IDgtOG0wLTRjLTYuNiAwLTEyIDUuNC0xMiAxMnYxMmgxMmM2LjYgMCAxMi01LjQgMTItMTJTNTIuNiA2IDQ2IDZ6bTAgMzJjNC40IDAgOCAzLjYgOCA4cy0zLjYgOC04IDgtOC0zLjYtOC04di04aDhtMC00SDM0djEyYzAgNi42IDUuNCAxMiAxMiAxMnMxMi01LjQgMTItMTItNS40LTEyLTEyLTEyem0tMjAgNHY4YzAgNC40LTMuNiA4LTggOHMtOC0zLjYtOC04IDMuNi04IDgtOGg4bTQtNEgxOGMtNi42IDAtMTIgNS40LTEyIDEyczUuNCAxMiAxMiAxMiAxMi01LjQgMTItMTJWMzR6Ij48L3BhdGg+PC9zdmc+",
+                  "category": 1,
+                  "description_zh_cn": "remote service for paas",
+                  "description_en": "remote service for paas",
+                  "long_description_zh_cn": "",
+                  "long_description_en": "",
+                  "instance_tutorial_zh_cn": "",
+                  "instance_tutorial_en": "",
+                  "available_languages": "python,nodejs,go",
+                  "created": "2020-12-25T17:00:00Z",
+                  "updated": "2020-12-25T17:00:00Z"
+              }
+          }]
+      - name: "plans.json"
+        data: |
+          []
+
+
+
+# 支持定义 deployment 版本，兼容多种版本 kube-api
+# TODO: 利用 Capabilities 来实现
+deployApiVersion: "apps/v1"

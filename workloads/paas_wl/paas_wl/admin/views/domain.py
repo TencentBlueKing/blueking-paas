@@ -1,0 +1,93 @@
+# -*- coding: utf-8 -*-
+from django.db.models import QuerySet
+from django.shortcuts import get_object_or_404
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr, validate_domain_payload
+from paas_wl.networking.ingress.models import Domain
+from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ
+from paas_wl.platform.applications.permissions import site_perm_class
+from paas_wl.platform.applications.struct_models import Application, set_many_model_structured, to_structured
+from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
+from paas_wl.platform.auth.views import BaseEndUserViewSet
+from paas_wl.utils.api_docs import openapi_empty_response
+
+
+class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+    """管理应用独立域名的 ViewSet"""
+
+    permission_classes = [IsAuthenticated, site_perm_class('admin:manage:workloads')]
+
+    def get_queryset(self, application: Application) -> QuerySet:
+        """Get Domain QuerySet of current application"""
+        struct_app = to_structured(application)
+        return Domain.objects.filter(module_id__in=struct_app.module_ids)
+
+    @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=['Domains'])
+    def list(self, request, **kwargs):
+        """查看应用的所有自定义域名信息
+
+        结果默认按（“模块名”、“环境”）排序
+        """
+        application = self.get_application()
+
+        # Get results and sort
+        domains = self.get_queryset(application)
+        set_many_model_structured(domains, application)
+        domains = sorted(domains, key=lambda d: (d.module.name, d.environment.environment, d.id))
+
+        serializer = DomainSLZ(domains, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_id="create-app-domain",
+        request_body=DomainSLZ,
+        response_serializer=DomainSLZ,
+        tags=['Domains'],
+    )
+    def create(self, request, **kwargs):
+        """创建一个独立域名
+
+        - 注意 `path` 字段目前只支持一级子路径，多级子路径（如 '/foo/bar/'）暂不支持
+        - 【客户端】建议使用文档里的正则进行校验
+        - 【客户端】模块与环境建议使用下拉框
+        - 【客户端】`https_enabled` 暂不暴露给给用户
+        """
+        application = self.get_application()
+
+        data = validate_domain_payload(request.data, application)
+        instance = get_custom_domain_mgr(application).create(
+            env=data['environment'],
+            host=data["name"],
+            path_prefix=data["path_prefix"],
+            https_enabled=data["https_enabled"],
+        )
+        return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        operation_id="update-app-domain",
+        request_body=DomainForUpdateSLZ,
+        response_serializer=DomainSLZ,
+        tags=['Domains'],
+    )
+    def update(self, request, **kwargs):
+        """更新一个独立域名的域名与路径信息"""
+        application = self.get_application()
+        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
+        new_instance = get_custom_domain_mgr(application).update(
+            instance, host=data['name'], path_prefix=data['path_prefix'], https_enabled=data['https_enabled']
+        )
+        return Response(DomainSLZ(new_instance).data)
+
+    @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=['Domains'])
+    def destroy(self, request, *args, **kwargs):
+        """通过 ID 删除一个独立域名"""
+        application = self.get_application()
+        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+
+        get_custom_domain_mgr(application).delete(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)

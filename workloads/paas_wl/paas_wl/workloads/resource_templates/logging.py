@@ -1,0 +1,49 @@
+# -*- coding: utf-8 -*-
+from typing import List
+
+import cattr
+from django.conf import settings
+
+from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
+from paas_wl.workloads.resource_templates.components.volume import Volume, VolumeMount
+
+
+def get_app_logging_volume(app) -> List[Volume]:
+    """应用日志卷"""
+    mdata = get_metadata(app)
+    # NOTE: DO NOT CHANGE `legacy_log_path` and `log_path_prefix` unless the log collection policy is adjusted
+    legacy_log_path = f"{app.region}-{app.scheduler_safe_name}"
+    # assemble some shortcuts
+    # /data/bkapp/v3logs/ieod-xxx_xxx-stag/default/
+    module_log_path = f"{app.region}-bkapp-{mdata.get_paas_app_code()}-{mdata.environment}/{mdata.module_name}"
+    return cattr.structure(
+        [
+            {
+                'name': settings.VOLUME_NAME_APP_LOGGING,
+                'hostPath': {"path": f"{settings.VOLUME_HOST_PATH_APP_LOGGING_DIR}/{legacy_log_path}"},
+            },
+            {
+                'name': settings.MUL_MODULE_VOLUME_NAME_APP_LOGGING,
+                'hostPath': {"path": f"{settings.MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR}/{module_log_path}"},
+            },
+        ],
+        List[Volume],
+    )
+
+
+def get_app_logging_volume_mounts(app: App) -> List[VolumeMount]:
+    """应用日志卷挂载到容器的挂载点"""
+    return cattr.structure(
+        [
+            {
+                'name': settings.VOLUME_NAME_APP_LOGGING,
+                'mountPath': settings.VOLUME_MOUNT_APP_LOGGING_DIR,
+            },
+            {
+                'name': settings.MUL_MODULE_VOLUME_NAME_APP_LOGGING,
+                'mountPath': settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
+            },
+        ],
+        List[VolumeMount],
+    )

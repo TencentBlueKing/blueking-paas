@@ -1,0 +1,127 @@
+# -*- coding: utf-8 -*-
+import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Generator, List, Optional
+
+from paas_wl.monitoring.metrics.clients import MetricClient, MetricQuery, MetricSeriesResult
+from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
+from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+
+if TYPE_CHECKING:
+    from paas_wl.workloads.processes.models import Process
+
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MetricsResourceResult:
+    type_name: 'MetricsResourceType'
+    results: List['MetricSeriesResult']
+
+
+@dataclass
+class MetricsInstanceResult:
+    instance_name: str
+    results: List['MetricsResourceResult']
+
+    def __len__(self):
+        return len(self.results)
+
+
+class ResourceMetricManager:
+    def __init__(self, process: 'Process', metric_client: 'MetricClient', bcs_cluster_id: str):
+        self.process = process
+        self.metric_client = metric_client
+        self.bcs_cluster_id = bcs_cluster_id
+        if not self.process.instances:
+            raise ValueError("Process should contain info of instances when querying metrics")
+
+    def gen_all_series_query(
+        self,
+        resource_type: 'MetricsResourceType',
+        instance_name: str,
+        time_range: Optional['MetricSmartTimeRange'] = None,
+    ) -> Generator['MetricQuery', None, None]:
+        """get all series type queries"""
+
+        # not expose request series
+        for single_series_type in [MetricsSeriesType.CURRENT.value, MetricsSeriesType.LIMIT.value]:
+            try:
+                yield self.gen_series_query(single_series_type, resource_type, instance_name, time_range)
+            except KeyError:
+                logger.info("%s type not exist in query tmpl", single_series_type)
+                continue
+
+    def gen_series_query(
+        self,
+        series_type: MetricsSeriesType,
+        resource_type: MetricsResourceType,
+        instance_name: str,
+        time_range: Optional['MetricSmartTimeRange'],
+    ) -> 'MetricQuery':
+        """get single metrics type query"""
+        tmpl = self.metric_client.get_query_template(series_type=series_type, resource_type=resource_type)
+        query = tmpl.format(instance_name=instance_name, cluster_id=self.bcs_cluster_id)
+        return MetricQuery(type_name=series_type, query=query, time_range=time_range)
+
+    def get_instance_metrics(
+        self,
+        instance_name: str,
+        resource_types: List['MetricsResourceType'],
+        series_type: 'MetricsSeriesType' = None,
+        time_range: 'MetricSmartTimeRange' = None,
+    ) -> List['MetricsResourceResult']:
+        """query metrics at Engine Application level"""
+
+        resource_results = []
+        for resource_type in resource_types:
+            if series_type:
+                queries = [
+                    self.gen_series_query(
+                        series_type=series_type,
+                        resource_type=resource_type,
+                        instance_name=instance_name,
+                        time_range=time_range,
+                    )
+                ]
+            else:
+                queries = list(
+                    self.gen_all_series_query(
+                        resource_type=resource_type, instance_name=instance_name, time_range=time_range
+                    )
+                )
+
+            resource_results.append(
+                MetricsResourceResult(
+                    type_name=resource_type,
+                    results=list(
+                        self.metric_client.general_query(queries, container_name=self.process.main_container_name)
+                    ),
+                )
+            )
+
+        return resource_results
+
+    def get_all_instances_metrics(
+        self,
+        resource_types: List['MetricsResourceType'],
+        time_range: 'MetricSmartTimeRange',
+        series_type: 'MetricsSeriesType' = None,
+    ) -> List['MetricsInstanceResult']:
+
+        all_instances_metrics = []
+        for instance in self.process.instances:
+            all_instances_metrics.append(
+                MetricsInstanceResult(
+                    instance_name=instance.name,
+                    results=self.get_instance_metrics(
+                        resource_types=resource_types,
+                        instance_name=instance.name,
+                        series_type=series_type,
+                        time_range=time_range,
+                    ),
+                )
+            )
+
+        return all_instances_metrics

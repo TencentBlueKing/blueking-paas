@@ -1,0 +1,84 @@
+/**
+ * 手风琴
+ */
+.ps-accordion {
+	* {
+		box-sizing: border-box;
+	}
+	.item {
+		min-height: 64px;
+		border: 1px solid #DCDEE5;
+		border-radius: 2px;
+		margin-bottom: 10px;
+
+		.main {
+			height: 64px;
+			display: flex;
+		}
+
+		.toggle-icon {
+			width: 44px;
+			text-align: center;
+			line-height: 64px;
+			font-size: 14px;
+			color: #979BA5;
+			cursor: pointer;
+		}
+
+		.metedata {
+			flex: 1;
+			position: relative;
+
+			.title {
+				color: #313238;
+				font-size: 14px;
+				font-weight: bold;
+				margin: 11px 0 3px 0;
+				line-height: 20px;
+				display: block;
+			}
+
+			.label {
+				font-size: 12px;
+				color: #979BA5;
+				margin-right: 20px;
+			}
+
+			.mark {
+				position: absolute;
+				right: 0;
+				top: 40%;
+				color: #C4C6CC;
+				font-size: 12px;
+			}
+		}
+
+		.action {
+			width: 64px;
+		}
+
+		.params-box {
+			box-shadow: 6px 10px 8px -10px rgba(0, 0, 0, 0.1) inset;
+			border-top: 1px solid #DCDEE5;
+			padding: 20px 30px;
+		}
+
+		.params-header {
+			height: 20px;
+			line-height: 20px;
+			margin-bottom: 13px;
+
+			.title {
+				font-size: 14px;
+				color: #63656E;
+				font-weight: bold;
+				float: left;
+			}
+
+			.bk-text-button {
+				float: right;
+				margin-left: 15px;
+			}
+		}
+	}
+}

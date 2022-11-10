@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv sh
+
+# render index.html with envsubst
+mv /var/www/index.html /var/www/index.html.template
+cat /var/www/index.html.template | envsubst > /var/www/index.html

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>开发者中心</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/base.css">
+    <link href="/static/images/favicon.ico" rel="Shortcut Icon">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      var process = {}
+      process.env = <%= htmlWebpackPlugin.options.PROCESS_ENV %>
+    </script>
+    <script src="/static/runtime/runtime.js"></script>
+    <script>
+      // 以下变量由webpack构建工具填充
+      var RELEASE_VERSION = '<%= htmlWebpackPlugin.options.RELEASE_VERSION %>'
+      var NODE_ENV = '<%= htmlWebpackPlugin.options.NODE_ENV %>'
+      var APP_VERSION = '<%= htmlWebpackPlugin.options.APP_VERSION %>'
+      var GLOBAL_CONFIG = {
+        APP_VERSION: APP_VERSION,
+        LOGIN_SERVICE_URL: window.LOGIN_SERVICE_URL,
+        USERS_URL: window.USERS_URL,
+        BK_COMPONENT_API_URL: window.BK_COMPONENT_API_URL
+      }
+    </script>
+  </body>
+</html>

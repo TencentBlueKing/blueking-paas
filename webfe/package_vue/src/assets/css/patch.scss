@@ -1,0 +1,20 @@
+@charset "UTF-8";
+.create-item {
+    .source-dir {
+        color: red;
+        &.error {
+            input {
+                border: 1px solid #ff3737;
+            }
+        }
+        input {
+            height: 40px;
+        }
+    }
+}
+
+.ps-sample-footer {
+    .bk-link-text {
+        font-size: 12px;
+    }
+}

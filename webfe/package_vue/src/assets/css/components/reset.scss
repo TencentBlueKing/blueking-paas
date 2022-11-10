@@ -1,0 +1,90 @@
+/*
+ * @file 重置样式
+ */
+
+* {
+    box-sizing: border-box;
+}
+
+:after,
+:before {
+    box-sizing: border-box;
+}
+
+:focus {
+    outline: none;
+}
+
+html {
+    overflow-y: auto;
+}
+body,
+html {
+    min-width: 1250px;
+    font-family: "Helvetica Neue", Helvetica, Tahoma, Arial, "Microsoft Yahei", "PingFang SC", STHeiTi, sans-serif;
+    color: #666666;
+    font-size: 14px;
+    position: relative;
+}
+
+a {
+    color: #3A84FF;
+}
+
+a:hover {
+    color: #3a84ff;
+}
+
+ul {
+    margin: 0;
+    padding: 0;
+}
+
+textarea {
+    resize: none;
+}
+
+input,
+button,
+select,
+textarea {
+    outline: none;
+    border: none;
+}
+
+input:focus,
+textarea:focus {
+    outline: none;
+    border-color: #3a84ff !important;
+    cursor: default;
+}
+
+
+code {
+    font-size: 85%;
+    color: #c7254e;
+    padding: 0;
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    margin: 0;
+    font-size: 85%;
+    background-color: rgba(0, 0, 0, 0.04);
+    border-radius: 3px;
+}
+
+::placeholder {
+    color: #ccc;
+    font-size: 12px;
+}
+
+/* 设置默认滚动条样式 */
+div::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background-color: #fafafa;
+}
+div::-webkit-scrollbar-thumb {
+    height: 6px;
+    border-radius: 4px;
+    background-color: #ccc;
+}

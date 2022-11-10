@@ -1,0 +1,84 @@
+/*
+ * @file datetimepicker
+ */
+
+.daterangepicker {
+    &.dropdown-menu {
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 8px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0, 0, 0, .15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+    }
+
+    .prev.available,
+    .next.available {
+        visibility: hidden;
+    }
+
+    .monthselect,
+    .yearselect {
+        border: 1px solid #ddd;
+    }
+
+    .range_inputs {
+        text-align: center;
+    }
+
+    .calendar {
+        max-width: inherit;
+    }
+
+    .table-condensed>tbody>tr>td,
+    .table-condensed>tbody>tr>th,
+    .table-condensed>tfoot>tr>td,
+    .table-condensed>tfoot>tr>th,
+    .table-condensed>thead>tr>td,
+    .table-condensed>thead>tr>th {
+        padding: 5px;
+    }
+
+    .input-mini {
+        box-sizing: border-box;
+        padding-left: 10px;
+
+        &+i {
+            display: none;
+        }
+    }
+
+    .cancelBtn,
+    .applyBtn {
+        padding: 5px 10px;
+        border-radius: 2px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .applyBtn {
+        color: #fff;
+        background: #3A84FF;
+        ;
+
+        &:hover {
+            background: #4e93d9;
+        }
+    }
+
+    .cancelBtn {
+        border: solid 1px #e5e5e5;
+        color: #7b7d8a;
+        background: white;
+    }
+}

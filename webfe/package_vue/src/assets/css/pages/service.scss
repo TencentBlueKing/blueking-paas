@@ -1,0 +1,76 @@
+/*
+ * @file 增强服务
+ */
+
+.service-ex {
+    position: relative;
+    padding: 15px 0 16px 88px;
+    // height: 72px;
+}
+
+.service-ex-img {
+    position: absolute;
+    left: 0;
+    top: 15px;
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    border: solid 1px #eaeeee;
+    overflow: hidden;
+}
+
+.service-ex h2 {
+    font-size: 18px;
+    color: #5d6075;
+    font-weight: bold;
+    padding: 0;
+    line-height: 32px;
+    padding: 0 0 10px 0;
+}
+
+.service-ex p {
+    display: table;
+}
+
+.service-ex .box {
+    display: inline-block;
+    height: 22px;
+    line-height: 20px;
+    padding: 0 6px;
+    border-radius: 2px;
+    float: left;
+    margin-right: 5px;
+}
+
+.service-ex .box.green {
+    color: #47d39d;
+    border: solid 1px #47d39d;
+    background: #dcfff1;
+}
+
+.service-ex .box.purple1 {
+    color: #8947d3;
+    border: solid 1px #8947d3;
+    background: #f1e4ff;
+}
+
+.service-ex .box.purple2 {
+    color: #5747d3;
+    border: solid 1px #bab4ee;
+    background: #ece9ff;
+}
+
+.service-p {
+    line-height: 24px;
+    color: #666666;
+    padding-bottom: 10px;
+}
+
+.service-p h3 {
+    color: #55545a;
+    line-height: 40px;
+}
+
+.service-p a {
+    padding: 0;
+}

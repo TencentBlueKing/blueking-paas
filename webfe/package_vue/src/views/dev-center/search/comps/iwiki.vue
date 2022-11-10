@@ -1,0 +1,130 @@
+<template>
+    <div class="paas-iwiki-wrapper">
+        <section
+            class="iwiki-item"
+            v-for="(item, index) in data"
+            :key="index">
+            <p class="name" @click.stop="handleOpen(item)">
+                <span v-html="handleHighlight(item.title)"></span>
+            </p>
+            <div class="digest-content"
+                v-html="handleContentHighlight(item.digest)"
+                v-if="isShowContent(item.digest)"
+                @click.stop="handleOpen(item)"></div>
+            <p class="author-info">
+                <span>{{ item.author_name }}</span>
+                <span style="margin-left: 10px;">{{ item.updated_at }}</span>
+            </p>
+        </section>
+    </div>
+</template>
+<script>
+    export default {
+        name: '',
+        props: {
+            data: {
+                type: Array,
+                default: () => []
+            },
+            filterKey: {
+                type: [String, Number],
+                default: ''
+            }
+        },
+        computed: {
+            isShowContent () {
+                return (payload) => {
+                    if (typeof payload === 'number') {
+                        return true;
+                    }
+                    return !!payload;
+                };
+            }
+        },
+        methods: {
+            handleOpen ({ url }) {
+                window.open(url);
+            },
+
+            handleHighlight (payload) {
+                if (this.filterKey === '') {
+                    return payload;
+                }
+                let keyword = this.filterKey.trim();
+                keyword = `(${keyword.replace(/([\+\.\*\|\?\-\(\[\^\$])/g, '\\$1')})`;
+                const patt = new RegExp(keyword, 'igm');
+                return payload.replace(patt, `<span class="keyword">$1</span>`);
+            },
+
+            handleContentHighlight (payload) {
+                const highlightKey = 'bk-highlight-mark';
+                const highlightPatt = new RegExp(highlightKey, 'igm');
+                const content = payload.replace(highlightPatt, 'marked');
+                if (this.filterKey === '') {
+                    return content;
+                }
+                let keyword = this.filterKey.trim();
+                keyword = `(${keyword.replace(/([\+\.\*\|\?\-\(\[\^\$])/g, '\\$1')})`;
+                const patt = new RegExp(keyword, 'igm');
+                return content.replace(patt, `<span class="keyword">$1</span>`);
+            }
+        }
+    };
+</script>
+<style lang="scss">
+    .paas-iwiki-wrapper {
+        padding-right: 320px;
+        .iwiki-item {
+            padding: 18px 0 20px 0;
+            min-height: 64px;
+            border-bottom: 1px solid #dcdee5;
+            .name {
+                display: inline-block;
+                font-size: 18px;
+                color: #313238;
+                cursor: pointer;
+                &:hover {
+                    color: #3a84ff;
+                    .keyword {
+                        color: #ff9c01;
+                    }
+                }
+                .keyword {
+                    padding: 0 3px;
+                    color: #ff9c01;
+                }
+            }
+            .digest-content {
+                margin-top: 10px;
+                line-height: 24px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: normal;
+                word-break: break-all;
+                display: -webkit-box;
+                -webkit-line-clamp: 1;
+                -webkit-box-orient: vertical;
+                color: #63656e;
+                cursor: pointer;
+                .keyword {
+                    padding: 0 3px;
+                    color: #ff9c01;
+                }
+                marked {
+                    color: #ff9c01 !important;
+                    span {
+                        color: #ff9c01 !important;
+                    }
+                }
+                &:hover {
+                    color: #3a84ff;
+                }
+            }
+            .author-info {
+                margin-top: 10px;
+                font-size: 12px;
+                color: #c4c6cc;
+            }
+        }
+    }
+</style>

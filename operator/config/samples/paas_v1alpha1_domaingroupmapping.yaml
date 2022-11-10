@@ -1,0 +1,21 @@
+apiVersion: paas.bk.tencent.com/v1alpha1
+kind: DomainGroupMapping
+metadata:
+  name: domaingroupmapping-sample
+spec:
+  data:
+  - domains:
+    - host: foo-sample.example.com
+      pathPrefixList:
+      - /
+    sourceType: subdomain
+  - domains:
+    - host: bar-sample.example.com
+      pathPrefixList:
+      - /foo/
+      - /bar/
+    sourceType: subpath
+  ref:
+    apiVersion: paas.bk.tencent.com/v1alpha1
+    kind: BkApp
+    name: bkapp-sample

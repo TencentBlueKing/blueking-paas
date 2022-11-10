@@ -409,7 +409,7 @@
                         if (e.name) {
                             this.$bkNotify({
                                 theme: 'error',
-                                message: `【${e.name}】${this.$t('没有访问权限！')}`,
+                                message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
                                 offsetY: 80
                             });
                         }
@@ -564,7 +564,7 @@
                     if (e.name) {
                         this.$bkNotify({
                             theme: 'error',
-                            message: `【${e.name}】没有访问权限！`,
+                            message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
                             offsetY: 80
                         });
                     }

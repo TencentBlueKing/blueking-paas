@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.constants import AppOperationType, EngineAppType
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.platform.applications.permissions import application_perm_class
@@ -17,19 +18,19 @@ from paas_wl.platform.auth.views import BaseEndUserViewSet
 from paas_wl.platform.external.client import get_plat_client
 from paas_wl.platform.external.exceptions import PlatClientRequestError
 from paas_wl.platform.system_api.serializers import ProcExtraInfoSLZ, ProcSpecsSerializer
-from paas_wl.resources.actions.exceptions import ScaleFailedException
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.controllers import AppProcessesController, judge_operation_frequent
+from paas_wl.workloads.processes.controllers import get_proc_mgr, judge_operation_frequent
 from paas_wl.workloads.processes.drf_serializers import (
+    CNativeProcSpecSLZ,
     InstanceForDisplaySLZ,
     ListProcessesSLZ,
     ProcessSpecSLZ,
     UpdateProcessSLZ,
     WatchProcessesSLZ,
 )
-from paas_wl.workloads.processes.exceptions import ProcessOperationTooOften
+from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
@@ -45,7 +46,7 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     _skip_judge_frequent: bool = False
 
     def update(self, request, code, module_name, environment):
-        """操作进程，支持的操作：启动、停止、调整时实例数"""
+        """操作进程，支持的操作：启动、停止、调整实例数"""
         slz = UpdateProcessSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -55,23 +56,27 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
             logger.warning("Unable to update process, environment %s has gone offline.", module_env)
             raise error_codes.CANNOT_OPERATE_PROCESS.f('环境已下架')
 
+        ctl = get_proc_mgr(module_env)
         engine_app = self.get_engine_app_via_path()
-        ctl = AppProcessesController(engine_app)
 
-        process_spec = self.get_object(data["process_type"])
-        judge_operation_frequent(process_spec, self._operation_interval)
+        proc_type = data["process_type"]
         try:
-            if data['operate_type'] == ProcessUpdateType.SCALE:
-                ctl.scale(process_spec, data['target_replicas'])
-            elif data['operate_type'] == ProcessUpdateType.STOP:
-                ctl.stop(process_spec)
-            elif data['operate_type'] == ProcessUpdateType.START:
-                ctl.start(process_spec)
-            else:
-                raise error_codes.PROCESS_OPERATE_FAILED.f(f"Invalid operate type {data['operate_type']}")
+            judge_operation_frequent(engine_app, proc_type, self._operation_interval)
         except ProcessOperationTooOften as e:
             raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
-        except ScaleFailedException as e:
+
+        try:
+            if data['operate_type'] == ProcessUpdateType.SCALE:
+                ctl.scale(proc_type, data['target_replicas'])
+            elif data['operate_type'] == ProcessUpdateType.STOP:
+                ctl.stop(proc_type)
+            elif data['operate_type'] == ProcessUpdateType.START:
+                ctl.start(proc_type)
+            else:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"Invalid operate type {data['operate_type']}")
+        except ProcessNotFound as e:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{e}' 未定义")
+        except ScaleProcessError as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
         # Create application operation log
@@ -97,13 +102,6 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """Get the type of application operation"""
         return {'start': AppOperationType.PROCESS_START, 'stop': AppOperationType.PROCESS_STOP}.get(type_, None)
 
-    def get_object(self, process_type: str):
-        engine_app = self.get_engine_app_via_path()
-        try:
-            return ProcessSpec.objects.get(engine_app_id=engine_app.uuid, name=process_type)
-        except ProcessSpec.DoesNotExist:
-            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 未定义")
-
 
 class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
@@ -114,15 +112,20 @@ class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
     def list(self, request, code, module_name, environment):
         """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
+        env = self.get_module_env_via_path()
         engine_app = self.get_engine_app_via_path()
         serializer = ListProcessesSLZ(data=request.query_params, context={'engine_app': engine_app})
         serializer.is_valid(raise_exception=True)
 
         data = get_proc_insts(engine_app, release_id=serializer.validated_data['release_id'])
 
-        # Attach ProcessSpec related data
+        # For default apps: Attach ProcessSpec related data
         packages = ProcessSpec.objects.filter(engine_app=engine_app).select_related('plan')
         data['process_packages'] = ProcessSpecSLZ(packages, many=True).data
+
+        # For cloud-native apps: Attach ProcessSpec-like data which have less
+        # properties, it's useful for the client when implementing process actions
+        data['cnative_proc_specs'] = CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
         return Response(data)
 
     def watch(self, request, code, module_name, environment):

@@ -7,10 +7,13 @@ from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
 from drf_yasg.utils import swagger_auto_schema
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
+from pydantic import ValidationError as PDValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.platform.applications.permissions import application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
@@ -21,12 +24,13 @@ from paas_wl.utils.error_codes import error_codes
 from .addresses import get_exposed_url
 from .constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DeployStatus
 from .credentials import get_references, validate_references
-from .models import AppModelDeploy, AppModelResource, update_app_resource
+from .models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from .resource import deploy, get_mres_from_cluster
 from .serializers import (
     AppModelResourceSerializer,
     CreateDeploySerializer,
     DeployDetailSerializer,
+    DeployPrepResultSLZ,
     DeploySerializer,
     MresStatusSLZ,
     QueryDeploysSerializer,
@@ -59,6 +63,8 @@ class MresViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
 class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """应用模型资源部署相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
 
     @cached_property
     def paginator(self):
@@ -153,6 +159,27 @@ class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         # Poll status in background
         AppModelDeployStatusPoller.start({'deploy_id': deployment.id}, DeployStatusHandler)
         return Response(manifest)
+
+    @swagger_auto_schema(request_body=CreateDeploySerializer, responses={"200": DeployPrepResultSLZ()})
+    def prepare(self, request, code, module_name, environment):
+        """每次部署前调用，接收的参数与部署一致，返回需用户关注的二次确认信息，比如
+        某些进程的副本数将被重写，等等。
+
+        - 客户端：当 `proc_replicas_changes` 没有数据时，不展示额外信息，只显示普通的
+          二次确认框
+        """
+        env = self.get_module_env_via_path()
+        slz = CreateDeploySerializer(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        # validate incoming manifest
+        try:
+            new_res = BkAppResource(**slz.validated_data.get("manifest"))
+        except PDValidationError as e:
+            raise ValidationError(to_error_string(e))
+
+        changes = get_online_replicas_diff(env, new_res)
+        return Response(DeployPrepResultSLZ({'proc_replicas_changes': changes}).data)
 
     def get_queryset(self) -> models.QuerySet:
         """Get the AppModelDeploy QuerySet object"""

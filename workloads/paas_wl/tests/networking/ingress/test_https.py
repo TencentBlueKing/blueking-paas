@@ -9,7 +9,7 @@ from paas_wl.networking.ingress.models import AppDomain, AppDomainCert, AppDomai
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestCustomDomainIngressWithHTTPS:
     @pytest.fixture
     def cert(self, app):

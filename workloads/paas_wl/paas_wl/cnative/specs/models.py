@@ -47,8 +47,7 @@ class AppModelResourceManager(models.Manager):
         :param module_id: ID of Module object
         :param resource: `BkAppResource` object
         """
-        # 不存储 status 字段
-        json_value = resource.dict(exclude={"status"})
+        json_value = resource.to_deployable()
         revision = AppModelRevision.objects.create(
             region=region,
             application_id=application_id,
@@ -81,8 +80,7 @@ class AppModelResource(TimestampedModel):
 
         :param resource: `BkAppResource` object
         """
-        # 不存储 status 字段
-        json_value = resource.dict(exclude={"status"})
+        json_value = resource.to_deployable()
         self.revision = AppModelRevision.objects.create(
             region=self.region,
             application_id=self.application_id,

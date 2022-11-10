@@ -7,7 +7,8 @@
             :module-list="curAppModuleList">
         </app-top-bar>
         <paas-content-loader :is-loading="isLoading" :placeholder="loaderPlaceholder" :offset-top="30" class="app-container middle overview">
-            <section class="deploy-panel deploy-metadata flex mt20">
+            <!-- 去掉 -->
+            <!-- <section class="deploy-panel deploy-metadata flex mt20">
                 <div class="metadata-wrap">
                     <div class="data-logo">
                         <img src="/static/images/smart.png" v-if="isSmartApp" />
@@ -22,7 +23,6 @@
                         </svg>
                     </div>
                     <div class="metadata">
-                        <!-- svn -->
                         <template v-if="overview.repo.source_type === 'bk_svn'">
                             <div class="data-item">
                                 <span class="data-title" v-bk-overflow-tips> {{ $t('仓库：') }} {{overview.repo.display_name}}</span>
@@ -32,7 +32,6 @@
                             </div>
                             <a class="mr10" target="_blank" :href="overview.repo.repo_url"> {{ $t('点击访问') }} </a>
                         </template>
-                        <!-- gitlab && gitcode -->
                         <template v-else>
                             <template v-if="isLesscodeApp">
                                 <div class="data-item">
@@ -91,7 +90,7 @@
                         <router-link :to="{ name: 'appEnvVariables', params: { id: appCode, moduleId: curModuleId } }"> {{ $t('查看详情') }} </router-link>
                     </div>
                 </div>
-            </section>
+            </section> -->
 
             <section class="deploy-panel deploy-main mt15">
                 <ul class="ps-tab" style="position: relative; z-index: 10;">
@@ -182,7 +181,7 @@
                 }
             },
             curModuleId (val) {
-                this.getLessCode();
+                // this.getLessCode();
             }
         },
         created () {
@@ -190,7 +189,13 @@
         },
         methods: {
             async init () {
-                this.isLoading = true;
+                this.isLoading = false;
+                // 部署 deploy-metadata 不展示
+                // this.getModuleRuntimeOverview();
+                // this.getLessCode();
+            },
+
+            async getModuleRuntimeOverview () {
                 try {
                     const appCode = this.appCode;
                     const moduleId = this.curModuleId;
@@ -210,7 +215,6 @@
                 } finally {
                     this.isLoading = false;
                 }
-                this.getLessCode();
             },
 
             handleTimelineSelect (payload) {

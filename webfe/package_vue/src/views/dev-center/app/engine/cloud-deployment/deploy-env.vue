@@ -6,7 +6,65 @@
                     {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
                     <span class="built-in-env" @click="handleShoEnvDialog">{{ $t('查看内置环境变量') }}</span>
                 </p>
-                <table v-if="envVarList.length" class="ps-table ps-table-default ps-table-width-overflowed" style="margin-bottom: 24px;">
+                <div class="filter-list">
+                    <div class="label">
+                        <i class="paasng-icon paasng-funnel"></i>
+                        {{ $t('生效环境：') }}
+                    </div>
+                    <div class="bk-button-group">
+                        <bk-button
+                            theme="primary"
+                            style="width: 130px;"
+                            :outline="curStage !== '_global_'"
+                            @click="changeConfigVarByEnv('_global_')">
+                            {{ $t('所有环境') }}
+                        </bk-button>
+                        <bk-button
+                            theme="primary"
+                            style="width: 130px;"
+                            :outline="curStage !== 'stag'"
+                            @click="changeConfigVarByEnv('stag')">
+                            {{ $t('仅预发布环境') }}
+                        </bk-button>
+                        <bk-button
+                            theme="primary"
+                            style="width: 130px;"
+                            :outline="curStage !== 'prod'"
+                            @click="changeConfigVarByEnv('prod')">
+                            {{ $t('仅生产环境') }}
+                        </bk-button>
+                    </div>
+                    <!-- 默认不展示 -->
+                    <bk-button
+                        v-if="curStage !== ''"
+                        ext-cls="reset-button"
+                        theme="primary"
+                        text
+                        @click="handleReset">
+                        {{ $t('重置') }}
+                    </bk-button>
+                    <!-- <bk-button ext-cls="env-sort-btn" slot="dropdown-trigger" @click="handleSort">
+                        <i class="paasng-icon paasng-general-sort sort-icon"></i>
+                        <span class="text"> {{ $t('排序') }} </span>
+                    </bk-button> -->
+                    <!-- <bk-dropdown-menu
+                        ext-cls="env-sort-btn"
+                        trigger="click"
+                        align="right"
+                        @show="dropdownShow"
+                        @hide="dropdownHide"
+                        ref="dropdown">
+                        <bk-button
+                            slot="dropdown-trigger">
+                            <i class="paasng-icon paasng-general-sort sort-icon"></i>
+                            <span class="text"> {{ $t('排序') }} </span>
+                        </bk-button>
+                        <ul class="bk-dropdown-list" slot="dropdown-content">
+                            <li><a href="javascript:;" style="margin: 0;" :class="curSortKey === 'key' ? 'active' : ''" @click="handleSort">{{ $t('KEY 名称(A-Z)') }}</a></li>
+                        </ul>
+                    </bk-dropdown-menu> -->
+                </div>
+                <table v-if="envVarList.length" class="ps-table ps-table-default ps-table-width-overflowed" style="margin-bottom: 24px;" v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }">
                     <tr v-for="(varItem, index) in envVarList" :key="index">
                         <td>
                             <bk-form form-type="inline" :model="varItem" ref="envRef">
@@ -35,6 +93,20 @@
                                         </bk-input>
                                     </template>
                                 </bk-form-item>
+                                <bk-form-item style="flex: 1 1 18%;">
+                                    <bk-select
+                                        v-model="varItem.envName"
+                                        :disabled="isReadOnlyRow(index)"
+                                        :placeholder="$t('请选择')"
+                                        :clearable="false">
+                                        <bk-option
+                                            v-for="(option, optionIndex) in envSelectList"
+                                            :key="optionIndex"
+                                            :id="option.id"
+                                            :name="option.text">
+                                        </bk-option>
+                                    </bk-select>
+                                </bk-form-item>
                                 <bk-form-item style="text-align: right; min-width: 80px;">
                                     <template v-if="isReadOnlyRow(index)">
                                         <a class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
@@ -45,7 +117,7 @@
                                             :ok-text="$t('确定')"
                                             :cancel-text="'取消'"
                                             :theme="'ps-tooltip'"
-                                            @ok="deleteEnvData(index)">
+                                            @ok="deleteEnvData(index, varItem)">
                                             <a slot="trigger" class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
                                                 v-show="isReadOnlyRow(index)">
                                             </a>
@@ -54,7 +126,7 @@
                                     <template v-else>
                                         <a class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
                                             type="submit"
-                                            @click="updateEnvData(index)">
+                                            @click="updateEnvData(index, varItem)">
                                         </a>
                                         <a class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
                                             style="margin-left: 0;"
@@ -161,6 +233,11 @@
                             required: true,
                             message: this.$t('NAME是必填项'),
                             trigger: 'blur'
+                        },
+                        {
+                            regex: /^[-._a-zA-Z][-._a-zA-Z0-9]*$/,
+                            message: this.$t('环境变量名称必须由字母字符、数字、下划线（_）、连接符（-）、点（.）组成，并且不得以数字开头（例如“my.env-name”或“MY_ENV.NAME”, 或 “MyEnvName1”）'),
+                            trigger: 'blur'
                         }
                     ],
                     value: [
@@ -233,7 +310,20 @@
                     basicLoading: false,
                     appRuntimeLoading: false,
                     bkPlatformLoading: false
-                }
+                },
+                globalSelectList: [
+                    
+                ],
+                envSelectList: [
+                    { id: '_global_', text: this.$t('所有环境') },
+                    { id: 'stag', text: this.$t('预发布环境') },
+                    { id: 'prod', text: this.$t('生产环境') }
+                ],
+                curStage: '',
+                allReplicaList: [],
+                envReplicaList: [],
+                isTableLoading: true,
+                allEnvVarList: []
             };
         },
         computed: {
@@ -309,14 +399,46 @@
                 handler (val) {
                     if (val.spec) {
                         this.localCloudAppData = _.cloneDeep(val);
+                        // 所有环境
+                        this.allEnvVarList = [...val.spec.configuration.env, ...val.spec.envOverlay.envVariables];
+                        this.allEnvVarList.forEach(item => {
+                            if (!item.envName) {
+                                this.$set(item, 'envName', '_global_');
+                            }
+                        });
+                        const envOverlay = _.cloneDeep(this.localCloudAppData.spec.envOverlay);
                         this.envVarList = val.spec.configuration.env;
+                        
+                        if (this.curStage === '') {
+                            const all = [...this.envVarList, ...val.spec.envOverlay.envVariables];
+                            this.envVarList = all;
+                        }
+                        this.allReplicaList = envOverlay.envVariables;
+
                         setTimeout(() => {
                             this.isLoading = false;
+                            this.isTableLoading = false;
                         }, 500);
                     }
                 },
                 immediate: true
                 // deep: true
+            },
+            allReplicaList: {
+                handler (val) {
+                    this.envReplicaList = val.filter(item => item.envName === this.curStage);
+                }
+            },
+            curStage (value) {
+                this.isTableLoading = true;
+                if (!value) {
+                    this.envVarList = this.allEnvVarList;
+                } else {
+                    this.envVarList = this.allEnvVarList.filter(item => item.envName === value);
+                }
+                setTimeout(() => {
+                    this.isTableLoading = false;
+                }, 200);
             }
         },
         created () {
@@ -331,15 +453,13 @@
                 this.isDropdownShow = false;
             },
             handleReset () {
-                this.activeEnvTab = '';
-                this.newVarConfig.env = 'stag';
-                this.loadConfigVar();
+                this.curStage = '';
             },
             init () {
                 this.isLoading = true;
                 this.isEdited = false;
                 this.curSortKey = '-created';
-                this.loadConfigVar();
+                // this.loadConfigVar();
                 this.fetchReleaseInfo();
                 this.getAllImages();
             },
@@ -390,30 +510,87 @@
                 return _.includes(this.availableEnv, envName);
             },
             editingRowToggle (rowItem, rowIndex, type = '') {
-                if (type === 'cancel') {
-                    if (Object.keys(this.envItemBackUp).length === 0) { // 如果没有任何内容 则删除
-                        this.envVarList.splice(rowIndex, 1);
-                    } else {
-                        this.envVarList.splice(rowIndex, 1, this.envItemBackUp);
-                    }
-                    this.editRowList = this.editRowList.filter(e => e !== rowIndex);
+                if (rowItem.isAdd) {
+                    // 直接删除
+                    this.envVarList.splice(rowIndex, 1);
                 } else {
-                    this.envItemBackUp = _.cloneDeep(rowItem);
-                    if (_.includes(this.editRowList, rowIndex)) {
+                    if (type === 'cancel') {
+                        if (Object.keys(this.envItemBackUp).length === 0) { // 如果没有任何内容 则删除
+                            this.envVarList.splice(rowIndex, 1);
+                        } else {
+                            this.envVarList.splice(rowIndex, 1, this.envItemBackUp);
+                        }
                         this.editRowList = this.editRowList.filter(e => e !== rowIndex);
                     } else {
-                        this.editRowList.push(rowIndex);
+                        this.envItemBackUp = _.cloneDeep(rowItem);
+                        if (_.includes(this.editRowList, rowIndex)) {
+                            this.editRowList = this.editRowList.filter(e => e !== rowIndex);
+                        } else {
+                            this.editRowList.push(rowIndex);
+                        }
                     }
                 }
             },
             // 修改完成
-            async updateEnvData (rowIndex) {
+            async updateEnvData (rowIndex, rowItem) {
+                // 是否已存在
+                if (rowItem.isAdd) {
+                    const isExist = this.isExistsVarName(rowItem);
+                    if (!isExist) {
+                        return;
+                    }
+                }
                 this.$refs.envRef[rowIndex].validate().then(() => {
-                    this.$set(this.localCloudAppData.spec.configuration, 'env', this.envVarList);
+                    this.isTableLoading = true;
+                    if (!this.localCloudAppData.spec.envOverlay) {
+                        this.$set(this.localCloudAppData.spec, 'envOverlay', {});
+                    }
+                    if (this.curStage !== '' && rowItem.isAdd) {
+                        this.allEnvVarList.push(rowItem);
+                    }
+                    // 该环境是否已存在
+                    if (this.curStage === '') {
+                        this.setLocalCloudAppData();
+                        // const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
+                        // const otherEnvList = this.envVarList.filter(item => item.envName !== '_global_');
+                        // this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
+                        // this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
+                    } else {
+                        if (this.curStage === '_global_') {
+                            if (rowItem.envName === '_global_') {
+                                this.$set(this.localCloudAppData.spec.configuration, 'env', this.envVarList);
+                            } else {
+                                this.setLocalCloudAppData();
+                            }
+                        } else {
+                            if (rowItem.envName === '_global_') {
+                                this.setLocalCloudAppData();
+                            } else {
+                                this.setLocalCloudAppData();
+                            }
+                        }
+                    }
                     this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
                     if (_.includes(this.editRowList, rowIndex)) {
                         this.editRowList = this.editRowList.filter(e => e !== rowIndex);
                     }
+                    this.$nextTick(() => {
+                        // 更新数据源
+                        // const spec = this.localCloudAppData.spec;
+                        // this.allEnvVarList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                        this.allEnvVarList.forEach(item => {
+                            if (!item.envName) {
+                                this.$set(item, 'envName', '_global_');
+                            }
+                            if (item.isAdd) {
+                                delete item.isAdd;
+                            }
+                        });
+                        setTimeout(() => {
+                            this.redisplay();
+                            this.isTableLoading = false;
+                        }, 200);
+                    });
                 });
             },
             // 处理回车
@@ -423,14 +600,73 @@
             addEnvData () {
                 this.envVarList.push({
                     name: '',
-                    value: ''
+                    value: '',
+                    envName: this.curStage || '_global_',
+                    isAdd: true
                 });
                 this.editRowList.push(this.envVarList.length - 1);
             },
-            deleteEnvData (rowIndex) {
-                this.envVarList.splice(rowIndex, 1);
-                this.$set(this.localCloudAppData.spec.configuration, 'env', this.envVarList);
+            deleteEnvData (rowIndex, rowItem) {
+                this.isTableLoading = true;
+                // this.envVarList.splice(rowIndex, 1);
+                if (!this.localCloudAppData.spec.envOverlay) {
+                    this.$set(this.localCloudAppData.spec, 'envOverlay', {});
+                }
+                if (this.curStage === '') {
+                    if (rowItem.envName === '_global_') {
+                        const results = this.allEnvVarList.filter(item => item.envName === '_global_' && item.name !== rowItem.name);
+                        this.$set(this.localCloudAppData.spec.configuration, 'env', results);
+                    } else {
+                        // 区分环境删除
+                        const results = this.allEnvVarList.filter(item => item.envName !== '_global_');
+                        results.forEach(item => {
+                            if (item.envName === rowItem.envName && item.name === rowItem.name) {
+                                item.isDelete = true;
+                            }
+                        });
+                        const filterEnvList = results.filter(item => !item.isDelete);
+                        this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', filterEnvList);
+                    }
+                } else {
+                    if (rowItem.envName === '_global_') {
+                        const results = this.allEnvVarList.filter(item => item.envName === '_global_' && item.name !== rowItem.name);
+                        this.$set(this.localCloudAppData.spec.configuration, 'env', results);
+                    } else {
+                        const results = this.allEnvVarList.filter(item => item.envName !== '_global_');
+                        results.forEach(item => {
+                            if (item.envName === rowItem.envName && item.name === rowItem.name) {
+                                item.isDelete = true;
+                            }
+                        });
+                        const filterEnvList = results.filter(item => !item.isDelete);
+                        this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', filterEnvList);
+                    }
+                }
                 this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+                if (this.$refs.deleteTooltip[rowIndex]) {
+                    this.$refs.deleteTooltip[rowIndex].cancel();
+                }
+                this.$nextTick(() => {
+                    // 更新
+                    const spec = this.localCloudAppData.spec;
+                    this.allEnvVarList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                    this.allEnvVarList.forEach(item => {
+                        if (!item.envName) {
+                            this.$set(item, 'envName', '_global_');
+                        }
+                        if (item.isAdd) {
+                            delete item.isAdd;
+                        }
+                    });
+                    // 重新获取环境列表
+                    this.envVarList = this.allEnvVarList;
+                    if (this.curStage) {
+                        this.envVarList = this.allEnvVarList.filter(item => item.envName === this.curStage);
+                    }
+                    setTimeout(() => {
+                        this.isTableLoading = false;
+                    }, 200);
+                });
             },
             cancelDelete () {
                 this.$refs.deleteTooltip[0].close();
@@ -555,6 +791,65 @@
                         this.$set(data[index], 'isTips', false);
                     }
                 });
+            },
+            
+            // 切换对应环境
+            changeConfigVarByEnv (env) {
+                this.curStage = env;
+            },
+
+            isExistsVarName (curItem) {
+                const spec = this.localCloudAppData.spec;
+                const sourceList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                const flag = sourceList.find(item => item.name === curItem.name && item.envName === curItem.envName);
+                if (flag) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: `该环境下名称为 ${curItem.name} 的变量已经存在，不能重复添加。`
+                    });
+                    return false;
+                }
+                return 'single';
+            },
+
+            handleSort () {
+                this.isTableLoading = true;
+                if (this.curStage === '_global_') {
+                    if (this.envVarList.length > 1) {
+                        this.alphabeticalOrder(this.envVarList);
+                    }
+                } else {
+                    if (this.allReplicaList.length > 1) {
+                        this.alphabeticalOrder(this.allReplicaList);
+                    }
+                }
+                setTimeout(() => {
+                    this.isTableLoading = false;
+                }, 200);
+            },
+
+            // 首字母排序
+            alphabeticalOrder (targetArr) {
+                targetArr.sort((a, b) => {
+                    const textA = a.name.toUpperCase();
+                    const textB = b.name.toUpperCase();
+                    return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+                });
+            },
+
+            redisplay () {
+                if (!this.curStage) {
+                    this.envVarList = this.allEnvVarList;
+                } else {
+                    this.envVarList = this.allEnvVarList.filter(item => item.envName === this.curStage);
+                }
+            },
+
+            setLocalCloudAppData () {
+                const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
+                const otherEnvList = this.allEnvVarList.filter(item => item.envName !== '_global_');
+                this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
+                this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
             }
         }
     };
@@ -746,7 +1041,7 @@
         position: relative;
         font-size: 0;
         letter-spacing: -5px;
-        margin: 0px 0 5px 0;
+        margin: 25px 0 5px 0;
 
         .label {
             position: relative;
@@ -759,7 +1054,7 @@
         .reset-button {
             position: relative;
             top: 4px;
-            padding-left: 110px;
+            padding-left: 10px;
         }
 
         .env-export-wrapper {
@@ -811,6 +1106,24 @@
                 &:hover {
                     color: #FFF;
                 }
+            }
+        }
+
+        .env-sort-btn {
+            position: absolute;
+            right: 0;
+            .sort-icon {
+                position: absolute;
+                font-size: 26px;
+                left: 5px;
+                top: 2px;
+            }
+            .text {
+                padding-left: 15px;
+            }
+            &:hover {
+                color: #3a84ff;
+                border-color: #3a84ff;
             }
         }
     }

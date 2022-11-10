@@ -3,7 +3,7 @@
 Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 import datetime
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -66,12 +66,36 @@ class BkAppConfiguration(BaseModel):
     env: List[EnvVar] = Field(default_factory=list)
 
 
+class ReplicasOverlay(BaseModel):
+    """Overwrite process's replicas by environment"""
+
+    envName: str
+    process: str
+    count: int
+
+
+class EnvVarOverlay(BaseModel):
+    """Overwrite or add application's environment vars by environment"""
+
+    envName: str
+    name: str
+    value: str
+
+
+class EnvOverlay(BaseModel):
+    """Defines environment specified configs"""
+
+    replicas: Optional[List[ReplicasOverlay]] = None
+    envVariables: Optional[List[EnvVarOverlay]] = None
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
     processes: List[BkAppProcess] = Field(default_factory=list)
     hooks: Optional[BkAppHooks] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
+    envOverlay: Optional[EnvOverlay] = None
 
 
 class BkAppStatus(BaseModel):
@@ -100,3 +124,7 @@ class BkAppResource(BaseModel):
         if v != ApiVersion.V1ALPHA1:
             raise ValueError(f'{v} is not valid, use {ApiVersion.V1ALPHA1}')
         return v
+
+    def to_deployable(self) -> Dict:
+        """Return the deployable manifest, some fields are excluded."""
+        return self.dict(exclude={"status"})

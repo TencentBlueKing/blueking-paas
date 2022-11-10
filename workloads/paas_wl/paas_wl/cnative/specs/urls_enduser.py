@@ -15,6 +15,11 @@ urlpatterns = [
         name='api.mres.deployments',
     ),
     re_path(
+        make_app_path(r'/mres/deploy_preps/$', include_envs=True),
+        views_enduser.MresDeploymentsViewSet.as_view({'post': 'prepare'}),
+        name='api.mres.deploy_preps',
+    ),
+    re_path(
         make_app_path(r'/mres/deployments/(?P<deploy_id>[\d]+)/$'),
         views_enduser.MresDeploymentsViewSet.as_view({'get': 'retrieve'}),
         name='api.mres.deployments.singular',

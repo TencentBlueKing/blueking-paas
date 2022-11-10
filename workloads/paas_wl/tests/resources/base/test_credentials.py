@@ -14,7 +14,7 @@ from paas_wl.workloads.images.models import AppImageCredential
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestImageCredentialsHandler:
     def test_create_empty(self, app, scheduler_client: K8sScheduler):
         scheduler_client.ensure_image_credentials_secret(app)

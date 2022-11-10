@@ -140,6 +140,9 @@ le<template lang="html">
         },
         created () {
             this.environment = this.$route.query.env || 'stag';
+            if (this.environment === 'prod') {
+                this.activeIndex = 1;
+            }
             this.init();
         },
         beforeDestroy () {

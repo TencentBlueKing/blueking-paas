@@ -1,12 +1,8 @@
 import logging
-from pathlib import Path
 from typing import Dict
 from unittest import mock
 
 import pytest
-import yaml
-from kubernetes.client import ApiextensionsV1Api
-from kubernetes.client.exceptions import ApiException
 
 from paas_wl.cnative.specs.constants import (
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -65,44 +61,16 @@ class TestMresConditionDetector:
         assert s.status == expected_status
 
 
+@pytest.mark.skip_when_no_crds
 class TestBkAppClusterOperator:
     """测试在集群中操作 bkapp 资源"""
 
-    @pytest.fixture
-    def setup_crd(self, k8s_client, k8s_version, settings):
-        if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 16):
-            pytest.skip("不支持版本 <1.16 的 k8s 集群")
-
-        crd_infos = [
-            ("bkapps.paas.bk.tencent.com", "bkapp_v1.yaml"),
-            ("domaingroupmappings.paas.bk.tencent.com", "domaingroupmappings_v1.yaml"),
-        ]
-
-        client = ApiextensionsV1Api(k8s_client)
-
-        for name, path in crd_infos:
-            body = yaml.load((Path(__file__).parent / "crd" / path).read_text())
-
-            try:
-                client.create_custom_resource_definition(body)
-            except ValueError as e:
-                logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
-            except ApiException as e:
-                if e.status == 409:
-                    # CRD 已存在, 忽略
-                    pass
-
-        yield
-
-        for name, _ in crd_infos:
-            client.delete_custom_resource_definition(name)
-
-    @pytest.fixture
-    def setup_clients(self):
+    @pytest.fixture(autouse=True)
+    def _setup_clients(self):
         with mock.patch('paas_wl.platform.external.client._global_plat_client', new=FakePlatformSvcClient()):
             yield
 
-    def test_deploy_and_get_status(self, bk_app, bk_stag_env, setup_crd, setup_clients):
+    def test_deploy_and_get_status(self, bk_app, bk_stag_env):
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha1",
             "kind": "BkApp",
@@ -116,6 +84,7 @@ class TestBkAppClusterOperator:
             },
         }
 
+        # Don't wait for controller
         with mock.patch('paas_wl.cnative.specs.resource.KNamespace.wait_for_default_sa'):
             ret = deploy(bk_stag_env, manifest)
 

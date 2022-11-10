@@ -59,7 +59,7 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
     elif pod_status.phase == "Running":
         pod_spec: kmodels.V1PodSpec = pod.spec
         if pod_spec.restart_policy == "Always":
-            cond_ready = find_pod_status_condition(pod_status.conditions, cond_type="Ready")
+            cond_ready = find_pod_status_condition(pod_status.conditions or [], cond_type="Ready")
             if cond_ready and cond_ready.status == "True":
                 return healthy
             if fail_message := get_any_container_fail_message(pod):

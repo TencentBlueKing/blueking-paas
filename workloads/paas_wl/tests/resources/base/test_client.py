@@ -22,7 +22,7 @@ from paas_wl.resources.base.exceptions import (
     ResourceDuplicate,
     ResourceMissing,
 )
-from paas_wl.resources.base.kres import KPod
+from paas_wl.resources.base.kres import KPod, PatchType
 from paas_wl.resources.kube_res.base import Schedule
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
@@ -303,7 +303,7 @@ class TestClientBuild:
             assert not kpod_delete.called
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestClientBuildNew:
     """New test cases using pytest"""
 
@@ -338,13 +338,8 @@ class TestClientBuildNew:
 
         KPod(k8s_client).create_or_update(pod_name, namespace=app.namespace, body=body)
 
-        # Must update Pod's status field seperately
-        pod = KPod(k8s_client).get(pod_name, namespace=app.namespace)
-        body = pod.to_dict()
-        body["status"]["phase"] = phase
-        if not body["status"].get("conditions"):
-            body["status"]["conditions"] = [{}]
-        KPod(k8s_client).update_status(pod_name, namespace=app.namespace, body=body)
+        body = {'status': {'phase': phase, 'conditions': []}}
+        KPod(k8s_client).patch_subres('status', pod_name, namespace=app.namespace, body=body, ptype=PatchType.MERGE)
 
         with exc_context:
             scheduler_client.wait_build_succeeded(app.namespace, pod_name, timeout=1)

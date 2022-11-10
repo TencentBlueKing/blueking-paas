@@ -60,7 +60,6 @@ class TestUtils(TestCase):
         super().setUp()
         self.app = random_fake_app()
         self.bp = random_fake_bp(self.app)
-        self.app.ensure_config()
 
     def test_generate_slug_path(self):
         app = self.app

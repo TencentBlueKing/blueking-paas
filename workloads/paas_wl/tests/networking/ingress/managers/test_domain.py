@@ -21,7 +21,7 @@ from tests.utils.app import create_app
 pytestmark = [pytest.mark.django_db]
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestAssignDomains:
     @pytest.fixture()
     def foo_shared_cert(self, app):
@@ -104,7 +104,7 @@ class TestAssignDomains:
         assert [d.host for d in ingress.domains] == ['foo.com']
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestSubdomainAppIngressMgrCommon:
     """Test common interfaces for `SubdomainAppIngressMgr`"""
 
@@ -210,7 +210,7 @@ class TestSubdomainAppIngressMgr:
 
 
 class TestCustomDomainIngressMgr:
-    @pytest.mark.ensure_k8s_namespace
+    @pytest.mark.auto_create_ns
     @pytest.mark.parametrize(
         'path_prefix,expected_path_prefixes,customized_ingress_name',
         [
@@ -249,7 +249,7 @@ class TestCustomDomainIngressMgr:
             ingress_kmodel.get(app, mgr.make_ingress_name())
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestIntegratedDomains:
     """Test cases for some combined situations"""
 

@@ -329,7 +329,10 @@
                             v-if="metadata.routerName "
                             :to="{ name: metadata.routerName, params: { id: appCode, moduleId: curModuleId } }">
                             <span class="paasng-icon paasng-chain" v-if="metadata.name === $t('访问地址')"></span>
-                            <span class="paasng-icon paasng-cog" v-else></span>
+                            <!-- lesscode 应用 和 smart 应用不展示这个 配置按钮 -->
+                            <template v-else>
+                                <span class="paasng-icon paasng-cog" v-if="isShowConfig"></span>
+                            </template>
                         </router-link>
                     </strong>
                     <ul class="card-list">
@@ -338,6 +341,9 @@
                                 <div class="card-key">{{item.text}}：</div>
                                 <template v-if="Array.isArray(item.value)">
                                     <div class="card-value" v-if="item.value.length">
+                                        <template v-if="isSmartApp && item.text === $t('源码管理')">
+                                            {{ $t('蓝鲸 S-mart 源码包') }}
+                                        </template>
                                         <span class="card-value-item mr5" v-for="(subItem, subIndex) of item.value" :key="subIndex">
                                             <router-link :to="subItem.route">
                                                 {{subItem.name}}
@@ -348,9 +354,20 @@
                                 </template>
                                 <template v-else>
                                     <div class="card-value">
-                                        {{item.value || $t('无')}}
+                                        <template v-if="item.text === $t('地址')">
+                                            <template v-if="item.value">
+                                                <span v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE">{{ item.value }}</span>
+                                                <a :href="item.value" target="_blank" v-else>{{ item.value }}</a>
+                                            </template>
+                                            <span v-else>{{ $t('无') }}</span>
+                                        </template>
+                                        <template v-else>
+                                            {{item.value || $t('无')}}
+                                        </template>
                                         <span v-if="item.value && item.href"><a target="_blank" :href="item.href" style="color: #3a84ff">{{item.hrefText}}</a></span>
                                         <a class="ml5" href="javascript: void(0);" v-if="!curAppModule.repo.linked_to_internal_svn && item.downloadBtn" @click="item.downloadBtn">{{item.downloadBtnText}}</a>
+                                        <!-- <a :href="item.value" target="_blank" v-if="item.text === $t('地址')"> {{ $t('点击访问') }} </a> -->
+                                        <a v-if="item.text === $t('源码管理') && lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" :href="lessCodeData.address_in_lesscode || 'javascript:;'" @click="handleLessCode"> {{ $t('我要开发') }} </a>
                                     </div>
                                     
                                 </template>
@@ -744,7 +761,9 @@
                 isDropdownShow: false,
                 imagePullPolicy: 'IfNotPresent',
                 schemaIsLoading: true,
-                branchInfoType: ''
+                branchInfoType: '',
+                lessCodeData: {},
+                lessCodeFlag: true
             };
         },
         computed: {
@@ -839,6 +858,16 @@
             },
             isSmartApp () {
                 return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+            },
+            isShowConfig () {
+                let flag = true;
+                if (this.isSmartApp) {
+                    flag = false;
+                }
+                if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.LESSCODE_APP) {
+                    flag = false;
+                }
+                return flag;
             }
         },
         watch: {
@@ -933,6 +962,7 @@
                 // 先获取各个阶段数据，防止状态丢失
                 await this.fetchModuleInfo(); // 获取模块信息
                 await this.fetchLanguageInfo(); // 获取模版说明
+                await this.getLessCode(); // 获取开发信息
                 this.getPreDeployDetail();
                 this.checkDeployOperation();
             },
@@ -2302,16 +2332,19 @@
                 const displayBlocks = [];
                 const keys = Object.keys(displays);
                 for (const key of keys) {
-                    const sourceInfo = [
-                        {
+                    const sourceInfo = [];
+                    if (displays[key].display_name) {
+                        sourceInfo.push({
                             text: this.$t('类型'),
                             value: displays[key].display_name
-                        },
-                        {
+                        });
+                    }
+                    if (displays[key].repo_url) {
+                        sourceInfo.push({
                             text: this.$t('地址'),
                             value: displays[key].repo_url
-                        }
-                    ];
+                        });
+                    }
                     if (displays[key].source_dir) {
                         sourceInfo.push({
                             text: this.$t('部署目录'),
@@ -2327,7 +2360,8 @@
                         });
                     }
 
-                    if (this.curAppModule.web_config.templated_source_enabled) {
+                    // 普通应用不展示
+                    if (this.curAppModule.web_config.templated_source_enabled && this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
                         sourceInfo.push({
                             text: this.$t('初始化模板类型'),
                             value: this.initTemplateTypeDisplay || '--'
@@ -2340,10 +2374,22 @@
                     }
                     
                     if (this.curAppModule.web_config.runtime_type !== 'custom_image') {
-                        sourceInfo.push({
-                            text: this.$t('源码管理'),
-                            value: this.curAppModule.source_origin === 1 ? this.$t('代码库') : this.$t('蓝鲸可视化开发平台提供源码包')
-                        });
+                        const smartRoute = [
+                            {
+                                name: this.$t('查看包版本'),
+                                route: {
+                                    name: 'appPackages'
+                                }
+                            }
+                        ];
+                        const value = this.isSmartApp ? smartRoute : (this.curAppModule.source_origin === 1 ? this.$t('代码库') : this.$t('蓝鲸可视化开发平台提供源码包'));
+                        // 普通应用不展示
+                        if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
+                            sourceInfo.push({
+                                text: this.$t('源码管理'),
+                                value
+                            });
+                        }
                     }
 
                     switch (key) {
@@ -2651,6 +2697,29 @@
             getBranchInfoType () {
                 const branchInfo = this.branchesMap[this.branchSelection];
                 this.branchInfoType = branchInfo.type;
+            },
+
+            async getLessCode () {
+                try {
+                    const resp = await this.$store.dispatch('baseInfo/gitLessCodeAddress', {
+                        appCode: this.appCode,
+                        moduleName: this.curModuleId
+                    });
+                    if (resp.address_in_lesscode === '' && resp.tips === '') {
+                        this.lessCodeFlag = false;
+                    }
+                    this.lessCodeData = resp;
+                } catch (errRes) {
+                    this.lessCodeFlag = false;
+                    console.error(errRes);
+                }
+            },
+
+            handleLessCode () {
+                if (this.lessCodeData.address_in_lesscode) {
+                    return;
+                }
+                this.$bkMessage({ theme: 'warning', message: this.lessCodeData.tips, delay: 2000, dismissable: false });
             }
         }
     };

@@ -53,6 +53,15 @@ class ProcessSpecSLZ(serializers.Serializer):
     plan_name = serializers.CharField(source="plan.name")
 
 
+class CNativeProcSpecSLZ(serializers.Serializer):
+    """Format cloud-native process specs"""
+
+    name = serializers.CharField()
+    target_replicas = serializers.IntegerField()
+    target_status = serializers.CharField()
+    max_replicas = serializers.IntegerField()
+
+
 class UpdateProcessSLZ(serializers.Serializer):
     """Serializer for updating processes"""
 

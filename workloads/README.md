@@ -111,6 +111,27 @@ EOF
 - `--reuse-db` 表示在每次启动测试时尝试复用测试数据库
 - `-s` 表示打印标准输出
 
+### 配置测试所需的 Kubernetes apiserver
+
+建议参考之前步骤，用 kind 在本地启动一个专用于测试的 Kubernetes 集群。你需要将该集群的相关信息放入配置文件中，部分测试用例会直接访问集群的 apiserver 服务。
+
+1. 打开 `~/.kube/config` 查看测试集群的相关配置
+2. 将其中的地址、 CA、客户端证书等信息放入 workloads 配置文件
+
+一份有效配置如下所示：
+
+```YAML
+FOR_TESTS_APISERVER_URL: https://127.0.0.1:34567
+FOR_TESTS_CA_DATA: LS0tL...
+FOR_TESTS_CERT_DATA: LS0tL...
+FOR_TESTS_KEY_DATA: LS0tL...
+```
+
+默认情况下，不同集群版本所执行的测试用例稍有不同：
+
+- 集群版本 < 1.17：不执行与 BkApp CRD 相关的测试
+- 集群版本 >= 1.17：执行所有测试
+
 
 # 服务备忘
 
@@ -137,8 +158,8 @@ current-context: docker-for-desktop
 快照。
 
 ```bash
-python manage.py region_gen_state --ignore-labels 'region=sht' 'region=sh'
-python manage.py region_gen_state --region ieod --ignore-labels 'region=sht' 'region=sh'
+python manage.py region_gen_state --ignore-labels 'region=szh' 'region=sz'
+python manage.py region_gen_state --region default --ignore-labels 'region=szt' 'region=sz'
 # 过滤集群
-python manage.py region_gen_state --region ieod --cluster-name=ieod-cprod
+python manage.py region_gen_state --region default --cluster-name=default-cluster
 ```

@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Optional
 
 from attrs import define
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.cnative.specs import credentials
 from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
@@ -35,6 +36,9 @@ def get_mres_from_cluster(env: ModuleEnv) -> Optional[BkAppResource]:
         # code more robust.
         try:
             data = crd.BkApp(client).get(planer.default_app_name, namespace=planer.namespace)
+        except ResourceNotFoundError:
+            logger.info('Resource BkApp not found in cluster %s', planer.cluster.name)
+            return None
         except ResourceMissing:
             logger.info('BkApp not found in %s, app: %s', planer.namespace, env.application)
             return None
@@ -47,7 +51,7 @@ def deploy(env: ModuleEnv, manifest: Dict) -> Dict:
 
     :param env: The env to be deployed.
     :param manifest: Application manifest data.
-    :raises: CreateServiceAccountTimeout 当创建 SA 超时（含无默认 token 的情况）时抛出异常
+    :raise: CreateServiceAccountTimeout 当创建 SA 超时（含无默认 token 的情况）时抛出异常
     """
     engine_app = EngineApp.objects.get_by_env(env)
     planer = EnvResourcePlanner(env)

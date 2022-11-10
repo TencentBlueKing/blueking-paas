@@ -55,6 +55,14 @@
                                 delete element.isEdit;
                             }
                         });
+                        val.spec.configuration.env.forEach(element => {
+                            if (element.envName) { // envName 删除
+                                delete element.envName;
+                            }
+                            if (element.isAdd) {
+                                delete element.isAdd;
+                            }
+                        });
                         this.localCloudAppData = _.cloneDeep(val);
                         if (Object.keys(val).length) {
                             this.$nextTick(() => {

@@ -26,7 +26,7 @@ class TestReplaceAppDomainService:
         with pytest.raises(ReplaceAppDomainFailed):
             ReplaceAppDomainService(app, 'invalid-name.example.com', '/')
 
-    @pytest.mark.ensure_k8s_namespace
+    @pytest.mark.auto_create_ns
     @pytest.mark.parametrize(
         'old_host,old_path_prefix,new_host,new_path_prefix',
         [

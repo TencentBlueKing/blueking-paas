@@ -28,7 +28,7 @@
                                 <a v-bk-tooltips="$t('访问控制台')" v-if="platformFeature.ENABLE_WEB_CONSOLE" class="icon-info-d icon-info-base ps-icon-btn-circle no-border" slot="trigger" @click="showProcessDetail(process)">
                                     <i class="paasng-icon paasng-diff-2"></i>
                                 </a>
-                                <!-- <template v-if="process.targetStatus === 'start'">
+                                <template v-if="process.targetStatus === 'start'">
                                     <div
                                         class="tool-confirm-wrapper"
                                         v-bk-tooltips="process.operateIconTitle"
@@ -49,7 +49,8 @@
                                                 class="ps-icon-btn-circle operate-process-icon stop"
                                                 href="javascript:;"
                                                 :class="{ 'disabled': isAppOfflined }">
-                                                <i></i>
+                                                <div class="square-icon"></div>
+                                                <!-- <i></i> -->
                                                 <img src="/static/images/btn_loading.gif" class="loading" style="margin-right: 0;" />
                                             </a>
                                         </tooltip-confirm>
@@ -65,7 +66,7 @@
                                         <i></i>
                                         <img src="/static/images/btn_loading.gif" class="loading" style="margin-right: 0;" />
                                     </a>
-                                </template> -->
+                                </template>
 
                                 <!-- <dropdown :options="{ position: 'bottom right' }" ref="operateDropRef">
                                     <a href="javascript:void(0);" class="ps-icon-btn-circle no-border a-more" slot="trigger">
@@ -339,7 +340,7 @@
     import 'echarts/lib/chart/line';
     import 'echarts/lib/component/tooltip';
     // import dropdown from '@/components/ui/Dropdown';
-    // import tooltipConfirm from '@/components/ui/TooltipConfirm';
+    import tooltipConfirm from '@/components/ui/TooltipConfirm';
     import moment from 'moment';
     import numInput from '@/components/ui/bkInput';
     import chartOption from '@/json/instance-chart-option';
@@ -364,7 +365,7 @@
     export default {
         components: {
             // dropdown,
-            // tooltipConfirm,
+            tooltipConfirm,
             numInput,
             chart: ECharts
         },
@@ -1150,7 +1151,9 @@
 
                 // 遍历进行数据组装
                 const extraInfos = processesData.processes.extra_infos;
-                const packages = processesData.process_packages;
+                // 云原生应用使用cnative_proc_specs里面的 target_status 判断
+                const packages = processesData.cnative_proc_specs;
+                // const packages = processesData.process_packages;
                 const instances = processesData.instances.items;
 
                 processesData.processes.items.forEach(processItem => {
@@ -1764,7 +1767,7 @@
             .process-command {
                 display: inline-block;
                 padding: 16px 24px 16px 0;
-                width: 300px;
+                width: 200px;
                 vertical-align: middle;
                 word-break: break-all;
                 cursor: pointer;
@@ -1952,6 +1955,9 @@
     }
 
     .operate-process-icon {
+        display: flex;
+        justify-content: center;
+        align-items: center;
         border-radius: 50%;
         .loading {
             display: none;
@@ -2023,8 +2029,18 @@
         }
     }
 
+    .operate-process-icon .square-icon {
+        width: 10px;
+        height: 10px;
+        background: #ea3636;
+        border-radius: 1px;
+    }
+
     .operate-process-icon:hover {
         background-color: #ea3636;
+        & .square-icon {
+            background-color: #fff;
+        }
     }
 
     .operate-process-icon:hover i {

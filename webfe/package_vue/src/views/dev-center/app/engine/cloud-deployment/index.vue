@@ -43,12 +43,34 @@
                         <i :class="['paasng-icon paasng-down-shape f12',{ 'paasng-up-shape': isDropdownShow }]" style="top: -1px;"></i>
                     </bk-button>
                     <ul class="bk-dropdown-list" slot="dropdown-content">
-                        <li><a href="javascript:;" style="margin: 0;" @click="handleDeploy('stag')"> {{ $t('预发布环境') }} </a></li>
-                        <li><a href="javascript:;" style="margin: 0;" @click="handleDeploy('prod')"> {{ $t('生产环境') }} </a></li>
+                        <li><a href="javascript:;" style="margin: 0;" @click="deployDialog('stag')"> {{ $t('预发布环境') }} </a></li>
+                        <li><a href="javascript:;" style="margin: 0;" @click="deployDialog('prod')"> {{ $t('生产环境') }} </a></li>
                     </ul>
                 </bk-dropdown-menu>
             </div>
 
+            <bk-dialog v-model="deployDialogConfig.visible"
+                theme="primary"
+                width="700"
+                ext-cls="deploy-dialog"
+                :mask-close="false"
+                :ok-text="$t('确认发布')"
+                :header-position="deployDialogConfig.headerPosition"
+                :title="$t(`确认发布至${deployDialogConfig.stageTitle}`)"
+                @confirm="sumbitCloudApp(deployDialogConfig.stage)"
+                @after-leave="dialogAfterLeave">
+                <div>
+                    {{ $t('请关注以下问题：') }}
+                    <div class="stage-info">
+                        <p class="info-title">{{ $t('进程副本数变更') }}</p>
+                        <p>{{ $t('目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。') }}</p>
+                        <p class="info-tips">{{ $t('副本数将发生以下变化：') }}</p>
+                        <template v-for="item in replicasChanges">
+                            <p><span class="info-label">{{ item.proc_type }}：</span>{{ item.old }}（{{ deployDialogConfig.stageTitle }}） -> {{ item.new }} {{ $t('（当前模型）') }}</p>
+                        </template>
+                    </div>
+                </div>
+            </bk-dialog>
         </paas-content-loader>
     </div>
 </template>
@@ -67,7 +89,14 @@
                 cloudAppData: {},
                 isDropdownShow: false,
                 isLargeDropdownShow: false,
-                buttonLoading: false
+                buttonLoading: false,
+                deployDialogConfig: {
+                    visible: false,
+                    headerPosition: 'left',
+                    stageTitle: this.$t('预发布环境'),
+                    stage: 'stag'
+                },
+                replicasChanges: []
             };
         },
         computed: {
@@ -124,12 +153,6 @@
             },
 
             handleGoPage (routeName) {
-                if (this.$refs.square.envVarList) {
-                    const data = this.$store.state.cloudApi.cloudAppData;
-                    data.spec.configuration.env = this.$refs.square.envVarList.filter(item => item.name !== '' && item.value !== '');
-                    this.$store.commit('cloudApi/updateCloudAppData', data);
-                }
-
                 this.cloudAppData = this.$store.state.cloudApi.cloudAppData;
                 this.$router.push({
                     name: routeName
@@ -146,152 +169,216 @@
                 this.$refs.dropdown.hide();
             },
 
+            deployDialog (env) {
+                this.buttonLoading = true;
+                this.getCloudAppInfo(env);
+            },
+
+            showDeployDialog (env) {
+                this.deployDialogConfig.visible = true;
+                if (env === 'stag') {
+                    this.deployDialogConfig.stage = 'stag';
+                    this.deployDialogConfig.stageTitle = this.$t('预发布环境');
+                } else {
+                    this.deployDialogConfig.stage = 'prod';
+                    this.deployDialogConfig.stageTitle = this.$t('生产环境');
+                }
+            },
+
+            dialogAfterLeave () {
+                this.buttonLoading = false;
+            },
+            
+            // 发布二次确认信息
+            async getCloudAppInfo (env) {
+                try {
+                    const res = await this.$store.dispatch('deploy/getCloudAppInfo', {
+                        params: { manifest: this.$store.state.cloudApi.cloudAppData },
+                        appCode: this.appCode,
+                        moduleId: this.curModuleId,
+                        env
+                    });
+                    this.replicasChanges = res.proc_replicas_changes;
+                    // proc_replicas_changes没有数据时，不展示额外信息，只显示普通的二次确认框
+                    if (!res.proc_replicas_changes.length) {
+                        this.handleDeploy(env);
+                    } else {
+                        // 显示二次确认框，并展示数据
+                        this.showDeployDialog(env);
+                    }
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.detail || e.message
+                    });
+                }
+            },
+
             async handleDeploy (env) {
                 this.$bkInfo({
                     title: `确认发布至${env === 'stag' ? '预发布' : '生产'}环境`,
                     subTitle: `确认要将应用（${this.appCode}）发布到${env === 'stag' ? '预发布' : '生产'}环境`,
                     confirmLoading: true,
+                    cancelFn: () => {
+                        this.buttonLoading = false;
+                    },
                     confirmFn: async () => {
-                        // 表单校验, 弹出提示
-                        let flag = true;
-                        const data = this.$store.state.cloudApi.cloudAppData;
-                        const processes = data.spec.processes;
-                        const imageReg = /^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/;
-                        const portReg = /^[0-9]*$/;
-                        for (let i = 0; i < processes.length; i++) {
-                            // image 镜像地址
-                            if (!processes[i].image) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('请输入容器镜像地址!')
-                                });
-                                flag = false;
-                                // 触发验证函数
-                                this.$refs.square.formDataValidate(i);
-                                break;
-                            }
-        
-                            if (!imageReg.test(processes[i].image)) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('地址格式不正确')
-                                });
-                                flag = false;
-                                this.$refs.square.formDataValidate(i);
-                                break;
-                            }
-
-                            // 不填 targetPort, 这个 key 需要传
-                            if (processes[i].targetPort === '' || processes[i].targetPort === null || processes[i].targetPort === undefined) {
-                                delete processes[i].targetPort;
-                            } else {
-                                if (processes[i].targetPort < 1 || processes[i].targetPort > 65535) {
-                                    this.$bkMessage({
-                                        theme: 'error',
-                                        message: this.$t('端口有效范围1-65535')
-                                    });
-                                    flag = false;
-                                    this.$refs.square.formDataValidate(i);
-                                    break;
-                                }
-                                if (!portReg.test(processes[i].targetPort)) {
-                                    this.$bkMessage({
-                                        theme: 'error',
-                                        message: this.$t('只能输入数字')
-                                    });
-                                    flag = false;
-                                    this.$refs.square.formDataValidate(i);
-                                    break;
-                                }
-                            }
-        
-                            // replicas 副本数量
-                            if (!processes[i].replicas) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('请输入副本数量!')
-                                });
-                                flag = false;
-                                this.$refs.square.formDataValidate(i);
-                                break;
-                            }
-                            if (!(processes[i].replicas >= 0 && processes[i].replicas <= 5)) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('副本数量有效值范围0-5')
-                                });
-                                flag = false;
-                                this.$refs.square.formDataValidate(i);
-                                break;
-                            }
-                        }
-
-                        if (!flag) {
-                            return;
-                        }
-
-                        // 环境变量
-                        const envArr = data.spec.configuration.env;
-                        for (let i = 0; i < envArr.length; i++) {
-                            if (!envArr[i].name) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('NAME是必填项')
-                                });
-                                flag = false;
-                                this.envProcessor(i);
-                                break;
-                            }
-                            if (!envArr[i].value) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('VALUE是必填项')
-                                });
-                                flag = false;
-                                this.envProcessor(i);
-                                break;
-                            }
-                            if (envArr[i].value.length > 2048) {
-                                this.$bkMessage({
-                                    theme: 'error',
-                                    message: this.$t('VALUE不能超过2048个字符')
-                                });
-                                flag = false;
-                                this.envProcessor(i);
-                                break;
-                            }
-                        }
-                       
-                        if (!flag) {
-                            return;
-                        }
-
-                        try {
-                            this.buttonLoading = true;
-                            await this.$store.dispatch('deploy/sumbitCloudApp', {
-                                params: { manifest: this.$store.state.cloudApi.cloudAppData },
-                                appCode: this.appCode,
-                                moduleId: this.curModuleId,
-                                env
-                            });
-                            this.$paasMessage({
-                                theme: 'success',
-                                message: '操作成功'
-                            });
-                            this.$router.push({
-                                name: 'appStatus',
-                                query: { env }
-                            });
-                        } catch (e) {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: e.detail || e.message
-                            });
-                        } finally {
-                            this.buttonLoading = false;
-                        }
+                        this.sumbitCloudApp(env);
                     }
                 });
+            },
+
+            async sumbitCloudApp (env) {
+                // 表单校验, 弹出提示
+                let flag = true;
+                const data = this.$store.state.cloudApi.cloudAppData;
+                const processes = data.spec.processes;
+                const imageReg = /^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$/;
+                const portReg = /^[0-9]*$/;
+                for (let i = 0; i < processes.length; i++) {
+                    // image 镜像地址
+                    if (!processes[i].image) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('请输入容器镜像地址!')
+                        });
+                        flag = false;
+                        // 触发验证函数
+                        this.$refs.square.formDataValidate(i);
+                        break;
+                    }
+
+                    if (!imageReg.test(processes[i].image)) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('地址格式不正确')
+                        });
+                        flag = false;
+                        this.$refs.square.formDataValidate(i);
+                        break;
+                    }
+
+                    // 不填 targetPort, 这个 key 需要传
+                    if (processes[i].targetPort === '' || processes[i].targetPort === null || processes[i].targetPort === undefined) {
+                        delete processes[i].targetPort;
+                    } else {
+                        if (processes[i].targetPort < 1 || processes[i].targetPort > 65535) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: this.$t('端口有效范围1-65535')
+                            });
+                            flag = false;
+                            this.$refs.square.formDataValidate(i);
+                            break;
+                        }
+                        if (!portReg.test(processes[i].targetPort)) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: this.$t('只能输入数字')
+                            });
+                            flag = false;
+                            this.$refs.square.formDataValidate(i);
+                            break;
+                        }
+                    }
+
+                    // replicas 副本数量
+                    if (!processes[i].replicas) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('请输入副本数量!')
+                        });
+                        flag = false;
+                        this.$refs.square.formDataValidate(i);
+                        break;
+                    }
+                    if (!(processes[i].replicas >= 0 && processes[i].replicas <= 5)) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('副本数量有效值范围0-5')
+                        });
+                        flag = false;
+                        this.$refs.square.formDataValidate(i);
+                        break;
+                    }
+                }
+
+                if (!flag) {
+                    return;
+                }
+
+                // 环境变量
+                const envArr = data.spec.configuration.env;
+                for (let i = 0; i < envArr.length; i++) {
+                    if (!envArr[i].name) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('NAME是必填项')
+                        });
+                        flag = false;
+                        this.envProcessor(i);
+                        break;
+                    }
+                    if (!envArr[i].value) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('VALUE是必填项')
+                        });
+                        flag = false;
+                        this.envProcessor(i);
+                        break;
+                    }
+                    if (envArr[i].value.length > 2048) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: this.$t('VALUE不能超过2048个字符')
+                        });
+                        flag = false;
+                        this.envProcessor(i);
+                        break;
+                    }
+                }
+                
+                if (!flag) {
+                    return;
+                }
+
+                const paramsData = this.$store.state.cloudApi.cloudAppData;
+                if (paramsData.spec.configuration.env.length) {
+                    paramsData.spec.configuration.env.forEach(element => {
+                        if (element.envName) {
+                            delete element.envName;
+                        }
+                        if (element.isAdd) {
+                            delete element.isAdd;
+                        }
+                    });
+                }
+
+                try {
+                    this.buttonLoading = true;
+                    await this.$store.dispatch('deploy/sumbitCloudApp', {
+                        params: { manifest: paramsData },
+                        appCode: this.appCode,
+                        moduleId: this.curModuleId,
+                        env
+                    });
+                    this.$paasMessage({
+                        theme: 'success',
+                        message: '操作成功'
+                    });
+                    this.$router.push({
+                        name: 'appStatus',
+                        query: { env }
+                    });
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.detail || e.message
+                    });
+                } finally {
+                    this.buttonLoading = false;
+                }
             },
 
             async envProcessor (i) {
@@ -336,6 +423,29 @@
 @media screen and (max-width: 1440px) {
     .deploy-btn-wrapper {
         width: 980px;
+    }
+}
+
+.deploy-dialog .stage-info {
+    width: 100%;
+    background-color: #f5f6fa;
+    overflow-y: auto;
+    border-left: 10px solid #ccc;
+    padding: 6px 0 30px 12px;
+    margin-top: 8px;
+
+    .info-title {
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .info-tips {
+        margin-bottom: 8px;
+    }
+
+    .info-label {
+        display: inline-block;
+        min-width: 65px;
     }
 }
 </style>

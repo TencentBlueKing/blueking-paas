@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.filters import BaseFilterBackend
 
-from paasng.pluginscenter.constants import PluginRole
-from paasng.pluginscenter.models import PluginInstance, PluginMembership
+from paasng.pluginscenter.iam_adaptor.policy.client import lazy_iam_client
+from paasng.pluginscenter.models import PluginInstance
 
 
 class PluginInstancePermissionFilter(BaseFilterBackend):
@@ -29,10 +29,8 @@ class PluginInstancePermissionFilter(BaseFilterBackend):
         # skip filter if queryset is not for PluginInstance
         if queryset.model is not PluginInstance:
             return queryset
-        # TODO: 对接权限中心需要重构这里
-        roles = [PluginRole.ADMINISTRATOR.value, PluginRole.DEVELOPER.value]
-        return queryset.filter(
-            pk__in=PluginMembership.objects.filter(user=request.user.pk, role__in=roles).values_list(
-                "plugin_id", flat=True
-            )
-        )
+        filters = lazy_iam_client.build_plugin_filters(username=request.user.username)
+        if filters:
+            return queryset.filter(filters)
+        else:
+            return queryset.none()

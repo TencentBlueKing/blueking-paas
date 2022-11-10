@@ -3,6 +3,8 @@ import logging
 from typing import Dict
 
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from jsonfield import JSONField
 
 from paas_wl.platform.applications.constants import EngineAppType
@@ -48,27 +50,13 @@ class App(UuidAuditedModel):
 
     @property
     def namespace(self):
+        # Both default and cloud-native are using the same algo for namespace
+        # at this moment.
         return self.scheduler_safe_name
 
     @property
     def latest_config(self):
         return self.config_set.latest()
-
-    def save(self, *args, **kwargs):
-        """Override default save method"""
-        app = super(App, self).save(*args, **kwargs)
-
-        # Create necessary resources
-        self.ensure_config()
-        return app
-
-    def ensure_config(self):
-        """Create initial Config"""
-        # Create config if not config can be found
-        try:
-            self.config_set.latest()
-        except Config.DoesNotExist:
-            Config.objects.create(app=self, owner=self.owner, runtime={})
 
     def get_structure(self) -> Dict:
         """This function provide compatibility with the field `App.structure`"""
@@ -82,3 +70,18 @@ class App(UuidAuditedModel):
 
 # An alias name to distinguish from Platform's App(Application/BluekingApplication) model
 EngineApp = App
+
+
+@receiver(post_save, sender=App)
+def on_app_created(sender, instance, created, *args, **kwargs):
+    """Do extra things when an app was created"""
+    if created:
+        create_initial_config(instance)
+
+
+def create_initial_config(app: App):
+    """Make sure the initial Config was created"""
+    try:
+        app.config_set.latest()
+    except Config.DoesNotExist:
+        Config.objects.create(app=app, owner=app.owner, runtime={})

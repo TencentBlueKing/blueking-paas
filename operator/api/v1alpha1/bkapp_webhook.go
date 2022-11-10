@@ -191,10 +191,10 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		)
 	}
 	// 3. 资源配额需要符合规范
-	if _, err := quota.New(quota.CPU, proc.CPU); err != nil {
+	if _, err := quota.NewQuantity(proc.CPU, quota.CPU); err != nil {
 		return field.Invalid(pField.Child("cpu"), proc.CPU, err.Error())
 	}
-	if _, err := quota.New(quota.Memory, proc.Memory); err != nil {
+	if _, err := quota.NewQuantity(proc.Memory, quota.Memory); err != nil {
 		return field.Invalid(pField.Child("memory"), proc.Memory, err.Error())
 	}
 	// 4. 进程镜像不可为空
@@ -221,6 +221,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "replicas": envName and process
+	maxReplicas := projConf.ResLimitConfig.MaxReplicas
 	for i, rep := range r.Spec.EnvOverlay.Replicas {
 		replicasField := f.Child("replicas").Index(i)
 		if !CheckEnvName(rep.EnvName) {
@@ -228,6 +229,13 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		}
 		if !lo.Contains(r.getProcNames(), rep.Process) {
 			return field.Invalid(replicasField.Child("process"), rep.Process, "process name is invalid")
+		}
+		if rep.Count > maxReplicas {
+			return field.Invalid(
+				replicasField.Child("count"),
+				rep.Process,
+				fmt.Sprintf("count can't be greater than %d", maxReplicas),
+			)
 		}
 	}
 	return nil

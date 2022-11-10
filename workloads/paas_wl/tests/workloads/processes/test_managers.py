@@ -13,7 +13,7 @@ from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.serializers import extract_type_from_name
 from tests.utils.app import release_setup
 
-pytestmark = [pytest.mark.django_db, pytest.mark.ensure_k8s_namespace]
+pytestmark = [pytest.mark.django_db, pytest.mark.auto_create_ns]
 
 
 @pytest.fixture

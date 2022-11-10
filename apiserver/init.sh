@@ -29,37 +29,37 @@ ensure-apigw() {
     # 同步网关基本信息
     python manage.py sync_apigw_config \
     --api-name "${api_name}" \
-    -f data/apigw/definition.yaml
+    -f support-files/apigw/definition.yaml
     
     # 同步网关环境信息
     python manage.py sync_apigw_stage \
     --api-name "${api_name}" \
-    -f data/apigw/definition.yaml
+    -f support-files/apigw/definition.yaml
     
     # 同步网关策略
     python manage.py sync_apigw_strategies \
     --api-name "${api_name}" \
-    -f data/apigw/definition.yaml
+    -f support-files/apigw/definition.yaml
     
     # 为应用主动授权
     python manage.py grant_apigw_permissions \
     --api-name "${api_name}" \
-    -f data/apigw/definition.yaml
+    -f support-files/apigw/definition.yaml
     
     # 同步网关资源
     python manage.py sync_apigw_resources \
     --api-name "${api_name}" \
-    -f data/apigw/resources.yaml
+    -f support-files/apigw/resources.yaml
     
     # 同步资源文档
     python manage.py sync_resource_docs_by_archive \
     --api-name "${api_name}" \
-    -f data/apigw/definition.yaml  
+    -f support-files/apigw/definition.yaml  
 
     # 创建资源版本并发布
     python manage.py create_version_and_release_apigw \
     --api-name "${api_name}" \
-    -f data/apigw/definition.yaml --generate-sdks
+    -f support-files/apigw/definition.yaml --generate-sdks
     
     # 获取网关公钥
     python manage.py fetch_apigw_public_key \

@@ -14,7 +14,7 @@ from paas_wl.platform.external.client import get_plat_client
 from paas_wl.release_controller.process.events import ProcEventsProducer
 from paas_wl.release_controller.process.models import PlainProcess, condense_processes
 from paas_wl.release_controller.process.utils import ProcessesSnapshotStore
-from paas_wl.workloads.processes.controllers import AppProcessesController
+from paas_wl.workloads.processes.controllers import get_processes_status
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,6 @@ class WaitProcedurePoller(TaskPoller):
     def __init__(self, params: Dict, metadata: PollingMetadata):
         super().__init__(params, metadata)
         self.engine_app = EngineApp.objects.get(uuid=self.params['engine_app_id'])
-        self.proc_mgr = AppProcessesController(self.engine_app)
 
         self.broadcast_enabled = bool(self.params.get('broadcast_enabled'))
         self.extra_params = self.params.get('extra_params', {})
@@ -148,7 +147,7 @@ class WaitProcedurePoller(TaskPoller):
 
     def _get_current_processes(self) -> List[PlainProcess]:
         """Get current process list"""
-        return condense_processes(self.proc_mgr.get_processes_status())
+        return condense_processes(get_processes_status(self.engine_app))
 
     def _get_last_processes(self) -> Optional[List[PlainProcess]]:
         """Get process list of last polling action"""

@@ -35,8 +35,13 @@
                             <tr v-if="curAppModule.web_config.runtime_type !== 'custom_image'">
                                 <td class="has-right-border" style="width: 220px;"> {{ $t('源码管理') }} </td>
                                 <td>
-                                    {{curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸可视化开发平台提供源码包')}}
-                                    <a v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :href="lessCodeData.address_in_lesscode || 'javascript:;'" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" class="ml5" @click="handleLessCode">{{ $t('查看') }}</a>
+                                    <template v-if="isSmartApp">
+                                        {{ $t('蓝鲸 S-mart 源码包') }}
+                                    </template>
+                                    <div v-else>
+                                        {{curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸可视化开发平台提供源码包')}}
+                                        <a v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :href="lessCodeData.address_in_lesscode || 'javascript:;'" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" class="ml5" @click="handleLessCode">{{ $t('查看') }}</a>
+                                    </div>
                                 </td>
                             </tr>
                         </table>

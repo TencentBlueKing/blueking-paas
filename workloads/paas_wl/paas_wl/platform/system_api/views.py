@@ -15,6 +15,7 @@ from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
 from paas_wl.platform.applications import models
 from paas_wl.platform.applications.models import Release
+from paas_wl.platform.applications.models.app import create_initial_config
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.platform.applications.struct_models import get_structured_app
 from paas_wl.platform.auth.permissions import IsInternalAdmin
@@ -28,7 +29,7 @@ from paas_wl.resources.base.generation import get_latest_mapper_version
 from paas_wl.resources.tasks import archive_app, release_app
 from paas_wl.resources.utils.app import get_scheduler_client
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.processes.controllers import AppProcessesController, env_is_running, list_proc_specs
+from paas_wl.workloads.processes.controllers import env_is_running, get_processes_status, list_proc_specs
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecManager
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 
@@ -133,7 +134,7 @@ class ProcessViewSet(SysModelViewSet):
     def list_processes_statuses(self, request, **kwargs):
         """List statuses of all processes"""
         app = self.get_object()
-        process_status = AppProcessesController(app=app).get_processes_status()
+        process_status = get_processes_status(app)
         processes = serializers.ProcessSerializer(process_status, many=True).data
         return Response({"results": processes, "count": len(processes)})
 
@@ -226,12 +227,15 @@ class ConfigViewSet(SysAppRelatedViewSet):
     serializer_class = serializers.ConfigSerializer
 
     def get_object(self):
+        # Make sure the initial Config exists
+        app = self.get_app()
+        create_initial_config(app)
         try:
             # 先尝试获取最后一次成功发布的配置
-            return Release.objects.get_latest(self.get_app(), ignore_failed=True).config
+            return Release.objects.get_latest(app, ignore_failed=True).config
         except ObjectDoesNotExist:
             # 如果应用未发布过, 则返回默认的配置
-            return self.get_app().config_set.latest()
+            return app.config_set.latest()
 
     def update_metadata(self, request, region, name):
         """更新 Metadata"""

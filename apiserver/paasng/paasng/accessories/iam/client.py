@@ -110,7 +110,7 @@ class BKIAMClient:
 
         if resp.get('code') != 0:
             logger.exception(f"create iam grade managers error, message:{resp['message']} \n data: {data}")
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
         return resp['data']['id']
 
@@ -135,7 +135,7 @@ class BKIAMClient:
                     grade_manager_id, resp['message']
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
         return resp.get('data', [])
 
@@ -163,7 +163,7 @@ class BKIAMClient:
                     grade_manager_id, resp['message'], data
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
     def delete_grade_manager_members(self, grade_manager_id: int, usernames: List[str]):
         """
@@ -189,7 +189,7 @@ class BKIAMClient:
                     resp['message'], grade_manager_id, params
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
     def create_builtin_user_groups(self, grade_manager_id: int, app_code: str) -> List[Dict]:
         """
@@ -227,12 +227,12 @@ class BKIAMClient:
                     resp['message'], grade_manager_id, data
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
         # 按照顺序，填充申请创建得到的各个用户组的 ID
         user_group_ids = resp.get('data', [])
         for group, user_group_id, role in zip(groups, user_group_ids, APP_DEFAULT_ROLES):
-            group.update({"id": user_group_id, "role": role})
+            group.update({"id": user_group_id, "role": role})  # type: ignore
         return groups
 
     def delete_user_groups(self, user_group_ids: List[int]):
@@ -249,14 +249,14 @@ class BKIAMClient:
 
             if resp.get('code') != 0:
                 logger.exception('delete user group error, group_id: {}, message:{}'.format(group_id, resp['message']))
-                raise BKIAMApiError(resp['message'])
+                raise BKIAMApiError(resp['message'], resp['code'])
 
     def fetch_user_group_members(self, user_group_id: int) -> List[str]:
         """
         获取某个用户组成员信息
 
         :param user_group_id: 用户组 ID
-        :returns: 用户组成员列表 [{'type': 'user', 'id': 'username', 'expired_at': 1619587562}]
+        :returns: 用户组成员列表 ['username1', 'username2']
         """
         path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': user_group_id}
         params = {'page': DEFAULT_PAGE, 'page_size': FETCH_USER_GROUP_MEMBERS_LIMIT}
@@ -274,9 +274,9 @@ class BKIAMClient:
                     resp['message'], user_group_id, params
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
-        return resp['data']['results']
+        return [user['id'] for user in resp['data']['results']]
 
     def add_user_group_members(self, user_group_id: int, usernames: List[str], expired_after_days: int):
         """
@@ -307,7 +307,7 @@ class BKIAMClient:
                     resp['message'], user_group_id, data
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
     def delete_user_group_members(self, user_group_id: int, usernames: List[str]):
         """
@@ -334,7 +334,7 @@ class BKIAMClient:
                     resp['message'], user_group_id, params
                 )
             )
-            raise BKIAMApiError(resp['message'])
+            raise BKIAMApiError(resp['message'], resp['code'])
 
     def grant_user_group_policies(self, app_code: str, app_name: str, groups: List[Dict]):
         """
@@ -382,4 +382,4 @@ class BKIAMClient:
                         resp['message'], group['id'], data
                     )
                 )
-                raise BKIAMApiError(resp['message'])
+                raise BKIAMApiError(resp['message'], resp['code'])

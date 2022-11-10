@@ -30,7 +30,8 @@ def test_save_addresses(bk_stag_env):
     assert AppSubpath.objects.filter(app=engine_app).count() == 1
 
 
-class Test__to_domain:
+@pytest.mark.auto_create_ns
+class TestToDomain:
     @pytest.mark.parametrize(
         'host,https_enabled,secret_name_has_value',
         [
@@ -39,10 +40,10 @@ class Test__to_domain:
             ('x-foo.example.com', True, True),
         ],
     )
-    def test_with_https(self, host, https_enabled, secret_name_has_value, app, bk_stag_engine_app):
+    def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_engine_app):
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            region=bk_stag_engine_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
         )
         d = AppDomain.objects.create(
             app=bk_stag_engine_app,
@@ -59,7 +60,8 @@ class Test__to_domain:
             assert domain.tlsSecretName is None
 
 
-class Test__to_shared_tls_domain:
+@pytest.mark.auto_create_ns
+class TestToSharedTLSDomain:
     def test_normal(self, app):
         d = MappingDomain(host='x-foo.example.com', pathPrefixList=['/'])
         d = to_shared_tls_domain(d, app)

@@ -33,6 +33,7 @@ from requests.models import Response
 from paasng.dev_resources.sourcectl.git.client import GitClient, MutableURL
 from paasng.dev_resources.sourcectl.models import GitProject
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
+from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
 from paasng.pluginscenter.sourcectl.exceptions import APIError, AuthTokenMissingError
@@ -234,7 +235,7 @@ class PluginRepoInitializer:
             # git clone <repository> <dest_dir>
             self._client.clone(self._build_repo_url_with_auth(git_project), dest_dir)
             # render <template> to <dest_dir>
-            self._template_render.render(plugin.template, dest_dir, context=context)
+            self._template_render.render(self._get_accessible_template(plugin), dest_dir, context=context)
             # git add .
             self._client.add(dest_dir, Path("."))
             self._fix_git_user_config(dest_dir / ".git" / "config")
@@ -242,6 +243,15 @@ class PluginRepoInitializer:
             self._client.commit(dest_dir, message="init repo")
             # git push
             self._client.push(dest_dir)
+
+    def _get_accessible_template(self, plugin: PluginInstance) -> PluginCodeTemplate:
+        """获取可访问的模板地址"""
+        template = plugin.template.copy(deep=True)
+        if urlparse(template.repository).hostname in ["github.com", "git.tencent.com"]:
+            return template
+        git_project = GitProject.parse_from_repo_url(template.repository, "tc_git")
+        template.repository = str(self._build_repo_url_with_auth(git_project))
+        return template
 
     def _fix_git_user_config(self, dest_dir: Path):
         """修复 git 的用户信息缺失问题"""

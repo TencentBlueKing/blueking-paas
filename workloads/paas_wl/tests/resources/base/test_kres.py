@@ -93,8 +93,20 @@ class TestNameBasedOps:
         obj = KDeployment(k8s_client).replace_or_patch(resource_name, namespace=namespace, body=deployment_body)
         assert obj.metadata.annotations["age"] == "4"
 
+    def test_patch(self, k8s_client, namespace_maker, resource_name):
+        namespace = resource_name
+        namespace_maker(namespace)
 
-@pytest.mark.ensure_k8s_namespace
+        deployment_body = construct_foo_deployment(resource_name, KDeployment(k8s_client).get_preferred_version())
+        KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
+
+        # Only provide necessarily fields
+        body = {'metadata': {'annotations': {"age": "4"}}}
+        obj = KDeployment(k8s_client).patch(resource_name, namespace=namespace, body=body)
+        assert obj.metadata.annotations["age"] == "4"
+
+
+@pytest.mark.auto_create_ns
 class TestLabelBasedOps:
     def test_create_watch_stream(self, k8s_client):
         namespace = "default"

@@ -1,0 +1,39 @@
+apigateway:
+  description: PaaS3.0 developer center, official built-in gateway, please do not modify
+  is_public: true
+  maintainers:
+    - "admin"
+
+
+# 更新了 resource.yaml 后必须修改 title
+release:
+  version: 1.0.8
+  title: "generate sdks"
+  comment: "generate sdks"
+
+stage:
+  name: "prod"
+  vars: {}
+  proxy_http:
+    timeout: 30
+    upstreams:
+      loadbalance: "roundrobin"
+      hosts:
+        - host: "{{ settings.BKPAAS_URL }}"
+          weight: 100
+
+grant_permissions:
+  - bk_app_code: "{{ settings.BK_APP_CODE }}"
+  - bk_app_code: bk_apigateway
+  - bk_app_code: bk_lesscode
+  - bk_app_code: bk_sops
+  - bk_app_code: bk_log_search
+  - bk_app_code: bk_monitorv3
+  - bk_app_code: bk_dataweb
+  - bk_app_code: bk_bkdata
+
+strategies: []
+
+resource_docs:
+  # 资源文档目录
+  basedir: "{{ settings.BASE_DIR }}/support-files/apigw/api_doc"

@@ -34,6 +34,20 @@ class CreateDeploySerializer(serializers.Serializer):
     manifest = serializers.JSONField(label=_('BkApp 配置信息'), required=False)
 
 
+class ProcReplicasChangeSLZ(serializers.Serializer):
+    """Format `ProcReplicasChange` object"""
+
+    proc_type = serializers.CharField(label=_('进程类型'))
+    old = serializers.IntegerField(label=_('旧副本数'))
+    new = serializers.IntegerField(label=_('新副本数'))
+
+
+class DeployPrepResultSLZ(serializers.Serializer):
+    """Format deploy preparation result"""
+
+    proc_replicas_changes = serializers.ListField(label=_('进程副本数变化'), child=ProcReplicasChangeSLZ())
+
+
 class QueryDeploysSerializer(serializers.Serializer):
     """Serializer for querying AppModelDeploy objects"""
 

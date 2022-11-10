@@ -162,6 +162,9 @@ class Command(BaseCommand):
                     self.user_group_map[(app_code, role)] = group_id
                     ApplicationUserGroup.objects.create(app_code=app_code, role=role, user_group_id=group_id)
 
+                # 新创建用户组后，需要对用户组进行授权
+                self.cli.grant_user_group_policies(app_code, app_name, groups)
+
             # 4. 将各类角色同步到权限中心用户组，迁移的权限都是永不过期
             user_group_id = self.user_group_map[administrator_key]
             self.cli.add_user_group_members(user_group_id, administrators, NEVER_EXPIRE_DAYS)

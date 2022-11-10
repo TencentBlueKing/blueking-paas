@@ -16,10 +16,10 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-import datetime
-from typing import Dict, Generic, List, Literal, TypeVar, Union
+from typing import Dict, Generic, List, Literal, Optional, TypeVar, Union
 
-from attr import define
+import arrow
+from attrs import converters, define, field, fields
 from elasticsearch_dsl.response import Hit
 from rest_framework.fields import get_attribute
 
@@ -41,6 +41,29 @@ class StructureLogLine:
     timestamp: int
     message: str
     raw: Dict
+
+
+@define
+class IngressLogLine:
+    """ingress 访问日志结构"""
+
+    timestamp: int
+    message: str
+    raw: Dict
+
+    method: Optional[str] = field(init=False, converter=converters.optional(str))
+    path: Optional[str] = field(init=False, converter=converters.optional(str))
+    status_code: Optional[int] = field(init=False, converter=converters.optional(int))
+    response_time: Optional[float] = field(init=False, converter=converters.optional(float))
+    client_ip: Optional[str] = field(init=False, converter=converters.optional(str))
+    bytes_sent: Optional[int] = field(init=False, converter=converters.optional(int))
+    user_agent: Optional[str] = field(init=False, converter=converters.optional(str))
+    http_version: Optional[str] = field(init=False, converter=converters.optional(str))
+
+    def __attrs_post_init__(self):
+        for attr in fields(type(self)):
+            if not attr.init:
+                setattr(self, attr.name, self.raw.get(attr.name))
 
 
 MLine = TypeVar("MLine")
@@ -85,4 +108,4 @@ def format_timestamp(
     elif input_format == "timestamp[ns]":
         return int(value) // 1000
     else:
-        return int(datetime.datetime.utcfromtimestamp(int(value)).timestamp())
+        return int(arrow.get(value).timestamp)

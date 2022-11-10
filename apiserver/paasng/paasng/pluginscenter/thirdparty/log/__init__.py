@@ -16,16 +16,22 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 
 import cattr
-from bkpaas_auth.core.encoder import user_id_encoder
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.thirdparty.log.client import instantiate_log_client
 from paasng.pluginscenter.thirdparty.log.filters import ElasticSearchFilter
-from paasng.pluginscenter.thirdparty.log.models import Logs, StandardOutputLogLine, StructureLogLine, clean_logs
+from paasng.pluginscenter.thirdparty.log.models import (
+    IngressLogLine,
+    Logs,
+    StandardOutputLogLine,
+    StructureLogLine,
+    clean_logs,
+)
 from paasng.pluginscenter.thirdparty.log.search import SmartSearch
 from paasng.pluginscenter.thirdparty.log.utils import SmartTimeRange
 
@@ -45,8 +51,7 @@ def query_standard_output_logs(
     offset: int,
 ) -> Logs[StandardOutputLogLine]:
     """查询标准输出日志"""
-    _, bk_username = user_id_encoder.decode(operator)
-    log_client = instantiate_log_client(pd.log_config, bk_username)
+    log_client = instantiate_log_client(pd.log_config, operator)
     stdout_config = pd.log_config.stdout
     search = make_base_search(
         plugin=instance, search_params=stdout_config, time_range=time_range, limit=limit, offset=offset
@@ -60,7 +65,7 @@ def query_standard_output_logs(
         {
             "logs": clean_logs(list(response), stdout_config),
             "total": total,
-            "dsl": str(search.to_dict()),
+            "dsl": json.dumps(search.to_dict()),
         },
         Logs[StandardOutputLogLine],
     )
@@ -76,8 +81,7 @@ def query_structure_logs(
     offset: int,
 ) -> Logs[StructureLogLine]:
     """查询结构化日志"""
-    _, bk_username = user_id_encoder.decode(operator)
-    log_client = instantiate_log_client(pd.log_config, bk_username)
+    log_client = instantiate_log_client(pd.log_config, operator)
     json_config = pd.log_config.json_
     if not json_config:
         raise ValueError("this plugin does not support query json logs")
@@ -93,9 +97,41 @@ def query_structure_logs(
         {
             "logs": clean_logs(list(response), json_config),
             "total": total,
-            "dsl": str(search.to_dict()),
+            "dsl": json.dumps(search.to_dict()),
         },
         Logs[StructureLogLine],
+    )
+
+
+def query_ingress_logs(
+    pd: PluginDefinition,
+    instance: PluginInstance,
+    operator: str,
+    time_range: SmartTimeRange,
+    query_string: str,
+    limit: int,
+    offset: int,
+) -> Logs[IngressLogLine]:
+    """查询 ingress 访问日志"""
+    log_client = instantiate_log_client(pd.log_config, operator)
+    ingress_config = pd.log_config.ingress
+    if not ingress_config:
+        raise ValueError("this plugin does not support query ingress logs")
+    search = make_base_search(
+        plugin=instance, search_params=ingress_config, time_range=time_range, limit=limit, offset=offset
+    )
+    if query_string:
+        search = search.filter("query_string", query=query_string, analyze_wildcard=True)
+    response, total = log_client.execute_search(
+        index=ingress_config.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
+    )
+    return cattr.structure(
+        {
+            "logs": clean_logs(list(response), ingress_config),
+            "total": total,
+            "dsl": json.dumps(search.to_dict()),
+        },
+        Logs[IngressLogLine],
     )
 
 

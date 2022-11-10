@@ -15,6 +15,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Optional
 
 
 class BKIAMGatewayServiceError(Exception):
@@ -31,3 +32,7 @@ class BKIAMApiError(BKIAMGatewayServiceError):
     """When calling the bk-iam api, bk-iam returns an error message,
     which needs to be captured and displayed to the user on the page
     """
+
+    def __init__(self, message: str, code: Optional[int] = None):
+        super().__init__(message)
+        self.code = code

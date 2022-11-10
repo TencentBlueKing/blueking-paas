@@ -28,6 +28,8 @@ class ErrorCodes:
     CANNOT_RELEASE_ONGOING_EXISTS = ErrorCode(_("创建发布失败，已有发布任务进行中，请刷新查看"))
     EXECUTE_STAGE_ERROR = ErrorCode(_("发布步骤执行失败"))
     STAGE_DEF_NOT_FOUND = ErrorCode(_("当前步骤在新的发布流程中被移除, 请重新发起部署流程或联系插件管理员"))
+    # 人员管理
+    MEMBERSHIP_DELETE_FAILED = ErrorCode(_('插件应该至少拥有一个管理员'))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

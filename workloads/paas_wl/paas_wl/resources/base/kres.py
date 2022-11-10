@@ -5,8 +5,10 @@ import functools
 import json
 import logging
 import time
+from contextlib import contextmanager
+from enum import Enum
 from types import ModuleType
-from typing import Any, Collection, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Callable, Collection, Dict, Iterator, List, Optional, Tuple, Type, Union, overload
 
 import cattr
 from attrs import define
@@ -41,6 +43,36 @@ def set_default_options(options: ClientOptionsDict):
     _default_options = options
 
 
+class PatchType(str, Enum):
+    """Different merge types when patching a kubernetes resource
+    See also: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
+    """
+
+    JSON = 'json'
+    MERGE = 'merge'
+    STRATEGIC = 'strategic'
+
+    def to_content_type(self):
+        """Get header value when used in "Content-Type" """
+        ct = {
+            PatchType.JSON: 'application/json-patch+json',
+            PatchType.MERGE: 'application/merge-patch+json',
+            PatchType.STRATEGIC: 'application/strategic-merge-patch+json',
+        }
+        return ct[self]
+
+
+@contextmanager
+def wrap_missing_exc(namespace: Namespace, name: str):
+    """A context manager which transform exc into ResourceMissing automatically"""
+    try:
+        yield
+    except ApiException as e:
+        if e.status == 404:
+            raise ResourceMissing(namespace=namespace, name=name)
+        raise
+
+
 class KubeObjectList:
     """Handle List object returned by kubernetes client"""
 
@@ -52,6 +84,26 @@ class KubeObjectList:
         self.items: List[ResourceInstance] = []
         for item in self.obj.items:
             self.items.append(ResourceInstance(self.obj.client, item))
+
+
+class NameBasedMethodProxy:
+    """A descriptor which proxy method calls to `self.ops_name`"""
+
+    def __set_name__(self, owner, name: str):
+        self.method_name = name
+
+    @overload
+    def __get__(self, instance: None, owner: None) -> 'NameBasedMethodProxy':
+        ...
+
+    @overload
+    def __get__(self, instance: object, owner: Type) -> Callable:
+        ...
+
+    def __get__(self, instance, owner: Optional[Type] = None) -> Union['NameBasedMethodProxy', Callable]:
+        if not instance:
+            return self
+        return getattr(instance.ops_name, self.method_name)
 
 
 class BaseKresource(object):
@@ -85,14 +137,25 @@ class BaseKresource(object):
         self.ops_name = NameBasedOperations(self, self.request_timeout)
         self.ops_label = LabelBasedOperations(self, self.request_timeout)
 
+    # Make shortcuts: proxy a collection of methods to self.ops_name(name
+    # based operations) for convenience.
+    get_preferred_version = NameBasedMethodProxy()
+    get_available_versions = NameBasedMethodProxy()
+    get = NameBasedMethodProxy()
+    patch = NameBasedMethodProxy()
+    replace_or_patch = NameBasedMethodProxy()
+    create_or_update = NameBasedMethodProxy()
+    get_or_create = NameBasedMethodProxy()
+    create = NameBasedMethodProxy()
+    delete = NameBasedMethodProxy()
+    update_subres = NameBasedMethodProxy()
+    patch_subres = NameBasedMethodProxy()
+    update_status = NameBasedMethodProxy()
+
     @classmethod
     def clone_from(cls, obj: 'BaseKresource') -> 'BaseKresource':
         """Clone a Kres object from another"""
         return cls(obj.client, obj.request_timeout)
-
-    def __getattr__(self, key: str):
-        """By default, proxy all methods to name-based operations"""
-        return getattr(self.ops_name, key)
 
 
 class BaseOperations(object):
@@ -144,12 +207,25 @@ class NameBasedOperations(BaseOperations):
         :param namespace: Resource namespace, only required for is_namespaced resource
         :raises: ResourceMissing when resource can not be found
         """
-        try:
+        with wrap_missing_exc(namespace, name):
             return self.resource.get(name=name, namespace=namespace, **self.default_kwargs)
-        except ApiException as e:
-            if e.status == 404:
-                raise ResourceMissing(namespace=namespace, name=name)
-            raise
+
+    def patch(
+        self, name: str, body: Manifest, namespace: Namespace = None, ptype: PatchType = PatchType.STRATEGIC, **kwargs
+    ) -> ResourceInstance:
+        """Patch a resource by name
+
+        :param ptype: Patch type, default to "strategic"
+        :return: Updated instance
+        :raises: ResourceMissing when resource can not be found
+        """
+        extra_kwargs = self.default_kwargs.copy()
+        extra_kwargs.update(kwargs)
+        extra_kwargs['content_type'] = ptype.to_content_type()
+
+        with wrap_missing_exc(namespace, name):
+            obj = self.resource.patch(name=name, body=body, namespace=namespace, **extra_kwargs)
+        return obj
 
     def replace_or_patch(
         self, name: str, body: Manifest, namespace: Namespace = None, update_method: str = "replace", **kwargs
@@ -163,14 +239,10 @@ class NameBasedOperations(BaseOperations):
         extra_kwargs = self.default_kwargs.copy()
         extra_kwargs.update(kwargs)
 
-        try:
+        with wrap_missing_exc(namespace, name):
             # Call replace/patch method
             _func = getattr(self.resource, update_method)
             obj = _func(name=name, body=body, namespace=namespace, **extra_kwargs)
-        except ApiException as e:
-            if e.status == 404:
-                raise ResourceMissing(namespace=namespace, name=name)
-            raise
         return obj
 
     def create_or_update(
@@ -298,15 +370,25 @@ class NameBasedOperations(BaseOperations):
         :return: Updated instance
         :raises: ResourceMissing when resource can not be found
         """
-        status_res = self.resource.subresources[subres_name]
-        try:
-            # Call replace/patch method
-            _func = getattr(status_res, 'replace')
-            obj = _func(name=name, body=body, namespace=namespace, **self.default_kwargs)
-        except ApiException as e:
-            if e.status == 404:
-                raise ResourceMissing(namespace=namespace, name=name)
-            raise
+        sub_res = self.resource.subresources[subres_name]
+        with wrap_missing_exc(namespace, name):
+            obj = sub_res.replace(name=name, body=body, namespace=namespace, **self.default_kwargs)
+        return obj
+
+    def patch_subres(
+        self,
+        subres_type: str,
+        name: str,
+        body: Manifest,
+        namespace: Namespace = None,
+        ptype: PatchType = PatchType.STRATEGIC,
+    ) -> ResourceInstance:
+        """Patch a subResources, such as Pod's Status."""
+        sub_res = self.resource.subresources[subres_type]
+        with wrap_missing_exc(namespace, name):
+            obj = sub_res.patch(
+                name=name, body=body, namespace=namespace, content_type=ptype.to_content_type(), **self.default_kwargs
+            )
         return obj
 
     def update_status(self, *args, **kwargs) -> ResourceInstance:

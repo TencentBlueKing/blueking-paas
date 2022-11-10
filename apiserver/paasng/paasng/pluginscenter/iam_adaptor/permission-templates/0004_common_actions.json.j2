@@ -1,0 +1,47 @@
+{
+	"system_id": "{{ IAM_PLUGINS_CENTER_SYSTEM_ID }}",
+	"operations": [{
+		"operation": "upsert_common_actions",
+		"data": [{
+				"name": "插件管理员",
+				"name_en": "Plugin Administrator",
+				"actions": [{
+						"id": "basic_development"
+					},
+					{
+						"id": "release_version"
+					},
+					{
+						"id": "manage_configuration"
+					},
+					{
+						"id": "edit_plugin"
+					},
+					{
+						"id": "delete_plugin"
+					},
+					{
+						"id": "manage_members"
+					},
+					{
+						"id": "manage_visibility"
+					}
+				]
+			},
+			{
+				"name": "插件开发者",
+				"name_en": "Plugin Developer",
+				"actions": [{
+						"id": "basic_development"
+					},
+					{
+						"id": "release_version"
+					},
+					{
+						"id": "manage_configuration"
+					}
+				]
+			}
+		]
+	}]
+}

@@ -1,0 +1,51 @@
+version: '3'
+networks:
+  engine-apiserver:
+    driver: bridge
+
+services:
+    etcd0:
+        image: "bitnami/etcd:3.3.15"
+        environment:
+            - ALLOW_NONE_AUTHENTICATION=yes
+        user: root
+        command:
+            - /opt/bitnami/etcd/bin/etcd
+            - "-name"
+            - etcd0
+            - "-advertise-client-urls"
+            - http://localhost:22379,http://localhost:24001
+            - --data-dir
+            - "/var/lib/etcd_data"
+            - -listen-client-urls
+            - "http://0.0.0.0:22379,http://0.0.0.0:24001"
+            - -listen-peer-urls
+            - "http://0.0.0.0:22380"
+            - -initial-advertise-peer-urls
+            - "http://etcd0:22380"
+            - -initial-cluster
+            - "etcd0=http://etcd0:22380"
+            - -initial-cluster-state
+            - "new"
+        volumes:
+            - ${STORAGE_ROOT}/etcd0:/var/lib/etcd_data
+        networks:
+            - engine-apiserver
+    apiserver1-8:
+        image: "gcr.io/google-containers/hyperkube:v1.8.3"
+        command:
+            - /hyperkube
+            - apiserver
+            # Change hostname to "host.docker.internal" if you are using "Docker for Mac"
+            - --etcd-servers=http://etcd0:24001
+            - --service-cluster-ip-range=10.254.0.0/18
+            - --service-node-port-range=80-32767
+            - --insecure-bind-address=0.0.0.0
+            - --insecure-port=8080
+            - --apiserver-count=1
+        ports:
+            - "28080:8080"
+        networks:
+            - engine-apiserver
+        depends_on:
+            - etcd0

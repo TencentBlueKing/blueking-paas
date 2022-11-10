@@ -1,8 +1,10 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
+  creationTimestamp: null
   name: bkapps.paas.bk.tencent.com
 spec:
   group: paas.bk.tencent.com
@@ -55,8 +57,57 @@ spec:
                       type: object
                     type: array
                 type: object
+              envOverlay:
+                description: EnvOverlay holds environment specified configurations,
+                  includes replica count and environment variables.
+                properties:
+                  envVariables:
+                    description: EnvVariables overwrite BkApp's environment vars
+                    items:
+                      description: EnvVarOverlay overwrite or add application's environment
+                        vars by environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        name:
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
+                          type: string
+                        value:
+                          description: Value of the environment variable
+                          type: string
+                      required:
+                      - envName
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  replicas:
+                    description: Replicas overwrite processes's replicas count
+                    items:
+                      description: ReplicasOverlay overwrite process's replicas by
+                        environment.
+                      properties:
+                        count:
+                          description: Count is the desired replicas for current process
+                          format: int32
+                          type: integer
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - count
+                      - envName
+                      - process
+                      type: object
+                    type: array
+                type: object
               hooks:
-                description: AppHooks defines bkapp deployment hook
+                description: Hook commands of current BkApp resource
                 properties:
                   preRelease:
                     description: Hook is a set of commands to execute during bkapp
@@ -73,8 +124,6 @@ spec:
                           type: string
                         type: array
                     type: object
-                required:
-                - preRelease
                 type: object
               processes:
                 items:
@@ -95,6 +144,9 @@ spec:
                       type: string
                     image:
                       description: Container image name
+                      type: string
+                    imagePullPolicy:
+                      description: Container image pull policy
                       type: string
                     memory:
                       description: Memory will be used as limits.memory
@@ -118,15 +170,33 @@ spec:
                 type: array
             required:
             - configuration
-            - hooks
             - processes
             type: object
           status:
             description: AppStatus defines the observed state of BkApp
             properties:
+              addresses:
+                description: Addresses holds all addressable locations of current
+                  BkApp, user may visit app via these locations, includes all domain
+                  source types.
+                items:
+                  description: Addressable includes URL and other related properties
+                  properties:
+                    sourceType:
+                      description: SourceType, see CRD DomainGroupMapping for more
+                        details
+                      type: string
+                    url:
+                      description: URL generally has the form "http[s]://{hostname}/{subpath}/"
+                      type: string
+                  required:
+                  - sourceType
+                  - url
+                  type: object
+                type: array
               conditions:
-                description: Represents the latest available observations of a BkApp's
-                  current state.
+                description: Conditions Represents the latest available observations
+                  of a BkApp's current state.
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -194,60 +264,70 @@ spec:
                   - type
                   type: object
                 type: array
+              deployId:
+                description: DeployId of the BkApp, which is injected from bkpaas
+                type: string
               hookStatuses:
                 description: HookStatuses is the status of Hook execution
-                properties:
-                  preRelease:
-                    description: HookStatus define the status of Hook execution
-                    properties:
-                      message:
-                        description: Same with PodStatus.Message
-                        type: string
-                      phase:
-                        description: Same with PodStatus.Phase
-                        type: string
-                      reason:
-                        description: Same with PodStatus.Reason
-                        type: string
-                      startTime:
-                        description: The hook's start time
-                        format: date-time
-                        type: string
-                      started:
-                        description: Started is true when hook is started
-                        type: boolean
-                    required:
-                    - phase
-                    type: object
-                type: object
+                items:
+                  description: HookStatus define the status of Hook execution
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the status
+                        transitioned from one status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: if pod is unhealthy, message will be the fail message,
+                        otherwise, same with PodStatus.Message
+                      type: string
+                    phase:
+                      description: HealthStatus Represents the hook pod health status
+                      type: string
+                    reason:
+                      description: Same with PodStatus.Reason
+                      type: string
+                    startTime:
+                      description: The hook's start time
+                      format: date-time
+                      type: string
+                    started:
+                      description: Started is true when hook is started
+                      type: boolean
+                    type:
+                      description: HookType hook type
+                      type: string
+                  required:
+                  - phase
+                  - type
+                  type: object
+                type: array
               lastUpdate:
                 description: LastUpdate is the bkapp's last update time
                 format: date-time
                 type: string
-              latestRevision:
-                description: LatestRevision of the bkapp configuration it generates
+              observedGeneration:
+                description: observedGeneration is the most recent generation observed
+                  for this BkApp. It corresponds to the .metadata.generation, which
+                  is updated on mutation by the API Server.
+                format: int64
+                type: integer
+              phase:
+                description: The phase of a BkApp is a simple, high-level summary
+                  of where the BkApp is in its lifecycle.
+                type: string
+              revision:
+                description: Revision of the BkApp configuration it generates
                 properties:
                   revision:
                     description: BkApp's version
                     format: int64
                     type: integer
-                  revisionHash:
-                    description: The hash value of the bkapp's spec
-                    type: string
                 required:
                 - revision
                 type: object
-              nextTrigger:
-                description: NextTrigger is trigger for the state machine to switch
-                  to the next state
-                type: string
-              state:
-                description: FSM related statuses State is the execution state the
-                  state machine is currently in
-                type: string
             required:
-            - nextTrigger
-            - state
+            - phase
             type: object
         type: object
     served: true

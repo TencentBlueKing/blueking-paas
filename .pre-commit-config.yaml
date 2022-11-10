@@ -75,7 +75,7 @@ repos:
         pass_filenames: false
         entry: bash -c "cd workloads && poetry run python -m mypy . --config-file=./mypy.ini"
         files: '^workloads/'
-      # Disable this hook temporarily because it may results EOF error and loss
+      # Disable this hook temporarily because is may results EOF error and loss
       # of changes.
       # - id: operator-fmt
       #   language: system

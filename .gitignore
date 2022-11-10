@@ -112,6 +112,7 @@ webfe-settings
 .pytest_cache/
 extra_fixtures
 
+# This gitignore file is always written by paasctl script automatically
 .pytest_cache/
 
 # poetry
@@ -147,3 +148,6 @@ apiserver/paasng/te
 apiserver/paasng/edition-metadata.json
 apiserver/paasng/editionctl.toml
 apiserver/paasng/.gitignore
+
+# apiserver: iam migration files
+apiserver/paasng/support-files/iam

@@ -54,7 +54,16 @@ class TestReleaseStages:
         pd.save()
         pd.refresh_from_db()
 
-    def test_release_version(self, mock_client, pd, plugin, setup_release_stages, api_client):
+    @pytest.fixture
+    def disable_permission_check(self):
+        with mock.patch("paasng.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client") as iam_policy_client:
+            iam_policy_client.is_action_allowed.return_value = True
+            iam_policy_client.is_actions_allowed.return_value = {"": True}
+            yield
+
+    def test_release_version(
+        self, mock_client, pd, plugin, setup_release_stages, api_client, disable_permission_check
+    ):
         assert PluginRelease.objects.count() == 0
         with mock.patch("paasng.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"

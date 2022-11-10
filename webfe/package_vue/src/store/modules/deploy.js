@@ -384,6 +384,16 @@ const actions = {
     },
 
     /**
+     * 获取二次确认信息
+     *
+     * @param {Object} params 请求参数：appCode, moduleId, env
+     */
+    getCloudAppInfo ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
+        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deploy_preps/`;
+        return http.post(url, params, config);
+    },
+
+    /**
      * 查看应用模型资源当前状态
      *
      * @param {Object} params 请求参数：appCode, moduleId, env

@@ -17,7 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from .definitions import PluginBasicInfoDefinition, PluginDefinition, PluginMarketInfoDefinition
-from .instances import PluginInstance, PluginMarketInfo, PluginMembership, PluginRelease, PluginReleaseStage
+from .instances import (
+    ApprovalService,
+    PluginInstance,
+    PluginMarketInfo,
+    PluginMembership,
+    PluginRelease,
+    PluginReleaseStage,
+)
 
 __all__ = [
     "PluginDefinition",
@@ -28,4 +35,5 @@ __all__ = [
     "PluginMembership",
     "PluginRelease",
     "PluginReleaseStage",
+    "ApprovalService",
 ]

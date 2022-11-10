@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Serializer for third-party api"""
 from rest_framework import serializers
 
-from paasng.pluginscenter.constants import PluginReleaseStatus
+from paasng.pluginscenter.constants import PluginReleaseStatus, PluginRole
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 
@@ -117,3 +117,13 @@ class PluginReleaseLogsResponseSLZ(serializers.Serializer):
 
     finished = serializers.BooleanField(help_text="日志是否结束", default=False)
     logs = serializers.ListSerializer(child=serializers.CharField(help_text="日志内容", allow_null=True, allow_blank=True))
+
+
+class PluginRoleSLZ(serializers.Serializer):
+    name = serializers.CharField(read_only=True, help_text="角色名称")
+    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
+
+
+class PluginMemberSLZ(serializers.Serializer):
+    username = serializers.CharField(help_text="用户名")
+    role = PluginRoleSLZ(help_text="角色")

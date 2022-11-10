@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -7,10 +8,13 @@ from typing import Callable, Dict, List, Optional
 from unittest import mock
 
 import pytest
+import yaml
 from django.conf import settings
 from django.db import transaction
 from django.utils.crypto import get_random_string
+from kubernetes.client import ApiextensionsV1Api
 from kubernetes.client.apis import VersionApi
+from kubernetes.client.exceptions import ApiException
 from rest_framework.test import APIClient
 
 from paas_wl.cluster.models import APIServer, Cluster
@@ -28,6 +32,8 @@ from tests.utils.auth import create_user
 from tests.utils.basic import random_resource_name
 from tests.utils.build_process import random_fake_bp
 
+logger = logging.getLogger(__name__)
+
 # IDs for default "bk_app"'s ModuleEnv objects
 DEFAULT_STAG_ENV_ID = 1
 DEFAULT_PROD_ENV_ID = 1
@@ -37,6 +43,55 @@ def pytest_addoption(parser):
     parser.addoption(
         "--init-s3-bucket", dest="init_s3_bucket", action="store_true", default=False, help="是否需要执行 s3 初始化流程"
     )
+
+
+@pytest.fixture(scope='session', autouse=True)
+def crds_is_configured(django_db_setup, django_db_blocker):
+    """Configure 'BkApp' and other CRDs when tests starts
+
+    :return: Whether the CRDs are successfully configured
+    """
+    with django_db_blocker.unblock():
+        client = get_client_by_cluster_name(get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION).name)
+        version = VersionApi(client).get_code()
+
+    # Minimal required version is 1.17
+    if (int(version.major), int(version.minor)) < (1, 17):
+        yield False
+    else:
+        crd_infos = [
+            ("bkapps.paas.bk.tencent.com", "cnative/specs/crd/bkapp_v1.yaml"),
+            ("domaingroupmappings.paas.bk.tencent.com", "cnative/specs/crd/domaingroupmappings_v1.yaml"),
+        ]
+        crd_client = ApiextensionsV1Api(client)
+
+        for name, path in crd_infos:
+            logger.info('Configure CRD %s...', name)
+            body = yaml.load((Path(__file__).parent / path).read_text())
+            try:
+                crd_client.create_custom_resource_definition(body)
+            except ValueError as e:
+                logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
+            except ApiException as e:
+                # Ignore 409 conflicts error
+                if e.status == 409:
+                    pass
+
+        yield True
+
+        # Clean up CRDs
+        for name, _ in crd_infos:
+            crd_client.delete_custom_resource_definition(name)
+
+
+@pytest.fixture(autouse=True)
+def _skip_when_no_crds(request, crds_is_configured):
+    """Handle @pytest.mark.skip_when_no_crds, skip current test when mark is used
+    and CRDs are not configured(from "crds_is_configured" fixture).
+    """
+    if request.keywords.get('skip_when_no_crds'):
+        if not crds_is_configured:
+            pytest.skip('Skip test because CRDs is not configured')
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -71,17 +126,37 @@ def k8s_version(k8s_client):
 
 
 @pytest.fixture(autouse=True)
-def ensure_k8s_namespace_if_mark(request):
-    if request.node.get_closest_marker("ensure_k8s_namespace") and "app" in request.fixturenames:
+def _auto_create_ns(request):
+    """Create the k8s namespace when the mark is found, supported fixture:
+    app / bk_stag_engine_app
+    """
+    if not request.keywords.get('auto_create_ns'):
+        yield
+        return
+
+    if "app" in request.fixturenames:
         app = request.getfixturevalue("app")
-        client = get_client_by_app(app)
-        kres = KNamespace(client)
-        kres.get_or_create(app.namespace)
-        k8s_version = VersionApi(client).get_code()
-        # k8s 1.8 只起了 apiserver 模拟测试, 不支持 wait_for_default_sa.
-        # 其他更高版本的集群为集成测试, 必须执行 wait_for_default_sa, 否则测试可能会出错
-        if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
-            kres.wait_for_default_sa(app.namespace)
+    elif "bk_stag_engine_app" in request.fixturenames:
+        app = request.getfixturevalue("bk_stag_engine_app")
+    else:
+        yield
+        return
+
+    client = get_client_by_app(app)
+    kres = KNamespace(client)
+    kres.get_or_create(app.namespace)
+    k8s_version = VersionApi(client).get_code()
+
+    # k8s 1.8 只起了 apiserver 模拟测试, 不支持 wait_for_default_sa.
+    # 其他更高版本的集群为集成测试, 必须执行 wait_for_default_sa, 否则测试可能会出错
+    # TODO: replace with more accurate logics, such as detecting if a controller-manager
+    # is enabled.
+    if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
+        kres.wait_for_default_sa(app.namespace)
+
+    yield
+    # Auto clean up resource
+    kres.delete(app.namespace)
 
 
 @pytest.fixture

@@ -136,6 +136,12 @@ def init_legacy_app(legacy_app_code):
     call_command("make_legacy_app_for_test", f"--code={legacy_app_code}", "--username=nobody", "--silence")
 
 
+@pytest.fixture(autouse=True, scope="session")
+def skip_iam_migrations():
+    with override_settings(BK_IAM_SKIP=True):
+        yield
+
+
 @pytest.fixture(autouse=True, scope="function")
 def sqlalchemy_transaction(request):
     """为使用了 sqlalchemy 操作 legacy db 的单元测试提供自动回滚，保证单元测试前后的状态一致"""

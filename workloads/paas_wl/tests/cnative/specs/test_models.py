@@ -35,6 +35,7 @@ def test_create_app_resource():
                 }
             ],
             'hooks': None,
+            'envOverlay': None,
             'configuration': {'env': []},
         },
         'status': {'conditions': [], 'lastUpdate': None, 'phase': "Pending", 'observedGeneration': 0},

@@ -1,100 +1,117 @@
 # -*- coding: utf-8 -*-
 import datetime
 import logging
-from typing import Dict, List
+from typing import Dict, List, Protocol
 
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from paas_wl.cnative.specs.models import AppModelDeploy
+from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
+from paas_wl.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import EngineApp, Release
 from paas_wl.platform.applications.struct_models import ModuleEnv
-from paas_wl.resources.actions.scale import AppScale
-from paas_wl.resources.actions.stop import AppStop
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
+from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
-from paas_wl.workloads.processes.exceptions import ProcessOperationTooOften
+from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Process, ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 
 logger = logging.getLogger(__name__)
 
 
+class ProcController(Protocol):
+    """Control app's processes"""
+
+    def start(self, proc_type: str):
+        ...
+
+    def stop(self, proc_type: str):
+        ...
+
+    def scale(self, proc_type: str, target_replicas: int):
+        ...
+
+
 class AppProcessesController:
-    """Controls an EngineApp's processes, includes common operations such as
+    """Controls app's processes, includes common operations such as
     "start", "stop" and "scale", this class will update both the "ProcessSpec"(persistent
     structure in database) and the related resources in Cluster.
+
+    Only support default applications.
     """
 
-    def __init__(self, app: EngineApp):
-        """
-        :param app:
-        :param skip_judge_frequent: whether raise exception when action happens too frequently, default to True
-        """
-        self.app = app
+    def __init__(self, env: ModuleEnv):
+        self.app = EngineApp.objects.get_by_env(env)
+        self.client = get_scheduler_client_by_app(self.app)
 
-    def start(self, proc_spec: ProcessSpec):
+    def start(self, proc_type: str):
         """Start a process, WILL update the service if necessary
 
-        :param proc_spec: process spec object
+        :param proc_type: process type
+        :raise: ScaleProcessError when error occurs
         """
+        proc_spec = self._get_spec(proc_type)
         if proc_spec.target_replicas <= 0:
             proc_spec.target_replicas = 1
         proc_spec.target_status = ProcessTargetStatus.START.value
         proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
 
-        AppScale(app=self.app).perform(proc_spec.name)
+        try:
+            self.client.scale_processes([self._prepare_process(proc_spec.name)])
+        except Exception as e:
+            raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
-    def stop(self, proc_spec: ProcessSpec):
+    def stop(self, proc_type: str):
         """Stop a process by setting replicas to zero, WILL NOT delete the service.
 
-        :param proc_spec: process spec object
+        :param proc_type: process type
+        :raise: ScaleProcessError when error occurs
         """
+        proc_spec = self._get_spec(proc_type)
         proc_spec.target_status = ProcessTargetStatus.STOP.value
         proc_spec.save(update_fields=['target_status', 'updated'])
 
-        AppStop(app=self.app).perform(proc_spec.name)
+        try:
+            self.client.shutdown_processes([self._prepare_process(proc_spec.name)])
+        except Exception as e:
+            raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
-    def scale(self, proc_spec: ProcessSpec, target_replicas: int):
+    def scale(self, proc_type: str, target_replicas: int):
         """Scale a process to target replicas, WILL update the service if necessary
 
-        :param proc_spec: process spec object
+        :param proc_type: process type
         :param target_replicas: the expected replicas, '0' for stop
         :raises: ValueError when target_replicas is too big
         """
+        proc_spec = self._get_spec(proc_type)
         proc_spec.target_replicas = target_replicas
         proc_spec.target_status = (
             ProcessTargetStatus.START.value if target_replicas else ProcessTargetStatus.STOP.value
         )
         proc_spec.save(update_fields=['target_replicas', 'target_status', 'updated'])
 
-        AppScale(app=self.app).perform(proc_spec.name)
-
-    def get_processes_status(self) -> List[Process]:
-        """Get the real-time processes status
-
-        1. Get current process structure from `release.structure`
-        2. Get process status from `process_kmodel` & `instance_kmodel`
-        """
-        results: List[Process] = []
-
         try:
-            procfile = Release.objects.get_latest(self.app).get_procfile()
+            self.client.scale_processes([self._prepare_process(proc_spec.name)])
         except Exception as e:
-            logger.info("Release does not exists. Detail: %s", e)
-            return results
+            raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
-        for process_type in procfile:
-            try:
-                process = process_kmodel.get_by_type(self.app, process_type)
-                process.instances = instance_kmodel.list_by_process_type(self.app, process_type)
-            except AppEntityNotFound:
-                logger.info("process<%s/%s> missing in k8s cluster" % (self.app.name, process_type))
-                continue
+    def _prepare_process(self, name: str) -> Process:
+        """Create Process object by name, reads properties from different sources:
 
-            results.append(process)
-        return results
+        1. replicas: defined in Model `ProcessSpec`
+        2. command: defined in `EngineApp.structure`
+        """
+        return AppProcessManager(app=self.app).assemble_process(name)
+
+    def _get_spec(self, proc_type: str) -> ProcessSpec:
+        try:
+            return ProcessSpec.objects.get(engine_app_id=self.app.uuid, name=proc_type)
+        except ProcessSpec.DoesNotExist:
+            raise ProcessNotFound(proc_type)
 
 
 def list_proc_specs(engine_app: EngineApp) -> List[Dict]:
@@ -111,10 +128,87 @@ def list_proc_specs(engine_app: EngineApp) -> List[Dict]:
     return results
 
 
-def judge_operation_frequent(process_spec: ProcessSpec, operation_interval: datetime.timedelta):
-    """检查 process 操作是否频繁"""
-    if (timezone.now() - process_spec.updated) < operation_interval:
+def judge_operation_frequent(app: EngineApp, proc_type: str, operation_interval: datetime.timedelta):
+    """检查 process 操作是否频繁
+
+    - Only normal app which owns ProcessSpec objects is supported
+    - Last operated time was stored in ProcessSpec.updated
+    """
+    try:
+        spec = ProcessSpec.objects.get(engine_app_id=app.uuid, name=proc_type)
+    except ProcessSpec.DoesNotExist:
+        return
+
+    if (timezone.now() - spec.updated) < operation_interval:
         raise ProcessOperationTooOften(_(f"进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"))
+
+
+class CNativeProcController:
+    """Process controller for cloud-native applications"""
+
+    # A hard limit on count
+    # TODO: Replace it with more concise solutions
+    HARD_LIMIT_COUNT = 10
+
+    def __init__(self, env: ModuleEnv):
+        self.env = env
+
+    def start(self, proc_type: str):
+        """Start a process"""
+        # TODO: Read target replicas from existed resource to maintain consistency
+        default_replicas = 1
+        return self.scale(proc_type, default_replicas)
+
+    def stop(self, proc_type: str):
+        """Stop a process by setting replicas to zero"""
+        return self.scale(proc_type, 0)
+
+    def scale(self, proc_type: str, target_replicas: int):
+        """Scale a process to target replicas
+
+        :param proc_type: process type
+        :param target_replicas: the expected replicas, '0' for stop
+        :raises: ValueError when target_replicas is too big
+        """
+        if target_replicas > self.HARD_LIMIT_COUNT:
+            raise ValueError(f"target_replicas can't be greater than {self.HARD_LIMIT_COUNT}")
+
+        try:
+            ProcReplicas(self.env).scale(proc_type, target_replicas)
+        except ProcNotFoundInRes as e:
+            raise ProcessNotFound(str(e))
+
+
+def get_proc_mgr(env: ModuleEnv) -> ProcController:
+    """Get a process controller by env"""
+    if env.application.type == ApplicationType.CLOUD_NATIVE:
+        return CNativeProcController(env)
+    return AppProcessesController(env)
+
+
+def get_processes_status(app: EngineApp) -> List[Process]:
+    """Get the real-time processes status
+
+    1. Get current process structure from `release.structure`
+    2. Get process status from `process_kmodel` & `instance_kmodel`
+    """
+    results: List[Process] = []
+
+    try:
+        procfile = Release.objects.get_latest(app).get_procfile()
+    except Release.DoesNotExist:
+        return results
+
+    for process_type in procfile:
+        try:
+            process = process_kmodel.get_by_type(app, process_type)
+            process.instances = instance_kmodel.list_by_process_type(app, process_type)
+        except AppEntityNotFound:
+            logger.info("process<%s/%s> missing in k8s cluster" % (app.name, process_type))
+            continue
+
+        results.append(process)
+    return results
 
 
 def env_is_running(env: ModuleEnv) -> bool:

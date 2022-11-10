@@ -15,24 +15,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
-from bkpaas_auth import get_user_by_user_id
 from django.db.models import Q
 from iam.collection import FancyDict
 from iam.resource.provider import ListResult, ResourceProvider
 from iam.resource.utils import Page
 
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.accessories.iam.client import BKIAMClient
+from paasng.accessories.iam.members.models import ApplicationGradeManager
+from paasng.platform.applications.models import Application
 
 
 class ApplicationProvider(ResourceProvider):
     """蓝鲸应用 Provider"""
-
-    @staticmethod
-    def _get_name_field(language: Optional[Any]) -> str:
-        return 'name_en' if language == "en" else 'name'
 
     def list_instance(self, filter_obj: FancyDict, page_obj: Page, **options) -> ListResult:
         name_field = self._get_name_field(options.get('language'))
@@ -48,19 +44,14 @@ class ApplicationProvider(ResourceProvider):
         name_field = self._get_name_field(options.get('language'))
 
         results = []
-        for app in Application.objects.filter(code__in=ids):
-            # TODO 替换成从 IAM 获取应用对应的管理者用户组成员
-            approvers = [
-                get_user_by_user_id(member_ship.user, username_only=True).username
-                for member_ship in ApplicationMembership.objects.filter(
-                    application=app, role=ApplicationRole.ADMINISTRATOR
-                )
-            ]
+        applications = Application.objects.filter(code__in=ids)
+        approvers = self._fetch_application_approvers([app.code for app in applications])
+        for app in applications:
             results.append(
                 {
                     'id': app.code,
                     'display_name': f"{getattr(app, name_field)} ({app.code})",
-                    '_bk_iam_approver_': approvers,
+                    '_bk_iam_approver_': approvers[app.code],
                 }
             )
 
@@ -87,3 +78,21 @@ class ApplicationProvider(ResourceProvider):
             for app in applications[page_obj.slice_from : page_obj.slice_to]
         ]
         return ListResult(results=results, count=applications.count())
+
+    @staticmethod
+    def _get_name_field(language: Optional[Any]) -> str:
+        return 'name_en' if language == "en" else 'name'
+
+    @staticmethod
+    def _fetch_application_approvers(app_codes: List[str]) -> Dict[str, List[str]]:
+        """
+        获取应用审批人信息（每个应用的分级管理员）
+
+        :param app_codes: 蓝鲸应用 ID 列表
+        :returns: 审批人信息，格式：{app_code: single_app_approvers}
+        """
+        cli = BKIAMClient()
+        return {
+            m.app_code: cli.fetch_grade_manager_members(m.grade_manager_id)
+            for m in ApplicationGradeManager.objects.filter(app_code__in=app_codes)
+        }

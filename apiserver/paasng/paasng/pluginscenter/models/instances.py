@@ -34,8 +34,16 @@ class PlainStageInfo:
     name: str
 
 
+@define
+class ItsmDetail:
+    sn: str
+    fields: List[dict]
+    ticket_url: str
+
+
 PluginCodeTemplateField = make_json_field("PluginCodeTemplateField", PluginCodeTemplate)
 StagesShortcutField = make_json_field("StagesShortcutField", List[PlainStageInfo])
+ItsmDetailField = make_json_field("ItsmDetailField", ItsmDetail)
 
 
 class PluginInstance(UuidAuditedModel):
@@ -53,6 +61,7 @@ class PluginInstance(UuidAuditedModel):
     status = models.CharField(
         verbose_name="插件状态", max_length=16, choices=PluginStatus.get_choices(), default=PluginStatus.WAITING_APPROVAL
     )
+    itsm_detail: ItsmDetail = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")
 
@@ -133,7 +142,7 @@ class PluginRelease(AuditedModel):
     current_stage = models.OneToOneField(
         "PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True
     )
-    stages_shortcut: List[PlainStageInfo] = StagesShortcutField(help_text="发布阶段简易索引(保证顺序可靠)", null=True, default=[])
+    stages_shortcut: List[PlainStageInfo] = StagesShortcutField(help_text="发布阶段简易索引(保证顺序可靠)", null=True, default=list)
     status = models.CharField(default=PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
 
@@ -180,11 +189,17 @@ class PluginReleaseStage(AuditedModel):
 
     status = models.CharField(verbose_name="发布状态", default=PluginReleaseStatus.INITIAL, max_length=16)
     fail_message = models.TextField(verbose_name="错误原因")
-    # TODO: 完善该字段的模型
-    itsm_detail = models.JSONField(verbose_name="ITSM 详情", null=True, help_text="该字段仅 invoke_method = itsm 时可用")
+    itsm_detail: ItsmDetail = ItsmDetailField(default=None, null=True)
     api_detail = models.JSONField(verbose_name="API 详情", null=True, help_text="该字段仅 invoke_method = api 时可用")
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
 
     class Meta:
         unique_together = ("release", "stage_id")
+
+
+class ApprovalService(UuidAuditedModel):
+    """审批服务信息"""
+
+    service_name = models.CharField(verbose_name="审批服务名称", max_length=64, unique=True)
+    service_id = models.IntegerField(verbose_name="审批服务ID", help_text="用于在 ITSM 上提申请单据")

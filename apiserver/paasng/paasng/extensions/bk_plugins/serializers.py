@@ -30,9 +30,7 @@ class ListBkPluginsSLZ(serializers.Serializer):
     has_deployed = serializers.NullBooleanField(help_text='按已部署状态过滤', default=None, required=False)
     order_by = serializers.CharField(default='-created')
     distributor_code_name = serializers.CharField(help_text='按已授权使用方代号过滤', default=None, required=False)
-    tag = serializers.PrimaryKeyRelatedField(
-        queryset=BkPluginTag.objects.all(), help_text='按插件分类ID过滤', default=None, required=False
-    )
+    tag_id = serializers.IntegerField(help_text='按插件分类ID过滤, -1 代表过滤没有分类的插件', default=None, required=False)
 
 
 class ListDetailedBkPluginsExtraSLZ(serializers.Serializer):

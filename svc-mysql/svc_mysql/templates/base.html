@@ -1,0 +1,526 @@
+{% load render_app_url %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}增强服务|MySQL{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/bk-magic-vue.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            color: #666;
+            overflow: hidden;
+            font-family: Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Microsoft Yahei, WenQuanYi Micro Hei, sans-serif;
+        }
+
+        p {
+            padding: 0;
+            margin: 0;
+        }
+
+        .dev_module_title {
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        a {
+            color: #3a84ff;
+            text-decoration: none;
+        }
+
+        .env_introduce_box p:before {
+            content: ' ';
+            width: 3px;
+            border-radius: 50%;
+            height: 3px;
+            margin-right: 7px;
+            display: inline-block;
+            background: #999;
+            vertical-align: middle;
+        }
+
+        #app {
+            height: 100%;
+            min-width: 800px;
+        }
+
+        .header-layout {
+            position: relative;
+            height: 61px;
+            -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
+            box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
+            background-color: #fff;
+            -webkit-transition: padding .1s ease-in;
+            transition: padding .1s ease-in;
+            z-index: 1000;
+        }
+
+        .header-layout .breadcrumbs {
+            line-height: 60px;
+            position: relative;
+            margin: 0 0 0 25px;
+            font-size: 0;
+        }
+
+        .header-layout .user {
+            font-size: 0;
+            line-height: 60px;
+            position: relative;
+        }
+
+        .header-layout .user .user-name {
+            padding: 0 20px;
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .header-layout .user .user-name .user-name-angle {
+            display: inline-block;
+            font-size: 12px;
+            margin: 0 2px;
+            color: #737987;
+            -webkit-transition: -webkit-transform .2s linear;
+            transition: -webkit-transform .2s linear;
+            transition: transform .2s linear;
+            transition: transform .2s linear, -webkit-transform .2s linear;
+        }
+
+        .header-layout .user .user-dropdown {
+            position: absolute;
+            width: 100px;
+            top: 55px;
+            right: 20px;
+            padding: 0;
+            line-height: 45px;
+            font-size: 14px;
+            background-color: #fff;
+            -webkit-box-shadow: 0 1px 5px 0 rgba(12, 34, 59, .1);
+            box-shadow: 0 1px 5px 0 rgba(12, 34, 59, .1);
+            z-index: 1;
+        }
+
+        .header-layout .user .user-dropdown .user-dropdown-item {
+            padding: 0 0 0 12px;
+            cursor: pointer;
+        }
+
+        .nav-layout {
+            position: relative;
+            width: 60px;
+            height: 100%;
+            float: left;
+            margin: -61px 0 0 0;
+            z-index: 1001;
+            -webkit-transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-layout .nav-wrapper {
+            position: relative;
+            width: 60px;
+            height: 100%;
+            background: rgba(46, 50, 59, 1);
+            -webkit-transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .logo img{
+            max-width: 100%;
+        }
+
+        .nav-list-wrapper {
+            height: calc(100% - 120px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            white-space: nowrap;
+            padding: 0;
+        }
+
+        .nav-list-wrapper .nav-item.active {
+            background-color: #151e2a;
+        }
+
+        .nav-list-wrapper .nav-item .nav-item-info {
+            margin: 0;
+            padding: 0;
+            height: 48px;
+            line-height: 48px;
+            font-weight: 400;
+            white-space: nowrap;
+            font-size: 0;
+            cursor: pointer;
+        }
+
+        .nav-list-wrapper .nav-item.active .nav-item-icon {
+            color: #fff;
+        }
+
+        .nav-list-wrapper .nav-item .nav-item-icon {
+            display: inline-block;
+            vertical-align: top;
+            margin: 12px 18px;
+            font-size: 24px;
+            color: #737987;
+        }
+
+        .header-layout .breadcrumbs .breadcrumbs-current {
+            margin: 0;
+            padding: 0;
+            display: inline-block;
+            vertical-align: middle;
+            font-size: 16px;
+            font-weight: normal;
+        }
+
+        .navigation-menu {
+            height: calc(100% - 60px);
+            justify-content: flex-start;
+
+        }
+        .navigation-menu:hover {
+            cursor: default;
+        }
+        .navigation-menu .navigation-menu-item:hover{
+            cursor: pointer;
+        }
+        .main-layout {
+            width: calc(100% - 20px);
+            position: relative;
+            overflow: -moz-scrollbars-none;
+            -ms-overflow-style: none;
+        }
+
+        .main-layout::-webkit-scrollbar {
+            width: 0 !important
+        }
+
+        .bk-table > thead > tr > th, .bk-table > thead > tr > td, .bk-table > tbody > tr > th, .bk-table > tbody > tr > td {
+            padding: 10px;
+            vertical-align: middle;
+            font-size: 13px;
+        }
+
+        .bk-table > thead > tr {
+            height: 50px;
+        }
+
+        .nav-tabs > li {
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .king-nav-tabs2 > li > a {
+            background: #fafbfd;
+        }
+
+        .nav-tabs > li > a {
+            line-height: 2;
+        }
+
+        .bk-table > thead > tr > th {
+            background-color: #fafbfd;
+        }
+
+        .nav-tabs > li > a:hover {
+            border-color: #eee #eee #ddd;
+        }
+
+        .nav > li > a:focus, .nav > li > a:hover {
+            text-decoration: none;
+            background-color: #fafbfd;
+        }
+
+        pre {
+            color: #7b7d8a;
+            margin-top: 15px;
+            border-radius: 2px;
+            background-color: #f9fafc;
+            border: 1px solid #e6e6e6;
+        }
+
+        .bk-table > tbody > tr > td {
+            color: #525267;
+        }
+
+        .bk-button:disabled span, .bk-button:disabled i {
+            color: gray;
+        }
+
+        .bk-button .bk-icon + span {
+            margin-left: 0;
+        }
+
+        .action {
+            display: flex;
+            line-height: 32px;
+        }
+
+        .action-type {
+            width: 125px;
+        }
+
+        .dev_center_module {
+            margin-top: 25px;
+        }
+
+        .dev_module_title {
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .bk-progress {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-box-align: center;
+            -ms-flex-align: center;
+            align-items: center;
+        }
+
+        .bk-progress .progress-bar.bk-progress-large {
+            height: 12px;
+        }
+
+        .bk-progress .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #F0F1F5;
+            border-radius: 50px;
+            position: relative;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .bk-progress .progress-inner.bk-primary {
+            background: #3c96ff;
+        }
+
+        .bk-progress .progress-inner {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            border-radius: 50px;
+            -webkit-transition: width 0.5s ease;
+            transition: width 0.5s ease;
+        }
+
+        .bk-progress .progress-text {
+            width: 7%;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .key {
+            font-weight: bold;
+        }
+
+        .long-text-col-view .cell {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .bk-button .bk-icon.icon-refresh {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .sql-code {
+            white-space: pre;
+            line-height: 1.1;
+            font-size: 1.1em;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+    </style>
+
+    <!-- nav style -->
+    <style>
+        .paas-side-bar .nav-header {
+            text-align: center;
+            background-color: rgb(24, 33, 50);
+            color: #96a2b9;
+            border-bottom: 1px solid #000;
+        }
+
+        .paas-side-bar .nav-header .title {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+            color: #96a2b9;
+        }
+
+        .paas-side-bar .nav-header .logo {
+            height: 60px;
+            width: 60px;
+            padding: 10px;
+            color: #fff;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+        .monitor-navigation-header{
+            line-height: 60px;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .monitor-navigation-content {
+            margin: 15px 0px 15px 25px;
+            height: calc(100% - 60px);
+            overflow-y: scroll;
+        }
+        .monitor-navigation-content h4,
+        .monitor-navigation-content .h4 {
+            font-size: 14px;
+        }
+
+        .paas-breadcrumb {
+            list-style: none;
+            border-radius: 4px;
+            padding-left: 4px;
+            margin: 2.5px;
+        }
+        .paas-breadcrumb > li {
+            display: inline-block;
+        }
+        .paas-breadcrumb > li + li:before {
+            padding: 0 5px;
+            content: "/\A0";
+        }
+        .paas-breadcrumb > li > a {
+            font-family: inherit;
+            font-weight: 500;
+            line-height: 1.1;
+            color: #333;
+        }
+        .paas-table th {
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/googlecode.css">
+    {% block end_of_head %}
+
+    {% endblock %}
+</head>
+<body class="bg-white" data-bg-color="bg-white">
+<div id="app" class="paas-container bk-navigation-wrapper">
+    <div class="paas-side-bar" id="paas-side-bar">
+        <div class="nav-header" style="width: 220px; display: flex;">
+            <div class="logo">
+                <img src="{{ SVC_LOGO_URL }}">
+            </div>
+            <span class="title">
+                增强服务 | MySQL
+            </span>
+        </div>
+        <bk-navigation-menu
+            ref="menu"
+            @select="handleSelect"
+            :default-active="active">
+            <bk-navigation-menu-item
+                v-for="item in navList"
+                :key="item.name"
+                :has-child="item.children && !!item.children.length"
+                :group="item.group"
+                :icon="item.icon"
+                :disabled="item.disabled"
+                :url="item.url"
+                :id="item.name">
+                <span>$[item.name]</span>
+                <div slot="child">
+                    <bk-navigation-menu-item
+                        :key="child.name"
+                        v-for="child in item.children"
+                        :id="child.name"
+                        :disabled="child.disabled"
+                        :icon="child.icon"
+                        :url="child.url"
+                        :default-active="child.active">
+                        <span>$[child.name]</span>
+                    </bk-navigation-menu-item>
+                </div>
+            </bk-navigation-menu-item>
+        </bk-navigation-menu>
+    </div>
+    <div class="navigation-container" style="overflow: hidden;">
+        <div class="container-header" id="paas-header" style="flex-basis: 0px; justify-content: flex-start;margin:2px 0px 3px 0px;">
+            <div class="monitor-navigation-header">
+                <div class="header-breadcrumb">
+                    {% block breadcrumb %}
+                    <ul class="paas-breadcrumb">
+                        <li><a href="{{ app_info | to_v3_url }}">{{ app_info.app_code }}</a></li>
+                        <li><a href="{{ app_info | to_v3_url }}">{{ app_info.module }}</a></li>
+                        <li class="active">Database: {{ instance.credentials.name }}</li>
+                    </ul>
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+        <div class="monitor-navigation-content">
+            <main class="main-layout">
+            {%  block main-layout %}
+            {% endblock %}
+            </main>
+        </div>
+    </div>
+</div>
+</body>
+
+
+<!-- 如果要使用Bootstrap的js插件，必须先调入jQuery -->
+<script src="/static/js/jquery-1.10.2.min.js"></script>
+<script src="/static/js/vue-2.5.22.js"></script>
+<script src="/static/js/bk-magic-vue.js"></script>
+<script>
+    var navList = [
+        {
+            name: "首页",
+            icon: 'nav-item-icon bk-icon icon-home-shape',
+            url:  "{% url 'instance.index' instance.uuid %}"
+        }
+    ]
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#paas-side-bar",
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    active: '{{ view.name }}',
+                    navList: navList,
+                }
+            },
+            methods: {
+                handleSelect: function (name, obj) {
+                    if (obj.url !== undefined && "{{ view.name }}" !== name) {
+                        this.$bkLoading({title: '加载中'})
+                        window.location.href = obj.url
+                    }
+                },
+            },
+        })
+    })
+</script>
+
+
+{% block end_of_body %}
+
+{% endblock %}
+</html>

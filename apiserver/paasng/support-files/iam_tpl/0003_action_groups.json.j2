@@ -1,0 +1,70 @@
+{
+  "system_id": "{{ IAM_PAAS_V3_SYSTEM_ID }}",
+  "operations": [
+    {
+      "operation": "upsert_action_groups",
+      "data": [
+        {
+          "name": "应用",
+          "name_en": "Application",
+          "sub_groups": [
+            {
+              "name": "应用管理",
+              "name_en": "Application Management",
+              "actions": [
+                {
+                  "id": "view_basic_info"
+                },
+                {
+                  "id": "edit_basic_info"
+                },
+                {
+                  "id": "delete_application"
+                },
+                {
+                  "id": "manage_members"
+                },
+                {
+                  "id": "manage_access_control"
+                },
+                {
+                  "id": "manage_app_market"
+                },
+                {
+                  "id": "data_statistics"
+                }
+              ]
+            },
+            {
+              "name": "应用开发",
+              "name_en": "Application Development",
+              "actions": [
+                {
+                  "id": "basic_develop"
+                },
+                {
+                  "id": "manage_cloud_api"
+                },
+                {
+                  "id": "view_alert_records"
+                },
+                {
+                  "id": "edit_alert_policy"
+                },
+                {
+                  "id": "manage_addons_services"
+                },
+                {
+                  "id": "manage_env_protection"
+                },
+                {
+                  "id": "manage_module"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

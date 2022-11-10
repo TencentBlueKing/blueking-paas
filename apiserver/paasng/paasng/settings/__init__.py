@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     'paasng.extensions.smart_app',
     'paasng.extensions.bk_plugins',
     'paasng.pluginscenter',
+    'paasng.pluginscenter.iam_adaptor',
     'paasng.platform.mgrlegacy',
     'bkpaas_auth',
     'apigw_manager.apigw',
@@ -1119,5 +1120,8 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
-# 插件中心相关配置
+# 插件中心「源码仓库」相关配置
 PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
+
+# 插件开发中心在权限中心注册的系统 ID
+IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')

@@ -103,7 +103,7 @@ class TestAppMonitorController:
     def monitor(self, app):
         return G(AppMetricsMonitor, port=5000, target_port=5001, app=app)
 
-    @pytest.mark.ensure_k8s_namespace
+    @pytest.mark.auto_create_ns
     def test_normal(self, monitor, app, setup_crd):
         controller = make_bk_monitor_controller(app)
         assert controller.app_monitor is not None

@@ -1912,6 +1912,15 @@ export default {
     '进程状态': 'Process Status',
     '账号': 'Account',
     '云原生应用': 'CloudNative App',
-    '插件分类': 'Plugin classification'
+    '插件分类': 'Plugin classification',
+    '蓝鲸 S-mart 源码包': 'BlueKing S-mart source package',
+    '确认发布': 'Confirm release',
+    '确认发布至预发布环境': 'Confirm release to staging environment',
+    '确认发布至生产环境': 'Confirm release to production environment',
+    '请关注以下问题：': 'Please pay attention to the following issues:',
+    '进程副本数变更': 'Change in the number of process replicas',
+    '目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。': 'The number of copies of some processes in the target environment is inconsistent with the current model, and the data in the current model will be used to overwrite the target environment.',
+    '副本数将发生以下变化：': 'The number of replicas will change as follows:',
+    '（当前模型）': '(current model)'
 
 };

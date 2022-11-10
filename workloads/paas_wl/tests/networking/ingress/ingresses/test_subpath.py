@@ -31,7 +31,7 @@ class TestSubPathAppIngressMgr:
             assert len(domains) == 0
 
 
-@pytest.mark.ensure_k8s_namespace
+@pytest.mark.auto_create_ns
 class TestAssignSubpaths:
     @pytest.fixture(autouse=True)
     def configure(self):

@@ -69,6 +69,7 @@ class PluginBasicInfoDefinition(AuditedModel):
     release_method = models.CharField(verbose_name="发布方式", max_length=16)
     repository_group = models.CharField(verbose_name="插件代码初始化仓库组", max_length=255)
     api: PluginBackendAPI = PluginBackendAPIField()
+    sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
 
 
@@ -77,6 +78,6 @@ class PluginMarketInfoDefinition(AuditedModel):
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="market_info_definition"
     )
     storage = models.CharField(verbose_name="存储方式", max_length=16)
-    category = PluginBackendAPIResourceField()
+    category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)

@@ -56,6 +56,14 @@ class Group(OperationGroup):
         path="/api/v2/open/management/systems/{system_id}/grade_managers/{id}/groups/",
     )
 
+    # 删除用户组
+    v2_management_grade_manager_delete_group = bind_property(
+        Operation,
+        name="v2_management_grade_manager_delete_group",
+        method="DELETE",
+        path="/api/v2/open/management/systems/{system_id}/groups/{group_id}/",
+    )
+
     # 用户组成员列表
     v2_management_group_members = bind_property(
         Operation,

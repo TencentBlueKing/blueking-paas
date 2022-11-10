@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from django.urls import path
 
 from . import views
+from .iam_adaptor.views import PluginSelectionView
 
 urlpatterns = [
     path("api/bkplugins/lists/", views.PluginInstanceViewSet.as_view({"get": "list"})),
@@ -64,6 +65,22 @@ urlpatterns = [
         views.PluginLogViewSet.as_view({"post": "query_structure_logs"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/ingress_logs/",
+        views.PluginLogViewSet.as_view({"post": "query_ingress_logs"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/",
+        views.PluginMembersViewSet.as_view({"get": "list", "post": "create"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/leave/",
+        views.PluginMembersViewSet.as_view({"post": "leave"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/<str:username>/",
+        views.PluginMembersViewSet.as_view({"delete": "destroy"}),
+    ),
+    path(
         "api/bkplugins/plugin_definitions/schemas/",
         views.SchemaViewSet.as_view({"get": "get_plugins_schema"}),
     ),
@@ -74,5 +91,21 @@ urlpatterns = [
     path(
         "api/bkplugins/plugin_definitions/<str:pd_id>/basic_info_schema/",
         views.SchemaViewSet.as_view({"get": "get_basic_info_schema"}),
+    ),
+    # iam selection api
+    path(
+        "api/bkplugins/shim/iam/selection/plugin_view/",
+        PluginSelectionView.as_view(),
+    ),
+    # 需要给 ITSM 后台回调的 API
+    # 创建插件审批回调 API
+    path(
+        "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/itsm/",
+        views.PluginReleaseStageApiViewSet.as_view({"post": "itsm_create_callback"}),
+    ),
+    # 发布流程中上线审批阶段回调 API
+    path(
+        "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/itsm/",
+        views.PluginReleaseStageApiViewSet.as_view({"post": "itsm_stage_callback"}),
     ),
 ]

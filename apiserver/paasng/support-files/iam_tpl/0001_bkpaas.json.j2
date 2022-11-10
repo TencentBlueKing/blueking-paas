@@ -1,0 +1,49 @@
+{
+  "system_id": "{{ IAM_PAAS_V3_SYSTEM_ID }}",
+  "operations": [
+    {
+      "operation": "upsert_system",
+      "data": {
+        "id": "{{ IAM_PAAS_V3_SYSTEM_ID }}",
+        "name": "开发者中心",
+        "name_en": "Developer Center",
+        "description": "蓝鲸开发者中心是一个开放式的 PaaS 平台，让开发者可以方便快捷地创建、开发、部署和管理 SaaS 应用。",
+        "description_en": "The BlueKing Developer Center is an open PaaS platform that allows developers to create, develop, deploy and manage SaaS applications quickly and easily.",
+        "clients": "{{ APP_CODE }}",
+        "provider_config": {
+          "host": "",
+          "auth": "basic"
+        }
+      }
+    },
+    {
+      "operation": "upsert_resource_type",
+      "data": {
+        "id": "application",
+        "name": "应用",
+        "name_en": "application",
+        "description": "蓝鲸开发者中心应用",
+        "description_en": "BlueKing Develop Center Application",
+        "parents": [],
+        "provider_config": {
+          "path": "/backend/api/iam-provider/applications/"
+        },
+        "version": 1
+      }
+    },
+    {
+      "operation": "upsert_instance_selection",
+      "data": {
+        "id": "application_list",
+        "name": "蓝鲸开发者中心应用",
+        "name_en": "BlueKing Develop Center Application",
+        "resource_type_chain": [
+          {
+            "system_id": "{{ IAM_PAAS_V3_SYSTEM_ID }}",
+            "id": "application"
+          }
+        ]
+      }
+    }
+  ]
+}

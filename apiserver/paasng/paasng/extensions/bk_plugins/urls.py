@@ -81,6 +81,11 @@ urlpatterns = [
         name="sys.api.plugins_center.bk_plugins.market.upsert",
     ),
     url(
+        'sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/members/$',
+        views.PluginCenterViewSet.as_view({"post": "sync_members"}),
+        name="sys.api.plugins_center.bk_plugins.members.sync",
+    ),
+    url(
         'sys/api/plugins_center/bk_plugins/market/category/$',
         views.PluginCenterViewSet.as_view({"get": "list_category"}),
         name="sys.api.plugins_center.bk_plugins.market.list_category",

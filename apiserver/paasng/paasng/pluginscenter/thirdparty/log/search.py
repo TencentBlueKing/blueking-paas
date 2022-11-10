@@ -29,7 +29,7 @@ class SmartSearch:
     def __init__(self, time_field: str, time_range: SmartTimeRange):
         self.time_range = time_range
         self.search = Search().filter("range", **time_range.get_time_range_filter(time_field))
-        self.search = self.search.sort({time_field: {"order": "asc"}})
+        self.search = self.search.sort({time_field: {"order": "desc"}})
 
     def filter(self, *args, **kwargs):
         """add filter to search dsl"""

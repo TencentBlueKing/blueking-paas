@@ -24,9 +24,13 @@ from typing import Optional, Type
 from bkapi_client_core.apigateway import APIGatewayClient, Operation
 from bkapi_client_core.apigateway import OperationGroup as _OperationGroup
 from bkapi_client_core.apigateway import bind_property
+from bkapi_client_core.config import HookEvent
 from bkapi_client_core.exceptions import ResponseError
+from bkapi_client_core.session import Session
 from blue_krill.web.std_error import APIError
 from django.conf import settings
+from django.utils.translation import get_language
+from requests.models import Request
 
 from paasng.pluginscenter.definitions import PluginBackendAPIResource
 
@@ -53,6 +57,10 @@ class DynamicClient(APIGatewayClient):
         self.update_bkapi_authorization(**auth)
         return self
 
+    def with_i18n_hook(self):
+        registry_i18n_hook(self.session)
+        return self
+
 
 @lru_cache
 def _make_operation_group(resource: PluginBackendAPIResource) -> Type[OperationGroup]:
@@ -77,6 +85,7 @@ def make_client(resource: PluginBackendAPIResource, bk_username: Optional[str] =
         )
         .with_group(_make_operation_group(resource))
         .with_bkapi_authorization(**auth)
+        .with_i18n_hook()
         .group
     )
 
@@ -91,7 +100,8 @@ def transform_exception(exc: Exception):
         raise APIError(code="UnknownError", message="system error") from exc
 
     error_message = ""
-    error_code = -1
+    error_code_string = "APIError"
+    error_code_num = -1
     if request_id := exc.request_id:
         error_message += f"<request_id: {request_id}> "
 
@@ -104,9 +114,12 @@ def transform_exception(exc: Exception):
 
     if isinstance(response_data, dict):
         response_message = response_data.get("message") or response_data.get("detail") or response_message
-        error_code = response_data.get("code", error_code)
-
-    raise APIError(code="APIError", message=error_message + response_message, code_num=int(error_code)) from exc
+        error_code = response_data.get("code", error_code_num)
+        try:
+            error_code_num = int(error_code)
+        except ValueError:
+            error_code_string = error_code or error_code_string
+    raise APIError(code=error_code_string, message=error_message + response_message, code_num=error_code_num) from exc
 
 
 def exception_transformer_decorator(func):
@@ -120,3 +133,15 @@ def exception_transformer_decorator(func):
             return transform_exception(exc)
 
     return wrapper
+
+
+def registry_i18n_hook(session: Session):
+    """registry hook to bkapi client session, which will auto set Accept-Language"""
+
+    def hook(request: Request):
+        language = get_language()
+        if language and not request.headers.get("Accept-Language"):
+            request.headers["Accept-Language"] = language
+        return request
+
+    session.register_hook(HookEvent.REQUEST, hook)

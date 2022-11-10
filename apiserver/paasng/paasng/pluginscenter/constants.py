@@ -58,6 +58,7 @@ class PluginStatus(str, StructuredEnum):
     """插件状态"""
 
     WAITING_APPROVAL = EnumField("waiting-approval", label="创建审批中")
+    APPROVAL_FAILED = EnumField("approval-failed", label="创建审批失败")
     DEVELOPING = EnumField("developing", label="开发中")
     RELEASING = EnumField("releasing", label="发布中")
     RELEASED = EnumField("released", label="已发布")

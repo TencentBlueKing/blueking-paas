@@ -21,6 +21,7 @@ import json
 import logging
 from typing import List, Tuple
 
+from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from blue_krill.redis_tools.messaging import StreamChannelSubscriber
 from django.conf import settings
 from django.db.transaction import atomic
@@ -43,9 +44,11 @@ from paasng.engine.models import Deployment
 from paasng.engine.models.managers import DeployPhaseManager
 from paasng.engine.streaming.constants import EventType
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.signals import post_create_application
+from paasng.platform.applications.models import ApplicationMembership
+from paasng.platform.applications.signals import application_member_updated, post_create_application
+from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.platform.modules.constants import SourceOrigin
@@ -88,7 +91,7 @@ class FilterPluginsMixin:
             order_by=[data['order_by']],
             has_deployed=data['has_deployed'],
             distributor_code_name=data['distributor_code_name'],
-            tag=data['tag'],
+            tag_id=data['tag_id'],
         )
         paginator = LimitOffsetPagination()
         applications = paginator.paginate_queryset(applications, request, self)
@@ -270,16 +273,19 @@ class PluginCenterViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        # TODO: 如何分配 region?
         region = settings.DEFAULT_REGION_NAME
         source_origin = SourceOrigin.AUTHORIZED_VCS
+        encoded_operator = user_id_encoder.encode(
+            getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
+        )
+
         application = create_application(
             region=region,
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],
             type_=ApplicationType.BK_PLUGIN,
-            operator=data["operator"],
+            operator=encoded_operator,
         )
 
         module = create_default_module(
@@ -348,12 +354,15 @@ class PluginCenterViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
+        encoded_operator = user_id_encoder.encode(
+            getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
+        )
         deployment = None
         try:
             with coordinator.release_on_error():
                 deployment = initialize_deployment(
                     env=env,
-                    operator=data["operator"],
+                    operator=encoded_operator,
                     version_info=VersionInfo(
                         revision=data["version"]["source_hash"],
                         version_name=data["version"]["source_version_name"],
@@ -468,7 +477,33 @@ class PluginCenterViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = serializers.BkPluginProfileSLZ(data=updated_data, instance=profile)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response()
+        return Response(data={})
+
+    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
+    def sync_members(self, request, code):
+        """同步插件成员"""
+        application = self.get_application()
+
+        slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        members = []
+        for member in data:
+            user_id = user_id_encoder.encode(
+                getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), username=member["username"]
+            )
+            ApplicationMembership.objects.update_or_create(
+                defaults={"role": ApplicationRole(member["role"]["id"])},
+                application=application,
+                user=user_id,
+            )
+            members.append(user_id)
+        # 删除用户
+        ApplicationMembership.objects.filter(application=application).exclude(user__in=members).delete()
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+        return Response(data={})
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.MarketCategorySLZ(many=True))
     def list_category(self, request):

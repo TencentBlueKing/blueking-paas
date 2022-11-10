@@ -24,8 +24,14 @@ from paasng.dev_resources.sourcectl.git.client import GitCommandExecutionError
 from paasng.pluginscenter import constants
 from paasng.pluginscenter.definitions import find_stage_by_id
 from paasng.pluginscenter.exceptions import error_codes
-from paasng.pluginscenter.models import PluginInstance, PluginMarketInfo, PluginMembership, PluginReleaseStage
-from paasng.pluginscenter.serializers import PluginMarketInfoSLZ
+from paasng.pluginscenter.iam_adaptor.management.shim import (
+    add_role_members,
+    setup_builtin_grade_manager,
+    setup_builtin_user_groups,
+)
+from paasng.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
+from paasng.pluginscenter.models import PluginInstance, PluginMarketInfo, PluginReleaseStage
+from paasng.pluginscenter.serializers import ItsmTicketInfoSlz, PluginMarketInfoSLZ
 from paasng.pluginscenter.sourcectl import get_plugin_repo_initializer
 from paasng.pluginscenter.sourcectl.exceptions import APIError
 from paasng.pluginscenter.thirdparty.deploy import check_deploy_result, deploy_version, get_deploy_logs
@@ -36,19 +42,31 @@ logger = logging.getLogger(__name__)
 
 
 def init_plugin_in_view(plugin: PluginInstance, operator: str):
+    """初始化插件
+
+    :param plugin: 蓝鲸插件
+    :param operator: 用户名
+    """
+    # 初始化插件仓库后, plugin.repository 才真正赋值
     if plugin.pd.basic_info_definition.release_method == constants.PluginReleaseMethod.CODE:
         init_plugin_repository(plugin)
 
+    # 调用第三方系统API时, 必须保证 plugin.repository 不为空
     if plugin.pd.basic_info_definition.api.create:
         try:
             create_instance(plugin.pd, plugin, operator)
         except Exception:
             logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
             raise error_codes.THIRD_PARTY_API_ERROR
-    # 创建者默认是管理员
-    PluginMembership.objects.create(plugin=plugin, role=constants.PluginRole.ADMINISTRATOR, user=operator)
+
     # 创建默认市场信息
     PluginMarketInfo.objects.create(plugin=plugin, extra_fields={})
+    # 创建 IAM 分级管理员
+    setup_builtin_grade_manager(plugin)
+    # 创建 IAM 用户组
+    setup_builtin_user_groups(plugin)
+    # 添加默认管理员
+    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
 
 
 def init_plugin_repository(plugin: PluginInstance):
@@ -57,6 +75,8 @@ def init_plugin_repository(plugin: PluginInstance):
     try:
         initializer.create_project(plugin)
     except APIError as e:
+        if e.message == '400 bad request for {:path=>["Path has already been taken"]}':
+            raise error_codes.CREATE_REPO_ERROR.f("同名仓库已存在")
         logger.exception("创建仓库返回异常, 异常信息: %s", e.message)
         raise error_codes.CREATE_REPO_ERROR
 
@@ -107,7 +127,12 @@ def render_release_stage(stage: PluginReleaseStage):
         elif stage.stage_id == "online":
             raise NotImplementedError
     elif stage.invoke_method == constants.ReleaseStageInvokeMethod.ITSM:
-        raise NotImplementedError
+        ticket_info = get_ticket_status(stage.itsm_detail.sn)
+        ticket_info['fields'] = stage.itsm_detail.fields
+        return {
+            **basic_info,
+            "detail": ItsmTicketInfoSlz(ticket_info).data,
+        }
     elif stage.invoke_method == constants.ReleaseStageInvokeMethod.PIPELINE:
         raise NotImplementedError
     elif stage.invoke_method == constants.ReleaseStageInvokeMethod.SUBPAGE:
@@ -127,7 +152,7 @@ def execute_stage(stage: PluginReleaseStage, operator: str):
     if stage.invoke_method == constants.ReleaseStageInvokeMethod.DEPLOY_API:
         deploy_version(pd, plugin, release, operator)
     elif stage.invoke_method == constants.ReleaseStageInvokeMethod.ITSM:
-        raise NotImplementedError
+        submit_online_approval_ticket(pd, plugin, release, operator)
     elif stage.invoke_method == constants.ReleaseStageInvokeMethod.PIPELINE:
         raise NotImplementedError
     elif stage.invoke_method == constants.ReleaseStageInvokeMethod.BUILTIN:

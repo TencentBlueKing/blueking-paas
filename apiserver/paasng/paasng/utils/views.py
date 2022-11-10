@@ -232,3 +232,58 @@ def get_filepath(fp, parent_dir: Union[str, Path]) -> Path:
             fh.write(fp.read())
         return path
     raise TypeError("Invalid File Type")
+
+
+def unwrap_partial(func):
+    """unwrap functools.partial for getting the real method"""
+    while isinstance(func, functools.partial):
+        func = func.func
+    return func
+
+
+def permission_classes(permission_classes, policy: str = "replace"):
+    """A decorator that gives support for having action-based permission_classes
+
+    usage:
+    from django.utils.decorators import method_decorator
+    _permission_classes = <this decorator>
+
+    @method_decorator(
+        _permission_classes([]),
+        name="action_c"
+    )
+    class ViewSet:
+        permission_classes = [Baz]
+
+        @_permission_classes([Foo])
+        def action_a(self, request):
+            assert self.permission_classes == [Foo]
+
+        @_permission_classes([Bar], policy="merge")
+        def action_b(self, request):
+            assert self.permission_classes == [Bar, Baz]
+
+        def action_c(self, request):
+            assert self.permission_classes == []
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            # try to unwrap partial from method_decorator
+            bound_method = unwrap_partial(func)
+            if hasattr(bound_method, "__self__"):
+                # when use permission_classes with django method_decorator, we can only get self from bound_method
+                self = bound_method.__self__
+            else:
+                # when use permission_classes as a normal decorator, we can only get self from args[0]
+                self = args[0]
+            if policy == "merge":
+                self.permission_classes = getattr(self, "permission_classes", []) + permission_classes
+            else:
+                self.permission_classes = permission_classes
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    return decorator

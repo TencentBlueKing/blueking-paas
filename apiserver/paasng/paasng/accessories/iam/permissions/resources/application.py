@@ -15,15 +15,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import Dict, Type
 
 from attrs import define, field, validators
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext as _
+from iam.exceptions import AuthAPIError
 
 from paasng.accessories.iam.constants import ResourceType
 from paasng.accessories.iam.permissions.perm import PermCtx, Permission, ResCreatorAction, validate_empty
 from paasng.accessories.iam.permissions.request import ResourceRequest
+
+logger = logging.getLogger(__name__)
 
 
 class AppAction(str, StructuredEnum):
@@ -180,3 +184,33 @@ class ApplicationPermission(Permission):
     def can_manage_module(self, perm_ctx: AppPermCtx, raise_exception: bool = True) -> bool:
         perm_ctx.validate_resource_id()
         return self.can_multi_actions(perm_ctx, [AppAction.MANAGE_MODULE, AppAction.VIEW_BASIC_INFO], raise_exception)
+
+    def gen_user_app_filters(self, username):
+        """
+        生成用户有权限的应用 Django 过滤条件
+
+        所有应用的角色都会有基础信息查看权限
+        """
+        request = self._make_request(username, AppAction.VIEW_BASIC_INFO)
+        return self._gen_app_filters_by_request(request)
+
+    def gen_develop_app_filters(self, username):
+        """
+        生成用户有开发者权限的应用 Django 过滤条件
+
+        管理者，开发者才会有基础开发权限
+        """
+        request = self._make_request(username, AppAction.BASIC_DEVELOP)
+        return self._gen_app_filters_by_request(request)
+
+    def _gen_app_filters_by_request(self, request):
+        """根据 IAM Auth Request 生成 Django 的过滤器"""
+        key_mapping = {"application.id": "code"}
+
+        try:
+            filters = self.iam.make_filter(request, key_mapping=key_mapping)
+        except AuthAPIError as e:
+            logger.warning("generate user app filters failed", str(e))
+            return None
+
+        return filters

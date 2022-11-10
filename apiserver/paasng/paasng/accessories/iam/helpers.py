@@ -96,9 +96,12 @@ def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
     原实现中用户只会有一个角色，但是接入权限中心后，角色表现为用户组，同一用户可能有多个角色
     """
     user_roles = []
-    for group in ApplicationUserGroup.objects.filter(app_code=app_code):
+    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
         if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
             user_roles.append(group.role)
+
+    if not user_roles:
+        return [ApplicationRole.NOBODY]
 
     return user_roles
 

@@ -23,8 +23,10 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, SemverAutomaticType
+from paasng.accounts.utils import get_user_avatar
+from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
 from paasng.pluginscenter.definitions import FieldSchema
+from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.models import (
     PluginDefinition,
     PluginInstance,
@@ -34,6 +36,22 @@ from paasng.pluginscenter.models import (
 )
 from paasng.pluginscenter.thirdparty.log import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+
+
+class ApprovalConfigSLZ(serializers.Serializer):
+    enabled = serializers.BooleanField(default=False)
+    tips = serializers.CharField(default=None)
+    docs = serializers.CharField(default=None)
+
+
+class PluginDefinitionSLZ(serializers.ModelSerializer):
+
+    name = TranslatedCharField()
+    approval_config = ApprovalConfigSLZ()
+
+    class Meta:
+        model = PluginDefinition
+        exclude = ("uuid", "created", "updated", "release_revision", "release_stages", "log_config")
 
 
 class PlainReleaseStageSLZ(serializers.Serializer):
@@ -65,6 +83,10 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
         exclude = ("plugin", "stages_shortcut")
 
 
+class ItsmDetailSLZ(serializers.Serializer):
+    ticket_url = serializers.CharField(default=None)
+
+
 class PluginInstanceSLZ(serializers.ModelSerializer):
     pd_id = serializers.CharField(source="pd.identifier", help_text="插件类型标识")
     pd_name = serializers.CharField(source="pd.name", help_text="插件类型名称")
@@ -72,6 +94,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
         source="all_versions.get_ongoing_release", help_text="当前正在发布的版本", allow_null=True
     )
     logo = serializers.CharField(source="pd.logo", help_text="插件logo", allow_null=True)
+    itsm_detail = ItsmDetailSLZ()
 
     class Meta:
         model = PluginInstance
@@ -325,3 +348,59 @@ class StructureLogsSLZ(serializers.Serializer):
     logs = StructureLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+
+
+class IngressLogLineSLZ(serializers.Serializer):
+    """Ingress 访问日志(每行)"""
+
+    timestamp = serializers.IntegerField(help_text="时间戳")
+    message = serializers.CharField(help_text="日志内容")
+    method = serializers.CharField(help_text="请求方法", default=None)
+    path = serializers.CharField(help_text="请求路径", default=None)
+    status_code = serializers.IntegerField(help_text="状态码", default=None)
+    response_time = serializers.FloatField(help_text="返回耗时", default=None)
+    client_ip = serializers.CharField(help_text="客户端IP", default=None)
+    bytes_sent = serializers.IntegerField(help_text="返回体大小", default=None)
+    user_agent = serializers.CharField(help_text="UserAgent", default=None)
+    http_version = serializers.CharField(help_text="http 版本号", default=None)
+
+
+class IngressLogSLZ(serializers.Serializer):
+    """Ingress 访问日志"""
+
+    logs = IngressLogLineSLZ(many=True)
+    total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
+    dsl = serializers.CharField(help_text="日志查询语句")
+
+
+class PluginRoleSLZ(serializers.Serializer):
+    name = serializers.CharField(read_only=True, help_text="角色名称")
+    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
+
+
+class PluginMemberSLZ(serializers.Serializer):
+    username = serializers.CharField(help_text="用户名")
+    role = PluginRoleSLZ(help_text="角色")
+    avatar = serializers.SerializerMethodField()
+
+    def get_avatar(self, obj):
+        return get_user_avatar(obj.username)
+
+
+class ItsmTicketInfoSlz(serializers.Serializer):
+    """itsm 单据状态"""
+
+    ticket_url = serializers.CharField(help_text="单据详情链接")
+    current_status = serializers.CharField(help_text="单据状态")
+    current_status_display = serializers.CharField(help_text="单据状态显示文案")
+    can_withdraw = serializers.BooleanField(help_text="是否可撤销单据")
+    fields = serializers.ListField(help_text="提单信息")
+
+
+class ItsmApprovalSLZ(serializers.Serializer):
+    """Itsm 回调数据格式"""
+
+    sn = serializers.CharField(label="申请的单据号")
+    current_status = serializers.ChoiceField(label="单据当前状态", choices=ItsmTicketStatus.get_choices())
+    approve_result = serializers.BooleanField(label="审批结果")
+    token = serializers.CharField(label="回调token", help_text="可用于验证请求是否来自于 ITSM")

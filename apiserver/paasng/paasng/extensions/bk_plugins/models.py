@@ -32,6 +32,7 @@ from pydantic import BaseModel, PrivateAttr
 
 from paasng.accounts.utils import id_to_username
 from paasng.engine.deploy.env_vars import env_vars_providers
+from paasng.extensions.bk_plugins.constants import PluginTagIdType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
 from paasng.publish.entrance.exposer import get_deployed_status
@@ -277,7 +278,7 @@ class BkPluginAppQuerySet:
         order_by: List[str],
         has_deployed: Optional[bool] = None,
         distributor_code_name: Optional[str] = None,
-        tag: Optional['BkPluginTag'] = None,
+        tag_id: Optional[int] = None,
     ) -> QuerySet:
         """filter queryset by given term
 
@@ -294,8 +295,10 @@ class BkPluginAppQuerySet:
         )
         if distributor_code_name:
             applications = applications.filter(distributors__code_name=distributor_code_name)
-        if tag:
-            applications = applications.filter(bk_plugin_profile__tag=tag)
+        if tag_id:
+            # tag_id 的值为未分类时，过滤所有没有分类信息的插件
+            tag_id = None if tag_id == PluginTagIdType.UNTAGGED.value else tag_id
+            applications = applications.filter(bk_plugin_profile__tag=tag_id)
         return applications
 
 

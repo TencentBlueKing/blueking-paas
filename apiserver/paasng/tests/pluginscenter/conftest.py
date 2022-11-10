@@ -19,16 +19,20 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
+from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
+from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.pluginscenter.constants import PluginRole
+from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
+    ApprovalService,
     PluginBasicInfoDefinition,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfoDefinition,
-    PluginMembership,
+    PluginRelease,
+    PluginReleaseStage,
 )
 from tests.utils.helpers import generate_random_string
 
@@ -39,6 +43,7 @@ def make_api_resource(path: str = ""):
 
 @pytest.fixture
 def pd():
+    log_params = {"indexPattern": "", "termTemplate": {}}
     pd: PluginDefinition = G(
         PluginDefinition,
         **{
@@ -47,7 +52,13 @@ def pd():
             "administrator": [],
             "approval_config": {},
             "release_revision": {"revisionType": "master", "versionNo": "automatic"},
-            "release_stages": [],
+            "release_stages": [{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
+            "log_config": {
+                "backend_type": "es",
+                "stdout": log_params,
+                "json": log_params,
+                "ingress": log_params,
+            },
         },
     )
     pd.market_info_definition = G(
@@ -95,7 +106,7 @@ def pd():
 @pytest.fixture
 def mock_client():
     with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
-        yield cls().with_group().with_bkapi_authorization().group
+        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
 
 
 @pytest.fixture
@@ -115,7 +126,42 @@ def plugin(pd, bk_user):
             },
             "repo_type": "git",
             "repository": f"http://git.example.com/foo/{identifier}.git",
+            "creator": user_id_encoder.encode(getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), "admin"),
         },
     )
-    G(PluginMembership, plugin=plugin, user=bk_user.pk, role=PluginRole.ADMINISTRATOR)
+    plugin.refresh_from_db()
     return plugin
+
+
+@pytest.fixture
+def release(plugin):
+    release: PluginRelease = G(
+        PluginRelease,
+        **{
+            "plugin": plugin,
+            "source_location": plugin.repository,
+            "type": "prod",
+            "source_version_type": "branch",
+            "source_version_name": "master",
+            "version": "0.0.1",
+            "comment": "",
+        },
+    )
+    release.initial_stage_set()
+    return release
+
+
+@pytest.fixture
+def itsm_online_stage(release):
+    stage = PluginReleaseStage.objects.filter(
+        release=release, invoke_method="itsm", stage_id="online_approval"
+    ).first()
+    return stage
+
+
+@pytest.fixture
+def online_approval_service():
+    svc: ApprovalService = G(
+        ApprovalService, **{"service_name": ApprovalServiceName.ONLINE_APPROVAL.value, "service_id": 1}
+    )
+    return svc

@@ -24,6 +24,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.extensions.bk_plugins.apigw import set_distributors
+from paasng.extensions.bk_plugins.constants import PluginTagIdType
 from paasng.extensions.bk_plugins.models import (
     BkPlugin,
     BkPluginAppQuerySet,
@@ -106,10 +107,14 @@ class TestBkPluginAppQuerySet:
         query = partial(BkPluginAppQuerySet().filter, search_term='', order_by=['-created'])
 
         tag_1 = G(BkPluginTag, code_name='sample-tag-1', name='sample-tag-1')
-        assert query(tag=tag_1).count() == 0
+        assert query(tag_id=tag_1.id).count() == 0
+
+        # When the plugin is not bound to the tag,
+        # you can filter the unclassified plugins according to "UNTAGGED TAG ID"
+        assert query(tag_id=PluginTagIdType.UNTAGGED.value).count() == 1
 
         # Add tag to plugin and query again
         profile = bk_plugin.get_profile()
         profile.tag = tag_1
         profile.save(update_fields=['tag'])
-        assert query(tag=tag_1).count() == 1
+        assert query(tag_id=tag_1.id).count() == 1

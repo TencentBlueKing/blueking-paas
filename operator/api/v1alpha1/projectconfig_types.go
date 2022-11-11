@@ -24,10 +24,10 @@ import (
 
 // PlatformConfig contains the config for interacting with other service
 type PlatformConfig struct {
-	// 调用蓝鲸 API （组件、BkOAuth 服务等）的鉴权信息
+	// Authentication information for calling BlueWhale APIs (components, BkOAuth services, etc.)
 	BkAppCode   string `json:"bkAppCode"`
 	BkAppSecret string `json:"bkAppSecret"`
-	// 蓝鲸的组件 API 地址，网关 SDK 依赖该配置项
+	// BlueKing's component API address, the gateway SDK depends on this configuration
 	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
 }
 
@@ -38,13 +38,13 @@ type IngressPluginConfig struct {
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module
 type AccessControlConfig struct {
-	// bk-ingress-nginx 选择连接哪个 redis 的 key, 可选值 'prod', 'test', 'local'
+	// bk-ingress-nginx choose which redis key to connect to, optional values 'prod', 'test', 'local'
 	RedisConfigKey string `json:"redisConfigKey"`
 }
 
 // ExperimentalFeatures is a set of ExperimentalFeature
 type ExperimentalFeatures struct {
-	// 使用 networkingV1Beta1 下发 Ingress 配置, 适用于 1.16 版本的 k8s 集群
+	// Use networkingV1Beta1 to issue Ingress configuration, suitable for k8s cluster of version 1.16
 	UseNetworkingV1Beta1 bool `json:"useNetworkingV1Beta1"`
 }
 

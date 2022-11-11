@@ -27,3 +27,6 @@ platformConfig:
   bkAPIGatewayURL: ""
 experimentalFeatures:
   useNetworkingV1Beta1: false
+ingressPluginConfig:
+  accessControlConfig:
+    redisConfigKey: ""

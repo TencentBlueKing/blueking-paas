@@ -371,7 +371,7 @@ class HelmChartUpdator:
 
     @staticmethod
     def _print_dividing_line():
-        print('\n============================================================\n')
+        print('\n' + '=' * 60 + '\n')
 
 
 if __name__ == "__main__":

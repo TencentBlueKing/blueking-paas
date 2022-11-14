@@ -21,10 +21,17 @@ import difflib
 import shutil
 from os import path, walk
 from pathlib import Path
+from textwrap import dedent, indent
 
 import yaml
 
 TMPL_DIR = 'templates'
+
+
+def wrap_multiline_str(space_num: int, m_string: str) -> str:
+    """对多行字符串做处理，避免格式化时候丢失缩进"""
+    return indent(dedent(m_string), ' ' * space_num)
+
 
 # 新 chart 中的模板文件是平铺的，但是到实际的 chart 中是分目录的，
 # 这里即文件的目标目录 & 文件的映射关系，后续可按照需求添加
@@ -55,58 +62,107 @@ content_patch_conf = {
     'deployment.yaml': [
         # 替换 rbac-proxy 镜像
         (
-            '{{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag | default .Chart.AppVersion }}',
-            '{{ include "bkpaas-app-operator.proxyImage" . }}\n        imagePullPolicy: {{ .Values.image.pullPolicy }}',
+            wrap_multiline_str(
+                8,
+                """
+        image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
+            """,
+            ),
+            wrap_multiline_str(
+                8,
+                """
+        image: {{ include "bkpaas-app-operator.proxyImage" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+            """,
+            ),
         ),
         # 替换 operator 镜像
         (
-            '{{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag | default .Chart.AppVersion }}',
-            '{{ include "bkpaas-app-operator.image" . }}\n        imagePullPolicy: {{ .Values.image.pullPolicy }}',
+            wrap_multiline_str(
+                8,
+                """
+        image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag | default .Chart.AppVersion }}
+            """,
+            ),
+            wrap_multiline_str(
+                8,
+                """
+        image: {{ include "bkpaas-app-operator.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+            """,
+            ),
         ),
         # 替换 rbac-proxy resources 为固定值
         (
-            'resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent 10 }}',
-            """resources:
+            wrap_multiline_str(
+                8,
+                """
+        resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent 10 }}
+            """,
+            ),
+            wrap_multiline_str(
+                8,
+                """
+        resources:
           limits:
             cpu: 500m
             memory: 512Mi
           requests:
             cpu: 5m
-            memory: 64Mi""",
+            memory: 64Mi
+            """,
+            ),
         ),
         # 替换 operator 资源配额
         (
-            'resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10 }}',
-            'resources: {{- toYaml .Values.resources | nindent 10 }}',
+            '.Values.controllerManager.manager.resources',
+            '.Values.resources',
         ),
         # 替换 imagePullSecrets，改成引用 values
         (
-            'imagePullSecrets:\n      - name: {{ include "bkpaas-app-operator.fullname" . }}-docker-registry',
-            """{{- with .Values.imagePullSecrets }}
+            wrap_multiline_str(
+                6,
+                """
+      imagePullSecrets:
+      - name: {{ include "bkpaas-app-operator.fullname" . }}-docker-registry
+            """,
+            ),
+            wrap_multiline_str(
+                6,
+                """
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
-      {{- end }}""",
+      {{- end }}
+            """,
+            ),
         ),
         # 替换副本数量引用
         (
-            'replicas: {{ .Values.controllerManager.replicas }}',
-            'replicas: {{ .Values.replicaCount }}',
+            '.Values.controllerManager.replicas',
+            '.Values.replicaCount',
         ),
     ],
     'manager-config.yaml': [
         ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controllerConfig'),
         (
-            # 实验性配置挪到 values 顶层
-            '{{ .Values.controllerConfig.experimentalFeatures.useNetworkingV1Beta1 }}',
-            '{{ .Values.experimentalFeatures.useNetworkingV1Beta1 }}',
-        ),
-        (
             # 白名单控制支持 enabled & 挪到 values 顶层
-            'accessControlConfig:\n        redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}',
-            """{{ if .Values.accessControl.enabled -}}
+            wrap_multiline_str(
+                6,
+                """
+      accessControlConfig:
+        redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
+            """,
+            ),
+            wrap_multiline_str(
+                6,
+                """
+      {{ if .Values.accessControl.enabled -}}
       accessControlConfig:
         redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
-      {{- end -}}""",
+      {{- end -}}
+            """,
+            ),
         ),
         (
             # 平台配置挪到 values 顶层
@@ -137,7 +193,7 @@ Proxy Image Tag
 
 class HelmChartUpdator:
     def __init__(self, chart_target_dir: str):
-        self.chart_target_dir = chart_target_dir
+        self.chart_target_dir = Path(chart_target_dir)
         self.chart_source_dir = Path(__file__).resolve().parents[1] / 'bkpaas-app-operator'
 
     def update(self):
@@ -171,31 +227,29 @@ class HelmChartUpdator:
 
     def _check_target_chart(self):
         """检查目标路径的 chart 是否存在"""
-        if not path.isfile(path.join(self.chart_target_dir, 'Chart.yaml')):
+        if not path.isfile(self.chart_target_dir / 'Chart.yaml'):
             raise Exception('target chart.yaml not exists')
 
-        if not path.isfile(path.join(self.chart_target_dir, 'values.yaml')):
+        if not path.isfile(self.chart_target_dir / 'values.yaml'):
             raise Exception('target values.yaml not exists')
 
-        if not path.isdir(path.join(self.chart_target_dir, TMPL_DIR)):
+        if not path.isdir(self.chart_target_dir / TMPL_DIR):
             raise Exception(f'target {TMPL_DIR} dir not exists')
 
         for sub_tmpl_dir in ['crds', 'controller', 'webhooks']:
-            if not path.isdir(path.join(self.chart_target_dir, TMPL_DIR, sub_tmpl_dir)):
+            if not path.isdir(self.chart_target_dir / TMPL_DIR / sub_tmpl_dir):
                 raise Exception(f'target {TMPL_DIR}/{sub_tmpl_dir} dir not exists')
 
     def _patch_chart_file_contents(self):
         """对 chart 文件的部分内容进行替换"""
         for filepath, patch_list in content_patch_conf.items():
-            fp = path.join(self.chart_source_dir, TMPL_DIR, filepath)
+            fp = self.chart_source_dir / TMPL_DIR / filepath
 
-            with open(fp, 'r') as fr:
-                contents = fr.read()
-                for src_str, dst_str in patch_list:
-                    contents = contents.replace(src_str, dst_str)
+            contents = fp.read_text()
+            for src_str, dst_str in patch_list:
+                contents = contents.replace(src_str, dst_str)
 
-            with open(fp, 'w') as fw:
-                fw.write(contents)
+            fp.write_text(contents)
 
     def _append_chart_file_contents(self):
         """对部分文件追加内容"""
@@ -209,31 +263,28 @@ class HelmChartUpdator:
             if not filepath.endswith('yaml'):
                 continue
 
-            fp = path.join(self.chart_source_dir, TMPL_DIR, filepath)
-            with open(fp, 'r') as fr:
-                contents = fr.readlines()
+            fp = self.chart_source_dir / TMPL_DIR / filepath
+            contents = fp.read_text().splitlines()
 
             for idx in range(len(contents)):
+                # 忽略第一行，因为首行不会是被强制换行的
                 if (
-                        idx
-                        and contents[idx].count('}}')
-                        and contents[idx - 1].count('{{') - contents[idx - 1].count('}}') == 1
+                    idx
+                    and contents[idx].count('}}')
+                    and contents[idx - 1].count('{{') - contents[idx - 1].count('}}') == 1
                 ):
                     # 去掉上一行原来的换行符，拼接上当前行，把当前行设置为空字符串
                     contents[idx - 1] = contents[idx - 1].rstrip() + ' '
                     contents[idx - 1] += contents[idx].lstrip()
                     contents[idx] = ''
 
-            with open(fp, 'w') as fw:
-                fw.write(''.join(contents))
+            fp.write_text('\n'.join([line for line in contents if line]))
 
     def _replace_chart_yaml_files(self):
         """使用新的 Charts 中的文件，替换原有的文件"""
         for src, dst in filepath_conf.items():
             print(f'replace [{dst}] with [{src}]...')
-            shutil.move(
-                path.join(self.chart_source_dir, TMPL_DIR, src), path.join(self.chart_target_dir, TMPL_DIR, dst)
-            )
+            shutil.move(self.chart_source_dir / TMPL_DIR / src, self.chart_target_dir / TMPL_DIR / dst)
 
         print(f'successfully replace {len(filepath_conf)} chart files!')
 
@@ -241,7 +292,7 @@ class HelmChartUpdator:
         # 有些文件是开发用的，不需要放到 chart 中，在检查时候跳过
         not_chart_required_files = ['docker-registry.yaml']
 
-        dir = path.join(self.chart_source_dir, TMPL_DIR)
+        dir = self.chart_source_dir / TMPL_DIR
         for root, _, files in walk(dir):
             for file in files:
                 if file in not_chart_required_files:
@@ -250,9 +301,8 @@ class HelmChartUpdator:
 
     def _patch_values_file(self):
         """对 values 中的部分配置进行调整"""
-        fp = path.join(self.chart_source_dir, 'values.yaml')
-        with open(fp, 'r') as fr:
-            values = yaml.load(fr.read(), yaml.SafeLoader)
+        fp = self.chart_source_dir / 'values.yaml'
+        values = yaml.load(fp.read_text(), yaml.SafeLoader)
 
         # 镜像，副本等平铺
         values['proxyImage'] = {
@@ -284,10 +334,6 @@ class HelmChartUpdator:
         values['controllerConfig'] = values['managerConfig']['controllerManagerConfigYaml']
         del values['managerConfig']
 
-        # 实验性功能配置挪到顶层
-        values['experimentalFeatures'] = values['controllerConfig']['experimentalFeatures']
-        del values['controllerConfig']['experimentalFeatures']
-
         # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
         del values['controllerConfig']['ingressPluginConfig']
@@ -296,19 +342,18 @@ class HelmChartUpdator:
         values['platformConfig'] = values['controllerConfig']['platformConfig']
         del values['controllerConfig']['platformConfig']
 
-        with open(fp, 'w') as fw:
-            fw.write(yaml.dump(values))
+        fp.write_text(yaml.dump(values))
 
     def _diff_values(self):
         """
         生成新旧 values 的 diff 结果，人工处理！
         不直接替换的原因是无法保留原有 values 中的注释，空行，顺序等
         """
-        with open(path.join(self.chart_source_dir, 'values.yaml'), 'r') as fr:
-            new_values = [line.rstrip() for line in fr.readlines()]
+        new_fp = self.chart_source_dir / 'values.yaml'
+        new_values = new_fp.read_text().splitlines()
 
-        with open(path.join(self.chart_target_dir, 'values.yaml'), 'r') as fr:
-            old_values = yaml.dump(yaml.load(fr.read(), yaml.SafeLoader)).splitlines()
+        old_fp = self.chart_target_dir / 'values.yaml'
+        old_values = yaml.dump(yaml.load(old_fp.read_text(), yaml.SafeLoader)).splitlines()
 
         diff_rets = list(difflib.unified_diff(old_values, new_values, 'old', 'new'))
         if not diff_rets:

@@ -55,16 +55,6 @@ spec:
                   of version) would be `ReplicaSet.apps`."
                 type: object
             type: object
-          experimentalFeatures:
-            description: ExperimentalFeatures is a set of ExperimentalFeature
-            properties:
-              useNetworkingV1Beta1:
-                description: Use networkingV1Beta1 to issue Ingress configuration,
-                  suitable for k8s cluster of version 1.16
-                type: boolean
-            required:
-            - useNetworkingV1Beta1
-            type: object
           gracefulShutDown:
             description: GracefulShutdownTimeout is the duration given to runnable
               to stop before the manager actually returns on stop. To disable graceful
@@ -176,7 +166,7 @@ spec:
                   on this configuration
                 type: string
               bkAppCode:
-                description: Authentication information for calling BlueWhale APIs
+                description: Authentication information for calling BlueKing APIs
                   (components, BkOAuth services, etc.)
                 type: string
               bkAppSecret:
@@ -233,7 +223,6 @@ spec:
                 type: integer
             type: object
         required:
-        - experimentalFeatures
         - ingressPluginConfig
         - platformConfig
         - resLimitConfig

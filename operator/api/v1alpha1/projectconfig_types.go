@@ -24,7 +24,7 @@ import (
 
 // PlatformConfig contains the config for interacting with other service
 type PlatformConfig struct {
-	// Authentication information for calling BlueWhale APIs (components, BkOAuth services, etc.)
+	// Authentication information for calling BlueKing APIs (components, BkOAuth services, etc.)
 	BkAppCode   string `json:"bkAppCode"`
 	BkAppSecret string `json:"bkAppSecret"`
 	// BlueKing's component API address, the gateway SDK depends on this configuration
@@ -40,12 +40,6 @@ type IngressPluginConfig struct {
 type AccessControlConfig struct {
 	// bk-ingress-nginx choose which redis key to connect to, optional values 'prod', 'test', 'local'
 	RedisConfigKey string `json:"redisConfigKey"`
-}
-
-// ExperimentalFeatures is a set of ExperimentalFeature
-type ExperimentalFeatures struct {
-	// Use networkingV1Beta1 to issue Ingress configuration, suitable for k8s cluster of version 1.16
-	UseNetworkingV1Beta1 bool `json:"useNetworkingV1Beta1"`
 }
 
 // ResLimitConfig contains bkapp resource limit
@@ -70,10 +64,9 @@ type ProjectConfig struct {
 	// ControllerManagerConfigurationSpec returns the configurations for controllers
 	cfg.ControllerManagerConfigurationSpec `json:",inline"`
 
-	PlatformConfig       PlatformConfig       `json:"platformConfig"`
-	IngressPluginConfig  IngressPluginConfig  `json:"ingressPluginConfig"`
-	ExperimentalFeatures ExperimentalFeatures `json:"experimentalFeatures"`
-	ResLimitConfig       ResLimitConfig       `json:"resLimitConfig"`
+	PlatformConfig      PlatformConfig      `json:"platformConfig"`
+	IngressPluginConfig IngressPluginConfig `json:"ingressPluginConfig"`
+	ResLimitConfig      ResLimitConfig      `json:"resLimitConfig"`
 }
 
 // NewProjectConfig create project config

@@ -15,8 +15,6 @@ platformConfig:
   bkAppCode: ""
   bkAppSecret: ""
   bkAPIGatewayURL: ""
-experimentalFeatures:
-  useNetworkingV1Beta1: false
 resLimitConfig:
   procDefaultCPULimits: "4"
   procDefaultMemLimits: "1Gi"

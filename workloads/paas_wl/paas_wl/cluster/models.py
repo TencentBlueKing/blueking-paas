@@ -87,6 +87,7 @@ class ClusterManager(models.Manager):
         token_value: Optional[str] = None,
         default_node_selector: Optional[Dict] = None,
         default_tolerations: Optional[List] = None,
+        pk: Optional[str] = None,
         **kwargs,
     ) -> 'Cluster':
         """Register a cluster to db, work Like update_or_create, but will validate some-attr
@@ -134,7 +135,10 @@ class ClusterManager(models.Manager):
         # We use `None` to mark this fields is unset, so we should pop it from defaults.
         defaults = {k: v for k, v in defaults.items() if v is not None}
 
-        cluster, _ = self.update_or_create(name=name, region=region, defaults=defaults)
+        if pk:
+            cluster, _ = self.update_or_create(pk=pk, name=name, region=region, defaults=defaults)
+        else:
+            cluster, _ = self.update_or_create(name=name, region=region, defaults=defaults)
         return cluster
 
     @transaction.atomic

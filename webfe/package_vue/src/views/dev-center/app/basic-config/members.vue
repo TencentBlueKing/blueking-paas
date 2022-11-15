@@ -1,176 +1,233 @@
 <template lang="html">
-    <div class="right-main">
-        <div class="ps-top-bar">
-            <h2> {{ $t('成员管理') }}
-                <template v-if="pagination.count">
-                    ({{pagination.count}}{{ $t('人') }})
-                </template>
-            </h2>
-        </div>
+  <div class="right-main">
+    <div class="ps-top-bar">
+      <h2>
+        {{ $t('成员管理') }}
+        <template v-if="pagination.count">
+          ({{ pagination.count }}{{ $t('人') }})
+        </template>
+      </h2>
+    </div>
 
-        <paas-content-loader class="app-container middle" :is-loading="loading" placeholder="roles-loading">
-            <div class="header mt10">
+    <paas-content-loader
+      class="app-container middle"
+      :is-loading="loading"
+      placeholder="roles-loading"
+    >
+      <div class="header mt10">
+        <bk-button
+          v-if="enableToAddRole"
+          theme="primary"
+          icon="plus"
+          @click="createMember"
+        >
+          {{ $t('新增成员') }}
+        </bk-button>
+        <bk-input
+          v-model="keyword"
+          class="search-input"
+          :placeholder="$t('请输入成员姓名，按Enter搜索')"
+          :clearable="true"
+          :right-icon="'bk-icon icon-search'"
+          @enter="handleSearch"
+        />
+      </div>
+      <div class="content-wrapper">
+        <bk-table
+          :data="memberListShow"
+          size="small"
+          :pagination="pagination"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+        >
+          <bk-table-column :label="$t('成员姓名')">
+            <template slot-scope="props">
+              <span
+                v-if="props.row.user.avatar"
+                class="user-photo"
+              ><img :src="props.row.user.avatar"></span>
+              <span class="user-name">{{ props.row.user.username }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('角色')">
+            <template slot-scope="props">
+              <span class="role-name">{{ $t(roleNames[props.row.role.name]) }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('权限')"
+            min-width="170"
+          >
+            <template slot-scope="props">
+              <span
+                v-for="(perm, permIndex) in roleSpec[props.row.role.name]"
+                v-if="perm[Object.keys(perm)[0]]"
+                :key="permIndex"
+                class="ps-pr"
+              >
+                {{ $t(Object.keys(perm)[0]) }}
+              </span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('操作')">
+            <template slot-scope="props">
+              <template v-if="canManageMe(props.row)">
                 <bk-button
-                    theme="primary"
-                    icon="plus"
-                    v-if="enableToAddRole"
-                    @click="createMember">
-                    {{ $t('新增成员') }}
+                  text
+                  class="mr5"
+                  @click="leaveApp(props.row.user.id, props.row.user.username)"
+                >
+                  {{ $t('退出应用') }}
                 </bk-button>
-                <bk-input
-                    class="search-input"
-                    :placeholder="$t('请输入成员姓名，按Enter搜索')"
-                    :clearable="true"
-                    :right-icon="'bk-icon icon-search'"
-                    v-model="keyword"
-                    @enter="handleSearch">
-                </bk-input>
-            </div>
-            <div class="content-wrapper">
-                <bk-table
-                    :data="memberListShow"
-                    size="small"
-                    :pagination="pagination"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange">
-                    <bk-table-column :label="$t('成员姓名')">
-                        <template slot-scope="props">
-                            <span class="user-photo" v-if="props.row.user.avatar"><img :src="props.row.user.avatar" /></span>
-                            <span class="user-name">{{props.row.user.username}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('角色')">
-                        <template slot-scope="props">
-                            <span class="role-name">{{ $t(roleNames[props.row.role.name]) }}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('权限')" min-width="170">
-                        <template slot-scope="props">
-                            <span class="ps-pr" v-for="(perm, permIndex) in roleSpec[props.row.role.name]" :key="permIndex" v-if="perm[Object.keys(perm)[0]]">
-                                {{ $t(Object.keys(perm)[0]) }}
-                            </span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('操作')">
-                        <template slot-scope="props">
-                            <template v-if="canManageMe(props.row)">
-                                <bk-button
-                                    text
-                                    class="mr5"
-                                    @click="leaveApp(props.row.user.id, props.row.user.username)">
-                                    {{ $t('退出应用') }}
-                                </bk-button>
-                            </template>
-                            <bk-button
-                                text
-                                class="mr5"
-                                v-if="canChangeMembers()"
-                                @click="updateMember(props.row.user.id, props.row.user.username, props.row.role.name)">
-                                {{ $t('更换角色') }}
-                            </bk-button>
-                            <bk-button
-                                text
-                                class="mr5"
-                                v-if="canManageMembers(props.row)"
-                                @click="delMember(props.row.user.username, props.row.user.id)">
-                                {{ $t('删除成员') }}
-                            </bk-button>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
-        </paas-content-loader>
+              </template>
+              <bk-button
+                v-if="canChangeMembers()"
+                text
+                class="mr5"
+                @click="updateMember(props.row.user.id, props.row.user.username, props.row.role.name)"
+              >
+                {{ $t('更换角色') }}
+              </bk-button>
+              <bk-button
+                v-if="canManageMembers(props.row)"
+                text
+                class="mr5"
+                @click="delMember(props.row.user.username, props.row.user.id)"
+              >
+                {{ $t('删除成员') }}
+              </bk-button>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </paas-content-loader>
 
-        <bk-dialog
-            width="540"
-            v-model="memberMgrConfig.visiable"
-            :title="memberMgrConfig.title"
-            header-position="left"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="memberMgrConfig.isLoading"
-            @confirm="memberMgrSave"
-            @cancel="closeMemberMgrModal"
-            @after-leave="hookAfterClose">
-            <div v-if="memberMgrConfig.showForm" style="min-height: 130px;">
-                <bk-form :label-width="120" form-type="vertical">
-                    <bk-form-item :label="$t('成员名称')" :required="true">
-                        <template v-if="memberMgrConfig.userEditable">
-                            <user v-model="personnelSelectorList"></user>
-                            <!-- <bk-member-selector
+    <bk-dialog
+      v-model="memberMgrConfig.visiable"
+      width="540"
+      :title="memberMgrConfig.title"
+      header-position="left"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="memberMgrConfig.isLoading"
+      @confirm="memberMgrSave"
+      @cancel="closeMemberMgrModal"
+      @after-leave="hookAfterClose"
+    >
+      <div
+        v-if="memberMgrConfig.showForm"
+        style="min-height: 130px;"
+      >
+        <bk-form
+          :label-width="120"
+          form-type="vertical"
+        >
+          <bk-form-item
+            :label="$t('成员名称')"
+            :required="true"
+          >
+            <template v-if="memberMgrConfig.userEditable">
+              <user v-model="personnelSelectorList" />
+              <!-- <bk-member-selector
                                 @change="updateValue"
                                 v-model="personnelSelectorList"
                                 ref="member_selector">
                             </bk-member-selector> -->
-                        </template>
-                        <template v-else>
-                            <bk-input :readonly="true" v-model="selectedMember.name"></bk-input>
-                        </template>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('角色')">
-                        <bk-radio-group v-model="roleName">
-                            <bk-radio :value="name" v-for="(chineseName, name) in roleNames" :key="name">{{$t(chineseName)}}</bk-radio>
-                        </bk-radio-group>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('权限列表')">
-                        <div class="ps-rights-list">
-                            <span v-for="(perm, permIndex) in roleSpec[roleName]" :key="permIndex">
-                                <a class="available-right" v-if="perm[Object.keys(perm)[0]]">
-                                    <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-check-1"></i>
-                                </a>
-                                <a class="not-available-right" v-else>
-                                    <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-close"></i>
-                                </a>
-                            </span>
-                        </div>
-                    </bk-form-item>
-                </bk-form>
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="540"
-            v-model="removeUserDialog.visiable"
-            :title=" `${$t('删除成员 ')}${selectedMember.name}`"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="removeUserDialog.isLoading"
-            @confirm="delSave"
-            @cancel="closeDelModal">
-            <div class="tc">
-                {{ $t('用户') }} {{ selectedMember.name }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="540"
-            v-model="leaveAppDialog.visiable"
-            :title="$t('退出应用')"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="leaveAppDialog.isLoading"
-            @confirm="leaveSave"
-            @cancel="closeLeaveApp">
-            <div class="tc">
-                {{ $t('退出并放弃此应用的对应权限，是否确定？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="540"
-            v-model="permissionNoticeDialog.visiable"
-            :title="$t('权限须知')"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="leaveAppDialog.isLoading">
-            <div class="tc">
-                {{ $t('由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作') }}
-            </div>
-            <template slot="footer">
-                <bk-button theme="primary" @click="iKnow"> {{ $t('我知道了') }} </bk-button>
             </template>
-        </bk-dialog>
-    </div>
+            <template v-else>
+              <bk-input
+                v-model="selectedMember.name"
+                :readonly="true"
+              />
+            </template>
+          </bk-form-item>
+          <bk-form-item :label="$t('角色')">
+            <bk-radio-group v-model="roleName">
+              <bk-radio
+                v-for="(chineseName, name) in roleNames"
+                :key="name"
+                :value="name"
+              >
+                {{ $t(chineseName) }}
+              </bk-radio>
+            </bk-radio-group>
+          </bk-form-item>
+          <bk-form-item :label="$t('权限列表')">
+            <div class="ps-rights-list">
+              <span
+                v-for="(perm, permIndex) in roleSpec[roleName]"
+                :key="permIndex"
+              >
+                <a
+                  v-if="perm[Object.keys(perm)[0]]"
+                  class="available-right"
+                >
+                  <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-check-1" />
+                </a>
+                <a
+                  v-else
+                  class="not-available-right"
+                >
+                  <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-close" />
+                </a>
+              </span>
+            </div>
+          </bk-form-item>
+        </bk-form>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="removeUserDialog.visiable"
+      width="540"
+      :title=" `${$t('删除成员 ')}${selectedMember.name}`"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="removeUserDialog.isLoading"
+      @confirm="delSave"
+      @cancel="closeDelModal"
+    >
+      <div class="tc">
+        {{ $t('用户') }} {{ selectedMember.name }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="leaveAppDialog.visiable"
+      width="540"
+      :title="$t('退出应用')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="leaveAppDialog.isLoading"
+      @confirm="leaveSave"
+      @cancel="closeLeaveApp"
+    >
+      <div class="tc">
+        {{ $t('退出并放弃此应用的对应权限，是否确定？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="permissionNoticeDialog.visiable"
+      width="540"
+      :title="$t('权限须知')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="leaveAppDialog.isLoading"
+    >
+      <div class="tc">
+        {{ $t('由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作') }}
+      </div>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          @click="iKnow"
+        >
+          {{ $t('我知道了') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>

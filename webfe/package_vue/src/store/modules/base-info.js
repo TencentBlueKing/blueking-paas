@@ -24,8 +24,8 @@ import Vue from 'vue';
 
 // store
 const state = {
-    stagGatewayInfos: null,
-    prodGatewayInfos: null
+  stagGatewayInfos: null,
+  prodGatewayInfos: null
 };
 
 // getters
@@ -38,7 +38,7 @@ const mutations = {};
 
 // actions
 const actions = {
-    /**
+  /**
      * 获取各环境网关获取情况
      *
      * @param {Function} commit store commit mutation handler
@@ -46,15 +46,15 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-    getGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
-        const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
+  getGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
+    const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
 
-        return Vue.http.get(url).then(resp => {
-            return resp;
-        });
-    },
+    return Vue.http.get(url).then(resp => {
+      return resp;
+    });
+  },
 
-    /**
+  /**
      * 获取相应环境出口网关信息
      *
      * @param {Function} commit store commit mutation handler
@@ -62,15 +62,15 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-    enableGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
-        const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/`;
+  enableGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
+    const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/`;
 
-        return Vue.http.post(url).then(resp => {
-            return resp;
-        });
-    },
+    return Vue.http.post(url).then(resp => {
+      return resp;
+    });
+  },
 
-    /**
+  /**
      * 清除当前已获取的的出口网关信息
      *
      * @param {Function} commit store commit mutation handler
@@ -78,15 +78,15 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-    clearGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
-        const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
+  clearGatewayInfos ({ commit, state }, { appCode, env, moduleName }) {
+    const url = `${BACKEND_URL}/svc_workloads/api/scheduling/applications/${appCode}/modules/${moduleName}/envs/${env}/egress_gateway_infos/default/`;
 
-        return Vue.http.delete(url).then(resp => {
-            return resp;
-        });
-    },
+    return Vue.http.delete(url).then(resp => {
+      return resp;
+    });
+  },
 
-    /**
+  /**
      * 获取lessCode应用列表信息地址
      *
      * @param {Function} commit store commit mutation handler
@@ -94,19 +94,19 @@ const actions = {
      * @param {String} appCode 应用code
      * @return {String} env 环境
      */
-    gitLessCodeAddress ({ commit, state }, { appCode, moduleName }) {
-        const url = `${BACKEND_URL}/api/bkapps/lesscode/${appCode}/modules/${moduleName}/`;
+  gitLessCodeAddress ({ commit, state }, { appCode, moduleName }) {
+    const url = `${BACKEND_URL}/api/bkapps/lesscode/${appCode}/modules/${moduleName}/`;
 
-        return Vue.http.get(url).then(resp => {
-            return resp;
-        });
-    }
+    return Vue.http.get(url).then(resp => {
+      return resp;
+    });
+  }
 };
 
 export default {
-    namespaced: true,
-    state,
-    getters,
-    mutations,
-    actions
+  namespaced: true,
+  state,
+  getters,
+  mutations,
+  actions
 };

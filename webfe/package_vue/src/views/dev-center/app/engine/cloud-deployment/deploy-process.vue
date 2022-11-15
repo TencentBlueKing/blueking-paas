@@ -1,160 +1,265 @@
 <template>
-    <paas-content-loader :is-loading="isLoading" placeholder="deploy-process-loading" :offset-top="20" :offset-left="20" class="deploy-action-box">
-        <div class="process-container">
-            <div class="tab-container">
-                <div class="tab-list">
-                    <div class="tab-item"
-                        :class="[{ 'isActive': panelActive === index }]"
-                        v-for="(panel, index) in panels"
-                        :key="index"
-                        @click="handlePanelClick(index, $event, 'add')"
-                        @mouseenter="handlePanelEnter(index)"
-                        @mouseleave="handlePanelLeave">
-                        <div v-if="panel.isEdit">
-                            <bk-input
-                                ref="panelInput"
-                                style="width: 100px"
-                                :placeholder="$t('进程名称')"
-                                ext-cls="bk-input-cls"
-                                @enter="handleEnter"
-                                @blur="handleBlur"
-                                v-model="itemValue">
-                            </bk-input>
-                        </div>
-                        <span v-else class="panel-name">{{panel.name}}</span>
-                        <i v-if="showEditIconIndex === index && !panel.isEdit"
-                            class="paasng-icon paasng-icon-close item-close-icon"
-                            @click.stop="handleDelete(index)"></i>
-                        <i v-if="showEditIconIndex === index && !panel.isEdit && panelActive !== index"
-                            class="paasng-icon paasng-edit2 edit-name-icon"
-                            @click.stop="handleIconClick(index)"></i>
-                    </div>
-                    <i class="paasng-icon paasng-plus-thick add-icon" @click="handleAddData"></i>
-                </div>
+  <paas-content-loader
+    :is-loading="isLoading"
+    placeholder="deploy-process-loading"
+    :offset-top="20"
+    :offset-left="20"
+    class="deploy-action-box"
+  >
+    <div class="process-container">
+      <div class="tab-container">
+        <div class="tab-list">
+          <div
+            v-for="(panel, index) in panels"
+            :key="index"
+            class="tab-item"
+            :class="[{ 'isActive': panelActive === index }]"
+            @click="handlePanelClick(index, $event, 'add')"
+            @mouseenter="handlePanelEnter(index)"
+            @mouseleave="handlePanelLeave"
+          >
+            <div v-if="panel.isEdit">
+              <bk-input
+                ref="panelInput"
+                v-model="itemValue"
+                style="width: 100px"
+                :placeholder="$t('进程名称')"
+                ext-cls="bk-input-cls"
+                @enter="handleEnter"
+                @blur="handleBlur"
+              />
             </div>
-            <div class="form-deploy">
-                <div class="create-item" data-test-id="createDefault_item_baseInfo">
-
-                    <bk-form :model="formData" :rules="rules" ref="formDeploy" ext-cls="form-process">
-                        <bk-form-item :label="$t('容器镜像地址')" :required="true" :label-width="120" :property="'image'">
-                            <bk-input style="width: 500px;" ref="mirrorUrl" v-model="formData.image"
-                                :placeholder="$t('请输入带标签的镜像地址')"></bk-input>
-                            <p class="whole-item-tips">
-                                {{ $t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest') }}&nbsp;
-                                <span class="whole-item-tips-text" @click.stop="useExample">{{ $t('使用示例镜像') }}</span>
-                            </p>
-                            <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                                <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                                <a target="_blank" :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC">{{ $t('帮助：如何构建镜像') }}</a>
-                            </p>
-                            <!-- <p class="whole-item-tips"> {{ $t('示例镜像：mirrors.tencent.com/foo/bar') }} </p>
+            <span
+              v-else
+              class="panel-name"
+            >{{ panel.name }}</span>
+            <i
+              v-if="showEditIconIndex === index && !panel.isEdit"
+              class="paasng-icon paasng-icon-close item-close-icon"
+              @click.stop="handleDelete(index)"
+            />
+            <i
+              v-if="showEditIconIndex === index && !panel.isEdit && panelActive !== index"
+              class="paasng-icon paasng-edit2 edit-name-icon"
+              @click.stop="handleIconClick(index)"
+            />
+          </div>
+          <i
+            class="paasng-icon paasng-plus-thick add-icon"
+            @click="handleAddData"
+          />
+        </div>
+      </div>
+      <div class="form-deploy">
+        <div
+          class="create-item"
+          data-test-id="createDefault_item_baseInfo"
+        >
+          <bk-form
+            ref="formDeploy"
+            :model="formData"
+            :rules="rules"
+            ext-cls="form-process"
+          >
+            <bk-form-item
+              :label="$t('容器镜像地址')"
+              :required="true"
+              :label-width="120"
+              :property="'image'"
+            >
+              <bk-input
+                ref="mirrorUrl"
+                v-model="formData.image"
+                style="width: 500px;"
+                :placeholder="$t('请输入带标签的镜像地址')"
+              />
+              <p class="whole-item-tips">
+                {{ $t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest') }}&nbsp;
+                <span
+                  class="whole-item-tips-text"
+                  @click.stop="useExample"
+                >{{ $t('使用示例镜像') }}</span>
+              </p>
+              <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
+                <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
+                <a
+                  target="_blank"
+                  :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
+                >{{ $t('帮助：如何构建镜像') }}</a>
+              </p>
+              <!-- <p class="whole-item-tips"> {{ $t('示例镜像：mirrors.tencent.com/foo/bar') }} </p>
                             <p class="whole-item-tips"> {{ $t('镜像应监听环境变量值$PORT端口，提供HTTP服务') }} </p> -->
-                        </bk-form-item>
+            </bk-form-item>
 
-                        <!-- 镜像凭证 -->
-                        <bk-form-item :label="$t('镜像凭证')" :label-width="120" :property="'command'" v-if="panels[panelActive]">
-                            <bk-select
-                                :disabled="false"
-                                v-model="voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${panels[panelActive].name}`]"
-                                style="width: 500px;"
-                                ext-cls="select-custom"
-                                ext-popover-cls="select-popover-custom"
-                                searchable>
-                                <bk-option v-for="option in voucherList"
-                                    :key="option.name"
-                                    :id="option.name"
-                                    :name="option.name">
-                                </bk-option>
-                                <div slot="extension" style="cursor: pointer;" @click="handlerCreateVoucher">
-                                    <i class="bk-icon icon-plus-circle mr5"></i>{{ $t('新建凭证') }}
-                                </div>
-                            </bk-select>
-                            <p class="whole-item-tips"> {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }} </p>
-                        </bk-form-item>
-
-                        <bk-form-item :label="$t('启动命令')" :label-width="120" :property="'command'">
-                            <bk-tag-input
-                                style="width: 500px"
-                                ext-cls="tag-extra"
-                                v-model="formData.command"
-                                :placeholder="$t('留空将使用镜像的默认 entry point 命令')"
-                                :allow-create="allowCreate"
-                                :allow-auto-match="true"
-                                :has-delete-icon="hasDeleteIcon"
-                                :paste-fn="copyStartMommand">
-                            </bk-tag-input>
-                            <p class="whole-item-tips"> {{ $t('示例：start_server，多个命令可用回车键分隔') }} </p>
-                        </bk-form-item>
-
-                        <bk-form-item :label="$t('命令参数')" :label-width="120" :property="'args'">
-                            <bk-tag-input
-                                style="width: 500px"
-                                ext-cls="tag-extra"
-                                v-model="formData.args"
-                                :placeholder="$t('请输入命令参数')"
-                                :allow-create="allowCreate"
-                                :allow-auto-match="true"
-                                :has-delete-icon="hasDeleteIcon"
-                                :paste-fn="copyCommandParameter">
-                            </bk-tag-input>
-                            <p class="whole-item-tips"> {{ $t('示例：--env prod，多个参数可用回车键分隔') }} </p>
-                        </bk-form-item>
-
-                        <bk-form-item :label="$t('容器端口')" :label-width="120" :property="'targetPort'">
-                            <bk-input style="width: 500px" :placeholder="$t('请输入 1 - 65535 的整数，非必填')" v-model="formData.targetPort"></bk-input>
-                            <i v-show="isTargetPortErrTips" class="bk-icon icon-exclamation-circle-shape tooltips-icon" tabindex="0" style="right: 8px;" v-bk-tooltips.top-end="targetPortErrTips"></i>
-                            <p class="whole-item-tips"> {{ $t('请求将会被发往容器的这个端口。推荐不指定具体端口号，让容器监听 $PORT 环境变量') }} </p>
-                        </bk-form-item>
-                    </bk-form>
-
+            <!-- 镜像凭证 -->
+            <bk-form-item
+              v-if="panels[panelActive]"
+              :label="$t('镜像凭证')"
+              :label-width="120"
+              :property="'command'"
+            >
+              <bk-select
+                v-model="voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${panels[panelActive].name}`]"
+                :disabled="false"
+                style="width: 500px;"
+                ext-cls="select-custom"
+                ext-popover-cls="select-popover-custom"
+                searchable
+              >
+                <bk-option
+                  v-for="option in voucherList"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.name"
+                />
+                <div
+                  slot="extension"
+                  style="cursor: pointer;"
+                  @click="handlerCreateVoucher"
+                >
+                  <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
                 </div>
+              </bk-select>
+              <p class="whole-item-tips">
+                {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}
+              </p>
+            </bk-form-item>
 
-                <div class="form-resource">
-                    <div class="item-title">
-                        {{ $t('副本数和资源') }}
-                    </div>
-                    <bk-form :model="formData" ref="formResource" form-type="inline" style="padding-left: 30px">
-                        <bk-form-item :label="$t('副本数量')" :required="true" :property="'replicas'" class="mb20" :rules="rules.replicas">
-                            <bk-input style="width: 150px" v-model="formData.replicas"></bk-input>
-                        </bk-form-item>
-                        <br>
-                        <bk-form-item class="pl20" :label="$t('内存')" :property="'memory'">
-                            <!-- <bk-input style="width: 150px" v-model="formData.memory"></bk-input> -->
-                            <bk-select
-                                allow-create
-                                :disabled="false"
-                                v-model="formData.memory"
-                                style="width: 150px;"
-                                searchable>
-                                <bk-option v-for="option in memoryData"
-                                    :key="option.key"
-                                    :id="option.value"
-                                    :name="option.value">
-                                </bk-option>
-                            </bk-select>
-                            <span class="whole-item-tips">{{ $t('每个容器能使用的最大内存') }}</span>
-                        </bk-form-item>
-                        <bk-form-item :label="$t('CPU(核数)')" :property="'cpu'">
-                            <!-- <bk-input style="width: 150px" v-model="formData.cpu"></bk-input> -->
-                            <bk-select
-                                allow-create
-                                :disabled="false"
-                                v-model="formData.cpu"
-                                style="width: 150px;"
-                                searchable>
-                                <bk-option v-for="option in cpuData"
-                                    :key="option.key"
-                                    :id="option.value"
-                                    :name="option.value">
-                                </bk-option>
-                            </bk-select>
-                            <span class="whole-item-tips">{{ $t('每个容器能使用的CPU核心数量') }}</span>
-                        </bk-form-item>
-                    </bk-form>
-                </div>
+            <bk-form-item
+              :label="$t('启动命令')"
+              :label-width="120"
+              :property="'command'"
+            >
+              <bk-tag-input
+                v-model="formData.command"
+                style="width: 500px"
+                ext-cls="tag-extra"
+                :placeholder="$t('留空将使用镜像的默认 entry point 命令')"
+                :allow-create="allowCreate"
+                :allow-auto-match="true"
+                :has-delete-icon="hasDeleteIcon"
+                :paste-fn="copyStartMommand"
+              />
+              <p class="whole-item-tips">
+                {{ $t('示例：start_server，多个命令可用回车键分隔') }}
+              </p>
+            </bk-form-item>
 
-                <!-- 部署前置命令 -->
-                <!-- <div class="form-pre" v-if="!panelActive">
+            <bk-form-item
+              :label="$t('命令参数')"
+              :label-width="120"
+              :property="'args'"
+            >
+              <bk-tag-input
+                v-model="formData.args"
+                style="width: 500px"
+                ext-cls="tag-extra"
+                :placeholder="$t('请输入命令参数')"
+                :allow-create="allowCreate"
+                :allow-auto-match="true"
+                :has-delete-icon="hasDeleteIcon"
+                :paste-fn="copyCommandParameter"
+              />
+              <p class="whole-item-tips">
+                {{ $t('示例：--env prod，多个参数可用回车键分隔') }}
+              </p>
+            </bk-form-item>
+
+            <bk-form-item
+              :label="$t('容器端口')"
+              :label-width="120"
+              :property="'targetPort'"
+            >
+              <bk-input
+                v-model="formData.targetPort"
+                style="width: 500px"
+                :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
+              />
+              <i
+                v-show="isTargetPortErrTips"
+                v-bk-tooltips.top-end="targetPortErrTips"
+                class="bk-icon icon-exclamation-circle-shape tooltips-icon"
+                tabindex="0"
+                style="right: 8px;"
+              />
+              <p class="whole-item-tips">
+                {{ $t('请求将会被发往容器的这个端口。推荐不指定具体端口号，让容器监听 $PORT 环境变量') }}
+              </p>
+            </bk-form-item>
+          </bk-form>
+        </div>
+
+        <div class="form-resource">
+          <div class="item-title">
+            {{ $t('副本数和资源') }}
+          </div>
+          <bk-form
+            ref="formResource"
+            :model="formData"
+            form-type="inline"
+            style="padding-left: 30px"
+          >
+            <bk-form-item
+              :label="$t('副本数量')"
+              :required="true"
+              :property="'replicas'"
+              class="mb20"
+              :rules="rules.replicas"
+            >
+              <bk-input
+                v-model="formData.replicas"
+                style="width: 150px"
+              />
+            </bk-form-item>
+            <br>
+            <bk-form-item
+              class="pl20"
+              :label="$t('内存')"
+              :property="'memory'"
+            >
+              <!-- <bk-input style="width: 150px" v-model="formData.memory"></bk-input> -->
+              <bk-select
+                v-model="formData.memory"
+                allow-create
+                :disabled="false"
+                style="width: 150px;"
+                searchable
+              >
+                <bk-option
+                  v-for="option in memoryData"
+                  :id="option.value"
+                  :key="option.key"
+                  :name="option.value"
+                />
+              </bk-select>
+              <span class="whole-item-tips">{{ $t('每个容器能使用的最大内存') }}</span>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('CPU(核数)')"
+              :property="'cpu'"
+            >
+              <!-- <bk-input style="width: 150px" v-model="formData.cpu"></bk-input> -->
+              <bk-select
+                v-model="formData.cpu"
+                allow-create
+                :disabled="false"
+                style="width: 150px;"
+                searchable
+              >
+                <bk-option
+                  v-for="option in cpuData"
+                  :id="option.value"
+                  :key="option.key"
+                  :name="option.value"
+                />
+              </bk-select>
+              <span class="whole-item-tips">{{ $t('每个容器能使用的CPU核心数量') }}</span>
+            </bk-form-item>
+          </bk-form>
+        </div>
+
+        <!-- 部署前置命令 -->
+        <!-- <div class="form-pre" v-if="!panelActive">
                     <div class="item-title">
                         {{ $t('钩子命令') }}
                     </div>
@@ -213,9 +318,9 @@
                         </bk-form-item>
                     </bk-form>
                 </div> -->
-            </div>
-        </div>
-    </paas-content-loader>
+      </div>
+    </div>
+  </paas-content-loader>
 </template>
 
 <script>

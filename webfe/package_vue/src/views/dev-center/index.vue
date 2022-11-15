@@ -1,298 +1,570 @@
 <template lang="html">
-    <div class="bk-apps-wrapper mt30" @click="resetAction()" :style="{ 'min-height': `${minHeight}px` }">
-        <div class="wrap" v-if="!userHasApp">
-            <div class="application-blank">
-                <h2> {{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }} </h2>
-                <p> {{ $t('您可以创建自己的蓝鲸应用，使用您熟悉的编程语言（Python、Golang等）进行开发。开发完成后，您可以一键部署，使应用运行在蓝鲸 PaaS 平台上。') }} </p>
-                <p> {{ $t('您可将应用发布到') }} <a class="blue" :href="GLOBAL.LINK.APP_MARKET" target="_blank"> {{ $t('蓝鲸应用市场') }} </a> {{ $t('后，其他蓝鲸平台的用户便可以通过应用市场搜索和访问您的应用') }} </p>
-                <p>
-                    <router-link :to="{ name: 'createApp' }" class="paas-operation-icon">
-                        <i class="paasng-icon paasng-plus"></i> {{ $t('创建应用') }}
-                    </router-link>
-                    <router-link :to="{ name: 'appLegacyMigration' }" v-if="userFeature.MGRLEGACY" class="btn-link spacing-h-x2"> {{ $t('迁移旧版应用') }} </router-link>
-                </p>
-            </div>
+  <div
+    class="bk-apps-wrapper mt30"
+    :style="{ 'min-height': `${minHeight}px` }"
+    @click="resetAction()"
+  >
+    <div
+      v-if="!userHasApp"
+      class="wrap"
+    >
+      <div class="application-blank">
+        <h2> {{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }} </h2>
+        <p> {{ $t('您可以创建自己的蓝鲸应用，使用您熟悉的编程语言（Python、Golang等）进行开发。开发完成后，您可以一键部署，使应用运行在蓝鲸 PaaS 平台上。') }} </p>
+        <p>
+          {{ $t('您可将应用发布到') }} <a
+            class="blue"
+            :href="GLOBAL.LINK.APP_MARKET"
+            target="_blank"
+          > {{ $t('蓝鲸应用市场') }} </a> {{ $t('后，其他蓝鲸平台的用户便可以通过应用市场搜索和访问您的应用') }}
+        </p>
+        <p>
+          <router-link
+            :to="{ name: 'createApp' }"
+            class="paas-operation-icon"
+          >
+            <i class="paasng-icon paasng-plus" /> {{ $t('创建应用') }}
+          </router-link>
+          <router-link
+            v-if="userFeature.MGRLEGACY"
+            :to="{ name: 'appLegacyMigration' }"
+            class="btn-link spacing-h-x2"
+          >
+            {{ $t('迁移旧版应用') }}
+          </router-link>
+        </p>
+      </div>
 
-            <ul class="application-list">
-                <li>
-                    <h2><a href="" target="_blank"> {{ $t('快速开始应用开发') }} </a></h2>
-                    <div class="application-list-text">
-                        <p> {{ $t('新手福利，这里有详细的Step by Step入门指南') }} </p>
-                        <p>
-                            <a href="javascript:" target="_blank">[{{ $t('新手入门') }}]</a>
-                            <a href="javascript:" target="_blank">[{{ $t('开发指南') }}]</a>
-                        </p>
-                    </div>
-                    <a href="javascript:" target="_blank"><img src="/static/images/application-list-1.png"></a>
-                </li>
-                <li>
-                    <h2><a href="javascript:" target="_blank"> {{ $t('使用预发布环境') }} </a></h2>
-                    <div class="application-list-text">
-                        <p> {{ $t('蓝鲸PaaS平台为所有应用提供预发布环境，使您的应用在上线到生产环境前经过充分的测试') }} </p>
-                    </div>
-                    <a href="javascript:" target="_blank"><img src="/static/images/application-list-2.png"></a>
-                </li>
-                <li>
-                    <h2><a href="javascript:" target="_blank"> {{ $t('发布到应用市场') }} </a></h2>
-                    <div class="application-list-text">
-                        <p> {{ $t('将应用部署到生产环境后，您就可以将其发布到蓝鲸应用市场了') }} </p>
-                    </div>
-                    <a href="javascript:" target="_blank"><img src="/static/images/application-list-3.png"></a>
-                </li>
-            </ul>
-        </div>
-        <paas-content-loader :is-loading="isFirstLoading" :placeholder="loaderPlaceholder" offset-top="20" class="wrap" :height="575" v-else>
-            <div class="paas-application-tit">
-                <h2> {{ $t('我的应用') }} <span> ({{pageConf.count}}) </span></h2>
-
-                <div class="fright">
-                    <div class="migrate" v-if="userFeature.MGRLEGACY">
-                        <bk-button theme="primary" text @click="appMigrate"> {{ $t('迁移旧版应用') }} </bk-button>
-                    </div>
-                    <div class="create-app">
-                        <bk-button theme="primary" @click="createApp"> {{ $t('创建应用') }} </bk-button>
-                    </div>
-
-                    <div class="paas-search">
-                        <bk-input
-                            :placeholder="$t('输入应用名称、ID，按Enter搜索')"
-                            :clearable="true"
-                            :right-icon="'paasng-icon paasng-search'"
-                            v-model="filterKey"
-                            @enter="searchApp">
-                        </bk-input>
-                    </div>
-
-                    <div class="advanced-filter" @click.stop="toggleChoose(true)">
-                        <p>
-                            {{ $t('高级筛选') }}
-                            <i class="paasng-icon" :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"></i>
-                        </p>
-                    </div>
-                    <div class="choose-panel" v-if="ifopen" @click.stop="showChoose">
-                        <div class="overflow shaixuan">
-                            <label class="button-holder">
-                                <input type="checkbox" class="ps-checkbox-default" v-model="appFilter.includeInactive" value="true" />
-                                <span> {{ $t('显示已下架应用') }} </span>
-                            </label>
-                        </div>
-                        <div class="overflow shaixuan">
-                            <label class="button-holder">
-                                <input type="checkbox" class="ps-checkbox-default" v-model="appFilter.excludeCollaborated" value="true" />
-                                <span> {{ $t('只显示我创建的') }} </span>
-                            </label>
-                        </div>
-                        <div class="overflow shaixuan">
-                            <label class="button-holder">
-                                <input type="checkbox" class="ps-checkbox-default" v-model="appFilter.type" value="true" />
-                                <span> {{ $t('只显示插件应用') }} </span>
-                            </label>
-                        </div>
-                        <div class="overflow shaixuan">
-                            <div style="margin-top: -5px; width: 78px; float: left"> {{ $t('排序方式') }} </div>
-                            <div style="width: 110px; float: right">
-                                <bk-radio-group v-model="sortValue">
-                                    <bk-radio value="-created" style="display: block; margin: 4px 0 0 0;"> {{ $t('最新创建') }} </bk-radio>
-                                    <bk-radio value="created" style="display: block; margin: 4px 0 0 0;"> {{ $t('最早创建') }} </bk-radio>
-                                    <bk-radio value="-latest_operated_at" style="display: block; margin: 4px 0 0 0;"> {{ $t('最近操作') }} </bk-radio>
-                                </bk-radio-group>
-                            </div>
-                        </div>
-                        <div class="overflow" v-if="isShowLanguagesSearch">
-                            <div style="width: 78px; float: left; margin-top: -4px;"> {{ $t('使用语言') }} </div>
-                            <div style="width: 110px; float: right">
-                                <label class="button-holder" v-if="isShowAllWithLanguages">
-                                    <input type="checkbox" class="ps-checkbox-default" v-model="IncludeAllLanguages" />
-                                    <span> {{ $t('全部') }} ({{appNumInfo.All}})</span>
-                                </label>
-                                <label class="button-holder" v-for="(language, languageIndex) in availableLanguages" v-if="appNumInfo[language]" :key="languageIndex">
-                                    <input type="checkbox" class="ps-checkbox-default" v-model="appFilter.languageList" :value="language" />
-                                    <span>{{language}} ({{appNumInfo[language]}})</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="overflow" v-if="isShowRegionsSearch && platformFeature.REGION_DISPLAY">
-                            <div style="width: 78px; float: left"> {{ $t('应用版本') }} </div>
-                            <div style="width: 110px; float: right">
-                                <label class="button-holder" v-if="isShowAllWithRegions">
-                                    <input type="checkbox" class="ps-checkbox-default" v-model="IncludeAllRegions" />
-                                    <span> {{ $t('全部') }} ({{appNumInfo.All}})</span>
-                                </label>
-                                <label class="button-holder" v-for="(region, regionIndex) in availableRegions" v-if="appNumInfo[region]" :key="regionIndex">
-                                    <input type="checkbox" class="ps-checkbox-default" v-model="appFilter.regionList" :value="region" />
-                                    <span>{{RegionTranslate[region]}} ({{appNumInfo[region]}})</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="application-choose-btn">
-                            <bk-button theme="primary" @click.stop.prevent="fetchAppList(1)"> {{ $t('筛选') }} </bk-button>
-                            <bk-button theme="default" @click.stop.prevent="reset"> {{ $t('重置') }} </bk-button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div v-bkloading="{ isLoading: isLoading, opacity: .7 }" :class="['apps-table-wrapper', { 'min-h': isLoading }, { 'reset-min-h': !isLoading && !appList.length }]">
-                <template v-if="appList.length">
-                    <div class="table-item" :class="{ 'mt': appIndex !== appList.length - 1 }" v-for="(appItem, appIndex) in appList" :key="appIndex">
-                        <div class="item-header">
-                            <div class="star-wrapper" @click="toggleAppMarked(appItem)">
-                                <span class="star-icon" :title="appItem.marked ? $t('取消置顶') : $t('置顶')">
-                                    <i :class="['paasng-icon', { 'paasng-star-cover': appItem.marked }, { 'paasng-star-line': !appItem.marked }]"></i>
-                                </span>
-                            </div>
-                            <div class="basic-info" @click="toPage(appItem)">
-                                <img :src="appItem.application ? (appItem.application.logo_url ? appItem.application.logo_url : defaultImg) : defaultImg" class="app-logo">
-                                <span class="app-name">
-                                    {{appItem.application.name}}
-                                </span>
-                            </div>
-                            <div class="region-info" v-if="platformFeature.REGION_DISPLAY">
-                                <span
-                                    :class="['reg-tag', { 'inner': appItem.application.region_name === $t('内部版') }, { 'clouds': appItem.application.region_name === $t('混合云版') }]">
-                                    {{appItem.application.region_name}}
-                                </span>
-                            </div>
-                            <div class="module-info" @click="expandedPanel(appItem)">
-                                <template v-if="appItem.application.config_info.engine_enabled && appItem.application.type !== 'cloud_native'">
-                                    <span class="module-name" :class="appItem.expanded ? 'expanded' : ''"> {{ $t('共') }}&nbsp; {{ appItem.application.modules.length}} &nbsp;{{ $t('个模块') }} <i class="paasng-icon unfold-icon" :class="appItem.expanded ? 'paasng-angle-up' : 'paasng-angle-down'"></i>
-                                    </span>
-                                </template>
-                            </div>
-                            <div class="visit-operate">
-                                <div v-if="!Object.keys(appItem.application.deploy_info).length" class="app-operation-section">
-                                    <bk-button theme="primary" text @click="toCloudAPI(appItem)">
-                                        {{ $t('申请云API权限') }}
-                                        <i class="paasng-icon paasng-keys"></i>
-                                    </bk-button>
-                                </div>
-
-                                <div v-else class="app-operation-section">
-                                    <bk-button v-if="appItem.application.type === 'cloud_native'" text
-                                        @click="deploy(appItem)">
-                                        {{ $t('应用编排') }}
-                                        <i class="paasng-icon paasng-external-link"></i>
-                                    </bk-button>
-                                    <template v-else>
-                                        <bk-button :disabled="!appItem.application.deploy_info.stag.deployed" text
-                                            @click="visitLink(appItem, 'stag')">
-                                            <template v-if="!appItem.application.deploy_info.stag.deployed">
-                                                <span v-bk-tooltips="$t('应用未部署，不能访问')"> {{ $t('预发布环境') }} <i class="paasng-icon paasng-external-link"></i>
-                                                </span>
-                                            </template>
-                                            <template v-else>
-                                                <span>
-                                                    {{ $t('预发布环境') }}
-                                                    <i class="paasng-icon paasng-external-link"></i>
-                                                </span>
-                                            </template>
-                                        </bk-button>
-                                        <bk-button :disabled="!appItem.application.deploy_info.prod.deployed" text
-                                            style="margin-left: 18px;"
-                                            @click="visitLink(appItem, 'prod')">
-                                            <template v-if="!appItem.application.deploy_info.prod.deployed">
-                                                <span v-bk-tooltips="$t('应用未部署，不能访问')"> {{ $t('生产环境') }} <i class="paasng-icon paasng-external-link"></i>
-                                                </span>
-                                            </template>
-                                            <template v-else>
-                                                <span>
-                                                    {{ $t('生产环境') }}
-                                                    <i class="paasng-icon paasng-external-link"></i>
-                                                </span>
-                                            </template>
-                                        </bk-button>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="item-content" v-show="appItem.expanded">
-                            <div class="apps-table-wrapper">
-                                <table class="ps-table ps-table-default ps-instances-table ps-table-special">
-                                    <thead>
-                                        <th> {{ $t('模块') }} </th>
-                                        <th> {{ $t('语言') }} </th>
-                                        <th> {{ $t('创建时间') }} </th>
-                                        <th style="width: 150px;"> {{ $t('操作') }} </th>
-                                    </thead>
-                                    <tbody>
-                                        <template v-if="appItem.application.modules.length">
-                                            <tr v-for="subModule in appItem.application.modules" :key="subModule.id">
-                                                <td class="module-name" @click.stop="toModule(appItem, subModule)">
-                                                    <p>
-                                                        {{subModule.name}}
-                                                        <span v-if="subModule.is_default" style="color: #979ba5;"> {{ $t('(主模块)') }} </span>
-                                                    </p>
-                                                </td>
-                                                <td class="run-state">
-                                                    <p>{{subModule.language}}</p>
-                                                </td>
-                                                <td class="time">
-                                                    <p>{{subModule.created || '--'}}</p>
-                                                </td>
-                                                <td class="operate">
-                                                    <template v-if="Object.keys(appItem.application.deploy_info).length">
-                                                        <a href="javascript:void(0);" class="blue" style="margin-right: 6px;" @click="deploy(appItem, subModule)"> {{ $t('部署') }} </a>
-                                                        <a href="javascript:void(0);" class="blue" @click="viewLog(appItem, subModule)"> {{ $t('查看日志') }} </a>
-                                                    </template>
-                                                    <template v-else>
-                                                        <a href="javascript:void(0);" class="blue" @click="applyCludeApi(appItem)"> {{ $t('申请云API权限') }} </a>
-                                                    </template>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                        <template v-else>
-                                            <tr>
-                                                <td colspan="4">
-                                                    <div class="ps-no-result">
-                                                        <div class="text">
-                                                            <p>
-                                                                <i class="paasng-icon paasng-empty"></i></p>
-                                                            <p> {{ $t('暂无模块') }} </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                        <tr v-if="appItem.application.type !== 'cloud_native'">
-                                            <td colspan="4" style="text-align: left;">
-                                                <bk-button style="margin-left: -13px;" theme="primary" icon="plus-circle-shape" text size="small" @click="addModule(appItem)" v-if="appItem.creation_allowed"> {{ $t('点击创建新模块') }} </bk-button>
-                                                <bk-button style="margin-left: -13px;" icon="plus-circle-shape" text size="small" disabled v-else>
-                                                    <span v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"> {{ $t('点击创建新模块') }} </span>
-                                                </bk-button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-                <template v-if="!isLoading && !appList.length">
-                    <div class="ps-no-result">
-                        <div class="text">
-                            <p>
-                                <i class="paasng-icon paasng-empty"></i>
-                            </p>
-                            <p> {{ $t('暂无应用') }} </p>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div v-if="pageConf.count" style="margin: 20px 0;">
-                <bk-pagination
-                    size="small"
-                    align="right"
-                    :current.sync="pageConf.curPage"
-                    :count="pageConf.count"
-                    :limit="pageConf.limit"
-                    :limit-list="pageConf.limitList"
-                    @change="pageChange"
-                    @limit-change="handlePageSizeChange">
-                </bk-pagination>
-            </div>
-        </paas-content-loader>
+      <ul class="application-list">
+        <li>
+          <h2>
+            <a
+              href=""
+              target="_blank"
+            > {{ $t('快速开始应用开发') }} </a>
+          </h2>
+          <div class="application-list-text">
+            <p> {{ $t('新手福利，这里有详细的Step by Step入门指南') }} </p>
+            <p>
+              <a
+                href="javascript:"
+                target="_blank"
+              >[{{ $t('新手入门') }}]</a>
+              <a
+                href="javascript:"
+                target="_blank"
+              >[{{ $t('开发指南') }}]</a>
+            </p>
+          </div>
+          <a
+            href="javascript:"
+            target="_blank"
+          ><img src="/static/images/application-list-1.png"></a>
+        </li>
+        <li>
+          <h2>
+            <a
+              href="javascript:"
+              target="_blank"
+            > {{ $t('使用预发布环境') }} </a>
+          </h2>
+          <div class="application-list-text">
+            <p> {{ $t('蓝鲸PaaS平台为所有应用提供预发布环境，使您的应用在上线到生产环境前经过充分的测试') }} </p>
+          </div>
+          <a
+            href="javascript:"
+            target="_blank"
+          ><img src="/static/images/application-list-2.png"></a>
+        </li>
+        <li>
+          <h2>
+            <a
+              href="javascript:"
+              target="_blank"
+            > {{ $t('发布到应用市场') }} </a>
+          </h2>
+          <div class="application-list-text">
+            <p> {{ $t('将应用部署到生产环境后，您就可以将其发布到蓝鲸应用市场了') }} </p>
+          </div>
+          <a
+            href="javascript:"
+            target="_blank"
+          ><img src="/static/images/application-list-3.png"></a>
+        </li>
+      </ul>
     </div>
+    <paas-content-loader
+      v-else
+      :is-loading="isFirstLoading"
+      :placeholder="loaderPlaceholder"
+      offset-top="20"
+      class="wrap"
+      :height="575"
+    >
+      <div class="paas-application-tit">
+        <h2> {{ $t('我的应用') }} <span> ({{ pageConf.count }}) </span></h2>
+
+        <div class="fright">
+          <div
+            v-if="userFeature.MGRLEGACY"
+            class="migrate"
+          >
+            <bk-button
+              theme="primary"
+              text
+              @click="appMigrate"
+            >
+              {{ $t('迁移旧版应用') }}
+            </bk-button>
+          </div>
+          <div class="create-app">
+            <bk-button
+              theme="primary"
+              @click="createApp"
+            >
+              {{ $t('创建应用') }}
+            </bk-button>
+          </div>
+
+          <div class="paas-search">
+            <bk-input
+              v-model="filterKey"
+              :placeholder="$t('输入应用名称、ID，按Enter搜索')"
+              :clearable="true"
+              :right-icon="'paasng-icon paasng-search'"
+              @enter="searchApp"
+            />
+          </div>
+
+          <div
+            class="advanced-filter"
+            @click.stop="toggleChoose(true)"
+          >
+            <p>
+              {{ $t('高级筛选') }}
+              <i
+                class="paasng-icon"
+                :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+              />
+            </p>
+          </div>
+          <div
+            v-if="ifopen"
+            class="choose-panel"
+            @click.stop="showChoose"
+          >
+            <div class="overflow shaixuan">
+              <label class="button-holder">
+                <input
+                  v-model="appFilter.includeInactive"
+                  type="checkbox"
+                  class="ps-checkbox-default"
+                  value="true"
+                >
+                <span> {{ $t('显示已下架应用') }} </span>
+              </label>
+            </div>
+            <div class="overflow shaixuan">
+              <label class="button-holder">
+                <input
+                  v-model="appFilter.excludeCollaborated"
+                  type="checkbox"
+                  class="ps-checkbox-default"
+                  value="true"
+                >
+                <span> {{ $t('只显示我创建的') }} </span>
+              </label>
+            </div>
+            <div class="overflow shaixuan">
+              <label class="button-holder">
+                <input
+                  v-model="appFilter.type"
+                  type="checkbox"
+                  class="ps-checkbox-default"
+                  value="true"
+                >
+                <span> {{ $t('只显示插件应用') }} </span>
+              </label>
+            </div>
+            <div class="overflow shaixuan">
+              <div style="margin-top: -5px; width: 78px; float: left">
+                {{ $t('排序方式') }}
+              </div>
+              <div style="width: 110px; float: right">
+                <bk-radio-group v-model="sortValue">
+                  <bk-radio
+                    value="-created"
+                    style="display: block; margin: 4px 0 0 0;"
+                  >
+                    {{ $t('最新创建') }}
+                  </bk-radio>
+                  <bk-radio
+                    value="created"
+                    style="display: block; margin: 4px 0 0 0;"
+                  >
+                    {{ $t('最早创建') }}
+                  </bk-radio>
+                  <bk-radio
+                    value="-latest_operated_at"
+                    style="display: block; margin: 4px 0 0 0;"
+                  >
+                    {{ $t('最近操作') }}
+                  </bk-radio>
+                </bk-radio-group>
+              </div>
+            </div>
+            <div
+              v-if="isShowLanguagesSearch"
+              class="overflow"
+            >
+              <div style="width: 78px; float: left; margin-top: -4px;">
+                {{ $t('使用语言') }}
+              </div>
+              <div style="width: 110px; float: right">
+                <label
+                  v-if="isShowAllWithLanguages"
+                  class="button-holder"
+                >
+                  <input
+                    v-model="IncludeAllLanguages"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                  >
+                  <span> {{ $t('全部') }} ({{ appNumInfo.All }})</span>
+                </label>
+                <label
+                  v-for="(language, languageIndex) in availableLanguages"
+                  v-if="appNumInfo[language]"
+                  :key="languageIndex"
+                  class="button-holder"
+                >
+                  <input
+                    v-model="appFilter.languageList"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    :value="language"
+                  >
+                  <span>{{ language }} ({{ appNumInfo[language] }})</span>
+                </label>
+              </div>
+            </div>
+            <div
+              v-if="isShowRegionsSearch && platformFeature.REGION_DISPLAY"
+              class="overflow"
+            >
+              <div style="width: 78px; float: left">
+                {{ $t('应用版本') }}
+              </div>
+              <div style="width: 110px; float: right">
+                <label
+                  v-if="isShowAllWithRegions"
+                  class="button-holder"
+                >
+                  <input
+                    v-model="IncludeAllRegions"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                  >
+                  <span> {{ $t('全部') }} ({{ appNumInfo.All }})</span>
+                </label>
+                <label
+                  v-for="(region, regionIndex) in availableRegions"
+                  v-if="appNumInfo[region]"
+                  :key="regionIndex"
+                  class="button-holder"
+                >
+                  <input
+                    v-model="appFilter.regionList"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    :value="region"
+                  >
+                  <span>{{ RegionTranslate[region] }} ({{ appNumInfo[region] }})</span>
+                </label>
+              </div>
+            </div>
+            <div class="application-choose-btn">
+              <bk-button
+                theme="primary"
+                @click.stop.prevent="fetchAppList(1)"
+              >
+                {{ $t('筛选') }}
+              </bk-button>
+              <bk-button
+                theme="default"
+                @click.stop.prevent="reset"
+              >
+                {{ $t('重置') }}
+              </bk-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-bkloading="{ isLoading: isLoading, opacity: .7 }"
+        :class="['apps-table-wrapper', { 'min-h': isLoading }, { 'reset-min-h': !isLoading && !appList.length }]"
+      >
+        <template v-if="appList.length">
+          <div
+            v-for="(appItem, appIndex) in appList"
+            :key="appIndex"
+            class="table-item"
+            :class="{ 'mt': appIndex !== appList.length - 1 }"
+          >
+            <div class="item-header">
+              <div
+                class="star-wrapper"
+                @click="toggleAppMarked(appItem)"
+              >
+                <span
+                  class="star-icon"
+                  :title="appItem.marked ? $t('取消置顶') : $t('置顶')"
+                >
+                  <i :class="['paasng-icon', { 'paasng-star-cover': appItem.marked }, { 'paasng-star-line': !appItem.marked }]" />
+                </span>
+              </div>
+              <div
+                class="basic-info"
+                @click="toPage(appItem)"
+              >
+                <img
+                  :src="appItem.application ? (appItem.application.logo_url ? appItem.application.logo_url : defaultImg) : defaultImg"
+                  class="app-logo"
+                >
+                <span class="app-name">
+                  {{ appItem.application.name }}
+                </span>
+              </div>
+              <div
+                v-if="platformFeature.REGION_DISPLAY"
+                class="region-info"
+              >
+                <span
+                  :class="['reg-tag', { 'inner': appItem.application.region_name === $t('内部版') }, { 'clouds': appItem.application.region_name === $t('混合云版') }]"
+                >
+                  {{ appItem.application.region_name }}
+                </span>
+              </div>
+              <div
+                class="module-info"
+                @click="expandedPanel(appItem)"
+              >
+                <template v-if="appItem.application.config_info.engine_enabled && appItem.application.type !== 'cloud_native'">
+                  <span
+                    class="module-name"
+                    :class="appItem.expanded ? 'expanded' : ''"
+                  > {{ $t('共') }}&nbsp; {{ appItem.application.modules.length }} &nbsp;{{ $t('个模块') }} <i
+                    class="paasng-icon unfold-icon"
+                    :class="appItem.expanded ? 'paasng-angle-up' : 'paasng-angle-down'"
+                  />
+                  </span>
+                </template>
+              </div>
+              <div class="visit-operate">
+                <div
+                  v-if="!Object.keys(appItem.application.deploy_info).length"
+                  class="app-operation-section"
+                >
+                  <bk-button
+                    theme="primary"
+                    text
+                    @click="toCloudAPI(appItem)"
+                  >
+                    {{ $t('申请云API权限') }}
+                    <i class="paasng-icon paasng-keys" />
+                  </bk-button>
+                </div>
+
+                <div
+                  v-else
+                  class="app-operation-section"
+                >
+                  <bk-button
+                    v-if="appItem.application.type === 'cloud_native'"
+                    text
+                    @click="deploy(appItem)"
+                  >
+                    {{ $t('应用编排') }}
+                    <i class="paasng-icon paasng-external-link" />
+                  </bk-button>
+                  <template v-else>
+                    <bk-button
+                      :disabled="!appItem.application.deploy_info.stag.deployed"
+                      text
+                      @click="visitLink(appItem, 'stag')"
+                    >
+                      <template v-if="!appItem.application.deploy_info.stag.deployed">
+                        <span v-bk-tooltips="$t('应用未部署，不能访问')"> {{ $t('预发布环境') }} <i class="paasng-icon paasng-external-link" />
+                        </span>
+                      </template>
+                      <template v-else>
+                        <span>
+                          {{ $t('预发布环境') }}
+                          <i class="paasng-icon paasng-external-link" />
+                        </span>
+                      </template>
+                    </bk-button>
+                    <bk-button
+                      :disabled="!appItem.application.deploy_info.prod.deployed"
+                      text
+                      style="margin-left: 18px;"
+                      @click="visitLink(appItem, 'prod')"
+                    >
+                      <template v-if="!appItem.application.deploy_info.prod.deployed">
+                        <span v-bk-tooltips="$t('应用未部署，不能访问')"> {{ $t('生产环境') }} <i class="paasng-icon paasng-external-link" />
+                        </span>
+                      </template>
+                      <template v-else>
+                        <span>
+                          {{ $t('生产环境') }}
+                          <i class="paasng-icon paasng-external-link" />
+                        </span>
+                      </template>
+                    </bk-button>
+                  </template>
+                </div>
+              </div>
+            </div>
+            <div
+              v-show="appItem.expanded"
+              class="item-content"
+            >
+              <div class="apps-table-wrapper">
+                <table class="ps-table ps-table-default ps-instances-table ps-table-special">
+                  <thead>
+                    <th> {{ $t('模块') }} </th>
+                    <th> {{ $t('语言') }} </th>
+                    <th> {{ $t('创建时间') }} </th>
+                    <th style="width: 150px;">
+                      {{ $t('操作') }}
+                    </th>
+                  </thead>
+                  <tbody>
+                    <template v-if="appItem.application.modules.length">
+                      <tr
+                        v-for="subModule in appItem.application.modules"
+                        :key="subModule.id"
+                      >
+                        <td
+                          class="module-name"
+                          @click.stop="toModule(appItem, subModule)"
+                        >
+                          <p>
+                            {{ subModule.name }}
+                            <span
+                              v-if="subModule.is_default"
+                              style="color: #979ba5;"
+                            > {{ $t('(主模块)') }} </span>
+                          </p>
+                        </td>
+                        <td class="run-state">
+                          <p>{{ subModule.language }}</p>
+                        </td>
+                        <td class="time">
+                          <p>{{ subModule.created || '--' }}</p>
+                        </td>
+                        <td class="operate">
+                          <template v-if="Object.keys(appItem.application.deploy_info).length">
+                            <a
+                              href="javascript:void(0);"
+                              class="blue"
+                              style="margin-right: 6px;"
+                              @click="deploy(appItem, subModule)"
+                            > {{ $t('部署') }} </a>
+                            <a
+                              href="javascript:void(0);"
+                              class="blue"
+                              @click="viewLog(appItem, subModule)"
+                            > {{ $t('查看日志') }} </a>
+                          </template>
+                          <template v-else>
+                            <a
+                              href="javascript:void(0);"
+                              class="blue"
+                              @click="applyCludeApi(appItem)"
+                            > {{ $t('申请云API权限') }} </a>
+                          </template>
+                        </td>
+                      </tr>
+                    </template>
+                    <template v-else>
+                      <tr>
+                        <td colspan="4">
+                          <div class="ps-no-result">
+                            <div class="text">
+                              <p>
+                                <i class="paasng-icon paasng-empty" />
+                              </p>
+                              <p> {{ $t('暂无模块') }} </p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                    <tr v-if="appItem.application.type !== 'cloud_native'">
+                      <td
+                        colspan="4"
+                        style="text-align: left;"
+                      >
+                        <bk-button
+                          v-if="appItem.creation_allowed"
+                          style="margin-left: -13px;"
+                          theme="primary"
+                          icon="plus-circle-shape"
+                          text
+                          size="small"
+                          @click="addModule(appItem)"
+                        >
+                          {{ $t('点击创建新模块') }}
+                        </bk-button>
+                        <bk-button
+                          v-else
+                          style="margin-left: -13px;"
+                          icon="plus-circle-shape"
+                          text
+                          size="small"
+                          disabled
+                        >
+                          <span v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"> {{ $t('点击创建新模块') }} </span>
+                        </bk-button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template v-if="!isLoading && !appList.length">
+          <div class="ps-no-result">
+            <div class="text">
+              <p>
+                <i class="paasng-icon paasng-empty" />
+              </p>
+              <p> {{ $t('暂无应用') }} </p>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div
+        v-if="pageConf.count"
+        style="margin: 20px 0;"
+      >
+        <bk-pagination
+          size="small"
+          align="right"
+          :current.sync="pageConf.curPage"
+          :count="pageConf.count"
+          :limit="pageConf.limit"
+          :limit-list="pageConf.limitList"
+          @change="pageChange"
+          @limit-change="handlePageSizeChange"
+        />
+      </div>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>
@@ -646,7 +918,7 @@
             clearFilter () {
                 this.filterKey = '';
             },
-            
+
             // 列表排序
             toggleSortTab () {
                 if (this.fetchParams.order_by.indexOf('-') === 0) {
@@ -988,7 +1260,7 @@
             }
             .ps-instances-table {
                 width: 100%;
-        
+
                 &.ps-table th,
                 &.ps-table td {
                     position: relative;
@@ -1024,7 +1296,7 @@
             }
             .ps-no-result {
                 height: auto;
-        
+
                 .text {
                     height: 90px;
                 }

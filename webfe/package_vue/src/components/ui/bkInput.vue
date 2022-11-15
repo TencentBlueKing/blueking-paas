@@ -1,35 +1,41 @@
 <template>
-    <div class="bk-input-box bk-selector">
-        <input
-            type="text"
-            :disabled="disabled"
-            :placeholder="placeholder"
-            class="bk-form-input"
-            autocomplete="off"
-            v-bk-focus="autoFocus"
-            :value="curValue"
-            @focus="focusHandler"
-            @blur="blurHandler"
-            @input="userInput"
-            @keyup="keyup"
-            @paste="paste"
-            :maxlength="maxlength" />
-        <transition :name="listSlideName">
-            <div class="bk-selector-list" v-show="isListPanelShow && resultList.length" :style="panelStyle">
-                <ul class="selector-list-box">
-                    <li
-                        v-for="(item, index) of resultList"
-                        class="bk-selector-list-item selected"
-                        :key="index"
-                        @click="confirmSelect($event, index)">
-                        <div :class="['bk-selector-node', { 'bk-selector-selected': item.isSelected }]">
-                            <span class="text">{{item[displayKey]}}</span>
-                        </div>
-                    </li>
-                </ul>
+  <div class="bk-input-box bk-selector">
+    <input
+      v-bk-focus="autoFocus"
+      type="text"
+      :disabled="disabled"
+      :placeholder="placeholder"
+      class="bk-form-input"
+      autocomplete="off"
+      :value="curValue"
+      :maxlength="maxlength"
+      @focus="focusHandler"
+      @blur="blurHandler"
+      @input="userInput"
+      @keyup="keyup"
+      @paste="paste"
+    >
+    <transition :name="listSlideName">
+      <div
+        v-show="isListPanelShow && resultList.length"
+        class="bk-selector-list"
+        :style="panelStyle"
+      >
+        <ul class="selector-list-box">
+          <li
+            v-for="(item, index) of resultList"
+            :key="index"
+            class="bk-selector-list-item selected"
+            @click="confirmSelect($event, index)"
+          >
+            <div :class="['bk-selector-node', { 'bk-selector-selected': item.isSelected }]">
+              <span class="text">{{ item[displayKey] }}</span>
             </div>
-        </transition>
-    </div>
+          </li>
+        </ul>
+      </div>
+    </transition>
+  </div>
 </template>
 
 <script>
@@ -46,7 +52,7 @@
             binding.value && el.focus();
         }
     });
-    
+
     /**
      *  获取元素相对于页面的高度
      *  @param node {NodeElement} 指定的DOM元素
@@ -262,7 +268,7 @@
             dispatch (componentName, eventName, params) {
                 let parent = this.$parent || this.$root;
                 let name = parent.$options.name;
-                
+
                 while (parent && (!name || name !== componentName)) {
                     parent = parent.$parent;
 
@@ -285,7 +291,7 @@
                         } else {
                             this.curValue = selectItem[this.displayKey];
                         }
-                        
+
                         this.$emit('item-selected', value, selectItem, isTrigger);
                     } else {
                         this.curValue = '';

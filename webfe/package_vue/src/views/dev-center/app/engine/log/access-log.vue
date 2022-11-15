@@ -1,183 +1,291 @@
 <template lang="html">
-    <div @click="hideAllFilterPopover">
-        <log-filter
-            ref="accessLogFilter"
-            :env-list="envList"
-            :stream-list="streamList"
-            :process-list="processList"
-            :log-count="pagination.count"
-            :loading="isChartLoading"
-            :key="routeChangeIndex"
-            :type="'accessLog'"
-            @change="handleLogSearch"
-            @date-change="handlePickSuccess"
-            @reload="handleLogReload">
-        </log-filter>
+  <div @click="hideAllFilterPopover">
+    <log-filter
+      ref="accessLogFilter"
+      :key="routeChangeIndex"
+      :env-list="envList"
+      :stream-list="streamList"
+      :process-list="processList"
+      :log-count="pagination.count"
+      :loading="isChartLoading"
+      :type="'accessLog'"
+      @change="handleLogSearch"
+      @date-change="handlePickSuccess"
+      @reload="handleLogReload"
+    />
 
-        <div class="table-filters" v-if="tableFormatFilters.length">
-            <ul class="filter-list">
-                <li v-for="(filter) of tableFormatFilters" :key="filter.value">
-                    <span class="filter-value" v-bk-tooltips="`${filter.key}：${filter.value}`">{{filter.key}}: <i>{{filter.value}}</i></span>
-                </li>
-            </ul>
-            <span class="paasng-icon paasng-close-circle-shape clear-filters-btn" @click="handleClearFilters" v-if="tableFilters.length" v-bk-tooltips.right="$t('清空筛选条件')"></span>
-        </div>
-
-        <div class="log-main" ref="logMain">
-            <div class="log-fields">
-                <p class="title">
-                    {{ $t('字段设置') }}
-                    <i class="paasng-icon paasng-info-circle tooltip-icon" v-bk-tooltips="$t('仅显示查询结果前200条数据包含的字段，没有出现的字段仍可以通过输入关键字查询')"></i>
-                </p>
-                <template v-if="fieldList.length">
-                    <bk-checkbox-group
-                        v-model="fieldSelectedList"
-                        class="field-list">
-                        <bk-checkbox
-                            class="ps-field-checkbox"
-                            :value="field.name"
-                            v-for="field of fieldList"
-                            :key="field.name"
-                            v-show="!staticFileds.includes(field.name)">
-                            <span :title="field.name">{{field.name}}</span>
-                        </bk-checkbox>
-                    </bk-checkbox-group>
-                </template>
-                <template v-else>
-                    <div class="bk-table-empty-block" style="margin-top: -40px;">
-                        <span class="bk-table-empty-text">
-                            <i class="bk-table-empty-icon paasng-icon paasng-empty"></i>
-                            <div class="f12"> {{ $t('暂无数据') }} </div>
-                        </span>
-                    </div>
-                </template>
-            </div>
-
-            <div class="log-content" ref="logContent">
-                <div class="chart-box mb20" v-bkloading="{ isLoading: isChartLoading }" style="width: 100%;" @click="hideAllFilterPopover">
-                    <div style="width: 100%; height: 150px;" v-charts="chartData"></div>
-                    <img class="chart-placeholder" src="/static/images/chart-default.svg" v-if="!hasChartData" />
-                </div>
-
-                <!-- 查询结果 start -->
-                <div class="table-wrapper" ref="tableBox" v-bkloading="{ isLoading: isLogListLoading }">
-                    <table class="ps-table ps-table-default ps-log-table" id="log-table" :key="renderIndex">
-                        <thead>
-                            <tr>
-                                <th style="min-width: 200px;" class="time-th">
-                                    <div class="filter-normal-label">Time</div>
-                                </th>
-                                <template v-for="(field, fieldIndex) of fieldSelectedList">
-                                    <template v-if="fieldOptions[field] && fieldOptions[field].length">
-                                        <th :key="fieldIndex">
-                                            <div class="filter-wrapper">
-                                                <div class="filter-label">
-                                                    <span class="filter-label-text" :title="field">{{field}}</span>
-                                                    <div class="paasng-icon paasng-funnel filter-icon" @click.stop.prevent="handleShowFilter(field)">
-                                                        <div class="filter-popover" v-if="fieldPopoverShow[field]" :key="renderFilter">
-                                                            <bk-input
-                                                                :placeholder="$t('搜索')"
-                                                                :left-icon="'paasng-icon paasng-search'"
-                                                                :clearable="true"
-                                                                v-model="filterKeyword">
-                                                            </bk-input>
-                                                            <template v-if="!fieldOptions[field].filter(option => option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1).length">
-                                                                <div class="not-found"> {{ $t('没找到') }} </div>
-                                                            </template>
-                                                            <bk-checkbox-group
-                                                                v-model="fieldChecked[field]"
-                                                                :key="JSON.stringify(fieldChecked)">
-                                                                <bk-checkbox
-                                                                    :value="`${field}:${option.value}`"
-                                                                    v-for="option of fieldOptions[field]"
-                                                                    :key="option.value"
-                                                                    v-show="option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1">
-                                                                    <span :title="option.text">{{option.text}}</span>
-                                                                </bk-checkbox>
-                                                            </bk-checkbox-group>
-                                                            <div class="field-actions">
-                                                                <button class="confirm" @click.prevent.stop="handleFilterChange(field)"> {{ $t('确定') }} </button>
-                                                                <button class="cancel" @click.prevent.stop="handleCancelFilterChange(field)"> {{ $t('取消') }} </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </th>
-                                    </template>
-                                    <template v-else>
-                                        <th :key="fieldIndex">
-                                            <div class="filter-wrapper">
-                                                <div class="filter-label" @click="toggleSort" style="cursor: pointer;">
-                                                    <span class="filter-label-text" :title="field">{{field}}</span>
-                                                    <span class="caret-wrapper" :class="{ 'asc': tableSortTypes[field] === 'asc', 'desc': tableSortTypes[field] === 'desc' }">
-                                                        <i class="sort-caret ascending"></i>
-                                                        <i class="sort-caret descending"></i>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </th>
-                                    </template>
-                                </template>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template v-if="logList.length">
-                                <template v-for="(log, index) of logList">
-                                    <tr @click="toggleDetail(log)" :key="index">
-                                        <td class="log-time">
-                                            <i :class="['paasng-icon ps-toggle-btn', { 'paasng-right-shape': !log.isToggled, 'paasng-down-shape': log.isToggled }]"></i>
-                                            {{log.ts}}
-                                        </td>
-                                        <template v-for="field of fieldSelectedList">
-                                            <td class="field" :key="field">
-                                                <div v-html="log.detail[field] || '--'"></div>
-                                            </td>
-                                        </template>
-                                    </tr>
-                                    <tr v-if="log.isToggled" :key="index">
-                                        <td :colspan="fieldSelectedList.length + 2" style="padding: 0; border-top: none;">
-                                            <ul class="detail-box">
-                                                <li v-for="(keyItem, key) of log.detail" :key="key">
-                                                    <span class="key">{{key}}：</span>
-                                                    <pre class="value" v-html="keyItem || '--'"></pre>
-                                                </li>
-                                            </ul>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </template>
-                            <template v-else>
-                                <tr>
-                                    <td :colspan="fieldSelectedList.length + 2">
-                                        <div class="ps-no-result">
-                                            <div class="text">
-                                                <p>
-                                                    <i class="paasng-icon paasng-empty"></i>
-                                                </p>
-                                                <p> {{ $t('暂无数据') }} </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="ps-page ml0 mr0" v-if="pagination.count">
-                    <bk-pagination
-                        size="small"
-                        align="right"
-                        :current.sync="pagination.current"
-                        :count="pagination.count"
-                        :limit="pagination.limit"
-                        @change="handlePageChange"
-                        @limit-change="handlePageSizeChange">
-                    </bk-pagination>
-                </div>
-            </div>
-        </div>
+    <div
+      v-if="tableFormatFilters.length"
+      class="table-filters"
+    >
+      <ul class="filter-list">
+        <li
+          v-for="(filter) of tableFormatFilters"
+          :key="filter.value"
+        >
+          <span
+            v-bk-tooltips="`${filter.key}：${filter.value}`"
+            class="filter-value"
+          >{{ filter.key }}: <i>{{ filter.value }}</i></span>
+        </li>
+      </ul>
+      <span
+        v-if="tableFilters.length"
+        v-bk-tooltips.right="$t('清空筛选条件')"
+        class="paasng-icon paasng-close-circle-shape clear-filters-btn"
+        @click="handleClearFilters"
+      />
     </div>
+
+    <div
+      ref="logMain"
+      class="log-main"
+    >
+      <div class="log-fields">
+        <p class="title">
+          {{ $t('字段设置') }}
+          <i
+            v-bk-tooltips="$t('仅显示查询结果前200条数据包含的字段，没有出现的字段仍可以通过输入关键字查询')"
+            class="paasng-icon paasng-info-circle tooltip-icon"
+          />
+        </p>
+        <template v-if="fieldList.length">
+          <bk-checkbox-group
+            v-model="fieldSelectedList"
+            class="field-list"
+          >
+            <bk-checkbox
+              v-for="field of fieldList"
+              v-show="!staticFileds.includes(field.name)"
+              :key="field.name"
+              class="ps-field-checkbox"
+              :value="field.name"
+            >
+              <span :title="field.name">{{ field.name }}</span>
+            </bk-checkbox>
+          </bk-checkbox-group>
+        </template>
+        <template v-else>
+          <div
+            class="bk-table-empty-block"
+            style="margin-top: -40px;"
+          >
+            <span class="bk-table-empty-text">
+              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
+              <div class="f12"> {{ $t('暂无数据') }} </div>
+            </span>
+          </div>
+        </template>
+      </div>
+
+      <div
+        ref="logContent"
+        class="log-content"
+      >
+        <div
+          v-bkloading="{ isLoading: isChartLoading }"
+          class="chart-box mb20"
+          style="width: 100%;"
+          @click="hideAllFilterPopover"
+        >
+          <div
+            v-charts="chartData"
+            style="width: 100%; height: 150px;"
+          />
+          <img
+            v-if="!hasChartData"
+            class="chart-placeholder"
+            src="/static/images/chart-default.svg"
+          >
+        </div>
+
+        <!-- 查询结果 start -->
+        <div
+          ref="tableBox"
+          v-bkloading="{ isLoading: isLogListLoading }"
+          class="table-wrapper"
+        >
+          <table
+            id="log-table"
+            :key="renderIndex"
+            class="ps-table ps-table-default ps-log-table"
+          >
+            <thead>
+              <tr>
+                <th
+                  style="min-width: 200px;"
+                  class="time-th"
+                >
+                  <div class="filter-normal-label">
+                    Time
+                  </div>
+                </th>
+                <template v-for="(field, fieldIndex) of fieldSelectedList">
+                  <template v-if="fieldOptions[field] && fieldOptions[field].length">
+                    <th :key="fieldIndex">
+                      <div class="filter-wrapper">
+                        <div class="filter-label">
+                          <span
+                            class="filter-label-text"
+                            :title="field"
+                          >{{ field }}</span>
+                          <div
+                            class="paasng-icon paasng-funnel filter-icon"
+                            @click.stop.prevent="handleShowFilter(field)"
+                          >
+                            <div
+                              v-if="fieldPopoverShow[field]"
+                              :key="renderFilter"
+                              class="filter-popover"
+                            >
+                              <bk-input
+                                v-model="filterKeyword"
+                                :placeholder="$t('搜索')"
+                                :left-icon="'paasng-icon paasng-search'"
+                                :clearable="true"
+                              />
+                              <template v-if="!fieldOptions[field].filter(option => option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1).length">
+                                <div class="not-found">
+                                  {{ $t('没找到') }}
+                                </div>
+                              </template>
+                              <bk-checkbox-group
+                                :key="JSON.stringify(fieldChecked)"
+                                v-model="fieldChecked[field]"
+                              >
+                                <bk-checkbox
+                                  v-for="option of fieldOptions[field]"
+                                  v-show="option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1"
+                                  :key="option.value"
+                                  :value="`${field}:${option.value}`"
+                                >
+                                  <span :title="option.text">{{ option.text }}</span>
+                                </bk-checkbox>
+                              </bk-checkbox-group>
+                              <div class="field-actions">
+                                <button
+                                  class="confirm"
+                                  @click.prevent.stop="handleFilterChange(field)"
+                                >
+                                  {{ $t('确定') }}
+                                </button>
+                                <button
+                                  class="cancel"
+                                  @click.prevent.stop="handleCancelFilterChange(field)"
+                                >
+                                  {{ $t('取消') }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </th>
+                  </template>
+                  <template v-else>
+                    <th :key="fieldIndex">
+                      <div class="filter-wrapper">
+                        <div
+                          class="filter-label"
+                          style="cursor: pointer;"
+                          @click="toggleSort"
+                        >
+                          <span
+                            class="filter-label-text"
+                            :title="field"
+                          >{{ field }}</span>
+                          <span
+                            class="caret-wrapper"
+                            :class="{ 'asc': tableSortTypes[field] === 'asc', 'desc': tableSortTypes[field] === 'desc' }"
+                          >
+                            <i class="sort-caret ascending" />
+                            <i class="sort-caret descending" />
+                          </span>
+                        </div>
+                      </div>
+                    </th>
+                  </template>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-if="logList.length">
+                <template v-for="(log, index) of logList">
+                  <tr
+                    :key="index"
+                    @click="toggleDetail(log)"
+                  >
+                    <td class="log-time">
+                      <i :class="['paasng-icon ps-toggle-btn', { 'paasng-right-shape': !log.isToggled, 'paasng-down-shape': log.isToggled }]" />
+                      {{ log.ts }}
+                    </td>
+                    <template v-for="field of fieldSelectedList">
+                      <td
+                        :key="field"
+                        class="field"
+                      >
+                        <div v-html="log.detail[field] || '--'" />
+                      </td>
+                    </template>
+                  </tr>
+                  <tr
+                    v-if="log.isToggled"
+                    :key="index"
+                  >
+                    <td
+                      :colspan="fieldSelectedList.length + 2"
+                      style="padding: 0; border-top: none;"
+                    >
+                      <ul class="detail-box">
+                        <li
+                          v-for="(keyItem, key) of log.detail"
+                          :key="key"
+                        >
+                          <span class="key">{{ key }}：</span>
+                          <pre
+                            class="value"
+                            v-html="keyItem || '--'"
+                          />
+                        </li>
+                      </ul>
+                    </td>
+                  </tr>
+                </template>
+              </template>
+              <template v-else>
+                <tr>
+                  <td :colspan="fieldSelectedList.length + 2">
+                    <div class="ps-no-result">
+                      <div class="text">
+                        <p>
+                          <i class="paasng-icon paasng-empty" />
+                        </p>
+                        <p> {{ $t('暂无数据') }} </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div
+          v-if="pagination.count"
+          class="ps-page ml0 mr0"
+        >
+          <bk-pagination
+            size="small"
+            align="right"
+            :current.sync="pagination.current"
+            :count="pagination.count"
+            :limit="pagination.limit"
+            @change="handlePageChange"
+            @limit-change="handlePageSizeChange"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -370,7 +478,7 @@
             init () {
                 this.isLoading = true;
                 this.loadData();
-                
+
                 const winHeight = document.body.scrollHeight || window.innerHeight;
                 const height = winHeight - 400;
                 if (height > 400) {
@@ -629,7 +737,7 @@
                         }
                         item.isToggled = false;
                     });
-                    
+
                     this.logList.splice(0, this.logList.length, ...data);
                     this.pagination.count = res.data.page.total;
                     this.pagination.current = page;
@@ -904,7 +1012,7 @@
         }
         width: 100%;
         box-sizing: border-box;
-        
+
         th {
             border-top: none;
             border-right: none;
@@ -1099,7 +1207,7 @@
         padding: 10px 20px;
         margin-top: 20px;
         border-radius: 2px 2px 0 0;
-        
+
         .text {
             margin-left: 5px;
             color: #fff;

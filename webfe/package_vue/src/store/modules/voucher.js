@@ -22,41 +22,41 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取凭证
          */
-        getVoucherList ({ commit, state }, { appCode }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
-            return http.get(url, config);
-        },
-        
-        /**
+    getVoucherList ({ commit, state }, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
+      return http.get(url, config);
+    },
+
+    /**
          * 新增凭证
          */
-        addVoucher ({ commit, state }, { appCode, data }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
-            return http.post(url, data, config);
-        },
+    addVoucher ({ commit, state }, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
+      return http.post(url, data, config);
+    },
 
-        /**
+    /**
          * 更新凭证
          */
-        updateVoucher ({ commit, state }, { appCode, voucherName, data }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${voucherName}`;
-            return http.put(url, data, config);
-        },
+    updateVoucher ({ commit, state }, { appCode, voucherName, data }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${voucherName}`;
+      return http.put(url, data, config);
+    },
 
-        /**
+    /**
          * 删除模块
          */
-        deleteVoucher ({ commit, state }, { appCode, voucherName }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${voucherName}`;
-            return http.delete(url, config);
-        }
+    deleteVoucher ({ commit, state }, { appCode, voucherName }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${voucherName}`;
+      return http.delete(url, config);
     }
+  }
 };

@@ -22,25 +22,25 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取增强服务实例
          */
-        getRegionsServices ({ commit, state }, { region, language }, config = {}) {
-            const url = `${BACKEND_URL}/api/services/regions/${region}/init_templates/${language}`;
-            return http.get(url, config);
-        },
-        
-        /**
+    getRegionsServices ({ commit, state }, { region, language }, config = {}) {
+      const url = `${BACKEND_URL}/api/services/regions/${region}/init_templates/${language}`;
+      return http.get(url, config);
+    },
+
+    /**
          * 获取与应用创建有关的可选项
          */
-        getOptions ({ commit, state }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/creation/options/`;
-            return http.get(url, config);
-        }
+    getOptions ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/creation/options/`;
+      return http.get(url, config);
     }
+  }
 };

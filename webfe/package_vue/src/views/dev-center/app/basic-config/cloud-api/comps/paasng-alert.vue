@@ -1,14 +1,14 @@
 <template>
-    <div :class="['paasng-alert', theme]">
-        <i class="bk-icon icon-info"></i>
-        <div class="alert-content">
-            <div class="alert-title">
-                <slot name="title">
-                    {{ title }}
-                </slot>
-            </div>
-        </div>
+  <div :class="['paasng-alert', theme]">
+    <i class="bk-icon icon-info" />
+    <div class="alert-content">
+      <div class="alert-title">
+        <slot name="title">
+          {{ title }}
+        </slot>
+      </div>
     </div>
+  </div>
 </template>
 <script>
     export default {

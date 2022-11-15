@@ -1,52 +1,81 @@
 <template lang="html">
-    <div class="right-main">
-        <div class="ps-top-bar">
-            <div class="header-title">
-                {{ $t('云API权限管理') }}
-                <div class="guide-wrapper">
-                    <bk-button class="f12" text theme="primary" style="margin-right: 10px;" @click="toLink('gateway')">{{ $t('API 网关接入指引') }}</bk-button>
-                    <bk-button class="f12" text theme="primary" style="margin-right: 10px;" @click="toLink('API')">{{ $t('API 调用指引') }}</bk-button>
-                    <bk-button class="f12" text theme="primary" @click="toLink('FAQ')">FAQ</bk-button>
-                </div>
-            </div>
+  <div class="right-main">
+    <div class="ps-top-bar">
+      <div class="header-title">
+        {{ $t('云API权限管理') }}
+        <div class="guide-wrapper">
+          <bk-button
+            class="f12"
+            text
+            theme="primary"
+            style="margin-right: 10px;"
+            @click="toLink('gateway')"
+          >
+            {{ $t('API 网关接入指引') }}
+          </bk-button>
+          <bk-button
+            class="f12"
+            text
+            theme="primary"
+            style="margin-right: 10px;"
+            @click="toLink('API')"
+          >
+            {{ $t('API 调用指引') }}
+          </bk-button>
+          <bk-button
+            class="f12"
+            text
+            theme="primary"
+            @click="toLink('FAQ')"
+          >
+            FAQ
+          </bk-button>
         </div>
-        <section class="app-container middle">
-            <paas-content-loader
-                :is-loading="isLoading"
-                placeholder="cloud-api-index-loading"
-                :offset-top="12"
-                :key="pageKey"
-                :delay="1000">
-                <bk-tab
-                    :active.sync="active"
-                    type="unborder-card"
-                    @tab-change="handleTabChange">
-                    <bk-tab-panel
-                        v-for="(panel, index) in panels"
-                        v-bind="panel"
-                        :key="index">
-                    </bk-tab-panel>
-                </bk-tab>
-                <render-api
-                    v-if="active === 'gatewayApi'"
-                    :key="comKey"
-                    :app-code="appCode"
-                    @data-ready="handlerDataReady" />
-                <render-api
-                    v-if="active === 'componentApi'"
-                    :key="comKey"
-                    api-type="component"
-                    :app-code="appCode"
-                    @data-ready="handlerDataReady" />
-                <app-perm
-                    v-if="active === 'appPerm'"
-                    @data-ready="handlerDataReady" />
-                <apply-record
-                    v-if="active === 'applyRecord'"
-                    @data-ready="handlerDataReady" />
-            </paas-content-loader>
-        </section>
+      </div>
     </div>
+    <section class="app-container middle">
+      <paas-content-loader
+        :key="pageKey"
+        :is-loading="isLoading"
+        placeholder="cloud-api-index-loading"
+        :offset-top="12"
+        :delay="1000"
+      >
+        <bk-tab
+          :active.sync="active"
+          type="unborder-card"
+          @tab-change="handleTabChange"
+        >
+          <bk-tab-panel
+            v-for="(panel, index) in panels"
+            :key="index"
+            v-bind="panel"
+          />
+        </bk-tab>
+        <render-api
+          v-if="active === 'gatewayApi'"
+          :key="comKey"
+          :app-code="appCode"
+          @data-ready="handlerDataReady"
+        />
+        <render-api
+          v-if="active === 'componentApi'"
+          :key="comKey"
+          api-type="component"
+          :app-code="appCode"
+          @data-ready="handlerDataReady"
+        />
+        <app-perm
+          v-if="active === 'appPerm'"
+          @data-ready="handlerDataReady"
+        />
+        <apply-record
+          v-if="active === 'applyRecord'"
+          @data-ready="handlerDataReady"
+        />
+      </paas-content-loader>
+    </section>
+  </div>
 </template>
 
 <script>

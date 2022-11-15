@@ -1,80 +1,130 @@
 <template lang="html">
-    <div>
-        <div class="container biz-create-success">
-            <div class="success-wrapper">
-                <div class="info">
-                    <p>
-                        <i class="paasng-icon paasng-check-circle-shape text-success"></i>
-                    </p>
-                    <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
-                    <p>
-                        {{ $t('常用操作：') }}
-                        <router-link :to="{ name: 'appSummary', params: { id: appCode } }" class="link">
-                            {{ $t('查看应用概览') }}
-                        </router-link>
-                        <span style="position: relative; top: -1px;">|</span>
-                        <router-link :to="{ name: 'appDeploy', params: { id: appCode } }" class="link">
-                            {{ $t('部署应用') }}
-                        </router-link>
-                        <span style="position: relative; top: -1px;">|</span>
-                        <router-link :to="{ name: 'appRoles', params: { id: appCode } }" class="link">
-                            {{ $t('添加成员') }}
-                        </router-link>
-                    </p>
-                </div>
-                <div class="content">
-                    <div class="input-wrapper" v-if="application.config_info.require_templated_source && downloadableAddress">
-                        <div class="input-item">
-                            <span class="url-label"> {{ $t('应用初始化模板地址：') }} </span>
-                            <input v-bk-tooltips.top="downloadableAddress" :class="['ps-form-control', 'svn-input', localLanguage === 'en' ? 'svn-input-en' : '']" type="text" v-model="downloadableAddress" />
-                        </div>
-                        <div class="btn-item">
-                            <a target="_blank" class="btn-checkout ps-btn ps-btn-primary" :href="downloadableAddress"> {{ $t('点击下载') }} </a>
-                        </div>
-                    </div>
-                    <div class="btn-check-svn spacing-x4" v-if="application.type === 'bk_plugin'">
-                        <div class="tips-wrapper">
-                            <div class="tips">
-                                <code>{{ $t('初始化插件项目') }}
-                                    {{pluginTips}}
-                                </code>
-                                <i :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']" v-copy="pluginTips"></i>
-                            </div>
-                            <div class="tips">
-                                <code># {{$t('添加远程仓库地址并完成推送')}}
-                                    {{pushTips}}
-                                </code>
-                                <i :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']" v-copy="pushTips"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="btn-check-svn spacing-x4" v-if="application.type !== 'bk_plugin' && isShowTips">
-                        <p class="log-title"> {{ $t('使用 Git 命令推送代码到远程仓库') }} </p>
-                        <div class="tips-wrapper">
-                            <div class="tips">
-                                <code># {{$t('下载并解压代码到本地目录')}}
-                                    {{downloadTips}}
-                                </code>
-                                <i :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']" v-copy="downloadTips"></i>
-                            </div>
-                            <div class="tips">
-                                <code># {{$t('添加远程仓库地址并完成推送')}}
-                                    {{pushTips}}
-                                </code>
-                                <i :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']" v-copy="pushTips"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <template v-if="advisedDocLinks.length > 0">
-                        <p class="help-doc"> {{ $t('帮助文档') }} </p>
-                        <p v-for="(link, linkIndex) in advisedDocLinks" :key="linkIndex">
-                            <a :href="link.location" :title="link.short_description" target="_blank">{{ link.title }}</a>
-                        </p>
-                    </template>
-                </div>
-            </div>
+  <div>
+    <div class="container biz-create-success">
+      <div class="success-wrapper">
+        <div class="info">
+          <p>
+            <i class="paasng-icon paasng-check-circle-shape text-success" />
+          </p>
+          <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>
+            {{ $t('常用操作：') }}
+            <router-link
+              :to="{ name: 'appSummary', params: { id: appCode } }"
+              class="link"
+            >
+              {{ $t('查看应用概览') }}
+            </router-link>
+            <span style="position: relative; top: -1px;">|</span>
+            <router-link
+              :to="{ name: 'appDeploy', params: { id: appCode } }"
+              class="link"
+            >
+              {{ $t('部署应用') }}
+            </router-link>
+            <span style="position: relative; top: -1px;">|</span>
+            <router-link
+              :to="{ name: 'appRoles', params: { id: appCode } }"
+              class="link"
+            >
+              {{ $t('添加成员') }}
+            </router-link>
+          </p>
         </div>
+        <div class="content">
+          <div
+            v-if="application.config_info.require_templated_source && downloadableAddress"
+            class="input-wrapper"
+          >
+            <div class="input-item">
+              <span class="url-label"> {{ $t('应用初始化模板地址：') }} </span>
+              <input
+                v-model="downloadableAddress"
+                v-bk-tooltips.top="downloadableAddress"
+                :class="['ps-form-control', 'svn-input', localLanguage === 'en' ? 'svn-input-en' : '']"
+                type="text"
+              >
+            </div>
+            <div class="btn-item">
+              <a
+                target="_blank"
+                class="btn-checkout ps-btn ps-btn-primary"
+                :href="downloadableAddress"
+              > {{ $t('点击下载') }} </a>
+            </div>
+          </div>
+          <div
+            v-if="application.type === 'bk_plugin'"
+            class="btn-check-svn spacing-x4"
+          >
+            <div class="tips-wrapper">
+              <div class="tips">
+                <code>{{ $t('初始化插件项目') }}
+                  {{ pluginTips }}
+                </code>
+                <i
+                  v-copy="pluginTips"
+                  :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
+                />
+              </div>
+              <div class="tips">
+                <code># {{ $t('添加远程仓库地址并完成推送') }}
+                  {{ pushTips }}
+                </code>
+                <i
+                  v-copy="pushTips"
+                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="application.type !== 'bk_plugin' && isShowTips"
+            class="btn-check-svn spacing-x4"
+          >
+            <p class="log-title">
+              {{ $t('使用 Git 命令推送代码到远程仓库') }}
+            </p>
+            <div class="tips-wrapper">
+              <div class="tips">
+                <code># {{ $t('下载并解压代码到本地目录') }}
+                  {{ downloadTips }}
+                </code>
+                <i
+                  v-copy="downloadTips"
+                  :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
+                />
+              </div>
+              <div class="tips">
+                <code># {{ $t('添加远程仓库地址并完成推送') }}
+                  {{ pushTips }}
+                </code>
+                <i
+                  v-copy="pushTips"
+                  :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']"
+                />
+              </div>
+            </div>
+          </div>
+          <template v-if="advisedDocLinks.length > 0">
+            <p class="help-doc">
+              {{ $t('帮助文档') }}
+            </p>
+            <p
+              v-for="(link, linkIndex) in advisedDocLinks"
+              :key="linkIndex"
+            >
+              <a
+                :href="link.location"
+                :title="link.short_description"
+                target="_blank"
+              >{{ link.title }}</a>
+            </p>
+          </template>
+        </div>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>

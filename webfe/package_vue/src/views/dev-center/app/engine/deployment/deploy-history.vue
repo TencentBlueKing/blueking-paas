@@ -1,128 +1,204 @@
 <template>
-    <paas-content-loader :is-loading="isLoading" placeholder="deploy-inner-history-loading" :offset-top="0" :offset-left="-8" class="deploy-history m20">
-        <bk-form form-type="inline">
-            <bk-form-item :label="$t('环境')" style="vertical-align: top;">
-                <bk-select
-                    v-model="choosedEnv"
-                    style="width: 150px;"
-                    :clearable="false">
-                    <bk-option
-                        v-for="(option, index) in envList"
-                        :key="index"
-                        :id="option.id"
-                        :name="option.text">
-                    </bk-option>
-                </bk-select>
-            </bk-form-item>
-            <bk-form-item :label="$t('操作人')" style="vertical-align: top;">
-                <user
-                    style="width: 350px;"
-                    :placeholder="$t('请选择')"
-                    :max-data="1"
-                    v-model="personnelSelectorList">
-                </user>
-            </bk-form-item>
-            <bk-form-item label="" style="vertical-align: top;">
-                <bk-button theme="primary" type="button" @click.stop.prevent="getDeployHistory(1)"> {{ $t('查询') }} </bk-button>
-            </bk-form-item>
-        </bk-form>
-        <bk-table
-            class="mt15 ps-history-list"
-            :data="historyList"
-            :outer-border="false"
-            :size="'small'"
-            :pagination="pagination"
-            :height="historyList.length ? '' : '520px'"
-            v-bkloading="{ isLoading: isPageLoading }"
-            @row-click="handleShowLog"
-            @page-limit-change="handlePageLimitChange"
-            @page-change="handlePageChange">
-            <bk-table-column :label="$t('部署环境')" prop="name">
-                <template slot-scope="props">
-                    <span v-if="props.row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
-                    <span v-else> {{ $t('生产环境') }} </span>
-                </template>
-            </bk-table-column>
-            <bk-table-column width="150" :label="$t('分支')" prop="name" :show-overflow-tooltip="false">
-                <template slot-scope="props">
-                    <bk-popover>
-                        <span class="branch-name">{{props.row.name}}</span>
-                        <div slot="content">
-                            <p class="flex"><span class="label"> {{ $t('部署分支：') }} </span><span class="value">{{props.row.name}}</span></p>
-                            <p class="flex"><span class="label"> {{ $t('仓库地址：') }} </span><span class="value">{{props.row.url}}</span></p>
-                        </div>
-                    </bk-popover>
-                </template>
-            </bk-table-column>
-            <!-- <bk-table-column label="部署目录">
+  <paas-content-loader
+    :is-loading="isLoading"
+    placeholder="deploy-inner-history-loading"
+    :offset-top="0"
+    :offset-left="-8"
+    class="deploy-history m20"
+  >
+    <bk-form form-type="inline">
+      <bk-form-item
+        :label="$t('环境')"
+        style="vertical-align: top;"
+      >
+        <bk-select
+          v-model="choosedEnv"
+          style="width: 150px;"
+          :clearable="false"
+        >
+          <bk-option
+            v-for="(option, index) in envList"
+            :id="option.id"
+            :key="index"
+            :name="option.text"
+          />
+        </bk-select>
+      </bk-form-item>
+      <bk-form-item
+        :label="$t('操作人')"
+        style="vertical-align: top;"
+      >
+        <user
+          v-model="personnelSelectorList"
+          style="width: 350px;"
+          :placeholder="$t('请选择')"
+          :max-data="1"
+        />
+      </bk-form-item>
+      <bk-form-item
+        label=""
+        style="vertical-align: top;"
+      >
+        <bk-button
+          theme="primary"
+          type="button"
+          @click.stop.prevent="getDeployHistory(1)"
+        >
+          {{ $t('查询') }}
+        </bk-button>
+      </bk-form-item>
+    </bk-form>
+    <bk-table
+      v-bkloading="{ isLoading: isPageLoading }"
+      class="mt15 ps-history-list"
+      :data="historyList"
+      :outer-border="false"
+      :size="'small'"
+      :pagination="pagination"
+      :height="historyList.length ? '' : '520px'"
+      @row-click="handleShowLog"
+      @page-limit-change="handlePageLimitChange"
+      @page-change="handlePageChange"
+    >
+      <bk-table-column
+        :label="$t('部署环境')"
+        prop="name"
+      >
+        <template slot-scope="props">
+          <span v-if="props.row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
+          <span v-else> {{ $t('生产环境') }} </span>
+        </template>
+      </bk-table-column>
+      <bk-table-column
+        width="150"
+        :label="$t('分支')"
+        prop="name"
+        :show-overflow-tooltip="false"
+      >
+        <template slot-scope="props">
+          <bk-popover>
+            <span class="branch-name">{{ props.row.name }}</span>
+            <div slot="content">
+              <p class="flex">
+                <span class="label"> {{ $t('部署分支：') }} </span><span class="value">{{ props.row.name }}</span>
+              </p>
+              <p class="flex">
+                <span class="label"> {{ $t('仓库地址：') }} </span><span class="value">{{ props.row.url }}</span>
+              </p>
+            </div>
+          </bk-popover>
+        </template>
+      </bk-table-column>
+      <!-- <bk-table-column label="部署目录">
                 <template slot-scope="{ row }">
                     {{ row.source_dir || '--' }}
                 </template>
             </bk-table-column> -->
-            <bk-table-column :label="$t('版本')" prop="revision" :show-overflow-tooltip="true"></bk-table-column>
-            <bk-table-column :label="$t('操作人')" prop="operator.username"></bk-table-column>
-            <bk-table-column :label="$t('类型')" prop="operation_act"></bk-table-column>
-            <bk-table-column :label="$t('耗时')">
-                <template slot-scope="{ row }">
-                    {{ computedDeployTime(row) }}
-                </template>
-            </bk-table-column>
-            <bk-table-column :label="$t('结果')">
-                <template slot-scope="props">
-                    <div v-if="props.row.status === 'successful'">
-                        <span class="dot success"></span> {{ $t('成功') }} </div>
-                    <div v-if="props.row.status === 'failed'">
-                        <span class="dot danger"></span> {{ $t('失败') }} </div>
-                    <div v-if="props.row.status === 'interrupted'">
-                        <span class="dot warning"></span> {{ $t('中断') }} </div>
-                    <div v-if="props.row.status === 'pending' && props.row.operation_type === 'online'">
-                        <span class="dot warning"></span> {{ $t('部署中') }} </div>
-                    <div v-if="props.row.status === 'pending' && props.row.operation_type === 'offline'">
-                        <span class="dot warning"></span> {{ $t('下架中') }} </div>
-                </template>
-            </bk-table-column>
-            <bk-table-column width="180" :label="$t('操作时间')" prop="created"></bk-table-column>
-        </bk-table>
+      <bk-table-column
+        :label="$t('版本')"
+        prop="revision"
+        :show-overflow-tooltip="true"
+      />
+      <bk-table-column
+        :label="$t('操作人')"
+        prop="operator.username"
+      />
+      <bk-table-column
+        :label="$t('类型')"
+        prop="operation_act"
+      />
+      <bk-table-column :label="$t('耗时')">
+        <template slot-scope="{ row }">
+          {{ computedDeployTime(row) }}
+        </template>
+      </bk-table-column>
+      <bk-table-column :label="$t('结果')">
+        <template slot-scope="props">
+          <div v-if="props.row.status === 'successful'">
+            <span class="dot success" /> {{ $t('成功') }}
+          </div>
+          <div v-if="props.row.status === 'failed'">
+            <span class="dot danger" /> {{ $t('失败') }}
+          </div>
+          <div v-if="props.row.status === 'interrupted'">
+            <span class="dot warning" /> {{ $t('中断') }}
+          </div>
+          <div v-if="props.row.status === 'pending' && props.row.operation_type === 'online'">
+            <span class="dot warning" /> {{ $t('部署中') }}
+          </div>
+          <div v-if="props.row.status === 'pending' && props.row.operation_type === 'offline'">
+            <span class="dot warning" /> {{ $t('下架中') }}
+          </div>
+        </template>
+      </bk-table-column>
+      <bk-table-column
+        width="180"
+        :label="$t('操作时间')"
+        prop="created"
+      />
+    </bk-table>
 
-        <bk-sideslider
-            :title="historySideslider.title"
-            :width="920"
-            :is-show.sync="historySideslider.isShow"
-            :quick-close="true"
-            @hidden="errorTips = {}">
-            <div slot="content" class="deploy-detail" v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }">
-                <template v-if="!(isLogLoading || isTimelineLoading)">
-                    <deploy-timeline
-                        :list="timeLineList"
-                        :disabled="true"
-                        class="mt20 ml15 mr15"
-                        style="min-width: 250px;"
-                        v-if="timeLineList.length"
-                    />
-                    <div class="paas-log-box">
-                        <div class="wrapper danger" v-if="isMatchedSolutionsFound">
-                            <div class="fl">
-                                <span class="paasng-icon paasng-info-circle-shape"></span>
-                            </div>
-                            <section style="position: relative; margin-left: 50px;">
-                                <p class="deploy-pending-text"> {{ $t('部署失败') }} </p>
-                                <p class="deploy-text-wrapper">
-                                    <span class="reason mr5">{{errorTips.possible_reason}}</span>
-                                    <span v-for="(help, index) in errorTips.helpers" :key="index">
-                                        <a :href="help.link" target="_blank" class="mr10">
-                                            {{help.text}}
-                                        </a>
-                                    </span>
-                                </p>
-                            </section>
-                        </div>
-                        <bk-alert style="margin: -20px -20px 10px -20px; border-radius: 0;" type="warning" :title="$t('仅展示准备阶段、构建阶段日志')" v-else></bk-alert>
-                        <pre v-html="curDeployLog"></pre>
-                    </div>
-                </template>
+    <bk-sideslider
+      :title="historySideslider.title"
+      :width="920"
+      :is-show.sync="historySideslider.isShow"
+      :quick-close="true"
+      @hidden="errorTips = {}"
+    >
+      <div
+        slot="content"
+        v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
+        class="deploy-detail"
+      >
+        <template v-if="!(isLogLoading || isTimelineLoading)">
+          <deploy-timeline
+            v-if="timeLineList.length"
+            :list="timeLineList"
+            :disabled="true"
+            class="mt20 ml15 mr15"
+            style="min-width: 250px;"
+          />
+          <div class="paas-log-box">
+            <div
+              v-if="isMatchedSolutionsFound"
+              class="wrapper danger"
+            >
+              <div class="fl">
+                <span class="paasng-icon paasng-info-circle-shape" />
+              </div>
+              <section style="position: relative; margin-left: 50px;">
+                <p class="deploy-pending-text">
+                  {{ $t('部署失败') }}
+                </p>
+                <p class="deploy-text-wrapper">
+                  <span class="reason mr5">{{ errorTips.possible_reason }}</span>
+                  <span
+                    v-for="(help, index) in errorTips.helpers"
+                    :key="index"
+                  >
+                    <a
+                      :href="help.link"
+                      target="_blank"
+                      class="mr10"
+                    >
+                      {{ help.text }}
+                    </a>
+                  </span>
+                </p>
+              </section>
             </div>
-        </bk-sideslider>
-    </paas-content-loader>
+            <bk-alert
+              v-else
+              style="margin: -20px -20px 10px -20px; border-radius: 0;"
+              type="warning"
+              :title="$t('仅展示准备阶段、构建阶段日志')"
+            />
+            <pre v-html="curDeployLog" />
+          </div>
+        </template>
+      </div>
+    </bk-sideslider>
+  </paas-content-loader>
 </template>
 
 <script>

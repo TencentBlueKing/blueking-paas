@@ -17,49 +17,49 @@
 */
 
 export const APP_TYPES = {
-    'dj18_hello_world': 'backend',
-    'dj18_with_auth': 'web',
-    'dj18_sample_with_auth': 'web',
-    'laveral51_with_auth': 'web',
-    'laveral51_sample_with_auth': 'web',
-    'go_gin_hello_world': 'backend',
-    'nodejs_express_hello_world': 'backend'
+  'dj18_hello_world': 'backend',
+  'dj18_with_auth': 'web',
+  'dj18_sample_with_auth': 'web',
+  'laveral51_with_auth': 'web',
+  'laveral51_sample_with_auth': 'web',
+  'go_gin_hello_world': 'backend',
+  'nodejs_express_hello_world': 'backend'
 };
 export const APP_LANGUAGES_IMAGE = {
-    'Python': {
-        'normal': '/static/images/python-1.png',
-        'hover': '/static/images/python.png'
-    },
-    'PHP': {
-        'normal': '/static/images/php.png',
-        'hover': '/static/images/php-1.png'
-    },
-    'Go': {
-        'normal': '/static/images/golang.png',
-        'hover': '/static/images/golang-1.png'
-    },
-    'NodeJS': {
-        'normal': '/static/images/nodejs.png',
-        'hover': '/static/images/nodejs-1.png'
-    }
+  'Python': {
+    'normal': '/static/images/python-1.png',
+    'hover': '/static/images/python.png'
+  },
+  'PHP': {
+    'normal': '/static/images/php.png',
+    'hover': '/static/images/php-1.png'
+  },
+  'Go': {
+    'normal': '/static/images/golang.png',
+    'hover': '/static/images/golang-1.png'
+  },
+  'NodeJS': {
+    'normal': '/static/images/nodejs.png',
+    'hover': '/static/images/nodejs-1.png'
+  }
 };
 
 export const DEFAULT_APP_SOURCE_CONTROL_TYPES = [
-    {
-        'value': 'bk_svn',
-        'name': '蓝鲸 SVN 服务',
-        'description': '（蓝鲸平台提供的源码托管服务）'
-    }
+  {
+    'value': 'bk_svn',
+    'name': '蓝鲸 SVN 服务',
+    'description': '（蓝鲸平台提供的源码托管服务）'
+  }
 ];
 
 export const APP_ROLE_NAMES = {
-    'administrator': '管理员',
-    'developer': '开发者',
-    'operator': '运营者'
+  'administrator': '管理员',
+  'developer': '开发者',
+  'operator': '运营者'
 };
 
 export const DEFAULR_LANG_NAME = {
-    'Python': 'Python开发框架',
-    'Go': 'Golang开发框架',
-    'NodeJS': 'NodeJS开发框架'
+  'Python': 'Python开发框架',
+  'Go': 'Golang开发框架',
+  'NodeJS': 'NodeJS开发框架'
 };

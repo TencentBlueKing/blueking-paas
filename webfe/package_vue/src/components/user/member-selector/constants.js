@@ -18,21 +18,21 @@
 
 const is = domain => (window.location.origin.indexOf(domain) > -1);
 const getFallbackURL = () => {
-    const devMode = process.env.NODE_ENV === 'dev';
-    if (devMode) {
-        return `${window.location.origin}/member-selector-fallback.html`;
-    }
-    if (is(`.${window.GLOBAL_CONFIG.OA_DOMAIN}`)) {
-        return `http://open.${window.GLOBAL_CONFIG.OA_DOMAIN}/static_api/v3/components_vue/2.0/member-selector-fallback.html`;
-    }
-    if (is(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`)) {
-        return `http://bkrepo.${window.GLOBAL_CONFIG.WOA_DOMAIN}/generic/bkcdn/static/bk-magicbox/member-selector-fallback.html`;
-    }
-    if (is(`.${window.GLOBAL_CONFIG.IED_DOMAIN}`)) {
-        return `http://o.${window.GLOBAL_CONFIG.IED_DOMAIN}/static_api/v3/components_vue/2.0/member-selector-fallback.html`;
-    }
+  const devMode = process.env.NODE_ENV === 'dev';
+  if (devMode) {
+    return `${window.location.origin}/member-selector-fallback.html`;
+  }
+  if (is(`.${window.GLOBAL_CONFIG.OA_DOMAIN}`)) {
+    return `http://open.${window.GLOBAL_CONFIG.OA_DOMAIN}/static_api/v3/components_vue/2.0/member-selector-fallback.html`;
+  }
+  if (is(`.${window.GLOBAL_CONFIG.WOA_DOMAIN}`)) {
+    return `http://bkrepo.${window.GLOBAL_CONFIG.WOA_DOMAIN}/generic/bkcdn/static/bk-magicbox/member-selector-fallback.html`;
+  }
+  if (is(`.${window.GLOBAL_CONFIG.IED_DOMAIN}`)) {
+    return `http://o.${window.GLOBAL_CONFIG.IED_DOMAIN}/static_api/v3/components_vue/2.0/member-selector-fallback.html`;
+  }
 };
 export default function () {
-    const curl = `${getFallbackURL()}?_t=${Date.now()}&from=${window.location.origin}&preview=true`;
-    return `${window.location.protocol}//login.o.${window.GLOBAL_CONFIG.OA_DOMAIN}/plain/?size=big&c_url=${encodeURIComponent(curl)}`;
+  const curl = `${getFallbackURL()}?_t=${Date.now()}&from=${window.location.origin}&preview=true`;
+  return `${window.location.protocol}//login.o.${window.GLOBAL_CONFIG.OA_DOMAIN}/plain/?size=big&c_url=${encodeURIComponent(curl)}`;
 }

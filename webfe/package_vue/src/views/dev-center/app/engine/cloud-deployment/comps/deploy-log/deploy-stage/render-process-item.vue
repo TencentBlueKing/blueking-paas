@@ -1,49 +1,83 @@
 <template>
-    <div class="paas-deploy-process-item-wrapper">
-        <section class="header" @click.stop="handleExpanded">
-            <i class="paasng-icon expanded-icon" :class="curExpanded ? 'paasng-down-shape' : 'paasng-right-shape'"></i>
-            <span class="process-title">{{ title }}</span>
-            <span class="process-sub-title">({{ subTitle }})</span>
-            <StatusItem :status="status" />
-            <div :class="['refresh-wrapper', { 'reset-right': !canFullScreen }]" v-if="curExpanded" @click.stop="handleRefresh">
-                <i class="paasng-icon paasng-refresh"></i>
-            </div>
-            <div class="screen-wrapper" v-if="canFullScreen" @click.stop="handleFullScreen">
-                <i class="paasng-icon paasng-full-screen-new"></i>
-            </div>
-        </section>
-        <section class="content" v-if="curExpanded">
-            <section
-                v-bkloading="{ isLoading: instanceLogLoading, color: '#2a2b2f' }">
-                <render-stage
-                    :data="logs"
-                    ext-cls="deploy-process-instance-log-cls"
-                    v-if="!instanceLogLoading && logs.length > 0" />
-                <div
-                    class="log-empty"
-                    v-if="!instanceLogLoading && logs.length < 1">
-                    {{ $t('暂无日志') }}
-                </div>
-            </section>
-        </section>
+  <div class="paas-deploy-process-item-wrapper">
+    <section
+      class="header"
+      @click.stop="handleExpanded"
+    >
+      <i
+        class="paasng-icon expanded-icon"
+        :class="curExpanded ? 'paasng-down-shape' : 'paasng-right-shape'"
+      />
+      <span class="process-title">{{ title }}</span>
+      <span class="process-sub-title">({{ subTitle }})</span>
+      <StatusItem :status="status" />
+      <div
+        v-if="curExpanded"
+        :class="['refresh-wrapper', { 'reset-right': !canFullScreen }]"
+        @click.stop="handleRefresh"
+      >
+        <i class="paasng-icon paasng-refresh" />
+      </div>
+      <div
+        v-if="canFullScreen"
+        class="screen-wrapper"
+        @click.stop="handleFullScreen"
+      >
+        <i class="paasng-icon paasng-full-screen-new" />
+      </div>
+    </section>
+    <section
+      v-if="curExpanded"
+      class="content"
+    >
+      <section
+        v-bkloading="{ isLoading: instanceLogLoading, color: '#2a2b2f' }"
+      >
+        <render-stage
+          v-if="!instanceLogLoading && logs.length > 0"
+          :data="logs"
+          ext-cls="deploy-process-instance-log-cls"
+        />
+        <div
+          v-if="!instanceLogLoading && logs.length < 1"
+          class="log-empty"
+        >
+          {{ $t('暂无日志') }}
+        </div>
+      </section>
+    </section>
 
-        <bk-dialog
-            v-model="fullDialogVisiable"
-            fullscreen
-            :show-footer="false"
-            ext-cls="paas-deploy-log-full-screen-cls"
-            title="">
-            <div class="screen-icon-wrapper" @click="fullDialogVisiable = false">
-                <i class="paasng-icon paasng-restore-screen"></i>
-            </div>
-            <div class="dialog-log-content" ref="dialogContent">
-                <p v-for="(item, index) in logs" :key="index" class="log-item">
-                    <span v-html="item.timestamp"></span>
-                    <span v-html="item.message" style="margin-left: 25px;"></span>
-                </p>
-            </div>
-        </bk-dialog>
-    </div>
+    <bk-dialog
+      v-model="fullDialogVisiable"
+      fullscreen
+      :show-footer="false"
+      ext-cls="paas-deploy-log-full-screen-cls"
+      title=""
+    >
+      <div
+        class="screen-icon-wrapper"
+        @click="fullDialogVisiable = false"
+      >
+        <i class="paasng-icon paasng-restore-screen" />
+      </div>
+      <div
+        ref="dialogContent"
+        class="dialog-log-content"
+      >
+        <p
+          v-for="(item, index) in logs"
+          :key="index"
+          class="log-item"
+        >
+          <span v-html="item.timestamp" />
+          <span
+            style="margin-left: 25px;"
+            v-html="item.message"
+          />
+        </p>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin.js';

@@ -22,94 +22,94 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取代码库类型
          */
-        getCodeTypes ({ commit, state }, config = {}) {
-            const url = `${BACKEND_URL}/api/sourcectl/providers/`;
-            return http.get(url, config);
-        },
+    getCodeTypes ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/sourcectl/providers/`;
+      return http.get(url, config);
+    },
 
-        getModuleCodeTypes ({ commit, state }, { appCode, moduleId }, config = {}) {
-            const url = `${BACKEND_URL}/api/sourcectl/applications/${appCode}/modules/${moduleId}/providers/`;
-            return http.get(url, config);
-        },
+    getModuleCodeTypes ({ commit, state }, { appCode, moduleId }, config = {}) {
+      const url = `${BACKEND_URL}/api/sourcectl/applications/${appCode}/modules/${moduleId}/providers/`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 获取支持的语言信息
          */
-        getLanguageInfo ({ commit, state }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/regions/specs`;
-            return http.get(url, config);
-        },
+    getLanguageInfo ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/regions/specs`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 创建应用模块
          */
-        createAppModule ({ commit, state }, { appCode, data }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/`;
-            return http.post(url, data, config);
-        },
+    createAppModule ({ commit, state }, { appCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/`;
+      return http.post(url, data, config);
+    },
 
-        /**
+    /**
          * 获取模块基本信息
          */
-        getModuleBasicInfo ({ commit, state }, { appCode, modelName }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}`;
-            return http.get(url, config);
-        },
+    getModuleBasicInfo ({ commit, state }, { appCode, modelName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 删除模块
          */
-        deleteModule ({ commit, state }, { appCode, moduleName }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/`;
-            return http.delete(url, config);
-        },
+    deleteModule ({ commit, state }, { appCode, moduleName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/`;
+      return http.delete(url, config);
+    },
 
-        /**
+    /**
          * 切换源码库
          */
-        switchRepo ({ commit, state }, { appCode, modelName, data }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/sourcectl/repo/modify/`;
-            return http.post(url, data, config);
-        },
+    switchRepo ({ commit, state }, { appCode, modelName, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/sourcectl/repo/modify/`;
+      return http.post(url, data, config);
+    },
 
-        /**
+    /**
          * 设置主模块
          */
-        setMainModule ({ commit, state }, { appCode, modelName }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/set_default/`;
-            return http.post(url, {}, config);
-        },
+    setMainModule ({ commit, state }, { appCode, modelName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/set_default/`;
+      return http.post(url, {}, config);
+    },
 
-        /**
+    /**
          * 设置部署限制
          */
-        setDeployLimit ({ commit, state }, { appCode, modelName, params }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/`;
-            return http.post(url, params, config);
-        },
+    setDeployLimit ({ commit, state }, { appCode, modelName, params }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/`;
+      return http.post(url, params, config);
+    },
 
-        /**
+    /**
          * 获取环境保护
          */
-        getEnvProtection ({ commit, state }, { appCode, modelName }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/?operation=deploy`;
-            return http.get(url, {}, config);
-        },
+    getEnvProtection ({ commit, state }, { appCode, modelName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/env_protection/?operation=deploy`;
+      return http.get(url, {}, config);
+    },
 
-        /**
+    /**
          * 获取应用模块域名信息
          */
-        getModuleDomainInfo ({ commit, state }, { appCode }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/custom_domain_entrance/`;
-            return http.get(url, {}, config);
-        }
+    getModuleDomainInfo ({ commit, state }, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/custom_domain_entrance/`;
+      return http.get(url, {}, config);
     }
+  }
 };

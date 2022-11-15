@@ -1,23 +1,37 @@
 <template lang="html">
-    <div class="right-main" :key="appCode">
-        <app-top-bar
-            :title="$t('告警记录')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-            <div slot="right" style="line-height: 50px;">
-                <bk-button
-                    text
-                    theme="primary"
-                    size="small"
-                    @click="handleHelp"> {{ $t('文档：如何处理常见告警？') }}
-                </bk-button>
-            </div>
-        </app-top-bar>
-        <paas-content-loader :is-loading="isLoading" placeholder="alarm-record-loading" :offset-top="10" class="app-container middle alarm-middle">
-            <alarm-record @data-ready="handleDataReady" />
-        </paas-content-loader>
-    </div>
+  <div
+    :key="appCode"
+    class="right-main"
+  >
+    <app-top-bar
+      :title="$t('告警记录')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    >
+      <div
+        slot="right"
+        style="line-height: 50px;"
+      >
+        <bk-button
+          text
+          theme="primary"
+          size="small"
+          @click="handleHelp"
+        >
+          {{ $t('文档：如何处理常见告警？') }}
+        </bk-button>
+      </div>
+    </app-top-bar>
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="alarm-record-loading"
+      :offset-top="10"
+      class="app-container middle alarm-middle"
+    >
+      <alarm-record @data-ready="handleDataReady" />
+    </paas-content-loader>
+  </div>
 </template>
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin';

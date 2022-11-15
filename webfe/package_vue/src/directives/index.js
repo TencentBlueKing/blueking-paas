@@ -20,14 +20,14 @@ import copy from './copy';
 import charts from './charts';
 
 const directives = {
-    copy,
-    charts
+  copy,
+  charts
 };
 
 export default {
-    install (Vue) {
-        Object.keys(directives).forEach((key) => {
-            Vue.directive(key, directives[key]);
-        });
-    }
+  install (Vue) {
+    Object.keys(directives).forEach((key) => {
+      Vue.directive(key, directives[key]);
+    });
+  }
 };

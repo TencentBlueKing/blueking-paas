@@ -1,77 +1,143 @@
 <template lang="html">
-    <div class="git-main">
-        <div slot="loadingContent" class="middle">
-            <section v-for="(oauth, index) in oauth2Backends" :key="index">
-                <div class="middle-oauth-title">
-                    <h4>{{titleInfo[oauth.name]}}</h4>
-                    <p class="ps-text-info">{{infoMap[oauth.name]}}</p>
-                </div>
-                <div class="backend-wrapper">
-                    <ul class="backend-content-wrapper clearfix">
-                        <template v-if="oauth.token_list.length">
-                            <li class="backend-list"
-                                v-for="(backendItem, backendIndex) in oauth.token_list"
-                                :key="backendIndex"
-                                :class="backendIndex > 1 ? 'set-mt' : ''">
-                                <p class="correct-mark">
-                                    <i class="icon paasng-icon paasng-correct"></i>
-                                </p>
-                                <div class="show-content">
-                                    <!-- logo 无需格式化-->
-                                    <div class="img-wrapper">
-                                        <span class="paasng-icon paasng-logo logo-icon" v-if="oauth.name === 'tc_git'"></span>
-                                        <img style="width: 47px; height: 47px;" v-else-if="oauth.name === 'github'" src="/static/images/github-logo.svg" alt="">
-                                        <img style="width: 47px; height: 44px;" v-else-if="oauth.name === 'gitee'" src="/static/images/gitee-logo.svg" alt="">
-                                        <span class="paasng-icon paasng-gitlab logo-icon" v-else></span>
-                                    </div>
-                                    <div class="desc-wrapper">
-                                        <h4 class="title">
-                                            {{oauth.display_info.display_name}}
-                                        </h4>
-                                        <p class="text">
-                                            <span>{{oauth.display_info.description}}</span>
-                                            <span class="scope" v-if="oauth.name === 'tc_git'">
-                                                {{ make_scope_readable(backendItem.scope) }}
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="hover-content">
-                                    <bk-button theme="primary" @click="auth_associate(oauth.auth_url)"> {{ $t('重新授权') }} </bk-button>
-                                    <bk-button theme="default" @click="disconnect(oauth, backendItem)"> {{ $t('取消授权') }} </bk-button>
-                                </div>
-                            </li>
-                        </template>
-                        <template v-if="oauth.associated">
-                            <li
-                                :class="['backend-list', 'no-impower', oauth.token_list.length > 1 ? 'set-mt' : '', oauth.token_list.length % 2 !== 0 ? 'set-ml' : '']" @click.stop="auth_associate(oauth.auth_url)">
-                                <div class="show-content">
-                                    <div class="img-wrapper">
-                                        <span class="paasng-icon paasng-logo logo-icon" v-if="oauth.name === 'tc_git'"></span>
-                                        <img style="width: 47px; height: 47px;" v-else-if="oauth.name === 'github'" src="/static/images/github-logo.svg" alt="">
-                                        <img style="width: 47px; height: 44px;" v-else-if="oauth.name === 'gitee'" src="/static/images/gitee-logo.svg" alt="">
-                                        <span class="paasng-icon paasng-plus-thick logo-icon" v-else></span>
-                                    </div>
-                                    <div class="desc-wrapper">
-                                        <h4 class="oauth-title">
-                                            {{oauth.display_info.display_name}}
-                                            <!-- <span> {{ $t('点击立即授权') }} </span> -->
-                                        </h4>
-                                        <p class="text">
-                                            <span>{{oauth.display_info.description}}</span>
-                                        </p>
-                                        <div class="btn-wrapper" v-if="oauth.display_info.auth_docs">
-                                            <bk-button text theme="primary" @click.stop="openDocu(`${oauth.display_info.auth_docs}`)"> {{ $t('授权指引') }} </bk-button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-            </section>
+  <div class="git-main">
+    <div
+      slot="loadingContent"
+      class="middle"
+    >
+      <section
+        v-for="(oauth, index) in oauth2Backends"
+        :key="index"
+      >
+        <div class="middle-oauth-title">
+          <h4>{{ titleInfo[oauth.name] }}</h4>
+          <p class="ps-text-info">
+            {{ infoMap[oauth.name] }}
+          </p>
         </div>
+        <div class="backend-wrapper">
+          <ul class="backend-content-wrapper clearfix">
+            <template v-if="oauth.token_list.length">
+              <li
+                v-for="(backendItem, backendIndex) in oauth.token_list"
+                :key="backendIndex"
+                class="backend-list"
+                :class="backendIndex > 1 ? 'set-mt' : ''"
+              >
+                <p class="correct-mark">
+                  <i class="icon paasng-icon paasng-correct" />
+                </p>
+                <div class="show-content">
+                  <!-- logo 无需格式化-->
+                  <div class="img-wrapper">
+                    <span
+                      v-if="oauth.name === 'tc_git'"
+                      class="paasng-icon paasng-logo logo-icon"
+                    />
+                    <img
+                      v-else-if="oauth.name === 'github'"
+                      style="width: 47px; height: 47px;"
+                      src="/static/images/github-logo.svg"
+                      alt=""
+                    >
+                    <img
+                      v-else-if="oauth.name === 'gitee'"
+                      style="width: 47px; height: 44px;"
+                      src="/static/images/gitee-logo.svg"
+                      alt=""
+                    >
+                    <span
+                      v-else
+                      class="paasng-icon paasng-gitlab logo-icon"
+                    />
+                  </div>
+                  <div class="desc-wrapper">
+                    <h4 class="title">
+                      {{ oauth.display_info.display_name }}
+                    </h4>
+                    <p class="text">
+                      <span>{{ oauth.display_info.description }}</span>
+                      <span
+                        v-if="oauth.name === 'tc_git'"
+                        class="scope"
+                      >
+                        {{ make_scope_readable(backendItem.scope) }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div class="hover-content">
+                  <bk-button
+                    theme="primary"
+                    @click="auth_associate(oauth.auth_url)"
+                  >
+                    {{ $t('重新授权') }}
+                  </bk-button>
+                  <bk-button
+                    theme="default"
+                    @click="disconnect(oauth, backendItem)"
+                  >
+                    {{ $t('取消授权') }}
+                  </bk-button>
+                </div>
+              </li>
+            </template>
+            <template v-if="oauth.associated">
+              <li
+                :class="['backend-list', 'no-impower', oauth.token_list.length > 1 ? 'set-mt' : '', oauth.token_list.length % 2 !== 0 ? 'set-ml' : '']"
+                @click.stop="auth_associate(oauth.auth_url)"
+              >
+                <div class="show-content">
+                  <div class="img-wrapper">
+                    <span
+                      v-if="oauth.name === 'tc_git'"
+                      class="paasng-icon paasng-logo logo-icon"
+                    />
+                    <img
+                      v-else-if="oauth.name === 'github'"
+                      style="width: 47px; height: 47px;"
+                      src="/static/images/github-logo.svg"
+                      alt=""
+                    >
+                    <img
+                      v-else-if="oauth.name === 'gitee'"
+                      style="width: 47px; height: 44px;"
+                      src="/static/images/gitee-logo.svg"
+                      alt=""
+                    >
+                    <span
+                      v-else
+                      class="paasng-icon paasng-plus-thick logo-icon"
+                    />
+                  </div>
+                  <div class="desc-wrapper">
+                    <h4 class="oauth-title">
+                      {{ oauth.display_info.display_name }}
+                      <!-- <span> {{ $t('点击立即授权') }} </span> -->
+                    </h4>
+                    <p class="text">
+                      <span>{{ oauth.display_info.description }}</span>
+                    </p>
+                    <div
+                      v-if="oauth.display_info.auth_docs"
+                      class="btn-wrapper"
+                    >
+                      <bk-button
+                        text
+                        theme="primary"
+                        @click.stop="openDocu(`${oauth.display_info.auth_docs}`)"
+                      >
+                        {{ $t('授权指引') }}
+                      </bk-button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </section>
     </div>
+  </div>
 </template>
 
 <script>

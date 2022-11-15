@@ -1,73 +1,118 @@
 <template>
-    <div class="app-top-bar">
-        <section class="bar-container">
-            <strong class="title" v-if="title && !hideTitle">{{title}}</strong>
-            <template v-for="(path, index) of paths">
-                <span class="expert" v-if="index !== (paths.length - 1)" :key="index">
-                    <template v-if="path.routeName">
-                        <router-link :to="{ name: path.routeName, params: { id: appCode, moduleId: moduleId } }">{{path.title}}</router-link>
-                    </template>
-                    <template v-else>
-                        <span>{{path.title}}</span>
-                    </template>
+  <div class="app-top-bar">
+    <section class="bar-container">
+      <strong
+        v-if="title && !hideTitle"
+        class="title"
+      >{{ title }}</strong>
+      <template v-for="(path, index) of paths">
+        <span
+          v-if="index !== (paths.length - 1)"
+          :key="index"
+          class="expert"
+        >
+          <template v-if="path.routeName">
+            <router-link :to="{ name: path.routeName, params: { id: appCode, moduleId: moduleId } }">{{ path.title }}</router-link>
+          </template>
+          <template v-else>
+            <span>{{ path.title }}</span>
+          </template>
+        </span>
+        <span
+          v-else
+          :key="index"
+        >{{ path.title }}</span>
+      </template>
+
+      <template v-if="disabled">
+        <span class="span" />
+        <span class="module-title"> {{ $t('模块') }}： </span>
+        <a
+          v-bk-tooltips.right="$t('权限管理功能目前只支持主模块')"
+          href="javascript: void(0);"
+          class="module-name disbled"
+        >
+          {{ curModule.name }}
+          <span v-if="curModule.is_default">{{ $t('(主)') }}</span>
+          <i class="paasng-icon paasng-down-shape" />
+        </a>
+      </template>
+      <template v-if="isDataReady && moduleList.length && !disabled">
+        <span
+          v-if="!hideTitle"
+          class="span"
+        />
+        <span class="module-title"> {{ $t('模块') }}： </span>
+        <dropdown
+          ref="dropdown"
+          style="display: inline-block; vertical-align: middle;"
+          :options="{
+            openOn: 'click',
+            position: 'bottom left'
+          }"
+        >
+          <div slot="trigger">
+            <a
+              href="javascript: void(0);"
+              class="module-name"
+            >
+              {{ curModule.name }}
+              <span v-if="curModule.is_default">{{ $t('(主)') }}</span>
+              <i class="paasng-icon paasng-down-shape" />
+            </a>
+          </div>
+          <div
+            slot="content"
+            style="width: 185px;"
+          >
+            <div class="bk-dropdown-content left-align">
+              <ul class="bk-dropdown-list">
+                <li
+                  v-for="(module, moduleIndex) of moduleList"
+                  :key="moduleIndex"
+                  @click="handleModuleSelect(module)"
+                >
+                  <a
+                    href="javascript: void(0);"
+                    :class="{ active: curModule.name === module.name }"
+                  >
+                    {{ module.name }}
+                    <span v-if="module.is_default">{{ $t('(主)') }}</span>
+                  </a>
+                </li>
+              </ul>
+              <div class="bk-select-extension">
+                <span
+                  v-if="canCreate"
+                  style="cursor: pointer;"
+                  @click="createAppModule"
+                >
+                  <i class="paasng-icon paasng-plus-circle" /> {{ $t('新增模块') }} </span>
+                <span
+                  v-else
+                  v-bk-tooltips="{ content: isSmartApp ? `S-mart ${$t('应用目前不允许创建其它模块')}` : $t('当前应用不允许新增模块'), zIndex: 11000 }"
+                  style="color: #c4c6cc; cursor: not-allowed;"
+                >
+                  <i class="paasng-icon paasng-plus-circle" /> {{ $t('新增模块') }}
                 </span>
-                <span v-else :key="index">{{path.title}}</span>
-            </template>
-
-            <template v-if="disabled">
-                <span class="span"></span>
-                <span class="module-title"> {{ $t('模块') }}： </span>
-                <a href="javascript: void(0);" class="module-name disbled" v-bk-tooltips.right="$t('权限管理功能目前只支持主模块')">
-                    {{curModule.name}}
-                    <span v-if="curModule.is_default">{{$t('(主)')}}</span>
-                    <i class="paasng-icon paasng-down-shape"></i>
-                </a>
-            </template>
-            <template v-if="isDataReady && moduleList.length && !disabled">
-                <span class="span" v-if="!hideTitle"></span>
-                <span class="module-title"> {{ $t('模块') }}： </span>
-                <dropdown
-                    ref="dropdown"
-                    style="display: inline-block; vertical-align: middle;"
-                    :options="{
-                        openOn: 'click',
-                        position: 'bottom left'
-                    }">
-                    <div slot="trigger">
-                        <a href="javascript: void(0);" class="module-name">
-                            {{curModule.name}}
-                            <span v-if="curModule.is_default">{{$t('(主)')}}</span>
-                            <i class="paasng-icon paasng-down-shape"></i>
-                        </a>
-                    </div>
-                    <div slot="content" style="width: 185px;">
-                        <div class="bk-dropdown-content left-align">
-                            <ul class="bk-dropdown-list">
-                                <li v-for="(module, moduleIndex) of moduleList" :key="moduleIndex" @click="handleModuleSelect(module)">
-                                    <a href="javascript: void(0);" :class="{ active: curModule.name === module.name }">
-                                        {{module.name}}
-                                        <span v-if="module.is_default">{{$t('(主)')}}</span>
-                                    </a>
-                                </li>
-                            </ul>
-                            <div class="bk-select-extension">
-                                <span style="cursor: pointer;" @click="createAppModule" v-if="canCreate">
-                                    <i class="paasng-icon paasng-plus-circle"></i> {{ $t('新增模块') }} </span>
-                                <span style="color: #c4c6cc; cursor: not-allowed;" v-else v-bk-tooltips="{ content: isSmartApp ? `S-mart ${$t('应用目前不允许创建其它模块')}` : $t('当前应用不允许新增模块'), zIndex: 11000 }">
-                                    <i class="paasng-icon paasng-plus-circle"></i> {{ $t('新增模块') }}
-                                </span>
-                                <span class="help-docu" @click="toHelpDocu"> {{ $t('帮助') }} </span>
-                            </div>
-                        </div>
-                    </div>
-                </dropdown>
-            </template>
-
-            <div class="right-slot" v-if="$slots['right']">
-                <slot name="right"></slot>
+                <span
+                  class="help-docu"
+                  @click="toHelpDocu"
+                > {{ $t('帮助') }} </span>
+              </div>
             </div>
-        </section>
-    </div>
+          </div>
+        </dropdown>
+      </template>
+
+      <div
+        v-if="$slots['right']"
+        class="right-slot"
+      >
+        <slot name="right" />
+      </div>
+    </section>
+  </div>
 </template>
 
 <script>
@@ -151,7 +196,7 @@
                         tab: this.$route.query.tab || ''
                     };
                 }
-                
+
                 this.$router.push({
                     name: routeName,
                     params: {

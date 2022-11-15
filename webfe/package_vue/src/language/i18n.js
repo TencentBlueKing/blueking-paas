@@ -29,25 +29,25 @@ Vue.use(VueI18n);
 let localLanguage = cookie.parse(document.cookie).blueking_language || 'zh-cn';
 
 if (['zh-cn', 'zh-CN', 'None', 'none', ''].includes(localLanguage)) {
-    localLanguage = 'zh-cn';
+  localLanguage = 'zh-cn';
 }
 
 store.commit('updateLocalLanguage', localLanguage);
 if (localLanguage === 'en') {
-    locale.use(lang.enUS);
+  locale.use(lang.enUS);
 }
 const i18n = new VueI18n({
-    // 语言标识
-    locale: localLanguage,
-    fallbackLocale: 'zh-cn',
-    // this.$i18n.locale 通过切换locale的值来实现语言切换
-    messages: {
+  // 语言标识
+  locale: localLanguage,
+  fallbackLocale: 'zh-cn',
+  // this.$i18n.locale 通过切换locale的值来实现语言切换
+  messages: {
     // 中文语言包
-        'zh-cn': Object.assign(lang.zhCN, zh),
-        // 英文语言包
-        en: Object.assign(lang.enUS, en)
-    },
-    silentTranslationWarn: true
+    'zh-cn': Object.assign(lang.zhCN, zh),
+    // 英文语言包
+    en: Object.assign(lang.enUS, en)
+  },
+  silentTranslationWarn: true
 });
 locale.i18n((key, value) => i18n.t(key, value));
 

@@ -23,81 +23,81 @@
 import store from '@/store';
 
 export default {
-    data () {
-        return {
-            winHeight: 300
-        };
+  data () {
+    return {
+      winHeight: 300
+    };
+  },
+  computed: {
+    appCode () {
+      return this.$route.params.id;
     },
-    computed: {
-        appCode () {
-            return this.$route.params.id;
-        },
-        curAppCode () {
-            return this.$store.state.curAppCode;
-        },
-        curAppInfo () {
-            return this.$store.state.curAppInfo;
-        },
-        curAppModuleList () {
-            return this.$store.state.curAppModuleList;
-        },
-        curAppModule () {
-            return this.$store.state.curAppModule;
-        },
-        isSmartApp () {
-            return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
-        },
-        curModuleId () {
-            return this.curAppModule.name;
-        },
-        confirmRequiredWhenPublish () {
-            if (this.curAppInfo) {
-                return this.curAppInfo.web_config.confirm_required_when_publish;
-            } else {
-                return false;
-            }
-        },
-        productInfoProvided () {
-            if (this.curAppInfo) {
-                // return !this.canPublishToMarket || Boolean(this.curAppInfo.product)
-                return this.confirmRequiredWhenPublish || Boolean(this.curAppInfo.product);
-            } else {
-                return false;
-            }
-        }
+    curAppCode () {
+      return this.$store.state.curAppCode;
     },
-    /**
+    curAppInfo () {
+      return this.$store.state.curAppInfo;
+    },
+    curAppModuleList () {
+      return this.$store.state.curAppModuleList;
+    },
+    curAppModule () {
+      return this.$store.state.curAppModule;
+    },
+    isSmartApp () {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+    },
+    curModuleId () {
+      return this.curAppModule.name;
+    },
+    confirmRequiredWhenPublish () {
+      if (this.curAppInfo) {
+        return this.curAppInfo.web_config.confirm_required_when_publish;
+      } else {
+        return false;
+      }
+    },
+    productInfoProvided () {
+      if (this.curAppInfo) {
+        // return !this.canPublishToMarket || Boolean(this.curAppInfo.product)
+        return this.confirmRequiredWhenPublish || Boolean(this.curAppInfo.product);
+      } else {
+        return false;
+      }
+    }
+  },
+  /**
      * 进入当前组件时请求应用信息
      */
-    async beforeRouteEnter (to, from, next) {
-        const appCode = to.params.id;
-        const moduleId = to.params.moduleId;
+  async beforeRouteEnter (to, from, next) {
+    const appCode = to.params.id;
+    const moduleId = to.params.moduleId;
 
-        if (!store.state.appInfo[appCode]) {
-            await store.dispatch('getAppInfo', { appCode, moduleId });
-            console.log('beforeRouteEnter: getAppInfo');
-        } else {
-            store.commit('updateCurAppByCode', { appCode, moduleId });
-        }
-        next(true);
-    },
-    /**
+    if (!store.state.appInfo[appCode]) {
+      await store.dispatch('getAppInfo', { appCode, moduleId });
+      console.log('beforeRouteEnter: getAppInfo');
+    } else {
+      store.commit('updateCurAppByCode', { appCode, moduleId });
+    }
+    next(true);
+  },
+  /**
      * 当前组件路由切换时请求应用信息
      */
-    async beforeRouteUpdate (to, from, next) {
-        const appCode = to.params.id;
-        const moduleId = to.params.moduleId;
+  async beforeRouteUpdate (to, from, next) {
+    const appCode = to.params.id;
+    const moduleId = to.params.moduleId;
 
-        if (!store.state.appInfo[appCode]) {
-            await store.dispatch('getAppInfo', { appCode, moduleId });
-            console.log('beforeRouteUpdate: getAppInfo');
-        } else {
-            store.commit('updateCurAppByCode', { appCode, moduleId });
-        }
-        next(true);
-    },
-
-    mounted () {
-        this.winHeight = window.innerHeight;
+    if (!store.state.appInfo[appCode]) {
+      await store.dispatch('getAppInfo', { appCode, moduleId });
+      console.log('beforeRouteUpdate: getAppInfo');
+    } else {
+      store.commit('updateCurAppByCode', { appCode, moduleId });
     }
+    next(true);
+  },
+
+  mounted () {
+    this.winHeight = window.innerHeight;
+  }
 };

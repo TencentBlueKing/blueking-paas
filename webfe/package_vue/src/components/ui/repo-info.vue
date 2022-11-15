@@ -1,34 +1,106 @@
 <template>
-    <div class="code-repo">
-        <bk-form :label-width="100" :model="info" ref="repoInfo">
-            <template v-if="type === 'bare_git'">
-                <bk-form-item :label="$t('源代码地址:')" :required="edited" :property="'url'" :rules="rules.gitUrl" :error-display-type="'normal'">
-                    <bk-input ref="url" v-model="info.url" :placeholder="`${$t('支持以下协议：')}http(s)://、git://`" v-if="edited"></bk-input>
-                    <p v-else>{{info.url}}</p>
-                </bk-form-item>
-            </template>
-            <template v-else>
-                <bk-form-item :label="$t('源代码地址:')" :required="edited" :property="'url'" :rules="rules.svnUrl" :error-display-type="'normal'">
-                    <bk-input ref="url" v-model="info.url" :placeholder="`${$t('支持以下协议：')}http(s)://、svn://，${$t('并确保trunk、branches、tags等在该目录下')}`" v-if="edited"></bk-input>
-                    <p v-else>{{info.url}}</p>
-                </bk-form-item>
-            </template>
+  <div class="code-repo">
+    <bk-form
+      ref="repoInfo"
+      :label-width="100"
+      :model="info"
+    >
+      <template v-if="type === 'bare_git'">
+        <bk-form-item
+          :label="$t('源代码地址:')"
+          :required="edited"
+          :property="'url'"
+          :rules="rules.gitUrl"
+          :error-display-type="'normal'"
+        >
+          <bk-input
+            v-if="edited"
+            ref="url"
+            v-model="info.url"
+            :placeholder="`${$t('支持以下协议：')}http(s)://、git://`"
+          />
+          <p v-else>
+            {{ info.url }}
+          </p>
+        </bk-form-item>
+      </template>
+      <template v-else>
+        <bk-form-item
+          :label="$t('源代码地址:')"
+          :required="edited"
+          :property="'url'"
+          :rules="rules.svnUrl"
+          :error-display-type="'normal'"
+        >
+          <bk-input
+            v-if="edited"
+            ref="url"
+            v-model="info.url"
+            :placeholder="`${$t('支持以下协议：')}http(s)://、svn://，${$t('并确保trunk、branches、tags等在该目录下')}`"
+          />
+          <p v-else>
+            {{ info.url }}
+          </p>
+        </bk-form-item>
+      </template>
 
-            <bk-form-item v-if="deploymentIsShow" :class="{ 'mt15': !edited }" :label="$t('部署目录')" :desc="sourceDirTip" :property="'sourceDir'" :rules="rules.sourceDir" :error-display-type="'normal'">
-                <bk-input ref="sourceDir" v-model="info.sourceDir" v-if="edited"></bk-input>
-                <p v-else>{{info.sourceDir}}</p>
-            </bk-form-item>
+      <bk-form-item
+        v-if="deploymentIsShow"
+        :class="{ 'mt15': !edited }"
+        :label="$t('部署目录')"
+        :desc="sourceDirTip"
+        :property="'sourceDir'"
+        :rules="rules.sourceDir"
+        :error-display-type="'normal'"
+      >
+        <bk-input
+          v-if="edited"
+          ref="sourceDir"
+          v-model="info.sourceDir"
+        />
+        <p v-else>
+          {{ info.sourceDir }}
+        </p>
+      </bk-form-item>
 
-            <bk-form-item :class="{ 'mt15': !edited }" :label="accountLabel" :required="edited" :property="'account'" :rules="rules.account" :error-display-type="'normal'">
-                <bk-input ref="account" v-model="info.account" v-if="edited"></bk-input>
-                <p v-else>{{info.account}}</p>
-            </bk-form-item>
-            <bk-form-item :class="{ 'mt15': !edited }" :label="$t('密码:')" :required="edited" :property="'password'" :rules="rules.password" :error-display-type="'normal'">
-                <bk-input ref="password" type="password" v-model="info.password" :placeholder="$t('请输入')" v-if="edited"></bk-input>
-                <p v-else>******</p>
-            </bk-form-item>
-        </bk-form>
-    </div>
+      <bk-form-item
+        :class="{ 'mt15': !edited }"
+        :label="accountLabel"
+        :required="edited"
+        :property="'account'"
+        :rules="rules.account"
+        :error-display-type="'normal'"
+      >
+        <bk-input
+          v-if="edited"
+          ref="account"
+          v-model="info.account"
+        />
+        <p v-else>
+          {{ info.account }}
+        </p>
+      </bk-form-item>
+      <bk-form-item
+        :class="{ 'mt15': !edited }"
+        :label="$t('密码:')"
+        :required="edited"
+        :property="'password'"
+        :rules="rules.password"
+        :error-display-type="'normal'"
+      >
+        <bk-input
+          v-if="edited"
+          ref="password"
+          v-model="info.password"
+          type="password"
+          :placeholder="$t('请输入')"
+        />
+        <p v-else>
+          ******
+        </p>
+      </bk-form-item>
+    </bk-form>
+  </div>
 </template>
 
 <script>

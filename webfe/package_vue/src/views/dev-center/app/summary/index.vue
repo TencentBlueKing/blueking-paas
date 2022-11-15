@@ -1,234 +1,413 @@
 <template lang="html">
-    <div class="right-main" id="summary">
-        <app-top-bar
-            data-test-id="summary_bar_moduleList"
-            :title="$t('应用概览')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="loading" placeholder="summary-loading" :offset-top="20" class="app-container overview-middle">
-            <template v-if="!loading">
-                <div class="summary-content" v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed">
-                    <div class="middle over-new" data-test-id="summary_list_overNew">
-                        <ul class="middle-list">
-                            <li style="margin-top: -5px;">
-                                <release-info
-                                    :app-code="appCode"
-                                    :environment="'stag'"
-                                    :app-deploy-info="releaseStatusStag"
-                                    :key="appCode">
-                                </release-info>
-                            </li>
-                            <li>
-                                <release-info
-                                    :app-code="appCode"
-                                    :environment="'prod'"
-                                    :app-deploy-info="releaseStatusProd"
-                                    :key="appCode">
-                                </release-info>
-                            </li>
-                        </ul>
-                    </div>
+  <div
+    id="summary"
+    class="right-main"
+  >
+    <app-top-bar
+      data-test-id="summary_bar_moduleList"
+      :title="$t('应用概览')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="loading"
+      placeholder="summary-loading"
+      :offset-top="20"
+      class="app-container overview-middle"
+    >
+      <template v-if="!loading">
+        <div
+          v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed"
+          class="summary-content"
+        >
+          <div
+            class="middle over-new"
+            data-test-id="summary_list_overNew"
+          >
+            <ul class="middle-list">
+              <li style="margin-top: -5px;">
+                <release-info
+                  :key="appCode"
+                  :app-code="appCode"
+                  :environment="'stag'"
+                  :app-deploy-info="releaseStatusStag"
+                />
+              </li>
+              <li>
+                <release-info
+                  :key="appCode"
+                  :app-code="appCode"
+                  :environment="'prod'"
+                  :app-deploy-info="releaseStatusProd"
+                />
+              </li>
+            </ul>
+          </div>
 
-                    <div class="middle bgc pl10 pr10" v-if="curAppInfo.feature.RESOURCE_METRICS">
-                        <h3 data-test-id="summary_header_select">
-                            {{curEnv === 'prod' ? $t('生产环境') : $t('预发布环境')}}{{ $t('资源用量') }}
-                            <span class="text" v-if="curEnv">
-                                ( <a href="javascript: void(0);" @click="goProcessView"> {{ $t('查看详情') }} </a> )
-                            </span>
-                            <div class="search-chart-wrapper" v-if="isProcessDataReady && !isChartLoading">
-                                <bk-select
-                                    v-model="curProcessName"
-                                    style="width: 150px; background: #fff; font-weight: normal;"
-                                    class="fr mt10"
-                                    :clearable="false"
-                                    @selected="handlerProcessSelecte">
-                                    <bk-option
-                                        v-for="option in curEnvProcesses"
-                                        :key="option.name"
-                                        :id="option.name"
-                                        :name="option.name">
-                                    </bk-option>
-                                </bk-select>
-                            </div>
-                        </h3>
-                        <div data-test-id="summary_box_cpuCharts">
-                            <!-- 使用v-show是因为需要及时获取ref并调用 -->
-                            <div class="resource-charts active" v-show="isProcessDataReady || isChartLoading">
-                                <div class="chart-box summary-chart-box">
-                                    <div class="type-title">
-                                        {{ $t('CPU使用率') }}
-                                        <bk-dropdown-menu
-                                            @show="dropdownShow"
-                                            @hide="dropdownHide"
-                                            trigger="click"
-                                            ref="dropdownCpu">
-                                            <div class="dropdown-trigger-btn" slot="dropdown-trigger">
-                                                <span>{{ timeMap[curCpuActive] }}</span>
-                                                <div class="trigger-icon">
-                                                    <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isCpuDropdownShow }]"></i>
-                                                </div>
-                                            </div>
-                                            <div class="bk-dropdown-list" slot="dropdown-content">
-                                                <li><a href="javascript:;" :class="curCpuActive === '1h' ? 'active' : ''" @click="triggerHandler('1h', 'cpu')"> {{ $t('1小时') }} </a></li>
-                                                <li><a href="javascript:;" :class="curCpuActive === '24h' ? 'active' : ''" @click="triggerHandler('24h', 'cpu')"> {{ $t('24小时') }} </a></li>
-                                                <li><a href="javascript:;" :class="curCpuActive === '168h' ? 'active' : ''" @click="triggerHandler('168h', 'cpu')">7天</a></li>
-                                            </div>
-                                        </bk-dropdown-menu>
-                                    </div>
-                                    <strong class="title"> {{ $t('单位：核') }} </strong>
-                                    <chart :options="cpuLine" ref="cpuLine" auto-resize style="width: 100%; height: 235px;"></chart>
-                                </div>
-                                <div class="chart-box summary-chart-box">
-                                    <div class="type-title">
-                                        {{ $t('内存使用量') }}
-                                        <bk-dropdown-menu
-                                            @show="dropdownShowMem"
-                                            @hide="dropdownHideMem"
-                                            trigger="click"
-                                            ref="dropdownMem">
-                                            <div class="dropdown-trigger-btn" slot="dropdown-trigger">
-                                                <span>{{ timeMap[curMemActive] }}</span>
-                                                <div class="trigger-icon">
-                                                    <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isMemDropdownShow }]"></i>
-                                                </div>
-                                            </div>
-                                            <div class="bk-dropdown-list" slot="dropdown-content">
-                                                <li><a href="javascript:;" :class="curMemActive === '1h' ? 'active' : ''" @click="triggerHandler('1h', 'mem')"> {{ $t('1小时') }} </a></li>
-                                                <li><a href="javascript:;" :class="curMemActive === '24h' ? 'active' : ''" @click="triggerHandler('24h', 'mem')"> {{ $t('24小时') }} </a></li>
-                                                <li><a href="javascript:;" :class="curMemActive === '168h' ? 'active' : ''" @click="triggerHandler('168h', 'mem')">7天</a></li>
-                                            </div>
-                                        </bk-dropdown-menu>
-                                    </div>
-                                    <strong class="title"> {{ $t('单位：MB') }} </strong>
-                                    <chart :options="memLine" ref="memLine" auto-resize style="width: 100%; height: 235px;"></chart>
-                                </div>
-                            </div>
-                            <div class="ps-no-result" v-if="!isProcessDataReady && !isChartLoading">
-                                <div class="text">
-                                    <p><i class="paasng-icon paasng-empty"></i></p>
-                                    <p> {{ $t('暂无数据') }} </p>
-                                </div>
-                            </div>
+          <div
+            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            class="middle bgc pl10 pr10"
+          >
+            <h3 data-test-id="summary_header_select">
+              {{ curEnv === 'prod' ? $t('生产环境') : $t('预发布环境') }}{{ $t('资源用量') }}
+              <span
+                v-if="curEnv"
+                class="text"
+              >
+                ( <a
+                  href="javascript: void(0);"
+                  @click="goProcessView"
+                > {{ $t('查看详情') }} </a> )
+              </span>
+              <div
+                v-if="isProcessDataReady && !isChartLoading"
+                class="search-chart-wrapper"
+              >
+                <bk-select
+                  v-model="curProcessName"
+                  style="width: 150px; background: #fff; font-weight: normal;"
+                  class="fr mt10"
+                  :clearable="false"
+                  @selected="handlerProcessSelecte"
+                >
+                  <bk-option
+                    v-for="option in curEnvProcesses"
+                    :id="option.name"
+                    :key="option.name"
+                    :name="option.name"
+                  />
+                </bk-select>
+              </div>
+            </h3>
+            <div data-test-id="summary_box_cpuCharts">
+              <!-- 使用v-show是因为需要及时获取ref并调用 -->
+              <div
+                v-show="isProcessDataReady || isChartLoading"
+                class="resource-charts active"
+              >
+                <div class="chart-box summary-chart-box">
+                  <div class="type-title">
+                    {{ $t('CPU使用率') }}
+                    <bk-dropdown-menu
+                      ref="dropdownCpu"
+                      trigger="click"
+                      @show="dropdownShow"
+                      @hide="dropdownHide"
+                    >
+                      <div
+                        slot="dropdown-trigger"
+                        class="dropdown-trigger-btn"
+                      >
+                        <span>{{ timeMap[curCpuActive] }}</span>
+                        <div class="trigger-icon">
+                          <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isCpuDropdownShow }]" />
                         </div>
-                    </div>
+                      </div>
+                      <div
+                        slot="dropdown-content"
+                        class="bk-dropdown-list"
+                      >
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curCpuActive === '1h' ? 'active' : ''"
+                            @click="triggerHandler('1h', 'cpu')"
+                          > {{ $t('1小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curCpuActive === '24h' ? 'active' : ''"
+                            @click="triggerHandler('24h', 'cpu')"
+                          > {{ $t('24小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curCpuActive === '168h' ? 'active' : ''"
+                            @click="triggerHandler('168h', 'cpu')"
+                          >7天</a>
+                        </li>
+                      </div>
+                    </bk-dropdown-menu>
+                  </div>
+                  <strong class="title"> {{ $t('单位：核') }} </strong>
+                  <chart
+                    ref="cpuLine"
+                    :options="cpuLine"
+                    auto-resize
+                    style="width: 100%; height: 235px;"
+                  />
                 </div>
+                <div class="chart-box summary-chart-box">
+                  <div class="type-title">
+                    {{ $t('内存使用量') }}
+                    <bk-dropdown-menu
+                      ref="dropdownMem"
+                      trigger="click"
+                      @show="dropdownShowMem"
+                      @hide="dropdownHideMem"
+                    >
+                      <div
+                        slot="dropdown-trigger"
+                        class="dropdown-trigger-btn"
+                      >
+                        <span>{{ timeMap[curMemActive] }}</span>
+                        <div class="trigger-icon">
+                          <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isMemDropdownShow }]" />
+                        </div>
+                      </div>
+                      <div
+                        slot="dropdown-content"
+                        class="bk-dropdown-list"
+                      >
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curMemActive === '1h' ? 'active' : ''"
+                            @click="triggerHandler('1h', 'mem')"
+                          > {{ $t('1小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curMemActive === '24h' ? 'active' : ''"
+                            @click="triggerHandler('24h', 'mem')"
+                          > {{ $t('24小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curMemActive === '168h' ? 'active' : ''"
+                            @click="triggerHandler('168h', 'mem')"
+                          >7天</a>
+                        </li>
+                      </div>
+                    </bk-dropdown-menu>
+                  </div>
+                  <strong class="title"> {{ $t('单位：MB') }} </strong>
+                  <chart
+                    ref="memLine"
+                    :options="memLine"
+                    auto-resize
+                    style="width: 100%; height: 235px;"
+                  />
+                </div>
+              </div>
+              <div
+                v-if="!isProcessDataReady && !isChartLoading"
+                class="ps-no-result"
+              >
+                <div class="text">
+                  <p><i class="paasng-icon paasng-empty" /></p>
+                  <p> {{ $t('暂无数据') }} </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                <div class="coding" v-else data-test-id="summary_box_empty">
-                    <template v-if="!loading">
-                        <h2> {{ $t('应用尚未部署，暂无运行数据！') }} </h2>
-                        <p> {{ $t('你可以根据以下操作解决此问题') }} </p>
-                        <div class="none-summary-controls">
-                            <router-link :to="{ name: 'appDeployForStag', params: { id: appCode, moduleId: curModuleId } }" class="bk-button bk-primary bk-button-large"> {{ $t('部署至预发布环境') }} </router-link>
-                        </div>
-                    </template>
+        <div
+          v-else
+          class="coding"
+          data-test-id="summary_box_empty"
+        >
+          <template v-if="!loading">
+            <h2> {{ $t('应用尚未部署，暂无运行数据！') }} </h2>
+            <p> {{ $t('你可以根据以下操作解决此问题') }} </p>
+            <div class="none-summary-controls">
+              <router-link
+                :to="{ name: 'appDeployForStag', params: { id: appCode, moduleId: curModuleId } }"
+                class="bk-button bk-primary bk-button-large"
+              >
+                {{ $t('部署至预发布环境') }}
+              </router-link>
+            </div>
+          </template>
+        </div>
+        <div
+          class="overview-sub-fright"
+          data-test-id="summary_content_detail"
+        >
+          <div
+            v-if="curAppModule.web_config.runtime_type === 'custom_image'"
+            class="fright-middle"
+            data-test-id="summary_content_source"
+          >
+            <h3> {{ $t('镜像信息') }} </h3>
+            <div>{{ $t('类型') }}: <span class="summary_text">{{ curAppModule.repo.display_name }}</span></div>
+            <div style="display: flex;">
+              <p :class="[localLanguage === 'en' ? 'address-en' : 'address-zh-cn']">
+                {{ $t('地址') }}:
+              </p>
+              <bk-popover
+                :content="curAppModule.repo.repo_url"
+                placement="bottom"
+                class="urlText"
+              >
+                <p>{{ curAppModule.repo.repo_url }}</p>
+              </bk-popover>
+            </div>
+          </div>
+          <div
+            v-else
+            class="fright-middle"
+            data-test-id="summary_content_source"
+          >
+            <h3>
+              {{ $t('应用源码') }}
+              <dropdown
+                v-if="sourceType === 'bk_svn'"
+                :options="{ position: 'bottom right' }"
+              >
+                <button
+                  slot="trigger"
+                  class="btn-source-more ps-btn ps-btn-default ps-btn-xs"
+                >
+                  <i class="paasng-icon paasng-down-shape when-drop-hide" />
+                  <i class="paasng-icon paasng-up-shape when-drop-show" />
+                  <i class="paasng-icon paasng-cog" />
+                </button>
+                <div slot="content">
+                  <ul class="ps-list-group-link spacing-x0">
+                    <li>
+                      <router-link
+                        :to="{ name: 'serviceCode' }"
+                        class="blue"
+                      >
+                        {{ $t('管理 SVN 账号') }}
+                      </router-link>
+                    </li>
+                  </ul>
                 </div>
-                <div class="overview-sub-fright" data-test-id="summary_content_detail">
-                    <div v-if="curAppModule.web_config.runtime_type === 'custom_image'" class="fright-middle" data-test-id="summary_content_source">
-                        <h3> {{ $t('镜像信息') }} </h3>
-                        <div>{{ $t('类型') }}: <span class="summary_text">{{curAppModule.repo.display_name}}</span></div>
-                        <div style="display: flex;">
-                            <p :class="[localLanguage === 'en' ? 'address-en' : 'address-zh-cn']">{{ $t('地址') }}: </p>
-                            <bk-popover :content="curAppModule.repo.repo_url" placement="bottom" class="urlText">
-                                <p>{{curAppModule.repo.repo_url}}</p>
-                            </bk-popover>
-                            
+              </dropdown>
+            </h3>
+            <p>
+              {{ $t('开发语言：') }} <label class="ps-label primary"><span>{{ appDevLang }}</span></label>
+            </p>
+            <p v-if="curAppModule.source_origin === 1">
+              {{ $t('已托管至：') }} <a
+                target="_blank"
+                :href="trunkUrl"
+                class="blue svn-a"
+              >{{ sourceTypeDisplayName }}</a>
+            </p>
+            <p v-else>
+              {{ $t('源码包：') }} <router-link
+                :to="{ name: 'appPackages' }"
+                class="blue svn-a"
+              >
+                {{ $t('查看包版本') }}
+              </router-link>
+            </p>
+            <div
+              v-if="!isSmartApp"
+              class="checkout-code"
+            >
+              <a
+                v-if="curAppModule.web_config.templated_source_enabled && !curAppModule.repo.linked_to_internal_svn"
+                class="ps-btn ps-btn-primary ps-btn-checkout-code"
+                @click="downloadTemplate"
+              > {{ $t('下载初始化模板代码') }} </a>
+              <dropdown
+                v-if="curAppModule.repo.linked_to_internal_svn"
+                :options="{ position: 'bottom right' }"
+              >
+                <bk-button
+                  slot="trigger"
+                  theme="primary"
+                  style="width: 100%;"
+                >
+                  {{ $t('签出应用代码') }}
+                  <i class="paasng-icon paasng-angle-down when-drop-hide" />
+                  <i class="paasng-icon paasng-angle-up when-drop-show" />
+                </bk-button>
+                <div
+                  slot="content"
+                  class="code-checkout ps-dropdown"
+                >
+                  <!-- SVN -->
+                  <template>
+                    <h2> {{ $t('使用 SVN 签出代码') }} </h2>
+                    <div class="checkout-content">
+                      <p> {{ $t('使用 SVN 客户端签出该地址来获取应用代码：') }} </p>
+                      <div class="spacing-x1 svn-input-container">
+                        <input
+                          id="urlInput"
+                          v-model="trunkUrl"
+                          readonly
+                          class="svn-input ps-form-control"
+                          type="text"
+                          onfocus="this.select()"
+                        >
+                        <div class="svn-input-button-group">
+                          <bk-popover
+                            :content="$t('复制地址')"
+                            style="float: left;"
+                          >
+                            <a
+                              href="javascript:"
+                              :class="['btn-c','btn-clipboard']"
+                              @click.stop.prevent="copyUrl"
+                            >
+                              <i class="paasng-icon paasng-clipboard" />
+                            </a>
+                          </bk-popover>
+                          <bk-popover :content="$t('签出代码')">
+                            <a
+                              :href="trunkUrl"
+                              :class="['btn-c', 'btn-clipboard']"
+                            >
+                              <i class="paasng-icon paasng-download" />
+                            </a>
+                          </bk-popover>
                         </div>
+                      </div>
                     </div>
-                    <div v-else class="fright-middle" data-test-id="summary_content_source">
-                        <h3> {{ $t('应用源码') }}
-                            <dropdown :options="{ position: 'bottom right' }" v-if="sourceType === 'bk_svn'">
-                                <button slot="trigger" class="btn-source-more ps-btn ps-btn-default ps-btn-xs">
-                                    <i class="paasng-icon paasng-down-shape when-drop-hide"></i>
-                                    <i class="paasng-icon paasng-up-shape when-drop-show"></i>
-                                    <i class="paasng-icon paasng-cog"></i>
-                                </button>
-                                <div slot="content">
-                                    <ul class="ps-list-group-link spacing-x0">
-                                        <li>
-                                            <router-link :to="{ name: 'serviceCode' }" class="blue"> {{ $t('管理 SVN 账号') }} </router-link>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </dropdown>
-                        </h3>
-                        <p>
-                            {{ $t('开发语言：') }} <label class="ps-label primary"><span>{{ appDevLang }}</span></label>
-                        </p>
-                        <p v-if="curAppModule.source_origin === 1">
-                            {{ $t('已托管至：') }} <a target="_blank" :href="trunkUrl" class="blue svn-a">{{ sourceTypeDisplayName }}</a>
-                        </p>
-                        <p v-else>
-                            {{ $t('源码包：') }} <router-link :to="{ name: 'appPackages' }" class="blue svn-a"> {{ $t('查看包版本') }} </router-link>
-                        </p>
-                        <div class="checkout-code" v-if="!isSmartApp">
-                            <a class="ps-btn ps-btn-primary ps-btn-checkout-code" v-if="curAppModule.web_config.templated_source_enabled && !curAppModule.repo.linked_to_internal_svn" @click="downloadTemplate"> {{ $t('下载初始化模板代码') }} </a>
-                            <dropdown v-if="curAppModule.repo.linked_to_internal_svn" :options="{ position: 'bottom right' }">
-                                <bk-button
-                                    slot="trigger"
-                                    theme="primary"
-                                    style="width: 100%;">
-                                    {{ $t('签出应用代码') }}
-                                    <i class="paasng-icon paasng-angle-down when-drop-hide"></i>
-                                    <i class="paasng-icon paasng-angle-up when-drop-show"></i>
-                                </bk-button>
-                                <div slot="content" class="code-checkout ps-dropdown">
-                                    <!-- SVN -->
-                                    <template>
-                                        <h2> {{ $t('使用 SVN 签出代码') }} </h2>
-                                        <div class="checkout-content">
-                                            <p> {{ $t('使用 SVN 客户端签出该地址来获取应用代码：') }} </p>
-                                            <div class="spacing-x1 svn-input-container">
-                                                <input readonly class="svn-input ps-form-control" id="urlInput" type="text" v-model="trunkUrl" onfocus="this.select()" />
-                                                <div class="svn-input-button-group">
-                                                    <bk-popover :content="$t('复制地址')" style="float: left;">
-                                                        <a href="javascript:" :class="['btn-c','btn-clipboard']" @click.stop.prevent="copyUrl">
-                                                            <i class="paasng-icon paasng-clipboard"></i>
-                                                        </a>
-                                                    </bk-popover>
-                                                    <bk-popover :content="$t('签出代码')">
-                                                        <a :href="trunkUrl" :class="['btn-c', 'btn-clipboard']">
-                                                            <i class="paasng-icon paasng-download"></i>
-                                                        </a>
-                                                    </bk-popover>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </dropdown>
-                        </div>
-                    </div>
+                  </template>
+                </div>
+              </dropdown>
+            </div>
+          </div>
 
-                    <div class="fright-middle fright-last" data-test-id="summary_content_noSource">
-                        <h3> {{ $t('最新动态') }} </h3>
-                        <ul class="dynamic-list">
-                            <template v-if="operationsList.length">
-                                <li v-for="(item, itemIndex) in operationsList" :key="itemIndex">
-                                    <p class="dynamic-time">
-                                        <span class="tooltip-time" v-bk-tooltips="item.at">{{item.at_friendly}}</span>
-                                    </p>
-                                    <p class="dynamic-content">
-                                        {{ $t('由') }}<span class="gruy">{{item.operator ? item.operator : '—'}}</span>{{item.operate}}
-                                    </p>
-                                </li>
-                                <li></li>
-                            </template>
-                            <template v-else>
-                                <div class="ps-no-result">
-                                    <div class="text">
-                                        <p><i class="paasng-icon paasng-empty"></i></p>
-                                        <p> {{ $t('暂无数据') }} </p>
-                                    </div>
-                                </div>
-                            </template>
-                        </ul>
-                    </div>
+          <div
+            class="fright-middle fright-last"
+            data-test-id="summary_content_noSource"
+          >
+            <h3> {{ $t('最新动态') }} </h3>
+            <ul class="dynamic-list">
+              <template v-if="operationsList.length">
+                <li
+                  v-for="(item, itemIndex) in operationsList"
+                  :key="itemIndex"
+                >
+                  <p class="dynamic-time">
+                    <span
+                      v-bk-tooltips="item.at"
+                      class="tooltip-time"
+                    >{{ item.at_friendly }}</span>
+                  </p>
+                  <p class="dynamic-content">
+                    {{ $t('由') }}<span class="gruy">{{ item.operator ? item.operator : '—' }}</span>{{ item.operate }}
+                  </p>
+                </li>
+                <li />
+              </template>
+              <template v-else>
+                <div class="ps-no-result">
+                  <div class="text">
+                    <p><i class="paasng-icon paasng-empty" /></p>
+                    <p> {{ $t('暂无数据') }} </p>
+                  </div>
                 </div>
-            </template>
-        </paas-content-loader>
-    </div>
+              </template>
+            </ul>
+          </div>
+        </div>
+      </template>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

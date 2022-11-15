@@ -1,23 +1,29 @@
 <template lang="html">
-    <paas-content-loader :is-loading="loading" :offset-top="0" placeholder="cloud-api-inner-index-loading" :height="300">
-        <layout>
-            <system-filter
-                :list="filterList"
-                :type="apiType"
-                @on-select="handleSelect"
-                @on-refresh="handleRefresh" />
-            <div slot="right">
-                <render-list
-                    :id="curId"
-                    :api-type="apiType"
-                    :name="curName"
-                    :maintainers="maintainers"
-                    :is-refresh="isRefresh"
-                    @data-ready="handlerDataReady">
-                </render-list>
-            </div>
-        </layout>
-    </paas-content-loader>
+  <paas-content-loader
+    :is-loading="loading"
+    :offset-top="0"
+    placeholder="cloud-api-inner-index-loading"
+    :height="300"
+  >
+    <layout>
+      <system-filter
+        :list="filterList"
+        :type="apiType"
+        @on-select="handleSelect"
+        @on-refresh="handleRefresh"
+      />
+      <div slot="right">
+        <render-list
+          :id="curId"
+          :api-type="apiType"
+          :name="curName"
+          :maintainers="maintainers"
+          :is-refresh="isRefresh"
+          @data-ready="handlerDataReady"
+        />
+      </div>
+    </layout>
+  </paas-content-loader>
 </template>
 <script>
     import Layout from './render-layout';

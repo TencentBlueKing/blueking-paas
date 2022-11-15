@@ -22,43 +22,43 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取当前应用下，所有的文档模板及实例
          *
          * @param {Object} params
          */
-        getDocumentInstance ({ commit, state }, params) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
-            return http.get(url);
-        },
+    getDocumentInstance ({ commit, state }, params) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
+      return http.get(url);
+    },
 
-        /**
+    /**
          * 实例不存在时，更新文档实例
          *
          * @param {Object} params
          */
-        updateDocumentInstance ({ commit, state }, params) {
-            const requestParams = Object.assign({}, params);
-            delete requestParams.appCode;
-            const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
-            return http.post(url, requestParams);
-        },
+    updateDocumentInstance ({ commit, state }, params) {
+      const requestParams = Object.assign({}, params);
+      delete requestParams.appCode;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/`;
+      return http.post(url, requestParams);
+    },
 
-        /**
+    /**
          * 实例存在时，更新文档实例
          *
          * @param {Object} params
          */
-        updateDocumentInstanceByExist ({ commit, state }, params) {
-            const requestParams = Object.assign({}, params);
-            delete requestParams.appCode;
-            delete requestParams.id;
-            const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/${params.id}/`;
-            return http.put(url, requestParams);
-        }
+    updateDocumentInstanceByExist ({ commit, state }, params) {
+      const requestParams = Object.assign({}, params);
+      delete requestParams.appCode;
+      delete requestParams.id;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${params.appCode}/document/instance/${params.id}/`;
+      return http.put(url, requestParams);
     }
+  }
 };

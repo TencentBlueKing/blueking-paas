@@ -22,49 +22,49 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取成员列表
          */
-        getMemberList ({ commit, state }, { appCode }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
-            return http.get(url, config);
-        },
+    getMemberList ({ commit, state }, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 新增成员
          */
-        addMember ({ commit, state }, { appCode, postParams }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
-            return http.post(url, postParams, config);
-        },
+    addMember ({ commit, state }, { appCode, postParams }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/`;
+      return http.post(url, postParams, config);
+    },
 
-        /**
+    /**
          * 退出应用
          */
-        quitApplication ({ commit, state }, { appCode }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/leave/`;
-            return http.post(url, {}, config);
-        },
+    quitApplication ({ commit, state }, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/leave/`;
+      return http.post(url, {}, config);
+    },
 
-        /**
+    /**
          * 角色更新
          */
-        updateRole ({ commit, state }, { appCode, id, params }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
-            return http.put(url, params, config);
-        },
+    updateRole ({ commit, state }, { appCode, id, params }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
+      return http.put(url, params, config);
+    },
 
-        /**
+    /**
          * 删除成员
          */
-        deleteRole ({ commit, state }, { appCode, id }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
-            return http.delete(url, config);
-        }
+    deleteRole ({ commit, state }, { appCode, id }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/members/${id}`;
+      return http.delete(url, config);
     }
+  }
 };

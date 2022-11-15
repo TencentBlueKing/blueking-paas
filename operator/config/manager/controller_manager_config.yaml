@@ -25,5 +25,6 @@ platformConfig:
   bkAppCode: ""
   bkAppSecret: ""
   bkAPIGatewayURL: ""
-experimentalFeatures:
-  useNetworkingV1Beta1: false
+ingressPluginConfig:
+  accessControlConfig:
+    redisConfigKey: ""

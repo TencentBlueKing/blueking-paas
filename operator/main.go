@@ -86,8 +86,6 @@ func main() {
 	// not use global because import cycle
 	paasv1alpha1.SetConfig(projConf)
 
-	setupLog.Info("ExperimentalFeatures", "UseNetworkingV1Beta1", projConf.ExperimentalFeatures.UseNetworkingV1Beta1)
-
 	if err = initExtensionClient(); err != nil {
 		setupLog.Error(err, "unable to init extension client")
 		os.Exit(1)

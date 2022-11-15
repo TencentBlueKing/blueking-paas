@@ -47,8 +47,6 @@ platformConfig:
   bkAppCode: "foo"
   bkAppSecret: "bar"
   bkAPIGatewayURL: "https://example.com"
-experimentalFeatures:
-  useNetworkingV1Beta1: true
 `
 		file, err := ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -72,7 +70,5 @@ experimentalFeatures:
 		Expect(projectConfig.PlatformConfig.BkAppCode).To(Equal("foo"))
 		Expect(projectConfig.PlatformConfig.BkAppSecret).To(Equal("bar"))
 		Expect(projectConfig.PlatformConfig.BkAPIGatewayURL).To(Equal("https://example.com"))
-		// 检测 experimentalFeatures
-		Expect(projectConfig.ExperimentalFeatures.UseNetworkingV1Beta1).To(BeTrue())
 	})
 })

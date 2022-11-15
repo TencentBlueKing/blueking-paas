@@ -58,7 +58,7 @@ from tests.utils import mock
 from tests.utils.helpers import configure_regions, generate_random_string
 
 from .utils.auth import create_user
-from .utils.helpers import _mock_current_engine_client, create_app, create_cnative_app
+from .utils.helpers import _mock_current_engine_client, create_app, create_cnative_app, initialize_module
 
 logger = logging.getLogger(__file__)
 
@@ -609,6 +609,13 @@ def create_custom_app():
         return application
 
     return create
+
+
+@pytest.fixture
+def create_module(bk_app):
+    module = Module.objects.create(region=bk_app.region, application=bk_app, name=generate_random_string(length=8))
+    initialize_module(module)
+    return module
 
 
 # Mocking fixtures

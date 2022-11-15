@@ -26,7 +26,12 @@ urlpatterns = [
     path("api/bkplugins/<str:pd_id>/plugins/", views.PluginInstanceViewSet.as_view({"post": "create"})),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/",
-        views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update"}),
+        views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/repo/commit-diff-external/"
+        + "<str:from_revision>/<str:to_revision>/",
+        views.PluginInstanceViewSet.as_view({"get": "get_compare_url"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
@@ -95,6 +100,10 @@ urlpatterns = [
     path(
         "api/bkplugins/plugin_definitions/<str:pd_id>/basic_info_schema/",
         views.SchemaViewSet.as_view({"get": "get_basic_info_schema"}),
+    ),
+    path(
+        "api/bkplugins/filter_params/",
+        views.SchemaViewSet.as_view({"get": "get_filter_params"}),
     ),
     # iam selection api
     path(

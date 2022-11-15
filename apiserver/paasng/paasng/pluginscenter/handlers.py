@@ -16,12 +16,23 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from paasng.pluginscenter.constants import PluginReleaseStatus
+from paasng.pluginscenter.models import PluginReleaseStage
 
 
-class PluginsCenterConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'paasng.pluginscenter'
-
-    def ready(self):
-        from . import handlers  # noqa
+@receiver(post_save, sender=PluginReleaseStage)
+def update_release_status_when_stage_status_change(sender, instance: PluginReleaseStage, created, *args, **kwargs):
+    if created:
+        return
+    release = instance.release
+    # 发布中断或失败
+    if instance.status in [PluginReleaseStatus.INTERRUPTED, PluginReleaseStatus.FAILED]:
+        release.status = instance.status
+        release.save()
+    # 最后一个步骤成功, 即发布成功
+    elif instance.status == PluginReleaseStatus.SUCCESSFUL and instance.next_stage is None:
+        release.status = instance.status
+        release.save()

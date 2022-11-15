@@ -1,13 +1,23 @@
 <template lang="html">
-    <div class="right-main">
-        <div class="ps-top-bar">
-            <h2> {{ $t('持续集成') }} </h2>
-        </div>
-        <paas-content-loader class="ps-container" :is-loading="!gitReady" placeholder="devops-loading">
-            <service-general :data="apiData" :show-title="false"></service-general>
-            <git @ready="gitReady = true" style="position: relative; top: -100px;"></git>
-        </paas-content-loader>
+  <div class="right-main">
+    <div class="ps-top-bar">
+      <h2> {{ $t('持续集成') }} </h2>
     </div>
+    <paas-content-loader
+      class="ps-container"
+      :is-loading="!gitReady"
+      placeholder="devops-loading"
+    >
+      <service-general
+        :data="apiData"
+        :show-title="false"
+      />
+      <git
+        style="position: relative; top: -100px;"
+        @ready="gitReady = true"
+      />
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

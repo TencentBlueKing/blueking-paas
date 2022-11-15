@@ -22,238 +22,238 @@
 // import moment from 'moment'
 import i18n from '@/language/i18n.js';
 export default {
-    cpu: {
-        color: ['#EA3636', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA'],
-        // color: ['#317fff', '#8ec68d', '#f2d0a8'],
-        title: {
-            show: false
-        },
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-                type: 'line',
-                animation: true,
-                label: {
-                    backgroundColor: '#6a7985'
-                }
-            },
-            formatter (params, ticket, callback) {
-                let ret = `<div>${params[0].axisValueLabel}</div>`;
-                params.forEach(item => {
-                    let val = parseFloat(item.value).toFixed(2);
-                    if (val === '0.00') {
-                        val = 0;
-                    }
-                    if (item.seriesName.includes('使用量')) {
-                        const seriesNameArr = item.seriesName.split('-');
-                        seriesNameArr[1] = i18n.t(seriesNameArr[1]);
-                        item.seriesName = seriesNameArr.join('-');
-                    } else {
-                        item.seriesName = i18n.t(item.seriesName);
-                    }
-                    ret += `<div>${item.seriesName}：${val}${i18n.t('核')}</div>`;
-                });
-                return ret;
-            }
-        },
-        legend: {
-            data: [
-                'Current',
-                'Request',
-                'Limit'
-            ]
-        },
-        toolbox: {
-            show: false
-        },
-        grid: {
-            top: '5%',
-            left: '3%',
-            right: '4%',
-            bottom: '5%',
-            containLabel: true
-        },
-        xAxis: [{
-            type: 'category',
-            boundaryGap: false,
-            // 设置横轴
-            axisLine: {
-                show: true,
-                lineStyle: {
-                    color: '#dde3ea'
-                }
-            },
-            // 设置横轴坐标刻度
-            axisTick: {
-                show: false
-            },
-            // 设置横轴文字
-            axisLabel: {
-                color: '#8a8f99',
-                formatter (value, index) {
-                    let ret = value;
-                    if (value) {
-                        ret = value.replace(' ', '\n');
-                    }
-                    return ret;
-                }
-            },
-            // 设置风格 - 竖线
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: ['#ecf0f4'],
-                    type: 'dashed'
-                }
-            },
-            data: []
-        }],
-        yAxis: [{
-            boundaryGap: [0, '2%'],
-            type: 'value',
-            // 设置纵轴线条
-            axisLine: {
-                show: true,
-                lineStyle: {
-                    color: '#dde3ea'
-                }
-            },
-            // 设置纵轴刻度
-            axisTick: {
-                show: false
-            },
-            // 设置纵轴文字
-            axisLabel: {
-                color: '#8a8f99',
-                formatter (value, index) {
-                    return `${value}`;
-                }
-            },
-            // 设置网格 - 横线
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: ['#ecf0f4'],
-                    type: 'solid'
-                }
-            }
-        }],
-        series: [
-        ]
+  cpu: {
+    color: ['#EA3636', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA'],
+    // color: ['#317fff', '#8ec68d', '#f2d0a8'],
+    title: {
+      show: false
     },
-    memory: {
-        color: ['#EA3636', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA'],
-        // color: ['#317fff', '#8ec68d', '#f2d0a8'],
-        title: {
-            show: false
-        },
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-                type: 'line',
-                animation: true,
-                label: {
-                    backgroundColor: '#6a7985'
-                }
-            },
-            formatter (params, ticket, callback) {
-                let ret = `<div>${params[0].axisValueLabel}</div>`;
-                params.forEach(item => {
-                    if (item.seriesName.includes('使用量')) {
-                        const seriesNameArr = item.seriesName.split('-');
-                        seriesNameArr[1] = i18n.t(seriesNameArr[1]);
-                        item.seriesName = seriesNameArr.join('-');
-                    } else {
-                        item.seriesName = i18n.t(item.seriesName);
-                    }
-                    ret += `<div>${item.seriesName}：${item.value}MB</div>`;
-                });
-                return ret;
-            }
-        },
-        legend: {
-            data: [
-                'Current',
-                'Request',
-                'Limit'
-            ]
-        },
-        toolbox: {
-            show: false
-        },
-        grid: {
-            top: '5%',
-            left: '3%',
-            right: '4%',
-            bottom: '5%',
-            containLabel: true
-        },
-        xAxis: [{
-            type: 'category',
-            boundaryGap: false,
-            // 设置横轴
-            axisLine: {
-                show: true,
-                lineStyle: {
-                    color: '#dde3ea'
-                }
-            },
-            // 设置横轴坐标刻度
-            axisTick: {
-                show: false
-            },
-            // 设置横轴文字
-            axisLabel: {
-                color: '#8a8f99',
-                formatter (value, index) {
-                    let ret = value;
-                    if (value) {
-                        ret = value.replace(' ', '\n');
-                    }
-                    return ret;
-                }
-            },
-            // 设置风格 - 竖线
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: ['#ecf0f4'],
-                    type: 'dashed'
-                }
-            },
-            data: []
-        }],
-        yAxis: [{
-            boundaryGap: [0, '2%'],
-            type: 'value',
-            // 设置纵轴线条
-            axisLine: {
-                show: true,
-                lineStyle: {
-                    color: '#dde3ea'
-                }
-            },
-            // 设置纵轴刻度
-            axisTick: {
-                show: false
-            },
-            // 设置纵轴文字
-            axisLabel: {
-                color: '#8a8f99',
-                formatter (value, index) {
-                    return `${value}`;
-                }
-            },
-            // 设置网格 - 横线
-            splitLine: {
-                show: true,
-                lineStyle: {
-                    color: ['#ecf0f4'],
-                    type: 'dashed'
-                }
-            }
-        }],
-        series: [
-        ]
-    }
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'line',
+        animation: true,
+        label: {
+          backgroundColor: '#6a7985'
+        }
+      },
+      formatter (params, ticket, callback) {
+        let ret = `<div>${params[0].axisValueLabel}</div>`;
+        params.forEach(item => {
+          let val = parseFloat(item.value).toFixed(2);
+          if (val === '0.00') {
+            val = 0;
+          }
+          if (item.seriesName.includes('使用量')) {
+            const seriesNameArr = item.seriesName.split('-');
+            seriesNameArr[1] = i18n.t(seriesNameArr[1]);
+            item.seriesName = seriesNameArr.join('-');
+          } else {
+            item.seriesName = i18n.t(item.seriesName);
+          }
+          ret += `<div>${item.seriesName}：${val}${i18n.t('核')}</div>`;
+        });
+        return ret;
+      }
+    },
+    legend: {
+      data: [
+        'Current',
+        'Request',
+        'Limit'
+      ]
+    },
+    toolbox: {
+      show: false
+    },
+    grid: {
+      top: '5%',
+      left: '3%',
+      right: '4%',
+      bottom: '5%',
+      containLabel: true
+    },
+    xAxis: [{
+      type: 'category',
+      boundaryGap: false,
+      // 设置横轴
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: '#dde3ea'
+        }
+      },
+      // 设置横轴坐标刻度
+      axisTick: {
+        show: false
+      },
+      // 设置横轴文字
+      axisLabel: {
+        color: '#8a8f99',
+        formatter (value, index) {
+          let ret = value;
+          if (value) {
+            ret = value.replace(' ', '\n');
+          }
+          return ret;
+        }
+      },
+      // 设置风格 - 竖线
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: ['#ecf0f4'],
+          type: 'dashed'
+        }
+      },
+      data: []
+    }],
+    yAxis: [{
+      boundaryGap: [0, '2%'],
+      type: 'value',
+      // 设置纵轴线条
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: '#dde3ea'
+        }
+      },
+      // 设置纵轴刻度
+      axisTick: {
+        show: false
+      },
+      // 设置纵轴文字
+      axisLabel: {
+        color: '#8a8f99',
+        formatter (value, index) {
+          return `${value}`;
+        }
+      },
+      // 设置网格 - 横线
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: ['#ecf0f4'],
+          type: 'solid'
+        }
+      }
+    }],
+    series: [
+    ]
+  },
+  memory: {
+    color: ['#EA3636', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA'],
+    // color: ['#317fff', '#8ec68d', '#f2d0a8'],
+    title: {
+      show: false
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'line',
+        animation: true,
+        label: {
+          backgroundColor: '#6a7985'
+        }
+      },
+      formatter (params, ticket, callback) {
+        let ret = `<div>${params[0].axisValueLabel}</div>`;
+        params.forEach(item => {
+          if (item.seriesName.includes('使用量')) {
+            const seriesNameArr = item.seriesName.split('-');
+            seriesNameArr[1] = i18n.t(seriesNameArr[1]);
+            item.seriesName = seriesNameArr.join('-');
+          } else {
+            item.seriesName = i18n.t(item.seriesName);
+          }
+          ret += `<div>${item.seriesName}：${item.value}MB</div>`;
+        });
+        return ret;
+      }
+    },
+    legend: {
+      data: [
+        'Current',
+        'Request',
+        'Limit'
+      ]
+    },
+    toolbox: {
+      show: false
+    },
+    grid: {
+      top: '5%',
+      left: '3%',
+      right: '4%',
+      bottom: '5%',
+      containLabel: true
+    },
+    xAxis: [{
+      type: 'category',
+      boundaryGap: false,
+      // 设置横轴
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: '#dde3ea'
+        }
+      },
+      // 设置横轴坐标刻度
+      axisTick: {
+        show: false
+      },
+      // 设置横轴文字
+      axisLabel: {
+        color: '#8a8f99',
+        formatter (value, index) {
+          let ret = value;
+          if (value) {
+            ret = value.replace(' ', '\n');
+          }
+          return ret;
+        }
+      },
+      // 设置风格 - 竖线
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: ['#ecf0f4'],
+          type: 'dashed'
+        }
+      },
+      data: []
+    }],
+    yAxis: [{
+      boundaryGap: [0, '2%'],
+      type: 'value',
+      // 设置纵轴线条
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: '#dde3ea'
+        }
+      },
+      // 设置纵轴刻度
+      axisTick: {
+        show: false
+      },
+      // 设置纵轴文字
+      axisLabel: {
+        color: '#8a8f99',
+        formatter (value, index) {
+          return `${value}`;
+        }
+      },
+      // 设置网格 - 横线
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: ['#ecf0f4'],
+          type: 'dashed'
+        }
+      }
+    }],
+    series: [
+    ]
+  }
 };

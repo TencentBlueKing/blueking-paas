@@ -1,19 +1,36 @@
 <template lang="html">
-    <section>
-        <h3 class="title"> {{ $t('配置信息') }} </h3>
-        <section class="content">
-            <section class="item"
-                v-for="(item, index) in listDisplay"
-                :key="index"
-                :class="index !== 0 ? 'set-top' : ''">
-                <label class="label" :title="item.name">{{item.name}}</label>
-                <section class="value">{{item.value}}</section>
-            </section>
+  <section>
+    <h3 class="title">
+      {{ $t('配置信息') }}
+    </h3>
+    <section class="content">
+      <section
+        v-for="(item, index) in listDisplay"
+        :key="index"
+        class="item"
+        :class="index !== 0 ? 'set-top' : ''"
+      >
+        <label
+          class="label"
+          :title="item.name"
+        >{{ item.name }}</label>
+        <section class="value">
+          {{ item.value }}
         </section>
-        <section class="action" v-if="isEdit">
-            <bk-button :loading="saveLoading" @click="handleEdit"> {{ $t('修改配置信息') }} </bk-button>
-        </section>
+      </section>
     </section>
+    <section
+      v-if="isEdit"
+      class="action"
+    >
+      <bk-button
+        :loading="saveLoading"
+        @click="handleEdit"
+      >
+        {{ $t('修改配置信息') }}
+      </bk-button>
+    </section>
+  </section>
 </template>
 
 <script>

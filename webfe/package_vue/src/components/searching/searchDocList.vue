@@ -1,16 +1,34 @@
 <template>
-    <ul :class="theme">
-        <template v-if="isLoading">
-            <li><img class="loading" src="/static/images/btn_loading.gif" /><span> {{ $t('搜索中...') }} </span></li>
-        </template>
-        <template v-else>
-            <li v-if="docList.length === 0" class="no-data"><span> {{ $t('无相关文档') }} </span></li>
-            <li :class="{ 'on': curActiveIndex === index }" v-for="(item, index) in docList" v-if="!max || index < max" :key="index">
-                <a :href="`${item.url}`" target="_blank">{{item.title}}
-                </a>
-            </li>
-        </template>
-    </ul>
+  <ul :class="theme">
+    <template v-if="isLoading">
+      <li>
+        <img
+          class="loading"
+          src="/static/images/btn_loading.gif"
+        ><span> {{ $t('搜索中...') }} </span>
+      </li>
+    </template>
+    <template v-else>
+      <li
+        v-if="docList.length === 0"
+        class="no-data"
+      >
+        <span> {{ $t('无相关文档') }} </span>
+      </li>
+      <li
+        v-for="(item, index) in docList"
+        v-if="!max || index < max"
+        :key="index"
+        :class="{ 'on': curActiveIndex === index }"
+      >
+        <a
+          :href="`${item.url}`"
+          target="_blank"
+        >{{ item.title }}
+        </a>
+      </li>
+    </template>
+  </ul>
 </template>
 
 <script>

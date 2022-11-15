@@ -1,35 +1,66 @@
 <template>
-    <div :class="['paas-deploy-log-stage-wrapper', extCls]">
-        <label class="title" v-if="isShowTitle">{{ title }}</label>
-        <section class="content-wrapper">
-            <section class="content" ref="content">
-                <p v-for="(item, index) in logs" :key="index" class="log-item">
-                    <span v-html="item.timestamp"></span>
-                    <span v-html="item.message" style="margin-left: 25px;"></span>
-                </p>
-            </section>
-            <div class="screen-wrapper" v-if="isShowFullScreen" @click.stop="handleFullScreen">
-                <i class="paasng-icon paasng-full-screen-new"></i>
-            </div>
-        </section>
+  <div :class="['paas-deploy-log-stage-wrapper', extCls]">
+    <label
+      v-if="isShowTitle"
+      class="title"
+    >{{ title }}</label>
+    <section class="content-wrapper">
+      <section
+        ref="content"
+        class="content"
+      >
+        <p
+          v-for="(item, index) in logs"
+          :key="index"
+          class="log-item"
+        >
+          <span v-html="item.timestamp" />
+          <span
+            style="margin-left: 25px;"
+            v-html="item.message"
+          />
+        </p>
+      </section>
+      <div
+        v-if="isShowFullScreen"
+        class="screen-wrapper"
+        @click.stop="handleFullScreen"
+      >
+        <i class="paasng-icon paasng-full-screen-new" />
+      </div>
+    </section>
 
-        <bk-dialog
-            v-model="fullDialogVisiable"
-            fullscreen
-            :show-footer="false"
-            ext-cls="paas-deploy-log-full-screen-cls"
-            title="">
-            <div class="screen-icon-wrapper" @click="fullDialogVisiable = false">
-                <i class="paasng-icon paasng-restore-screen"></i>
-            </div>
-            <div class="dialog-log-content" ref="dialogContent">
-                <p v-for="(item, index) in logs" :key="index" class="log-item">
-                    <span v-html="item.timestamp"></span>
-                    <span v-html="item.message" style="margin-left: 25px;"></span>
-                </p>
-            </div>
-        </bk-dialog>
-    </div>
+    <bk-dialog
+      v-model="fullDialogVisiable"
+      fullscreen
+      :show-footer="false"
+      ext-cls="paas-deploy-log-full-screen-cls"
+      title=""
+    >
+      <div
+        class="screen-icon-wrapper"
+        @click="fullDialogVisiable = false"
+      >
+        <i class="paasng-icon paasng-restore-screen" />
+      </div>
+      <div
+        ref="dialogContent"
+        class="dialog-log-content"
+      >
+        <p
+          v-for="(item, index) in logs"
+          :key="index"
+          class="log-item"
+        >
+          <span v-html="item.timestamp" />
+          <span
+            style="margin-left: 25px;"
+            v-html="item.message"
+          />
+        </p>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 <script>
     export default {

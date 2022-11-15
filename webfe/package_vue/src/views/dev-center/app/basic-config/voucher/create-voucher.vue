@@ -1,47 +1,81 @@
 <template>
-    <div>
-        <bk-dialog
-            v-model="versionDialogConf.visiable"
-            :title="versionDialogConf.title"
-            header-position="center"
-            :width="600"
-            @after-leave="handleCancel">
-            <bk-form
-                class="mt20 mb10"
-                style="width: 540px;"
-                :label-width="80"
-                :model="voucherParams"
-                :rules="rules"
-                ref="versionForm">
-                <bk-form-item
-                    :label="$t('名称')"
-                    :required="true"
-                    :property="'name'">
-                    <bk-input :placeholder="$t('以英文字母、数字或下划线(_)组成，不超过40个字')" v-model="voucherParams.name" :disabled="type === 'edit'"></bk-input>
-                </bk-form-item>
-                <bk-form-item :label="$t('账号')" :required="true" :property="'username'">
-                    <bk-input :placeholder="$t('请输入')" v-model="voucherParams.username"></bk-input>
-                </bk-form-item>
-                <bk-form-item :label="$t('密码')" :required="true" :property="'password'">
-                    <bk-input
-                        ext-cls="passwordEl"
-                        type="password"
-                        :placeholder="$t('请输入')"
-                        v-model="voucherParams.password"
-                        autocomplete="off">
-                    </bk-input>
-                    <!-- <p v-else>******</p> -->
-                </bk-form-item>
-                <bk-form-item :label="$t('描述')" :property="'description'">
-                    <bk-input type="textarea" :placeholder="$t('描述')" v-model="voucherParams.description"></bk-input>
-                </bk-form-item>
-            </bk-form>
-            <div slot="footer">
-                <bk-button class="mr15" theme="primary" @click="handleCreate" :loading="versionDialogConf.loading">{{ $t('确定')}}</bk-button>
-                <bk-button @click="handleCancel"> {{ $t('取消') }} </bk-button>
-            </div>
-        </bk-dialog>
-    </div>
+  <div>
+    <bk-dialog
+      v-model="versionDialogConf.visiable"
+      :title="versionDialogConf.title"
+      header-position="center"
+      :width="600"
+      @after-leave="handleCancel"
+    >
+      <bk-form
+        ref="versionForm"
+        class="mt20 mb10"
+        style="width: 540px;"
+        :label-width="80"
+        :model="voucherParams"
+        :rules="rules"
+      >
+        <bk-form-item
+          :label="$t('名称')"
+          :required="true"
+          :property="'name'"
+        >
+          <bk-input
+            v-model="voucherParams.name"
+            :placeholder="$t('以英文字母、数字或下划线(_)组成，不超过40个字')"
+            :disabled="type === 'edit'"
+          />
+        </bk-form-item>
+        <bk-form-item
+          :label="$t('账号')"
+          :required="true"
+          :property="'username'"
+        >
+          <bk-input
+            v-model="voucherParams.username"
+            :placeholder="$t('请输入')"
+          />
+        </bk-form-item>
+        <bk-form-item
+          :label="$t('密码')"
+          :required="true"
+          :property="'password'"
+        >
+          <bk-input
+            v-model="voucherParams.password"
+            ext-cls="passwordEl"
+            type="password"
+            :placeholder="$t('请输入')"
+            autocomplete="off"
+          />
+          <!-- <p v-else>******</p> -->
+        </bk-form-item>
+        <bk-form-item
+          :label="$t('描述')"
+          :property="'description'"
+        >
+          <bk-input
+            v-model="voucherParams.description"
+            type="textarea"
+            :placeholder="$t('描述')"
+          />
+        </bk-form-item>
+      </bk-form>
+      <div slot="footer">
+        <bk-button
+          class="mr15"
+          theme="primary"
+          :loading="versionDialogConf.loading"
+          @click="handleCreate"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button @click="handleCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>

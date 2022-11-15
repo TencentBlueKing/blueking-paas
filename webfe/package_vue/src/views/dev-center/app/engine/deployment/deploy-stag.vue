@@ -1,7 +1,7 @@
 <template>
-    <deploy-action
-        :environment="'stag'">
-    </deploy-action>
+  <deploy-action
+    :environment="'stag'"
+  />
 </template>
 
 <script>

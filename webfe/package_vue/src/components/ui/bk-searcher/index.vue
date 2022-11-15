@@ -1,61 +1,152 @@
 <template>
-    <div class="bk-searcher-wrapper" ref="searchWrapper" v-clickoutside="hideFilterList">
-        <div class="placeholder" v-if="!searchParams.length && !fixedSearchParams.length && !showFilter" @click="foucusSearcher($event)"> {{ $t('搜索，支持上下键选择，按Enter选中') }} </div>
-        <div class="bk-searcher" @click="foucusSearcher($event)">
-            <ul class="search-params-wrapper" ref="searchParamsWrapper">
-                <li v-if="fixedSearchParams && fixedSearchParams.length" v-for="(fsp, fspIndex) in fixedSearchParams">
-                    <div class="selectable" @click.stop="fixedSearchParamsClickHandler($event, fsp, fspIndex)">
-                        <div class="name">{{fsp.text}}</div>
-                        <div class="value-container" v-if="fsp.value">
-                            <div class="value">{{fsp.value.text}}</div>
-                        </div>
-                    </div>
-                </li>
-                <li v-if="searchParams && searchParams.length" v-for="(sp, spIndex) in searchParams">
-                    <div class="selectable" @click.stop="searchParamsClickHandler($event, sp, spIndex)">
-                        <div class="name">{{sp.text}}</div>
-                        <div class="value-container" v-if="sp.value">
-                            <div class="value">{{sp.value.text}}</div>
-                            <div class="remove-search-params" @click.stop="removeSearchParams($event, sp, spIndex)"><i class="paasng-icon paasng-close"></i></div>
-                        </div>
-                    </div>
-                </li>
-                <li ref="searchInputParent">
-                    <input type="text" class="input" ref="searchInput" v-model="curInputValue"
-                        :style="{ width: `${maxInputWidth}px`, minWidth: `${minInputWidth}px` }"
-                        :maxlength="inputSearchKey || showFilterValue ? Infinity : 0"
-                        @keyup="inputKeyup($event)"
-                        @keypress="keyboardEvt($event)"
-                        @keydown="keyboardEvt($event)">
-                </li>
-            </ul>
-        </div>
-        <div class="bk-searcher-dropdown-menu filter-list" v-show="showFilter && filterList.length">
-            <div class="bk-searcher-dropdown-content" :class="showFilter ? 'is-show' : ''" :style="{ left: `${searcherDropdownLeft}px` }">
-                <ul class="bk-searcher-dropdown-list" v-bkloading="{ isLoading: filterValueLoading }">
-                    <li v-for="(filter, filterIndex) in filterList">
-                        <a href="javascript:void(0);" @click="selectFilter(filter, filterIndex)" :class="filterIndex === filterKeyboardIndex ? 'active' : ''">{{filter.text}}</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="bk-searcher-dropdown-menu filter-value-list" v-show="showFilterValue && filterValueList.length">
-            <div class="bk-searcher-dropdown-content" ref="filterValueListNode" :class="showFilterValue ? 'is-show' : ''" :style="{ left: `${searcherDropdownLeft}px` }">
-                <ul class="bk-searcher-dropdown-list" v-if="filterValueList && filterValueList.length">
-                    <li v-for="(fv, fvIndex) in filterValueList">
-                        <a href="javascript:void(0);" :class="fvIndex === filterValueKeyboardIndex ? 'active' : ''" @click="selectFilterValue(fv)">{{fv.text}}</a>
-                    </li>
-                </ul>
-                <ul class="bk-searcher-dropdown-list" v-else>
-                    <li>
-                        <a href="javascript:void(0);"> {{ $t('没有数据') }} </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
+  <div
+    ref="searchWrapper"
+    v-clickoutside="hideFilterList"
+    class="bk-searcher-wrapper"
+  >
+    <div
+      v-if="!searchParams.length && !fixedSearchParams.length && !showFilter"
+      class="placeholder"
+      @click="foucusSearcher($event)"
+    >
+      {{ $t('搜索，支持上下键选择，按Enter选中') }}
     </div>
+    <div
+      class="bk-searcher"
+      @click="foucusSearcher($event)"
+    >
+      <ul
+        ref="searchParamsWrapper"
+        class="search-params-wrapper"
+      >
+        <li
+          v-for="(fsp, fspIndex) in fixedSearchParams"
+          v-if="fixedSearchParams && fixedSearchParams.length"
+          :key="fspIndex"
+        >
+          <div
+            class="selectable"
+            @click.stop="fixedSearchParamsClickHandler($event, fsp, fspIndex)"
+          >
+            <div class="name">
+              {{ fsp.text }}
+            </div>
+            <div
+              v-if="fsp.value"
+              class="value-container"
+            >
+              <div class="value">
+                {{ fsp.value.text }}
+              </div>
+            </div>
+          </div>
+        </li>
+        <li
+          v-for="(sp, spIndex) in searchParams"
+          v-if="searchParams && searchParams.length"
+          :key="spIndex"
+        >
+          <div
+            class="selectable"
+            @click.stop="searchParamsClickHandler($event, sp, spIndex)"
+          >
+            <div class="name">
+              {{ sp.text }}
+            </div>
+            <div
+              v-if="sp.value"
+              class="value-container"
+            >
+              <div class="value">
+                {{ sp.value.text }}
+              </div>
+              <div
+                class="remove-search-params"
+                @click.stop="removeSearchParams($event, sp, spIndex)"
+              >
+                <i class="paasng-icon paasng-close" />
+              </div>
+            </div>
+          </div>
+        </li>
+        <li ref="searchInputParent">
+          <input
+            ref="searchInput"
+            v-model="curInputValue"
+            type="text"
+            class="input"
+            :style="{ width: `${maxInputWidth}px`, minWidth: `${minInputWidth}px` }"
+            :maxlength="inputSearchKey || showFilterValue ? Infinity : 0"
+            @keyup="inputKeyup($event)"
+            @keypress="keyboardEvt($event)"
+            @keydown="keyboardEvt($event)"
+          >
+        </li>
+      </ul>
+    </div>
+    <div
+      v-show="showFilter && filterList.length"
+      class="bk-searcher-dropdown-menu filter-list"
+    >
+      <div
+        class="bk-searcher-dropdown-content"
+        :class="showFilter ? 'is-show' : ''"
+        :style="{ left: `${searcherDropdownLeft}px` }"
+      >
+        <ul
+          v-bkloading="{ isLoading: filterValueLoading }"
+          class="bk-searcher-dropdown-list"
+        >
+          <li
+            v-for="(filter, filterIndex) in filterList"
+            :key="filterIndex"
+          >
+            <a
+              href="javascript:void(0);"
+              :class="filterIndex === filterKeyboardIndex ? 'active' : ''"
+              @click="selectFilter(filter, filterIndex)"
+            >{{ filter.text }}</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div
+      v-show="showFilterValue && filterValueList.length"
+      class="bk-searcher-dropdown-menu filter-value-list"
+    >
+      <div
+        ref="filterValueListNode"
+        class="bk-searcher-dropdown-content"
+        :class="showFilterValue ? 'is-show' : ''"
+        :style="{ left: `${searcherDropdownLeft}px` }"
+      >
+        <ul
+          v-if="filterValueList && filterValueList.length"
+          class="bk-searcher-dropdown-list"
+        >
+          <li
+            v-for="(fv, fvIndex) in filterValueList"
+            :key="fvIndex"
+          >
+            <a
+              href="javascript:void(0);"
+              :class="fvIndex === filterValueKeyboardIndex ? 'active' : ''"
+              @click="selectFilterValue(fv)"
+            >{{ fv.text }}</a>
+          </li>
+        </ul>
+        <ul
+          v-else
+          class="bk-searcher-dropdown-list"
+        >
+          <li>
+            <a href="javascript:void(0);"> {{ $t('没有数据') }} </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -256,8 +347,8 @@
             this.filterListCache.splice(0, this.filterListCache.length, ...filterList);
 
             const { searchWrapper, searchParamsWrapper } = this.$refs;
-            this.searcherDropdownLeft = getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper)
-                + this.searchParamsItemMargin;
+            this.searcherDropdownLeft = getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper) +
+                this.searchParamsItemMargin;
 
             // 绑定清除 searchParams 的方法，父组件调用方式如下：
             // this.$refs.bkSearcher.$emit('resetSearchParams')
@@ -405,8 +496,8 @@
                 const { searchWrapper, searchParamsWrapper } = this.$refs;
                 // this.searcherDropdownLeft = getActualLeft(target) - getActualLeft(searchWrapper)
                 //     + this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode)
-                this.searcherDropdownLeft = getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper)
-                    + this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode);
+                this.searcherDropdownLeft = getActualLeft(searchParamsWrapper) - getActualLeft(searchWrapper) +
+                    this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode);
 
                 this.showFilter = false;
                 this.showFilterValue = true;
@@ -435,8 +526,8 @@
                 const valueContainerNode = target.querySelector('.value-container');
 
                 const { searchWrapper } = this.$refs;
-                this.searcherDropdownLeft = getActualLeft(target) - getActualLeft(searchWrapper)
-                    + this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode);
+                this.searcherDropdownLeft = getActualLeft(target) - getActualLeft(searchWrapper) +
+                    this.searchParamsItemMargin + getActualLeft(valueContainerNode) - getActualLeft(nameNode);
 
                 this.showFilter = false;
                 this.showFilterValue = true;

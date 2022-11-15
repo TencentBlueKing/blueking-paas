@@ -1,299 +1,490 @@
 <template>
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('用户限制')"
-            :cur-module="curModule"
-            disabled
-            ref="moduleRef"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isPermissionChecking" placeholder="user-limit-loading" :offset-top="25" class="app-container middle">
-            <section>
-                <div class="perm-action mt15" v-if="!isPermissionChecking">
-                    <div :class="['perm-icon', { 'active': isUseUserPermission }]">
-                        <span :class="['paasng-icon', { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]"></span>
-                    </div>
-                    <div class="perm-title">
-                        {{isUseUserPermission ? $t('已开启用户限制') : $t('未开启用户限制')}}
-                        <div class="ps-switcher-wrapper" @click="togglePermission">
-                            <bk-switcher
-                                v-model="isUseUserPermission">
-                            </bk-switcher>
-                        </div>
-                    </div>
-                    <p class="perm-tip">
-                        {{ isUseUserPermission ? $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') : $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效')}}
-                        <a class="a-link" :href="GLOBAL.DOC.ACCESS_CONTROL" target="_blank"> {{ $t('功能说明') }} </a>
-                    </p>
-                </div>
-                <template v-if="!isPermissionChecking && isUseUserPermission">
-                    <div class="ps-table-bar">
-                        <bk-button
-                            theme="primary"
-                            @click="showUserModal">
-                            <i class="paasng-icon paasng-plus mr5"></i> {{ $t('添加白名单') }}
-                        </bk-button>
-                        <bk-dropdown-menu
-                            trigger="click"
-                            ref="largeDropdown"
-                            ext-cls="by-user-export-wrapper">
-                            <bk-button
-                                :loading="exportLoading"
-                                slot="dropdown-trigger">
-                                {{ $t('批量导入/导出') }}
-                            </bk-button>
-                            <ul class="bk-dropdown-list" slot="dropdown-content">
-                                <li><a href="javascript:;" style="margin: 0;" @click="handleExport('file')"> {{ $t('从文件导入') }} </a></li>
-                                <li><a href="javascript:;" style="margin: 0;" @click="handleExport('batch')"> {{ $t('批量导出') }} </a></li>
-                            </ul>
-                        </bk-dropdown-menu>
-                        <bk-button style="margin-left: 6px;" :disabled="isBatchDisabled" @click="batchDelete"> {{ $t('批量删除') }} </bk-button>
-                        <div class="path-exempt" v-if="curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE">
-                            <bk-button text @click="handlePathExempt" size="small"> {{ $t('配置豁免路径') }} </bk-button>
-                        </div>
-                        <bk-input
-                            style="width: 240px; float: right;"
-                            :placeholder="$t('输入关键字，按Enter搜索')"
-                            :right-icon="'paasng-icon paasng-search'"
-                            v-model="keyword"
-                            clearable
-                            @enter="searchUserPermissionList">
-                        </bk-input>
-                    </div>
+  <div class="right-main">
+    <app-top-bar
+      ref="moduleRef"
+      :title="$t('用户限制')"
+      :cur-module="curModule"
+      disabled
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="isPermissionChecking"
+      placeholder="user-limit-loading"
+      :offset-top="25"
+      class="app-container middle"
+    >
+      <section>
+        <div
+          v-if="!isPermissionChecking"
+          class="perm-action mt15"
+        >
+          <div :class="['perm-icon', { 'active': isUseUserPermission }]">
+            <span :class="['paasng-icon', { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]" />
+          </div>
+          <div class="perm-title">
+            {{ isUseUserPermission ? $t('已开启用户限制') : $t('未开启用户限制') }}
+            <div
+              class="ps-switcher-wrapper"
+              @click="togglePermission"
+            >
+              <bk-switcher
+                v-model="isUseUserPermission"
+              />
+            </div>
+          </div>
+          <p class="perm-tip">
+            {{ isUseUserPermission ? $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') : $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') }}
+            <a
+              class="a-link"
+              :href="GLOBAL.DOC.ACCESS_CONTROL"
+              target="_blank"
+            > {{ $t('功能说明') }} </a>
+          </p>
+        </div>
+        <template v-if="!isPermissionChecking && isUseUserPermission">
+          <div class="ps-table-bar">
+            <bk-button
+              theme="primary"
+              @click="showUserModal"
+            >
+              <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
+            </bk-button>
+            <bk-dropdown-menu
+              ref="largeDropdown"
+              trigger="click"
+              ext-cls="by-user-export-wrapper"
+            >
+              <bk-button
+                slot="dropdown-trigger"
+                :loading="exportLoading"
+              >
+                {{ $t('批量导入/导出') }}
+              </bk-button>
+              <ul
+                slot="dropdown-content"
+                class="bk-dropdown-list"
+              >
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0;"
+                    @click="handleExport('file')"
+                  > {{ $t('从文件导入') }} </a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0;"
+                    @click="handleExport('batch')"
+                  > {{ $t('批量导出') }} </a>
+                </li>
+              </ul>
+            </bk-dropdown-menu>
+            <bk-button
+              style="margin-left: 6px;"
+              :disabled="isBatchDisabled"
+              @click="batchDelete"
+            >
+              {{ $t('批量删除') }}
+            </bk-button>
+            <div
+              v-if="curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE"
+              class="path-exempt"
+            >
+              <bk-button
+                text
+                size="small"
+                @click="handlePathExempt"
+              >
+                {{ $t('配置豁免路径') }}
+              </bk-button>
+            </div>
+            <bk-input
+              v-model="keyword"
+              style="width: 240px; float: right;"
+              :placeholder="$t('输入关键字，按Enter搜索')"
+              :right-icon="'paasng-icon paasng-search'"
+              clearable
+              @enter="searchUserPermissionList"
+            />
+          </div>
 
-                    <bk-table
-                        :data="userPermissionList"
-                        size="small"
-                        :class="{ 'set-border': tableLoading }"
-                        :pagination="pagination"
-                        :ext-cls="'ps-permission-table'"
-                        @page-change="pageChange"
-                        @page-limit-change="limitChange"
-                        @select="handlerChange"
-                        @select-all="handlerAllChange"
-                        v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                        <bk-table-column type="selection" width="60" align="left"></bk-table-column>
-                        <bk-table-column :label="userTypeMap[userType]" prop="content"></bk-table-column>
-                        <bk-table-column :label="$t('添加者')">
-                            <template slot-scope="props">
-                                <span>{{props.row.owner.username || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加时间')" :render-header="renderHeader">
-                            <template slot-scope="{ row }">
-                                <span v-bk-tooltips="row.created">{{smartTime(row.created,'fromNow')}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('更新时间')">
-                            <template slot-scope="{ row }">
-                                <span v-bk-tooltips="row.updated">{{smartTime(row.updated,'fromNow')}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加原因')">
-                            <template slot-scope="props">
-                                <bk-popover>
-                                    <div class="reason">{{props.row.desc ? props.row.desc : '--'}}</div>
-                                    <div slot="content" style="white-space: normal;">
-                                        {{props.row.desc ? props.row.desc : '--'}}
-                                    </div>
-                                </bk-popover>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('到期时间')" width="100">
-                            <template slot-scope="{ row }">
-                                <template v-if="row.is_expired">
-                                    <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
-                                </template>
-                                <template v-else>
-                                    <template v-if="row.expires_at">
-                                        <span v-bk-tooltips="row.expires_at">{{smartTime(row.expires_at,'fromNow')}}</span>
-                                    </template>
-                                    <template v-else>
-                                        {{ $t('永不') }}
-                                    </template>
-                                </template>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('操作')" width="150">
-                            <template slot-scope="props">
-                                <section>
-                                    <bk-button theme="primary" text @click="handleRenewal(props.row)"> {{ $t('续期') }} </bk-button>
-                                    <bk-button theme="primary" text style="margin-left: 6px;" @click="handleEdit(props.row)"> {{ $t('编辑') }} </bk-button>
-                                    <bk-button theme="primary" text style="margin-left: 6px;" @click="showRemoveModal(props.row)"> {{ $t('删除') }} </bk-button>
-                                </section>
-                            </template>
-                        </bk-table-column>
-                    </bk-table>
+          <bk-table
+            v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+            :data="userPermissionList"
+            size="small"
+            :class="{ 'set-border': tableLoading }"
+            :pagination="pagination"
+            :ext-cls="'ps-permission-table'"
+            @page-change="pageChange"
+            @page-limit-change="limitChange"
+            @select="handlerChange"
+            @select-all="handlerAllChange"
+          >
+            <bk-table-column
+              type="selection"
+              width="60"
+              align="left"
+            />
+            <bk-table-column
+              :label="userTypeMap[userType]"
+              prop="content"
+            />
+            <bk-table-column :label="$t('添加者')">
+              <template slot-scope="props">
+                <span>{{ props.row.owner.username || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('添加时间')"
+              :render-header="renderHeader"
+            >
+              <template slot-scope="{ row }">
+                <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('更新时间')">
+              <template slot-scope="{ row }">
+                <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('添加原因')">
+              <template slot-scope="props">
+                <bk-popover>
+                  <div class="reason">
+                    {{ props.row.desc ? props.row.desc : '--' }}
+                  </div>
+                  <div
+                    slot="content"
+                    style="white-space: normal;"
+                  >
+                    {{ props.row.desc ? props.row.desc : '--' }}
+                  </div>
+                </bk-popover>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('到期时间')"
+              width="100"
+            >
+              <template slot-scope="{ row }">
+                <template v-if="row.is_expired">
+                  <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
                 </template>
-            </section>
-        </paas-content-loader>
-
-        <bk-dialog
-            width="600"
-            v-model="userPermissionDialog.visiable"
-            :title="`${isUseUserPermission ? $t('是否停用用户限制') : $t('是否开启用户限制')}?`"
-            :theme="'primary'"
-            :mask-close="false"
-            :header-position="'left'"
-            :loading="userPermissionDialog.isLoading"
-            @confirm="setUserPermission"
-            @cancel="closePermission">
-            <div class="tl">
-                {{isUseUserPermission ? $t('停用后【预发布】和【生产】环境的用户限制将立即失效，所有用户都可访问') : $t('开启后【预发布】和【生产】环境的用户限制都将立即生效，仅白名单内用户可访问')}}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="removeUserDialog.visiable"
-            :header-position="'left'"
-            :title="`${$t('确定删除名单')}【${curUserParams.content}】`"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="removeUserDialog.isLoading"
-            @confirm="removeUser"
-            @after-leave="afterCloseRemove">
-            <div class="tl">
-                {{curUserParams.content}} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="renewalDialog.visiable"
-            :title="$t('有效期续期')"
-            :theme="'primary'"
-            :mask-close="false"
-            :header-position="'left'"
-            :loading="renewalDialog.isLoading"
-            @confirm="handleRenewalDialog"
-            @after-leave="afterRenewalClose">
-            <div>
-                <div class="time-button-groups bk-button-group">
-                    <bk-button
-                        :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
-                        v-for="(key, index) in Object.keys(timeFilters)"
-                        :key="index"
-                        :name="key"
-                        v-if="key !== 'cur'"
-                        @click="timeFilterHandler(key, index)">
-                        {{timeFilters[key]}}
-                    </bk-button>
-                </div>
-                <div class="custom-time-select" v-if="customTimeFlag">
-                    <input type="text" class="bk-form-input custom-time"
-                        @input="authDetailTimeHandler"
-                        v-model="customTime"
-                        placeholder="1" />
-                    <div class="unit">{{ $t('天') }}</div>
-                </div>
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="batchRemoveUserDialog.visiable"
-            :title="$t('确定批量删除名单？')"
-            :theme="'primary'"
-            :header-position="'left'"
-            :mask-close="false"
-            :loading="batchRemoveUserDialog.isLoading"
-            @confirm="batchRemoveUser">
-            <div class="tl">
-                {{ $t('批量删除的名单将失去此应用的对应权限，是否确定删除？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            :title="addUserDialog.title"
-            v-model="addUserDialog.visiable"
-            header-position="left"
-            :theme="'primary'"
-            :mask-close="false"
-            :close-icon="!addUserDialog.isLoading"
-            :loading="addUserDialog.isLoading"
-            @confirm="addUser"
-            @cancel="cancelAddUser"
-            @after-leave="afterAddClose">
-            <template v-if="addUserDialog.showForm" style="min-height: 140px;">
-                <bk-form :label-width="100" :model="curUserParams" ref="addUserForm" form-type="vertical">
-                    <bk-form-item :label="`${userTypeMap[userType]}`" :rules="userParamRules.content" :required="true" :property="'content'">
-                        <template v-if="userType === 'rtx'">
-                            <user @change="updateCurUserContent" ref="member_selector" :disabled="addUserDialog.isEdit" v-model="rtxList"></user>
-                        </template>
-                        <template v-else>
-                            <bk-input v-model="curUserParams.content" :disabled="addUserDialog.isEdit"></bk-input>
-                            <p class="ps-tip mt10"> {{ $t('多个QQ请用英文分号‘;’隔开') }} </p>
-                        </template>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('添加原因')" :rules="userParamRules.desc" :required="true" :property="'desc'">
-                        <bk-input type="textarea" :placeholder="$t('请输入200个字符以内')" :maxlength="200" v-model="curUserParams.desc"></bk-input>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('有效时间')" :rules="userParamRules.expires_at" :required="true" :property="'expires_at'" v-if="!addUserDialog.isEdit">
-                        <div class="time-button-groups bk-button-group">
-                            <bk-button
-                                :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
-                                v-for="(key, index) in Object.keys(timeFilters)"
-                                :key="index"
-                                :name="key"
-                                v-if="key !== 'cur'"
-                                @click="timeFilterHandler(key, index)">
-                                {{timeFilters[key]}}
-                            </bk-button>
-                        </div>
-                        <div class="custom-time-select" v-if="customTimeFlag">
-                            <input type="text" class="bk-form-input custom-time"
-                                @input="authDetailTimeHandler"
-                                v-model="customTime"
-                                placeholder="1" />
-                            <div class="unit">{{$t('天')}}</div>
-                        </div>
-                    </bk-form-item>
-                </bk-form>
-            </template>
-        </bk-dialog>
-
-        <bk-dialog
-            v-model="exportFileDialog.visiable"
-            :header-position="exportFileDialog.headerPosition"
-            :loading="exportFileDialog.loading"
-            :width="exportFileDialog.width"
-            :ok-text="$t('确定导入')"
-            ext-cls="paas-env-var-upload-dialog"
-            @after-leave="handleExportFileLeave">
-            <div slot="header" class="header">
-                {{ $t('从文件导入IP白名单') }}
-            </div>
-            <div>
-                <div class="download-tips">
-                    <span>
-                        <i class="paasng-icon paasng-exclamation-circle"></i>
-                        {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
-                    </span>
-                    <bk-button text theme="primary" size="small" style="line-height: 40px;" @click="handleDownloadTemplate"> {{ $t('下载模板') }} </bk-button>
-                </div>
-                <div class="upload-content">
-                    <p><i class="paasng-icon paasng-file-fill file-icon"></i></p>
-                    <p><bk-button text theme="primary" ext-cls="env-var-upload-btn-cls" @click="handleTriggerUpload"> {{ $t('选择文件') }} </bk-button></p>
-                    <p v-if="curFile.name" class="cur-upload-file">
-                        {{ $t('已选择文件：') }} {{ curFile.name }}
-                    </p>
-                    <p v-if="isFileTypeError" class="file-error-tips"> {{ $t('请选择yaml文件') }} </p>
-                </div>
-
-                <input ref="upload" type="file" style="position: absolute; width: 0; height: 0;" @change="handleStartUpload" />
-            </div>
-            <div slot="footer">
-                <bk-button
+                <template v-else>
+                  <template v-if="row.expires_at">
+                    <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+                  </template>
+                  <template v-else>
+                    {{ $t('永不') }}
+                  </template>
+                </template>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('操作')"
+              width="150"
+            >
+              <template slot-scope="props">
+                <section>
+                  <bk-button
                     theme="primary"
-                    :loading="exportFileDialog.loading"
-                    :disabled="!curFile.name"
-                    @click="handleExportFileConfirm"> {{ $t('确定导入') }} </bk-button>
-                <bk-button @click="handleExportFileCancel"> {{ $t('取消') }} </bk-button>
+                    text
+                    @click="handleRenewal(props.row)"
+                  >
+                    {{ $t('续期') }}
+                  </bk-button>
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 6px;"
+                    @click="handleEdit(props.row)"
+                  >
+                    {{ $t('编辑') }}
+                  </bk-button>
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 6px;"
+                    @click="showRemoveModal(props.row)"
+                  >
+                    {{ $t('删除') }}
+                  </bk-button>
+                </section>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </template>
+      </section>
+    </paas-content-loader>
+
+    <bk-dialog
+      v-model="userPermissionDialog.visiable"
+      width="600"
+      :title="`${isUseUserPermission ? $t('是否停用用户限制') : $t('是否开启用户限制')}?`"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      :loading="userPermissionDialog.isLoading"
+      @confirm="setUserPermission"
+      @cancel="closePermission"
+    >
+      <div class="tl">
+        {{ isUseUserPermission ? $t('停用后【预发布】和【生产】环境的用户限制将立即失效，所有用户都可访问') : $t('开启后【预发布】和【生产】环境的用户限制都将立即生效，仅白名单内用户可访问') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="removeUserDialog.visiable"
+      width="600"
+      :header-position="'left'"
+      :title="`${$t('确定删除名单')}【${curUserParams.content}】`"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="removeUserDialog.isLoading"
+      @confirm="removeUser"
+      @after-leave="afterCloseRemove"
+    >
+      <div class="tl">
+        {{ curUserParams.content }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="renewalDialog.visiable"
+      width="600"
+      :title="$t('有效期续期')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      :loading="renewalDialog.isLoading"
+      @confirm="handleRenewalDialog"
+      @after-leave="afterRenewalClose"
+    >
+      <div>
+        <div class="time-button-groups bk-button-group">
+          <bk-button
+            v-for="(key, index) in Object.keys(timeFilters)"
+            v-if="key !== 'cur'"
+            :key="index"
+            :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
+            :name="key"
+            @click="timeFilterHandler(key, index)"
+          >
+            {{ timeFilters[key] }}
+          </bk-button>
+        </div>
+        <div
+          v-if="customTimeFlag"
+          class="custom-time-select"
+        >
+          <input
+            v-model="customTime"
+            type="text"
+            class="bk-form-input custom-time"
+            placeholder="1"
+            @input="authDetailTimeHandler"
+          >
+          <div class="unit">
+            {{ $t('天') }}
+          </div>
+        </div>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="batchRemoveUserDialog.visiable"
+      width="600"
+      :title="$t('确定批量删除名单？')"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :loading="batchRemoveUserDialog.isLoading"
+      @confirm="batchRemoveUser"
+    >
+      <div class="tl">
+        {{ $t('批量删除的名单将失去此应用的对应权限，是否确定删除？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="addUserDialog.visiable"
+      width="600"
+      :title="addUserDialog.title"
+      header-position="left"
+      :theme="'primary'"
+      :mask-close="false"
+      :close-icon="!addUserDialog.isLoading"
+      :loading="addUserDialog.isLoading"
+      @confirm="addUser"
+      @cancel="cancelAddUser"
+      @after-leave="afterAddClose"
+    >
+      <template
+        v-if="addUserDialog.showForm"
+        style="min-height: 140px;"
+      >
+        <bk-form
+          ref="addUserForm"
+          :label-width="100"
+          :model="curUserParams"
+          form-type="vertical"
+        >
+          <bk-form-item
+            :label="`${userTypeMap[userType]}`"
+            :rules="userParamRules.content"
+            :required="true"
+            :property="'content'"
+          >
+            <template v-if="userType === 'rtx'">
+              <user
+                ref="member_selector"
+                v-model="rtxList"
+                :disabled="addUserDialog.isEdit"
+                @change="updateCurUserContent"
+              />
+            </template>
+            <template v-else>
+              <bk-input
+                v-model="curUserParams.content"
+                :disabled="addUserDialog.isEdit"
+              />
+              <p class="ps-tip mt10">
+                {{ $t('多个QQ请用英文分号‘;’隔开') }}
+              </p>
+            </template>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('添加原因')"
+            :rules="userParamRules.desc"
+            :required="true"
+            :property="'desc'"
+          >
+            <bk-input
+              v-model="curUserParams.desc"
+              type="textarea"
+              :placeholder="$t('请输入200个字符以内')"
+              :maxlength="200"
+            />
+          </bk-form-item>
+          <bk-form-item
+            v-if="!addUserDialog.isEdit"
+            :label="$t('有效时间')"
+            :rules="userParamRules.expires_at"
+            :required="true"
+            :property="'expires_at'"
+          >
+            <div class="time-button-groups bk-button-group">
+              <bk-button
+                v-for="(key, index) in Object.keys(timeFilters)"
+                v-if="key !== 'cur'"
+                :key="index"
+                :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
+                :name="key"
+                @click="timeFilterHandler(key, index)"
+              >
+                {{ timeFilters[key] }}
+              </bk-button>
             </div>
-        </bk-dialog>
-    </div>
+            <div
+              v-if="customTimeFlag"
+              class="custom-time-select"
+            >
+              <input
+                v-model="customTime"
+                type="text"
+                class="bk-form-input custom-time"
+                placeholder="1"
+                @input="authDetailTimeHandler"
+              >
+              <div class="unit">
+                {{ $t('天') }}
+              </div>
+            </div>
+          </bk-form-item>
+        </bk-form>
+      </template>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="exportFileDialog.visiable"
+      :header-position="exportFileDialog.headerPosition"
+      :loading="exportFileDialog.loading"
+      :width="exportFileDialog.width"
+      :ok-text="$t('确定导入')"
+      ext-cls="paas-env-var-upload-dialog"
+      @after-leave="handleExportFileLeave"
+    >
+      <div
+        slot="header"
+        class="header"
+      >
+        {{ $t('从文件导入IP白名单') }}
+      </div>
+      <div>
+        <div class="download-tips">
+          <span>
+            <i class="paasng-icon paasng-exclamation-circle" />
+            {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
+          </span>
+          <bk-button
+            text
+            theme="primary"
+            size="small"
+            style="line-height: 40px;"
+            @click="handleDownloadTemplate"
+          >
+            {{ $t('下载模板') }}
+          </bk-button>
+        </div>
+        <div class="upload-content">
+          <p><i class="paasng-icon paasng-file-fill file-icon" /></p>
+          <p>
+            <bk-button
+              text
+              theme="primary"
+              ext-cls="env-var-upload-btn-cls"
+              @click="handleTriggerUpload"
+            >
+              {{ $t('选择文件') }}
+            </bk-button>
+          </p>
+          <p
+            v-if="curFile.name"
+            class="cur-upload-file"
+          >
+            {{ $t('已选择文件：') }} {{ curFile.name }}
+          </p>
+          <p
+            v-if="isFileTypeError"
+            class="file-error-tips"
+          >
+            {{ $t('请选择yaml文件') }}
+          </p>
+        </div>
+
+        <input
+          ref="upload"
+          type="file"
+          style="position: absolute; width: 0; height: 0;"
+          @change="handleStartUpload"
+        >
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :loading="exportFileDialog.loading"
+          :disabled="!curFile.name"
+          @click="handleExportFileConfirm"
+        >
+          {{ $t('确定导入') }}
+        </bk-button>
+        <bk-button @click="handleExportFileCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>

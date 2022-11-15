@@ -1,41 +1,63 @@
 <template lang="html">
-    <div class="right-main" :key="appCode">
-        <app-top-bar
-            :title="$t('日志查询')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-        </app-top-bar>
+  <div
+    :key="appCode"
+    class="right-main"
+  >
+    <app-top-bar
+      :title="$t('日志查询')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
 
-        <paas-content-loader class="app-container log-middle" :is-loading="isLoading" placeholder="log-loading" :offset-top="60">
-            <section>
-                <bk-tab
-                    :active.sync="tabActive"
-                    type="unborder-card"
-                    @tab-change="handleTabChange">
-                    <template slot="setting">
-                        <a class="f12" :href="GLOBAL.DOC.LOG_QUERY_USER" target="_blank"> {{ $t('如何查询应用日志') }} </a>
-                    </template>
-                    <bk-tab-panel
-                        name="structured"
-                        :label="$t('结构化日志')"
-                        v-if="curAppInfo.application.type !== 'cloud_native'">
-                        <custom-log ref="customLog" v-if="tabActive === 'structured'"></custom-log>
-                    </bk-tab-panel>
-                    <bk-tab-panel
-                        name="stream"
-                        :label="$t('标准输出日志')">
-                        <standart-log v-if="tabActive === 'stream'"></standart-log>
-                    </bk-tab-panel>
-                    <bk-tab-panel
-                        name="access"
-                        :label="$t('访问日志')">
-                        <access-log ref="accessLog" v-if="tabActive === 'access'"></access-log>
-                    </bk-tab-panel>
-                </bk-tab>
-            </section>
-        </paas-content-loader>
-    </div>
+    <paas-content-loader
+      class="app-container log-middle"
+      :is-loading="isLoading"
+      placeholder="log-loading"
+      :offset-top="60"
+    >
+      <section>
+        <bk-tab
+          :active.sync="tabActive"
+          type="unborder-card"
+          @tab-change="handleTabChange"
+        >
+          <template slot="setting">
+            <a
+              class="f12"
+              :href="GLOBAL.DOC.LOG_QUERY_USER"
+              target="_blank"
+            > {{ $t('如何查询应用日志') }} </a>
+          </template>
+          <bk-tab-panel
+            v-if="curAppInfo.application.type !== 'cloud_native'"
+            name="structured"
+            :label="$t('结构化日志')"
+          >
+            <custom-log
+              v-if="tabActive === 'structured'"
+              ref="customLog"
+            />
+          </bk-tab-panel>
+          <bk-tab-panel
+            name="stream"
+            :label="$t('标准输出日志')"
+          >
+            <standart-log v-if="tabActive === 'stream'" />
+          </bk-tab-panel>
+          <bk-tab-panel
+            name="access"
+            :label="$t('访问日志')"
+          >
+            <access-log
+              v-if="tabActive === 'access'"
+              ref="accessLog"
+            />
+          </bk-tab-panel>
+        </bk-tab>
+      </section>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

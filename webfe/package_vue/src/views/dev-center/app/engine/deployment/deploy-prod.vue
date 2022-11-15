@@ -1,7 +1,7 @@
 <template>
-    <deploy-action
-        :environment="'prod'">
-    </deploy-action>
+  <deploy-action
+    :environment="'prod'"
+  />
 </template>
 
 <script>

@@ -1,483 +1,755 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('环境配置')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isLoading" placeholder="env-loading" :offset-top="20" class="app-container middle">
-            <section v-show="!isLoading">
-                <div class="middle variable-main">
-                    <div class="mt20" v-if="isEdited && isReleased">
-                        <div class="ps-alert ps-alert-plain fadeIn">
-                            <div class="ps-alert-icon">
-                                <i class="paasng-icon paasng-info-circle-shape"></i>
-                            </div>
-                            <div class="ps-alert-content">
-                                <h4> {{ $t('重新发布使改动生效') }} </h4>
-                                <div>
-                                    {{ $t('您刚刚修改了环境变量，改动将在应用下次部署时生效。') }} <br>
-                                    {{ $t('或者，您也可以选择现在进行静默发布让改动生效，服务将不会受到任何影响。') }}
-                                </div>
-                            </div>
-                            <div class="spacing-x2" style="border-bottom: solid 1px #e6e9ea"></div>
-                            <div class="row spacing-x2" style="margin-bottom: 0;">
-                                <div class="col-md-100">
-                                    <div class="ps-btn-group">
-                                        <button
-                                            @click="releaseEnv(globalEnvName)"
-                                            class="ps-btn ps-btn-default ps-btn-l">
-                                            {{ $t('发布到当前所有环境') }}
-                                        </button>
-
-                                        <dropdown
-                                            ref="releaseDropDown"
-                                            :options="{ position: 'bottom right', remove: 'click' }">
-
-                                            <button slot="trigger" class="ps-btn ps-btn-default ps-btn-l ps-btn-dropdown p10">
-                                                <i class="paasng-icon paasng-angle-down"></i>
-                                            </button>
-
-                                            <div slot="content">
-                                                <ul class="ps-list-group-link spacing-x0">
-                                                    <li>
-                                                        <a @click="releaseEnv('stag')" v-if="isEnvAvailable('stag')"> {{ $t('仅发布到预发布环境') }} </a>
-                                                    </li>
-                                                    <li>
-                                                        <a @click="releaseEnv('prod')" v-if="isEnvAvailable('prod')"> {{ $t('仅发布到生产环境') }} </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </dropdown>
-                                    </div>
-                                    <a class="ps-btn ps-btn-l ps-btn-link spacing-h-x2" @click="skipRelease">
-                                        {{ $t('跳过，以后手动发布') }}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <section class="mb35 pt15" v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE">
-                        <div class="ps-top-card mb10">
-                            <p class="main-title"> {{ $t('自定义运行时') }} </p>
-                            <p class="desc"> {{ $t('调整应用使用的基础镜像、构建工具包，修改后重新部署该模块生效') }} </p>
-                        </div>
-
-                        <table class="ps-table ps-table-border mt20 ps-edit-form">
-                            <tr>
-                                <td style="width: 150px;" class="has-right-border"> {{ $t('基础镜像') }} </td>
-                                <td style="width: 720px;">
-                                    {{runtimeImageText || '--'}}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="has-right-border"> {{ $t('构建工具') }} </td>
-                                <td>
-                                    <template v-if="runtimeBuildTexts.length">
-                                        <p :class="{ 'builder-item': runtimeBuildTexts.length > 1 }" v-for="(build, index) of runtimeBuildTexts" :key="index">{{build.name}}</p>
-                                    </template>
-                                    <template v-else>
-                                        <p style="line-height: 20px;">--</p>
-                                    </template>
-                                </td>
-                            </tr>
-                        </table>
-
-                        <bk-button theme="primary" class="mt10" @click="handleShowRuntimeDialog"> {{ $t('修改运行时配置') }} </bk-button>
-                    </section>
-
-                    <section class="mt20">
-                        <div class="ps-top-card mb15">
-                            <p class="main-title"> {{ $t('环境变量配置') }} </p>
-                            <p class="desc">
-                                <!-- <a class="link-a" :href="GLOBAL.DOC.ENV_VAR_INLINE" target="_blank"> {{ $t('文档：什么是内置环境变量？') }} </a> -->
-                                {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
-                                <span class="built-in-env" @click="handleShoEnvDialog">{{ $t('查看内置环境变量') }}</span>
-                            </p>
-                        </div>
-
-                        <div class="filter-list">
-                            <div class="label">
-                                <i class="paasng-icon paasng-funnel"></i>
-                                {{ $t('生效环境：') }}
-                            </div>
-                            <div class="bk-button-group">
-                                <bk-button
-                                    theme="primary"
-                                    style="width: 130px;"
-                                    :outline="activeEnvTab !== '_global_'"
-                                    @click="filterConfigVarByEnv('_global_')">
-                                    {{ $t('所有环境') }}
-                                </bk-button>
-                                <bk-button
-                                    theme="primary"
-                                    style="width: 130px;"
-                                    :outline="activeEnvTab !== 'stag'"
-                                    @click="filterConfigVarByEnv('stag')">
-                                    {{ $t('仅预发布环境') }}
-                                </bk-button>
-                                <bk-button
-                                    theme="primary"
-                                    style="width: 130px;"
-                                    :outline="activeEnvTab !== 'prod'"
-                                    @click="filterConfigVarByEnv('prod')">
-                                    {{ $t('仅生产环境') }}
-                                </bk-button>
-                            </div>
-                            <bk-button
-                                v-if="activeEnvTab !== ''"
-                                ext-cls="reset-button"
-                                theme="primary"
-                                text
-                                @click="handleReset">
-                                {{ $t('重置') }}
-                            </bk-button>
-                            <bk-dropdown-menu
-                                trigger="click"
-                                ref="largeDropdown"
-                                ext-cls="env-export-wrapper">
-                                <bk-button
-                                    :loading="exportLoading"
-                                    slot="dropdown-trigger">
-                                    {{ $t('批量导入/导出') }}
-                                </bk-button>
-                                <ul class="bk-dropdown-list" slot="dropdown-content">
-                                    <li><a href="javascript:;" style="margin: 0;" :class="curModuleList.length < 1 ? 'is-disabled' : ''" @click="handleExport('module')"> {{ $t('从模块导入') }} </a></li>
-                                    <li><a href="javascript:;" style="margin: 0;" @click="handleExport('file')"> {{ $t('从文件导入') }} </a></li>
-                                    <li><a href="javascript:;" style="margin: 0;" @click="handleExport('batch')"> {{ $t('批量导出') }} </a></li>
-                                </ul>
-                            </bk-dropdown-menu>
-                            <bk-dropdown-menu
-                                ext-cls="env-sort-wrapper"
-                                trigger="click"
-                                align="right"
-                                @show="dropdownShow"
-                                @hide="dropdownHide"
-                                ref="dropdown">
-                                <bk-button
-                                    slot="dropdown-trigger">
-                                    <i class="paasng-icon paasng-general-sort sort-icon"></i>
-                                    <span class="text"> {{ $t('排序') }} </span>
-                                </bk-button>
-                                <ul class="bk-dropdown-list" slot="dropdown-content">
-                                    <li><a href="javascript:;" style="margin: 0;" :class="curSortKey === '-created' ? 'active' : ''" @click="handleSort('-created')"> {{ $t('最新创建') }} </a></li>
-                                    <li><a href="javascript:;" style="margin: 0;" :class="curSortKey === 'key' ? 'active' : ''" @click="handleSort('key')">{{ $t('KEY 名称(A-Z)') }}</a></li>
-                                </ul>
-                            </bk-dropdown-menu>
-                        </div>
-                        <div class="result-table-content" v-if="isVarLoading">
-                            <div class="ps-no-result">
-                                <div class="text">
-                                    <div class="bk-loading1 bk-loading2">
-                                        <div class="point point1"></div>
-                                        <div class="point point2"></div>
-                                        <div class="point point3"></div>
-                                        <div class="point point4"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+  <div class="right-main">
+    <app-top-bar
+      :title="$t('环境配置')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="env-loading"
+      :offset-top="20"
+      class="app-container middle"
+    >
+      <section v-show="!isLoading">
+        <div class="middle variable-main">
+          <div
+            v-if="isEdited && isReleased"
+            class="mt20"
+          >
+            <div class="ps-alert ps-alert-plain fadeIn">
+              <div class="ps-alert-icon">
+                <i class="paasng-icon paasng-info-circle-shape" />
+              </div>
+              <div class="ps-alert-content">
+                <h4> {{ $t('重新发布使改动生效') }} </h4>
+                <div>
+                  {{ $t('您刚刚修改了环境变量，改动将在应用下次部署时生效。') }} <br>
+                  {{ $t('或者，您也可以选择现在进行静默发布让改动生效，服务将不会受到任何影响。') }}
                 </div>
+              </div>
+              <div
+                class="spacing-x2"
+                style="border-bottom: solid 1px #e6e9ea"
+              />
+              <div
+                class="row spacing-x2"
+                style="margin-bottom: 0;"
+              >
+                <div class="col-md-100">
+                  <div class="ps-btn-group">
+                    <button
+                      class="ps-btn ps-btn-default ps-btn-l"
+                      @click="releaseEnv(globalEnvName)"
+                    >
+                      {{ $t('发布到当前所有环境') }}
+                    </button>
 
-                <table class="ps-table ps-table-default ps-table-width-overflowed" style="margin-bottom: 24px;" v-if="!isVarLoading">
-                    <tr v-for="(varItem, index) in envVarList" :key="index">
-                        <td>
-                            <bk-form form-type="inline" :model="varItem" :ref="varItem.id">
-                                <bk-form-item :rules="varRules.key" :property="'key'" style="flex: 1 1 25%;">
-                                    <bk-input
-                                        placeholder="KEY"
-                                        :clearable="false"
-                                        :readonly="isReadOnlyRow(index)"
-                                        v-model="varItem.key">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item :rules="varRules.value" :property="'value'" style="flex: 1 1 25%;">
-                                    <template v-if="isReadOnlyRow(index)">
-                                        <div class="desc-form-content" v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }">
-                                            {{varItem.value}}
-                                        </div>
-                                    </template>
-                                    <template v-else>
-                                        <bk-input
-                                            placeholder="VALUE"
-                                            :clearable="false"
-                                            :readonly="isReadOnlyRow(index)"
-                                            v-model="varItem.value">
-                                        </bk-input>
-                                    </template>
-                                </bk-form-item>
-                                <bk-form-item :rules="varRules.description" :property="'description'" style="flex: 1 1 25%;">
-                                    <template v-if="isReadOnlyRow(index)">
-                                        <div class="desc-form-content" v-if="varItem.description !== ''" v-bk-tooltips="{ content: varItem.description, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }">{{varItem.description}}</div>
-                                        <div class="desc-form-content" v-else>{{varItem.description}}</div>
-                                    </template>
-                                    <template v-else>
-                                        <bk-input
-                                            :placeholder="$t('描述')"
-                                            :clearable="false"
-                                            v-model="varItem.description">
-                                        </bk-input>
-                                    </template>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 18%;">
-                                    <bk-select
-                                        v-model="varItem.environment_name"
-                                        :placeholder="$t('请选择')"
-                                        :clearable="false"
-                                        :disabled="isReadOnlyRow(index)">
-                                        <bk-option
-                                            v-for="(option, optionIndex) in envSelectList"
-                                            :key="optionIndex"
-                                            :id="option.id"
-                                            :name="option.text">
-                                        </bk-option>
-                                    </bk-select>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
-                                    <template v-if="isReadOnlyRow(index)">
-                                        <a class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
-                                            @click="editingRowToggle({}, index)">
-                                        </a>
-                                        <tooltip-confirm
-                                            ref="deleteTooltip"
-                                            :ok-text="$t('确定')"
-                                            :cancel-text="'取消'"
-                                            :theme="'ps-tooltip'"
-                                            @ok="deleteConfigVar(varItem.id)">
-                                            <a slot="trigger" class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
-                                                v-show="isReadOnlyRow(index)">
-                                            </a>
-                                        </tooltip-confirm>
-                                    </template>
-                                    <template v-else>
-                                        <a class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
-                                            type="submit"
-                                            @click="updateConfigVar(varItem.id, index, varItem)">
-                                        </a>
-                                        <a class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
-                                            style="margin-left: 0;"
-                                            @click="editingRowToggle(varItem, index, 'cancel')">
-                                        </a>
-                                    </template>
-                                </bk-form-item>
-                            </bk-form>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <bk-form form-type="inline" :model="newVarConfig" ref="newVarForm">
-                                <bk-form-item :rules="varRules.key" :property="'key'" style="flex: 1 1 25%;">
-                                    <bk-input
-                                        placeholder="KEY"
-                                        :clearable="false"
-                                        v-model="newVarConfig.key">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item :rules="varRules.value" :property="'value'" style="flex: 1 1 25%;">
-                                    <bk-input
-                                        placeholder="VALUE"
-                                        :clearable="false"
-                                        v-model="newVarConfig.value">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item :rules="varRules.description" :property="'description'" style="flex: 1 1 25%;">
-                                    <bk-input
-                                        placeholder="描述"
-                                        :clearable="false"
-                                        v-model="newVarConfig.description">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 18%;">
-                                    <bk-select
-                                        v-model="newVarConfig.env"
-                                        :placeholder="$t('请选择')"
-                                        :clearable="false">
-                                        <bk-option
-                                            v-for="(option, optionIndex) in envSelectList"
-                                            :key="optionIndex"
-                                            :id="option.id"
-                                            :name="option.text">
-                                        </bk-option>
-                                    </bk-select>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
-                                    <bk-button
-                                        theme="primary"
-                                        :outline="true"
-                                        @click.stop.prevent="createConfigVar">
-                                        {{ $t('添加') }}
-                                    </bk-button>
-                                </bk-form-item>
-                            </bk-form>
-                        </td>
-                    </tr>
-                </table>
-            </section>
-        </paas-content-loader>
+                    <dropdown
+                      ref="releaseDropDown"
+                      :options="{ position: 'bottom right', remove: 'click' }"
+                    >
+                      <button
+                        slot="trigger"
+                        class="ps-btn ps-btn-default ps-btn-l ps-btn-dropdown p10"
+                      >
+                        <i class="paasng-icon paasng-angle-down" />
+                      </button>
 
-        <bk-dialog
-            width="850"
-            :title="$t('修改运行时配置')"
-            v-model="runtimeDialogConf.visiable"
-            header-position="left"
-            :theme="'primary'"
-            :mask-close="false"
-            :draggable="false"
-            :close-icon="!isRuntimeUpdaing"
-            :loading="isRuntimeUpdaing"
-            @confirm="updateRuntimeInfo"
-            @cancel="handleHideRuntimeDialog">
-            <bk-form :label-width="95">
-                <bk-form-item :label="$t('基础镜像:')">
-                    <bk-select
-                        v-model="runtimeDialogConf.image"
-                        searchable
-                        :clearable="false"
-                        @selected="handleImageChange">
-                        <bk-option v-for="(option, index) in runtimeImageList"
-                            :key="index"
-                            :id="option.image"
-                            :name="option.name">
-                            <div>
-                                {{option.name}}
-                            </div>
-                        </bk-option>
-                    </bk-select>
-                </bk-form-item>
-                <bk-form-item :label="$t('构建工具')">
-                    <bk-transfer
-                        :target-list="runtimeDialogConf.buildpackValueList"
-                        :source-list="runtimeBuildpacks"
-                        :title="[$t('可选的构建工具'), $t('选中的构建工具 (按选择顺序排序)')]"
-                        :display-key="'name'"
-                        :setting-key="'id'"
-                        :key="runtimeDialogConf.image"
-                        @change="handleBuildpackChange">
-                    </bk-transfer>
-                    <p class="mt10" style="color: #ea3636; font-size: 12px; line-height: 1;"> {{ $t('构建工具会逐个进行构建，请注意构建工具的选择顺序') }} </p>
-                </bk-form-item>
-            </bk-form>
-        </bk-dialog>
-
-        <bk-dialog
-            v-model="exportDialog.visiable"
-            :title="$t('从其它模块导入环境变量')"
-            :header-position="exportDialog.headerPosition"
-            :width="exportDialog.width"
-            @after-leave="handleAfterLeave">
-            <div>
-                <div class="paas-env-var-export">
-                    <label class="title"> {{ $t('模块：') }} </label>
-                    <bk-select
-                        v-model="moduleValue"
-                        :disabled="false"
-                        :clearable="false"
-                        searchable
-                        style="flex: 0 0 390px;"
-                        @selected="handleModuleSelected">
-                        <bk-option v-for="option in curModuleList"
-                            :key="option.id"
-                            :id="option.id"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
+                      <div slot="content">
+                        <ul class="ps-list-group-link spacing-x0">
+                          <li>
+                            <a
+                              v-if="isEnvAvailable('stag')"
+                              @click="releaseEnv('stag')"
+                            > {{ $t('仅发布到预发布环境') }} </a>
+                          </li>
+                          <li>
+                            <a
+                              v-if="isEnvAvailable('prod')"
+                              @click="releaseEnv('prod')"
+                            > {{ $t('仅发布到生产环境') }} </a>
+                          </li>
+                        </ul>
+                      </div>
+                    </dropdown>
+                  </div>
+                  <a
+                    class="ps-btn ps-btn-l ps-btn-link spacing-h-x2"
+                    @click="skipRelease"
+                  >
+                    {{ $t('跳过，以后手动发布') }}
+                  </a>
                 </div>
-                <div class="export-by-module-tips" v-bkloading="{ isLoading: exportDialog.isLoading, opacity: 1 }">
-                    <p v-if="exportDialog.count" style="line-height: 20px;">
-                        【{{curSelectModuleName}}】 {{ $t('模块共有') }} {{exportDialog.count}} {{ $t('个环境变量，将增量更新到当前') }} 【{{curModuleId}} 】{{ $t('模块') }}
-                    </p>
-                    <p v-else>
-                        【{{curSelectModuleName}}】 {{ $t('模块暂无环境变量，请选择其它模块') }}
-                    </p>
-                </div>
+              </div>
             </div>
-            <div slot="footer">
+          </div>
+
+          <section
+            v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE"
+            class="mb35 pt15"
+          >
+            <div class="ps-top-card mb10">
+              <p class="main-title">
+                {{ $t('自定义运行时') }}
+              </p>
+              <p class="desc">
+                {{ $t('调整应用使用的基础镜像、构建工具包，修改后重新部署该模块生效') }}
+              </p>
+            </div>
+
+            <table class="ps-table ps-table-border mt20 ps-edit-form">
+              <tr>
+                <td
+                  style="width: 150px;"
+                  class="has-right-border"
+                >
+                  {{ $t('基础镜像') }}
+                </td>
+                <td style="width: 720px;">
+                  {{ runtimeImageText || '--' }}
+                </td>
+              </tr>
+              <tr>
+                <td class="has-right-border">
+                  {{ $t('构建工具') }}
+                </td>
+                <td>
+                  <template v-if="runtimeBuildTexts.length">
+                    <p
+                      v-for="(build, index) of runtimeBuildTexts"
+                      :key="index"
+                      :class="{ 'builder-item': runtimeBuildTexts.length > 1 }"
+                    >
+                      {{ build.name }}
+                    </p>
+                  </template>
+                  <template v-else>
+                    <p style="line-height: 20px;">
+                      --
+                    </p>
+                  </template>
+                </td>
+              </tr>
+            </table>
+
+            <bk-button
+              theme="primary"
+              class="mt10"
+              @click="handleShowRuntimeDialog"
+            >
+              {{ $t('修改运行时配置') }}
+            </bk-button>
+          </section>
+
+          <section class="mt20">
+            <div class="ps-top-card mb15">
+              <p class="main-title">
+                {{ $t('环境变量配置') }}
+              </p>
+              <p class="desc">
+                <!-- <a class="link-a" :href="GLOBAL.DOC.ENV_VAR_INLINE" target="_blank"> {{ $t('文档：什么是内置环境变量？') }} </a> -->
+                {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
+                <span
+                  class="built-in-env"
+                  @click="handleShoEnvDialog"
+                >{{ $t('查看内置环境变量') }}</span>
+              </p>
+            </div>
+
+            <div class="filter-list">
+              <div class="label">
+                <i class="paasng-icon paasng-funnel" />
+                {{ $t('生效环境：') }}
+              </div>
+              <div class="bk-button-group">
                 <bk-button
-                    theme="primary"
-                    :disabled="exportDialog.count < 1"
-                    :loading="exportDialog.loading"
-                    @click="handleExportConfirm"> {{ $t('确定导入') }} </bk-button>
-                <bk-button @click="handleExportCancel"> {{ $t('取消') }} </bk-button>
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            v-model="exportFileDialog.visiable"
-            :header-position="exportFileDialog.headerPosition"
-            :loading="exportFileDialog.loading"
-            :width="exportFileDialog.width"
-            :ok-text="$t('确定导入')"
-            ext-cls="paas-env-var-upload-dialog"
-            @after-leave="handleExportFileLeave">
-            <div slot="header" class="header">
-                {{ $t('从文件导入环境变量到') }}【<span class="title" :title="curModuleId">{{ curModuleId }}</span> 】{{ $t('模块') }}
-            </div>
-            <div>
-                <div class="download-tips">
-                    <span>
-                        <i class="paasng-icon paasng-exclamation-circle"></i>
-                        {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
-                    </span>
-                    <bk-button text theme="primary" size="small" style="line-height: 40px;" @click="handleDownloadTemplate"> {{ $t('下载模板') }}</bk-button>
-                </div>
-                <div class="upload-content">
-                    <p><i class="paasng-icon paasng-file-fill file-icon"></i></p>
-                    <p><bk-button text theme="primary" ext-cls="env-var-upload-btn-cls" @click="handleTriggerUpload"> {{ $t('选择文件') }} </bk-button></p>
-                    <p v-if="curFile.name" class="cur-upload-file"> {{ $t('已选择文件：') }} {{ curFile.name }}
-                    </p>
-                    <p v-if="isFileTypeError" class="file-error-tips"> {{ $t('请选择yaml文件') }} </p>
-                </div>
-
-                <input ref="upload" type="file" style="position: absolute; width: 0; height: 0;" @change="handleStartUpload" />
-            </div>
-            <div slot="footer">
+                  theme="primary"
+                  style="width: 130px;"
+                  :outline="activeEnvTab !== '_global_'"
+                  @click="filterConfigVarByEnv('_global_')"
+                >
+                  {{ $t('所有环境') }}
+                </bk-button>
                 <bk-button
-                    theme="primary"
-                    :loading="exportFileDialog.loading"
-                    :disabled="!curFile.name"
-                    @click="handleExportFileConfirm"> {{ $t('确定导入') }} </bk-button>
-                <bk-button @click="handleExportFileCancel"> {{ $t('取消') }} </bk-button>
+                  theme="primary"
+                  style="width: 130px;"
+                  :outline="activeEnvTab !== 'stag'"
+                  @click="filterConfigVarByEnv('stag')"
+                >
+                  {{ $t('仅预发布环境') }}
+                </bk-button>
+                <bk-button
+                  theme="primary"
+                  style="width: 130px;"
+                  :outline="activeEnvTab !== 'prod'"
+                  @click="filterConfigVarByEnv('prod')"
+                >
+                  {{ $t('仅生产环境') }}
+                </bk-button>
+              </div>
+              <bk-button
+                v-if="activeEnvTab !== ''"
+                ext-cls="reset-button"
+                theme="primary"
+                text
+                @click="handleReset"
+              >
+                {{ $t('重置') }}
+              </bk-button>
+              <bk-dropdown-menu
+                ref="largeDropdown"
+                trigger="click"
+                ext-cls="env-export-wrapper"
+              >
+                <bk-button
+                  slot="dropdown-trigger"
+                  :loading="exportLoading"
+                >
+                  {{ $t('批量导入/导出') }}
+                </bk-button>
+                <ul
+                  slot="dropdown-content"
+                  class="bk-dropdown-list"
+                >
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      :class="curModuleList.length < 1 ? 'is-disabled' : ''"
+                      @click="handleExport('module')"
+                    > {{ $t('从模块导入') }} </a>
+                  </li>
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      @click="handleExport('file')"
+                    > {{ $t('从文件导入') }} </a>
+                  </li>
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      @click="handleExport('batch')"
+                    > {{ $t('批量导出') }} </a>
+                  </li>
+                </ul>
+              </bk-dropdown-menu>
+              <bk-dropdown-menu
+                ref="dropdown"
+                ext-cls="env-sort-wrapper"
+                trigger="click"
+                align="right"
+                @show="dropdownShow"
+                @hide="dropdownHide"
+              >
+                <bk-button
+                  slot="dropdown-trigger"
+                >
+                  <i class="paasng-icon paasng-general-sort sort-icon" />
+                  <span class="text"> {{ $t('排序') }} </span>
+                </bk-button>
+                <ul
+                  slot="dropdown-content"
+                  class="bk-dropdown-list"
+                >
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      :class="curSortKey === '-created' ? 'active' : ''"
+                      @click="handleSort('-created')"
+                    > {{ $t('最新创建') }} </a>
+                  </li>
+                  <li>
+                    <a
+                      href="javascript:;"
+                      style="margin: 0;"
+                      :class="curSortKey === 'key' ? 'active' : ''"
+                      @click="handleSort('key')"
+                    >{{ $t('KEY 名称(A-Z)') }}</a>
+                  </li>
+                </ul>
+              </bk-dropdown-menu>
             </div>
-        </bk-dialog>
+            <div
+              v-if="isVarLoading"
+              class="result-table-content"
+            >
+              <div class="ps-no-result">
+                <div class="text">
+                  <div class="bk-loading1 bk-loading2">
+                    <div class="point point1" />
+                    <div class="point point2" />
+                    <div class="point point3" />
+                    <div class="point point4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
 
-        <bk-sideslider
-            :is-show.sync="envSidesliderConf.visiable"
-            :width="800"
-            :title="$t('内置环境变量')"
-            :quick-close="true"
-            @shown="showEnvVariable">
-            <div slot="content" class="slider-env-content" v-bkloading="{ isLoading: envLoading, zIndex: 10 }">
-                <div v-if="basicInfo.length">
-                    <p class="env-title mb10">{{ $t('应用基本信息') }}</p>
-                    <div ref="basicInfoWrapper">
-                        <p v-for="item in basicInfo" :key="item.label" class="env-item">
-                            <span v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }" ref="basicText">{{ item.label }}: {{ item.value }}</span>
-                        </p>
+        <table
+          v-if="!isVarLoading"
+          class="ps-table ps-table-default ps-table-width-overflowed"
+          style="margin-bottom: 24px;"
+        >
+          <tr
+            v-for="(varItem, index) in envVarList"
+            :key="index"
+          >
+            <td>
+              <bk-form
+                :ref="varItem.id"
+                form-type="inline"
+                :model="varItem"
+              >
+                <bk-form-item
+                  :rules="varRules.key"
+                  :property="'key'"
+                  style="flex: 1 1 25%;"
+                >
+                  <bk-input
+                    v-model="varItem.key"
+                    placeholder="KEY"
+                    :clearable="false"
+                    :readonly="isReadOnlyRow(index)"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :rules="varRules.value"
+                  :property="'value'"
+                  style="flex: 1 1 25%;"
+                >
+                  <template v-if="isReadOnlyRow(index)">
+                    <div
+                      v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      class="desc-form-content"
+                    >
+                      {{ varItem.value }}
                     </div>
-                </div>
-                <div v-if="appRuntimeInfo.length">
-                    <p class="env-title mt15 mb10">{{ $t('应用运行时信息') }}</p>
-                    <div ref="appRuntimeInfoWrapper">
-                        <p v-for="item in appRuntimeInfo" :key="item.label" class="env-item">
-                            <span v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }" ref="appRuntimeText">{{ item.label }}: {{ item.value }}</span>
-                        </p>
+                  </template>
+                  <template v-else>
+                    <bk-input
+                      v-model="varItem.value"
+                      placeholder="VALUE"
+                      :clearable="false"
+                      :readonly="isReadOnlyRow(index)"
+                    />
+                  </template>
+                </bk-form-item>
+                <bk-form-item
+                  :rules="varRules.description"
+                  :property="'description'"
+                  style="flex: 1 1 25%;"
+                >
+                  <template v-if="isReadOnlyRow(index)">
+                    <div
+                      v-if="varItem.description !== ''"
+                      v-bk-tooltips="{ content: varItem.description, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      class="desc-form-content"
+                    >
+                      {{ varItem.description }}
                     </div>
-                </div>
-                <div v-if="bkPlatformInfo.length">
-                    <p class="env-title mt15 mb10">{{ $t('蓝鲸体系内平台地址') }}</p>
-                    <div ref="bkPlatformInfoWrapper">
-                        <p v-for="item in bkPlatformInfo" :key="item.label" class="env-item">
-                            <span v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }" ref="bkPlatformText">{{ item.label }}={{ item.value }}</span>
-                        </p>
+                    <div
+                      v-else
+                      class="desc-form-content"
+                    >
+                      {{ varItem.description }}
                     </div>
-                </div>
-                <p class="reminder">{{ $t('增强服务也会写入相关的环境变量，可在增强服务的“实例详情”页面的“配置信息”中查看') }}</p>
-            </div>
-        </bk-sideslider>
-    </div>
+                  </template>
+                  <template v-else>
+                    <bk-input
+                      v-model="varItem.description"
+                      :placeholder="$t('描述')"
+                      :clearable="false"
+                    />
+                  </template>
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 18%;">
+                  <bk-select
+                    v-model="varItem.environment_name"
+                    :placeholder="$t('请选择')"
+                    :clearable="false"
+                    :disabled="isReadOnlyRow(index)"
+                  >
+                    <bk-option
+                      v-for="(option, optionIndex) in envSelectList"
+                      :id="option.id"
+                      :key="optionIndex"
+                      :name="option.text"
+                    />
+                  </bk-select>
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
+                  <template v-if="isReadOnlyRow(index)">
+                    <a
+                      class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
+                      @click="editingRowToggle({}, index)"
+                    />
+                    <tooltip-confirm
+                      ref="deleteTooltip"
+                      :ok-text="$t('确定')"
+                      :cancel-text="'取消'"
+                      :theme="'ps-tooltip'"
+                      @ok="deleteConfigVar(varItem.id)"
+                    >
+                      <a
+                        v-show="isReadOnlyRow(index)"
+                        slot="trigger"
+                        class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
+                      />
+                    </tooltip-confirm>
+                  </template>
+                  <template v-else>
+                    <a
+                      class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
+                      type="submit"
+                      @click="updateConfigVar(varItem.id, index, varItem)"
+                    />
+                    <a
+                      class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
+                      style="margin-left: 0;"
+                      @click="editingRowToggle(varItem, index, 'cancel')"
+                    />
+                  </template>
+                </bk-form-item>
+              </bk-form>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <bk-form
+                ref="newVarForm"
+                form-type="inline"
+                :model="newVarConfig"
+              >
+                <bk-form-item
+                  :rules="varRules.key"
+                  :property="'key'"
+                  style="flex: 1 1 25%;"
+                >
+                  <bk-input
+                    v-model="newVarConfig.key"
+                    placeholder="KEY"
+                    :clearable="false"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :rules="varRules.value"
+                  :property="'value'"
+                  style="flex: 1 1 25%;"
+                >
+                  <bk-input
+                    v-model="newVarConfig.value"
+                    placeholder="VALUE"
+                    :clearable="false"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :rules="varRules.description"
+                  :property="'description'"
+                  style="flex: 1 1 25%;"
+                >
+                  <bk-input
+                    v-model="newVarConfig.description"
+                    placeholder="描述"
+                    :clearable="false"
+                  />
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 18%;">
+                  <bk-select
+                    v-model="newVarConfig.env"
+                    :placeholder="$t('请选择')"
+                    :clearable="false"
+                  >
+                    <bk-option
+                      v-for="(option, optionIndex) in envSelectList"
+                      :id="option.id"
+                      :key="optionIndex"
+                      :name="option.text"
+                    />
+                  </bk-select>
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
+                  <bk-button
+                    theme="primary"
+                    :outline="true"
+                    @click.stop.prevent="createConfigVar"
+                  >
+                    {{ $t('添加') }}
+                  </bk-button>
+                </bk-form-item>
+              </bk-form>
+            </td>
+          </tr>
+        </table>
+      </section>
+    </paas-content-loader>
+
+    <bk-dialog
+      v-model="runtimeDialogConf.visiable"
+      width="850"
+      :title="$t('修改运行时配置')"
+      header-position="left"
+      :theme="'primary'"
+      :mask-close="false"
+      :draggable="false"
+      :close-icon="!isRuntimeUpdaing"
+      :loading="isRuntimeUpdaing"
+      @confirm="updateRuntimeInfo"
+      @cancel="handleHideRuntimeDialog"
+    >
+      <bk-form :label-width="95">
+        <bk-form-item :label="$t('基础镜像:')">
+          <bk-select
+            v-model="runtimeDialogConf.image"
+            searchable
+            :clearable="false"
+            @selected="handleImageChange"
+          >
+            <bk-option
+              v-for="(option, index) in runtimeImageList"
+              :id="option.image"
+              :key="index"
+              :name="option.name"
+            >
+              <div>
+                {{ option.name }}
+              </div>
+            </bk-option>
+          </bk-select>
+        </bk-form-item>
+        <bk-form-item :label="$t('构建工具')">
+          <bk-transfer
+            :key="runtimeDialogConf.image"
+            :target-list="runtimeDialogConf.buildpackValueList"
+            :source-list="runtimeBuildpacks"
+            :title="[$t('可选的构建工具'), $t('选中的构建工具 (按选择顺序排序)')]"
+            :display-key="'name'"
+            :setting-key="'id'"
+            @change="handleBuildpackChange"
+          />
+          <p
+            class="mt10"
+            style="color: #ea3636; font-size: 12px; line-height: 1;"
+          >
+            {{ $t('构建工具会逐个进行构建，请注意构建工具的选择顺序') }}
+          </p>
+        </bk-form-item>
+      </bk-form>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="exportDialog.visiable"
+      :title="$t('从其它模块导入环境变量')"
+      :header-position="exportDialog.headerPosition"
+      :width="exportDialog.width"
+      @after-leave="handleAfterLeave"
+    >
+      <div>
+        <div class="paas-env-var-export">
+          <label class="title"> {{ $t('模块：') }} </label>
+          <bk-select
+            v-model="moduleValue"
+            :disabled="false"
+            :clearable="false"
+            searchable
+            style="flex: 0 0 390px;"
+            @selected="handleModuleSelected"
+          >
+            <bk-option
+              v-for="option in curModuleList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+        <div
+          v-bkloading="{ isLoading: exportDialog.isLoading, opacity: 1 }"
+          class="export-by-module-tips"
+        >
+          <p
+            v-if="exportDialog.count"
+            style="line-height: 20px;"
+          >
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+          </p>
+          <p v-else>
+            【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}
+          </p>
+        </div>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="exportDialog.count < 1"
+          :loading="exportDialog.loading"
+          @click="handleExportConfirm"
+        >
+          {{ $t('确定导入') }}
+        </bk-button>
+        <bk-button @click="handleExportCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="exportFileDialog.visiable"
+      :header-position="exportFileDialog.headerPosition"
+      :loading="exportFileDialog.loading"
+      :width="exportFileDialog.width"
+      :ok-text="$t('确定导入')"
+      ext-cls="paas-env-var-upload-dialog"
+      @after-leave="handleExportFileLeave"
+    >
+      <div
+        slot="header"
+        class="header"
+      >
+        {{ $t('从文件导入环境变量到') }}【<span
+          class="title"
+          :title="curModuleId"
+        >{{ curModuleId }}</span> 】{{ $t('模块') }}
+      </div>
+      <div>
+        <div class="download-tips">
+          <span>
+            <i class="paasng-icon paasng-exclamation-circle" />
+            {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
+          </span>
+          <bk-button
+            text
+            theme="primary"
+            size="small"
+            style="line-height: 40px;"
+            @click="handleDownloadTemplate"
+          >
+            {{ $t('下载模板') }}
+          </bk-button>
+        </div>
+        <div class="upload-content">
+          <p><i class="paasng-icon paasng-file-fill file-icon" /></p>
+          <p>
+            <bk-button
+              text
+              theme="primary"
+              ext-cls="env-var-upload-btn-cls"
+              @click="handleTriggerUpload"
+            >
+              {{ $t('选择文件') }}
+            </bk-button>
+          </p>
+          <p
+            v-if="curFile.name"
+            class="cur-upload-file"
+          >
+            {{ $t('已选择文件：') }} {{ curFile.name }}
+          </p>
+          <p
+            v-if="isFileTypeError"
+            class="file-error-tips"
+          >
+            {{ $t('请选择yaml文件') }}
+          </p>
+        </div>
+
+        <input
+          ref="upload"
+          type="file"
+          style="position: absolute; width: 0; height: 0;"
+          @change="handleStartUpload"
+        >
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :loading="exportFileDialog.loading"
+          :disabled="!curFile.name"
+          @click="handleExportFileConfirm"
+        >
+          {{ $t('确定导入') }}
+        </bk-button>
+        <bk-button @click="handleExportFileCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+
+    <bk-sideslider
+      :is-show.sync="envSidesliderConf.visiable"
+      :width="800"
+      :title="$t('内置环境变量')"
+      :quick-close="true"
+      @shown="showEnvVariable"
+    >
+      <div
+        slot="content"
+        v-bkloading="{ isLoading: envLoading, zIndex: 10 }"
+        class="slider-env-content"
+      >
+        <div v-if="basicInfo.length">
+          <p class="env-title mb10">
+            {{ $t('应用基本信息') }}
+          </p>
+          <div ref="basicInfoWrapper">
+            <p
+              v-for="item in basicInfo"
+              :key="item.label"
+              class="env-item"
+            >
+              <span
+                ref="basicText"
+                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
+              >{{ item.label }}: {{ item.value }}</span>
+            </p>
+          </div>
+        </div>
+        <div v-if="appRuntimeInfo.length">
+          <p class="env-title mt15 mb10">
+            {{ $t('应用运行时信息') }}
+          </p>
+          <div ref="appRuntimeInfoWrapper">
+            <p
+              v-for="item in appRuntimeInfo"
+              :key="item.label"
+              class="env-item"
+            >
+              <span
+                ref="appRuntimeText"
+                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
+              >{{ item.label }}: {{ item.value }}</span>
+            </p>
+          </div>
+        </div>
+        <div v-if="bkPlatformInfo.length">
+          <p class="env-title mt15 mb10">
+            {{ $t('蓝鲸体系内平台地址') }}
+          </p>
+          <div ref="bkPlatformInfoWrapper">
+            <p
+              v-for="item in bkPlatformInfo"
+              :key="item.label"
+              class="env-item"
+            >
+              <span
+                ref="bkPlatformText"
+                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
+              >{{ item.label }}={{ item.value }}</span>
+            </p>
+          </div>
+        </div>
+        <p class="reminder">
+          {{ $t('增强服务也会写入相关的环境变量，可在增强服务的“实例详情”页面的“配置信息”中查看') }}
+        </p>
+      </div>
+    </bk-sideslider>
+  </div>
 </template>
 
 <script>
@@ -1234,7 +1506,7 @@
                 this.runtimeDialogConf.buildpacks = [];
                 this.runtimeDialogConf.buildpackValueList = [];
             },
-            
+
             handleShoEnvDialog () {
                 this.envSidesliderConf.visiable = true;
             },

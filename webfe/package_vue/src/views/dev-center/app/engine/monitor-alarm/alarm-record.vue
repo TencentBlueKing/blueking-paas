@@ -1,192 +1,280 @@
 <template>
-    <div class="paas-monitor-alarm-wrapper">
-        <section class="search-wrapper">
-            <div class="search-select">
-                <div class="select">
-                    <bk-select
-                        v-model="curEnv"
-                        :placeholder="$t('环境')"
-                        style="width: 120px;">
-                        <bk-option v-for="option in envList"
-                            :key="option.id"
-                            :id="option.id"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
-                </div>
-            </div>
-            <div class="search-select ml">
-                <div class="select">
-                    <bk-select
-                        v-model="curType"
-                        :placeholder="$t('类型')"
-                        :loading="selectLoading"
-                        :popover-min-width="240"
-                        style="width: 240px;">
-                        <bk-option v-for="option in typeList"
-                            :key="option.uuid"
-                            :id="option.uuid"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
-                </div>
-            </div>
-            <div class="search-select ml">
-                <div class="select">
-                    <bk-input clearable v-model="keyword" :placeholder="$t('输入关键字')" style="width: 180px;"></bk-input>
-                </div>
-            </div>
-            <div class="search-select ml" v-bk-clickoutside="hideDatePicker">
-                <div class="select">
-                    <bk-date-picker
-                        v-model="initDateTimeRange"
-                        :shortcuts="dateShortCut"
-                        :shortcuts-type="'relative'"
-                        :format="'yyyy-MM-dd HH:mm:ss'"
-                        :placement="'bottom-end'"
-                        :placeholder="$t('选择日期时间范围')"
-                        :shortcut-close="true"
-                        :type="'datetimerange'"
-                        :options="datePickerOption"
-                        :open="isDatePickerOpen"
-                        @change="handlerChange"
-                        @pick-success="handlerPickSuccess">
-                        <div slot="trigger" @click="toggleDatePicker" style="width: 310px;">
-                            <button class="action-btn timer">
-                                <i class="left-icon paasng-icon paasng-clock f16"></i>
-                                <span class="text">{{ timerDisplay }}</span>
-                                <i class="right-icon paasng-icon paasng-down-shape f12"></i>
-                            </button>
-                        </div>
-                    </bk-date-picker>
-                </div>
-            </div>
+  <div class="paas-monitor-alarm-wrapper">
+    <section class="search-wrapper">
+      <div class="search-select">
+        <div class="select">
+          <bk-select
+            v-model="curEnv"
+            :placeholder="$t('环境')"
+            style="width: 120px;"
+          >
+            <bk-option
+              v-for="option in envList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+      </div>
+      <div class="search-select ml">
+        <div class="select">
+          <bk-select
+            v-model="curType"
+            :placeholder="$t('类型')"
+            :loading="selectLoading"
+            :popover-min-width="240"
+            style="width: 240px;"
+          >
+            <bk-option
+              v-for="option in typeList"
+              :id="option.uuid"
+              :key="option.uuid"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+      </div>
+      <div class="search-select ml">
+        <div class="select">
+          <bk-input
+            v-model="keyword"
+            clearable
+            :placeholder="$t('输入关键字')"
+            style="width: 180px;"
+          />
+        </div>
+      </div>
+      <div
+        v-bk-clickoutside="hideDatePicker"
+        class="search-select ml"
+      >
+        <div class="select">
+          <bk-date-picker
+            v-model="initDateTimeRange"
+            :shortcuts="dateShortCut"
+            :shortcuts-type="'relative'"
+            :format="'yyyy-MM-dd HH:mm:ss'"
+            :placement="'bottom-end'"
+            :placeholder="$t('选择日期时间范围')"
+            :shortcut-close="true"
+            :type="'datetimerange'"
+            :options="datePickerOption"
+            :open="isDatePickerOpen"
+            @change="handlerChange"
+            @pick-success="handlerPickSuccess"
+          >
             <div
-                :class="['search-action', { 'reset-right': curDateType !== 'custom' }]">
-                <bk-button theme="primary" @click="handleSearch"> {{ $t('查询') }} </bk-button>
+              slot="trigger"
+              style="width: 310px;"
+              @click="toggleDatePicker"
+            >
+              <button class="action-btn timer">
+                <i class="left-icon paasng-icon paasng-clock f16" />
+                <span class="text">{{ timerDisplay }}</span>
+                <i class="right-icon paasng-icon paasng-down-shape f12" />
+              </button>
             </div>
-        </section>
-        <bk-table
-            :data="alarmRecordList"
-            size="small"
-            :ext-cls="tableLoading ? 'is-being-loading' : ''"
-            :pagination="pagination"
-            @page-change="pageChange"
-            @page-limit-change="limitChange"
-            v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-            <bk-table-column :label="$t('告警开始时间')" prop="start" width="160" :render-header="renderTypeHeader"></bk-table-column>
-            <bk-table-column :label="$t('环境')" width="90">
-                <template slot-scope="{ row }">
-                    <span>{{ row.env === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
-                </template>
-            </bk-table-column>
-            <bk-table-column :label="$t('类型')" width="200">
-                <template slot-scope="{ row }">
-                    <span v-bk-tooltips="row.genre.name">{{ row.genre.name }}</span>
-                </template>
-            </bk-table-column>
-            <bk-table-column :label="$t('内容')">
-                <template slot-scope="{ row }">
-                    <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
-                </template>
-            </bk-table-column>
-            <bk-table-column :label="$t('操作')" width="150">
-                <template slot-scope="{ row }">
-                    <section>
-                        <bk-button theme="primary" text @click="handleDetail(row)"> {{ $t('详情') }} </bk-button>
-                    </section>
-                </template>
-            </bk-table-column>
-        </bk-table>
+          </bk-date-picker>
+        </div>
+      </div>
+      <div
+        :class="['search-action', { 'reset-right': curDateType !== 'custom' }]"
+      >
+        <bk-button
+          theme="primary"
+          @click="handleSearch"
+        >
+          {{ $t('查询') }}
+        </bk-button>
+      </div>
+    </section>
+    <bk-table
+      v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+      :data="alarmRecordList"
+      size="small"
+      :ext-cls="tableLoading ? 'is-being-loading' : ''"
+      :pagination="pagination"
+      @page-change="pageChange"
+      @page-limit-change="limitChange"
+    >
+      <bk-table-column
+        :label="$t('告警开始时间')"
+        prop="start"
+        width="160"
+        :render-header="renderTypeHeader"
+      />
+      <bk-table-column
+        :label="$t('环境')"
+        width="90"
+      >
+        <template slot-scope="{ row }">
+          <span>{{ row.env === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
+        </template>
+      </bk-table-column>
+      <bk-table-column
+        :label="$t('类型')"
+        width="200"
+      >
+        <template slot-scope="{ row }">
+          <span v-bk-tooltips="row.genre.name">{{ row.genre.name }}</span>
+        </template>
+      </bk-table-column>
+      <bk-table-column :label="$t('内容')">
+        <template slot-scope="{ row }">
+          <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
+        </template>
+      </bk-table-column>
+      <bk-table-column
+        :label="$t('操作')"
+        width="150"
+      >
+        <template slot-scope="{ row }">
+          <section>
+            <bk-button
+              theme="primary"
+              text
+              @click="handleDetail(row)"
+            >
+              {{ $t('详情') }}
+            </bk-button>
+          </section>
+        </template>
+      </bk-table-column>
+    </bk-table>
 
-        <bk-sideslider
-            :is-show.sync="isShowDetailSlider"
-            :title="$t('告警详情')"
-            ext-cls="paas-alarm-detail-slider"
-            :width="700"
-            :quick-close="true"
-            @hidden="handlerChartHide"
-            @animation-end="handleSliderAfterClose">
-            <div
-                slot="content"
-                class="alarm-detail-slider-content"
-                v-bkloading="{ isLoading: sliderLoading, opacity: 1 }">
-                <div class="detail-content">
-                    <div
-                        :class="['chart-box', { 'is-loading': metricsLoading }, { 'is-empty': !isShowMetrics }]"
-                        v-bkloading="{ isLoading: metricsLoading, opacity: 1 }">
-                        <template v-if="isShowMetrics && !metricsLoading">
-                            <chart :options="alarmMetrics" ref="alarmMetrics" auto-resize style="width: 660px; height: 300px; background: #1e1e21;"></chart>
-                            <div class="legend-info">
-                                <p>
-                                    <span class="blue"></span>
-                                    {{ alarmMetricsTitle }}
-                                    <span class="red"></span>
-                                    {{ $t('阈值') }}
-                                    <span class="circle"></span>
-                                    {{ $t('告警开始时间') }}
-                                </p>
-                            </div>
-                        </template>
-                        <template v-else-if="!isShowMetrics && !metricsLoading">
-                            <div class="metrics-empty">
-                                <p><i class="paasng-icon paasng-empty"></i></p>
-                                <p class="text"> {{ $t('暂无数据') }} </p>
-                            </div>
-                        </template>
-                        <template v-else>
-                            <div class="metrics-empty">
-                                <p><i class="paasng-icon paasng-empty"></i></p>
-                                <p class="text"> {{ $t('暂无数据') }} </p>
-                            </div>
-                        </template>
-                    </div>
-                    <template v-if="!sliderLoading">
-                        <a style="line-height: 28px;"
-                            v-if="curDetailData.genre && curDetailData.genre.name === 'GCS-MySQL 慢查询'"
-                            :href="GLOBAL.DOC.CHECK_SQL" target="_blank">
-                            {{ $t('文档：如何查看慢查询的 SQL 语句') }}
-                        </a>
-                        <div class="detail-item">
-                            <div class="item-title"> {{ $t('告警开始时间：') }} </div>
-                            <div class="item-content">{{ curDetailData.start || '--' }}</div>
-                        </div>
-                        <div class="detail-item pd">
-                            <div class="item-title"> {{ $t('告警内容：') }} </div>
-                            <div class="item-content">{{ curDetailData.message || '--' }}</div>
-                        </div>
-                        <div
-                            class="status-item"
-                            v-for="(item, index) in curDetailData.status"
-                            :key="index">
-                            <div class="detail-item">
-                                <div class="item-title"> {{ $t('处理步骤：') }} </div>
-                                <div class="item-content">{{ executorMap[item.executor] }}</div>
-                            </div>
-                            <template v-if="item.details">
-                                <div class="detail-item">
-                                    <div class="item-title"> {{ $t('通知人员：') }} </div>
-                                    <div class="item-content">{{ item.details.receiver || '--' }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="item-title"> {{ $t('通知方式：') }} </div>
-                                    <div class="item-content">{{ noticeTypeMap[item.details.type] || '--' }}</div>
-                                </div>
-                            </template>
-                            <div class="detail-item">
-                                <div class="item-title"> {{ $t('通知时间：') }} </div>
-                                <div class="item-content">{{ item.created || '--' }}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="item-title"> {{ $t('处理结果：') }} </div>
-                                <div class="item-content">{{ item.status === 'Failed' ? $t('失败') : $t('成功') }}</div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
+    <bk-sideslider
+      :is-show.sync="isShowDetailSlider"
+      :title="$t('告警详情')"
+      ext-cls="paas-alarm-detail-slider"
+      :width="700"
+      :quick-close="true"
+      @hidden="handlerChartHide"
+      @animation-end="handleSliderAfterClose"
+    >
+      <div
+        slot="content"
+        v-bkloading="{ isLoading: sliderLoading, opacity: 1 }"
+        class="alarm-detail-slider-content"
+      >
+        <div class="detail-content">
+          <div
+            v-bkloading="{ isLoading: metricsLoading, opacity: 1 }"
+            :class="['chart-box', { 'is-loading': metricsLoading }, { 'is-empty': !isShowMetrics }]"
+          >
+            <template v-if="isShowMetrics && !metricsLoading">
+              <chart
+                ref="alarmMetrics"
+                :options="alarmMetrics"
+                auto-resize
+                style="width: 660px; height: 300px; background: #1e1e21;"
+              />
+              <div class="legend-info">
+                <p>
+                  <span class="blue" />
+                  {{ alarmMetricsTitle }}
+                  <span class="red" />
+                  {{ $t('阈值') }}
+                  <span class="circle" />
+                  {{ $t('告警开始时间') }}
+                </p>
+              </div>
+            </template>
+            <template v-else-if="!isShowMetrics && !metricsLoading">
+              <div class="metrics-empty">
+                <p><i class="paasng-icon paasng-empty" /></p>
+                <p class="text">
+                  {{ $t('暂无数据') }}
+                </p>
+              </div>
+            </template>
+            <template v-else>
+              <div class="metrics-empty">
+                <p><i class="paasng-icon paasng-empty" /></p>
+                <p class="text">
+                  {{ $t('暂无数据') }}
+                </p>
+              </div>
+            </template>
+          </div>
+          <template v-if="!sliderLoading">
+            <a
+              v-if="curDetailData.genre && curDetailData.genre.name === 'GCS-MySQL 慢查询'"
+              style="line-height: 28px;"
+              :href="GLOBAL.DOC.CHECK_SQL"
+              target="_blank"
+            >
+              {{ $t('文档：如何查看慢查询的 SQL 语句') }}
+            </a>
+            <div class="detail-item">
+              <div class="item-title">
+                {{ $t('告警开始时间：') }}
+              </div>
+              <div class="item-content">
+                {{ curDetailData.start || '--' }}
+              </div>
             </div>
-        </bk-sideslider>
-    </div>
+            <div class="detail-item pd">
+              <div class="item-title">
+                {{ $t('告警内容：') }}
+              </div>
+              <div class="item-content">
+                {{ curDetailData.message || '--' }}
+              </div>
+            </div>
+            <div
+              v-for="(item, index) in curDetailData.status"
+              :key="index"
+              class="status-item"
+            >
+              <div class="detail-item">
+                <div class="item-title">
+                  {{ $t('处理步骤：') }}
+                </div>
+                <div class="item-content">
+                  {{ executorMap[item.executor] }}
+                </div>
+              </div>
+              <template v-if="item.details">
+                <div class="detail-item">
+                  <div class="item-title">
+                    {{ $t('通知人员：') }}
+                  </div>
+                  <div class="item-content">
+                    {{ item.details.receiver || '--' }}
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="item-title">
+                    {{ $t('通知方式：') }}
+                  </div>
+                  <div class="item-content">
+                    {{ noticeTypeMap[item.details.type] || '--' }}
+                  </div>
+                </div>
+              </template>
+              <div class="detail-item">
+                <div class="item-title">
+                  {{ $t('通知时间：') }}
+                </div>
+                <div class="item-content">
+                  {{ item.created || '--' }}
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="item-title">
+                  {{ $t('处理结果：') }}
+                </div>
+                <div class="item-content">
+                  {{ item.status === 'Failed' ? $t('失败') : $t('成功') }}
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </bk-sideslider>
+  </div>
 </template>
 <script>
     import _ from 'lodash';

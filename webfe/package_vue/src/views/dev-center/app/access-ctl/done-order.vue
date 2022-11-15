@@ -1,98 +1,117 @@
 <template lang="html">
-    <paas-loading :loading="isFirstLoading">
-        <div slot="loadingContent">
-            <bk-form form-type="inline">
-                <bk-form-item :label="$t('结果')">
-                    <bk-select
-                        style="width: 150px;"
-                        v-model="filterType"
-                        :placeholder="$t('请选择')"
-                        :clearable="false"
-                        @selected="typeSelected">
-                        <bk-option
-                            v-for="(option, optionIndex) in list"
-                            :key="optionIndex"
-                            :id="option.id"
-                            :name="option.text">
-                        </bk-option>
-                    </bk-select>
-                </bk-form-item>
-            </bk-form>
-            <div class="content-wrapper">
-                <bk-table
-                    :key="tableKey"
-                    ref="doneTableRef"
-                    :data="orderList"
-                    size="small"
-                    :class="{ 'set-border': tableLoading }"
-                    :pagination="pagination"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange"
-                    @row-click="rowClick"
-                    v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                    <bk-table-column type="expand" width="40" align="right">
-                        <template slot-scope="props">
-                            <ul class="detail-box" v-for="(subProps, subPropsIndex) of props.row.children" :key="subPropsIndex">
-                                <li>
-                                    <span class="key"> {{ $t('申请人IP：') }} </span>
-                                    <pre class="value">{{subProps.ip || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('审批人：') }} </span>
-                                    <pre class="value">{{subProps.auditor.username || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('业务接口人：') }} </span>
-                                    <pre class="value">{{subProps.business_interface_user || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('添加原因：') }} </span>
-                                    <pre class="value">{{subProps.reason || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('有效时间：') }} </span>
-                                    <pre class="value">{{subProps.expires || '--'}}</pre>
-                                </li>
-                            </ul>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('申请人')">
-                        <template slot-scope="props">
-                            <span>{{props.row.applicant || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('公司')">
-                        <template slot-scope="props">
-                            <span>{{props.row.company || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('业务')">
-                        <template slot-scope="props">
-                            <span>{{props.row.business || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('申请时间')" :render-header="renderHeader">
-                        <template slot-scope="props">
-                            <span>{{props.row.created || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('有效时间')">
-                        <template slot-scope="props">
-                            <span>{{props.row.expires || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('结果')">
-                        <template slot-scope="props">
-                            <p>
-                                <span class="ps-text-primary" v-if="props.row.status === 'pass'"> {{ $t('已通过') }} </span>
-                                <span class="ps-text-danger" v-else> {{ $t('被驳回') }} </span>
-                            </p>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
-        </div>
-    </paas-loading>
+  <paas-loading :loading="isFirstLoading">
+    <div slot="loadingContent">
+      <bk-form form-type="inline">
+        <bk-form-item :label="$t('结果')">
+          <bk-select
+            v-model="filterType"
+            style="width: 150px;"
+            :placeholder="$t('请选择')"
+            :clearable="false"
+            @selected="typeSelected"
+          >
+            <bk-option
+              v-for="(option, optionIndex) in list"
+              :id="option.id"
+              :key="optionIndex"
+              :name="option.text"
+            />
+          </bk-select>
+        </bk-form-item>
+      </bk-form>
+      <div class="content-wrapper">
+        <bk-table
+          :key="tableKey"
+          ref="doneTableRef"
+          v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+          :data="orderList"
+          size="small"
+          :class="{ 'set-border': tableLoading }"
+          :pagination="pagination"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+          @row-click="rowClick"
+        >
+          <bk-table-column
+            type="expand"
+            width="40"
+            align="right"
+          >
+            <template slot-scope="props">
+              <ul
+                v-for="(subProps, subPropsIndex) of props.row.children"
+                :key="subPropsIndex"
+                class="detail-box"
+              >
+                <li>
+                  <span class="key"> {{ $t('申请人IP：') }} </span>
+                  <pre class="value">{{ subProps.ip || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('审批人：') }} </span>
+                  <pre class="value">{{ subProps.auditor.username || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('业务接口人：') }} </span>
+                  <pre class="value">{{ subProps.business_interface_user || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('添加原因：') }} </span>
+                  <pre class="value">{{ subProps.reason || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('有效时间：') }} </span>
+                  <pre class="value">{{ subProps.expires || '--' }}</pre>
+                </li>
+              </ul>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('申请人')">
+            <template slot-scope="props">
+              <span>{{ props.row.applicant || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('公司')">
+            <template slot-scope="props">
+              <span>{{ props.row.company || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('业务')">
+            <template slot-scope="props">
+              <span>{{ props.row.business || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('申请时间')"
+            :render-header="renderHeader"
+          >
+            <template slot-scope="props">
+              <span>{{ props.row.created || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('有效时间')">
+            <template slot-scope="props">
+              <span>{{ props.row.expires || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('结果')">
+            <template slot-scope="props">
+              <p>
+                <span
+                  v-if="props.row.status === 'pass'"
+                  class="ps-text-primary"
+                > {{ $t('已通过') }} </span>
+                <span
+                  v-else
+                  class="ps-text-danger"
+                > {{ $t('被驳回') }} </span>
+              </p>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </div>
+  </paas-loading>
 </template>
 
 <script>
@@ -266,7 +285,7 @@
                         offset: (this.pagination.current - 1) * this.pagination.limit,
                         order_by: this.is_up ? '-created' : 'created'
                     };
-            
+
                     const res = await this.$store.dispatch('order/getOrderList', params);
                     this.pagination.count = res.count
                     ;(res.results || []).forEach(item => {

@@ -1,144 +1,209 @@
 <template>
-    <div class="ps-log-filter">
-        <div class="header" v-bk-clickoutside="hideDatePicker">
-            <div class="fl">{{ $t('共') }} <strong>{{logCount}}</strong> {{ $t('条日志') }} </div>
-            <div class="reload-action fr">
-                <bk-date-picker
-                    :ref="type"
-                    v-model="initDateTimeRange"
-                    :shortcuts="dateShortCut"
-                    :shortcuts-type="'relative'"
-                    :format="'yyyy-MM-dd HH:mm:ss'"
-                    :placement="'bottom-end'"
-                    :placeholder="$t('选择日期时间范围')"
-                    :shortcut-close="true"
-                    :type="'datetimerange'"
-                    :options="datePickerOption"
-                    :open="isDatePickerOpen"
-                    @change="handlerChange"
-                    @pick-success="handlerPickSuccess">
-                    <div slot="trigger" @click="toggleDatePicker" style="height: 28px;">
-                        <button class="action-btn timer fr">
-                            <i class="left-icon paasng-icon paasng-clock f16"></i>
-                            <span class="text">{{ $t(timerDisplay) }}</span>
-                            <i class="right-icon paasng-icon paasng-down-shape f12"></i>
-                        </button>
-                    </div>
-                </bk-date-picker>
+  <div class="ps-log-filter">
+    <div
+      v-bk-clickoutside="hideDatePicker"
+      class="header"
+    >
+      <div class="fl">
+        {{ $t('共') }} <strong>{{ logCount }}</strong> {{ $t('条日志') }}
+      </div>
+      <div class="reload-action fr">
+        <bk-date-picker
+          :ref="type"
+          v-model="initDateTimeRange"
+          :shortcuts="dateShortCut"
+          :shortcuts-type="'relative'"
+          :format="'yyyy-MM-dd HH:mm:ss'"
+          :placement="'bottom-end'"
+          :placeholder="$t('选择日期时间范围')"
+          :shortcut-close="true"
+          :type="'datetimerange'"
+          :options="datePickerOption"
+          :open="isDatePickerOpen"
+          @change="handlerChange"
+          @pick-success="handlerPickSuccess"
+        >
+          <div
+            slot="trigger"
+            style="height: 28px;"
+            @click="toggleDatePicker"
+          >
+            <button class="action-btn timer fr">
+              <i class="left-icon paasng-icon paasng-clock f16" />
+              <span class="text">{{ $t(timerDisplay) }}</span>
+              <i class="right-icon paasng-icon paasng-down-shape f12" />
+            </button>
+          </div>
+        </bk-date-picker>
 
-                <button
-                    class="action-btn auto"
-                    style="position: absolute; right: 38px; top: 0;"
-                    @click="isAutoPanelShow = !isAutoPanelShow"
-                    v-bk-clickoutside="handleClickOutSide">
-                    <i class="left-icon paasng-icon paasng-tree-application f16"></i>
-                    <span class="text">{{autoTimeConf.label}}</span>
-                    <i class="right-icon paasng-icon paasng-down-shape f12"></i>
+        <button
+          v-bk-clickoutside="handleClickOutSide"
+          class="action-btn auto"
+          style="position: absolute; right: 38px; top: 0;"
+          @click="isAutoPanelShow = !isAutoPanelShow"
+        >
+          <i class="left-icon paasng-icon paasng-tree-application f16" />
+          <span class="text">{{ autoTimeConf.label }}</span>
+          <i class="right-icon paasng-icon paasng-down-shape f12" />
 
-                    <div class="auto-time-list" v-if="isAutoPanelShow">
-                        <ul class="wrapper">
-                            <li
-                                :class="[{ 'active': autoTimeConf.name === time.name }]"
-                                v-for="time of autoTimeList"
-                                :key="time.name"
-                                @click="handleAuto(time)">
-                                {{time.name}}
-                            </li>
-                        </ul>
-                    </div>
-                </button>
+          <div
+            v-if="isAutoPanelShow"
+            class="auto-time-list"
+          >
+            <ul class="wrapper">
+              <li
+                v-for="time of autoTimeList"
+                :key="time.name"
+                :class="[{ 'active': autoTimeConf.name === time.name }]"
+                @click="handleAuto(time)"
+              >
+                {{ time.name }}
+              </li>
+            </ul>
+          </div>
+        </button>
 
-                <button class="action-btn refresh" style="position: absolute; right: 0; top: 0;" v-bk-tooltips="$t('刷新')" @click="handleReload">
-                    <round-loading v-if="loading" />
-                    <i class="left-icon paasng-icon paasng-refresh f16" v-else style="color: #979BA5;"></i>
-                </button>
-            </div>
-        </div>
-        <div class="filter">
-            <bk-select
-                v-model="logParams.environment" :placeholder="$t('环境')"
-                style="width: 100px;"
-                class="mr10">
-                <bk-option v-for="option in envList"
-                    :key="option.id"
-                    :id="option.id"
-                    :name="option.text">
-                </bk-option>
-            </bk-select>
-            <bk-select
-                v-model="logParams.stream" :placeholder="$t('输出流')"
-                style="width: 100px;"
-                class="mr10"
-                v-if="isUseStreamFilter">
-                <bk-option v-for="option in streamList"
-                    :key="option.id"
-                    :id="option.id"
-                    :name="option.text">
-                </bk-option>
-            </bk-select>
-            <bk-select
-                v-model="logParams.process_id" :placeholder="$t('进程')"
-                style="width: 100px;"
-                class="mr10">
-                <bk-option v-for="option in processList"
-                    :key="option.id"
-                    :id="option.id"
-                    :name="option.text">
-                </bk-option>
-            </bk-select>
-            <div :class="['log-search-input-wrapper', { 'mr10': isShowExample }]">
-                <bk-input
-                    v-model="keyword" :placeholder="$t('请输入过滤关键字，按 Enter 键搜索')"
-                    :clearable="true"
-                    :right-icon="'paasng-icon paasng-search'"
-                    @focus="handleFocus"
-                    @input="handleInput"
-                    @keyup.up.native="handleKeyup"
-                    @keyup.down.native="handleKeydown"
-                    @keyup.enter.native="handleSearch">
-                </bk-input>
-                <div class="search-history-wrapper"
-                    v-if="searchHistoryDisplayList.length > 0 && isShowHistoryPanel"
-                    v-bk-clickoutside="handleClickoutside">
-                    <p
-                        v-for="(item, index) in searchHistoryDisplayList"
-                        :key="index"
-                        :class="['history-item', { 'active': curActiveIndex === index }]"
-                        @click.stop="handleSelectKeyword(item, index)">
-                        {{ item }}
-                        <i class="paasng-icon paasng-close remove-icon" @click.stop="handleRemove(item, index)"></i>
-                    </p>
-                </div>
-            </div>
-            <bk-dropdown-menu
-                ref="dropdown"
-                align="right"
-                trigger="click"
-                v-if="isShowExample"
-                @show="dropdownShow"
-                @hide="dropdownHide">
-                <div style="padding-left: 19px;" slot="dropdown-trigger">
-                    <bk-button
-                        :text="true"
-                        style="width: 90px; height: 30px; line-height: 30px;">
-                        {{isDropdownShow ? $t('隐藏示例') : $t('显示示例')}}
-                        <i :class="['paasng-icon paasng-down-shape f12',{ 'icon-flip': isDropdownShow }]" style="top: -1px;"></i>
-                    </bk-button>
-                </div>
-                <div class="dropdown-content" slot="dropdown-content" :style="{ width: type === 'customLog' ? '550px' : '400px' }">
-                    <ul class="examples">
-                        <li v-for="example of logSearchExamples" :key="example.key">
-                            <div class="label">{{example.label}}：</div>
-                            <div class="command" @click="handleTriggerSearch(example)">{{example.command}}</div>
-                        </li>
-                    </ul>
-                    <div class="dropdown-footer">
-                        {{ $t('更多请参考') }} <a :href="GLOBAL.DOC.LOG_QUERY_SYNTAX" target="_blank"> {{ $t('日志查询语法') }} </a>
-                    </div>
-                </div>
-            </bk-dropdown-menu>
-        </div>
+        <button
+          v-bk-tooltips="$t('刷新')"
+          class="action-btn refresh"
+          style="position: absolute; right: 0; top: 0;"
+          @click="handleReload"
+        >
+          <round-loading v-if="loading" />
+          <i
+            v-else
+            class="left-icon paasng-icon paasng-refresh f16"
+            style="color: #979BA5;"
+          />
+        </button>
+      </div>
     </div>
+    <div class="filter">
+      <bk-select
+        v-model="logParams.environment"
+        :placeholder="$t('环境')"
+        style="width: 100px;"
+        class="mr10"
+      >
+        <bk-option
+          v-for="option in envList"
+          :id="option.id"
+          :key="option.id"
+          :name="option.text"
+        />
+      </bk-select>
+      <bk-select
+        v-if="isUseStreamFilter"
+        v-model="logParams.stream"
+        :placeholder="$t('输出流')"
+        style="width: 100px;"
+        class="mr10"
+      >
+        <bk-option
+          v-for="option in streamList"
+          :id="option.id"
+          :key="option.id"
+          :name="option.text"
+        />
+      </bk-select>
+      <bk-select
+        v-model="logParams.process_id"
+        :placeholder="$t('进程')"
+        style="width: 100px;"
+        class="mr10"
+      >
+        <bk-option
+          v-for="option in processList"
+          :id="option.id"
+          :key="option.id"
+          :name="option.text"
+        />
+      </bk-select>
+      <div :class="['log-search-input-wrapper', { 'mr10': isShowExample }]">
+        <bk-input
+          v-model="keyword"
+          :placeholder="$t('请输入过滤关键字，按 Enter 键搜索')"
+          :clearable="true"
+          :right-icon="'paasng-icon paasng-search'"
+          @focus="handleFocus"
+          @input="handleInput"
+          @keyup.up.native="handleKeyup"
+          @keyup.down.native="handleKeydown"
+          @keyup.enter.native="handleSearch"
+        />
+        <div
+          v-if="searchHistoryDisplayList.length > 0 && isShowHistoryPanel"
+          v-bk-clickoutside="handleClickoutside"
+          class="search-history-wrapper"
+        >
+          <p
+            v-for="(item, index) in searchHistoryDisplayList"
+            :key="index"
+            :class="['history-item', { 'active': curActiveIndex === index }]"
+            @click.stop="handleSelectKeyword(item, index)"
+          >
+            {{ item }}
+            <i
+              class="paasng-icon paasng-close remove-icon"
+              @click.stop="handleRemove(item, index)"
+            />
+          </p>
+        </div>
+      </div>
+      <bk-dropdown-menu
+        v-if="isShowExample"
+        ref="dropdown"
+        align="right"
+        trigger="click"
+        @show="dropdownShow"
+        @hide="dropdownHide"
+      >
+        <div
+          slot="dropdown-trigger"
+          style="padding-left: 19px;"
+        >
+          <bk-button
+            :text="true"
+            style="width: 90px; height: 30px; line-height: 30px;"
+          >
+            {{ isDropdownShow ? $t('隐藏示例') : $t('显示示例') }}
+            <i
+              :class="['paasng-icon paasng-down-shape f12',{ 'icon-flip': isDropdownShow }]"
+              style="top: -1px;"
+            />
+          </bk-button>
+        </div>
+        <div
+          slot="dropdown-content"
+          class="dropdown-content"
+          :style="{ width: type === 'customLog' ? '550px' : '400px' }"
+        >
+          <ul class="examples">
+            <li
+              v-for="example of logSearchExamples"
+              :key="example.key"
+            >
+              <div class="label">
+                {{ example.label }}：
+              </div>
+              <div
+                class="command"
+                @click="handleTriggerSearch(example)"
+              >
+                {{ example.command }}
+              </div>
+            </li>
+          </ul>
+          <div class="dropdown-footer">
+            {{ $t('更多请参考') }} <a
+              :href="GLOBAL.DOC.LOG_QUERY_SYNTAX"
+              target="_blank"
+            > {{ $t('日志查询语法') }} </a>
+          </div>
+        </div>
+      </bk-dropdown-menu>
+    </div>
+  </div>
 </template>
 
 <script>

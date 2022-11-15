@@ -1,22 +1,22 @@
 <template>
-    <div>
-        <blueking-user-selector
-            class="cmdb-form-objuser"
-            ref="userSelector"
-            display-list-tips
-            v-bind="props"
-            v-model="localValue"
-            v-if="GLOBAL.USERS_URL"
-            @focus="$emit('focus')"
-            @blur="$emit('blur')">
-        </blueking-user-selector>
-        <bk-member-selector
-            v-else
-            v-model="localValue"
-            :max-data="curMaxData"
-            ref="member_selector">
-        </bk-member-selector>
-    </div>
+  <div>
+    <blueking-user-selector
+      v-if="GLOBAL.USERS_URL"
+      ref="userSelector"
+      v-model="localValue"
+      class="cmdb-form-objuser"
+      display-list-tips
+      v-bind="props"
+      @focus="$emit('focus')"
+      @blur="$emit('blur')"
+    />
+    <bk-member-selector
+      v-else
+      ref="member_selector"
+      v-model="localValue"
+      :max-data="curMaxData"
+    />
+  </div>
 </template>
 
 <script>
@@ -24,7 +24,7 @@
     import 'BKSelectMinCss';
 
     export default {
-        name: 'cmdb-form-objuser',
+        name: 'CmdbFormObjuser',
         components: {
             BluekingUserSelector,
             'bk-member-selector': () => {

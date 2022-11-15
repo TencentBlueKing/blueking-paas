@@ -1,5 +1,5 @@
 <template lang="html">
-    <service-general :data="apiData"></service-general>
+  <service-general :data="apiData" />
 </template>
 
 <script>

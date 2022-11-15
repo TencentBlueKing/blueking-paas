@@ -1,22 +1,40 @@
 <template>
-    <ul :class="theme" class="ps-app-list">
-        <template v-if="isLoading">
-            <li>
-                <img class="loading" src="/static/images/btn_loading.gif" />
-                <span> {{ $t('搜索中...') }} </span>
-            </li>
-        </template>
-        <template v-else>
-            <li v-if="appList.length === 0" class="no-data"><span> {{ $t('无应用') }} </span></li>
-            <!-- 在顶部导航是需要控制显示应用的个数 -->
-            <li :class="{ 'on': curActiveIndex === index }" v-for="(item, index) in appList" :key="index">
-                <a href="javascript:void(0);" @click="handlerSelectApp(item)">
-                    <span class="app-name">{{item.name}}</span>
-                    <span class="app-code">{{item.code}}</span>
-                </a>
-            </li>
-        </template>
-    </ul>
+  <ul
+    :class="theme"
+    class="ps-app-list"
+  >
+    <template v-if="isLoading">
+      <li>
+        <img
+          class="loading"
+          src="/static/images/btn_loading.gif"
+        >
+        <span> {{ $t('搜索中...') }} </span>
+      </li>
+    </template>
+    <template v-else>
+      <li
+        v-if="appList.length === 0"
+        class="no-data"
+      >
+        <span> {{ $t('无应用') }} </span>
+      </li>
+      <!-- 在顶部导航是需要控制显示应用的个数 -->
+      <li
+        v-for="(item, index) in appList"
+        :key="index"
+        :class="{ 'on': curActiveIndex === index }"
+      >
+        <a
+          href="javascript:void(0);"
+          @click="handlerSelectApp(item)"
+        >
+          <span class="app-name">{{ item.name }}</span>
+          <span class="app-code">{{ item.code }}</span>
+        </a>
+      </li>
+    </template>
+  </ul>
 </template>
 
 <script>
@@ -75,7 +93,7 @@
                 if (['monitorAlarm', 'appLog'].includes(this.$route.name)) {
                     target['query'] = {};
                 }
-                
+
                 return target;
             },
             init () {

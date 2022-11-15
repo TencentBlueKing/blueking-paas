@@ -1,247 +1,469 @@
 <template>
-    <div class="index-main" @click="closeOpen">
-        <div class="paas-banner" v-if="!userHasApp">
-            <div class="wrap">
-                <div class="paas-text"><img src="/static/images/yahei-5.png" class="appear"></div>
-                <router-link :to="{ name: 'createApp' }" class="paas-banner-button appear">
-                    {{homePageStaticInfo.data.banner_btn.text}}
-                </router-link>
-                <router-link :to="{ name: 'appLegacyMigration' }" v-if="userFeature.MGRLEGACY" class="btn-link spacing-h-x2"> {{ $t('迁移旧版应用') }} </router-link>
-                <router-link :to="{ name: 'myApplications', query: { include_inactive: true } }" v-if="isShowOffAppAction" style="margin-left: 0;" class="btn-link spacing-h-x2">
-                    {{ $t('查看已下架应用') }}
-                </router-link>
-            </div>
+  <div
+    class="index-main"
+    @click="closeOpen"
+  >
+    <div
+      v-if="!userHasApp"
+      class="paas-banner"
+    >
+      <div class="wrap">
+        <div class="paas-text">
+          <img
+            src="/static/images/yahei-5.png"
+            class="appear"
+          >
         </div>
-        <!-- 最近操作 start -->
-        <div class="paas-content white" v-if="userHasApp">
-            <div class="wrap">
-                <paas-content-loader :is-loading="isLoading" placeholder="index-loading" :offset-top="0" :height="378" data-test-id="developer_header_content">
-                    <div class="paas-operation-tit" data-test-id="developer_header_operationTit">
-                        <h2> {{ $t('最近操作') }} </h2>
-                        <div class="fright">
-                            <router-link :to="{ name: 'createApp' }" class="paas-operation-icon">
-                                <i class="paasng-icon paasng-plus"></i> {{ $t('创建应用') }}
-                            </router-link>
-                        </div>
-
-                        <div class="fright legacy-links" v-if="userFeature.MGRLEGACY">
-                            <a :href="GLOBAL.LINK.V2_APP_SUMMARY" target="_blank">
-                                <i class="paasng-icon paasng-chain"></i> {{ $t('管理旧版应用') }} </a>
-                            <router-link :to="{ name: 'appLegacyMigration' }" class="btn-link spacing-h-x2"> {{ $t('一键迁移') }} </router-link>
-                        </div>
-                    </div>
-                    <div data-test-id="developer_list_sectionApp">
-                        <ul class="paas-operation" v-if="records.length && !isLoading">
-                            <li class="clearfix" v-for="(recordItem, index) in records" :key="index">
-                                <div class="paas-operation-section section1">
-                                    <template v-if="recordItem.engine_enabled">
-                                        <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }"><img :src="recordItem.applogo" width="38px" height="38px" class="fleft" style="border-radius: 4px"><span class="spantext" v-bk-tooltips="recordItem.appname">{{recordItem.appname}}</span></router-link>
-                                    </template>
-                                    <template v-else>
-                                        <router-link :to="{ name: 'appBaseInfo', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }"><img :src="recordItem.applogo" width="38px" height="38px" class="fleft" style="border-radius: 4px"><span class="spantext" v-bk-tooltips="recordItem.appname">{{recordItem.appname}}</span></router-link>
-                                    </template>
-                                </div>
-                                <div class="paas-operation-section time-section">
-                                    <em v-bk-tooltips="recordItem.time">{{smartTime(recordItem.time,'fromNow')}}</em>
-                                </div>
-                                <div class="paas-operation-section section2 section-wrapper">
-                                    <span v-if="recordItem.represent_info.props.display_module && recordItem.represent_info.props.provide_links" class="module-name">{{recordItem.represent_info.module_name + $t('模块')}}</span>
-                                    <span v-bk-tooltips.bottom="recordItem.type" class="bottom-middle text-style" :title="recordItem.type">{{recordItem.type}}</span>
-                                </div>
-
-                                <div v-if="!recordItem.stag.deployed && !recordItem.prod.deployed" class="paas-operation-section section3">
-                                    <button
-                                        class="ps-btn ps-btn-disabled-new"
-                                        v-bk-tooltips="$t('无可用地址')"
-                                        v-if="recordItem.represent_info.props.provide_links">
-                                        {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down"></i>
-                                    </button>
-                                </div>
-
-                                <div
-                                    v-if="recordItem.represent_info.props.provide_links && (recordItem.stag.deployed || recordItem.prod.deployed)"
-                                    :class="['paas-operation-section','section3',{ 'open': activeVisit === index }]">
-                                    <div
-                                        :class="['section-box']">
-                                        <a class="section-button-new" href="javascript:" @click.stop.prevent="visitOpen($event,index)"> {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down"></i></a>
-                                        <div class="section-button-down">
-                                            <a
-                                                target="_blank"
-                                                :href="recordItem.stag.url"
-                                                v-if="recordItem.stag.deployed">
-                                                {{ $t('预发布环境') }}
-                                            </a>
-                                            <a
-                                                target="_blank"
-                                                :href="recordItem.prod.url"
-                                                v-if="recordItem.prod.deployed">
-                                                {{ $t('生产环境') }}
-                                            </a>
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                <div class="paas-operation-section fright">
-                                    <template v-if="recordItem.represent_info.props.provide_actions">
-                                        <bk-button theme="primary" text @click="toDeploy(recordItem)" style="margin-right: 6px;"> {{ $t('部署') }} </bk-button>
-                                        <bk-button theme="primary" text @click="toViewLog(recordItem)" style="margin-right: 10px;"> {{ $t('查看日志') }} </bk-button>
-                                    </template>
-                                    <template v-else>
-                                        <bk-button theme="primary" text @click="toCloudAPI(recordItem)" style="margin-right: 10px;"> {{ $t('申请云API权限') }} </bk-button>
-                                    </template>
-                                    <!-- <a href="javascript:" target="_blank">权限管理</a> -->
-                                </div>
-                            </li>
-                            <li class="clearfix lessthan" v-if="appCount < 4">
-                                <router-link :to="{ name: 'createApp' }"> {{ $t('点击创建应用，探索蓝鲸 PaaS 平台的更多内容！') }} </router-link>
-                            </li>
-                        </ul>
-                        <div class="paas-operation" v-else data-test-id="developer_list_empty">
-                            <div class="ps-no-result">
-                                <div class="text">
-                                    <p><i class="paasng-icon paasng-empty"></i></p>
-                                    <p> {{ $t('暂无应用') }} </p>
-                                </div>
-                            </div>
-                        </div>
-                        <router-link :to="{ name: 'myApplications' }" class="read-more" v-if="appCount >= 4"> {{ $t('查看更多应用') }} </router-link>
-                    </div>
-                </paas-content-loader>
-            </div>
-        </div>
-        <!-- 最近操作 end -->
-
-        <!-- 中间部分 start -->
-        <div class="paas-content" data-test-id="developer_content_wrap">
-            <div class="wrap">
-
-                <div class="appuser" v-if="userHasApp">
-                    <!-- 图表 start -->
-                    <div class="paas-content-boxpanel" data-test-id="developer_content_highCharts">
-                        <div class="paas-highcharts fleft">
-                            <paas-content-loader :is-loading="loading1" background-color="#f5f6f9" data-test-id="developer_highCharts_left">
-                                <div style="width: 100%; height: 275px;">
-                                    <chart id="viewchart" style="width: 100%; height: 275px;"></chart>
-                                    <div class="ps-no-result" v-if="chartList1.length === 0" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                                        <div class="text">
-                                            <p><i class="paasng-icon paasng-empty"></i></p>
-                                            <p> {{ $t('暂无数据') }} </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </paas-content-loader>
-                        </div>
-                        <div class="paas-highcharts fright">
-                            <paas-content-loader :is-loading="loading2" background-color="#f5f6f9" data-test-id="developer_highCharts_right">
-                                <div style="width: 100%; height: 275px;">
-                                    <chart id="visitedchart" style="width: 100%; height: 275px;"></chart>
-                                    <div class="ps-no-result" v-if="chartList2.length === 0" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                                        <div class="text">
-                                            <p><i class="paasng-icon paasng-empty"></i></p>
-                                            <p> {{ $t('暂无数据') }} </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </paas-content-loader>
-                        </div>
-                    </div>
-                    <!-- 图表 end -->
-
-                    <!-- 资源使用情况 start -->
-                    <div class="paas-content-boxpanel bk-fade-animate hide" data-test-id="developer_list_resource">
-                        <ul class="paas-resource">
-                            <li>
-                                <div class="paas-resource-title">Mysql</div>
-                                <div class="paas-resource-text">
-                                    <p class="resource-text"><span>1024</span>/MB</p>
-                                    <p> {{ $t('资源使用量') }} </p>
-                                </div>
-                            </li>
-                            <li>
-                                <div class="paas-resource-title">Redis</div>
-                                <div class="paas-resource-text">
-                                    <p class="resource-text"><span>215</span>/MB</p>
-                                    <p> {{ $t('资源使用量') }} </p>
-                                </div>
-                            </li>
-                            <li>
-                                <div class="paas-resource-title"> {{ $t('对象储存') }} </div>
-                                <div class="paas-resource-text">
-                                    <p class="resource-text"><span>852</span>/MB</p>
-                                    <p> {{ $t('资源使用量') }} </p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                    <!-- 资源使用情况 end -->
-                </div>
-                <!-- 新手入门&使用指南 start -->
-                <div class="paas-content-boxpanel" data-test-id="developer_list_info">
-                    <div class="paas-modular fleft">
-                        <h2 class="paas-modular-title"> {{ $t('新手入门') }} </h2>
-                        <div class="paas-question" v-for="(item, index) in homePageStaticInfo.data.new_user.list" :key="index">
-                            <a :href="item.url" target="_blank" class="paas-ask">{{item.title}}</a>
-                            <p>{{item.info}}</p>
-                        </div>
-                    </div>
-                    <div class="paas-modular fright">
-                        <h2 class="paas-modular-title"> {{ $t('使用指南') }} </h2>
-                        <div class="paas-question" v-for="(item, index) in homePageStaticInfo.data.guide_info.list" :key="index">
-                            <a :href="item.url" target="_blank" class="paas-ask">
-                                {{item.title}}
-                                <i class="paasng-icon paasng-play" v-if="item.icon"></i>
-                            </a>
-                            <p>{{item.info}}</p>
-                        </div>
-
-                    </div>
-                </div>
-                <!-- 新手入门&使用指南 end -->
-                <!-- 了解我们的服务 start -->
-                <div class="paas-content-boxpanel bk-fade-animate" data-test-id="developer_list_service">
-                    <h2 class="paas-modular-title center"> {{ $t('了解我们的服务') }} </h2>
-                    <div class="paas-service">
-                        <ul class="paas-service-list">
-                            <li :class="{ 'active': index === curServiceIndex }"
-                                @click="changeService(index)"
-                                v-for="(item, index) in serviceInfo" :key="index">
-                                <i :class="['paas-service-icon', 'icon' + (index + 1)]"></i>
-                                <span class="paas-service-text">{{item.title}}</span>
-                            </li>
-                        </ul>
-                        <div class="paas-service-main" data-test-id="developer_list_main">
-                            <div :class="['paas-service-content', 'showCon' + curServiceIndex]">
-                                <!-- 开发 -->
-                                <div class="content-panel"
-                                    v-for="(service, index) in serviceInfo" :key="index">
-                                    <dl v-for="(item, serviceIndex) in service.items" :key="serviceIndex">
-                                        <dt>
-                                            <a
-                                                v-if="item.url === 'javascript:;'"
-                                                target="_blank"
-                                                :href="GLOBAL.DOC.API_HELP">
-                                                {{item.text}}
-                                            </a>
-                                            <router-link
-                                                target="_blank"
-                                                v-else
-                                                :to="'/developer-center/service/' + item.url">
-                                                {{item.text}}
-                                            </router-link>
-                                        </dt>
-                                        <dd>{{item.explain}}</dd>
-                                    </dl>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- 了解我们的服务 end -->
-            </div>
-        </div>
+        <router-link
+          :to="{ name: 'createApp' }"
+          class="paas-banner-button appear"
+        >
+          {{ homePageStaticInfo.data.banner_btn.text }}
+        </router-link>
+        <router-link
+          v-if="userFeature.MGRLEGACY"
+          :to="{ name: 'appLegacyMigration' }"
+          class="btn-link spacing-h-x2"
+        >
+          {{ $t('迁移旧版应用') }}
+        </router-link>
+        <router-link
+          v-if="isShowOffAppAction"
+          :to="{ name: 'myApplications', query: { include_inactive: true } }"
+          style="margin-left: 0;"
+          class="btn-link spacing-h-x2"
+        >
+          {{ $t('查看已下架应用') }}
+        </router-link>
+      </div>
     </div>
+    <!-- 最近操作 start -->
+    <div
+      v-if="userHasApp"
+      class="paas-content white"
+    >
+      <div class="wrap">
+        <paas-content-loader
+          :is-loading="isLoading"
+          placeholder="index-loading"
+          :offset-top="0"
+          :height="378"
+          data-test-id="developer_header_content"
+        >
+          <div
+            class="paas-operation-tit"
+            data-test-id="developer_header_operationTit"
+          >
+            <h2> {{ $t('最近操作') }} </h2>
+            <div class="fright">
+              <router-link
+                :to="{ name: 'createApp' }"
+                class="paas-operation-icon"
+              >
+                <i class="paasng-icon paasng-plus" /> {{ $t('创建应用') }}
+              </router-link>
+            </div>
+
+            <div
+              v-if="userFeature.MGRLEGACY"
+              class="fright legacy-links"
+            >
+              <a
+                :href="GLOBAL.LINK.V2_APP_SUMMARY"
+                target="_blank"
+              >
+                <i class="paasng-icon paasng-chain" /> {{ $t('管理旧版应用') }} </a>
+              <router-link
+                :to="{ name: 'appLegacyMigration' }"
+                class="btn-link spacing-h-x2"
+              >
+                {{ $t('一键迁移') }}
+              </router-link>
+            </div>
+          </div>
+          <div data-test-id="developer_list_sectionApp">
+            <ul
+              v-if="records.length && !isLoading"
+              class="paas-operation"
+            >
+              <li
+                v-for="(recordItem, index) in records"
+                :key="index"
+                class="clearfix"
+              >
+                <div class="paas-operation-section section1">
+                  <template v-if="recordItem.engine_enabled">
+                    <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                      <img
+                        :src="recordItem.applogo"
+                        width="38px"
+                        height="38px"
+                        class="fleft"
+                        style="border-radius: 4px"
+                      ><span
+                        v-bk-tooltips="recordItem.appname"
+                        class="spantext"
+                      >{{ recordItem.appname }}</span>
+                    </router-link>
+                  </template>
+                  <template v-else>
+                    <router-link :to="{ name: 'appBaseInfo', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                      <img
+                        :src="recordItem.applogo"
+                        width="38px"
+                        height="38px"
+                        class="fleft"
+                        style="border-radius: 4px"
+                      ><span
+                        v-bk-tooltips="recordItem.appname"
+                        class="spantext"
+                      >{{ recordItem.appname }}</span>
+                    </router-link>
+                  </template>
+                </div>
+                <div class="paas-operation-section time-section">
+                  <em v-bk-tooltips="recordItem.time">{{ smartTime(recordItem.time,'fromNow') }}</em>
+                </div>
+                <div class="paas-operation-section section2 section-wrapper">
+                  <span
+                    v-if="recordItem.represent_info.props.display_module && recordItem.represent_info.props.provide_links"
+                    class="module-name"
+                  >{{ recordItem.represent_info.module_name + $t('模块') }}</span>
+                  <span
+                    v-bk-tooltips.bottom="recordItem.type"
+                    class="bottom-middle text-style"
+                    :title="recordItem.type"
+                  >{{ recordItem.type }}</span>
+                </div>
+
+                <div
+                  v-if="!recordItem.stag.deployed && !recordItem.prod.deployed"
+                  class="paas-operation-section section3"
+                >
+                  <button
+                    v-if="recordItem.represent_info.props.provide_links"
+                    v-bk-tooltips="$t('无可用地址')"
+                    class="ps-btn ps-btn-disabled-new"
+                  >
+                    {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down" />
+                  </button>
+                </div>
+
+                <div
+                  v-if="recordItem.represent_info.props.provide_links && (recordItem.stag.deployed || recordItem.prod.deployed)"
+                  :class="['paas-operation-section','section3',{ 'open': activeVisit === index }]"
+                >
+                  <div
+                    :class="['section-box']"
+                  >
+                    <a
+                      class="section-button-new"
+                      href="javascript:"
+                      @click.stop.prevent="visitOpen($event,index)"
+                    > {{ $t('访问模块') }} <i class="paasng-icon paasng-angle-down" /></a>
+                    <div class="section-button-down">
+                      <a
+                        v-if="recordItem.stag.deployed"
+                        target="_blank"
+                        :href="recordItem.stag.url"
+                      >
+                        {{ $t('预发布环境') }}
+                      </a>
+                      <a
+                        v-if="recordItem.prod.deployed"
+                        target="_blank"
+                        :href="recordItem.prod.url"
+                      >
+                        {{ $t('生产环境') }}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="paas-operation-section fright">
+                  <template v-if="recordItem.represent_info.props.provide_actions">
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-right: 6px;"
+                      @click="toDeploy(recordItem)"
+                    >
+                      {{ $t('部署') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-right: 10px;"
+                      @click="toViewLog(recordItem)"
+                    >
+                      {{ $t('查看日志') }}
+                    </bk-button>
+                  </template>
+                  <template v-else>
+                    <bk-button
+                      theme="primary"
+                      text
+                      style="margin-right: 10px;"
+                      @click="toCloudAPI(recordItem)"
+                    >
+                      {{ $t('申请云API权限') }}
+                    </bk-button>
+                  </template>
+                  <!-- <a href="javascript:" target="_blank">权限管理</a> -->
+                </div>
+              </li>
+              <li
+                v-if="appCount < 4"
+                class="clearfix lessthan"
+              >
+                <router-link :to="{ name: 'createApp' }">
+                  {{ $t('点击创建应用，探索蓝鲸 PaaS 平台的更多内容！') }}
+                </router-link>
+              </li>
+            </ul>
+            <div
+              v-else
+              class="paas-operation"
+              data-test-id="developer_list_empty"
+            >
+              <div class="ps-no-result">
+                <div class="text">
+                  <p><i class="paasng-icon paasng-empty" /></p>
+                  <p> {{ $t('暂无应用') }} </p>
+                </div>
+              </div>
+            </div>
+            <router-link
+              v-if="appCount >= 4"
+              :to="{ name: 'myApplications' }"
+              class="read-more"
+            >
+              {{ $t('查看更多应用') }}
+            </router-link>
+          </div>
+        </paas-content-loader>
+      </div>
+    </div>
+    <!-- 最近操作 end -->
+
+    <!-- 中间部分 start -->
+    <div
+      class="paas-content"
+      data-test-id="developer_content_wrap"
+    >
+      <div class="wrap">
+        <div
+          v-if="userHasApp"
+          class="appuser"
+        >
+          <!-- 图表 start -->
+          <div
+            class="paas-content-boxpanel"
+            data-test-id="developer_content_highCharts"
+          >
+            <div class="paas-highcharts fleft">
+              <paas-content-loader
+                :is-loading="loading1"
+                background-color="#f5f6f9"
+                data-test-id="developer_highCharts_left"
+              >
+                <div style="width: 100%; height: 275px;">
+                  <chart
+                    id="viewchart"
+                    style="width: 100%; height: 275px;"
+                  />
+                  <div
+                    v-if="chartList1.length === 0"
+                    class="ps-no-result"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
+                  >
+                    <div class="text">
+                      <p><i class="paasng-icon paasng-empty" /></p>
+                      <p> {{ $t('暂无数据') }} </p>
+                    </div>
+                  </div>
+                </div>
+              </paas-content-loader>
+            </div>
+            <div class="paas-highcharts fright">
+              <paas-content-loader
+                :is-loading="loading2"
+                background-color="#f5f6f9"
+                data-test-id="developer_highCharts_right"
+              >
+                <div style="width: 100%; height: 275px;">
+                  <chart
+                    id="visitedchart"
+                    style="width: 100%; height: 275px;"
+                  />
+                  <div
+                    v-if="chartList2.length === 0"
+                    class="ps-no-result"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
+                  >
+                    <div class="text">
+                      <p><i class="paasng-icon paasng-empty" /></p>
+                      <p> {{ $t('暂无数据') }} </p>
+                    </div>
+                  </div>
+                </div>
+              </paas-content-loader>
+            </div>
+          </div>
+          <!-- 图表 end -->
+
+          <!-- 资源使用情况 start -->
+          <div
+            class="paas-content-boxpanel bk-fade-animate hide"
+            data-test-id="developer_list_resource"
+          >
+            <ul class="paas-resource">
+              <li>
+                <div class="paas-resource-title">
+                  Mysql
+                </div>
+                <div class="paas-resource-text">
+                  <p class="resource-text">
+                    <span>1024</span>/MB
+                  </p>
+                  <p> {{ $t('资源使用量') }} </p>
+                </div>
+              </li>
+              <li>
+                <div class="paas-resource-title">
+                  Redis
+                </div>
+                <div class="paas-resource-text">
+                  <p class="resource-text">
+                    <span>215</span>/MB
+                  </p>
+                  <p> {{ $t('资源使用量') }} </p>
+                </div>
+              </li>
+              <li>
+                <div class="paas-resource-title">
+                  {{ $t('对象储存') }}
+                </div>
+                <div class="paas-resource-text">
+                  <p class="resource-text">
+                    <span>852</span>/MB
+                  </p>
+                  <p> {{ $t('资源使用量') }} </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <!-- 资源使用情况 end -->
+        </div>
+        <!-- 新手入门&使用指南 start -->
+        <div
+          class="paas-content-boxpanel"
+          data-test-id="developer_list_info"
+        >
+          <div class="paas-modular fleft">
+            <h2 class="paas-modular-title">
+              {{ $t('新手入门') }}
+            </h2>
+            <div
+              v-for="(item, index) in homePageStaticInfo.data.new_user.list"
+              :key="index"
+              class="paas-question"
+            >
+              <a
+                :href="item.url"
+                target="_blank"
+                class="paas-ask"
+              >{{ item.title }}</a>
+              <p>{{ item.info }}</p>
+            </div>
+          </div>
+          <div class="paas-modular fright">
+            <h2 class="paas-modular-title">
+              {{ $t('使用指南') }}
+            </h2>
+            <div
+              v-for="(item, index) in homePageStaticInfo.data.guide_info.list"
+              :key="index"
+              class="paas-question"
+            >
+              <a
+                :href="item.url"
+                target="_blank"
+                class="paas-ask"
+              >
+                {{ item.title }}
+                <i
+                  v-if="item.icon"
+                  class="paasng-icon paasng-play"
+                />
+              </a>
+              <p>{{ item.info }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- 新手入门&使用指南 end -->
+        <!-- 了解我们的服务 start -->
+        <div
+          class="paas-content-boxpanel bk-fade-animate"
+          data-test-id="developer_list_service"
+        >
+          <h2 class="paas-modular-title center">
+            {{ $t('了解我们的服务') }}
+          </h2>
+          <div class="paas-service">
+            <ul class="paas-service-list">
+              <li
+                v-for="(item, index) in serviceInfo"
+                :key="index"
+                :class="{ 'active': index === curServiceIndex }"
+                @click="changeService(index)"
+              >
+                <i :class="['paas-service-icon', 'icon' + (index + 1)]" />
+                <span class="paas-service-text">{{ item.title }}</span>
+              </li>
+            </ul>
+            <div
+              class="paas-service-main"
+              data-test-id="developer_list_main"
+            >
+              <div :class="['paas-service-content', 'showCon' + curServiceIndex]">
+                <!-- 开发 -->
+                <div
+                  v-for="(service, index) in serviceInfo"
+                  :key="index"
+                  class="content-panel"
+                >
+                  <dl
+                    v-for="(item, serviceIndex) in service.items"
+                    :key="serviceIndex"
+                  >
+                    <dt>
+                      <a
+                        v-if="item.url === 'javascript:;'"
+                        target="_blank"
+                        :href="GLOBAL.DOC.API_HELP"
+                      >
+                        {{ item.text }}
+                      </a>
+                      <router-link
+                        v-else
+                        target="_blank"
+                        :to="'/developer-center/service/' + item.url"
+                      >
+                        {{ item.text }}
+                      </router-link>
+                    </dt>
+                    <dd>{{ item.explain }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 了解我们的服务 end -->
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>

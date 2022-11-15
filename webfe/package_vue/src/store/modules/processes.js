@@ -23,71 +23,71 @@ import http from '@/api';
 import { json2Query } from '@/common/tools';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取进程下实例使用资源数据
          * @param {Object} params 包括appCode, env
          */
-        getInstanceMetrics ({ commit, state }, params, config = {}) {
-            const appCode = params.appCode;
-            const moduleId = params.moduleId;
-            const env = params.env;
-            // const instanceName = params.instanceName
-            delete params.appCode;
-            delete params.moduleId;
-            delete params.env;
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/metrics/?${json2Query(params)}`;
-            return http.get(url, config);
-        },
+    getInstanceMetrics ({ commit, state }, params, config = {}) {
+      const appCode = params.appCode;
+      const moduleId = params.moduleId;
+      const env = params.env;
+      // const instanceName = params.instanceName
+      delete params.appCode;
+      delete params.moduleId;
+      delete params.env;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/metrics/?${json2Query(params)}`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 获取实例的webconsole信息
          * @param {Object} params 包括appCode instanceName env
          */
-        getInstanceConsole ({ commit, state }, { appCode, moduleId, instanceName, env, processType }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/webconsole/`;
-            
-            return http.get(url, config);
-        },
+    getInstanceConsole ({ commit, state }, { appCode, moduleId, instanceName, env, processType }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/webconsole/`;
 
-        /**
+      return http.get(url, config);
+    },
+
+    /**
          * 加载进程
          * @param {Object} params 包括appCode instanceName env
          */
-        getProcesses ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/`;
-            return http.get(url, config);
-        },
+    getProcesses ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 加载最后一个版本的进程
          * @param {Object} params 包括appCode instanceName env releaseId
          */
-        getLastVersionProcesses ({ commit, state }, { appCode, moduleId, env, releaseId }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/?only_latest_version=true&release_id=${releaseId}`;
-            return http.get(url, config);
-        },
+    getLastVersionProcesses ({ commit, state }, { appCode, moduleId, env, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/list/?only_latest_version=true&release_id=${releaseId}`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 更新进程
          * @param {Object} params 包括appCode instanceName env data
          */
-        updateProcess ({ commit, state }, { appCode, moduleId, env, data }, config = {}) {
-            const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
-            return http.post(url, data, config);
-        },
+    updateProcess ({ commit, state }, { appCode, moduleId, env, data }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/`;
+      return http.post(url, data, config);
+    },
 
-        /**
+    /**
          * 加载实例日志数据
          * @param {Object} params 包括appCode instanceName env
          */
-        getInstanceLog ({ commit, state }, { appCode, moduleId, data }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/standard_output/list/?time_range=5m`;
-            return http.post(url, data, config);
-        }
+    getInstanceLog ({ commit, state }, { appCode, moduleId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/standard_output/list/?time_range=5m`;
+      return http.post(url, data, config);
     }
+  }
 };

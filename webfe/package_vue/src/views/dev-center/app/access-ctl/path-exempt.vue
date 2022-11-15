@@ -1,141 +1,215 @@
 <template>
-    <div class="right-main">
-        <div class="overview-tit">
-            <h2>
-                <span class="expert" @click="handleToByUser" style="cursor: pointer;">
-                    <span> {{ $t('用户限制') }} </span>
-                </span>
-                <span> {{ $t('配置豁免路径') }} </span>
-            </h2>
-        </div>
-        <paas-content-loader class="app-container middle path-exempt-wrapper" :is-loading="isPathExemptLoading" placeholder="exempt-loading">
-            <section>
-                <div class="header-info mt10">
-                    <label> {{ $t('配置豁免路径') }} </label>
-                    <p> {{ $t('路径添加到豁免路径配置中后，访问这些路径时不会再校验用户信息，预发布环境、生产环境同时生效') }} </p>
-                </div>
-                <template v-if="!isPathExemptLoading">
-                    <div class="ps-table-bar">
-                        <bk-button
-                            theme="primary"
-                            @click="showUserModal">
-                            <i class="paasng-icon paasng-plus mr5"></i> {{ $t('新增路径前缀') }}
-                        </bk-button>
-                        <bk-button style="margin-left: 6px;" :disabled="isBatchDisabled" @click="batchDelete"> {{ $t('批量删除') }} </bk-button>
-                        <bk-input
-                            style="width: 240px; float: right;"
-                            :placeholder="$t('输入关键字，按Enter搜索')"
-                            :right-icon="'paasng-icon paasng-search'"
-                            v-model="keyword"
-                            clearable
-                            @enter="searchUserPermissionList">
-                        </bk-input>
-                    </div>
-
-                    <bk-table
-                        :data="userPermissionList"
-                        size="small"
-                        :class="{ 'set-border': tableLoading }"
-                        :pagination="pagination"
-                        @page-change="pageChange"
-                        @page-limit-change="limitChange"
-                        @select="handlerChange"
-                        @select-all="handlerAllChange"
-                        v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                        <bk-table-column type="selection" width="60" align="left"></bk-table-column>
-                        <bk-table-column :label="$t('路径前缀')">
-                            <template slot-scope="{ row }">
-                                <span>{{row.path || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加者')">
-                            <template slot-scope="props">
-                                <span>{{props.row.owner.username || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加时间')" :render-header="renderHeader">
-                            <template slot-scope="{ row }">
-                                <span v-bk-tooltips="row.created">{{smartTime(row.created,'fromNow')}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加原因')">
-                            <template slot-scope="props">
-                                <bk-popover>
-                                    <div class="reason">{{props.row.desc ? props.row.desc : '--'}}</div>
-                                    <div slot="content" style="white-space: normal;">
-                                        {{props.row.desc ? props.row.desc : '--'}}
-                                    </div>
-                                </bk-popover>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('操作')" width="100">
-                            <template slot-scope="props">
-                                <section>
-                                    <bk-button theme="primary" text @click="handleUpdate(props.row)"> {{ $t('更新') }} </bk-button>
-                                    <bk-button theme="primary" text style="margin-left: 4px;" @click="showRemoveModal(props.row)"> {{ $t('删除') }} </bk-button>
-                                </section>
-                            </template>
-                        </bk-table-column>
-                    </bk-table>
-                </template>
-            </section>
-        </paas-content-loader>
-
-        <bk-dialog
-            width="500"
-            v-model="removeUserDialog.visiable"
-            :title="$t('确定删除？')"
-            :theme="'primary'"
-            :mask-close="false"
-            :header-position="'left'"
-            :loading="removeUserDialog.isLoading"
-            @confirm="removePath"
-            @after-leave="afterCloseRemove">
-            <div class="tl">
-                {{ $t('删除后，访问路径') }}[{{curPathParams.path || '--'}}]{{ $t('需提供用户登录态并在用户白名单内。') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="batchRemovePathDialog.visiable"
-            :title="$t('确定批量删除？')"
-            :theme="'primary'"
-            :mask-close="false"
-            :header-position="'left'"
-            :loading="batchRemovePathDialog.isLoading"
-            @confirm="batchRemovePath">
-            <div class="tl">
-                {{ $t('删除后，访问这些路径需提供用户登录态并在用户白名单内。') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            :title="addPathDialog.title"
-            v-model="addPathDialog.visiable"
-            header-position="left"
-            :theme="'primary'"
-            :mask-close="false"
-            :close-icon="!addPathDialog.isLoading"
-            :loading="addPathDialog.isLoading"
-            @confirm="addPath"
-            @cancel="cancelAddPath"
-            @after-leave="afterAddClose">
-            <template v-if="addPathDialog.showForm" style="min-height: 140px;">
-                <bk-form :label-width="100" :model="curPathParams" ref="addUserForm" form-type="vertical">
-                    <bk-form-item :label="$t('路径前缀')" :rules="pathParamRules.path" :required="true" :property="'path'">
-                        <bk-input v-model="curPathParams.path"></bk-input>
-                        <p class="ps-tip mt10"> {{ $t('以反斜杠(/)开始、结束，如：/api/user/ 表示以 /api/user/ 开头的所有路径均被豁免') }} </p>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('添加原因')" :rules="pathParamRules.desc" :required="true" :property="'desc'">
-                        <bk-input type="textarea" :placeholder="$t('请输入200个字符以内')" :maxlength="200" v-model="curPathParams.desc"></bk-input>
-                    </bk-form-item>
-                    <p style="margin-top: 10px; font-size: 12px; font-weight: 600;"> {{ $t('注意：路径被豁免后会完全失去白名单保护，请确保已对其进行额外的安全加固，否则可能引起严重后果。') }} </p>
-                </bk-form>
-            </template>
-        </bk-dialog>
+  <div class="right-main">
+    <div class="overview-tit">
+      <h2>
+        <span
+          class="expert"
+          style="cursor: pointer;"
+          @click="handleToByUser"
+        >
+          <span> {{ $t('用户限制') }} </span>
+        </span>
+        <span> {{ $t('配置豁免路径') }} </span>
+      </h2>
     </div>
+    <paas-content-loader
+      class="app-container middle path-exempt-wrapper"
+      :is-loading="isPathExemptLoading"
+      placeholder="exempt-loading"
+    >
+      <section>
+        <div class="header-info mt10">
+          <label> {{ $t('配置豁免路径') }} </label>
+          <p> {{ $t('路径添加到豁免路径配置中后，访问这些路径时不会再校验用户信息，预发布环境、生产环境同时生效') }} </p>
+        </div>
+        <template v-if="!isPathExemptLoading">
+          <div class="ps-table-bar">
+            <bk-button
+              theme="primary"
+              @click="showUserModal"
+            >
+              <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增路径前缀') }}
+            </bk-button>
+            <bk-button
+              style="margin-left: 6px;"
+              :disabled="isBatchDisabled"
+              @click="batchDelete"
+            >
+              {{ $t('批量删除') }}
+            </bk-button>
+            <bk-input
+              v-model="keyword"
+              style="width: 240px; float: right;"
+              :placeholder="$t('输入关键字，按Enter搜索')"
+              :right-icon="'paasng-icon paasng-search'"
+              clearable
+              @enter="searchUserPermissionList"
+            />
+          </div>
+
+          <bk-table
+            v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+            :data="userPermissionList"
+            size="small"
+            :class="{ 'set-border': tableLoading }"
+            :pagination="pagination"
+            @page-change="pageChange"
+            @page-limit-change="limitChange"
+            @select="handlerChange"
+            @select-all="handlerAllChange"
+          >
+            <bk-table-column
+              type="selection"
+              width="60"
+              align="left"
+            />
+            <bk-table-column :label="$t('路径前缀')">
+              <template slot-scope="{ row }">
+                <span>{{ row.path || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('添加者')">
+              <template slot-scope="props">
+                <span>{{ props.row.owner.username || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('添加时间')"
+              :render-header="renderHeader"
+            >
+              <template slot-scope="{ row }">
+                <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('添加原因')">
+              <template slot-scope="props">
+                <bk-popover>
+                  <div class="reason">
+                    {{ props.row.desc ? props.row.desc : '--' }}
+                  </div>
+                  <div
+                    slot="content"
+                    style="white-space: normal;"
+                  >
+                    {{ props.row.desc ? props.row.desc : '--' }}
+                  </div>
+                </bk-popover>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('操作')"
+              width="100"
+            >
+              <template slot-scope="props">
+                <section>
+                  <bk-button
+                    theme="primary"
+                    text
+                    @click="handleUpdate(props.row)"
+                  >
+                    {{ $t('更新') }}
+                  </bk-button>
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 4px;"
+                    @click="showRemoveModal(props.row)"
+                  >
+                    {{ $t('删除') }}
+                  </bk-button>
+                </section>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </template>
+      </section>
+    </paas-content-loader>
+
+    <bk-dialog
+      v-model="removeUserDialog.visiable"
+      width="500"
+      :title="$t('确定删除？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      :loading="removeUserDialog.isLoading"
+      @confirm="removePath"
+      @after-leave="afterCloseRemove"
+    >
+      <div class="tl">
+        {{ $t('删除后，访问路径') }}[{{ curPathParams.path || '--' }}]{{ $t('需提供用户登录态并在用户白名单内。') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="batchRemovePathDialog.visiable"
+      width="600"
+      :title="$t('确定批量删除？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      :loading="batchRemovePathDialog.isLoading"
+      @confirm="batchRemovePath"
+    >
+      <div class="tl">
+        {{ $t('删除后，访问这些路径需提供用户登录态并在用户白名单内。') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="addPathDialog.visiable"
+      width="600"
+      :title="addPathDialog.title"
+      header-position="left"
+      :theme="'primary'"
+      :mask-close="false"
+      :close-icon="!addPathDialog.isLoading"
+      :loading="addPathDialog.isLoading"
+      @confirm="addPath"
+      @cancel="cancelAddPath"
+      @after-leave="afterAddClose"
+    >
+      <template
+        v-if="addPathDialog.showForm"
+        style="min-height: 140px;"
+      >
+        <bk-form
+          ref="addUserForm"
+          :label-width="100"
+          :model="curPathParams"
+          form-type="vertical"
+        >
+          <bk-form-item
+            :label="$t('路径前缀')"
+            :rules="pathParamRules.path"
+            :required="true"
+            :property="'path'"
+          >
+            <bk-input v-model="curPathParams.path" />
+            <p class="ps-tip mt10">
+              {{ $t('以反斜杠(/)开始、结束，如：/api/user/ 表示以 /api/user/ 开头的所有路径均被豁免') }}
+            </p>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('添加原因')"
+            :rules="pathParamRules.desc"
+            :required="true"
+            :property="'desc'"
+          >
+            <bk-input
+              v-model="curPathParams.desc"
+              type="textarea"
+              :placeholder="$t('请输入200个字符以内')"
+              :maxlength="200"
+            />
+          </bk-form-item>
+          <p style="margin-top: 10px; font-size: 12px; font-weight: 600;">
+            {{ $t('注意：路径被豁免后会完全失去白名单保护，请确保已对其进行额外的安全加固，否则可能引起严重后果。') }}
+          </p>
+        </bk-form>
+      </template>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>
@@ -385,7 +459,7 @@
                 this.addPathDialog.showForm = true;
                 this.addPathDialog.visiable = true;
             },
- 
+
             closePermission () {
                 this.userPermissionDialog.visiable = false;
             },
@@ -401,7 +475,7 @@
                         search_term: this.keyword,
                         restriction_type: 'user'
                     };
-            
+
                     const res = await this.$store.dispatch('user/getExemptList', params);
                     this.pagination.count = res.count;
                     this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
@@ -558,7 +632,7 @@
             cancelAddPath () {
                 this.addPathDialog.visiable = false;
             },
-        
+
             async checkUserPermissin () {
                 try {
                     const res = await this.$store.dispatch('user/checkUserPermissin', {

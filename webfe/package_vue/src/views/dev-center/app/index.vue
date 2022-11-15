@@ -1,59 +1,77 @@
 <template lang="html">
-    <div class="overview-content">
-        <template v-if="isAppFound">
-            <div class="wrap">
-                <div class="overview">
-                    <div class="overview-main" :style="{ 'min-height': `${minHeight}px` }">
-                        <div class="overview-fleft">
-                            <app-quick-nav></app-quick-nav>
-                            <paas-cloud-app-nav v-if="type === 'cloud_native'"></paas-cloud-app-nav>
-                            <paas-app-nav v-else></paas-app-nav>
-                        </div>
-                        <div class="overview-fright">
-                            <router-view
-                                v-if="userVisitEnable && appVisitEnable"
-                                :app-info="appInfo"
-                                @current-app-info-updated="updateAppInfo">
-                            </router-view>
-                            
-                            <div class="paas-loading-content" v-else>
-                                <div class="no-permission">
-                                    <img src="/static/images/permissions.png">
-                                    <h2 v-if="errorMessage">
-                                        {{errorMessage}}
-                                    </h2>
-                                    <h2 class="exception-text" v-else-if="deniedMessageType === 'default'">
-                                        <template v-if="appPermissionMessage">
-                                            {{appPermissionMessage}}，
-                                            {{ $t('如需开启请联系') }}
-                                            <a :href="GLOBAL.HELPER.href" v-if="GLOBAL.HELPER.href">{{GLOBAL.HELPER.name}}</a>
-                                            <span v-else> {{ $t('管理员') }} </span>
-                                        </template>
-                                        <template v-else>
-                                            {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
-                                            <router-link class="toRolePage" :to="{ name: 'appRoles', params: { id: appCode } }">
-                                                {{ $t('成员管理') }}
-                                            </router-link>
-                                            {{ $t('页面的应用管理员') }}
-                                        </template>
-                                    </h2>
-                                    <h2 v-else-if="deniedMessageType === 'noMarketingForBackendApp'">
-                                        {{ $t('当前应用为后台应用，无法上线到应用市场') }}
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  <div class="overview-content">
+    <template v-if="isAppFound">
+      <div class="wrap">
+        <div class="overview">
+          <div
+            class="overview-main"
+            :style="{ 'min-height': `${minHeight}px` }"
+          >
+            <div class="overview-fleft">
+              <app-quick-nav />
+              <paas-cloud-app-nav v-if="type === 'cloud_native'" />
+              <paas-app-nav v-else />
+            </div>
+            <div class="overview-fright">
+              <router-view
+                v-if="userVisitEnable && appVisitEnable"
+                :app-info="appInfo"
+                @current-app-info-updated="updateAppInfo"
+              />
+
+              <div
+                v-else
+                class="paas-loading-content"
+              >
+                <div class="no-permission">
+                  <img src="/static/images/permissions.png">
+                  <h2 v-if="errorMessage">
+                    {{ errorMessage }}
+                  </h2>
+                  <h2
+                    v-else-if="deniedMessageType === 'default'"
+                    class="exception-text"
+                  >
+                    <template v-if="appPermissionMessage">
+                      {{ appPermissionMessage }}，
+                      {{ $t('如需开启请联系') }}
+                      <a
+                        v-if="GLOBAL.HELPER.href"
+                        :href="GLOBAL.HELPER.href"
+                      >{{ GLOBAL.HELPER.name }}</a>
+                      <span v-else> {{ $t('管理员') }} </span>
+                    </template>
+                    <template v-else>
+                      {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
+                      <router-link
+                        class="toRolePage"
+                        :to="{ name: 'appRoles', params: { id: appCode } }"
+                      >
+                        {{ $t('成员管理') }}
+                      </router-link>
+                      {{ $t('页面的应用管理员') }}
+                    </template>
+                  </h2>
+                  <h2 v-else-if="deniedMessageType === 'noMarketingForBackendApp'">
+                    {{ $t('当前应用为后台应用，无法上线到应用市场') }}
+                  </h2>
                 </div>
+              </div>
             </div>
-        </template>
-        <template v-else>
-            <div class="nofound" style="width: 1180px; margin: 0px auto;">
-                <img src="/static/images/404.png">
-                <p> {{ $t('应用找不到了！') }} </p>
-            </div>
-        </template>
-    </div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <template v-else>
+      <div
+        class="nofound"
+        style="width: 1180px; margin: 0px auto;"
+      >
+        <img src="/static/images/404.png">
+        <p> {{ $t('应用找不到了！') }} </p>
+      </div>
+    </template>
+  </div>
 </template>
 
 <script>

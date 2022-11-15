@@ -1,264 +1,387 @@
 <template>
-    <div class="paasng-api-panel">
-        <div class="search-wrapper">
-            <section class="search-item">
-                <div class="label"> {{ $t('类型') }} </div>
-                <div class="select-wrapper">
-                    <bk-select
-                        v-model="typeValue"
-                        :clearable="false"
-                        @selected="handleSelect">
-                        <bk-option v-for="option in typeList"
-                            :key="option.id"
-                            :id="option.id"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
-                </div>
-            </section>
-            <section class="search-item set-ml">
-                <div class="label"> {{ $t('申请人') }} </div>
-                <div class="member-wrapper">
-                    <user
-                        style="width: 142px;"
-                        v-model="applicants"
-                        :multiple="false"
-                        @change="handleMemberSelect"></user>
-                </div>
-            </section>
-            <section class="search-item set-ml">
-                <div class="label"> {{ $t('状态') }} </div>
-                <div class="select-wrapper">
-                    <bk-select
-                        v-model="statusValue"
-                        clearable
-                        @selected="handleStatusSelect"
-                        @clear="handleClear">
-                        <bk-option v-for="option in statusList"
-                            :key="option.id"
-                            :id="option.id"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
-                </div>
-            </section>
-            <section class="search-item set-ml">
-                <div class="label"> {{ $t('申请时间') }} </div>
-                <div class="date-wrapper">
-                    <bk-date-picker
-                        style="width: 195px;"
-                        v-model="initDateTimeRange"
-                        :placeholder="$t('选择日期范围')"
-                        :type="'daterange'"
-                        placement="bottom-end"
-                        :shortcuts="shortcuts"
-                        :shortcut-close="true"
-                        :options="dateOptions"
-                        @change="handleDateChange">
-                    </bk-date-picker>
-                </div>
-            </section>
-            <section class="search-item set-ml">
-                <bk-input
-                    :placeholder="`${$t('输入')}${isComponentApi ? $t('系统名称') : $t('网关名称，按Enter搜索')}`"
-                    clearable
-                    style="width: 195px;"
-                    right-icon="paasng-icon paasng-search"
-                    v-model="searchValue"
-                    @enter="handleSearch">
-                </bk-input>
-            </section>
-            <section class="search-item">
-                <bk-button theme="primary" @click="handlePageSearch"> {{ $t('查询') }} </bk-button>
-            </section>
+  <div class="paasng-api-panel">
+    <div class="search-wrapper">
+      <section class="search-item">
+        <div class="label">
+          {{ $t('类型') }}
         </div>
-        <paas-content-loader :is-loading="loading" :offset-top="0" placeholder="cloud-api-inner-loading" :height="300">
-            <div>
-                <bk-table
-                    :data="tableList"
-                    size="small"
-                    :empty-text="$t('暂无数据')"
-                    :pagination="pagination"
-                    :show-pagination-info="true"
-                    :header-border="false"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange">
-                    <bk-table-column :label="$t('申请人')">
-                        <template slot-scope="props">
-                            {{ props.row.applied_by }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column prop="applied_time" :label="$t('申请时间')" :show-overflow-tooltip="true"></bk-table-column>
-                    <bk-table-column :label="$t('API类型')">
-                        <template slot-scope="props">
-                            {{ typeMap[props.row.type] }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="isComponentApi ? $t('系统') : $t('网关')">
-                        <template slot-scope="props">
-                            <template v-if="isComponentApi">
-                                {{ props.row.system_name }}
-                                <template v-if="!!props.row.tag">
-                                    <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
-                                        {{ props.row.tag }}
-                                    </span>
-                                </template>
-                            </template>
-                            <template v-else>
-                                {{ props.row.api_name }}
-                            </template>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('审批人')">
-                        <template slot-scope="props">
-                            <template v-if="getHandleBy(props.row.handled_by) === '--'">
-                                --
-                            </template>
-                            <span v-bk-tooltips="getHandleBy(props.row.handled_by)" v-else>{{ getHandleBy(props.row.handled_by) }}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('审批状态')">
-                        <template slot-scope="props">
-                            <template v-if="props.row.apply_status === 'approved'">
-                                <span class="paasng-icon paasng-pass"></span> {{ getStatusDisplay(props.row.apply_status) }}
-                            </template>
-                            <template v-else-if="props.row.apply_status === 'partial_approved'">
-                                {{ getStatusDisplay(props.row.apply_status) }}
-                            </template>
-                            <template v-else-if="props.row.apply_status === 'rejected'">
-                                <span class="paasng-icon paasng-reject"></span> {{ getStatusDisplay(props.row.apply_status) }}
-                            </template>
-                            <template v-else>
-                                <round-loading ext-cls="applying" /> {{ getStatusDisplay(props.row.apply_status) }}
-                            </template>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('审批时间')">
-                        <template slot-scope="props">
-                            {{ props.row.handled_time || '--' }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('操作')" width="100">
-                        <template slot-scope="props">
-                            <div class="table-operate-buttons">
-                                <bk-button
-                                    theme="primary"
-                                    size="small"
-                                    text
-                                    @click="handleOpenDetail(props.row)">
-                                    {{ $t('详情') }}
-                                </bk-button>
-                            </div>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
-        </paas-content-loader>
-
-        <bk-sideslider
-            quick-close
-            :title="sliderTitle"
-            :width="600"
-            :is-show.sync="detailSliderConf.show">
-            <div slot="content" class="slider-detail-content" v-bkloading="{ isLoading: detailLoading }">
-                <section class="paasng-kv-list" v-if="!detailLoading">
-                    <div class="item">
-                        <div class="key"> {{ $t('申请人') }}： </div>
-                        <div class="value">{{ curRecord.applied_by }}</div>
-                    </div>
-                    <div class="item" v-if="!isComponentApi">
-                        <div class="key"> {{ $t('授权维度：') }} </div>
-                        <div class="value">{{ curRecord.grant_dimension === 'resource' ? $t('按资源') : $t('按网关') }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('有效时间：') }} </div>
-                        <div class="value">{{ curRecord.expire_days === 0 ? $t('永久') : Math.ceil(curRecord.expire_days / 30) + $t('个月') }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('申请理由：') }} </div>
-                        <div class="value">{{ curRecord.reason || '--' }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('申请时间：') }} </div>
-                        <div class="value">{{ curRecord.applied_time }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('审批人：') }} </div>
-                        <div class="value">{{ getHandleBy(curRecord.handled_by) || '--' }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('审批时间：') }} </div>
-                        <div class="value">{{ curRecord.handled_time || '--' }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('审批状态：') }} </div>
-                        <div class="value">{{ curRecord.apply_status_display || '--' }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key"> {{ $t('审批内容：') }} </div>
-                        <div class="value" style="line-height: 22px; padding-top: 10px">{{ curRecord.comment || '--' }}</div>
-                    </div>
-                    <div class="item">
-                        <div class="key">{{ isComponentApi ? $t('系统名称：') : $t('网关名称：')}} </div>
-                        <div class="value">{{ (isComponentApi ? curRecord.system_name : curRecord.api_name) || '--' }}</div>
-                    </div>
-                    <div class="item" v-if="isComponentApi">
-                        <div class="key"> {{ $t('API列表：') }} </div>
-                        <div class="value" style="line-height: 22px; padding-top: 10px">
-                            <bk-table
-                                :size="'small'"
-                                :data="curRecord.components"
-                                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
-                                ext-cls="paasng-expand-table">
-                                <bk-table-column prop="name" :label="$t('API名称')"></bk-table-column>
-                                <bk-table-column prop="method" :label="$t('审批状态')">
-                                    <template slot-scope="prop">
-                                        <template v-if="prop.row['apply_status'] === 'rejected'">
-                                            <span class="paasng-icon paasng-reject"></span> {{ $t('驳回') }}
-                                        </template>
-                                        <template v-else-if="prop.row['apply_status'] === 'pending'">
-                                            <round-loading ext-cls="applying" /> {{ $t('待审批') }}
-                                        </template>
-                                        <template v-else>
-                                            <span class="paasng-icon paasng-pass"></span> {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
-                                        </template>
-                                    </template>
-                                </bk-table-column>
-                            </bk-table>
-                        </div>
-                    </div>
-                    <div class="item" v-else>
-                        <div class="key"> {{ $t('API列表：') }} </div>
-                        <div class="value"
-                            style="line-height: 22px; padding-top: 10px"
-                            v-if="curRecord.grant_dimension === 'resource'">
-                            <bk-table
-                                :size="'small'"
-                                :data="curRecord.resources"
-                                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
-                                ext-cls="paasng-expand-table">
-                                <bk-table-column prop="name" :label="$t('API名称')"></bk-table-column>
-                                <bk-table-column prop="method" :label="$t('审批状态')">
-                                    <template slot-scope="prop">
-                                        <template v-if="prop.row['apply_status'] === 'rejected'">
-                                            <span class="paasng-icon paasng-reject"></span> {{ $t('驳回') }}
-                                        </template>
-                                        <template v-else-if="prop.row['apply_status'] === 'pending'">
-                                            <round-loading ext-cls="applying" /> {{ $t('待审批') }}
-                                        </template>
-                                        <template v-else>
-                                            <span class="paasng-icon paasng-pass"></span> {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
-                                        </template>
-                                    </template>
-                                </bk-table-column>
-                            </bk-table>
-                        </div>
-                        <div class="value" v-else> {{ $t('网关下所有资源') }} </div>
-                    </div>
-                </section>
-            </div>
-        </bk-sideslider>
+        <div class="select-wrapper">
+          <bk-select
+            v-model="typeValue"
+            :clearable="false"
+            @selected="handleSelect"
+          >
+            <bk-option
+              v-for="option in typeList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+      </section>
+      <section class="search-item set-ml">
+        <div class="label">
+          {{ $t('申请人') }}
+        </div>
+        <div class="member-wrapper">
+          <user
+            v-model="applicants"
+            style="width: 142px;"
+            :multiple="false"
+            @change="handleMemberSelect"
+          />
+        </div>
+      </section>
+      <section class="search-item set-ml">
+        <div class="label">
+          {{ $t('状态') }}
+        </div>
+        <div class="select-wrapper">
+          <bk-select
+            v-model="statusValue"
+            clearable
+            @selected="handleStatusSelect"
+            @clear="handleClear"
+          >
+            <bk-option
+              v-for="option in statusList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+      </section>
+      <section class="search-item set-ml">
+        <div class="label">
+          {{ $t('申请时间') }}
+        </div>
+        <div class="date-wrapper">
+          <bk-date-picker
+            v-model="initDateTimeRange"
+            style="width: 195px;"
+            :placeholder="$t('选择日期范围')"
+            :type="'daterange'"
+            placement="bottom-end"
+            :shortcuts="shortcuts"
+            :shortcut-close="true"
+            :options="dateOptions"
+            @change="handleDateChange"
+          />
+        </div>
+      </section>
+      <section class="search-item set-ml">
+        <bk-input
+          v-model="searchValue"
+          :placeholder="`${$t('输入')}${isComponentApi ? $t('系统名称') : $t('网关名称，按Enter搜索')}`"
+          clearable
+          style="width: 195px;"
+          right-icon="paasng-icon paasng-search"
+          @enter="handleSearch"
+        />
+      </section>
+      <section class="search-item">
+        <bk-button
+          theme="primary"
+          @click="handlePageSearch"
+        >
+          {{ $t('查询') }}
+        </bk-button>
+      </section>
     </div>
+    <paas-content-loader
+      :is-loading="loading"
+      :offset-top="0"
+      placeholder="cloud-api-inner-loading"
+      :height="300"
+    >
+      <div>
+        <bk-table
+          :data="tableList"
+          size="small"
+          :empty-text="$t('暂无数据')"
+          :pagination="pagination"
+          :show-pagination-info="true"
+          :header-border="false"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+        >
+          <bk-table-column :label="$t('申请人')">
+            <template slot-scope="props">
+              {{ props.row.applied_by }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            prop="applied_time"
+            :label="$t('申请时间')"
+            :show-overflow-tooltip="true"
+          />
+          <bk-table-column :label="$t('API类型')">
+            <template slot-scope="props">
+              {{ typeMap[props.row.type] }}
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="isComponentApi ? $t('系统') : $t('网关')">
+            <template slot-scope="props">
+              <template v-if="isComponentApi">
+                {{ props.row.system_name }}
+                <template v-if="!!props.row.tag">
+                  <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
+                    {{ props.row.tag }}
+                  </span>
+                </template>
+              </template>
+              <template v-else>
+                {{ props.row.api_name }}
+              </template>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('审批人')">
+            <template slot-scope="props">
+              <template v-if="getHandleBy(props.row.handled_by) === '--'">
+                --
+              </template>
+              <span
+                v-else
+                v-bk-tooltips="getHandleBy(props.row.handled_by)"
+              >{{ getHandleBy(props.row.handled_by) }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('审批状态')">
+            <template slot-scope="props">
+              <template v-if="props.row.apply_status === 'approved'">
+                <span class="paasng-icon paasng-pass" /> {{ getStatusDisplay(props.row.apply_status) }}
+              </template>
+              <template v-else-if="props.row.apply_status === 'partial_approved'">
+                {{ getStatusDisplay(props.row.apply_status) }}
+              </template>
+              <template v-else-if="props.row.apply_status === 'rejected'">
+                <span class="paasng-icon paasng-reject" /> {{ getStatusDisplay(props.row.apply_status) }}
+              </template>
+              <template v-else>
+                <round-loading ext-cls="applying" /> {{ getStatusDisplay(props.row.apply_status) }}
+              </template>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('审批时间')">
+            <template slot-scope="props">
+              {{ props.row.handled_time || '--' }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('操作')"
+            width="100"
+          >
+            <template slot-scope="props">
+              <div class="table-operate-buttons">
+                <bk-button
+                  theme="primary"
+                  size="small"
+                  text
+                  @click="handleOpenDetail(props.row)"
+                >
+                  {{ $t('详情') }}
+                </bk-button>
+              </div>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </paas-content-loader>
+
+    <bk-sideslider
+      quick-close
+      :title="sliderTitle"
+      :width="600"
+      :is-show.sync="detailSliderConf.show"
+    >
+      <div
+        slot="content"
+        v-bkloading="{ isLoading: detailLoading }"
+        class="slider-detail-content"
+      >
+        <section
+          v-if="!detailLoading"
+          class="paasng-kv-list"
+        >
+          <div class="item">
+            <div class="key">
+              {{ $t('申请人') }}：
+            </div>
+            <div class="value">
+              {{ curRecord.applied_by }}
+            </div>
+          </div>
+          <div
+            v-if="!isComponentApi"
+            class="item"
+          >
+            <div class="key">
+              {{ $t('授权维度：') }}
+            </div>
+            <div class="value">
+              {{ curRecord.grant_dimension === 'resource' ? $t('按资源') : $t('按网关') }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('有效时间：') }}
+            </div>
+            <div class="value">
+              {{ curRecord.expire_days === 0 ? $t('永久') : Math.ceil(curRecord.expire_days / 30) + $t('个月') }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('申请理由：') }}
+            </div>
+            <div class="value">
+              {{ curRecord.reason || '--' }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('申请时间：') }}
+            </div>
+            <div class="value">
+              {{ curRecord.applied_time }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('审批人：') }}
+            </div>
+            <div class="value">
+              {{ getHandleBy(curRecord.handled_by) || '--' }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('审批时间：') }}
+            </div>
+            <div class="value">
+              {{ curRecord.handled_time || '--' }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('审批状态：') }}
+            </div>
+            <div class="value">
+              {{ curRecord.apply_status_display || '--' }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ $t('审批内容：') }}
+            </div>
+            <div
+              class="value"
+              style="line-height: 22px; padding-top: 10px"
+            >
+              {{ curRecord.comment || '--' }}
+            </div>
+          </div>
+          <div class="item">
+            <div class="key">
+              {{ isComponentApi ? $t('系统名称：') : $t('网关名称：') }}
+            </div>
+            <div class="value">
+              {{ (isComponentApi ? curRecord.system_name : curRecord.api_name) || '--' }}
+            </div>
+          </div>
+          <div
+            v-if="isComponentApi"
+            class="item"
+          >
+            <div class="key">
+              {{ $t('API列表：') }}
+            </div>
+            <div
+              class="value"
+              style="line-height: 22px; padding-top: 10px"
+            >
+              <bk-table
+                :size="'small'"
+                :data="curRecord.components"
+                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
+                ext-cls="paasng-expand-table"
+              >
+                <bk-table-column
+                  prop="name"
+                  :label="$t('API名称')"
+                />
+                <bk-table-column
+                  prop="method"
+                  :label="$t('审批状态')"
+                >
+                  <template slot-scope="prop">
+                    <template v-if="prop.row['apply_status'] === 'rejected'">
+                      <span class="paasng-icon paasng-reject" /> {{ $t('驳回') }}
+                    </template>
+                    <template v-else-if="prop.row['apply_status'] === 'pending'">
+                      <round-loading ext-cls="applying" /> {{ $t('待审批') }}
+                    </template>
+                    <template v-else>
+                      <span class="paasng-icon paasng-pass" /> {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
+                    </template>
+                  </template>
+                </bk-table-column>
+              </bk-table>
+            </div>
+          </div>
+          <div
+            v-else
+            class="item"
+          >
+            <div class="key">
+              {{ $t('API列表：') }}
+            </div>
+            <div
+              v-if="curRecord.grant_dimension === 'resource'"
+              class="value"
+              style="line-height: 22px; padding-top: 10px"
+            >
+              <bk-table
+                :size="'small'"
+                :data="curRecord.resources"
+                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
+                ext-cls="paasng-expand-table"
+              >
+                <bk-table-column
+                  prop="name"
+                  :label="$t('API名称')"
+                />
+                <bk-table-column
+                  prop="method"
+                  :label="$t('审批状态')"
+                >
+                  <template slot-scope="prop">
+                    <template v-if="prop.row['apply_status'] === 'rejected'">
+                      <span class="paasng-icon paasng-reject" /> {{ $t('驳回') }}
+                    </template>
+                    <template v-else-if="prop.row['apply_status'] === 'pending'">
+                      <round-loading ext-cls="applying" /> {{ $t('待审批') }}
+                    </template>
+                    <template v-else>
+                      <span class="paasng-icon paasng-pass" /> {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
+                    </template>
+                  </template>
+                </bk-table-column>
+              </bk-table>
+            </div>
+            <div
+              v-else
+              class="value"
+            >
+              {{ $t('网关下所有资源') }}
+            </div>
+          </div>
+        </section>
+      </div>
+    </bk-sideslider>
+  </div>
 </template>
 
 <script>

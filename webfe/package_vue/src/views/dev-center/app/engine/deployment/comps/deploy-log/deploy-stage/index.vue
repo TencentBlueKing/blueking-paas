@@ -1,30 +1,37 @@
 <template>
-    <div class="paas-deploy-log-deploy-stage-wrapper">
-        <label class="title">
-            {{ $t('部署阶段') }}
-            <status-item status="abnormal" :abnormal-count="abnormalCount" v-if="abnormalCount > 0" />
-        </label>
-        <section class="content" v-bkloading="{ isLoading: loading, color: '#2a2b2f' }">
-            <div class="process-content">
-                <template v-if="curProcessList.length > 0">
-                    <process-item
-                        v-for="item in curProcessList"
-                        :key="`${item.name}${item.instanceData.display_name}`"
-                        :status="item.state"
-                        :title="item.name"
-                        :instance-name="item.instanceData.name"
-                        :expanded="item.expanded"
-                        :sub-title="item.instanceData.display_name">
-                    </process-item>
-                </template>
-                <template v-else>
-                    <div class="empty-process">
-                        {{ $t('无执行中的进程') }}
-                    </div>
-                </template>
-            </div>
-        </section>
-    </div>
+  <div class="paas-deploy-log-deploy-stage-wrapper">
+    <label class="title">
+      {{ $t('部署阶段') }}
+      <status-item
+        v-if="abnormalCount > 0"
+        status="abnormal"
+        :abnormal-count="abnormalCount"
+      />
+    </label>
+    <section
+      v-bkloading="{ isLoading: loading, color: '#2a2b2f' }"
+      class="content"
+    >
+      <div class="process-content">
+        <template v-if="curProcessList.length > 0">
+          <process-item
+            v-for="item in curProcessList"
+            :key="`${item.name}${item.instanceData.display_name}`"
+            :status="item.state"
+            :title="item.name"
+            :instance-name="item.instanceData.name"
+            :expanded="item.expanded"
+            :sub-title="item.instanceData.display_name"
+          />
+        </template>
+        <template v-else>
+          <div class="empty-process">
+            {{ $t('无执行中的进程') }}
+          </div>
+        </template>
+      </div>
+    </section>
+  </div>
 </template>
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin.js';

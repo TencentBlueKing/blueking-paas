@@ -1,29 +1,47 @@
 s<template>
-    <paas-content-loader :is-loading="isLoading" placeholder="deploy-config-loading" :offset-top="0" :offset-left="-8" class="config-warp">
-        <bk-form class="info-special-form" form-type="inline">
-            <bk-form-item style="width: 165px;">
-                <label class="title-label"> {{ $t('部署前置命令') }} </label>
-                <i class="paasng-icon paasng-info-circle tooltip-icon" v-bk-tooltips="configDirTip"></i>
-            </bk-form-item>
-            <div class="pt5">
-                <div class="ps-switcher-wrapper" @click="togglePermission">
-                    <bk-switcher
-                        v-model="configInfo.loaclEnabled">
-                    </bk-switcher>
-                </div>
-                <span class="pl5">{{configInfo.loaclEnabled ? $t('已启用') : $t('未启用')}}</span>
-            </div>
-            <bk-form-item class="pt20" style="width: calc(100% - 260px); position:relative">
-                <bk-input
-                    v-if="configInfo.loaclEnabled"
-                    ref="nameInput"
-                    :placeholder="$t('请输入')"
-                    :readonly="!isEdited"
-                    ext-cls="paas-info-app-name-cls"
-                    :clearable="false"
-                    v-model="configInfo.command">
-                </bk-input>
-                <!-- <bk-button
+  <paas-content-loader
+    :is-loading="isLoading"
+    placeholder="deploy-config-loading"
+    :offset-top="0"
+    :offset-left="-8"
+    class="config-warp"
+  >
+    <bk-form
+      class="info-special-form"
+      form-type="inline"
+    >
+      <bk-form-item style="width: 165px;">
+        <label class="title-label"> {{ $t('部署前置命令') }} </label>
+        <i
+          v-bk-tooltips="configDirTip"
+          class="paasng-icon paasng-info-circle tooltip-icon"
+        />
+      </bk-form-item>
+      <div class="pt5">
+        <div
+          class="ps-switcher-wrapper"
+          @click="togglePermission"
+        >
+          <bk-switcher
+            v-model="configInfo.loaclEnabled"
+          />
+        </div>
+        <span class="pl5">{{ configInfo.loaclEnabled ? $t('已启用') : $t('未启用') }}</span>
+      </div>
+      <bk-form-item
+        class="pt20"
+        style="width: calc(100% - 260px); position:relative"
+      >
+        <bk-input
+          v-if="configInfo.loaclEnabled"
+          ref="nameInput"
+          v-model="configInfo.command"
+          :placeholder="$t('请输入')"
+          :readonly="!isEdited"
+          ext-cls="paas-info-app-name-cls"
+          :clearable="false"
+        />
+        <!-- <bk-button
                     class="config-button"
                     theme="primary"
                     :disabled="isEdited"
@@ -31,144 +49,209 @@ s<template>
                     @click.stop.prevent="handlerCommand">
                     {{configInfo.enabled ? '确认禁用' : '确认启用'}}
                 </bk-button> -->
-                <span class="info">{{ $t('复杂命令可封装在一个脚本中，放在代码仓库的 bin 目录下(bin/pre-task.sh)，并将部署前置命令配置为:') }} "bash ./bin/pre-task.sh"</span>
+        <span class="info">{{ $t('复杂命令可封装在一个脚本中，放在代码仓库的 bin 目录下(bin/pre-task.sh)，并将部署前置命令配置为:') }} "bash ./bin/pre-task.sh"</span>
 
-                <div class="action-box">
-                    <template v-if="!isEdited">
-                        <a v-if="configInfo.loaclEnabled" class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
-                            @click="showEdit">
-                        </a>
-                    </template>
-                    <template v-else>
-                        <bk-button
-                            v-if="configInfo.loaclEnabled"
-                            style="margin-right: 6px;"
-                            theme="primary"
-                            :disabled="configInfo.command === ''"
-                            text
-                            @click.stop.prevent="saveCommand">
-                            {{ $t('确认启用') }}
-                        </bk-button>
-                        <bk-button
-                            v-if="configInfo.loaclEnabled"
-                            theme="primary"
-                            text
-                            @click.stop.prevent="cancelCommand">
-                            {{ $t('取消') }}
-                        </bk-button>
-                    </template>
-                </div>
-            </bk-form-item>
-        </bk-form>
-        <bk-form v-if="curAppModule.web_config.runtime_type !== 'custom_image'" class="info-special-form pt20" form-type="inline">
-            <bk-form-item style="width: 140px;">
-                <label class="title-label"> {{ $t('部署命令') }} </label>
-            </bk-form-item>
-            <bk-form-item>
-                <p class="command"> {{ $t('由应用代码根目录下的Procfile文件定义') }} <a :href="GLOBAL.DOC.PROCFILE_DOC" target="_blank" class="blue ml10"> {{ $t('文档：应用进程与Procfile') }} </a></p>
-            </bk-form-item>
-        </bk-form>
-        <bk-form v-if="isDockerApp" class="info-special-form pt20" form-type="inline" style="display: flex">
-            <bk-form-item style="width: 165px;margin-top: 18px;">
-                <label class="title-label"> {{ $t('启动命令') }} </label>
-            </bk-form-item>
+        <div class="action-box">
+          <template v-if="!isEdited">
+            <a
+              v-if="configInfo.loaclEnabled"
+              v-bk-tooltips="$t('编辑')"
+              class="paasng-icon paasng-edit2"
+              @click="showEdit"
+            />
+          </template>
+          <template v-else>
+            <bk-button
+              v-if="configInfo.loaclEnabled"
+              style="margin-right: 6px;"
+              theme="primary"
+              :disabled="configInfo.command === ''"
+              text
+              @click.stop.prevent="saveCommand"
+            >
+              {{ $t('确认启用') }}
+            </bk-button>
+            <bk-button
+              v-if="configInfo.loaclEnabled"
+              theme="primary"
+              text
+              @click.stop.prevent="cancelCommand"
+            >
+              {{ $t('取消') }}
+            </bk-button>
+          </template>
+        </div>
+      </bk-form-item>
+    </bk-form>
+    <bk-form
+      v-if="curAppModule.web_config.runtime_type !== 'custom_image'"
+      class="info-special-form pt20"
+      form-type="inline"
+    >
+      <bk-form-item style="width: 140px;">
+        <label class="title-label"> {{ $t('部署命令') }} </label>
+      </bk-form-item>
+      <bk-form-item>
+        <p class="command">
+          {{ $t('由应用代码根目录下的Procfile文件定义') }} <a
+            :href="GLOBAL.DOC.PROCFILE_DOC"
+            target="_blank"
+            class="blue ml10"
+          > {{ $t('文档：应用进程与Procfile') }} </a>
+        </p>
+      </bk-form-item>
+    </bk-form>
+    <bk-form
+      v-if="isDockerApp"
+      class="info-special-form pt20"
+      form-type="inline"
+      style="display: flex"
+    >
+      <bk-form-item style="width: 165px;margin-top: 18px;">
+        <label class="title-label"> {{ $t('启动命令') }} </label>
+      </bk-form-item>
 
-            <bk-form-item v-if="curAppModule.web_config.runtime_type !== 'custom_image'">
-                <p class="command"> {{ $t('由应用代码根目录下的Procfile文件定义') }} <a :href="GLOBAL.DOC.PROCFILE_DOC" target="_blank" class="blue ml10"> {{ $t('文档：应用进程与Procfile') }} </a></p>
-            </bk-form-item>
-            <bk-form-item v-else style="flex: 1">
-                <table class="ps-table ps-table-default ps-table-width-overflowed" style="margin-bottom: 24px;width: 100%">
-                    <tr v-for="(varItem, index) in commandList" :key="index">
-                        <td>
-                            <bk-form form-type="inline" :model="varItem" :rules="varRules" class="orderList" style="display: flex">
-                                <bk-form-item :property="'name'" style="flex: 1 1 20%;padding-right: 10px">
-                                    <bk-input
-                                        :clearable="false"
-                                        :readonly="isReadOnlyRow(index)"
-                                        :ref="'varItem' + index"
-                                        v-model="varItem.name">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item :property="'command'" style="flex: 1 1 60%;">
-                                    <bk-input
-                                        :clearable="false"
-                                        :readonly="isReadOnlyRow(index)"
-                                        v-model="varItem.command">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
-                                    <template v-if="isReadOnlyRow(index)">
-                                        <a class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
-                                            @click="editingRowToggle(index)">
-                                        </a>
-                                        <tooltip-confirm
-                                            ref="deleteTooltip"
-                                            :ok-text="$t('确定')"
-                                            :cancel-text="$t('取消')"
-                                            :theme="'ps-tooltip'"
-                                            @ok="deleteConfigVar(varItem.name)">
-                                            <a slot="trigger" class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
-                                                v-show="isReadOnlyRow(index)">
-                                            </a>
-                                        </tooltip-confirm>
-                                    </template>
-                                    <template v-else>
-                                        <a class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
-                                            type="submit"
-                                            @click="updateConfigVar(index)">
-                                        </a>
-                                        <a class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
-                                            style="margin-left: 0;"
-                                            @click="editingRowToggle(index)">
-                                        </a>
-                                    </template>
-                                </bk-form-item>
-                            </bk-form>
-                        </td>
-                    </tr>
-                    <tr v-if="curAppModule.web_config.runtime_type === 'custom_image'">
-                        <td>
-                            <bk-form form-type="inline" :rules="varRules" :model="newVarConfig" ref="validate2" style="display: flex">
-                                <bk-form-item :property="'name'" style="flex: 1 1 20%;padding-right: 10px">
-                                    <bk-input
-                                        ref="serverInput"
-                                        :placeholder="$t('名称，例如：web')"
-                                        :clearable="false"
-                                        v-model="newVarConfig.name">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item :property="'command'" style="flex: 1 1 60%;">
-                                    <bk-input
-                                        placeholder="$t('启动命令。包含参数，例如：gunicorn wsgi -w 4 -b :$PORT')"
-                                        :clearable="false"
-                                        v-model="newVarConfig.command">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px; margin-top: 5px;">
-                                    <bk-button
-                                        theme="primary"
-                                        :outline="true"
-                                        @click.stop.prevent="createConfigVar">
-                                        {{ $t('添加') }}
-                                    </bk-button>
-                                </bk-form-item>
-                            </bk-form>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <bk-form-item>
-                                <p class="mt-minus">
-                                    在<span @click="skip"> {{ $t('访问入口-进程服务管理') }} </span> {{ $t('中可设置将应用进程暴露给应用内部与外部用户') }}
-                                </p>
-                            </bk-form-item>
-                        </td>
-                    </tr>
-                    
-                </table>
-            </bk-form-item>
-        </bk-form>
-    </paas-content-loader>
+      <bk-form-item v-if="curAppModule.web_config.runtime_type !== 'custom_image'">
+        <p class="command">
+          {{ $t('由应用代码根目录下的Procfile文件定义') }} <a
+            :href="GLOBAL.DOC.PROCFILE_DOC"
+            target="_blank"
+            class="blue ml10"
+          > {{ $t('文档：应用进程与Procfile') }} </a>
+        </p>
+      </bk-form-item>
+      <bk-form-item
+        v-else
+        style="flex: 1"
+      >
+        <table
+          class="ps-table ps-table-default ps-table-width-overflowed"
+          style="margin-bottom: 24px;width: 100%"
+        >
+          <tr
+            v-for="(varItem, index) in commandList"
+            :key="index"
+          >
+            <td>
+              <bk-form
+                form-type="inline"
+                :model="varItem"
+                :rules="varRules"
+                class="orderList"
+                style="display: flex"
+              >
+                <bk-form-item
+                  :property="'name'"
+                  style="flex: 1 1 20%;padding-right: 10px"
+                >
+                  <bk-input
+                    :ref="'varItem' + index"
+                    v-model="varItem.name"
+                    :clearable="false"
+                    :readonly="isReadOnlyRow(index)"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :property="'command'"
+                  style="flex: 1 1 60%;"
+                >
+                  <bk-input
+                    v-model="varItem.command"
+                    :clearable="false"
+                    :readonly="isReadOnlyRow(index)"
+                  />
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
+                  <template v-if="isReadOnlyRow(index)">
+                    <a
+                      class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
+                      @click="editingRowToggle(index)"
+                    />
+                    <tooltip-confirm
+                      ref="deleteTooltip"
+                      :ok-text="$t('确定')"
+                      :cancel-text="$t('取消')"
+                      :theme="'ps-tooltip'"
+                      @ok="deleteConfigVar(varItem.name)"
+                    >
+                      <a
+                        v-show="isReadOnlyRow(index)"
+                        slot="trigger"
+                        class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
+                      />
+                    </tooltip-confirm>
+                  </template>
+                  <template v-else>
+                    <a
+                      class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
+                      type="submit"
+                      @click="updateConfigVar(index)"
+                    />
+                    <a
+                      class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
+                      style="margin-left: 0;"
+                      @click="editingRowToggle(index)"
+                    />
+                  </template>
+                </bk-form-item>
+              </bk-form>
+            </td>
+          </tr>
+          <tr v-if="curAppModule.web_config.runtime_type === 'custom_image'">
+            <td>
+              <bk-form
+                ref="validate2"
+                form-type="inline"
+                :rules="varRules"
+                :model="newVarConfig"
+                style="display: flex"
+              >
+                <bk-form-item
+                  :property="'name'"
+                  style="flex: 1 1 20%;padding-right: 10px"
+                >
+                  <bk-input
+                    ref="serverInput"
+                    v-model="newVarConfig.name"
+                    :placeholder="$t('名称，例如：web')"
+                    :clearable="false"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :property="'command'"
+                  style="flex: 1 1 60%;"
+                >
+                  <bk-input
+                    v-model="newVarConfig.command"
+                    placeholder="$t('启动命令。包含参数，例如：gunicorn wsgi -w 4 -b :$PORT')"
+                    :clearable="false"
+                  />
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px; margin-top: 5px;">
+                  <bk-button
+                    theme="primary"
+                    :outline="true"
+                    @click.stop.prevent="createConfigVar"
+                  >
+                    {{ $t('添加') }}
+                  </bk-button>
+                </bk-form-item>
+              </bk-form>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <bk-form-item>
+                <p class="mt-minus">
+                  在<span @click="skip"> {{ $t('访问入口-进程服务管理') }} </span> {{ $t('中可设置将应用进程暴露给应用内部与外部用户') }}
+                </p>
+              </bk-form-item>
+            </td>
+          </tr>
+        </table>
+      </bk-form-item>
+    </bk-form>
+  </paas-content-loader>
 </template>
 <script>
     import _ from 'lodash';

@@ -1,28 +1,37 @@
 <template lang="html">
-    <div class="container biz-create-success">
-        <div class="success-wrapper">
-            <div class="info">
-                <p>
-                    <i class="paasng-icon paasng-check-circle-shape text-success"></i>
-                </p>
-                <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
-                <p>
-                    {{ $t('常用操作：') }}
-                    <router-link :to="{ name: 'appRoles', params: { id: appCode } }" class="link">
-                        {{ $t('添加成员') }}
-                    </router-link>
-                    <span style="position: relative; top: -1px;">|</span>
-                    <router-link :to="{ name: 'appDeploy', params: { id: appCode } }" class="link">
-                        {{ $t('部署应用') }}
-                    </router-link>
-                    <span style="position: relative; top: -1px;">|</span>
-                    <router-link :to="{ name: 'appCloudAPI', params: { id: appCode } }" class="link">
-                        {{ $t('云API申请') }}
-                    </router-link>
-                </p>
-            </div>
-        </div>
+  <div class="container biz-create-success">
+    <div class="success-wrapper">
+      <div class="info">
+        <p>
+          <i class="paasng-icon paasng-check-circle-shape text-success" />
+        </p>
+        <p>{{ $t('恭喜，应用') }}&nbsp;&nbsp;"{{ application.name }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+        <p>
+          {{ $t('常用操作：') }}
+          <router-link
+            :to="{ name: 'appRoles', params: { id: appCode } }"
+            class="link"
+          >
+            {{ $t('添加成员') }}
+          </router-link>
+          <span style="position: relative; top: -1px;">|</span>
+          <router-link
+            :to="{ name: 'appDeploy', params: { id: appCode } }"
+            class="link"
+          >
+            {{ $t('部署应用') }}
+          </router-link>
+          <span style="position: relative; top: -1px;">|</span>
+          <router-link
+            :to="{ name: 'appCloudAPI', params: { id: appCode } }"
+            class="link"
+          >
+            {{ $t('云API申请') }}
+          </router-link>
+        </p>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>

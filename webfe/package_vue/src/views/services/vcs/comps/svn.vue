@@ -1,48 +1,101 @@
 <template lang="html">
-    <div class="svn-main">
-        <div slot="loadingContent">
-            <div class="code-content-wrapper" v-if="userid">
-                <h4 class="head-title"> {{ $t('蓝鲸SVN代码仓库') }} </h4>
-                <p class="desc">
-                    {{ $t('如果应用选择使用SVN管理，蓝鲸将默认为该应用分配SVN仓库') }}
-                    <a href="https://tortoisesvn.net/downloads.html" target="_blank" style="display: none;"> {{ $t('查看SVN操作指引文档') }} </a>
-                    <a href="https://tortoisesvn.net/downloads.html" target="_blank"> {{ $t('下载SVN客户端') }} </a>
+  <div class="svn-main">
+    <div slot="loadingContent">
+      <div
+        v-if="userid"
+        class="code-content-wrapper"
+      >
+        <h4 class="head-title">
+          {{ $t('蓝鲸SVN代码仓库') }}
+        </h4>
+        <p class="desc">
+          {{ $t('如果应用选择使用SVN管理，蓝鲸将默认为该应用分配SVN仓库') }}
+          <a
+            href="https://tortoisesvn.net/downloads.html"
+            target="_blank"
+            style="display: none;"
+          > {{ $t('查看SVN操作指引文档') }} </a>
+          <a
+            href="https://tortoisesvn.net/downloads.html"
+            target="_blank"
+          > {{ $t('下载SVN客户端') }} </a>
+        </p>
+        <div class="user-info-wrapper">
+          <ul>
+            <li class="user-list">
+              <p class="title">
+                {{ $t('用户名') }}
+              </p>
+              <div class="specific-desc">
+                {{ userList.username }}
+              </div>
+            </li>
+            <li class="user-list">
+              <p class="title">
+                {{ $t('密码') }}
+              </p>
+              <div class="specific-desc">
+                {{ bkpaasUserId }}
+                <a
+                  id="getPassword"
+                  v-bk-tooltips="$t('您将进行密码重置操作！')"
+                  class="blue tooltip loadown-text"
+                  href="javascript:"
+                  @click="openPassword"
+                >
+                  {{ $t('忘记密码') }}
+                </a>
+              </div>
+              <div
+                v-if="isopen"
+                class="get-password"
+              >
+                <p style="line-height: 19px;">
+                  {{ $t('验证码已发送至您的企业微信，请注意查收！') }}
                 </p>
-                <div class="user-info-wrapper">
-                    <ul>
-                        <li class="user-list">
-                            <p class="title"> {{ $t('用户名') }} </p>
-                            <div class="specific-desc">{{userList.username}}</div>
-                        </li>
-                        <li class="user-list">
-                            <p class="title"> {{ $t('密码') }} </p>
-                            <div class="specific-desc">
-                                {{bkpaasUserId}}
-                                <a class="blue tooltip loadown-text" href="javascript:" id="getPassword" @click="openPassword" v-bk-tooltips="$t('您将进行密码重置操作！')">
-                                    {{ $t('忘记密码') }}
-                                </a>
-                            </div>
-                            <div class="get-password" v-if="isopen">
-                                <p style="line-height: 19px;">
-                                    {{ $t('验证码已发送至您的企业微信，请注意查收！') }}
-                                </p>
-                                <p style="margin: 18px 0 20px 0;">
-                                    <span class="password">
-                                        <input type="text" class="password-text" :placeholder="$t('请输入验证码')" v-model="verificationcode" />
-                                        <bk-button class="code-text" theme="default" :disabled="true" v-if="flag">{{timer}}s{{ $t('重新获取') }} </bk-button>
-                                        <bk-button class="get-code-btn" theme="default" v-else @click="getPassword(true)"> {{ $t('重新获取') }} </bk-button>
-                                    </span>
-                                </p>
-                                <p style="font-size: 0;">
-                                    <bk-button class="mr10" theme="primary" @click="resetPassword"> {{ $t('重置密码') }} </bk-button>
-                                    <bk-button theme="default" @click="closePassword"> {{ $t('取消') }} </bk-button>
-                                </p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <!-- <div class="middle" v-else>
+                <p style="margin: 18px 0 20px 0;">
+                  <span class="password">
+                    <input
+                      v-model="verificationcode"
+                      type="text"
+                      class="password-text"
+                      :placeholder="$t('请输入验证码')"
+                    >
+                    <bk-button
+                      v-if="flag"
+                      class="code-text"
+                      theme="default"
+                      :disabled="true"
+                    >{{ timer }}s{{ $t('重新获取') }} </bk-button>
+                    <bk-button
+                      v-else
+                      class="get-code-btn"
+                      theme="default"
+                      @click="getPassword(true)"
+                    > {{ $t('重新获取') }} </bk-button>
+                  </span>
+                </p>
+                <p style="font-size: 0;">
+                  <bk-button
+                    class="mr10"
+                    theme="primary"
+                    @click="resetPassword"
+                  >
+                    {{ $t('重置密码') }}
+                  </bk-button>
+                  <bk-button
+                    theme="default"
+                    @click="closePassword"
+                  >
+                    {{ $t('取消') }}
+                  </bk-button>
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <!-- <div class="middle" v-else>
                 <div class="coding" v-if="GLOBAL.APP_VERSION !== 'ee'">
                     <h2> {{ $t('蓝鲸为开发者提供SVN服务作为应用代码仓库！') }} </h2>
                     <p> {{ $t('初始化账号后，你可以使用SVN客户端访问你的项目代码；蓝鲸会给每个蓝鲸应用默认分配一个代码仓库！') }} </p>
@@ -54,8 +107,8 @@
                     </p>
                 </div>
             </div> -->
-        </div>
     </div>
+  </div>
 </template>
 
 <script>

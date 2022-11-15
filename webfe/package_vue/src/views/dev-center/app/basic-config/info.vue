@@ -1,409 +1,587 @@
 <template lang="html">
-    <div class="right-main">
-        <div class="ps-top-bar">
-            <h2> {{ $t('基本信息') }} </h2>
-        </div>
-        <paas-content-loader class="app-container middle" :is-loading="isLoading" placeholder="base-info-loading">
-            <section>
-                <div class="basic-info-item mt15">
-                    <div class="title"> {{ $t('基本信息') }} </div>
-                    <div class="info" v-if="isSmartApp"> {{ $t('应用名称等基本信息请在“app.yaml”文件中配置') }} </div>
-                    <div class="info" v-else> {{ $t('管理员、开发者和运营者可以修改应用名称等基本信息') }} </div>
-                    <div class="content no-border">
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label logo"> {{ $t('应用logo') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="logo-uploader item-logn-content">
-                                    <div class="preview">
-                                        <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
-                                    </div>
-                                    <div class="preview-btn pl20">
-                                        <template>
-                                            <div>
-                                                <bk-button :theme="'default'" class="upload-btn mt5">
-                                                    {{ $t('更换图片') }}
-                                                    <input
-                                                        type="file"
-                                                        accept="image/jpeg, image/png"
-                                                        value=""
-                                                        name="logo"
-                                                        @change="handlerUploadFile" />
-                                                </bk-button>
-                                                <p class="tip" style="line-height: 1;">{{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}</p>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('应用名称') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <bk-input
-                                    ref="nameInput"
-                                    :placeholder="$t('请输入20个字符以内的应用名称')"
-                                    :readonly="!isEdited"
-                                    ext-cls="paas-info-app-name-cls"
-                                    :clearable="false"
-                                    :maxlength="20"
-                                    v-model="localeAppInfo.name">
-                                </bk-input>
-
-                                <div class="action-box" v-if="!isSmartApp">
-                                    <template v-if="!isEdited">
-                                        <a class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
-                                            @click="showEdit">
-                                        </a>
-                                    </template>
-                                    <template v-else>
-                                        <bk-button
-                                            style="margin-right: 6px;"
-                                            theme="primary"
-                                            :disabled="localeAppInfo.name === ''"
-                                            text
-                                            @click.stop.prevent="submitBasicInfo">
-                                            {{ $t('保存') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="primary"
-                                            text
-                                            @click.stop.prevent="cancelBasicInfo">
-                                            {{ $t('取消') }}
-                                        </bk-button>
-                                    </template>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline" v-if="platformFeature.REGION_DISPLAY">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('应用版本') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">{{ curAppInfo.application.region_name || '--' }}</div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('创建时间') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">{{ curAppInfo.application.created || '--' }}</div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline" v-if="curAppInfo.cluster">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('所属集群') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">{{ curAppInfo.cluster ? curAppInfo.cluster.bcs_cluster_id : '--' }}</div>
-                            </bk-form-item>
-                        </bk-form>
-                    </div>
-                </div>
-                <div class="basic-info-item mt15" v-if="curAppInfo.application.type !== 'cloud_native'">
-                    <div class="desc-flex">
-                        <div class="title"> {{ $t('应用描述文件') }} </div>
-                        <div class="ps-switcher-wrapper" @click="toggleDescSwitch">
-                            <bk-switcher
-                                :disabled="descAppDisabled"
-                                v-model="descAppStatus">
-                            </bk-switcher>
-                        </div>
-                    </div>
-                    <div class="info">
-                        {{ descAppStatus ? $t('已启用应用描述文件 app_desc.yaml，可在文件中定义环境变量，服务发现等。') : $t('未启用应用描述文件 app_desc.yaml') }}
-                        <a :href="GLOBAL.DOC.APP_DESC_DOC" target="_blank"> {{ $t('文档：什么是应用描述文件') }} </a>
-                    </div>
-                </div>
-                <div class="basic-info-item plugin-type-scope" v-if="curAppInfo.application.type === 'bk_plugin'">
-                    <div class="title"> {{ $t('插件信息') }} </div>
-                    <div class="info">
-                        {{ $t('管理插件相关信息') }}
-                    </div>
-                    <div class="content no-border">
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('插件简介') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <bk-input
-                                    ref="pluginInput"
-                                    :placeholder="pluginPlaceholder"
-                                    :readonly="!pluginIntroDuction"
-                                    ext-cls="paas-info-app-name-cls"
-                                    :clearable="false"
-                                    v-model="localeAppInfo.introduction">
-                                </bk-input>
-
-                                <div class="action-box">
-                                    <template v-if="!pluginIntroDuction">
-                                        <a class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
-                                            @click="showPluginEdit">
-                                        </a>
-                                    </template>
-                                    <template v-else>
-                                        <bk-button
-                                            style="margin-right: 6px;"
-                                            theme="primary"
-                                            :disabled="localeAppInfo.name === ''"
-                                            text
-                                            @click.stop.prevent="submitPluginBasicInfo('')">
-                                            {{ $t('保存') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="primary"
-                                            text
-                                            @click.stop.prevent="cancelPluginBasicInfo">
-                                            {{ $t('取消') }}
-                                        </bk-button>
-                                    </template>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('联系人员') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <bk-member-selector
-                                    ext-cls="member-cls"
-                                    :disabled="isDisabled"
-                                    @change="updateContact"
-                                    v-model="localeAppInfo.contact"
-                                    ref="member_selector">
-                                </bk-member-selector>
-                                <div class="action-box">
-                                    <template v-if="isDisabled">
-                                        <a class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
-                                            @click="showPluginContactEdit">
-                                        </a>
-                                    </template>
-                                    <template v-else>
-                                        <bk-button
-                                            style="margin-right: 6px;"
-                                            theme="primary"
-                                            :disabled="localeAppInfo.name === ''"
-                                            text
-                                            @click.stop.prevent="submitPluginBasicInfo({ contact: curVal })">
-                                            {{ $t('保存') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="primary"
-                                            text
-                                            @click.stop.prevent="cancelPluginContactBasicInfo">
-                                            {{ $t('取消') }}
-                                        </bk-button>
-                                    </template>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('蓝鲸网关') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div class="item-content">
-                                    <span v-if="apiGwName" style="color: #3A84FF;">{{$t('已绑定到') + apiGwName}}</span>
-                                    <span v-else style="color: #979ba5;"> {{ $t('暂未找到已同步网关') }} </span>
-                                    <i class="paasng-icon paasng-info-circle tooltip-icon" v-bk-tooltips="$t('网关维护者默认为应用管理员')"></i>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;">
-                                <label class="title-label"> {{ $t('插件分类') }} </label>
-                            </bk-form-item>
-                            <bk-form-item style="width: calc(100% - 180px);">
-                                <div :class="['item-content', 'plugin-type', { 'custom-active': !isPluginTypeSelect && isFocus }]" ref="refPluginType">
-                                    <bk-select
-                                        :disabled="isPluginTypeSelect"
-                                        clearable
-                                        v-model="pluginTypeValue"
-                                        ext-cls="select-custom"
-                                        searchable>
-                                        <bk-option v-for="option in pluginTypeList"
-                                            :key="option.id"
-                                            :id="option.id"
-                                            :name="option.name">
-                                        </bk-option>
-                                    </bk-select>
-                                </div>
-                                <div class="action-box">
-                                    <template v-if="isPluginTypeSelect">
-                                        <a class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
-                                            @click="showPluginSelected">
-                                        </a>
-                                    </template>
-                                    <template v-else>
-                                        <bk-button
-                                            style="margin-right: 6px;"
-                                            theme="primary"
-                                            :disabled="localeAppInfo.name === ''"
-                                            text
-                                            @click.stop.prevent="submitPluginBasicInfo({ 'tag': pluginTypeValue })">
-                                            {{ $t('保存') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="primary"
-                                            text
-                                            @click.stop.prevent="cancelPluginType">
-                                            {{ $t('取消') }}
-                                        </bk-button>
-                                    </template>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                        <bk-form class="info-special-form" form-type="inline">
-                            <bk-form-item style="width: 180px;height: 480px;">
-                                <label class="title-label plugin-info">
-                                    <p style="height: 26px"> {{ $t('插件使用方') }} </p>
-                                    <span v-bk-tooltips.bottom="tipsInfo" class="bottom-middle">
-                                        <!-- <a href="#"> {{ $t('功能说明') }} </a> 待确定路径-->
-                                        <p style="color: #3a84ff;height: 30px;"> {{ $t('功能说明') }} </p>
-                                    </span>
-                                </label>
-                            </bk-form-item>
-                            <bk-form-item class="pluginEmploy" style="width: calc(100% - 180px);">
-                                <bk-transfer
-                                    :target-list="targetPluginList"
-                                    :source-list="pluginList"
-                                    :display-key="'name'"
-                                    :setting-key="'code_name'"
-                                    @change="transferChange"
-                                    :show-overflow-tips="true"
-                                    :empty-content="promptContent"
-                                    :title="titleArr">
-                                </bk-transfer>
-                                <div class="button-wrap">
-                                    <bk-button :theme="'primary'" type="submit" :title="$t('保存')" @click="updateAuthorizationUse" class="mr10">
-                                        {{ $t('保存') }}
-                                    </bk-button>
-                                    <bk-button :theme="'default'" :title="$t('主要按钮')" class="mr10" @click="revivification">
-                                        {{ $t('还原') }}
-                                    </bk-button>
-                                </div>
-                                <div class="explain">
-                                    <p> {{ $t('说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。') }} </p>
-                                    <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。')}}</p>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                    </div>
-                </div>
-                <div class="basic-info-item" v-if="canViewSecret">
-                    <div class="title"> {{ $t('鉴权信息') }} </div>
-                    <div class="info">
-                        {{ $t('在调用蓝鲸云 API 时需要提供应用鉴权信息。使用方法请参考：') }} <a :href="GLOBAL.DOC.APIGW_USER_API" target="_blank"> {{ $t('API调用指引') }} </a>
-                    </div>
-                    <div class="content">
-                        <div class="content-item">
-                            <label v-if="platformFeature.APP_ID_ALIAS">
-                                <p class="title-p">app id</p>
-                                <p class="title-p tip"> {{ $t('别名') }}：bk_app_code </p>
-                            </label>
-                            <label v-else>
-                                <p class="title-p mt15">bk_app_code</p>
-                            </label>
-                            <div class="item-practical-content">{{curAppInfo.application.code}}</div>
-                        </div>
-                        <div class="content-item">
-                            <label v-if="platformFeature.APP_ID_ALIAS">
-                                <p class="title-p">app secret</p>
-                                <p class="title-p tip"> {{ $t('别名') }}：bk_app_secret </p>
-                            </label>
-                            <label v-else>
-                                <p class="title-p mt15">bk_app_secret</p>
-                            </label>
-                            <div class="item-practical-content">
-                                <span>{{appSecretText}}</span>
-                                <span class="paasng-icon paasng-eye" style="cursor: pointer;" v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')" v-if="!appSecret" @click="onSecretToggle"></span>
-                                <div class="accept-vcode" v-if="isAcceptSMSCode">
-                                    <p> {{ $t('验证码已发送至您的企业微信，请注意查收！') }} </p>
-                                    <p style="display: flex;align-items: center;">
-                                        <b> {{ $t('验证码：') }} </b>
-                                        <bk-input
-                                            type="text"
-                                            :placeholder="$t('请输入验证码')"
-                                            style="width: 200px; margin-right: 10px;"
-                                            v-model="appSecretVerificationCode">
-                                        </bk-input>
-                                        <bk-button
-                                            theme="default"
-                                            :disabled="true"
-                                            v-if="appSecretTimer !== 0">
-                                            {{appSecretTimer}}s&nbsp;{{ $t('后重新获取') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="default"
-                                            v-else
-                                            @click="sendMsg">
-                                            {{ $t('重新获取') }}
-                                        </bk-button>
-                                    </p>
-                                    <p style="display: flex;">
-                                        <b style="visibility: hidden;"> {{ $t('验证码：') }} </b>
-                                        <bk-button
-                                            theme="primary"
-                                            style="margin-right: 10px;"
-                                            @click="getAppSecret">
-                                            {{ $t('提交') }}
-                                        </bk-button>
-                                        <bk-button
-                                            theme="default"
-                                            @click="isAcceptSMSCode = false">
-                                            {{ $t('取消') }}
-                                        </bk-button>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="basic-info-item" v-if="canDeleteApp">
-                    <div class="title"> {{ $t('删除应用') }} </div>
-                    <div class="info"> {{ $t('只有管理员才能删除应用，请在删除前与应用其他成员沟通') }} </div>
-                    <div class="content no-border">
-                        <bk-button
-                            theme="danger"
-                            @click="showRemovePrompt"> {{ $t('删除应用') }} </bk-button>
-                        <div class="ps-text-warn spacing-x1">
-                            {{ $t('该操作无法撤回') }}
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </paas-content-loader>
-
-        <bk-dialog
-            width="540"
-            v-model="delAppDialog.visiable"
-            :title="`确认删除应用【${curAppInfo.application.name}】？`"
-            :theme="'primary'"
-            :header-position="'left'"
-            :mask-close="false"
-            :loading="delAppDialog.isLoading"
-            @after-leave="hookAfterClose">
-            <div class="ps-form">
-                <div class="spacing-x1">
-                    {{ $t('请完整输入') }} <code>{{ curAppInfo.application.code }}</code> {{ $t('来确认删除应用！') }}
-                </div>
-                <div class="ps-form-group">
-                    <input v-model="formRemoveConfirmCode" type="text" class="ps-form-control">
-                    <div class="mt10 f13">
-                        {{ $t('注意：因为安全等原因，应用 ID 和名称在删除后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名应用') }}
-                    </div>
-                </div>
-            </div>
-            <template slot="footer">
-                <bk-button theme="primary" @click="submitRemoveApp" :disabled="!formRemoveValidated"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="delAppDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </template>
-        </bk-dialog>
+  <div class="right-main">
+    <div class="ps-top-bar">
+      <h2> {{ $t('基本信息') }} </h2>
     </div>
+    <paas-content-loader
+      class="app-container middle"
+      :is-loading="isLoading"
+      placeholder="base-info-loading"
+    >
+      <section>
+        <div class="basic-info-item mt15">
+          <div class="title">
+            {{ $t('基本信息') }}
+          </div>
+          <div
+            v-if="isSmartApp"
+            class="info"
+          >
+            {{ $t('应用名称等基本信息请在“app.yaml”文件中配置') }}
+          </div>
+          <div
+            v-else
+            class="info"
+          >
+            {{ $t('管理员、开发者和运营者可以修改应用名称等基本信息') }}
+          </div>
+          <div class="content no-border">
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label logo"> {{ $t('应用logo') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div class="logo-uploader item-logn-content">
+                  <div class="preview">
+                    <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
+                  </div>
+                  <div class="preview-btn pl20">
+                    <template>
+                      <div>
+                        <bk-button
+                          :theme="'default'"
+                          class="upload-btn mt5"
+                        >
+                          {{ $t('更换图片') }}
+                          <input
+                            type="file"
+                            accept="image/jpeg, image/png"
+                            value=""
+                            name="logo"
+                            @change="handlerUploadFile"
+                          >
+                        </bk-button>
+                        <p
+                          class="tip"
+                          style="line-height: 1;"
+                        >
+                          {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
+                        </p>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('应用名称') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <bk-input
+                  ref="nameInput"
+                  v-model="localeAppInfo.name"
+                  :placeholder="$t('请输入20个字符以内的应用名称')"
+                  :readonly="!isEdited"
+                  ext-cls="paas-info-app-name-cls"
+                  :clearable="false"
+                  :maxlength="20"
+                />
+
+                <div
+                  v-if="!isSmartApp"
+                  class="action-box"
+                >
+                  <template v-if="!isEdited">
+                    <a
+                      v-bk-tooltips="$t('编辑')"
+                      class="paasng-icon paasng-edit2"
+                      @click="showEdit"
+                    />
+                  </template>
+                  <template v-else>
+                    <bk-button
+                      style="margin-right: 6px;"
+                      theme="primary"
+                      :disabled="localeAppInfo.name === ''"
+                      text
+                      @click.stop.prevent="submitBasicInfo"
+                    >
+                      {{ $t('保存') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      @click.stop.prevent="cancelBasicInfo"
+                    >
+                      {{ $t('取消') }}
+                    </bk-button>
+                  </template>
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              v-if="platformFeature.REGION_DISPLAY"
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('应用版本') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div class="item-content">
+                  {{ curAppInfo.application.region_name || '--' }}
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('创建时间') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div class="item-content">
+                  {{ curAppInfo.application.created || '--' }}
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              v-if="curAppInfo.cluster"
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('所属集群') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div class="item-content">
+                  {{ curAppInfo.cluster ? curAppInfo.cluster.bcs_cluster_id : '--' }}
+                </div>
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </div>
+        <div
+          v-if="curAppInfo.application.type !== 'cloud_native'"
+          class="basic-info-item mt15"
+        >
+          <div class="desc-flex">
+            <div class="title">
+              {{ $t('应用描述文件') }}
+            </div>
+            <div
+              class="ps-switcher-wrapper"
+              @click="toggleDescSwitch"
+            >
+              <bk-switcher
+                v-model="descAppStatus"
+                :disabled="descAppDisabled"
+              />
+            </div>
+          </div>
+          <div class="info">
+            {{ descAppStatus ? $t('已启用应用描述文件 app_desc.yaml，可在文件中定义环境变量，服务发现等。') : $t('未启用应用描述文件 app_desc.yaml') }}
+            <a
+              :href="GLOBAL.DOC.APP_DESC_DOC"
+              target="_blank"
+            > {{ $t('文档：什么是应用描述文件') }} </a>
+          </div>
+        </div>
+        <div
+          v-if="curAppInfo.application.type === 'bk_plugin'"
+          class="basic-info-item plugin-type-scope"
+        >
+          <div class="title">
+            {{ $t('插件信息') }}
+          </div>
+          <div class="info">
+            {{ $t('管理插件相关信息') }}
+          </div>
+          <div class="content no-border">
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('插件简介') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <bk-input
+                  ref="pluginInput"
+                  v-model="localeAppInfo.introduction"
+                  :placeholder="pluginPlaceholder"
+                  :readonly="!pluginIntroDuction"
+                  ext-cls="paas-info-app-name-cls"
+                  :clearable="false"
+                />
+
+                <div class="action-box">
+                  <template v-if="!pluginIntroDuction">
+                    <a
+                      v-bk-tooltips="$t('编辑')"
+                      class="paasng-icon paasng-edit2"
+                      @click="showPluginEdit"
+                    />
+                  </template>
+                  <template v-else>
+                    <bk-button
+                      style="margin-right: 6px;"
+                      theme="primary"
+                      :disabled="localeAppInfo.name === ''"
+                      text
+                      @click.stop.prevent="submitPluginBasicInfo('')"
+                    >
+                      {{ $t('保存') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      @click.stop.prevent="cancelPluginBasicInfo"
+                    >
+                      {{ $t('取消') }}
+                    </bk-button>
+                  </template>
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('联系人员') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <bk-member-selector
+                  ref="member_selector"
+                  v-model="localeAppInfo.contact"
+                  ext-cls="member-cls"
+                  :disabled="isDisabled"
+                  @change="updateContact"
+                />
+                <div class="action-box">
+                  <template v-if="isDisabled">
+                    <a
+                      v-bk-tooltips="$t('编辑')"
+                      class="paasng-icon paasng-edit2"
+                      @click="showPluginContactEdit"
+                    />
+                  </template>
+                  <template v-else>
+                    <bk-button
+                      style="margin-right: 6px;"
+                      theme="primary"
+                      :disabled="localeAppInfo.name === ''"
+                      text
+                      @click.stop.prevent="submitPluginBasicInfo({ contact: curVal })"
+                    >
+                      {{ $t('保存') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      @click.stop.prevent="cancelPluginContactBasicInfo"
+                    >
+                      {{ $t('取消') }}
+                    </bk-button>
+                  </template>
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('蓝鲸网关') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div class="item-content">
+                  <span
+                    v-if="apiGwName"
+                    style="color: #3A84FF;"
+                  >{{ $t('已绑定到') + apiGwName }}</span>
+                  <span
+                    v-else
+                    style="color: #979ba5;"
+                  > {{ $t('暂未找到已同步网关') }} </span>
+                  <i
+                    v-bk-tooltips="$t('网关维护者默认为应用管理员')"
+                    class="paasng-icon paasng-info-circle tooltip-icon"
+                  />
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('插件分类') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div
+                  ref="refPluginType"
+                  :class="['item-content', 'plugin-type', { 'custom-active': !isPluginTypeSelect && isFocus }]"
+                >
+                  <bk-select
+                    v-model="pluginTypeValue"
+                    :disabled="isPluginTypeSelect"
+                    clearable
+                    ext-cls="select-custom"
+                    searchable
+                  >
+                    <bk-option
+                      v-for="option in pluginTypeList"
+                      :id="option.id"
+                      :key="option.id"
+                      :name="option.name"
+                    />
+                  </bk-select>
+                </div>
+                <div class="action-box">
+                  <template v-if="isPluginTypeSelect">
+                    <a
+                      v-bk-tooltips="$t('编辑')"
+                      class="paasng-icon paasng-edit2"
+                      @click="showPluginSelected"
+                    />
+                  </template>
+                  <template v-else>
+                    <bk-button
+                      style="margin-right: 6px;"
+                      theme="primary"
+                      :disabled="localeAppInfo.name === ''"
+                      text
+                      @click.stop.prevent="submitPluginBasicInfo({ 'tag': pluginTypeValue })"
+                    >
+                      {{ $t('保存') }}
+                    </bk-button>
+                    <bk-button
+                      theme="primary"
+                      text
+                      @click.stop.prevent="cancelPluginType"
+                    >
+                      {{ $t('取消') }}
+                    </bk-button>
+                  </template>
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;height: 480px;">
+                <label class="title-label plugin-info">
+                  <p style="height: 26px"> {{ $t('插件使用方') }} </p>
+                  <span
+                    v-bk-tooltips.bottom="tipsInfo"
+                    class="bottom-middle"
+                  >
+                    <!-- <a href="#"> {{ $t('功能说明') }} </a> 待确定路径-->
+                    <p style="color: #3a84ff;height: 30px;"> {{ $t('功能说明') }} </p>
+                  </span>
+                </label>
+              </bk-form-item>
+              <bk-form-item
+                class="pluginEmploy"
+                style="width: calc(100% - 180px);"
+              >
+                <bk-transfer
+                  :target-list="targetPluginList"
+                  :source-list="pluginList"
+                  :display-key="'name'"
+                  :setting-key="'code_name'"
+                  :show-overflow-tips="true"
+                  :empty-content="promptContent"
+                  :title="titleArr"
+                  @change="transferChange"
+                />
+                <div class="button-wrap">
+                  <bk-button
+                    :theme="'primary'"
+                    type="submit"
+                    :title="$t('保存')"
+                    class="mr10"
+                    @click="updateAuthorizationUse"
+                  >
+                    {{ $t('保存') }}
+                  </bk-button>
+                  <bk-button
+                    :theme="'default'"
+                    :title="$t('主要按钮')"
+                    class="mr10"
+                    @click="revivification"
+                  >
+                    {{ $t('还原') }}
+                  </bk-button>
+                </div>
+                <div class="explain">
+                  <p> {{ $t('说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。') }} </p>
+                  <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}</p>
+                </div>
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </div>
+        <div
+          v-if="canViewSecret"
+          class="basic-info-item"
+        >
+          <div class="title">
+            {{ $t('鉴权信息') }}
+          </div>
+          <div class="info">
+            {{ $t('在调用蓝鲸云 API 时需要提供应用鉴权信息。使用方法请参考：') }} <a
+              :href="GLOBAL.DOC.APIGW_USER_API"
+              target="_blank"
+            > {{ $t('API调用指引') }} </a>
+          </div>
+          <div class="content">
+            <div class="content-item">
+              <label v-if="platformFeature.APP_ID_ALIAS">
+                <p class="title-p">app id</p>
+                <p class="title-p tip"> {{ $t('别名') }}：bk_app_code </p>
+              </label>
+              <label v-else>
+                <p class="title-p mt15">bk_app_code</p>
+              </label>
+              <div class="item-practical-content">
+                {{ curAppInfo.application.code }}
+              </div>
+            </div>
+            <div class="content-item">
+              <label v-if="platformFeature.APP_ID_ALIAS">
+                <p class="title-p">app secret</p>
+                <p class="title-p tip"> {{ $t('别名') }}：bk_app_secret </p>
+              </label>
+              <label v-else>
+                <p class="title-p mt15">bk_app_secret</p>
+              </label>
+              <div class="item-practical-content">
+                <span>{{ appSecretText }}</span>
+                <span
+                  v-if="!appSecret"
+                  v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
+                  class="paasng-icon paasng-eye"
+                  style="cursor: pointer;"
+                  @click="onSecretToggle"
+                />
+                <div
+                  v-if="isAcceptSMSCode"
+                  class="accept-vcode"
+                >
+                  <p> {{ $t('验证码已发送至您的企业微信，请注意查收！') }} </p>
+                  <p style="display: flex;align-items: center;">
+                    <b> {{ $t('验证码：') }} </b>
+                    <bk-input
+                      v-model="appSecretVerificationCode"
+                      type="text"
+                      :placeholder="$t('请输入验证码')"
+                      style="width: 200px; margin-right: 10px;"
+                    />
+                    <bk-button
+                      v-if="appSecretTimer !== 0"
+                      theme="default"
+                      :disabled="true"
+                    >
+                      {{ appSecretTimer }}s&nbsp;{{ $t('后重新获取') }}
+                    </bk-button>
+                    <bk-button
+                      v-else
+                      theme="default"
+                      @click="sendMsg"
+                    >
+                      {{ $t('重新获取') }}
+                    </bk-button>
+                  </p>
+                  <p style="display: flex;">
+                    <b style="visibility: hidden;"> {{ $t('验证码：') }} </b>
+                    <bk-button
+                      theme="primary"
+                      style="margin-right: 10px;"
+                      @click="getAppSecret"
+                    >
+                      {{ $t('提交') }}
+                    </bk-button>
+                    <bk-button
+                      theme="default"
+                      @click="isAcceptSMSCode = false"
+                    >
+                      {{ $t('取消') }}
+                    </bk-button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          v-if="canDeleteApp"
+          class="basic-info-item"
+        >
+          <div class="title">
+            {{ $t('删除应用') }}
+          </div>
+          <div class="info">
+            {{ $t('只有管理员才能删除应用，请在删除前与应用其他成员沟通') }}
+          </div>
+          <div class="content no-border">
+            <bk-button
+              theme="danger"
+              @click="showRemovePrompt"
+            >
+              {{ $t('删除应用') }}
+            </bk-button>
+            <div class="ps-text-warn spacing-x1">
+              {{ $t('该操作无法撤回') }}
+            </div>
+          </div>
+        </div>
+      </section>
+    </paas-content-loader>
+
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="`确认删除应用【${curAppInfo.application.name}】？`"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :loading="delAppDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <div class="ps-form">
+        <div class="spacing-x1">
+          {{ $t('请完整输入') }} <code>{{ curAppInfo.application.code }}</code> {{ $t('来确认删除应用！') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+          <div class="mt10 f13">
+            {{ $t('注意：因为安全等原因，应用 ID 和名称在删除后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名应用') }}
+          </div>
+        </div>
+      </div>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveApp"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>
@@ -1375,7 +1553,7 @@
         line-height: 1.5em;
         color: #979ba5;
     }
-    
+
     .pluginEmploy {
         height: 460px;padding: 20px 24px 0;
         border: 1px solid #dcdee5;

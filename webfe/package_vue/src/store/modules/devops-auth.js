@@ -23,44 +23,44 @@ import http from '@/api';
 import { json2Query } from '@/common/tools';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取代码检查列表
          * @param {Object} params 请求参数：appCode, moduleId, env, limit, offset
          */
-        getCodeReviewList ({ commit, state }, { appCode, moduleId, env, limit, offset }, config = {}) {
-            const params = {
-                limit,
-                offset,
-                env
-            };
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/jobs/?${json2Query(params)}`;
-            return http.get(url, config);
-        },
+    getCodeReviewList ({ commit, state }, { appCode, moduleId, env, limit, offset }, config = {}) {
+      const params = {
+        limit,
+        offset,
+        env
+      };
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/jobs/?${json2Query(params)}`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 判断token是否存在
          */
-        getCiToken ({ commit, state }, config = {}) {
-            const url = `${BACKEND_URL}/api/ci/token/?backend=tencent_ci`;
-            return http.get(url, config);
-        },
+    getCiToken ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/ci/token/?backend=tencent_ci`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 获取授权url
          */
-        getAuthUrl ({ commit, state }, config = {}) {
-            const url = `${BACKEND_URL}/api/ci/oauth_url/?backend=tencent_ci`;
-            return http.get(url, config);
-        },
-        
-        getCiInfo ({ commit, state }, { appCode, moduleId }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/info/`;
-            return http.get(url, config);
-        }
+    getAuthUrl ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/ci/oauth_url/?backend=tencent_ci`;
+      return http.get(url, config);
+    },
+
+    getCiInfo ({ commit, state }, { appCode, moduleId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/ci/info/`;
+      return http.get(url, config);
     }
+  }
 };

@@ -400,20 +400,24 @@
                     if (val.spec) {
                         this.localCloudAppData = _.cloneDeep(val);
                         // 所有环境
-                        this.allEnvVarList = [...val.spec.configuration.env, ...val.spec.envOverlay.envVariables];
+                        this.allEnvVarList = [...val.spec.configuration.env];
+                        if (val.spec.envOverlay && val.spec.envOverlay.envVariables) {
+                            this.allEnvVarList.push(...val.spec.envOverlay.envVariables);
+                        }
                         this.allEnvVarList.forEach(item => {
                             if (!item.envName) {
                                 this.$set(item, 'envName', '_global_');
                             }
                         });
-                        const envOverlay = _.cloneDeep(this.localCloudAppData.spec.envOverlay);
                         this.envVarList = val.spec.configuration.env;
                         
                         if (this.curStage === '') {
-                            const all = [...this.envVarList, ...val.spec.envOverlay.envVariables];
+                            const all = [...this.envVarList];
+                            if (val.spec.envOverlay && val.spec.envOverlay.envVariables) {
+                                all.push(...val.spec.envOverlay.envVariables);
+                            }
                             this.envVarList = all;
                         }
-                        this.allReplicaList = envOverlay.envVariables;
 
                         setTimeout(() => {
                             this.isLoading = false;
@@ -424,11 +428,11 @@
                 immediate: true
                 // deep: true
             },
-            allReplicaList: {
-                handler (val) {
-                    this.envReplicaList = val.filter(item => item.envName === this.curStage);
-                }
-            },
+            // allReplicaList: {
+            //     handler (val) {
+            //         this.envReplicaList = val.filter(item => item.envName === this.curStage);
+            //     }
+            // },
             curStage (value) {
                 this.isTableLoading = true;
                 if (!value) {
@@ -550,11 +554,10 @@
                     }
                     // 该环境是否已存在
                     if (this.curStage === '') {
-                        this.setLocalCloudAppData();
-                        // const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
-                        // const otherEnvList = this.envVarList.filter(item => item.envName !== '_global_');
-                        // this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
-                        // this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
+                        const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
+                        const otherEnvList = this.envVarList.filter(item => item.envName !== '_global_');
+                        this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
+                        this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
                     } else {
                         if (this.curStage === '_global_') {
                             if (rowItem.envName === '_global_') {
@@ -576,8 +579,12 @@
                     }
                     this.$nextTick(() => {
                         // 更新数据源
-                        // const spec = this.localCloudAppData.spec;
-                        // this.allEnvVarList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                        const spec = this.localCloudAppData.spec;
+                        this.allEnvVarList = [...spec.configuration.env];
+                        if (spec.envOverlay && spec.envOverlay.envVariables) {
+                            this.allEnvVarList.push(...spec.envOverlay.envVariables);
+                        }
+                        
                         this.allEnvVarList.forEach(item => {
                             if (!item.envName) {
                                 this.$set(item, 'envName', '_global_');
@@ -598,6 +605,10 @@
                 this.updateEnvData(i);
             },
             addEnvData () {
+                const isAdd = this.envVarList.find(item => item.isAdd);
+                if (isAdd) {
+                    return;
+                }
                 this.envVarList.push({
                     name: '',
                     value: '',
@@ -606,12 +617,20 @@
                 });
                 this.editRowList.push(this.envVarList.length - 1);
             },
+            // 保留当前的新建
             deleteEnvData (rowIndex, rowItem) {
                 this.isTableLoading = true;
                 // this.envVarList.splice(rowIndex, 1);
                 if (!this.localCloudAppData.spec.envOverlay) {
                     this.$set(this.localCloudAppData.spec, 'envOverlay', {});
                 }
+                const editEnvList = this.envVarList.filter((item, index) => !this.isReadOnlyRow(index) || item.isAdd);
+                this.allEnvVarList = this.allEnvVarList.filter((item, index) => {
+                    const isEdit = this.isReadOnlyRow(index);
+                    if (!item.isAdd && isEdit) {
+                        return true;
+                    }
+                });
                 if (this.curStage === '') {
                     if (rowItem.envName === '_global_') {
                         const results = this.allEnvVarList.filter(item => item.envName === '_global_' && item.name !== rowItem.name);
@@ -649,7 +668,10 @@
                 this.$nextTick(() => {
                     // 更新
                     const spec = this.localCloudAppData.spec;
-                    this.allEnvVarList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                    this.allEnvVarList = [...spec.configuration.env];
+                    if (spec.envOverlay && spec.envOverlay.envVariables) {
+                        this.allEnvVarList.push(...spec.envOverlay.envVariables);
+                    }
                     this.allEnvVarList.forEach(item => {
                         if (!item.envName) {
                             this.$set(item, 'envName', '_global_');
@@ -658,11 +680,18 @@
                             delete item.isAdd;
                         }
                     });
+                    // 并把当前项改为编辑状态
+                    this.allEnvVarList.push(...editEnvList);
                     // 重新获取环境列表
                     this.envVarList = this.allEnvVarList;
                     if (this.curStage) {
                         this.envVarList = this.allEnvVarList.filter(item => item.envName === this.curStage);
                     }
+                    this.envVarList.forEach((item, index) => {
+                        if (item.isAdd) {
+                            this.editRowList.push(index);
+                        }
+                    });
                     setTimeout(() => {
                         this.isTableLoading = false;
                     }, 200);
@@ -800,7 +829,10 @@
 
             isExistsVarName (curItem) {
                 const spec = this.localCloudAppData.spec;
-                const sourceList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                const sourceList = [...spec.configuration.env];
+                if (spec.envOverlay && spec.envOverlay.envVariables) {
+                    sourceList.push(...spec.envOverlay.envVariables);
+                }
                 const flag = sourceList.find(item => item.name === curItem.name && item.envName === curItem.envName);
                 if (flag) {
                     this.$paasMessage({

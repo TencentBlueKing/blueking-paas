@@ -10,10 +10,11 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
 from paas_wl.platform.applications.permissions import site_perm_class
+from paas_wl.platform.applications.struct_models import get_env_by_engine_app_id
 from paas_wl.platform.auth.permissions import IsInternalAdmin
 from paas_wl.platform.system_api.views import SysAppRelatedViewSet
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
-from paas_wl.workloads.processes.controllers import AppProcessesController
+from paas_wl.workloads.processes.controllers import get_proc_mgr
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.workloads.processes.readers import instance_kmodel
 
@@ -105,10 +106,9 @@ class ProcessSpecManageViewSet(SysAppRelatedViewSet):
         engine_app = self.get_app()
         data = request.data
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=engine_app.pk, name=process_type)
-        ctl = AppProcessesController(engine_app)
-
+        ctl = get_proc_mgr(get_env_by_engine_app_id(engine_app.pk))
         if process_spec.target_replicas != int(data["target_replicas"]):
-            ctl.scale(process_spec, target_replicas=int(data["target_replicas"]))
+            ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

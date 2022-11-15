@@ -16,12 +16,14 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from rest_framework.permissions import BasePermission
 
 
-class PluginsCenterConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'paasng.pluginscenter'
+class IsPluginCreator(BasePermission):
+    """判断是否为插件创建者"""
 
-    def ready(self):
-        from . import handlers  # noqa
+    def has_permission(self, request, view):
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        return obj.creator == request.user.pk

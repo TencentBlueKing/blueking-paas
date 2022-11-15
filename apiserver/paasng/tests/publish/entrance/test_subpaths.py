@@ -21,6 +21,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import cattr
 import pytest
+from django.test.utils import override_settings
 
 from paasng.engine.controller.models import IngressConfig
 from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, get_legacy_compatible_path, get_preallocated_path
@@ -38,9 +39,10 @@ class TestModuleEnvSubpaths:
 
     @pytest.fixture(autouse=True)
     def setup_cluster(self):
+        # Enable USE_LEGACY_SUB_PATH_PATTERN by default
         with replace_cluster_service(
             ingress_config={'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}]}
-        ):
+        ), override_settings(USE_LEGACY_SUB_PATH_PATTERN=True):
             yield
 
     def test_prod_default(self, bk_module):
@@ -86,6 +88,16 @@ class TestModuleEnvSubpaths:
             'http://sub.example.cn/stag--default--some-app-o/',
             f'http://sub.example.cn{legacy_path}',
         ]
+
+    def test_disable_legacy_pattern(self, bk_module, bk_stag_env):
+        bk_module.is_default = False
+        bk_module.save()
+        with override_settings(USE_LEGACY_SUB_PATH_PATTERN=False):
+            subpaths = ModuleEnvSubpaths(bk_stag_env).all()
+            assert [d.as_url().as_address() for d in subpaths] == [
+                'http://sub.example.com/stag--default--some-app-o/',
+                'http://sub.example.cn/stag--default--some-app-o/',
+            ]
 
 
 class TestModuleEnvSubpathsNotConfigured:

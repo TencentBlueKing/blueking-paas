@@ -200,6 +200,8 @@ class SubPathURLProvider(BaseEnvExposedURLProvider):
         if not subpaths:
             return None
 
+        # Pick addresses which have the biggest "type" by value, see
+        # `SubpathPriorityType` for more details.
         subpaths = sorted(subpaths, key=Subpath.sort_by_type, reverse=True)
         _, group = next(groupby(subpaths, key=Subpath.sort_by_type))
         return [subpath.as_url() for subpath in group]

@@ -22,6 +22,7 @@ import logging
 import pytest
 from django_dynamic_fixture import G
 
+from paasng.engine.models import ConfigVar
 from paasng.extensions.bk_plugins.apigw import safe_sync_apigw
 from paasng.extensions.bk_plugins.models import BkPluginDistributor
 
@@ -69,3 +70,31 @@ class TestDistributorRels:
         api_client.put(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/', {'distributors': ['sample-dis-1']})
         resp = api_client.get(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/')
         assert len(resp.json()) == 1
+
+
+class TestPluginConfigurationViewSet:
+    """Test APIS of syncing configurations"""
+
+    def test_sync(self, bk_plugin_app, sys_api_client):
+        module = bk_plugin_app.get_default_module()
+        assert ConfigVar.objects.filter(module=module).count() == 0
+        response = sys_api_client.post(
+            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/configuration/",
+            data=[{"key": "FOO", "value": "foo"}, {"key": "BAR", "value": "bar"}, {"key": "BAZ", "value": "baz"}],
+        )
+        assert response.status_code == 200
+        assert ConfigVar.objects.filter(module=module).count() == 3
+        assert ConfigVar.objects.get(module=module, key="FOO").value == "foo"
+        assert ConfigVar.objects.get(module=module, key="BAR").value == "bar"
+        assert ConfigVar.objects.get(module=module, key="BAZ").value == "baz"
+        response = sys_api_client.post(
+            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/configuration/",
+            data=[
+                {"key": "FOO", "value": "foo"},
+                {"key": "BAR", "value": "BAR"},
+            ],
+        )
+        assert response.status_code == 200
+        assert ConfigVar.objects.filter(module=module).count() == 2
+        assert ConfigVar.objects.get(module=module, key="FOO").value == "foo"
+        assert ConfigVar.objects.get(module=module, key="BAR").value == "BAR"

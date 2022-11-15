@@ -28,6 +28,7 @@ from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
     ApprovalService,
     PluginBasicInfoDefinition,
+    PluginConfigInfoDefinition,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfoDefinition,
@@ -97,6 +98,17 @@ def pd():
             "update": make_api_resource("update-instance-{ plugin_id }"),
             "delete": make_api_resource("delete-instance-{ plugin_id }"),
         },
+    )
+
+    pd.config_definition = G(
+        PluginConfigInfoDefinition,
+        pd=pd,
+        title="配置管理",
+        sync_api=make_api_resource("sync-configuration-{ plugin_id }"),
+        columns=[
+            {"type": "string", "title": "FOO", "unique": True},
+            {"type": "string", "title": "BAR", "unique": False},
+        ],
     )
     pd.save()
     pd.refresh_from_db()

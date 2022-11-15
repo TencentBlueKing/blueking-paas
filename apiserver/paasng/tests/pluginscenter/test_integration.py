@@ -178,9 +178,5 @@ class TestReleaseStages:
         # - 渲染 stage 时隐含了更新 status 的操作(后面需要重构成后台任务轮训更新状态)
         release.refresh_from_db()
         assert release.current_stage.status == PluginReleaseStatus.SUCCESSFUL
-        assert release.status == PluginReleaseStatus.PENDING
-        resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
-        assert resp.status_code == 200
-
-        release.refresh_from_db()
+        # 最后一个步骤成功, 自动部署成功
         assert release.status == PluginReleaseStatus.SUCCESSFUL

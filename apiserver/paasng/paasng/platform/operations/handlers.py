@@ -22,8 +22,8 @@ import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paasng.engine.constants import JobStatus
-from paasng.engine.models import Deployment
+from paasng.engine.constants import JobStatus, OperationTypes
+from paasng.engine.models import Deployment, ModuleEnvironmentOperations
 from paasng.engine.signals import post_appenv_deploy
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.signals import (
@@ -169,6 +169,13 @@ def on_offline_success(sender, offline_instance, environment, **kwargs):
 @receiver(module_environment_offline_event)
 def on_offline(sender, offline_instance, environment, **kwargs):
     AppOfflineOperationObj.create_operation(offline_instance)
+    ModuleEnvironmentOperations.objects.create(
+        operator=offline_instance.operator,
+        app_environment=offline_instance.app_environment,
+        application=offline_instance.app_environment.application,
+        operation_type=OperationTypes.OFFLINE.value,
+        object_uid=offline_instance.pk,
+    )
 
 
 @receiver(post_appenv_deploy)

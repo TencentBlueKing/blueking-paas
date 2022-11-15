@@ -24,13 +24,11 @@ from typing import Dict, List, Optional
 import jinja2
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from dynaconf import Dynaconf
 
 from paas_wl.cluster.constants import ClusterTokenType
 from paas_wl.cluster.models import APIServer, Cluster
 
 logger = logging.getLogger(__name__)
-dynaconf_settings = Dynaconf(envvar_prefix="PAAS_WL")
 
 
 @dataclass
@@ -80,20 +78,20 @@ class Command(BaseCommand):
 
         cluster_id = data['pk']
         cluster_data = ClusterData(**data['fields'])
-        # 容忍度和污点是用户填写的结构化数据，直接从环境变量中获取
-        if default_node_selector := dynaconf_settings.get("CLUSTER_NODE_SELECTOR"):
-            cluster_data.default_node_selector = default_node_selector
+        # 容忍度和污点是用户填写的结构化数据，直接从环境变量中获取,需要转换为 json 格式
+        node_selector = os.environ.get('PAAS_WL_CLUSTER_NODE_SELECTOR', "{}")
+        toleration = os.environ.get('PAAS_WL_CLUSTER_TOLERATIONS', "[]")
+        try:
+            cluster_data.default_node_selector = json.loads(node_selector)
+            cluster_data.default_tolerations = json.loads(toleration)
+        except Exception as e:
+            logger.error(f"node_selector: {node_selector}\ntoleration: {toleration} \nare not valid json")
+            raise ValueError("node_selector and toleration are not valid json") from e
 
-        if default_tolerations := dynaconf_settings.get("CLUSTER_TOLERATIONS"):
-            cluster_data.default_tolerations = default_tolerations
+        api_server_urls = os.environ.get('PAAS_WL_CLUSTER_API_SERVER_URLS')
+        api_server_list = api_server_urls.split(";") if api_server_urls else []
 
-        api_server_urls = dynaconf_settings.get('CLUSTER_API_SERVER_URLS')
-        if not isinstance(api_server_urls, list):
-            raise ValueError("api_server_urls is not a list, cannot be initialized")
-
-        return InitialClusterData(
-            cluster_id=cluster_id, cluster_data=cluster_data, api_server_urls=list(api_server_urls)
-        )
+        return InitialClusterData(cluster_id=cluster_id, cluster_data=cluster_data, api_server_urls=api_server_list)
 
     def handle(self, override, dry_run, *args, **options):
         data = self.render_data()
@@ -111,6 +109,6 @@ class Command(BaseCommand):
         cluster = Cluster.objects.register_cluster(pk=data.cluster_id, **asdict(data.cluster_data))
 
         for _url in data.api_server_urls:
-            api_server, _ = APIServer.objects.get_or_create(cluster=cluster, host=_url)
+            APIServer.objects.get_or_create(cluster=cluster, host=_url)
         APIServer.objects.exclude(host__in=data.api_server_urls).delete()
         logger.info("The cluster was initialized successfully")

@@ -354,6 +354,10 @@ class Application(OwnerTimestampedModel):
         developers = self.get_members(ApplicationRole.DEVELOPER.value) + self.get_administrators()
         return developers
 
+    def get_developer_names(self):
+        """获取具有开发者权限的人员名列表"""
+        return [user.username for user in self.get_developers()]
+
     def get_members(self, role) -> List[SimpleUserIDWrapper]:
         queryset = self.applicationmembership_set.filter(role=role)
         users = queryset.values_list("user", flat=True)

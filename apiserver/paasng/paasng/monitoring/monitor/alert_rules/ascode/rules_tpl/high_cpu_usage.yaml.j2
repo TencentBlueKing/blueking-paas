@@ -1,0 +1,24 @@
+name: '{{ alert_rule_display_name }}'
+enabled: {{ enabled }}
+
+labels:
+  - BKPAAS
+
+query:
+  data_source: prometheus
+  data_type: time_series
+  query_configs:
+  - metric: 'sum by (pod, container_name, namespace) (rate(container_cpu_usage_seconds_total{container_name!="POD",namespace="{{ namespace }}",pod=~"{{ namespace }}--.*"}[2m])) / sum by (pod, container_name, namespace)(label_join(kube_pod_container_resource_limits_cpu_cores{namespace="{{ namespace }}",pod=~"{{ namespace }}--.*"}, "container_name", "", "container"))'
+    interval: 60
+
+detect: # 检测配置
+  algorithm: # 检测算法
+    fatal: # 告警级别
+    - type: Threshold # 算法类型
+      config: "{{ threshold_expr }}" # 算法配置
+
+  trigger: 15/15/15 # 触发条件. 异常次数/检测周期数/恢复周期数
+
+notice: # 通知配置
+  user_groups: # 通知组配置
+  - '{{ notice_group_name }}'

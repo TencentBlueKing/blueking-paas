@@ -1129,3 +1129,5 @@ PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
 
 # 插件开发中心在权限中心注册的系统 ID
 IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')
+
+MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.constants import AppOperationType, EngineAppType
 from paas_wl.platform.applications.models import EngineApp
-from paas_wl.platform.applications.permissions import application_perm_class
+from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.views import BaseEndUserViewSet
 from paas_wl.platform.external.client import get_plat_client
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     _operation_interval: datetime.timedelta = datetime.timedelta(seconds=3)
     _skip_judge_frequent: bool = False
@@ -105,7 +105,7 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
 class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     # Use special negotiation class to accept "text/event-stream" content type
     content_negotiation_class = IgnoreClientContentNegotiation

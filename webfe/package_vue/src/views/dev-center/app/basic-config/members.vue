@@ -41,13 +41,15 @@
                     </bk-table-column>
                     <bk-table-column :label="$t('角色')">
                         <template slot-scope="props">
-                            <span class="role-name">{{ $t(roleNames[props.row.role.name]) }}</span>
+                            <span class="role-label" v-for="role in props.row.roles">
+                                {{ $t(roleNames[role.name]) }}
+                            </span>
                         </template>
                     </bk-table-column>
                     <bk-table-column :label="$t('权限')" min-width="170">
                         <template slot-scope="props">
-                            <span class="ps-pr" v-for="(perm, permIndex) in roleSpec[props.row.role.name]" :key="permIndex" v-if="perm[Object.keys(perm)[0]]">
-                                {{ $t(Object.keys(perm)[0]) }}
+                            <span class="ps-pr" v-for="perm in genUserPerms(props.row.roles)">
+                                {{ $t(perm) }}
                             </span>
                         </template>
                     </bk-table-column>
@@ -65,7 +67,7 @@
                                 text
                                 class="mr5"
                                 v-if="canChangeMembers()"
-                                @click="updateMember(props.row.user.id, props.row.user.username, props.row.role.name)">
+                                @click="updateMember(props.row.user.id, props.row.user.username, props.row.roles)">
                                 {{ $t('更换角色') }}
                             </bk-button>
                             <bk-button
@@ -93,6 +95,12 @@
             @cancel="closeMemberMgrModal"
             @after-leave="hookAfterClose">
             <div v-if="memberMgrConfig.showForm" style="min-height: 130px;">
+                <bk-alert
+                    type="warning"
+                    v-if="memberMgrConfig.type === 'edit'"
+                    :title="$t('更新后仅保留用户的新角色')"
+                    style="margin-bottom: 15px;">
+                </bk-alert>
                 <bk-form :label-width="120" form-type="vertical">
                     <bk-form-item :label="$t('成员名称')" :required="true">
                         <template v-if="memberMgrConfig.userEditable">
@@ -378,7 +386,7 @@
             },
 
             createMember () {
-                this.roleName = 'administrator';
+                this.roleName = 'developer';
                 this.personnelSelectorList = [];
                 this.memberMgrConfig = {
                     visiable: true,
@@ -417,9 +425,11 @@
                         'user': {
                             'username': this.personnelSelectorList[i]
                         },
-                        'role': {
-                            'id': ROLE_BACKEND_IDS[this.roleName]
-                        }
+                        'roles': [
+                            {
+                                'id': ROLE_BACKEND_IDS[this.roleName]
+                            }
+                        ]
                     };
                     createSuc.push(createParam);
                 }
@@ -470,10 +480,10 @@
                 this.leaveAppDialog.visiable = false;
             },
 
-            updateMember (updateMemberID, updateMemberName, updateMemberRole) {
+            updateMember (updateMemberID, updateMemberName, memberRoles) {
                 this.selectedMember.id = updateMemberID;
                 this.selectedMember.name = updateMemberName;
-                this.roleName = updateMemberRole;
+                this.roleName = memberRoles[0].name;
                 this.memberMgrConfig = {
                     visiable: true,
                     isLoading: false,
@@ -506,7 +516,7 @@
                     this.fetchMemberList();
                     this.$paasMessage({
                         theme: 'success',
-                        message: this.$t('角色更新成功！')
+                        message: this.$t('角色更换成功！')
                     });
                     if (this.selectedMember.name === this.currentUser && this.roleName !== 'administrator') {
                         this.enableToAddRole = false;
@@ -514,7 +524,7 @@
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
-                        message: `${this.$t('修改角色失败：')} ${e.detail}`
+                        message: `${this.$t('角色更换失败：')} ${e.detail}`
                     });
                 } finally {
                     this.memberMgrConfig.isLoading = false;
@@ -591,6 +601,20 @@
                 } else {
                     this.fetchMemberList();
                 }
+            },
+            genUserPerms (userRoles) {
+                const userPerms = [];
+                for (let i = 0; i < userRoles.length; i++) {
+                    const rolePerm = this.roleSpec[userRoles[i].name];
+                    for (let j = 0; j < rolePerm.length; j++) {
+                        const perm = rolePerm[j];
+                        const name = Object.keys(perm)[0];
+                        if (perm[name] && userPerms.indexOf(name) === -1) {
+                            userPerms.push(name);
+                        }
+                    }
+                }
+                return userPerms;
             }
         }
     };
@@ -672,5 +696,23 @@
                 margin-left: 3px;
             }
         }
+    }
+
+    .role-label {
+        display: inline-block;
+        background: #fafafa;
+        font-size: 12px;
+        border: 1px solid;
+        vertical-align: middle;
+        box-sizing: border-box;
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 0 8px;
+        height: 21px;
+        line-height: 19px;
+        border-radius: 21px;
+        margin: 0px 8px;
+        border-color: #3c96ff;
+        color: #3c96ff;
     }
 </style>

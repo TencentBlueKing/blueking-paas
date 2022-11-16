@@ -25,7 +25,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
@@ -151,7 +153,7 @@ class ApplicationOperationsViewSet(viewsets.ModelViewSet, ApplicationCodeInPathM
     """
 
     serializer_class = serializers.ApplicationOperationSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
     queryset = Operation.objects.all()
     lookup_field = "id"
     ordering_fields = ('-id',)
@@ -173,7 +175,7 @@ class ApplicationOperationsViewSet(viewsets.ModelViewSet, ApplicationCodeInPathM
 class SysOperationsViewSet(viewsets.ViewSet):
     """操作记录相关 API，供内部系统使用"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def create(self, request):
         slz = SysOperationSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

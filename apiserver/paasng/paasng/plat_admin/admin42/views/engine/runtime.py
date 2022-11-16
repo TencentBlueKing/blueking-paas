@@ -22,11 +22,13 @@ import logging
 from django.db import transaction
 from django.http.response import Http404
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from rest_framework.viewsets import GenericViewSet
 
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.serializers.runtime import AppBuildPackSLZ, AppSlugBuilderSLZ, AppSlugRunnerSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
@@ -104,12 +106,12 @@ class RuntimeManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """运行时管理 API"""
 
     schema = None
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def list(self, request, *args, **kwargs):
         application = self.get_application()
         return Response(ModuleRuntimeSLZ(module).to_dict() for module in application.modules.all())
 
-    @site_perm_required("admin:read:application")
     @transaction.atomic
     def bind(self, request, **kwargs):
         """绑定运行时"""

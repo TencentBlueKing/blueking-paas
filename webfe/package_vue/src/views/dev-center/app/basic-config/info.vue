@@ -19,7 +19,7 @@
                                     <div class="preview">
                                         <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
                                     </div>
-                                    <div class="preview-btn pl20">
+                                    <div class="preview-btn pl20" v-if="canEditAppBasicInfo">
                                         <template>
                                             <div>
                                                 <bk-button :theme="'default'" class="upload-btn mt5">
@@ -53,7 +53,7 @@
                                     v-model="localeAppInfo.name">
                                 </bk-input>
 
-                                <div class="action-box" v-if="!isSmartApp">
+                                <div class="action-box" v-if="!isSmartApp && canEditAppBasicInfo">
                                     <template v-if="!isEdited">
                                         <a class="paasng-icon paasng-edit2" v-bk-tooltips="$t('编辑')"
                                             @click="showEdit">
@@ -495,8 +495,8 @@
             canViewSecret () {
                 return this.curAppInfo.role.name !== 'operator';
             },
-            couldEditAppName () {
-                return ['administrator', 'developer', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
+            canEditAppBasicInfo () {
+                return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
             },
             formRemoveValidated () {
                 return this.curAppInfo.application.code === this.formRemoveConfirmCode;

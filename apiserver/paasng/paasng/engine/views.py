@@ -36,6 +36,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.helpers import fetch_user_roles
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accessories.smart_advisor.utils import get_failure_hint
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
@@ -93,7 +95,6 @@ from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import AppEnvironment, AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import ApplicationMembership
 from paasng.platform.applications.signals import module_environment_offline_success
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
@@ -110,7 +111,7 @@ logger = logging.getLogger(__name__)
 
 class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     serializer_class = GetReleasedInfoSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(deprecated=True)
     def get_current_info(self, request, code, module_name, environment):
@@ -188,7 +189,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def release(self, request, code, module_name, environment):
         """
@@ -217,7 +218,7 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @staticmethod
     def make_exported_vars_response(data: ExportedConfigVars, file_name: str) -> HttpResponse:
@@ -291,7 +292,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
     pagination_class = None
     serializer_class = ConfigVarSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def get_object(self):
         """Get current ConfigVar object by path var"""
@@ -347,7 +348,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
 
     serializer_class = CreateDeploymentSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @property
     def paginator(self):
@@ -379,9 +380,9 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
         env = module.get_envs(environment)
 
-        role = ApplicationMembership.objects.get(user=request.user, application=application).role
+        roles = fetch_user_roles(application.code, request.user.username)
         try:
-            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, role=role)
+            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=env, roles=roles)
         except RoleNotAllowError:
             raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
 
@@ -537,7 +538,7 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
 
     serializer_class = CreateOfflineOperationSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def offline(self, request, code, module_name, environment):
         """
@@ -553,10 +554,10 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         app_environment = module.get_envs(environment)
         manager = OfflineManager(env=app_environment)
 
-        role = ApplicationMembership.objects.get(user=request.user, application=application).role
+        roles = fetch_user_roles(application.code, request.user.username)
         try:
             # 现在部署和下架使用相同的操作识别
-            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=app_environment, role=role)
+            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=app_environment, roles=roles)
         except RoleNotAllowError:
             raise error_codes.RESTRICT_ROLE_DEPLOY_ENABLED
 
@@ -620,7 +621,7 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
 
     serializer_class = QueryOperationsSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @property
     def paginator(self):
@@ -666,7 +667,7 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """进程资源使用 Metrics API"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @staticmethod
     def _format_datetime(date_string):
@@ -723,7 +724,7 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
 
 
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ()})
     def retrieve(self, request, code, module_name):

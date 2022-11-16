@@ -34,7 +34,8 @@ from paasng.utils.basic import get_client_ip
 from paasng.utils.local import local
 
 from .models import AuthenticatedAppAsUser, User, UserPrivateToken
-from .permissions.tools import user_has_perm
+from .permissions.constants import SiteAction
+from .permissions.global_site import user_has_site_action_perm
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class SiteAccessControlMiddleware(MiddlewareMixin):
                 # 用户验证失败，重定向到登录页面
                 return HttpResponseRedirect(f"{settings.LOGIN_FULL}?c_url={request.build_absolute_uri()}")
 
-            if not user_has_perm(request.user, 'visit_admin', 'site'):
+            if not user_has_site_action_perm(request.user, SiteAction.VISIT_ADMIN42):
                 raise PermissionDenied('You are not allowed to visit this')
 
             return
@@ -58,7 +59,7 @@ class SiteAccessControlMiddleware(MiddlewareMixin):
         if not request.user.is_authenticated:
             return
 
-        if not user_has_perm(request.user, 'visit_site', 'site'):
+        if not user_has_site_action_perm(request.user, SiteAction.VISIT_SITE):
             # Use a custom
             return JsonResponse({"code": "PRODUCT_NOT_READY", "detail": _('产品灰度测试中，尚未开放，敬请期待')}, status=404)
 

@@ -60,7 +60,9 @@
                           v-for="(element, index) in unselectedBuildPack"
                           :key="element.id"
                         >
-                          <span v-if="element.display_name">$[ element.display_name]($[ element.name ])</span><span v-else>$[ element.name ]</span>
+                            <span v-bk-tooltips="getBuildPackVisibleName(element)">
+                                $[ getBuildPackVisibleName(element) ]
+                            </span>
                         </div>
                        <template slot="footer" key="footer">
                            <div v-if="unselectedBuildPack.length === 0" style="min-height: 0px;"></div>
@@ -79,7 +81,9 @@
                           v-for="(element, index) in selectedBuildPack"
                           :key="element.id"
                         >
-                          <span v-if="element.display_name">$[ element.display_name]($[ element.name ])</span><span v-else>$[ element.name ]</span>
+                            <span v-bk-tooltips="getBuildPackVisibleName(element)">
+                                $[ getBuildPackVisibleName(element) ]
+                            </span>
                         </div>
                        <template slot="footer" key="footer">
                            <div v-if="selectedBuildPack.length === 0" style="min-height: 0px;"></div>
@@ -171,7 +175,17 @@
                     } finally {
                         this.runtimes = (await this.$http.get(URLRouter.list))
                     }
+                    this.dialog.visible = false
                 },
+                getBuildPackVisibleName (element) {
+                    if (element === undefined) {
+                        return '--'
+                    } else {
+                        if (element.display_name)
+                            return `${element.display_name}(${element.name})`
+                        return element.name || element.id
+                    }
+                }
             }
         })
     })

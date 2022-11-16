@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.networking.egress.serializers import RCStateAppBindingSLZ
-from paas_wl.platform.applications.permissions import application_perm_class
+from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.views import BaseEndUserViewSet
 from paas_wl.utils.error_codes import error_codes
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class EgressGatewayInfosViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """应用出口 IP 管理相关 API"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def retrieve(self, request, code, module_name, environment):
         """返回已获取的出口网关信息"""

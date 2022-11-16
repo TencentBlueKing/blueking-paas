@@ -21,10 +21,12 @@ from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paasng.accounts.permissions.application import application_perm_required
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.publish.sync_market.managers import AppUseRecordManger
+from paasng.utils.views import permission_classes as perm_classes
 
 from .handlers import on_product_deploy_success
 from .serializers import PVGroupByAppSLZ
@@ -53,7 +55,7 @@ class StatisticsPVAPIView(APIView):
 
 
 class TestONProductDeployAPIView(APIView):
-    @application_perm_required('manage_product')
+    @perm_classes([application_perm_class(AppAction.MANAGE_APP_MARKET)], policy='merge')
     def get(self, request, code):
         application = Application.objects.get(code=code)
         on_product_deploy_success(application.get_product(), 'prod')

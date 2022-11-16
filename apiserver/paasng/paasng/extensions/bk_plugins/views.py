@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
+from collections import defaultdict
 from typing import List, Tuple
 
 from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
@@ -34,8 +35,11 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.accounts.permissions.global_site import SitePermission, site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class, site_perm_required
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.deploy.infras import DeploymentCoordinator
 from paasng.engine.deploy.preparations import initialize_deployment
@@ -46,7 +50,6 @@ from paasng.engine.streaming.constants import EventType
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import ApplicationMembership
 from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
@@ -103,13 +106,13 @@ class FilterPluginsMixin:
 class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for bk_plugin type applications"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request):
         """查询所有的蓝鲸插件"""
         plugins, paginator = self.filter_plugins(request)
         return paginator.get_paginated_response(serializers.BkPluginSLZ(plugins, many=True).data)
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def retrieve(self, request, code):
         """查询某个蓝鲸插件的详细信息"""
         plugin = get_plugin_or_404(code)
@@ -119,7 +122,7 @@ class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for batch operations on bk_plugin type applications"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_detailed(self, request):
         """批量查询蓝鲸插件的详细信息（包含各环境部署状态等）"""
         plugins, paginator = self.filter_plugins(request)
@@ -138,7 +141,7 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginLogsViewset(viewsets.ViewSet):
     """Viewset for querying bk_plugin's logs"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
         serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
@@ -162,7 +165,7 @@ def get_plugin_or_404(code: str) -> BkPlugin:
 class SysBkPluginTagsViewSet(viewsets.ViewSet):
     """Viewset for querying bk_plugin's tags"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request):
         """View all plugin tags in the system, the default is based on "created time (from old to new)"""
         tags = BkPluginTag.objects.all().order_by('created')
@@ -175,7 +178,7 @@ class SysBkPluginTagsViewSet(viewsets.ViewSet):
 class BkPluginProfileViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Viewset for managing BkPlugin's profile"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(tags=["bk_plugin"], responses={200: serializers.BkPluginProfileSLZ})
     def retrieve(self, request, code):
@@ -261,8 +264,7 @@ class DistributorRelsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class PluginCenterViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """a shim ViewSet for plugin-center to manage bk plugin"""
 
-    # TODO: 确认具体权限
-    permission_classes = [IsAuthenticated, SitePermission("sysapi:manage:applications")]
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
 
     @swagger_auto_schema(
         tags=["plugin-center"], request_body=api_serializers.PluginRequestSLZ, responses={201: serializers.BkPluginSLZ}
@@ -486,21 +488,22 @@ class PluginCenterViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
 
-        members = []
-        for member in data:
-            user_id = user_id_encoder.encode(
-                getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), username=member["username"]
-            )
-            ApplicationMembership.objects.update_or_create(
-                defaults={"role": ApplicationRole(member["role"]["id"])},
-                application=application,
-                user=user_id,
-            )
-            members.append(user_id)
-        # 删除用户
-        ApplicationMembership.objects.filter(application=application).exclude(user__in=members).delete()
+        # 清理掉旧的应用数据
+        app_members = [member['username'] for member in fetch_application_members(app_code=application.code)]
+        remove_user_all_roles(app_code=application.code, usernames=app_members)
+
+        new_members = set()
+        role_members = defaultdict(list)
+        for member in slz.validated_data:
+            username = member['username']
+            role_members[ApplicationRole(member['role']['id'])].append(username)
+            new_members.add(username)
+
+        # 按照角色添加用户
+        for role, members in role_members.items():
+            add_role_members(app_code=application.code, role=role, usernames=members)
+
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})

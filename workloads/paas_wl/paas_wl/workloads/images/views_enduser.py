@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.platform.applications.permissions import application_perm_class
+from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.views import BaseEndUserViewSet
 from paas_wl.utils.error_codes import error_codes
@@ -15,7 +15,7 @@ from paas_wl.workloads.images.serializers import UsernamePasswordPairSLZ
 
 
 class AppUserCredentialViewSet(ApplicationCodeInPathMixin, BaseEndUserViewSet):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: UsernamePasswordPairSLZ(many=True)})
     def list(self, request, code):

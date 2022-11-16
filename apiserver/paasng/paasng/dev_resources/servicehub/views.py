@@ -32,6 +32,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.servicehub import serializers as slzs
 from paasng.dev_resources.servicehub.exceptions import (
@@ -57,6 +58,7 @@ from paasng.platform.modules.serializers import MinimalModuleSLZ
 from paasng.platform.region.models import get_all_regions
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
+from paasng.utils.views import permission_classes as perm_classes
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +68,7 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
 
     permission_classes = [
         IsAuthenticated,
-        application_perm_class('manage_services'),
+        application_perm_class(AppAction.BASIC_DEVELOP),
         res_must_not_be_protected_perm(ProtectedRes.SERVICES_MODIFICATIONS),
     ]
 
@@ -92,13 +94,11 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与蓝鲸应用模块相关的增强服务接口"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_services')]
-
     @staticmethod
     def get_service(service_id, application):
         return mixed_service_mgr.get_or_404(service_id, region=application.region)
 
-    def get_application_by_code(self, application_code):
+    def _get_application_by_code(self, application_code):
         application = get_object_or_404(Application, code=application_code)
         # NOTE: 必须检查是否具有操作 app 的权限
         self.check_object_permissions(self.request, application)
@@ -106,6 +106,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateAttachmentSLZ, response_serializer=slzs.ServiceAttachmentSLZ)
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def bind(self, request):
         """创建蓝鲸应用与增强服务的绑定关系"""
         serializer = slzs.CreateAttachmentSLZ(data=request.data)
@@ -113,7 +114,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         data = serializer.data
         specs = data['specs']
-        application = self.get_application_by_code(data['code'])
+        application = self._get_application_by_code(data['code'])
         service_obj = self.get_service(data['service_id'], application)
         module = application.get_module(data.get('module_name', None))
 
@@ -140,6 +141,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
         return Response(serializer.data)
 
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def retrieve(self, request, code, module_name, service_id):
         """查看应用模块与增强服务的绑定关系详情"""
         application = self.get_application()
@@ -167,6 +169,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
 
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def retrieve_specs(self, request, code, module_name, service_id):
         """获取应用已绑定的服务规格"""
         application = self.get_application()
@@ -194,9 +197,10 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = slzs.ServicePlanSpecificationSLZ(results, many=True)
         return Response({"results": slz.data})
 
+    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy='merge')
     def unbind(self, request, code, module_name, service_id):
         """删除一个服务绑定关系"""
-        application = self.get_application_by_code(code)
+        application = self._get_application_by_code(code)
         module = application.get_module(module_name)
 
         # Check if application was protected
@@ -223,7 +227,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """增强服务相关视图(与应用无关的)"""
 
     serializer_class = slzs.ServiceSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_services')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @property
     def paginator(self):
@@ -347,7 +351,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class ServiceSetViewSet(viewsets.ViewSet):
     """增强服务集合-查询接口"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_services')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @cached_property
     def paginator(self):
@@ -460,13 +464,14 @@ class ServicePlanViewSet(viewsets.ViewSet):
 class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与共享增强服务有关的接口"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_services')]
+    permission_classes = [IsAuthenticated]
 
     @staticmethod
     def get_service(service_id, application):
         return mixed_service_mgr.get_or_404(service_id, region=application.region)
 
     @swagger_auto_schema(tags=['增强服务'], response_serializer=MinimalModuleSLZ(many=True))
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def list_shareable(self, request, code, module_name, service_id):
         """查看所有可被共享的模块
 
@@ -480,6 +485,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=['增强服务'], request_body=slzs.CreateSharedAttachmentsSLZ, responses={201: openapi_empty_response}
     )
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def create_shared(self, request, code, module_name, service_id):
         """创建增强服务共享关系
 
@@ -515,6 +521,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({}, status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=['增强服务'], response_serializer=slzs.SharedServiceInfo)
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def retrieve(self, request, code, module_name, service_id):
         """查看已创建的共享关系
 
@@ -528,6 +535,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(slzs.SharedServiceInfo(info).data)
 
     @swagger_auto_schema(tags=['增强服务'], responses={204: openapi_empty_response})
+    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy='merge')
     def destroy(self, request, code, module_name, service_id):
         """解除共享关系
 
@@ -542,7 +550,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """查看被共享引用的增强服务情况"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_services')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @staticmethod
     def get_service(service_id, application):

@@ -22,10 +22,13 @@ from typing import Text
 
 from django.http import Http404
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 
@@ -44,6 +47,9 @@ from .serializer import (
 
 
 class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(responses={200: EventRecordListSLZ}, request_body=EventRecordListQuerySLZ, tags=["查询告警记录"])
     def query(self, request: Request, code: Text):
         request_slz = EventRecordListQuerySLZ(data=request.data, partial=True)
@@ -93,6 +99,9 @@ class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(responses={200: EventRecordDetailsSLZ}, tags=["查询告警记录详情"])
     def get(self, request: Request, code: Text, record: Text):
         client = Client()
@@ -107,6 +116,9 @@ class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(
         responses={200: EventRecordMetricsResultSLZ}, query_serializer=EventRecordMetricsQuerySLZ, tags=["查询告警记录指标趋势"]
     )
@@ -130,6 +142,9 @@ class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventGenreView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(responses={200: EventGenreListSLZ}, query_serializer=EventGenreListQuerySLZ, tags=["查询告警类型"])
     def list(self, request: Request, code: Text):
         request_slz = EventGenreListQuerySLZ(data=request.query_params, partial=True)

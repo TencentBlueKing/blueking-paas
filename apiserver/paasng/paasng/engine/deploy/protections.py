@@ -17,12 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-"""Preconditions for deploy Module"""
 from typing import TYPE_CHECKING
 
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accounts.permissions.application import get_user_app_role
+from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.dev_resources.sourcectl.exceptions import (
     AccessTokenForbidden,
     BasicAuthError,
@@ -39,6 +38,7 @@ from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.publish.market.models import Product
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 if TYPE_CHECKING:
     from bkpaas_auth.models import User
@@ -103,9 +103,9 @@ class EnvProtectionCondition(DeployCondition):
     action_name = DeployConditions.CHECK_ENV_PROTECTION.value
 
     def validate(self):
-        role = get_user_app_role(user=self.user, obj=self.env.module)
+        roles = fetch_user_roles(self.env.application.code, get_username_by_bkpaas_user_id(self.user.pk))
         try:
-            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=self.env, role=role)
+            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=self.env, roles=roles)
         except RoleNotAllowError as e:
             message = _("当前用户无部署该环境的权限, 请联系应用管理员")
             raise ConditionNotMatched(message, self.action_name) from e

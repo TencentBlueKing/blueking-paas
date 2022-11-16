@@ -17,187 +17,55 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-"""Permissions for application
-"""
-from typing import Union
+import time
 
-from django.shortcuts import get_object_or_404
-from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import BasePermission
 
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import Application, ApplicationMembership
-from paasng.platform.modules.models import Module
-
-from .base import ProtectedResource
-from .tools import user_has_perm, user_has_perms
-
-
-class ApplicationResource(ProtectedResource):
-
-    permissions = [
-        ('view_application', 'Can view application'),
-        ('checkout_source', 'Can checkout source'),
-        ('commit_source', 'Can checkout source'),
-        ('manage_services', 'Can checkout source'),
-        ('manage_processes', 'Can manage process'),
-        ('view_logs', 'Can view logs'),
-        ('manage_deploy', 'Can manage deployments'),
-        ('manage_env_protection', 'Can manage env protection'),
-        ('manage_members', 'Can manage memberships'),
-        ('manage_product', 'Can manage product which is related to this application'),
-        ('review_app', 'Can review app when it will be online'),
-        ('edit_app', 'Can edit app, such as name'),
-        ('delete_app', 'Can delete app'),
-        ('manage_cloud_api', 'Can manage cloud api'),
-        ('manage_access_control', 'Can manage access control'),
-    ]
-
-    def _get_role_of_user(self, user, obj):
-        """Get the role of application"""
-        role = get_user_app_role(user, obj)
-        return ApplicationRole(role).name.lower()
+from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
+from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
+from paasng.platform.applications.models import Application
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 
-application_resource = ApplicationResource()
+def application_perm_class(action: AppAction):
+    """
+    构建 DRF 可用的应用权限类
 
-application_resource.add_nobody_role()
-application_resource.add_role(
-    'administrator',
-    {
-        'view_application': True,
-        'checkout_source': True,
-        'commit_source': True,
-        'manage_services': True,
-        'manage_processes': True,
-        'view_logs': True,
-        'manage_deploy': True,
-        'manage_env_protection': True,
-        'manage_members': True,
-        'manage_product': True,
-        'review_app': True,
-        'edit_app': True,
-        'delete_app': True,
-        'manage_cloud_api': True,
-        'manage_access_control': True,
-    },
-)
-application_resource.add_role(
-    'developer',
-    {
-        'view_application': True,
-        'checkout_source': True,
-        'commit_source': True,
-        'manage_services': True,
-        'manage_processes': True,
-        'view_logs': True,
-        'manage_deploy': True,
-        'manage_env_protection': False,
-        'manage_members': False,
-        'manage_product': True,
-        'review_app': False,
-        'edit_app': True,
-        'delete_app': False,
-        'manage_cloud_api': True,
-        'manage_access_control': True,
-    },
-)
-application_resource.add_role(
-    'operator',
-    {
-        'view_application': True,
-        'checkout_source': False,
-        'commit_source': False,
-        'manage_services': False,
-        'manage_processes': False,
-        'view_logs': False,
-        'manage_deploy': False,
-        'manage_env_protection': False,
-        'manage_members': False,
-        'manage_product': True,
-        'review_app': True,
-        'edit_app': True,
-        'delete_app': False,
-        'manage_cloud_api': True,
-        'manage_access_control': True,
-    },
-)
+    注意：该权限类使用装饰器附加到 viewset 方法时，需要使用 paasng.utils.views.permission_classes 并指定 policy='merge'
+    原因是 self.get_application() 时, check_object_permissions 用的是 self.get_permissions，会使用类的权限类
+    而 drf 的装饰器只是修改 func.permission_classes，会导致鉴权失效
+    """
 
-
-def get_user_app_role(user, obj: Union[Application, Module]):
-    # Module 权限完全兼容 Application
-    if isinstance(obj, Module):
-        application = obj.application
-    else:
-        application = obj
-
-    try:
-        # Currently, user can only have one role
-        membership = ApplicationMembership.objects.get(application=application, user=user.pk)
-    except (ApplicationMembership.DoesNotExist, ApplicationMembership.MultipleObjectsReturned):
-        return ApplicationRole.NOBODY.value
-    return membership.role
-
-
-def application_perm_class(perm_name):
-    """A factory function which generates a Permission class for DRF permission check"""
-    if perm_name not in application_resource._permissions:
-        raise ValueError('"%s" is not a valid permission name for Application' % perm_name)
-
-    class Permission(permissions.BasePermission):
+    class Permission(BasePermission):
         def has_object_permission(self, request, view, obj):
-            return user_has_perm(request.user, perm_name, obj)
+            return user_has_app_action_perm(request.user, obj, action)
 
     return Permission
 
 
-def check_application_perms(user, perm_names, application):
-    for perm_name in perm_names:
-        if perm_name not in application_resource._permissions:
-            raise ValueError('"%s" is not a valid permission name for Application' % perm_name)
-    if not user_has_perms(user, perm_names, application):
+def check_application_perm(user, application: Application, action: AppAction):
+    """检查指定用户是否对应用的某个操作具有权限"""
+    if not user_has_app_action_perm(user, application, action):
         raise PermissionDenied('You are not allowed to do this operation.')
 
 
-def application_perm_required(perm_name):
-    """This decorator can only be used when these conditions are meet:
-
-    - decorated func if a method in ViewSet
-    - there is a "code" kwargs in request path which represents application code
+def user_has_app_action_perm(user, application: Application, action: AppAction) -> bool:
     """
-    if perm_name not in application_resource._permissions:
-        raise ValueError('"%s" is not a valid permission name for Application' % perm_name)
+    检查指定用户是否对应用的某个操作具有权限
 
-    def decorated(func):
-        def view_func(self, request, *args, **kwargs):
-            application = get_object_or_404(Application, code=kwargs['code'])
-            if not user_has_perm(request.user, perm_name, application):
-                raise PermissionDenied('You are not allowed to do this operation.')
-
-            return func(self, request, *args, **kwargs)
-
-        return view_func
-
-    return decorated
-
-
-def application_perm_required_with_uuid(perm_name):
-    """This decorator can only be used when these conditions are meet:
-
-    - decorated func if a method in ViewSet
-    - there is a "application_id" kwargs in request.data
+    # TODO 如果后续需要支持 无权限跳转权限中心申请，可以设置 raise_exception = True，PermissionDeniedError 会包含 apply_url 信息
     """
-    if perm_name not in application_resource._permissions:
-        raise ValueError('"%s" is not a valid permission name for Application' % perm_name)
+    # 由于权限中心的用户组授权为异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
+    # 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
+    if (
+        user.pk == application.owner
+        and time.time() - application.created.timestamp() < PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
+    ):
+        return True
 
-    def decorated(func):
-        def view_func(self, request, *args, **kwargs):
-            application = get_object_or_404(Application, pk=request.data.get('application_id'))
-            if not user_has_perm(request.user, perm_name, application):
-                raise PermissionDenied('You are not allowed to do this operation.')
-
-            return func(self, request, *args, **kwargs)
-
-        return view_func
-
-    return decorated
+    perm_ctx = AppPermCtx(
+        code=application.code,
+        username=get_username_by_bkpaas_user_id(user.pk),
+    )
+    return ApplicationPermission().get_method_by_action(action)(perm_ctx, raise_exception=False)

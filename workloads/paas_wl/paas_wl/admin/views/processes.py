@@ -9,7 +9,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
-from paas_wl.platform.applications.permissions import site_perm_class
+from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
 from paas_wl.platform.auth.permissions import IsInternalAdmin
 from paas_wl.platform.system_api.views import SysAppRelatedViewSet
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
@@ -23,7 +23,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
 
     exclude_from_schema = True
     serializer_class = ProcessSpecPlanSLZ
-    permission_classes = [site_perm_class("admin:manage:workloads")]
+    permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [SearchFilter]
     search_fields = ['region', 'environment']
     queryset = ProcessSpecPlan.objects.all()
@@ -70,7 +70,7 @@ class ProcessSpecManageViewSet(SysAppRelatedViewSet):
     """ProcessSpec 管理API"""
 
     # NOTE: 由于 switch_process_plan 需要给后台调用, 因此需要通过 IsInternalAdmin 权限
-    permission_classes = [IsInternalAdmin | site_perm_class("admin:manage:workloads")]
+    permission_classes = [IsInternalAdmin | site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def switch_process_plan(self, request, region, name, process_type):
         engine_app = self.get_app()
@@ -115,7 +115,7 @@ class ProcessSpecManageViewSet(SysAppRelatedViewSet):
 
 class ProcessInstanceViewSet(SysAppRelatedViewSet):
     exclude_from_schema = True
-    permission_classes = [site_perm_class("admin:manage:workloads")]
+    permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def retrieve(self, request, region, name, process_type, instance_name):
         app = self.get_app()

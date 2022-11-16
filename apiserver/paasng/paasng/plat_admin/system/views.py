@@ -29,6 +29,7 @@ from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
 from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
@@ -66,7 +67,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=['SYSTEMAPI'], responses={200: UniversalAppSLZ(many=True)}, query_serializer=QueryUniApplicationsByID
     )
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_by_id(self, request):
         """根据应用 ID（Code）查询多平台应用信息"""
         serializer = QueryUniApplicationsByID(data=request.query_params)
@@ -107,7 +108,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         responses={200: UniversalAppSLZ(many=True)},
         query_serializer=QueryUniApplicationsByUserName,
     )
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_by_username(self, request):
         """根据 username 查询多平台应用信息"""
         serializer = QueryUniApplicationsByUserName(data=request.query_params)
@@ -123,7 +124,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     """System api for managing Application Addons"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
-    @site_perm_required("sysapi:read:services")
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def query_credentials(self, request, code, module_name, environment, service_name):
         """查询增强服务的 credentials 信息"""
         application = self.get_application()
@@ -140,7 +141,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         return Response(data={"credentials": credentials})
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
-    @site_perm_required("sysapi:read:services")
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def provision_service(self, request, code, module_name, environment, service_name):
         """分配增强服务实例"""
         application = self.get_application()
@@ -167,7 +168,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
-    @site_perm_required("sysapi:read:services")
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def list_services(self, request, code, module_name, environment):
         """查询增强服务启用/实例分配情况"""
         engine_app = self.get_engine_app_via_path()
@@ -179,7 +180,7 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     """System api for lesscode"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI", "LESSCODE"])
-    @site_perm_required("sysapi:read:db-credential")
+    @site_perm_required(SiteAction.SYSAPI_READ_DB_CREDENTIAL)
     def query_db_credentials(self, request, code, module_name, environment):
         """查询数据库增强服务的 credentials 信息"""
         svc = self.get_db_service()
@@ -191,7 +192,7 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         return Response(data={"credentials": credentials})
 
     @swagger_auto_schema(tags=["SYSTEMAPI", "LESSCODE"])
-    @site_perm_required("sysapi:bind:db-service")
+    @site_perm_required(SiteAction.SYSAPI_BIND_DB_SERVICE)
     def bind_db_service(self, request, code, module_name):
         """尝试绑定数据库增强服务"""
         svc = self.get_db_service()
@@ -222,7 +223,7 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
 class SysApplicationViewSet(viewsets.ViewSet):
     """System application view sets"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query(self, request):
         """查询应用的模块、环境等信息"""
         serializer = QueryApplicationsSLZ(data=request.query_params)
@@ -278,7 +279,7 @@ class SysApplicationViewSet(viewsets.ViewSet):
 class SysMarketViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     """System Market view sets"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def get_entrance(self, request, code):
         """获取某应用的蓝鲸市场访问入口地址"""
         application = self.get_application()
@@ -295,7 +296,7 @@ class ApplicationAddressViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     TODO: Remove this ViewSet, move the algorithm to workloads
     """
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_preallocated_addresses(self, request, code, module_name, environment):
         """获取给应用预分配的子域名和子路径
         Preallocated addresses contains sub-domains and sub-paths generated via platform's
@@ -311,7 +312,7 @@ class ApplicationAddressViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
 class ApplicationBuiltinEnvViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
     """本视图提供应用内置环境变量相关的接口"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_builtin_envs(self, request, code, module_name, environment):
         engine_app = self.get_engine_app_via_path()
         return Response({"data": generate_builtin_env_vars(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)})

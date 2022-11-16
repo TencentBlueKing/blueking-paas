@@ -24,6 +24,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.test import TestCase
 
+from paasng.accessories.iam.helpers import fetch_application_members
 from paasng.dev_resources.sourcectl.models import SvnRepository
 from paasng.platform.mgrlegacy.app_migrations.basic import BaseMigration, BaseObjectMigration, MainInfoMigration
 from paasng.platform.mgrlegacy.app_migrations.product import ProductMigration
@@ -167,7 +168,7 @@ class TestMainInfoMigration(BaseTestCaseForMigration):
         with pytest.raises(ObjectDoesNotExist):
             app.get_default_module()
         assert app.envs.count() == 0, "app 未绑定 ApplicationEnvironment"
-        assert app.applicationmembership_set.count() == 0, "app 已绑定 ApplicationMembership"
+        assert len(fetch_application_members(app.code)) == 0, "App 已绑定用户组"
 
         with global_mock(self.context):
             self.migration.migrate()
@@ -177,7 +178,7 @@ class TestMainInfoMigration(BaseTestCaseForMigration):
         ), f"app 默认提供的运行环境数量不为 {len(ModuleInitializer.default_environments)}"
         assert app.modules.count() == 1, "迁移应用的模块数量不为 1"
         # TODO: 逐个判断 ADMINISTRATOR, DEVELOPER, OPERATOR 的人员
-        assert app.applicationmembership_set.count() != 0, "绑定迁移应用的人员名单失败"
+        assert len(fetch_application_members(app.code)) != 0, "绑定迁移应用的人员名单失败"
 
     def test_rollback(self):
         self.test_migrate()
@@ -185,7 +186,7 @@ class TestMainInfoMigration(BaseTestCaseForMigration):
         app = self.context.app
         self.migration.rollback()
         assert app.envs.count() == 0, "app 清理 ApplicationEnvironment 失败"
-        assert app.applicationmembership_set.count() == 0, "app 清理 ApplicationMembership 失败"
+        assert len(fetch_application_members(app.code)) == 0, "App 清理用户组成员失败"
         assert app.modules.count() == 0, "app 清理 Modules 失败"
 
 

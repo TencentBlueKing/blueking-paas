@@ -26,14 +26,14 @@ from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueTogetherValidator, UniqueValidator, qs_exists
+from rest_framework.validators import UniqueValidator, qs_exists
 
 from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.platform.applications.constants import AppLanguage, ApplicationRole, ApplicationType
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
-from paasng.platform.applications.models import Application, ApplicationMembership, UserMarkedApplication
+from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.signals import (
     application_logo_updated,
     prepare_change_application_name,
@@ -374,42 +374,16 @@ class RoleField(serializers.Field):
         return role_id
 
 
-class ApplicationMembershipListSerializer(serializers.ListSerializer):
-    def create(self, validated_data):
-        memberships = [ApplicationMembership(**item) for item in validated_data]
-        return ApplicationMembership.objects.bulk_create(memberships)
+class ApplicationMemberSLZ(serializers.Serializer):
 
-
-class ApplicationMembershipSLZ(serializers.ModelSerializer):
-    """Serializer for create and list"""
-
-    application = ApplicationRelationSLZ()
     user = UserField()
-    role = RoleField()
-
-    class Meta(object):
-        model = ApplicationMembership
-        list_serializer_class = ApplicationMembershipListSerializer
-        fields = ['application', 'user', 'role', 'created', 'updated']
-        validators = [
-            UniqueTogetherValidator(
-                queryset=ApplicationMembership.objects.all(),
-                fields=('application', 'user'),
-                message=u'用户已经是应用成员，不能重复添加',
-            )
-        ]
+    roles = serializers.ListField(child=RoleField(), help_text='用户角色列表')
 
 
-class ApplicationMembershipRoleOnlySLZ(serializers.ModelSerializer):
+class ApplicationMemberRoleOnlySLZ(serializers.Serializer):
     """Serializer for update, only role"""
 
-    application = ApplicationRelationSLZ(read_only=True)
     role = RoleField()
-
-    class Meta(object):
-        model = ApplicationMembership
-        read_only_fields = ['application', 'user', 'created', 'updated']
-        fields = read_only_fields + ['role']
 
 
 class ApplicationListDetailedSLZ(serializers.Serializer):

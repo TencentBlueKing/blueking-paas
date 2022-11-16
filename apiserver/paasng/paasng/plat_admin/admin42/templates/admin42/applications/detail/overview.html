@@ -155,7 +155,7 @@
             },
             methods: {
                 beAppAdmin: function () {
-                    this.$http.post(decodeURI("{% url 'admin.applications.detail.base_info.memberships.api' application.code %}"),
+                    this.$http.post(decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
                         {
                             // 管理员
                             username: '{{ request.user.username }}',
@@ -166,7 +166,7 @@
                     })
                 },
                 exitApp: function () {
-                    this.$http.delete(decodeURI("{% url 'admin.applications.detail.base_info.memberships.api' application.code %}"),
+                    this.$http.delete(decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
                         {
                             params: {
                                 username: '{{ request.user.username }}'

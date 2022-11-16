@@ -19,8 +19,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf import settings
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import SourceTypeSpecConfig
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -31,8 +34,7 @@ class SourceTypeSpecManageView(GenericTemplateView):
     """平台服务管理-代码库配置"""
 
     template_name = "admin42/platformmgr/sourcectl.html"
-    queryset = SourceTypeSpecConfig.objects.all()
-    serializer_class = SourceTypeSpecConfigSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "代码库配置"
 
     def get_context_data(self, **kwargs):
@@ -72,3 +74,4 @@ class SourceTypeSpecViewSet(CreateModelMixin, DestroyModelMixin, ListModelMixin,
 
     queryset = SourceTypeSpecConfig.objects.all()
     serializer_class = SourceTypeSpecConfigSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]

@@ -63,7 +63,6 @@ from paasng.engine.models import EngineApp
 from paasng.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 if TYPE_CHECKING:
     import datetime
@@ -330,9 +329,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
                 module=self.db_module,
                 env=self.db_env,
                 cluster_info=cluster_info,
-                app_developers=json.dumps(
-                    [get_username_by_bkpaas_user_id(uid) for uid in self.db_application.get_developers()]
-                ),
+                app_developers=json.dumps(self.db_application.get_developers()),
             )
         return result
 

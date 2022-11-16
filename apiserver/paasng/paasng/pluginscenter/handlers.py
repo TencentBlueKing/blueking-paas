@@ -29,7 +29,7 @@ def update_release_status_when_stage_status_change(sender, instance: PluginRelea
         return
     release = instance.release
     # 发布中断或失败
-    if instance.status in [PluginReleaseStatus.INTERRUPTED, PluginReleaseStatus.FAILED]:
+    if instance.status in PluginReleaseStatus.abnormal_status():
         release.status = instance.status
         release.save()
     # 最后一个步骤成功, 即发布成功

@@ -3,26 +3,22 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 from paas_wl.platform.applications.middlewares import InstancesInPlaceMiddleware
+from paas_wl.platform.applications.permissions import AppAction, SiteAction
 
 APPLICATION_PERMS_MAP = {
-    'view_application': True,
-    'checkout_source': True,
-    'commit_source': True,
-    'manage_services': True,
-    'manage_processes': True,
-    'view_logs': True,
-    'manage_deploy': True,
-    'manage_env_protection': True,
-    'manage_members': True,
-    'manage_product': True,
-    'review_app': True,
-    'edit_app': True,
-    'delete_app': True,
-    'manage_cloud_api': True,
-    'manage_access_control': True,
+    AppAction.VIEW_BASIC_INFO: True,
+    AppAction.BASIC_DEVELOP: True,
+    AppAction.MANAGE_ADDONS_SERVICES: True,
+    AppAction.MANAGE_ENV_PROTECTION: True,
+    AppAction.MANAGE_MEMBERS: True,
+    AppAction.MANAGE_APP_MARKET: True,
+    AppAction.EDIT_BASIC_INFO: True,
+    AppAction.DELETE_APPLICATION: True,
+    AppAction.MANAGE_CLOUD_API: True,
+    AppAction.MANAGE_ACCESS_CONTROL: True,
 }
 
-SITE_PERMISSION_MAP = {'visit_site': True}
+SITE_PERMISSION_MAP = {SiteAction.VISIT_SITE: True}
 
 
 class TestInstancesInPlaceMiddleware:
@@ -70,10 +66,10 @@ class TestInstancesInPlaceMiddleware:
         # Test permission objects
         application = request.insts_in_place.get_application_by_code('foo-app')
         perm_obj = request.perms_in_place.get_application_perms(application)
-        assert perm_obj.check_allowed('manage_deploy') is True
+        assert perm_obj.check_allowed(AppAction.BASIC_DEVELOP) is True
 
         site_perms_obj = request.perms_in_place.site_perms
-        assert site_perms_obj.check_allowed('visit_site') is True
+        assert site_perms_obj.check_allowed(SiteAction.VISIT_SITE) is True
 
     def test_application_only(self, rf):
         """Try trigger the middleware with some data, then query an EngineApp object"""

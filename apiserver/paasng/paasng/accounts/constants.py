@@ -34,6 +34,10 @@ class SiteRole(ChoicesEnum):
     SUPER_USER = 4
     BANNED_USER = 5
 
+    PLATFORM_MANAGER = 20
+    APP_TEMPLATES_MANAGER = 21
+    PLATFORM_OPERATOR = 22
+
     SYSTEM_API_BASIC_READER = 50
     SYSTEM_API_BASIC_MAINTAINER = 60
     SYSTEM_API_LIGHT_APP_MAINTAINER = 70
@@ -45,6 +49,9 @@ class SiteRole(ChoicesEnum):
         (ADMIN, _('管理员')),
         (SUPER_USER, _('超级用户')),
         (BANNED_USER, _('不允许访问服务的用户')),
+        (PLATFORM_MANAGER, _('平台管理员')),
+        (APP_TEMPLATES_MANAGER, _('应用模板管理员')),
+        (PLATFORM_OPERATOR, _('平台运营人员')),
         (SYSTEM_API_BASIC_READER, _('系统 API 用户：基础可读')),
         (SYSTEM_API_BASIC_MAINTAINER, _('系统 API 用户：具有基本管理权限')),
         (SYSTEM_API_LIGHT_APP_MAINTAINER, _('系统 API 用户：具有轻应用管理权限')),

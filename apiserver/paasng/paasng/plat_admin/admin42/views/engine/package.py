@@ -19,9 +19,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.http.response import HttpResponse
 from rest_framework.mixins import ListModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import SourcePackage
 from paasng.dev_resources.sourcectl.package.downloader import download_package
 from paasng.dev_resources.sourcectl.utils import generate_temp_file
@@ -55,6 +57,7 @@ class SourcePackageManageViewSet(ListModelMixin, GenericViewSet, ApplicationCode
     schema = None
     queryset = SourcePackage.objects.all()
     serializer_class = SourcePackageSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_queryset(self):
         application = self.get_application()
@@ -64,7 +67,6 @@ class SourcePackageManageViewSet(ListModelMixin, GenericViewSet, ApplicationCode
             return super().get_queryset().filter(module__application=application)
         return super().get_queryset().filter(module=module)
 
-    @site_perm_required("admin:read:application")
     def download(self, request, **kwargs):
         """下载已有源码包"""
         package = self.get_object()

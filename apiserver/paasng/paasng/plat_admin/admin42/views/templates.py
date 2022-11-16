@@ -18,8 +18,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.plat_admin.admin42.serializers.templates import TemplateSLZ
@@ -31,8 +34,7 @@ class TemplateManageView(GenericTemplateView):
     """平台服务管理-模板配置"""
 
     template_name = "admin42/configuration/templates.html"
-    queryset = Template.objects.all()
-    serializer_class = TemplateSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "模板配置"
 
     def get_context_data(self, **kwargs):
@@ -48,3 +50,4 @@ class TemplateViewSet(CreateModelMixin, DestroyModelMixin, ListModelMixin, Updat
 
     queryset = Template.objects.all()
     serializer_class = TemplateSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]

@@ -69,8 +69,6 @@ class UniSimpleApp:
 
 
 def get_simple_app_by_default_app(app: Application) -> UniSimpleApp:
-    developers = [u.username for u in app.get_developers()]
-
     simple_app = UniSimpleApp(
         _source=SimpleAppSource.DEFAULT,
         region=app.region or 'unknown',
@@ -79,7 +77,7 @@ def get_simple_app_by_default_app(app: Application) -> UniSimpleApp:
         logo_url=app.get_logo_url(),
         created=app.created,
         creator=str_username(app.creator),
-        developers=developers,
+        developers=app.get_developers(),
         _db_object=app,
     )
     return simple_app

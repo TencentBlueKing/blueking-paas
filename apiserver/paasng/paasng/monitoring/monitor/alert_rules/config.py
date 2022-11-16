@@ -101,7 +101,7 @@ class AppRuleConfig:
             display_name=self.alert_rule_display_name,
             enabled=self.enabled,
             threshold_expr=self.threshold_expr,
-            receivers=self.receivers or application.get_developer_names(),
+            receivers=self.receivers or application.get_developers(),
             application=application,
             environment=self.run_env,
             module=None,

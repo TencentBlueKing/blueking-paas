@@ -26,6 +26,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.cloudapi import serializers
 from paasng.dev_resources.cloudapi.components.apigw_dashboard import apigw_dashboard_component
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_cloud_api')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWAPISLZ(many=True),

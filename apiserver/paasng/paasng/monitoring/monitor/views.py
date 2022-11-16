@@ -23,14 +23,17 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paasng.accounts.permissions.application import check_application_perms
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
 from paasng.monitoring.monitor.alert_rules.constants import DEFAULT_RULE_CONFIGS
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
+from paasng.utils.views import permission_classes as perm_classes
 
 from .models import AppAlertRule
 from .phalanx import Client
@@ -49,6 +52,9 @@ from .serializers import AlertRuleSLZ, ListAlertRulesSLZ, SupportedAlertSLZ
 
 
 class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(responses={200: EventRecordListSLZ}, request_body=EventRecordListQuerySLZ, tags=["查询告警记录"])
     def query(self, request: Request, code: Text):
         request_slz = EventRecordListQuerySLZ(data=request.data, partial=True)
@@ -98,6 +104,9 @@ class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(responses={200: EventRecordDetailsSLZ}, tags=["查询告警记录详情"])
     def get(self, request: Request, code: Text, record: Text):
         client = Client()
@@ -112,6 +121,9 @@ class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(
         responses={200: EventRecordMetricsResultSLZ}, query_serializer=EventRecordMetricsQuerySLZ, tags=["查询告警记录指标趋势"]
     )
@@ -135,6 +147,9 @@ class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventGenreView(ViewSet, ApplicationCodeInPathMixin):
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+
     @swagger_auto_schema(responses={200: EventGenreListSLZ}, query_serializer=EventGenreListQuerySLZ, tags=["查询告警类型"])
     def list(self, request: Request, code: Text):
         request_slz = EventGenreListQuerySLZ(data=request.query_params, partial=True)
@@ -157,9 +172,9 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
     pagination_class = None
 
     @swagger_auto_schema(query_serializer=ListAlertRulesSLZ)
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def list(self, request, code, module_name):
         """查询告警规则列表"""
-
         serializer = ListAlertRulesSLZ(data=self.request.query_params)
         serializer.is_valid(raise_exception=True)
 
@@ -181,12 +196,9 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy='merge')
     def update(self, request, code, id):
         """更新告警规则"""
-        application = self.get_application()
-
-        check_application_perms(self.request.user, ['manage_deploy'], application)
-
         filter_kwargs = {'id': id, 'application': self.get_application()}
         instance = get_object_or_404(self.queryset, **filter_kwargs)
 

@@ -21,7 +21,7 @@ import base64
 import logging
 import random
 import string
-from collections import Counter
+from collections import Counter, defaultdict
 from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
@@ -41,15 +41,19 @@ from rest_framework.views import APIView
 
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.accessories.iam.helpers import (
+    add_role_members,
+    fetch_application_members,
+    fetch_role_members,
+    fetch_user_main_role,
+    remove_user_all_roles,
+)
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.constants import AccountFeatureFlag as AFF
 from paasng.accounts.constants import FunctionType
 from paasng.accounts.models import AccountFeatureFlag, make_verifier
-from paasng.accounts.permissions.application import (
-    application_perm_class,
-    application_perm_required,
-    check_application_perms,
-    get_user_app_role,
-)
+from paasng.accounts.permissions.application import application_perm_class, check_application_perm
+from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative import initialize_simple
@@ -71,11 +75,11 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import (
     Application,
     ApplicationEnvironment,
-    ApplicationMembership,
     UserApplicationFilter,
     UserMarkedApplication,
 )
 from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
+from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import (
     application_member_updated,
     post_create_application,
@@ -103,8 +107,10 @@ from paasng.platform.region.permissions import HasPostRegionPermission
 from paasng.publish.market.constant import AppState, ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig, Product
 from paasng.publish.sync_market.managers import AppDeveloperManger
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from paasng.utils.error_message import wrap_validation_error
+from paasng.utils.views import permission_classes as perm_classes
 
 try:
     from paasng.platform.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -201,11 +207,12 @@ class ApplicationViewSet(viewsets.ViewSet):
             if cluster:
                 return cluster
 
-    @application_perm_required('view_application')
     def retrieve(self, request, code):
         """获取单个应用的信息"""
-        application = get_object_or_404(Application.objects.filter_by_user(request.user), code=code)
-        role = get_user_app_role(request.user, application)
+        application = get_object_or_404(Application, code=code)
+        check_application_perm(request.user, application, AppAction.VIEW_BASIC_INFO)
+
+        main_role = fetch_user_main_role(code, request.user.username)
         product = application.get_product()
 
         web_config = application.config_info
@@ -213,8 +220,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
-                # TODO: Change RoleField from File to SLZ?
-                'role': slzs.RoleField().to_representation(role),
+                'role': slzs.RoleField().to_representation(main_role),
                 'application': slzs.ApplicationSLZ(application).data,
                 'product': slzs.ProductSLZ(product).data if product else None,
                 'marked': UserMarkedApplication.objects.filter(
@@ -262,7 +268,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         """
         # TODO can create get_application func and refactor all the permissions logic in ApplicationViewset
         application = get_object_or_404(Application, code=code)
-        check_application_perms(self.request.user, ['delete_app'], application)
+        check_application_perm(self.request.user, application, AppAction.DELETE_APPLICATION)
 
         market_config, _created = MarketConfig.objects.get_or_create_by_app(application)
         if market_config.enabled:
@@ -305,8 +311,8 @@ class ApplicationViewSet(viewsets.ViewSet):
         - param: name, 应用名称
         """
         application = get_object_or_404(Application, code=code)
-        # 编辑应用名称的权限：管理员、开发者、运营
-        check_application_perms(self.request.user, ['edit_app'], application)
+        # 编辑应用名称的权限：管理员、运营
+        check_application_perm(self.request.user, application, AppAction.EDIT_BASIC_INFO)
         # Check if app was protected
         raise_if_protected(application, ProtectedRes.BASIC_INFO_MODIFICATIONS)
 
@@ -317,7 +323,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
     def check_manage_permissions(self, request, application):
-        check_application_perms(request.user, ['manage_deploy'], application)
+        check_application_perm(request.user, application, AppAction.BASIC_DEVELOP)
 
 
 class ApplicationCreateViewSet(viewsets.ViewSet):
@@ -620,99 +626,80 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     """Viewset for application members management"""
 
     pagination_class = None
-    serializer_class = slzs.ApplicationMembershipSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return ApplicationMembership.objects.filter(application=self.get_application()).order_by('role')
-
-    def get_object(self):
-        application = self.get_application()
-        return get_object_or_404(ApplicationMembership, application=application, user=self.kwargs['user_id'])
-
-    def get_serializer_class(self):
-        # Only support update "role" field only when Updating a membership
-        if self.request.method == 'PUT':
-            return slzs.ApplicationMembershipRoleOnlySLZ
-        return self.serializer_class
-
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def list(self, request, **kwargs):
         """Always add 'result' key in response"""
-        # TODO 切换成调用权限中心 先 DB 获取用户组，再权限中心查询每个用户组的成员
-        return Response({'results': super(ApplicationMembersViewSet, self).list(request).data})
+        members = fetch_application_members(self.get_application().code)
+        return Response({'results': ApplicationMemberSLZ(members, many=True).data})
 
+    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy='merge')
     def create(self, request, **kwargs):
         application = self.get_application()
-        self.check_manage_permissions(application)
 
-        data = request.data
-        for idata in data:
-            idata['application'] = application
-
-        serializer = self.get_serializer(data=data, many=True)
+        serializer = ApplicationMemberSLZ(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+
+        role_members_map = defaultdict(list)
+        for info in serializer.data:
+            for role in info['roles']:
+                role_members_map[role['id']].append(info['user']['username'])
+
+        for role, members in role_members_map.items():
+            add_role_members(application.code, role, members)
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy='merge')
     def update(self, request, *args, **kwargs):
-        membership = self.get_object()
-        application = membership.application
-        self.check_manage_permissions(application)
+        application = self.get_application()
 
-        serializer = self.get_serializer(membership, data=request.data, partial=False)
+        serializer = ApplicationMemberRoleOnlySLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-        # Check whether the application has at least one administrator when the membership was updated
-        old_role, new_role = membership.role, data['role']
-        if new_role != old_role:
-            self.check_admin_count(membership)
-        serializer.save()
+
+        username = get_username_by_bkpaas_user_id(kwargs['user_id'])
+        self.check_admin_count(application.code, username)
+        remove_user_all_roles(application.code, username)
+        add_role_members(application.code, ApplicationRole(serializer.data['role']['id']), username)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
-        return Response(serializer.data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
         user = request.user
         if application.owner == user.pk:  # owner can not leave application
             raise error_codes.MEMBERSHIP_OWNER_FAILED
 
-        membership = get_object_or_404(
-            ApplicationMembership,
-            application=application,
-            user=user.pk,
-        )
-        self.check_admin_count(membership)
-        membership.delete()
+        self.check_admin_count(application.code, request.user.username)
+        remove_user_all_roles(application.code, request.user.username)
+
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @perm_classes([application_perm_class(AppAction.MANAGE_MEMBERS)], policy='merge')
     def destroy(self, request, *args, **kwargs):
-        membership = self.get_object()
-        application = membership.application
-        self.check_manage_permissions(application)
-        self.check_admin_count(membership)
-        membership.delete()
+        application = self.get_application()
+
+        username = get_username_by_bkpaas_user_id(kwargs['user_id'])
+        self.check_admin_count(application.code, username)
+        remove_user_all_roles(application.code, username)
+
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def check_admin_count(self, membership):
+    def check_admin_count(self, app_code: str, username: str):
         # Check whether the application has at least one administrator when the membership was deleted
-        if membership.role == ApplicationRole.ADMINISTRATOR.value:
-            administrator_count = ApplicationMembership.objects.filter(
-                application=membership.application, role=ApplicationRole.ADMINISTRATOR.value
-            ).count()
-            if administrator_count <= 1:
-                raise error_codes.MEMBERSHIP_DELETE_FAILED
-
-    def check_manage_permissions(self, application):
-        check_application_perms(self.request.user, ['manage_members'], application)
+        administrators = fetch_role_members(app_code, ApplicationRole.ADMINISTRATOR)
+        if len(administrators) <= 1 and username in administrators:
+            raise error_codes.MEMBERSHIP_DELETE_FAILED
 
     def get_roles(self, request):
         return Response({'results': ApplicationRole.get_django_choices()})
@@ -855,7 +842,7 @@ class ApplicationGroupByFieldStatisticsView(APIView):
 
 
 class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('checkout_source')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def get_secret(self, request, code):
         """获取单个应用的secret"""
@@ -878,14 +865,14 @@ class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
-
     @swagger_auto_schema(tags=["特性标记"])
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def list(self, request, code):
         application = self.get_application()
         return Response(application.feature_flag.get_application_features())
 
     @swagger_auto_schema(tags=["特性标记"])
+    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')
     def switch_app_desc_flag(self, request, code):
         application = self.get_application()
         flag = AppFeatureFlag.APPLICATION_DESCRIPTION
@@ -901,7 +888,7 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
 class ApplicationResProtectionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """查看应用的资源保护情况"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def list(self, request, code):
         """返回应用的资源保护状态"""
@@ -914,7 +901,7 @@ class ApplicationResProtectionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMi
 class LightAppViewSet(viewsets.ViewSet):
     """为标准运维提供轻应用管理接口，部分代码迁移自 open—paas"""
 
-    @site_perm_required('sysapi:manage:light-applications')
+    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(request_body=slzs.LightAppCreateSLZ)
     def create(self, request):
         """创建轻应用"""
@@ -987,7 +974,7 @@ class LightAppViewSet(viewsets.ViewSet):
 
             return self.make_app_response(session, light_app)
 
-    @site_perm_required('sysapi:manage:light-applications')
+    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(query_serializer=slzs.LightAppDeleteSLZ)
     def delete(self, request):
         """软删除轻应用"""
@@ -1010,7 +997,7 @@ class LightAppViewSet(viewsets.ViewSet):
 
         return self.make_feedback_response(LightApplicationViewSetErrorCode.SUCCESS, data={"count": 1})
 
-    @site_perm_required('sysapi:manage:light-applications')
+    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(request_body=slzs.LightAppEditSLZ)
     def edit(self, request):
         """修改轻应用"""
@@ -1053,7 +1040,7 @@ class LightAppViewSet(viewsets.ViewSet):
 
             return self.make_app_response(session, app)
 
-    @site_perm_required('sysapi:manage:light-applications')
+    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(query_serializer=slzs.LightAppQuerySLZ)
     def query(self, request):
         """查询轻应用"""
@@ -1158,13 +1145,14 @@ class ApplicationLogoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Viewset for managing application's Logo"""
 
     serializer_class = slzs.ApplicationLogoSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
 
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def retrieve(self, request, code):
         """查看应用 Logo 相关信息"""
         serializer = slzs.ApplicationLogoSLZ(instance=self.get_application())
         return Response(serializer.data)
 
+    @perm_classes([application_perm_class(AppAction.EDIT_BASIC_INFO)], policy='merge')
     def update(self, request, code):
         """修改应用 Logo"""
         application = self.get_application()
@@ -1175,7 +1163,7 @@ class ApplicationLogoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class SysAppViewSet(viewsets.ViewSet):
-    @site_perm_required('sysapi:manage:applications')
+    @site_perm_required(SiteAction.SYSAPI_MANAGE_APPLICATIONS)
     @swagger_auto_schema(request_body=slzs.SysThirdPartyApplicationSLZ, tags=["创建第三方(外链)应用"])
     def create_sys_third_app(self, request, sys_id):
         """给特定系统提供的创建第三方应用的 API, 应用ID 必现以系统ID为前缀"""

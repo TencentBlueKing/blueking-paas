@@ -27,6 +27,7 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from svn.common import SvnException
 
+from paasng.accessories.iam.helpers import add_role_members
 from paasng.dev_resources.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.dev_resources.sourcectl.models import SvnRepository, VersionInfo
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
@@ -37,9 +38,7 @@ from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.templater import Templater
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import ApplicationMembership
 from tests.utils import mock
-from tests.utils.auth import create_user
 
 pytestmark = pytest.mark.django_db
 
@@ -158,7 +157,6 @@ class TestSvnAuth:
     @pytest.mark.parametrize(
         "username, role, added",
         [
-            ("foo", ApplicationRole.COLLABORATOR, False),
             ("bar", ApplicationRole.DEVELOPER, True),
             ("baz", ApplicationRole.ADMINISTRATOR, True),
         ],
@@ -172,8 +170,7 @@ class TestSvnAuth:
         mock_add_group = Mock(return_value={})
         authorization_manager = get_svn_authorization_manager(bk_app)
         with patch.object(authorization_manager.svn_client, 'add_group', mock_add_group):
-            new_user = create_user(username=username)
-            ApplicationMembership.objects.create(user=new_user, application=bk_app, role=role.value)
+            add_role_members(bk_app.code, role, username)
             authorization_manager.update_developers()
 
             assert mock_add_group.called

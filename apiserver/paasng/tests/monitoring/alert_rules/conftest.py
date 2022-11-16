@@ -94,7 +94,7 @@ def bk_app_init_rule_configs(bk_app):
             notice_group_name=notice_group_name,
         ),
         'notice/default_notice.yaml': j2_env.get_template('notice.yaml.j2').render(
-            notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developer_names()
+            notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developers()
         ),
     }
 
@@ -106,7 +106,7 @@ def cpu_usage_alert_rule_obj(bk_app):
         display_name='high_cpu_usage',
         enabled=True,
         threshold_expr='>= 0.8',
-        receivers=bk_app.get_developer_names(),
+        receivers=bk_app.get_developers(),
         application=bk_app,
         environment='stag',
         module=bk_app.get_default_module(),

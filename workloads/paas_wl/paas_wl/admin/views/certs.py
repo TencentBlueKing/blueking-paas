@@ -6,7 +6,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from paas_wl.networking.ingress.models import AppDomainSharedCert
 from paas_wl.networking.ingress.serializers import AppDomainSharedCertSLZ, UpdateAppDomainSharedCertSLZ
-from paas_wl.platform.applications.permissions import site_perm_class
+from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
 
 
 class AppDomainSharedCertsViewSet(ModelViewSet):
@@ -16,7 +16,7 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
     model = AppDomainSharedCert
     serializer_class = AppDomainSharedCertSLZ
     pagination_class = None
-    permission_classes = [site_perm_class("admin:manage:workloads")]
+    permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     queryset = AppDomainSharedCert.objects.all()
 
     @transaction.atomic

@@ -8,13 +8,13 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, mixins
 
 from paas_wl.admin.serializers.clusters import APIServerSLZ, ClusterRegisterRequestSLZ, ReadonlyClusterSLZ
 from paas_wl.cluster.models import APIServer, Cluster
-from paas_wl.platform.applications.permissions import site_perm_class
+from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
 
 
 class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
     queryset = Cluster.objects.all()
     serializer_class = ReadonlyClusterSLZ
-    permission_classes = [site_perm_class("admin:manage:workloads")]
+    permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     pagination_class = None
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['region', 'name', 'is_default']

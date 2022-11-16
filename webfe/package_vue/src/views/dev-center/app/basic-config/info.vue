@@ -38,7 +38,7 @@
                   <div class="preview">
                     <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
                   </div>
-                  <div class="preview-btn pl20">
+                  <div class="preview-btn pl20" v-if="canEditAppBasicInfo">
                     <template>
                       <div>
                         <bk-button
@@ -85,7 +85,7 @@
                 />
 
                 <div
-                  v-if="!isSmartApp"
+                  v-if="!isSmartApp && canEditAppBasicInfo"
                   class="action-box"
                 >
                   <template v-if="!isEdited">
@@ -673,8 +673,8 @@
             canViewSecret () {
                 return this.curAppInfo.role.name !== 'operator';
             },
-            couldEditAppName () {
-                return ['administrator', 'developer', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
+            canEditAppBasicInfo () {
+                return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
             },
             formRemoveValidated () {
                 return this.curAppInfo.application.code === this.formRemoveConfirmCode;

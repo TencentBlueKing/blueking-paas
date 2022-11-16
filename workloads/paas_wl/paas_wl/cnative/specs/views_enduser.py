@@ -15,7 +15,7 @@ from rest_framework.response import Response
 
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
-from paas_wl.platform.applications.permissions import application_perm_class
+from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.utils import username_to_id
 from paas_wl.platform.auth.views import BaseEndUserViewSet
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class MresViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """管理应用模型资源"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: AppModelResourceSerializer})
     def retrieve(self, request, code):
@@ -64,7 +64,7 @@ class MresViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """应用模型资源部署相关视图"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @cached_property
     def paginator(self):
@@ -193,7 +193,7 @@ class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 class MresStatusViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """应用模型资源状态相关视图"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={"200": MresStatusSLZ})
     def retrieve(self, request, code, module_name, environment):

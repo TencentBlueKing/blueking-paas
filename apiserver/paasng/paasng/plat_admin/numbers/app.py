@@ -25,17 +25,18 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import IntEnum
-from functools import lru_cache
+from functools import lru_cache, reduce
 from typing import Any, Collection, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
 from bkpaas_auth import get_user_by_user_id
-from bkpaas_auth.models import DatabaseUser, user_id_encoder
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.utils.translation import gettext as _
 from rest_framework.fields import get_attribute
 from sqlalchemy import func
 from sqlalchemy.orm import Query, Session
 
+from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
 from paasng.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.dev_resources.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.dev_resources.sourcectl.models import GitProject
@@ -44,8 +45,8 @@ from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names, get
 from paasng.dev_resources.sourcectl.svn.server_config import get_bksvn_config
 from paasng.plat_admin.system.constants import SimpleAppSource
 from paasng.plat_admin.system.legacy import LegacyAppNormalizer, query_concrete_apps
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.region.models import get_region
@@ -204,15 +205,15 @@ class DefaultAppDataBuilder(AppDataBuilder):
 
     def set_filter_developers(self, filter_developers: Collection[str]):
         """Set filter by developers"""
-        users = []
+        app_filters, app_ids = [], []
         for username in filter_developers:
-            user = DatabaseUser(settings.USER_TYPE, username=username)
-            users.append(user)
+            if f := ApplicationPermission().gen_develop_app_filters(username):
+                app_filters.append(f)
 
-        roles = {ApplicationRole.ADMINISTRATOR.value, ApplicationRole.DEVELOPER.value}
-        app_ids = ApplicationMembership.objects.filter(user__in=users, role__in=roles).values_list(
-            'application_id', flat=True
-        )
+        if app_filters:
+            filters = reduce(lambda x, y: x | y, app_filters)
+            app_ids = Application.objects.filter(filters).values_list('id', flat=True)
+
         # Enable filter flag
         self.filter_developers_enabled = True
         self.filter_developers_app_ids = set(app_ids)
@@ -252,7 +253,6 @@ class DefaultAppDataBuilder(AppDataBuilder):
                 source_location = ''
 
             creator = get_user_by_user_id(app.creator, username_only=True).username
-            developers = [u.username for u in app.get_developers()]
 
             pv, uv = self.get_pv_uv(app=app) if self.include_pv_uv else (0, 0)
 
@@ -275,7 +275,7 @@ class DefaultAppDataBuilder(AppDataBuilder):
                 source_location=source_location,
                 engine_enabled=engine_enabled,
                 creator=creator,
-                developers=developers,
+                developers=app.get_developers(),
                 # 市场信息
                 market_address=market_address,
                 market_tag=market_tag,

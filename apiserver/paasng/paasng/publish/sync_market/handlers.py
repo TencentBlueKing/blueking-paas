@@ -51,7 +51,6 @@ from paasng.publish.market.signals import product_create_or_update_by_operator
 from paasng.publish.sync_market.engine import RemoteAppManager
 from paasng.publish.sync_market.managers import AppDeveloperManger, AppManger, AppOpsManger, AppReleaseRecordManger
 from paasng.publish.sync_market.utils import run_required_db_console_config
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 try:
     from paasng.publish.sync_market.constant_ext import I18N_FIELDS_IN_CONSOLE
@@ -188,7 +187,6 @@ def sync_console_app_developers(application: Application, session: Session):
     # sync developers(开发者) to console
     try:
         developers = application.get_developers()
-        developers = [get_username_by_bkpaas_user_id(developer) for developer in developers]
         AppDeveloperManger(session).update_developers(application.code, developers)
     except Exception:
         logger.exception(u"同步开发者信息到桌面失败！")
@@ -198,7 +196,6 @@ def sync_console_app_devopses(application: Application, session: Session):
     # sync devops(运营人员) to console
     try:
         devopses = application.get_devopses()
-        devopses = [get_username_by_bkpaas_user_id(devops) for devops in devopses]
         AppOpsManger(session).update_ops(application.code, devopses)
     except NotImplementedError:
         logger.info('op role is not defined, skip synchronization')

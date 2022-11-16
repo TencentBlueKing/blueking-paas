@@ -36,6 +36,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from svn.common import SvnException
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.constants import FunctionType
 from paasng.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.accounts.oauth.utils import get_backend
@@ -196,7 +197,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
 
 
 class GitRepoViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def handle_exception(self, exc):
         logger.exception("unable to fetch repo list: %s", exc)
@@ -250,7 +251,7 @@ class AccountAllowAppSourceControlView(APIView):
 class ModuleSourceProvidersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """获取某个应用模块可用的源码仓库"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def list(self, request, code, module_name):
         module = self.get_module_via_path()
@@ -264,7 +265,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
     """管理某个应用模块的源码包"""
 
     serializer_class = slzs.SourcePackageSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['version', 'package_name', 'package_size']
     ordering = ('-created',)
@@ -314,7 +315,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
 class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """重新生成应用模块初始化代码，并提供下载地址"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def download(self, request, code, module_name):
         application = self.get_application()
@@ -339,7 +340,7 @@ class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """源码仓库控制"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(request_body=slzs.RepoBackendModifySLZ(), tags=["sourcectl"])
     def modify(self, request, code, module_name):
@@ -390,7 +391,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def get_repo_branches(self, request, code, module_name):
         """获取蓝鲸应用的代码分支信息"""
@@ -483,7 +484,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def post(self, request, code, module_name):
         """
@@ -522,7 +523,7 @@ class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):
 class RevisionInspectViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """This ViewSet provides a service for querying details of deployable versions"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def retrieve(self, request, code, module_name, smart_revision):
         module = self.get_module_via_path()

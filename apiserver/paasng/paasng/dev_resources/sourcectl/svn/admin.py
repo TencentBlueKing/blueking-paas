@@ -31,7 +31,6 @@ from django.utils.translation import gettext as _
 
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
 from paasng.dev_resources.sourcectl.svn.server_config import get_bksvn_config
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 from .exceptions import SVNServiceError
 
@@ -288,9 +287,7 @@ class SvnApplicationAuthorization:
     def update_developers(self):
         """更新开发者"""
         developers = self.application.get_developers()
-        developers = [get_username_by_bkpaas_user_id(developer) for developer in developers]
-        developers = ";".join(developers)
-        self.svn_client.add_group(self.group_name, developers=developers)
+        self.svn_client.add_group(self.group_name, developers=";".join(developers))
 
     def set_paas_user_root_privilege(self, path, read=True, write=False):
         """针对根路径的平台账户权限设置

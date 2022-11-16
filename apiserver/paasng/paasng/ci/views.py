@@ -23,6 +23,7 @@ from rest_framework import viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.ci import serializers
 from paasng.ci.models import CIAtomJob
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 class CIJobViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """获取 CI 任务"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @property
     def paginator(self):

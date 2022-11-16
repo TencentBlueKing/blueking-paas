@@ -27,7 +27,6 @@ from bkapi_client_core.exceptions import BKAPIError, RequestException
 from django.conf import settings
 from typing_extensions import Protocol
 
-from paasng.accounts.utils import id_to_username
 from paasng.platform.applications.models import Application
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 
@@ -191,8 +190,7 @@ class PluginDefaultAPIGateway:
 
     def _get_maintainers(self) -> List[str]:
         """Get plugin's maintainer list"""
-        users = self.plugin_app.get_developers()
-        return [id_to_username(u) for u in users]
+        return self.plugin_app.get_developers()
 
     def _get_bkapi_auth_header(self) -> str:
         """Get the authorization header which is required for using bk-api client"""

@@ -28,6 +28,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts import serializers
 from paasng.accounts.models import AccountFeatureFlag, Oauth2TokenHolder, UserProfile, make_verifier
 from paasng.accounts.oauth.backends import get_bkapp_oauth_backend_cls
@@ -122,7 +123,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     以用户身份申请 BKApp 的 AccessToken
     """
 
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def fetch_paasv3cli_token(self, request):
         """获取代表 paasv3cli 和用户身份的 AccessToken, 暂不考虑 refresh token"""

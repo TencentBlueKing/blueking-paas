@@ -30,10 +30,11 @@ from paasng.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.dev_resources.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from paasng.extensions.declarative.handlers import get_desc_handler
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.models import Application
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.operations.constant import OperationType
 from paasng.platform.operations.models import Operation
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, generate_random_string
@@ -75,22 +76,17 @@ class TestMembershipViewset:
     def test_list_with_another_user(self, api_client, bk_app, bk_user, another_user, role, status, ok):
         url = reverse("api.applications.members", kwargs=dict(code=bk_app.code))
         if role is not ...:
-            G(
-                ApplicationMembership,
-                application=bk_app,
-                user=another_user.pk,
-                role=role.value,
-                region=settings.DEFAULT_REGION_NAME,
-            )
+            from paasng.accessories.iam.helpers import add_role_members
+
+            add_role_members(bk_app.code, role, get_username_by_bkpaas_user_id(another_user.pk))
 
         api_client.force_authenticate(user=another_user)
         response = api_client.get(url)
         assert response.status_code == status
         if ok:
             assert len(response.data['results']) == 2
-            membership = response.data['results'][0]
             test = {
-                m['user']["username"]: dict(code=membership["application"]["code"], role=m["role"]["id"])
+                m['user']["username"]: dict(code=bk_app.code, role=m["roles"][0]["id"])
                 for m in response.data["results"]
             }
             assert test[another_user.username]["code"] == bk_app.code
@@ -99,9 +95,6 @@ class TestMembershipViewset:
     @pytest.mark.parametrize(
         "role, request_user_idx, to_create_user_idx, status",
         [
-            # duplicated case
-            (ApplicationRole.ADMINISTRATOR, 0, 0, 400),
-            (ApplicationRole.DEVELOPER, 0, 0, 400),
             # success case
             (ApplicationRole.ADMINISTRATOR, 0, 1, 201),
             (ApplicationRole.DEVELOPER, 0, 1, 201),
@@ -122,7 +115,7 @@ class TestMembershipViewset:
 
         url = reverse("api.applications.members", kwargs=dict(code=bk_app.code))
         role_value = role.value if isinstance(role, ApplicationRole) else 'invalid_role'
-        data = [dict(user=dict(username=new_user.username, id=new_user.pk), role=dict(id=role_value))]
+        data = [{'user': {'username': new_user.username, 'id': new_user.pk}, 'roles': [{'id': role_value}]}]
 
         api_client.force_authenticate(cur_user)
         response = api_client.post(url, data=data)
@@ -139,21 +132,14 @@ class TestMembershipViewset:
             (ApplicationRole.DEVELOPER, 1, 0, 403),
             (ApplicationRole.ADMINISTRATOR, 1, 1, 204),
             (ApplicationRole.DEVELOPER, 1, 1, 403),
-            # user not found in memberships
-            (ApplicationRole.ADMINISTRATOR, 0, 2, 404),
-            (ApplicationRole.ADMINISTRATOR, 1, 2, 404),
         ],
     )
     def test_delete(
         self, api_client, bk_app, bk_user, another_user, another_user_role, request_user_idx, be_deleted_idx, status
     ):
-        G(
-            ApplicationMembership,
-            application=bk_app,
-            user=another_user.pk,
-            role=another_user_role.value,
-            region=settings.DEFAULT_REGION_NAME,
-        )
+        from paasng.accessories.iam.helpers import add_role_members, fetch_application_members
+
+        add_role_members(bk_app.code, another_user_role, get_username_by_bkpaas_user_id(another_user.pk))
         user_choices = [bk_user, another_user, create_user("dummy")]
         cur_user = user_choices[request_user_idx]
         user_to_delete = user_choices[be_deleted_idx]
@@ -165,9 +151,9 @@ class TestMembershipViewset:
         assert response.status_code == status
 
         if status == 204:
-            assert bk_app.applicationmembership_set.count() == 1
+            assert len(fetch_application_members(bk_app.code)) == 1
         else:
-            assert bk_app.applicationmembership_set.count() == 2
+            assert len(fetch_application_members(bk_app.code)) == 2
 
     @pytest.mark.parametrize(
         "another_user_role, request_user_idx, status, code",
@@ -179,13 +165,9 @@ class TestMembershipViewset:
         ],
     )
     def test_level(self, api_client, bk_app, bk_user, another_user, another_user_role, request_user_idx, status, code):
-        G(
-            ApplicationMembership,
-            application=bk_app,
-            user=another_user.pk,
-            role=another_user_role.value,
-            region=settings.DEFAULT_REGION_NAME,
-        )
+        from paasng.accessories.iam.helpers import add_role_members, fetch_application_members
+
+        add_role_members(bk_app.code, another_user_role, get_username_by_bkpaas_user_id(another_user.pk))
         user_choices = [bk_user, another_user, create_user("dummy")]
         cur_user = user_choices[request_user_idx]
 
@@ -195,29 +177,24 @@ class TestMembershipViewset:
         assert response.status_code == status
 
         user_count = 1 if status == 204 else 2
-        assert bk_app.applicationmembership_set.count() == user_count
+        assert len(fetch_application_members(bk_app.code)) == user_count
 
         if code is not ...:
             assert response.json()["code"] == code
 
     def test_level_last_admin(self, api_client, bk_app, bk_user, another_user):
-        G(
-            ApplicationMembership,
-            application=bk_app,
-            user=another_user.pk,
-            role=ApplicationRole.ADMINISTRATOR.value,
-            region=settings.DEFAULT_REGION_NAME,
-        )
-        ApplicationMembership.objects.filter(application=bk_app, user=bk_user.pk).update(
-            role=ApplicationRole.DEVELOPER.value
-        )
+        from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+
+        add_role_members(bk_app.code, ApplicationRole.ADMINISTRATOR, get_username_by_bkpaas_user_id(another_user.pk))
+        remove_user_all_roles(bk_app.code, get_username_by_bkpaas_user_id(bk_user.pk))
+        add_role_members(bk_app.code, ApplicationRole.DEVELOPER, get_username_by_bkpaas_user_id(bk_user.pk))
         cur_user = another_user
 
         url = reverse("api.applications.members.leave", kwargs=dict(code=bk_app.code))
         api_client.force_authenticate(cur_user)
         response = api_client.post(url)
         assert response.status_code == 400
-        assert bk_app.applicationmembership_set.count() == 2
+        assert len(fetch_application_members(bk_app.code)) == 2
         assert response.json()["code"] == "MEMBERSHIP_DELETE_FAILED"
 
 

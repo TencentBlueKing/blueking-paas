@@ -9,25 +9,24 @@
         :data="memberships">
         <bk-table-column type="index" label="序列" align="center" width="60"></bk-table-column>
         <bk-table-column label="成员姓名" prop="user.username" width="120"></bk-table-column>
-        <bk-table-column label="角色" prop="role.id" width="120">
+        <bk-table-column label="角色" width="300">
             <template slot-scope="props">
-                    <span>$[ roleIdToRole(props.row.role.id) ]</span>
+                <div v-for="role in props.row.roles" class="permission-label">
+                    <span>$[ roleIdToRole(role.id) ]</span>
+                </div>
             </template>
         </bk-table-column>
-        <bk-table-column label="权限" width="600">
+        <bk-table-column label="权限" width="450">
             <template slot-scope="props">
                 <div v-for="permission in PERMISSION_LIST" class="permission-label"
-                :class="ROLE_PERMISSION_SPEC[props.row.role.id].indexOf(permission) !== -1 ?'ok' : 'fail'"
-                >
+                :class="hasPerm(props.row.roles, permission) ? 'ok' : 'fail'">
                     <span>$[ permission ]</span>
                 </div>
-                <bk-tag></bk-tag>
             </template>
         </bk-table-column>
-
         <bk-table-column label="操作">
             <template slot-scope="props">
-                <bk-button theme="primary" text :disabled="props.row.status === '创建中'" @click="handleEdit(props.row.user, props.row.role)">更换角色</bk-button>
+                <bk-button theme="primary" text :disabled="props.row.status === '创建中'" @click="handleEdit(props.row.user)">更换角色</bk-button>
                 <bk-button theme="primary" text @click="handleDelete(props.row.user)">删除成员</bk-button>
             </template>
         </bk-table-column>
@@ -55,7 +54,7 @@
                         </bk-radio-group>
                     </bk-form-item>
                     <bk-form-item label="权限列表">
-                        <div v-for="permission in PERMISSION_LIST" class="permission-label" 
+                        <div v-for="permission in PERMISSION_LIST" class="permission-label"
                         :class="ROLE_PERMISSION_SPEC[form.roleId].indexOf(permission) !== -1 ?'ok' : 'fail'"
                         >
                             <span>$[ permission ]</span>
@@ -86,9 +85,18 @@
         return undefined
     }
 
+    const hasPerm = function (roles, permission) {
+        for (role of roles) {
+            if (ROLE_PERMISSION_SPEC[role.id].indexOf(permission) !== -1) {
+                return true
+            }
+        }
+        return false
+    }
+
     const URLRouter = {
-        list: decodeURI("{% url 'admin.applications.detail.base_info.memberships.api' application.code %}"),
-        detail: decodeURI("{% url 'admin.applications.detail.base_info.memberships.api' application.code %}"),
+        list: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+        detail: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
         }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -139,9 +147,9 @@
                         this.memberships = this.memberships.filter(x => x.user !== user)
                     })
                 },
-                handleEdit: function (user, role) {
+                handleEdit: function (user) {
                     this.form.username = user.username
-                    this.form.roleId = role.id
+                    this.form.roleId = 3
                     this.form.type = 'update'
 
                     this.dialogVisible = true

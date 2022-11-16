@@ -74,14 +74,9 @@ class SentryProvider(BaseProvider):
     @staticmethod
     def _get_developers(application_id):
         from paasng.platform.applications.models import Application
-        from paasng.utils.basic import get_username_by_bkpaas_user_id
 
         application = Application.objects.get(id=application_id)
-        developers = application.get_developers()
-
-        if not developers:
-            return []
-        return [get_username_by_bkpaas_user_id(developer) for developer in developers]
+        return application.get_developers()
 
     # ============ crud ============
 

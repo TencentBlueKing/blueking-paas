@@ -32,7 +32,7 @@ class AlertRuleManager:
     def __init__(self, application: Application):
         self.application = application
         self.app_code = self.application.code
-        self.default_receivers = application.get_developer_names()
+        self.default_receivers = application.get_developers()
         self.config_generator = AppRuleConfigGenerator(self.application, self.default_receivers)
 
     def init_rules(self):

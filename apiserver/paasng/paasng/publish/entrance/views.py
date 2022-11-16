@@ -25,6 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -45,7 +46,7 @@ from paasng.publish.market.utils import ModuleEnvAvailableAddressHelper
 class ExposedURLTypeViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """管理模块访问地址类型"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def update(self, request, code, module_name):
         """更新模块由平台提供的访问地址的类型"""
@@ -69,7 +70,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
     -   由用户设置的独立域名地址(与模块环境存在 1vN 关系)
     """
 
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(responses={'200': ApplicationAvailableEntranceSLZ()}, tags=["访问入口"])
     def list_module_default_entrances(self, request, code, module_name):
@@ -149,7 +150,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
 
 
 class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(responses={'200': RootDoaminSLZ()}, tags=["访问入口"])
     def get(self, request, code, module_name):
@@ -182,7 +183,7 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModulePreferredRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def update(self, request, code, module_name):
         """更新模块的偏好根域"""

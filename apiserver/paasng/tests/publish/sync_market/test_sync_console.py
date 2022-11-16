@@ -17,20 +17,16 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-"""测试同步信息到桌面的相关方法
-"""
 import logging
 
 import pytest
-from bkpaas_auth.models import user_id_encoder
-from django.conf import settings
 from django_dynamic_fixture import G
 
+from paasng.accessories.iam.helpers import add_role_members, delete_role_members
 from paasng.engine.constants import JobStatus
 from paasng.engine.models.deployment import Deployment
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
-from paasng.platform.applications.models import ApplicationMembership
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.publish.market.models import Product
@@ -58,7 +54,7 @@ logger = logging.getLogger(__name__)
 class TestAppMembers:
     @pytest.fixture(autouse=True)
     def init_data(self, bk_user, create_custom_app):
-        init_users = ['user1', 'user2', 'user3']
+        init_users = [bk_user.username, 'user1', 'user2', 'user3']
         app = create_custom_app(bk_user, developers=init_users, ops=init_users)
         # 创建应用后，将应用注册到 console
         register_application_with_default(app.region, app.code, app.name)
@@ -82,11 +78,9 @@ class TestAppMembers:
         sync_users = set(init_users)
         sync_users.remove(delete_user)
 
-        # 删除开发者
-        membership = ApplicationMembership.objects.filter(
-            application=app, user=user_id_encoder.encode(settings.USER_TYPE, delete_user)
-        )
-        membership.delete()
+        # 删除开发者与运营者
+        delete_role_members(app.code, ApplicationRole.DEVELOPER, delete_user)
+        delete_role_members(app.code, ApplicationRole.OPERATOR, delete_user)
 
         with console_db.session_scope() as session:
             # 删除后同步到桌面
@@ -104,15 +98,9 @@ class TestAppMembers:
         add_user = 'user4'
         sync_users = set(init_users)
         sync_users.add(add_user)
-        ApplicationMembership.objects.update_or_create(
-            application=app,
-            user=user_id_encoder.encode(settings.USER_TYPE, add_user),
-        )
-        ApplicationMembership.objects.update_or_create(
-            application=app,
-            user=user_id_encoder.encode(settings.USER_TYPE, add_user),
-            role=ApplicationRole.OPERATOR.value,
-        )
+        # 将用户添加为开发者，运营者
+        add_role_members(app.code, ApplicationRole.DEVELOPER, add_user)
+        add_role_members(app.code, ApplicationRole.OPERATOR, add_user)
 
         with console_db.session_scope() as session:
             # 添加后后同步到桌面

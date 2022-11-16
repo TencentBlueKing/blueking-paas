@@ -338,6 +338,7 @@
                 <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸 PaaS Admin</a>
             </div>
             <ul class="nav navbar-nav">
+                <!-- TODO 考虑优化下，如果没有对应的管理权限，直接不展示 -->
                 <li><a href="{% url 'admin.front_page' %}">首页</a></li>
                 <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
                 <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>

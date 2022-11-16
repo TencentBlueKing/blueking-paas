@@ -18,8 +18,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.extensions.bk_plugins.models import BkPluginDistributor, BkPluginTag
 from paasng.plat_admin.admin42.serializers.bk_plugins import BkPluginDistributorSLZ, BKPluginTagSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -29,8 +32,7 @@ class BKPluginTagManageView(GenericTemplateView):
     """平台服务管理-插件分类配置"""
 
     template_name = "admin42/configuration/bk_plugin_tag.html"
-    queryset = BkPluginTag.objects.all()
-    serializer_class = BKPluginTagSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "插件分类配置"
 
 
@@ -39,14 +41,14 @@ class BKPluginTagView(CreateModelMixin, DestroyModelMixin, ListModelMixin, Updat
 
     queryset = BkPluginTag.objects.all()
     serializer_class = BKPluginTagSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
 
 
 class BKPluginDistributorsManageView(GenericTemplateView):
     """平台服务管理-插件使用方配置"""
 
     template_name = "admin42/configuration/bk_plugin_distributor.html"
-    queryset = BkPluginDistributor.objects.all()
-    serializer_class = BkPluginDistributorSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "插件使用方配置"
 
 
@@ -55,3 +57,4 @@ class BKPluginDistributorsView(CreateModelMixin, DestroyModelMixin, ListModelMix
 
     queryset = BkPluginDistributor.objects.all()
     serializer_class = BkPluginDistributorSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]

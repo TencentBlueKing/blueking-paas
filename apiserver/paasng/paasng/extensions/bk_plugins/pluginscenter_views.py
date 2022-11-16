@@ -29,7 +29,8 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accounts.permissions.global_site import SitePermission
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import AppEnvName
 from paasng.engine.deploy.infras import DeploymentCoordinator
@@ -55,7 +56,7 @@ from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.utils.error_codes import error_codes
 
 # TODO: 确认具体权限
-API_PERMISSION_CLASSES = [IsAuthenticated, SitePermission("sysapi:manage:applications")]
+API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
 
 
 class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

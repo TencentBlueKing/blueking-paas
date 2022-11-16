@@ -33,6 +33,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.constants import AccountFeatureFlag as AFF
 from paasng.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.accounts.permissions.application import application_perm_class
@@ -189,7 +190,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
     """管理某个 S-Mart 应用的源码包"""
 
     serializer_class = SourcePackageSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     search_fields = ['version', 'package_name', 'package_size']
     ordering = ('-created',)
     ordering_fields = ('version', 'package_name', 'package_size', 'updated')

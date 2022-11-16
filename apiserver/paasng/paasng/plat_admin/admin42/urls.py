@@ -304,16 +304,14 @@ urlpatterns = [
     # 应用详情-成员管理
     url(
         r'^applications/(?P<code>[^/]+)/base_info/memberships/$',
-        applications.ApplicationMembershipsManageView.as_view(),
-        name="admin.applications.detail.base_info.memberships",
+        applications.ApplicationMembersManageView.as_view(),
+        name="admin.applications.detail.base_info.members",
     ),
     # 应用详情-成员管理 API
     url(
         r'^api/applications/(?P<code>[^/]+)/base_info/memberships/$',
-        applications.ApplicationMembershipsManageViewSet.as_view(
-            {'get': 'list', 'post': 'update', 'delete': 'destroy'}
-        ),
-        name='admin.applications.detail.base_info.memberships.api',
+        applications.ApplicationMembersManageViewSet.as_view({'get': 'list', 'post': 'update', 'delete': 'destroy'}),
+        name='admin.applications.detail.base_info.members.api',
     ),
     # 应用详情-特性管理
     url(

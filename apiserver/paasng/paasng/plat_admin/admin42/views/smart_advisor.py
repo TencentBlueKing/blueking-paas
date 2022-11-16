@@ -18,9 +18,12 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
 from paasng.accessories.smart_advisor.models import DeployFailurePattern, DocumentaryLink
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.smart_advisor import DeployFailurePatternSLZ, DocumentaryLinkSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 
@@ -31,6 +34,7 @@ class DocumentaryLinkView(GenericTemplateView):
     template_name = "admin42/platformmgr/documentary_link.html"
     queryset = DocumentaryLink.objects.all()
     serializer_class = DocumentaryLinkSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "文档管理"
 
     def get_context_data(self, **kwargs):
@@ -47,6 +51,7 @@ class DocumentaryLinkManageViewSet(
     """智能顾问-文档管理API"""
 
     serializer_class = DocumentaryLinkSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     queryset = DocumentaryLink.objects.all()
 
 
@@ -56,6 +61,7 @@ class DeployFailurePatternView(GenericTemplateView):
     template_name = "admin42/platformmgr/deploy_failure_tips.html"
     queryset = DeployFailurePattern.objects.all()
     serializer_class = DeployFailurePatternSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "失败提示管理"
 
     def get_context_data(self, **kwargs):
@@ -72,4 +78,5 @@ class DeployFailurePatternManageViewSet(
     """智能顾问-失败提示管理API"""
 
     serializer_class = DeployFailurePatternSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     queryset = DeployFailurePattern.objects.all()

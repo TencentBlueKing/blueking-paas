@@ -29,7 +29,9 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
@@ -81,13 +83,13 @@ class FilterPluginsMixin:
 class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for bk_plugin type applications"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request):
         """查询所有的蓝鲸插件"""
         plugins, paginator = self.filter_plugins(request)
         return paginator.get_paginated_response(serializers.BkPluginSLZ(plugins, many=True).data)
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def retrieve(self, request, code):
         """查询某个蓝鲸插件的详细信息"""
         plugin = get_plugin_or_404(code)
@@ -97,7 +99,7 @@ class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for batch operations on bk_plugin type applications"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_detailed(self, request):
         """批量查询蓝鲸插件的详细信息（包含各环境部署状态等）"""
         plugins, paginator = self.filter_plugins(request)
@@ -116,7 +118,7 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginLogsViewset(viewsets.ViewSet):
     """Viewset for querying bk_plugin's logs"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
         serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
@@ -140,7 +142,7 @@ def get_plugin_or_404(code: str) -> BkPlugin:
 class SysBkPluginTagsViewSet(viewsets.ViewSet):
     """Viewset for querying bk_plugin's tags"""
 
-    @site_perm_required('sysapi:read:applications')
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request):
         """View all plugin tags in the system, the default is based on "created time (from old to new)"""
         tags = BkPluginTag.objects.all().order_by('created')
@@ -153,7 +155,7 @@ class SysBkPluginTagsViewSet(viewsets.ViewSet):
 class BkPluginProfileViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Viewset for managing BkPlugin's profile"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(tags=["bk_plugin"], responses={200: serializers.BkPluginProfileSLZ})
     def retrieve(self, request, code):

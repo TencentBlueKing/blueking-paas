@@ -87,7 +87,6 @@
                         'appSummary', // 概览
                         'appEngine', // 应用引擎
                         'appServices', // 增强服务
-                        'appPermissions', // 权限管理
                         'appMarketing', // 市场推广
                         'appConfigs', // 基本设置
                         'moduleManage', // 模块管理
@@ -103,8 +102,7 @@
                         'appConfigs', // 基本设置
                         'appAnalysis', // 数据统计
                         'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appCloudAPI' // 云 API 权限管理
+                        'docuManagement' // 文档管理
                     ]
                 }
             };
@@ -202,6 +200,11 @@
                                 nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
                             }
                         });
+                    }
+
+                    // 当角色为开发者时，过滤部分功能入口
+                    if (this.curAppInfo.role.name === 'developer') {
+                        navTree = navTree.filter(nav => this.roleAllowRouters['developer'].includes(nav.name));
                     }
 
                     // 当角色运营者时，过滤部分功能入口

@@ -26,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_403_FORBIDDEN
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tags import get_dynamic_tag
@@ -52,7 +53,7 @@ logger = logging.getLogger(__name__)
 class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [
         IsAuthenticated,
-        application_perm_class("manage_processes"),
+        application_perm_class(AppAction.BASIC_DEVELOP),
     ]
 
     @swagger_auto_schema(

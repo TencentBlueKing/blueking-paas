@@ -21,10 +21,12 @@ from django.db.transaction import atomic
 from django.http.response import Http404
 from django.utils.translation import gettext as _
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
 from paasng.dev_resources.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
 from paasng.dev_resources.servicehub.remote.exceptions import UnsupportedOperationError
@@ -36,7 +38,6 @@ from paasng.dev_resources.services.providers import (
 )
 from paasng.plat_admin.admin42.serializers.services import (
     PlanObjSLZ,
-    PlanSLZ,
     PlanWithPreCreatedInstanceSLZ,
     PreCreatedInstanceSLZ,
     ServiceInstanceBindInfoSLZ,
@@ -53,6 +54,7 @@ class ApplicationServicesView(ApplicationDetailBaseView):
     """Application应用增强服务页"""
 
     template_name = "admin42/applications/detail/services.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "增强服务"
 
     def get_context_data(self, **kwargs):
@@ -84,8 +86,8 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
 
     schema = None
     serializer_class = ServiceInstanceBindInfoSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
-    @site_perm_required("admin:read:application")
     def list(self, request, code):
         service_instance_list = []
         for module in self.get_application().modules.all():
@@ -106,7 +108,6 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
                     )
         return Response(ServiceInstanceBindInfoSLZ(service_instance_list, many=True).data)
 
-    @site_perm_required("admin:modify:application")
     @atomic
     def provision_instance(self, request, code, module_name, environment, service_id):
         module = self.get_module_via_path()
@@ -120,7 +121,6 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
         rel.provision()
         return Response(status=status.HTTP_201_CREATED)
 
-    @site_perm_required("admin:modify:application")
     @atomic
     def recycle_resource(self, request, code, module_name, service_id, instance_id):
         module = self.get_module_via_path()
@@ -141,9 +141,8 @@ class PlatformServicesView(GenericTemplateView):
     """平台增强服务管理-增强服务页"""
 
     template_name = "admin42/platformmgr/services.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "服务管理"
-    serializer_class = ServiceObjSLZ
-    queryset = Service.objects.order_by("region").all()
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
@@ -163,6 +162,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
     """平台增强服务管理-服务管理API"""
 
     schema = None
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def create(self, request, *args, **kwargs):
         slz = ServiceObjSLZ(data=request.data)
@@ -204,9 +204,8 @@ class PlatformPlanView(GenericTemplateView):
     """平台增强服务管理-方案管理页"""
 
     template_name = "admin42/platformmgr/plans.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "方案管理"
-    serializer_class = PlanSLZ
-    queryset = Plan.objects.order_by("service__region").all()
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
@@ -228,6 +227,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
     """平台增强服务管理-方案管理API"""
 
     schema = None
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def create(self, request, service_id):
         slz = PlanObjSLZ(data=request.data)
@@ -274,8 +274,9 @@ class PreCreatedInstanceView(GenericTemplateView):
     """平台增强服务管理-方案管理页"""
 
     template_name = "admin42/platformmgr/instance_pools.html"
-    name = "资源池管理"
     serializer_class = PlanWithPreCreatedInstanceSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    name = "资源池管理"
 
     def get_queryset(self):
         return Plan.objects.filter(
@@ -302,6 +303,7 @@ class PreCreatedInstanceView(GenericTemplateView):
 class PreCreatedInstanceManageViewSet(ModelViewSet):
     schema = None
     serializer_class = PreCreatedInstanceSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     lookup_field = "uuid"
 
     def get_plan(self):

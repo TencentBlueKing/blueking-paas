@@ -26,8 +26,6 @@ from dataclasses import asdict
 import pymysql
 import pytest
 import sqlalchemy as sa
-from bkpaas_auth.core.token import LoginToken
-from bkpaas_auth.models import User
 from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
 from django.core.management import call_command
@@ -44,7 +42,7 @@ from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient,
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.extensions.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.platform.core.storages.utils import SADBManager
@@ -284,6 +282,48 @@ def bk_user(request):
     """Generate a random user"""
     user = create_user()
     return user
+
+
+@pytest.fixture(autouse=True)
+def mock_iam():
+    def mock_user_has_app_action_perm(user, application, action) -> bool:
+        from paasng.accessories.iam.constants import APP_DEFAULT_ROLES
+        from paasng.accessories.iam.helpers import fetch_user_roles
+        from paasng.accessories.iam.utils import get_app_actions_by_role
+        from paasng.utils.basic import get_username_by_bkpaas_user_id
+
+        user_roles = fetch_user_roles(application.code, get_username_by_bkpaas_user_id(user.pk))
+        for role in APP_DEFAULT_ROLES:
+            if role in user_roles and action in get_app_actions_by_role(role):
+                return True
+        return False
+
+    from tests.utils.mocks.iam import StubBKIAMClient
+    from tests.utils.mocks.permissions import StubApplicationPermission
+
+    with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
+        'paasng.accessories.iam.helpers.BKIAMClient',
+        new=StubBKIAMClient,
+    ), mock.patch('paasng.platform.applications.handlers.BKIAMClient', new=StubBKIAMClient), mock.patch(
+        'paasng.platform.mgrlegacy.app_migrations.basic.BKIAMClient',
+        new=StubBKIAMClient,
+    ), mock.patch(
+        'paasng.accessories.iam.helpers.IAM_CLI',
+        new=StubBKIAMClient(),
+    ), mock.patch(
+        'paasng.accounts.permissions.application.user_has_app_action_perm',
+        new=mock_user_has_app_action_perm,
+    ), mock.patch(
+        'paasng.extensions.declarative.application.controller.user_has_app_action_perm',
+        new=mock_user_has_app_action_perm,
+    ), mock.patch(
+        'paasng.platform.applications.models.ApplicationPermission',
+        new=StubApplicationPermission,
+    ), mock.patch(
+        'paasng.plat_admin.numbers.app.ApplicationPermission',
+        new=StubApplicationPermission,
+    ):
+        yield
 
 
 @pytest.fixture
@@ -590,22 +630,19 @@ def create_custom_app():
         if 'init_default_module' in kwargs:
             create_default_module(application, source_origin=kwargs.get('source_origin', SourceOrigin.BK_LESS_CODE))
 
+        from tests.utils.helpers import register_iam_after_create_application
+
+        register_iam_after_create_application(application)
+
         # 添加开发者
+        from paasng.accessories.iam.helpers import add_role_members
+
         if 'developers' in kwargs and isinstance(kwargs['developers'], list):
-            for developer in kwargs['developers']:
-                # 如果开发传的是字符串，需要转成 User 对象
-                if isinstance(developer, str):
-                    token = LoginToken(login_token='any_token', expires_in=86400)
-                    developer = User(token=token, provider_type=settings.USER_TYPE, username=developer)
-                G(ApplicationMembership, application=application, user=developer.pk)
+            add_role_members(application.code, ApplicationRole.DEVELOPER, kwargs['developers'])
         # 添加运营者
         if 'ops' in kwargs and isinstance(kwargs['ops'], list):
-            for op in kwargs['ops']:
-                # 如果开发传的是字符串，需要转成 User 对象
-                if isinstance(op, str):
-                    token = LoginToken(login_token='any_token', expires_in=86400)
-                    op = User(token=token, provider_type=settings.USER_TYPE, username=op)
-                G(ApplicationMembership, application=application, user=op.pk, role=ApplicationRole.OPERATOR.value)
+            add_role_members(application.code, ApplicationRole.OPERATOR, kwargs['ops'])
+
         return application
 
     return create

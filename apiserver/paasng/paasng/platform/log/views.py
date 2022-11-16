@@ -31,7 +31,9 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.metrics import LOG_SEARCH_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -47,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 class LogBaseAPIView(APIView, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('view_logs')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @staticmethod
     def get_extra_params_by_log_type(log_type: LogType) -> dict:
@@ -317,10 +319,10 @@ class IngressLogAPIView(LogBaseAPIView):
 class SysStructuredLogAPIView(StructuredLogAPIView):
     permission_classes: List = []
 
-    @site_perm_required("sysapi:read:applications")
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def get(self, request, code, module_name):
         return self.handle(request, code, module_name)
 
-    @site_perm_required("sysapi:read:applications")
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def post(self, request, code, module_name):
         return self.handle(request, code, module_name)

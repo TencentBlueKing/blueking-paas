@@ -26,7 +26,7 @@ from rest_framework.request import Request
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 
-openapi_empty_schema = openapi.Schema(type='object')
+openapi_empty_schema = openapi.Schema(type=openapi.TYPE_OBJECT)
 openapi_empty_response = openapi.Response(_('操作成功后的空响应'), schema=openapi_empty_schema)
 
 

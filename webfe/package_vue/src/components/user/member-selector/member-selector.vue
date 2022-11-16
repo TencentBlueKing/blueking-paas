@@ -1,28 +1,35 @@
 <template>
-    <div :class="[memberClass, extCls]" @click.capture="handleClick">
-        <bk-tag-input
-            v-model="tags"
-            ref="tagInput"
-            :placeholder="defaultPlaceholder"
-            :disabled="disabled || isLoading"
-            :save-key="saveKey"
-            :display-key="displayKey"
-            :search-key="searchKey"
-            :has-delete-icon="hasDeleteIcon"
-            :max-data="maxData"
-            :max-result="maxResult"
-            :content-width="contentWidth"
-            :list="renderList"
-            :tag-tpl="tagTpl"
-            :tpl="tpl"
-            :filter-callback="filterCallback"
-            :tooltip-key="tooltipKey"
-            @change="change"
-            @select="select"
-            @remove="remove">
-        </bk-tag-input>
-        <img class="bk-member-loading" v-if="isLoading" src="./spinner.svg">
-    </div>
+  <div
+    :class="[memberClass, extCls]"
+    @click.capture="handleClick"
+  >
+    <bk-tag-input
+      ref="tagInput"
+      v-model="tags"
+      :placeholder="defaultPlaceholder"
+      :disabled="disabled || isLoading"
+      :save-key="saveKey"
+      :display-key="displayKey"
+      :search-key="searchKey"
+      :has-delete-icon="hasDeleteIcon"
+      :max-data="maxData"
+      :max-result="maxResult"
+      :content-width="contentWidth"
+      :list="renderList"
+      :tag-tpl="tagTpl"
+      :tpl="tpl"
+      :filter-callback="filterCallback"
+      :tooltip-key="tooltipKey"
+      @change="change"
+      @select="select"
+      @remove="remove"
+    />
+    <img
+      v-if="isLoading"
+      class="bk-member-loading"
+      src="./spinner.svg"
+    >
+  </div>
 </template>
 
 <script>
@@ -42,7 +49,7 @@
     }
 
     export default {
-        name: 'bk-member-selector',
+        name: 'BkMemberSelector',
         mixins: [locale.mixin, emitter],
         props: {
             placeholder: {

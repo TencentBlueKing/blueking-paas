@@ -98,6 +98,8 @@ class PluginRepoAccessor:
 
         :param smart_revision: 有名字的版本号，比如 master
         """
+        if ':' not in smart_revision:
+            return smart_revision
         version_type, version_name = smart_revision.split(":")
         commit = self.get_last_commit(self.project, version_name)
         return commit["id"]
@@ -190,6 +192,12 @@ class PluginRepoAccessor:
             last_update=commit_date,
             message=message,
         )
+
+    def build_compare_url(self, from_revision: str, to_revision: str) -> str:
+        repo_url = self.plugin.repository
+        from_revision = self.extract_smart_revision(from_revision)
+        to_revision = self.extract_smart_revision(to_revision)
+        return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
 
 class PluginRepoInitializer:

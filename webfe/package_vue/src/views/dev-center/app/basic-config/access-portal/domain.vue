@@ -1,123 +1,203 @@
 <template lang="html">
-    <div class="paas-domain-part-wrapper">
-        <div class="ps-top-card">
-            <p class="main-title"> {{ $t('独立域名配置') }} </p>
-            <p class="desc">
-                {{ $t('独立域名允许你通过默认地址以外的其他自定义域名来访问蓝鲸应用。使用前请先阅读') }}
-                <a :href="GLOBAL.DOC.APP_ENTRY_INTRO" target="blank"> {{ $t('详细使用说明') }} </a>
-            </p>
+  <div class="paas-domain-part-wrapper">
+    <div class="ps-top-card">
+      <p class="main-title">
+        {{ $t('独立域名配置') }}
+      </p>
+      <p class="desc">
+        {{ $t('独立域名允许你通过默认地址以外的其他自定义域名来访问蓝鲸应用。使用前请先阅读') }}
+        <a
+          :href="GLOBAL.DOC.APP_ENTRY_INTRO"
+          target="blank"
+        > {{ $t('详细使用说明') }} </a>
+      </p>
+    </div>
+    <!-- 独立域名配置 -->
+    <div class="content">
+      <bk-tab
+        :active.sync="active"
+        ext-cls="domain-tab-cls"
+        type="unborder-card"
+      >
+        <bk-tab-panel
+          v-for="(panel, index) in panels"
+          :key="index"
+          v-bind="panel"
+        />
+      </bk-tab>
+      <div class="controller">
+        <div
+          v-if="isInitLoading"
+          class="result-table-content"
+        >
+          <div
+            v-bkloading="{ isLoading: isInitLoading }"
+            class="ps-loading-placeholder"
+          />
         </div>
-        <!-- 独立域名配置 -->
-        <div class="content">
-            <bk-tab
-                :active.sync="active"
-                ext-cls="domain-tab-cls"
-                type="unborder-card">
-                <bk-tab-panel
-                    v-for="(panel, index) in panels"
-                    v-bind="panel"
-                    :key="index">
-                </bk-tab-panel>
-            </bk-tab>
-            <div class="controller">
-                <div class="result-table-content" v-if="isInitLoading">
-                    <div class="ps-loading-placeholder" v-bkloading="{ isLoading: isInitLoading }"></div>
-                </div>
-                <div v-else v-bkloading="{ isLoading: isDomainLoading }">
-                    <template v-if="active === 'domain'">
-                        <bk-button theme="primary" class="mb20" @click="handleShowAddUrlDialog"> {{ $t('添加域名') }} </bk-button>
-                        <bk-table
-                            :data="domainConfigList"
-                            size="small"
-                            :class="{ 'set-border': tableLoading }"
-                            :ext-cls="'ps-permission-table'"
-                            v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                            <bk-table-column :label="$t('环境')">
-                                <template slot-scope="props">
-                                    <span>{{props.row.environment_name || '--'}}</span>
-                                </template>
-                            </bk-table-column>
-                            <bk-table-column :label="$t('域名')">
-                                <template slot-scope="{ row }">
-                                    <span v-bk-tooltips="row.domain_name">{{row.domain_name}}</span>
-                                </template>
-                            </bk-table-column>
-                            <bk-table-column :label="$t('路径')">
-                                <template slot-scope="props">
-                                    <span>{{props.row.path_prefix || '--'}}</span>
-                                </template>
-                            </bk-table-column>
-                            <!-- 目前云原生应用调用独立域名相关的接口，模块名都先固定为 “default”，未来也许会支持其他模块。 -->
-                            <!-- <bk-table-column :label="$t('绑定模块')">
+        <div
+          v-else
+          v-bkloading="{ isLoading: isDomainLoading }"
+        >
+          <template v-if="active === 'domain'">
+            <bk-button
+              theme="primary"
+              class="mb20"
+              @click="handleShowAddUrlDialog"
+            >
+              {{ $t('添加域名') }}
+            </bk-button>
+            <bk-table
+              v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+              :data="domainConfigList"
+              size="small"
+              :class="{ 'set-border': tableLoading }"
+              :ext-cls="'ps-permission-table'"
+            >
+              <bk-table-column :label="$t('环境')">
+                <template slot-scope="props">
+                  <span>{{ props.row.environment_name || '--' }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column :label="$t('域名')">
+                <template slot-scope="{ row }">
+                  <span v-bk-tooltips="row.domain_name">{{ row.domain_name }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column :label="$t('路径')">
+                <template slot-scope="props">
+                  <span>{{ props.row.path_prefix || '--' }}</span>
+                </template>
+              </bk-table-column>
+              <!-- 目前云原生应用调用独立域名相关的接口，模块名都先固定为 “default”，未来也许会支持其他模块。 -->
+              <!-- <bk-table-column :label="$t('绑定模块')">
                                 <template slot-scope="props">
                                     <span>{{props.row.module_name || '--'}}</span>
                                 </template>
                             </bk-table-column> -->
-                            <bk-table-column :label="$t('操作')" width="150">
-                                <template slot-scope="{ row, $index }">
-                                    <bk-button theme="primary" text style="margin-left: 6px;" @click="handleEdit(row, $index)"> {{ $t('编辑') }} </bk-button>
-                                    <bk-button theme="primary" text style="margin-left: 6px;" @click="showRemoveModal(row, $index)"> {{ $t('删除') }} </bk-button>
-                                </template>
-                            </bk-table-column>
-                        </bk-table>
-                    </template>
-                    <template v-else>
-                        <table class="ps-table ps-table-border" style="width: 100%;">
-                            <tr>
-                                <td style="width: 148px;" class="has-right-border"> {{ $t('域名解析目标IP') }} </td>
-                                <td v-if="curIngressIp">
-                                    {{ curIngressIp }}
-                                </td>
-                                <td v-else> {{ $t('暂无信息') }}
-                                    <span v-if="GLOBAL.HELPER.href"> {{ $t('请联系') }} <a :href="GLOBAL.HELPER.href">{{GLOBAL.HELPER.name}}</a>）
-                                    </span>
-                                </td>
-                            </tr>
-                        </table>
-                    </template>
-                    <div class="info-wrapper" v-if="active === 'ipInfo'">
-                        <p class="title"> {{ $t('推荐操作流程：') }} </p>
-                        <p>1. {{ $t('首先，在“域名管理”添加域名') }}</p>
-                        <p>2. {{ $t('修改本机 Hosts 文件，将域名解析到表格中的 IP') }}</p>
-                        <p>3. {{ $t('打开浏览器，测试访问是否正常') }}</p>
-                        <p>4. {{ $t('修改域名解析记录，将其永久解析到目标 IP') }}</p>
-                    </div>
-                    <bk-dialog
-                        width="600"
-                        :title="addUrlDialog.title"
-                        v-model="addUrlDialog.visiable"
-                        header-position="left"
-                        :theme="'primary'"
-                        :mask-close="false"
-                        :close-icon="!addUrlDialog.isLoading"
-                        :loading="addUrlDialog.isLoading"
-                        @confirm="addDomainUrl"
-                        @cancel="cancelAddUrl"
-                    >
-                        <template style="min-height: 140px;">
-                            <bk-form v-if="addUrlDialog.showForm" :label-width="100" :model="curUrlParams" ref="addUrlForm">
-                                <!-- 表单关联问题， 编辑取消后， 当前表单的数据微还原 -->
-                                <bk-form-item :label="$t('环境')" :rules="urlParamRules.environment_name" :required="true" :property="'environment_name'">
-                                    <bk-select v-model="curUrlParams.environment_name" :clearable="false" :disabled="addUrlDialog.isEdit">
-                                        <bk-option
-                                            v-for="(option, index) in envSelectList"
-                                            :key="index"
-                                            :id="option.id"
-                                            :name="option.text">
-                                        </bk-option>
-                                    </bk-select>
-                                </bk-form-item>
-                                <bk-form-item :label="$t('域名')" :rules="urlParamRules.domain_name" :required="true" :property="'domain_name'">
-                                    <bk-input v-model="curUrlParams.domain_name" :placeholder="$t('请输入有效域名，并以这些后缀结尾：') + domainInputPlaceholderText"></bk-input>
-                                </bk-form-item>
-                                <bk-form-item :label="$t('路径')" :rules="urlParamRules.path_prefix" :required="true" :property="'path_prefix'">
-                                    <bk-input v-model="curUrlParams.path_prefix"></bk-input>
-                                    <p class="paas-tip">
-                                        {{ $t('子路径仅支持配置一段') }}('/sub/'), {{ $t('不支持配置多段') }}('/sub/path/')
-                                    </p>
-                                </bk-form-item>
-                                <!-- 目前云原生应用调用独立域名相关的接口，模块名都先固定为 “default”，未来也许会支持其他模块。 -->
-                                <!-- <bk-form-item :label="$t('绑定模块')" :rules="urlParamRules.module_name" :required="true" :property="'module_name'">
+              <bk-table-column
+                :label="$t('操作')"
+                width="150"
+              >
+                <template slot-scope="{ row, $index }">
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 6px;"
+                    @click="handleEdit(row, $index)"
+                  >
+                    {{ $t('编辑') }}
+                  </bk-button>
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 6px;"
+                    @click="showRemoveModal(row, $index)"
+                  >
+                    {{ $t('删除') }}
+                  </bk-button>
+                </template>
+              </bk-table-column>
+            </bk-table>
+          </template>
+          <template v-else>
+            <table
+              class="ps-table ps-table-border"
+              style="width: 100%;"
+            >
+              <tr>
+                <td
+                  style="width: 148px;"
+                  class="has-right-border"
+                >
+                  {{ $t('域名解析目标IP') }}
+                </td>
+                <td v-if="curIngressIp">
+                  {{ curIngressIp }}
+                </td>
+                <td v-else>
+                  {{ $t('暂无信息') }}
+                  <span v-if="GLOBAL.HELPER.href"> {{ $t('请联系') }} <a :href="GLOBAL.HELPER.href">{{ GLOBAL.HELPER.name }}</a>）
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </template>
+          <div
+            v-if="active === 'ipInfo'"
+            class="info-wrapper"
+          >
+            <p class="title">
+              {{ $t('推荐操作流程：') }}
+            </p>
+            <p>1. {{ $t('首先，在“域名管理”添加域名') }}</p>
+            <p>2. {{ $t('修改本机 Hosts 文件，将域名解析到表格中的 IP') }}</p>
+            <p>3. {{ $t('打开浏览器，测试访问是否正常') }}</p>
+            <p>4. {{ $t('修改域名解析记录，将其永久解析到目标 IP') }}</p>
+          </div>
+          <bk-dialog
+            v-model="addUrlDialog.visiable"
+            width="600"
+            :title="addUrlDialog.title"
+            header-position="left"
+            :theme="'primary'"
+            :mask-close="false"
+            :close-icon="!addUrlDialog.isLoading"
+            :loading="addUrlDialog.isLoading"
+            @confirm="addDomainUrl"
+            @cancel="cancelAddUrl"
+          >
+            <template style="min-height: 140px;">
+              <bk-form
+                v-if="addUrlDialog.showForm"
+                ref="addUrlForm"
+                :label-width="100"
+                :model="curUrlParams"
+              >
+                <!-- 表单关联问题， 编辑取消后， 当前表单的数据微还原 -->
+                <bk-form-item
+                  :label="$t('环境')"
+                  :rules="urlParamRules.environment_name"
+                  :required="true"
+                  :property="'environment_name'"
+                >
+                  <bk-select
+                    v-model="curUrlParams.environment_name"
+                    :clearable="false"
+                    :disabled="addUrlDialog.isEdit"
+                  >
+                    <bk-option
+                      v-for="(option, index) in envSelectList"
+                      :id="option.id"
+                      :key="index"
+                      :name="option.text"
+                    />
+                  </bk-select>
+                </bk-form-item>
+                <bk-form-item
+                  :label="$t('域名')"
+                  :rules="urlParamRules.domain_name"
+                  :required="true"
+                  :property="'domain_name'"
+                >
+                  <bk-input
+                    v-model="curUrlParams.domain_name"
+                    :placeholder="$t('请输入有效域名，并以这些后缀结尾：') + domainInputPlaceholderText"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :label="$t('路径')"
+                  :rules="urlParamRules.path_prefix"
+                  :required="true"
+                  :property="'path_prefix'"
+                >
+                  <bk-input v-model="curUrlParams.path_prefix" />
+                  <p class="paas-tip">
+                    {{ $t('子路径仅支持配置一段') }}('/sub/'), {{ $t('不支持配置多段') }}('/sub/path/')
+                  </p>
+                </bk-form-item>
+                <!-- 目前云原生应用调用独立域名相关的接口，模块名都先固定为 “default”，未来也许会支持其他模块。 -->
+                <!-- <bk-form-item :label="$t('绑定模块')" :rules="urlParamRules.module_name" :required="true" :property="'module_name'">
                                     <bk-select v-model="curUrlParams.module_name" :clearable="false" :disabled="addUrlDialog.isEdit">
                                         <bk-option
                                             v-for="option in curAppModuleList"
@@ -127,13 +207,13 @@
                                         </bk-option>
                                     </bk-select>
                                 </bk-form-item> -->
-                            </bk-form>
-                        </template>
-                    </bk-dialog>
-                </div>
-            </div>
+              </bk-form>
+            </template>
+          </bk-dialog>
         </div>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>

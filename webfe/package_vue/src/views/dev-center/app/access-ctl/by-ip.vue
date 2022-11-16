@@ -1,319 +1,484 @@
 <template>
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('IP限制')"
-            :cur-module="curModule"
-            disabled
-            ref="moduleRef"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isPermissionChecking" placeholder="user-limit-loading" :offset-top="25" class="app-container middle">
-            <section v-show="!isPermissionChecking">
-                <div class="perm-action mt15" v-if="!isPermissionChecking">
-                    <div :class="['perm-icon', { 'active': isUseIPPermission }]">
-                        <span :class="['paasng-icon', { 'paasng-lock': !isUseIPPermission, 'paasng-unlock': isUseIPPermission }]"></span>
-                    </div>
-                    <div class="perm-title">
-                        {{isUseIPPermission ? $t('已开启 IP 限制') : $t('未开启 IP 限制')}}
-                        <div class="ps-switcher-wrapper" @click="togglePermission">
-                            <bk-switcher
-                                v-model="isUseIPPermission">
-                            </bk-switcher>
-                        </div>
-                    </div>
-                    <p class="perm-tip">
-                        {{ isUseIPPermission ? $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') : $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效')}}
-                        
-                    </p>
-                </div>
-                <template v-if="!isPermissionChecking && isUseIPPermission">
-                    <div class="ps-table-bar">
-                        <bk-button
-                            theme="primary"
-                            @click="showIPModal">
-                            <i class="paasng-icon paasng-plus mr5"></i> {{ $t('添加白名单') }}
-                        </bk-button>
-                        <bk-dropdown-menu
-                            trigger="click"
-                            ref="largeDropdown"
-                            ext-cls="by-ip-export-wrapper">
-                            <bk-button
-                                :loading="exportLoading"
-                                slot="dropdown-trigger">
-                                {{ $t('批量导入/导出') }}
-                            </bk-button>
-                            <ul class="bk-dropdown-list" slot="dropdown-content">
-                                <li><a href="javascript:;" style="margin: 0;" @click="handleExport('file')"> {{ $t('从文件导入') }} </a></li>
-                                <li><a href="javascript:;" style="margin: 0;" @click="handleExport('batch')"> {{ $t('批量导出') }} </a></li>
-                            </ul>
-                        </bk-dropdown-menu>
-                        <bk-button style="margin-left: 6px;" :disabled="isBatchDisabled" @click="batchDelete"> {{ $t('批量删除') }} </bk-button>
-                        <bk-input
-                            style="width: 240px; float: right;"
-                            :placeholder="$t('输入关键字，按Enter搜索')"
-                            :right-icon="'paasng-icon paasng-search'"
-                            v-model="keyword"
-                            clearable
-                            @enter="searchIpList">
-                        </bk-input>
-                    </div>
+  <div class="right-main">
+    <app-top-bar
+      ref="moduleRef"
+      :title="$t('IP限制')"
+      :cur-module="curModule"
+      disabled
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="isPermissionChecking"
+      placeholder="user-limit-loading"
+      :offset-top="25"
+      class="app-container middle"
+    >
+      <section v-show="!isPermissionChecking">
+        <div
+          v-if="!isPermissionChecking"
+          class="perm-action mt15"
+        >
+          <div :class="['perm-icon', { 'active': isUseIPPermission }]">
+            <span :class="['paasng-icon', { 'paasng-lock': !isUseIPPermission, 'paasng-unlock': isUseIPPermission }]" />
+          </div>
+          <div class="perm-title">
+            {{ isUseIPPermission ? $t('已开启 IP 限制') : $t('未开启 IP 限制') }}
+            <div
+              class="ps-switcher-wrapper"
+              @click="togglePermission"
+            >
+              <bk-switcher
+                v-model="isUseIPPermission"
+              />
+            </div>
+          </div>
+          <p class="perm-tip">
+            {{ isUseIPPermission ? $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') : $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') }}
+          </p>
+        </div>
+        <template v-if="!isPermissionChecking && isUseIPPermission">
+          <div class="ps-table-bar">
+            <bk-button
+              theme="primary"
+              @click="showIPModal"
+            >
+              <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
+            </bk-button>
+            <bk-dropdown-menu
+              ref="largeDropdown"
+              trigger="click"
+              ext-cls="by-ip-export-wrapper"
+            >
+              <bk-button
+                slot="dropdown-trigger"
+                :loading="exportLoading"
+              >
+                {{ $t('批量导入/导出') }}
+              </bk-button>
+              <ul
+                slot="dropdown-content"
+                class="bk-dropdown-list"
+              >
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0;"
+                    @click="handleExport('file')"
+                  > {{ $t('从文件导入') }} </a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0;"
+                    @click="handleExport('batch')"
+                  > {{ $t('批量导出') }} </a>
+                </li>
+              </ul>
+            </bk-dropdown-menu>
+            <bk-button
+              style="margin-left: 6px;"
+              :disabled="isBatchDisabled"
+              @click="batchDelete"
+            >
+              {{ $t('批量删除') }}
+            </bk-button>
+            <bk-input
+              v-model="keyword"
+              style="width: 240px; float: right;"
+              :placeholder="$t('输入关键字，按Enter搜索')"
+              :right-icon="'paasng-icon paasng-search'"
+              clearable
+              @enter="searchIpList"
+            />
+          </div>
 
-                    <bk-table
-                        :data="IPPermissionList"
-                        size="small"
-                        :class="{ 'set-border': tableLoading }"
-                        :ext-cls="'ps-permission-table'"
-                        :pagination="pagination"
-                        @page-change="pageChange"
-                        @page-limit-change="limitChange"
-                        @select="handlerChange"
-                        @select-all="handlerAllChange"
-                        v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                        <bk-table-column type="selection" width="60" align="left"></bk-table-column>
-                        <bk-table-column label="IP/IP段" prop="content"></bk-table-column>
-                        <bk-table-column :label="$t('路径')" prop="path"></bk-table-column>
-                        <bk-table-column :label="$t('添加者')">
-                            <template slot-scope="props">
-                                <span>{{props.row.owner.username || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加时间')" :render-header="renderHeader">
-                            <template slot-scope="{ row }">
-                                <span v-bk-tooltips="row.created">{{smartTime(row.created,'fromNow')}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('更新时间')">
-                            <template slot-scope="{ row }">
-                                <span v-bk-tooltips="row.updated">{{smartTime(row.updated,'fromNow')}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('添加原因')">
-                            <template slot-scope="props">
-                                <bk-popover>
-                                    <div class="reason">{{props.row.desc ? props.row.desc : '--'}}</div>
-                                    <div slot="content" style="white-space: normal;">
-                                        {{props.row.desc ? props.row.desc : '--'}}
-                                    </div>
-                                </bk-popover>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('到期时间')" width="100">
-                            <template slot-scope="{ row }">
-                                <template v-if="row.is_expired">
-                                    <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
-                                </template>
-                                <template v-else>
-                                    <template v-if="row.expires_at">
-                                        <span v-bk-tooltips="row.expires_at">{{smartTime(row.expires_at,'fromNow')}}</span>
-                                    </template>
-                                    <template v-else> {{ $t('永不') }} </template>
-                                </template>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('操作')" width="150">
-                            <template slot-scope="props">
-                                <section>
-                                    <bk-button theme="primary" text @click="handleRenewal(props.row)"> {{ $t('续期') }} </bk-button>
-                                    <bk-button theme="primary" text style="margin-left: 6px;" @click="handleEdit(props.row)"> {{ $t('编辑') }} </bk-button>
-                                    <bk-button theme="primary" text style="margin-left: 6px;" @click="showRemoveModal(props.row)"> {{ $t('删除') }} </bk-button>
-                                </section>
-                            </template>
-                        </bk-table-column>
-                    </bk-table>
+          <bk-table
+            v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+            :data="IPPermissionList"
+            size="small"
+            :class="{ 'set-border': tableLoading }"
+            :ext-cls="'ps-permission-table'"
+            :pagination="pagination"
+            @page-change="pageChange"
+            @page-limit-change="limitChange"
+            @select="handlerChange"
+            @select-all="handlerAllChange"
+          >
+            <bk-table-column
+              type="selection"
+              width="60"
+              align="left"
+            />
+            <bk-table-column
+              label="IP/IP段"
+              prop="content"
+            />
+            <bk-table-column
+              :label="$t('路径')"
+              prop="path"
+            />
+            <bk-table-column :label="$t('添加者')">
+              <template slot-scope="props">
+                <span>{{ props.row.owner.username || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('添加时间')"
+              :render-header="renderHeader"
+            >
+              <template slot-scope="{ row }">
+                <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('更新时间')">
+              <template slot-scope="{ row }">
+                <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('添加原因')">
+              <template slot-scope="props">
+                <bk-popover>
+                  <div class="reason">
+                    {{ props.row.desc ? props.row.desc : '--' }}
+                  </div>
+                  <div
+                    slot="content"
+                    style="white-space: normal;"
+                  >
+                    {{ props.row.desc ? props.row.desc : '--' }}
+                  </div>
+                </bk-popover>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('到期时间')"
+              width="100"
+            >
+              <template slot-scope="{ row }">
+                <template v-if="row.is_expired">
+                  <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
                 </template>
-            </section>
-        </paas-content-loader>
-
-        <bk-dialog
-            width="600"
-            v-model="IPPermissionDialog.visiable"
-            :title="`${isUseIPPermission ? $t('是否停用 IP 限制') : $t('是否开启 IP 限制')}?`"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="IPPermissionDialog.isLoading"
-            @confirm="setIPPermission"
-            @cancel="closePermission">
-            <div class="tc">
-                {{isUseIPPermission ? $t('停用后【预发布】和【生产】环境的 IP 限制都将立即失效，所有 IP 都可访问') : $t('开启后【预发布】和【生产】环境的 IP 限制都将立即生效，仅白名单内 IP 可访问')}}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="removeIPDialog.visiable"
-            :title="`确定删除IP【${curIPParams.content}】`"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="removeIPDialog.isLoading"
-            @confirm="removeIP"
-            @cancel="cancelRemoveIP"
-            @after-leave="afterDeleteClose">
-            <div class="tc">
-                {{curIPParams.content}} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="batchRemoveIpDialog.visiable"
-            :title="$t('确定批量删除IP？')"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="batchRemoveIpDialog.isLoading"
-            @confirm="batchRemoveIp">
-            <div class="tc">
-                {{ $t('批量删除的IP将失去此应用的对应权限，是否确定删除？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            v-model="renewalDialog.visiable"
-            :title="$t('有效期续期')"
-            :theme="'primary'"
-            :mask-close="false"
-            :header-position="'left'"
-            :loading="renewalDialog.isLoading"
-            @confirm="handleRenewalDialog"
-            @after-leave="afterRenewalClose">
-            <div>
-                <div class="time-button-groups bk-button-group">
-                    <bk-button
-                        :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
-                        v-for="(key, index) in Object.keys(timeFilters)"
-                        :key="index"
-                        :name="key"
-                        v-if="key !== 'cur'"
-                        @click="timeFilterHandler(key, index)">
-                        {{timeFilters[key]}}
-                    </bk-button>
-                </div>
-                <div class="custom-time-select" v-if="customTimeFlag">
-                    <input type="text" class="bk-form-input custom-time"
-                        @input="authDetailTimeHandler"
-                        v-model="customTime"
-                        placeholder="1" />
-                    <div class="unit">天</div>
-                </div>
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="600"
-            :title="addIPDialog.title"
-            v-model="addIPDialog.visiable"
-            :theme="'primary'"
-            :mask-close="false"
-            header-position="left"
-            :close-icon="!addIPDialog.isLoading"
-            :loading="addIPDialog.isLoading"
-            @confirm="addIP"
-            @cancel="cancelAddIP"
-            @after-leave="afterAddClose">
-            <div style="min-height: 140px;" v-if="isShowAddForm">
-                <bk-form :label-width="100" :model="curIPParams" ref="addIPForm" form-type="vertical">
-                    <bk-form-item
-                        label="IP/IP段"
-                        :required="true"
-                        :rules="IPParamRules.content"
-                        :property="'content'">
-                        <bk-input
-                            type="text"
-                            :maxlength="200"
-                            :disabled="addIPDialog.isEdit"
-                            v-model="curIPParams.content">
-                        </bk-input>
-                        <p class="ps-tip mt10"> {{ $t('多个IP请用英文分号‘;’隔开，支持掩码') }} </p>
-                    </bk-form-item>
-                    <bk-form-item
-                        :label="$t('可访问路径前缀')"
-                        :label-width="160"
-                        :rules="IPParamRules.path"
-                        :required="false"
-                        :property="'path'">
-                        <bk-input
-                            :placeholder="$t('不填代表可访问所有路径')"
-                            type="text"
-                            :disabled="addIPDialog.isEdit"
-                            v-model="curIPParams.path">
-                        </bk-input>
-                        <p class="ps-tip mt10"> {{ $t('以反斜杆(/)开始、结束，如/api/user/表示可访问以/api/user/开头的所有路径') }} </p>
-                    </bk-form-item>
-                    <bk-form-item
-                        :label="$t('添加原因')"
-                        :required="true"
-                        :rules="IPParamRules.desc"
-                        :property="'desc'">
-                        <bk-input
-                            type="textarea"
-                            :placeholder="$t('请输入200个字符以内')"
-                            :maxlength="200"
-                            v-model="curIPParams.desc">
-                        </bk-input>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('有效时间')" :rules="IPParamRules.expires_at" :required="true" :property="'expires_at'" v-if="!addIPDialog.isEdit">
-                        <div class="time-button-groups bk-button-group">
-                            <bk-button
-                                :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
-                                v-for="(key, index) in Object.keys(timeFilters)"
-                                :key="index"
-                                :name="key"
-                                v-if="key !== 'cur'"
-                                @click="timeFilterHandler(key, index)">
-                                {{timeFilters[key]}}
-                            </bk-button>
-                        </div>
-                        <div class="custom-time-select" v-if="customTimeFlag">
-                            <input type="text" class="bk-form-input custom-time"
-                                @input="authDetailTimeHandler"
-                                v-model="customTime"
-                                placeholder="1" />
-                            <div class="unit">天</div>
-                        </div>
-                    </bk-form-item>
-                </bk-form>
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            v-model="exportFileDialog.visiable"
-            :header-position="exportFileDialog.headerPosition"
-            :loading="exportFileDialog.loading"
-            :width="exportFileDialog.width"
-            :ok-text="$t('确定导入')"
-            ext-cls="paas-env-var-upload-dialog"
-            @after-leave="handleExportFileLeave">
-            <div slot="header" class="header">
-                {{ $t('从文件导入IP白名单') }}
-            </div>
-            <div>
-                <div class="download-tips">
-                    <span>
-                        <i class="paasng-icon paasng-exclamation-circle"></i>
-                        {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
-                    </span>
-                    <bk-button text theme="primary" size="small" style="line-height: 40px;" @click="handleDownloadTemplate"> {{ $t('下载模板') }} </bk-button>
-                </div>
-                <div class="upload-content">
-                    <p><i class="paasng-icon paasng-file-fill file-icon"></i></p>
-                    <p><bk-button text theme="primary" ext-cls="env-var-upload-btn-cls" @click="handleTriggerUpload"> {{ $t('选择文件') }} </bk-button></p>
-                    <p v-if="curFile.name" class="cur-upload-file"> {{ $t('已选择文件：') }} {{ curFile.name }}
-                    </p>
-                    <p v-if="isFileTypeError" class="file-error-tips"> {{ $t('请选择yaml文件') }} </p>
-                </div>
-                
-                <input ref="upload" type="file" style="position: absolute; width: 0; height: 0;" @change="handleStartUpload" />
-            </div>
-            <div slot="footer">
-                <bk-button
+                <template v-else>
+                  <template v-if="row.expires_at">
+                    <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+                  </template>
+                  <template v-else>
+                    {{ $t('永不') }}
+                  </template>
+                </template>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('操作')"
+              width="150"
+            >
+              <template slot-scope="props">
+                <section>
+                  <bk-button
                     theme="primary"
-                    :loading="exportFileDialog.loading"
-                    :disabled="!curFile.name"
-                    @click="handleExportFileConfirm"> {{ $t('确定导入') }} </bk-button>
-                <bk-button @click="handleExportFileCancel"> {{ $t('取消') }} </bk-button>
+                    text
+                    @click="handleRenewal(props.row)"
+                  >
+                    {{ $t('续期') }}
+                  </bk-button>
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 6px;"
+                    @click="handleEdit(props.row)"
+                  >
+                    {{ $t('编辑') }}
+                  </bk-button>
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 6px;"
+                    @click="showRemoveModal(props.row)"
+                  >
+                    {{ $t('删除') }}
+                  </bk-button>
+                </section>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </template>
+      </section>
+    </paas-content-loader>
+
+    <bk-dialog
+      v-model="IPPermissionDialog.visiable"
+      width="600"
+      :title="`${isUseIPPermission ? $t('是否停用 IP 限制') : $t('是否开启 IP 限制')}?`"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="IPPermissionDialog.isLoading"
+      @confirm="setIPPermission"
+      @cancel="closePermission"
+    >
+      <div class="tc">
+        {{ isUseIPPermission ? $t('停用后【预发布】和【生产】环境的 IP 限制都将立即失效，所有 IP 都可访问') : $t('开启后【预发布】和【生产】环境的 IP 限制都将立即生效，仅白名单内 IP 可访问') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="removeIPDialog.visiable"
+      width="600"
+      :title="`确定删除IP【${curIPParams.content}】`"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="removeIPDialog.isLoading"
+      @confirm="removeIP"
+      @cancel="cancelRemoveIP"
+      @after-leave="afterDeleteClose"
+    >
+      <div class="tc">
+        {{ curIPParams.content }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="batchRemoveIpDialog.visiable"
+      width="600"
+      :title="$t('确定批量删除IP？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="batchRemoveIpDialog.isLoading"
+      @confirm="batchRemoveIp"
+    >
+      <div class="tc">
+        {{ $t('批量删除的IP将失去此应用的对应权限，是否确定删除？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="renewalDialog.visiable"
+      width="600"
+      :title="$t('有效期续期')"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      :loading="renewalDialog.isLoading"
+      @confirm="handleRenewalDialog"
+      @after-leave="afterRenewalClose"
+    >
+      <div>
+        <div class="time-button-groups bk-button-group">
+          <bk-button
+            v-for="(key, index) in Object.keys(timeFilters)"
+            v-if="key !== 'cur'"
+            :key="index"
+            :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
+            :name="key"
+            @click="timeFilterHandler(key, index)"
+          >
+            {{ timeFilters[key] }}
+          </bk-button>
+        </div>
+        <div
+          v-if="customTimeFlag"
+          class="custom-time-select"
+        >
+          <input
+            v-model="customTime"
+            type="text"
+            class="bk-form-input custom-time"
+            placeholder="1"
+            @input="authDetailTimeHandler"
+          >
+          <div class="unit">
+            天
+          </div>
+        </div>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="addIPDialog.visiable"
+      width="600"
+      :title="addIPDialog.title"
+      :theme="'primary'"
+      :mask-close="false"
+      header-position="left"
+      :close-icon="!addIPDialog.isLoading"
+      :loading="addIPDialog.isLoading"
+      @confirm="addIP"
+      @cancel="cancelAddIP"
+      @after-leave="afterAddClose"
+    >
+      <div
+        v-if="isShowAddForm"
+        style="min-height: 140px;"
+      >
+        <bk-form
+          ref="addIPForm"
+          :label-width="100"
+          :model="curIPParams"
+          form-type="vertical"
+        >
+          <bk-form-item
+            label="IP/IP段"
+            :required="true"
+            :rules="IPParamRules.content"
+            :property="'content'"
+          >
+            <bk-input
+              v-model="curIPParams.content"
+              type="text"
+              :maxlength="200"
+              :disabled="addIPDialog.isEdit"
+            />
+            <p class="ps-tip mt10">
+              {{ $t('多个IP请用英文分号‘;’隔开，支持掩码') }}
+            </p>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('可访问路径前缀')"
+            :label-width="160"
+            :rules="IPParamRules.path"
+            :required="false"
+            :property="'path'"
+          >
+            <bk-input
+              v-model="curIPParams.path"
+              :placeholder="$t('不填代表可访问所有路径')"
+              type="text"
+              :disabled="addIPDialog.isEdit"
+            />
+            <p class="ps-tip mt10">
+              {{ $t('以反斜杆(/)开始、结束，如/api/user/表示可访问以/api/user/开头的所有路径') }}
+            </p>
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('添加原因')"
+            :required="true"
+            :rules="IPParamRules.desc"
+            :property="'desc'"
+          >
+            <bk-input
+              v-model="curIPParams.desc"
+              type="textarea"
+              :placeholder="$t('请输入200个字符以内')"
+              :maxlength="200"
+            />
+          </bk-form-item>
+          <bk-form-item
+            v-if="!addIPDialog.isEdit"
+            :label="$t('有效时间')"
+            :rules="IPParamRules.expires_at"
+            :required="true"
+            :property="'expires_at'"
+          >
+            <div class="time-button-groups bk-button-group">
+              <bk-button
+                v-for="(key, index) in Object.keys(timeFilters)"
+                v-if="key !== 'cur'"
+                :key="index"
+                :class="[{ 'is-selected': key === timeFilters['cur'] }, { 'reset-width': key === 'custom' }]"
+                :name="key"
+                @click="timeFilterHandler(key, index)"
+              >
+                {{ timeFilters[key] }}
+              </bk-button>
             </div>
-        </bk-dialog>
-    </div>
+            <div
+              v-if="customTimeFlag"
+              class="custom-time-select"
+            >
+              <input
+                v-model="customTime"
+                type="text"
+                class="bk-form-input custom-time"
+                placeholder="1"
+                @input="authDetailTimeHandler"
+              >
+              <div class="unit">
+                天
+              </div>
+            </div>
+          </bk-form-item>
+        </bk-form>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="exportFileDialog.visiable"
+      :header-position="exportFileDialog.headerPosition"
+      :loading="exportFileDialog.loading"
+      :width="exportFileDialog.width"
+      :ok-text="$t('确定导入')"
+      ext-cls="paas-env-var-upload-dialog"
+      @after-leave="handleExportFileLeave"
+    >
+      <div
+        slot="header"
+        class="header"
+      >
+        {{ $t('从文件导入IP白名单') }}
+      </div>
+      <div>
+        <div class="download-tips">
+          <span>
+            <i class="paasng-icon paasng-exclamation-circle" />
+            {{ $t('请先下载模板，按格式修改后点击“选择文件”批量导入') }}
+          </span>
+          <bk-button
+            text
+            theme="primary"
+            size="small"
+            style="line-height: 40px;"
+            @click="handleDownloadTemplate"
+          >
+            {{ $t('下载模板') }}
+          </bk-button>
+        </div>
+        <div class="upload-content">
+          <p><i class="paasng-icon paasng-file-fill file-icon" /></p>
+          <p>
+            <bk-button
+              text
+              theme="primary"
+              ext-cls="env-var-upload-btn-cls"
+              @click="handleTriggerUpload"
+            >
+              {{ $t('选择文件') }}
+            </bk-button>
+          </p>
+          <p
+            v-if="curFile.name"
+            class="cur-upload-file"
+          >
+            {{ $t('已选择文件：') }} {{ curFile.name }}
+          </p>
+          <p
+            v-if="isFileTypeError"
+            class="file-error-tips"
+          >
+            {{ $t('请选择yaml文件') }}
+          </p>
+        </div>
+
+        <input
+          ref="upload"
+          type="file"
+          style="position: absolute; width: 0; height: 0;"
+          @change="handleStartUpload"
+        >
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :loading="exportFileDialog.loading"
+          :disabled="!curFile.name"
+          @click="handleExportFileConfirm"
+        >
+          {{ $t('确定导入') }}
+        </bk-button>
+        <bk-button @click="handleExportFileCancel">
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>
@@ -1028,7 +1193,7 @@
                         order_by: this.is_up ? '-created' : 'created',
                         search_term: this.keyword
                     };
-            
+
                     const res = await this.$store.dispatch('ip/getIpList', params);
                     this.pagination.count = res.count;
                     this.IPPermissionList.splice(0, this.IPPermissionList.length, ...(res.results || []));
@@ -1068,7 +1233,7 @@
                     };
                 }
             },
-            
+
             checkUserParams (params) {
                 const contentReg = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/([1-9]|[1-2][0-9]|3[0-2]))?$/;
                 const text = this.addIPDialog.isEdit ? this.$t('编辑') : this.$t('添加');

@@ -1,106 +1,163 @@
 <template lang="html">
-    <paas-loading :loading="isFirstLoading">
-        <div slot="loadingContent">
-            <div class="operate-wrapper">
-                <bk-button theme="primary" :disabled="!selectOrderIds.length" @click="batchAudit('pass')"> {{ $t('批量通过') }} </bk-button>
-                <bk-button :disabled="!selectOrderIds.length" @click="batchAudit('reject')" style="margin-left: 6px;"> {{ $t('批量驳回') }} </bk-button>
-            </div>
-            <div class="content-wrapper">
-                <bk-table
-                    ref="processTableRef"
-                    :data="orderList"
-                    size="small"
-                    :class="{ 'set-border': tableLoading }"
-                    :ext-cls="'ps-permission-table'"
-                    :pagination="pagination"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange"
-                    @select="itemHandlerChange"
-                    @select-all="allHandlerChange"
-                    @row-click="rowClick"
-                    v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                    <bk-table-column type="expand" width="40" align="right">
-                        <template slot-scope="props">
-                            <ul class="detail-box" v-for="(subProps, subPropsIndex) of props.row.children" :key="subPropsIndex">
-                                <li>
-                                    <span class="key"> {{ $t('申请人IP：') }} </span>
-                                    <pre class="value">{{subProps.ip || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('业务接口人：') }} </span>
-                                    <pre class="value">{{subProps.business_interface_user || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('添加原因：') }} </span>
-                                    <pre class="value">{{subProps.reason || '--'}}</pre>
-                                </li>
-                                <li>
-                                    <span class="key"> {{ $t('有效时间：') }} </span>
-                                    <pre class="value">{{subProps.expires || '--'}}</pre>
-                                </li>
-                            </ul>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column type="selection" width="60"></bk-table-column>
-                    <bk-table-column :label="$t('申请人')">
-                        <template slot-scope="props">
-                            <span>{{props.row.applicant || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('公司')">
-                        <template slot-scope="props">
-                            <span>{{props.row.company || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('业务')">
-                        <template slot-scope="props">
-                            <span>{{props.row.business || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('申请时间')" :render-header="renderHeader">
-                        <template slot-scope="props">
-                            <span>{{props.row.created || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('有效时间')">
-                        <template slot-scope="props">
-                            <span>{{props.row.expires || '--'}}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('操作')" width="150">
-                        <template slot-scope="props">
-                            <div class="table-operate-wrapper">
-                                <bk-button theme="primary" text @click.stop="showAuditModal(props.row, 'pass')"> {{ $t('通过') }} </bk-button>
-                                <bk-button theme="primary" text @click.stop="showAuditModal(props.row, 'reject')" style="margin-left: 6px;"> {{ $t('驳回') }} </bk-button>
-                            </div>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
+  <paas-loading :loading="isFirstLoading">
+    <div slot="loadingContent">
+      <div class="operate-wrapper">
+        <bk-button
+          theme="primary"
+          :disabled="!selectOrderIds.length"
+          @click="batchAudit('pass')"
+        >
+          {{ $t('批量通过') }}
+        </bk-button>
+        <bk-button
+          :disabled="!selectOrderIds.length"
+          style="margin-left: 6px;"
+          @click="batchAudit('reject')"
+        >
+          {{ $t('批量驳回') }}
+        </bk-button>
+      </div>
+      <div class="content-wrapper">
+        <bk-table
+          ref="processTableRef"
+          v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+          :data="orderList"
+          size="small"
+          :class="{ 'set-border': tableLoading }"
+          :ext-cls="'ps-permission-table'"
+          :pagination="pagination"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+          @select="itemHandlerChange"
+          @select-all="allHandlerChange"
+          @row-click="rowClick"
+        >
+          <bk-table-column
+            type="expand"
+            width="40"
+            align="right"
+          >
+            <template slot-scope="props">
+              <ul
+                v-for="(subProps, subPropsIndex) of props.row.children"
+                :key="subPropsIndex"
+                class="detail-box"
+              >
+                <li>
+                  <span class="key"> {{ $t('申请人IP：') }} </span>
+                  <pre class="value">{{ subProps.ip || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('业务接口人：') }} </span>
+                  <pre class="value">{{ subProps.business_interface_user || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('添加原因：') }} </span>
+                  <pre class="value">{{ subProps.reason || '--' }}</pre>
+                </li>
+                <li>
+                  <span class="key"> {{ $t('有效时间：') }} </span>
+                  <pre class="value">{{ subProps.expires || '--' }}</pre>
+                </li>
+              </ul>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            type="selection"
+            width="60"
+          />
+          <bk-table-column :label="$t('申请人')">
+            <template slot-scope="props">
+              <span>{{ props.row.applicant || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('公司')">
+            <template slot-scope="props">
+              <span>{{ props.row.company || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('业务')">
+            <template slot-scope="props">
+              <span>{{ props.row.business || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('申请时间')"
+            :render-header="renderHeader"
+          >
+            <template slot-scope="props">
+              <span>{{ props.row.created || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('有效时间')">
+            <template slot-scope="props">
+              <span>{{ props.row.expires || '--' }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('操作')"
+            width="150"
+          >
+            <template slot-scope="props">
+              <div class="table-operate-wrapper">
+                <bk-button
+                  theme="primary"
+                  text
+                  @click.stop="showAuditModal(props.row, 'pass')"
+                >
+                  {{ $t('通过') }}
+                </bk-button>
+                <bk-button
+                  theme="primary"
+                  text
+                  style="margin-left: 6px;"
+                  @click.stop="showAuditModal(props.row, 'reject')"
+                >
+                  {{ $t('驳回') }}
+                </bk-button>
+              </div>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
 
-            <bk-dialog
-                v-model="approveDialog.visiable"
-                :title="approveDialog.title"
-                header-position="left"
-                :width="approveDialog.width"
-                @after-leave="dialogAfterClose">
-                <bk-input
-                    v-model="auditParams.remark"
-                    :placeholder="$t('请填写原因')"
-                    :type="'textarea'"
-                    :rows="5"
-                    style="margin-bottom: 15px;">
-                </bk-input>
-                <p class="ps-tip">{{ $t('共') }}{{auditParams.type === 'pass' ? $t('通过') : $t('驳回')}}
-                    <span class="span-tip">{{auditParams.ids.length}}</span> {{ $t('条记录') }}
-                </p>
-                <div slot="footer">
-                    <bk-button theme="primary" :disabled="auditParams.remark === ''" :loading="buttonLoading" @click="saveAudit"> {{ $t('确定') }} </bk-button>
-                    <bk-button @click="cancelAudit" style="margin-left: 6px;"> {{ $t('取消') }} </bk-button>
-                </div>
-            </bk-dialog>
+      <bk-dialog
+        v-model="approveDialog.visiable"
+        :title="approveDialog.title"
+        header-position="left"
+        :width="approveDialog.width"
+        @after-leave="dialogAfterClose"
+      >
+        <bk-input
+          v-model="auditParams.remark"
+          :placeholder="$t('请填写原因')"
+          :type="'textarea'"
+          :rows="5"
+          style="margin-bottom: 15px;"
+        />
+        <p class="ps-tip">
+          {{ $t('共') }}{{ auditParams.type === 'pass' ? $t('通过') : $t('驳回') }}
+          <span class="span-tip">{{ auditParams.ids.length }}</span> {{ $t('条记录') }}
+        </p>
+        <div slot="footer">
+          <bk-button
+            theme="primary"
+            :disabled="auditParams.remark === ''"
+            :loading="buttonLoading"
+            @click="saveAudit"
+          >
+            {{ $t('确定') }}
+          </bk-button>
+          <bk-button
+            style="margin-left: 6px;"
+            @click="cancelAudit"
+          >
+            {{ $t('取消') }}
+          </bk-button>
         </div>
-    </paas-loading>
+      </bk-dialog>
+    </div>
+  </paas-loading>
 </template>
 
 <script>
@@ -342,7 +399,7 @@
                         offset: (this.pagination.current - 1) * this.pagination.limit,
                         order_by: this.is_up ? '-created' : 'created'
                     };
-            
+
                     const res = await this.$store.dispatch('order/getOrderList', params);
                     this.pagination.count = res.count
                     ;(res.results || []).forEach(item => {
@@ -358,7 +415,7 @@
                             }
                         ]);
                     });
-                    
+
                     this.orderList.splice(0, this.orderList.length, ...(res.results || []));
                 } catch (res) {
                     this.$paasMessage({

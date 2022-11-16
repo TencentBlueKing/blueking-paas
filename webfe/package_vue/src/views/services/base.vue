@@ -1,24 +1,33 @@
 <template lang="html">
-    <div class="overview-content">
-        <div class="wrap">
-            <div class="overview">
-                <div class="overview-main" :style="{ 'min-height': `${minHeight}px` }">
-                    <div class="overview-fleft">
-                        <div class="overview-tit">
-                            <div class="title service-title">
-                                <img src="/static/images/service-pic1.png" class="overview-title-pic fleft">
-                                <span class="overview-title-text f16"> {{ $t('服务') }} </span>
-                            </div>
-                        </div>
-                        <paasNav :nav-categories="navCategories" :nav-items="navItems"></paasNav>
-                    </div>
-                    <div class="overview-fright">
-                        <router-view></router-view>
-                    </div>
-                </div>
+  <div class="overview-content">
+    <div class="wrap">
+      <div class="overview">
+        <div
+          class="overview-main"
+          :style="{ 'min-height': `${minHeight}px` }"
+        >
+          <div class="overview-fleft">
+            <div class="overview-tit">
+              <div class="title service-title">
+                <img
+                  src="/static/images/service-pic1.png"
+                  class="overview-title-pic fleft"
+                >
+                <span class="overview-title-text f16"> {{ $t('服务') }} </span>
+              </div>
             </div>
+            <paasNav
+              :nav-categories="navCategories"
+              :nav-items="navItems"
+            />
+          </div>
+          <div class="overview-fright">
+            <router-view />
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>
@@ -53,7 +62,7 @@
             }
             document.body.className = 'ps-service-detail';
         },
-        
+
         beforeDestroy () {
             document.body.className = '';
         }

@@ -1,25 +1,35 @@
 <template>
-    <div>
-        <paas-content-loader :is-loading="screenIsLoading" placeholder="deploy-yaml-loading" :offset-top="20" :offset-left="20" class="deploy-action-box">
-            <div class="process-yaml-container">
-                <resource-editor
-                    v-model="detail"
-                    :height="fullScreen ? clientHeight : height"
-                    ref="editorRef"
-                    key="editor"
-                    v-bkloading="{ isLoading, opacity: 1, color: '#1a1a1a' }"
-                    @error="handleEditorErr">
-                </resource-editor>
-                <EditorStatus class="status-wrapper" :message="editorErr.message" v-show="!!editorErr.message"></EditorStatus>
-            </div>
-        </paas-content-loader>
-        <!-- <bk-button theme="primary"
+  <div>
+    <paas-content-loader
+      :is-loading="screenIsLoading"
+      placeholder="deploy-yaml-loading"
+      :offset-top="20"
+      :offset-left="20"
+      class="deploy-action-box"
+    >
+      <div class="process-yaml-container">
+        <resource-editor
+          ref="editorRef"
+          key="editor"
+          v-model="detail"
+          v-bkloading="{ isLoading, opacity: 1, color: '#1a1a1a' }"
+          :height="fullScreen ? clientHeight : height"
+          @error="handleEditorErr"
+        />
+        <EditorStatus
+          v-show="!!editorErr.message"
+          class="status-wrapper"
+          :message="editorErr.message"
+        />
+      </div>
+    </paas-content-loader>
+    <!-- <bk-button theme="primary"
             class="mt20"
             :loading="deployLoading"
             @click="handleDeploy">
             保存并发布
         </bk-button> -->
-    </div>
+  </div>
 </template>
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin.js';

@@ -70,6 +70,9 @@ class PluginRepoAccessor(Protocol):
     def list_alternative_versions(self, include_branch: bool, include_tag: bool) -> List[AlternativeVersion]:
         """列举当前所有可选的有名字的版本号，通常包括 branch, tag 等"""
 
+    def build_compare_url(self, from_revision: str, to_revision: str) -> str:
+        """对比版本代码差异"""
+
 
 class TemplateRender:
     """插件模板渲染器"""

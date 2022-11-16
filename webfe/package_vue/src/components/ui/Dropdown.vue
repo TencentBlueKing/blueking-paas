@@ -1,8 +1,8 @@
 <template lang="html">
-    <span>
-        <slot name="trigger"></slot>
-        <slot name="content"></slot>
-    </span>
+  <span>
+    <slot name="trigger" />
+    <slot name="content" />
+  </span>
 </template>
 
 <script>
@@ -46,7 +46,7 @@
                 this.instance.on('open', () => {
                     this.$emit('open');
                 });
-                
+
                 if (this.closeOnLinkClicked) {
                     $(this.$slots.content[0].elm).on('click', 'a', (event) => {
                         this.close();

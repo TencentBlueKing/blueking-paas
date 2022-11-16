@@ -1,37 +1,60 @@
 <template lang="html">
-    <ul class="overview-list">
-        <template v-for="(category, categoryIndex) in navTree">
-            <!-- 有子级导航 -->
-            <li :class="{ 'has-child-actived': category.isActived, 'has-child-selected': !category.isExpanded && category.hasChildSelected }"
-                :key="categoryIndex"
-                v-if="category.children && category.children.length">
-                <a class="overview-text" href="javascript:" @click="toggleNavCategory(category)">
-                    {{category.label}}
-                    <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]"></i>
-                    <!-- <i class="paasng-icon paasng-angle-right" v-else></i> -->
-                </a>
-                <span :class="getIconClass(category)"></span>
-                <transition @enter="enter" @after-enter="afterEnter" @leave="leave">
-                    <div class="overview-text-slide" v-if="category.isExpanded">
-                        <a :class="{ 'on': navItem.isSelected }"
-                            href="javascript: void(0);"
-                            v-for="(navItem, navIndex) in category.children"
-                            :key="navIndex"
-                            @click="goPage(navItem)">
-                            {{navItem.name}}
-                        </a>
-                    </div>
-                </transition>
-            </li>
+  <ul class="overview-list">
+    <template v-for="(category, categoryIndex) in navTree">
+      <!-- 有子级导航 -->
+      <li
+        v-if="category.children && category.children.length"
+        :key="categoryIndex"
+        :class="{ 'has-child-actived': category.isActived, 'has-child-selected': !category.isExpanded && category.hasChildSelected }"
+      >
+        <a
+          class="overview-text"
+          href="javascript:"
+          @click="toggleNavCategory(category)"
+        >
+          {{ category.label }}
+          <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]" />
+          <!-- <i class="paasng-icon paasng-angle-right" v-else></i> -->
+        </a>
+        <span :class="getIconClass(category)" />
+        <transition
+          @enter="enter"
+          @after-enter="afterEnter"
+          @leave="leave"
+        >
+          <div
+            v-if="category.isExpanded"
+            class="overview-text-slide"
+          >
+            <a
+              v-for="(navItem, navIndex) in category.children"
+              :key="navIndex"
+              :class="{ 'on': navItem.isSelected }"
+              href="javascript: void(0);"
+              @click="goPage(navItem)"
+            >
+              {{ navItem.name }}
+            </a>
+          </div>
+        </transition>
+      </li>
 
-            <li :class="{ 'no-child-actived': category.isActived }" v-else-if="category.destRoute" :key="categoryIndex">
-                <a class="overview-text" href="javascript:" @click="goPage(category)">
-                    {{category.label}}
-                </a>
-                <span :class="getIconClass(category)"></span>
-            </li>
-        </template>
-    </ul>
+      <li
+        v-else-if="category.destRoute"
+        :key="categoryIndex"
+        :class="{ 'no-child-actived': category.isActived }"
+      >
+        <a
+          class="overview-text"
+          href="javascript:"
+          @click="goPage(category)"
+        >
+          {{ category.label }}
+        </a>
+        <span :class="getIconClass(category)" />
+      </li>
+    </template>
+  </ul>
 </template>
 
 <script>

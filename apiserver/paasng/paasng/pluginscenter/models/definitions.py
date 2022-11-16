@@ -72,6 +72,18 @@ class PluginBasicInfoDefinition(AuditedModel):
     sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
 
+    @classmethod
+    def get_languages(cls) -> List[str]:
+        """get languages declared in all plugin templates"""
+        language_list = []
+
+        plugin_templates = cls.objects.values_list('init_templates', flat=True)
+        for templates in plugin_templates:
+            languages = [t.language for t in templates]
+            language_list.extend(languages)
+
+        return language_list
+
 
 class PluginMarketInfoDefinition(AuditedModel):
     pd = models.OneToOneField(

@@ -1,64 +1,131 @@
 <template lang="html">
-    <div>
-        <log-filter
-            ref="standartLogFilter"
-            :env-list="envList"
-            :stream-list="streamList"
-            :process-list="processList"
-            :log-count="streamLogCount"
-            :loading="isStreamLogListLoading"
-            :key="routeChangeIndex"
-            :type="'standartLog'"
-            :is-use-stream-filter="false"
-            @change="handleLogSearch"
-            @date-change="handlePickSuccess"
-            @reload="handleLogReload">
-        </log-filter>
+  <div>
+    <log-filter
+      ref="standartLogFilter"
+      :key="routeChangeIndex"
+      :env-list="envList"
+      :stream-list="streamList"
+      :process-list="processList"
+      :log-count="streamLogCount"
+      :loading="isStreamLogListLoading"
+      :type="'standartLog'"
+      :is-use-stream-filter="false"
+      @change="handleLogSearch"
+      @date-change="handlePickSuccess"
+      @reload="handleLogReload"
+    />
 
-        <div class="table-filters" v-if="streamLogFilters.length">
-            <ul class="filter-list">
-                <li v-for="(filter) of streamLogFilters" :key="filter.value">
-                    <span class="filter-value">实例名: {{filter.text}}</span>
-                </li>
-            </ul>
-            <span class="paasng-icon paasng-close-circle-shape clear-filters-btn" @click="handleClearStreamLogFilters" v-if="streamLogFilters.length" v-bk-tooltips.right="$t('清空筛选条件')"></span>
-        </div>
-
-        <div class="ps-log-header">
-            <bk-switcher v-model="isShowDate" :disabled="!streamLogList.length" class="bk-small-switcher"></bk-switcher>
-            <span class="text">{{isShowDate ? $t('隐藏时间') : $t('显示时间')}}</span>
-        </div>
-        <div class="ps-log-container" ref="logContainer" :style="{ 'height': `${contentHeight}px`, 'overflow': isStreamLogListLoading ? 'hidden' : 'auto' }" v-bkloading="{ isLoading: isStreamLogListLoading && !isScrollLoading }">
-            <div class="scroll-loading" v-bkloading="{ isLoading: isScrollLoading, color: '#24252c' }" v-if="isScrollLoading"></div>
-            <p class="no-data" v-if="streamLogList.length && !hasNextStreamLog"> {{ $t('已加载该时间段内所有日志') }} </p>
-            <ul v-if="streamLogList.length">
-                <li v-for="(log, index) of streamLogList" :key="index" class="stream-log">
-                    <span class="mr10" style="min-width: 140px;" v-if="isShowDate">{{log.timestamp}}</span>
-                    <div>
-                        <span v-if="log.process_id.length < 5" class="mouseStyle">{{log.process_id}}</span>
-                        <span v-else style="cursor: pointer;" v-bk-tooltips.right="{ theme: 'light', content: log.process_id }">{{processIdSlice(log.process_id)}}</span>
-                    </div>
-                    <template v-if="streamLogFilters.length">
-                        <span class="pod-name" style="cursor: default;">{{log.podShortName}}</span>
-                    </template>
-                    <template v-else>
-                        <div class="pod-name" @click="handleAddStreamLogFilters(log)">
-                            <span v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }">{{log.podShortName}}</span>
-                        </div>
-                    </template>
-                    <pre class="message" v-html="log.message || '--'"></pre>
-                </li>
-            </ul>
-            <div class="ps-no-result" v-else>
-                <div class="text" v-if="!isStreamLogListLoading">
-                    <p>
-                        <i class="paasng-icon paasng-empty" style="font-size: 65px;"></i>
-                    </p>
-                    <p class="f12" style="color: #c3cdd7;"> {{ $t('暂无数据') }} </p>
-                </div>
-            </div>
-        </div>
+    <div
+      v-if="streamLogFilters.length"
+      class="table-filters"
+    >
+      <ul class="filter-list">
+        <li
+          v-for="(filter) of streamLogFilters"
+          :key="filter.value"
+        >
+          <span class="filter-value">实例名: {{ filter.text }}</span>
+        </li>
+      </ul>
+      <span
+        v-if="streamLogFilters.length"
+        v-bk-tooltips.right="$t('清空筛选条件')"
+        class="paasng-icon paasng-close-circle-shape clear-filters-btn"
+        @click="handleClearStreamLogFilters"
+      />
     </div>
+
+    <div class="ps-log-header">
+      <bk-switcher
+        v-model="isShowDate"
+        :disabled="!streamLogList.length"
+        class="bk-small-switcher"
+      />
+      <span class="text">{{ isShowDate ? $t('隐藏时间') : $t('显示时间') }}</span>
+    </div>
+    <div
+      ref="logContainer"
+      v-bkloading="{ isLoading: isStreamLogListLoading && !isScrollLoading }"
+      class="ps-log-container"
+      :style="{ 'height': `${contentHeight}px`, 'overflow': isStreamLogListLoading ? 'hidden' : 'auto' }"
+    >
+      <div
+        v-if="isScrollLoading"
+        v-bkloading="{ isLoading: isScrollLoading, color: '#24252c' }"
+        class="scroll-loading"
+      />
+      <p
+        v-if="streamLogList.length && !hasNextStreamLog"
+        class="no-data"
+      >
+        {{ $t('已加载该时间段内所有日志') }}
+      </p>
+      <ul v-if="streamLogList.length">
+        <li
+          v-for="(log, index) of streamLogList"
+          :key="index"
+          class="stream-log"
+        >
+          <span
+            v-if="isShowDate"
+            class="mr10"
+            style="min-width: 140px;"
+          >{{ log.timestamp }}</span>
+          <div>
+            <span
+              v-if="log.process_id.length < 5"
+              class="mouseStyle"
+            >{{ log.process_id }}</span>
+            <span
+              v-else
+              v-bk-tooltips.right="{ theme: 'light', content: log.process_id }"
+              style="cursor: pointer;"
+            >{{ processIdSlice(log.process_id) }}</span>
+          </div>
+          <template v-if="streamLogFilters.length">
+            <span
+              class="pod-name"
+              style="cursor: default;"
+            >{{ log.podShortName }}</span>
+          </template>
+          <template v-else>
+            <div
+              class="pod-name"
+              @click="handleAddStreamLogFilters(log)"
+            >
+              <span v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }">{{ log.podShortName }}</span>
+            </div>
+          </template>
+          <pre
+            class="message"
+            v-html="log.message || '--'"
+          />
+        </li>
+      </ul>
+      <div
+        v-else
+        class="ps-no-result"
+      >
+        <div
+          v-if="!isStreamLogListLoading"
+          class="text"
+        >
+          <p>
+            <i
+              class="paasng-icon paasng-empty"
+              style="font-size: 65px;"
+            />
+          </p>
+          <p
+            class="f12"
+            style="color: #c3cdd7;"
+          >
+            {{ $t('暂无数据') }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -166,7 +233,7 @@
             init () {
                 this.isLoading = true;
                 this.loadData();
-                
+
                 const winHeight = window.innerHeight;
                 const height = winHeight - 400;
                 if (height > 400) {
@@ -611,7 +678,7 @@
         }
         width: 100%;
         box-sizing: border-box;
-        
+
         th {
             border-top: none;
             border-right: none;
@@ -802,7 +869,7 @@
         padding: 10px 20px;
         margin-top: 20px;
         border-radius: 2px 2px 0 0;
-        
+
         .text {
             margin-left: 5px;
             color: #fff;

@@ -23,409 +23,409 @@ import http from '@/api';
 import { json2Query } from '@/common/tools';
 
 const state = {
-    // 是否允许推广到应用市场, 一般只有接入登录的应用才允许
-    // canPublishToMarket: false,
-    availableBranch: '',
-    productInfoProvided: false,
+  // 是否允许推广到应用市场, 一般只有接入登录的应用才允许
+  // canPublishToMarket: false,
+  availableBranch: '',
+  productInfoProvided: false,
 
-    confirmRequiredWhenPublish: false,
-    availableType: 'branch'
+  confirmRequiredWhenPublish: false,
+  availableType: 'branch'
 };
 
 const getters = {
-    // canPublishToMarket: state => state.canPublishToMarket,
-    productInfoProvided: state => state.productInfoProvided,
-    availableBranch: state => state.availableBranch,
-    confirmRequiredWhenPublish: state => state.confirmRequiredWhenPublish
+  // canPublishToMarket: state => state.canPublishToMarket,
+  productInfoProvided: state => state.productInfoProvided,
+  availableBranch: state => state.availableBranch,
+  confirmRequiredWhenPublish: state => state.confirmRequiredWhenPublish
 };
 
 const mutations = {
-    updateDeploymentInfo: function (state, { key, value }) {
-        state[key] = value;
-    }
+  updateDeploymentInfo: function (state, { key, value }) {
+    state[key] = value;
+  }
 };
 
 // actions
 const actions = {
-    checkProductInfoProvided ({ commit, state }, appCode) {
-        return http.get(BACKEND_URL + `/api/bkapps/applications/${appCode}/`).then(response => {
-            commit('updateDeploymentInfo', {
-                key: 'confirmRequiredWhenPublish',
-                value: response.web_config.confirm_required_when_publish
-            });
-            commit('updateDeploymentInfo', {
-                key: 'productInfoProvided',
-                value: !state.confirmRequiredWhenPublish || Boolean(response.product)
-            });
-        });
-    },
+  checkProductInfoProvided ({ commit, state }, appCode) {
+    return http.get(BACKEND_URL + `/api/bkapps/applications/${appCode}/`).then(response => {
+      commit('updateDeploymentInfo', {
+        key: 'confirmRequiredWhenPublish',
+        value: response.web_config.confirm_required_when_publish
+      });
+      commit('updateDeploymentInfo', {
+        key: 'productInfoProvided',
+        value: !state.confirmRequiredWhenPublish || Boolean(response.product)
+      });
+    });
+  },
 
-    refreshAvailableBranch ({ commit }, { appCode, moduleId }) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/stag/released_state/`;
-        return http.get(url).then(res => {
-            const branchData = res.deployment;
-            if (branchData) {
-                commit('updateDeploymentInfo', {
-                    key: 'availableBranch',
-                    value: branchData.repo.name
-                });
-                commit('updateDeploymentInfo', {
-                    key: 'availableType',
-                    value: branchData.repo.type
-                });
-                return `${branchData.repo.type}:${branchData.repo.name}`;
-            } else {
-                commit('updateDeploymentInfo', {
-                    key: 'availableBranch',
-                    value: ''
-                });
-                commit('updateDeploymentInfo', {
-                    key: 'availableType',
-                    value: 'branch'
-                });
-                return '';
-            }
-        }, res => {
-            commit('updateDeploymentInfo', {
-                key: 'availableBranch',
-                value: ''
-            });
-            commit('updateDeploymentInfo', {
-                key: 'availableType',
-                value: 'branch'
-            });
-        });
-    },
-
-    updateAvailableBranch ({ commit }, availableBranch) {
+  refreshAvailableBranch ({ commit }, { appCode, moduleId }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/stag/released_state/`;
+    return http.get(url).then(res => {
+      const branchData = res.deployment;
+      if (branchData) {
         commit('updateDeploymentInfo', {
-            key: 'availableBranch',
-            value: availableBranch
+          key: 'availableBranch',
+          value: branchData.repo.name
         });
-    },
-
-    updateAvailableType ({ commit }, availableType) {
         commit('updateDeploymentInfo', {
-            key: 'availableType',
-            value: availableType
+          key: 'availableType',
+          value: branchData.repo.type
         });
-    },
+        return `${branchData.repo.type}:${branchData.repo.name}`;
+      } else {
+        commit('updateDeploymentInfo', {
+          key: 'availableBranch',
+          value: ''
+        });
+        commit('updateDeploymentInfo', {
+          key: 'availableType',
+          value: 'branch'
+        });
+        return '';
+      }
+    }, res => {
+      commit('updateDeploymentInfo', {
+        key: 'availableBranch',
+        value: ''
+      });
+      commit('updateDeploymentInfo', {
+        key: 'availableType',
+        value: 'branch'
+      });
+    });
+  },
 
-    /**
+  updateAvailableBranch ({ commit }, availableBranch) {
+    commit('updateDeploymentInfo', {
+      key: 'availableBranch',
+      value: availableBranch
+    });
+  },
+
+  updateAvailableType ({ commit }, availableType) {
+    commit('updateDeploymentInfo', {
+      key: 'availableType',
+      value: availableType
+    });
+  },
+
+  /**
      * 获取部署的基本信息
      * @param {Object} params 请求参数：appCode, apiType, apiPackageSelected
      */
-    getModuleRuntimeOverview ({ commit, state }, { appCode, moduleId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/overview`;
-        return http.get(url, config);
-    },
+  getModuleRuntimeOverview ({ commit, state }, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/overview`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取模块部署信息
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getModuleReleaseInfo ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/released_state/`;
-        return http.get(url, config).then(res => {
-            if (!res.is_offlined && env === 'stag') {
-                commit('updateDeploymentInfo', {
-                    key: 'availableBranch',
-                    value: res.deployment.repo.name
-                });
-                commit('updateDeploymentInfo', {
-                    key: 'availableType',
-                    value: res.deployment.repo.type
-                });
-            }
-            return res;
-        }).catch(res => {
-            commit('updateDeploymentInfo', {
-                key: 'availableBranch',
-                value: ''
-            });
-            commit('updateDeploymentInfo', {
-                key: 'availableType',
-                value: 'branch'
-            });
-            return res;
+  getModuleReleaseInfo ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/released_state/`;
+    return http.get(url, config).then(res => {
+      if (!res.is_offlined && env === 'stag') {
+        commit('updateDeploymentInfo', {
+          key: 'availableBranch',
+          value: res.deployment.repo.name
         });
-    },
+        commit('updateDeploymentInfo', {
+          key: 'availableType',
+          value: res.deployment.repo.type
+        });
+      }
+      return res;
+    }).catch(res => {
+      commit('updateDeploymentInfo', {
+        key: 'availableBranch',
+        value: ''
+      });
+      commit('updateDeploymentInfo', {
+        key: 'availableType',
+        value: 'branch'
+      });
+      return res;
+    });
+  },
 
-    /**
+  /**
      * 获取模块部署分支
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getModuleBranches ({ commit, state }, { appCode, moduleId }, config = { requestId: 'getModuleBranches' }) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/branches/`;
-        return http.get(url, config);
-    },
+  getModuleBranches ({ commit, state }, { appCode, moduleId }, config = { requestId: 'getModuleBranches' }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/branches/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 部署模块
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    createDeployForModule ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/`;
-        return http.post(url, params, config);
-    },
+  createDeployForModule ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/`;
+    return http.post(url, params, config);
+  },
 
-    /**
+  /**
      * 获取模块部署结果
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getDeployResult ({ commit, state }, { appCode, moduleId, deployId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/`;
-        return http.get(url, config);
-    },
+  getDeployResult ({ commit, state }, { appCode, moduleId, deployId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取git代码对比链接
      * @param {Object} params 请求参数：appCode, fromVersion, toVersion
      */
-    getGitCompareUrl ({ commit, state }, { appCode, moduleId, fromVersion, toVersion }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/commit-diff-external/${fromVersion}/${toVersion}/`;
-        return http.get(url, config);
-    },
+  getGitCompareUrl ({ commit, state }, { appCode, moduleId, fromVersion, toVersion }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/commit-diff-external/${fromVersion}/${toVersion}/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取svn代码提交记录
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getSvnCommits ({ commit, state }, { appCode, moduleId, fromVersion, toVersion }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/commit-diff/${fromVersion}/${toVersion}/logs/`;
-        return http.get(url, config);
-    },
+  getSvnCommits ({ commit, state }, { appCode, moduleId, fromVersion, toVersion }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/commit-diff/${fromVersion}/${toVersion}/logs/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取部署前条件准备情况
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getDeployPreparations ({ commit, state }, { appCode, moduleId, env, fromVersion, toVersion }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy/preparations`;
-        return http.get(url, config);
-    },
+  getDeployPreparations ({ commit, state }, { appCode, moduleId, env, fromVersion, toVersion }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy/preparations`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 模块下架
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    offlineApp ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/offlines/`;
-        return http.post(url, {}, config);
-    },
+  offlineApp ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/offlines/`;
+    return http.post(url, {}, config);
+  },
 
-    /**
+  /**
      * 获取模块下架进度
      * @param {Object} params 请求参数：appCode, moduleId, offlineOperationId
      */
-    getOfflineResult ({ commit, state }, { appCode, moduleId, offlineOperationId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/offlines/${offlineOperationId}/result/`;
-        return http.get(url, config);
-    },
+  getOfflineResult ({ commit, state }, { appCode, moduleId, offlineOperationId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/offlines/${offlineOperationId}/result/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 检测模块下架进度状况，如果进行中需要拉起“获取模块下架进度”
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getOfflineStatus ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/offlines/resumable/`;
-        return http.get(url, config);
-    },
+  getOfflineStatus ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/offlines/resumable/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 检测模块部署进度状况
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getDeployStatus ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/resumable/`;
-        return http.get(url, config);
-    },
+  getDeployStatus ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deployments/resumable/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取部署记录
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getDeployHistory ({ commit, state }, { appCode, moduleId, pageParams }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_operations/lists/?${json2Query(pageParams)}`;
-        return http.get(url, config);
-    },
+  getDeployHistory ({ commit, state }, { appCode, moduleId, pageParams }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取部署前各阶段详情
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getPreDeployDetail ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy_phases/`;
-        return http.get(url, config);
-    },
+  getPreDeployDetail ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy_phases/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取部署中阶段详情
      * @param {Object} params 请求参数：appCode, moduleId, env, uuid
      */
-    getBeingDeployDetail ({ commit, state }, { appCode, moduleId, env, uuid }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy_phases/${uuid}/`;
-        return http.get(url, config);
-    },
+  getBeingDeployDetail ({ commit, state }, { appCode, moduleId, env, uuid }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy_phases/${uuid}/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 创建svn分支
      * @param {Object} params 请求参数：appCode, moduleId
      */
-    createSvnBranch ({ commit, state }, { appCode, moduleId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/tags/`;
-        return http.post(url, {}, config);
-    },
+  createSvnBranch ({ commit, state }, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/repo/tags/`;
+    return http.post(url, {}, config);
+  },
 
-    /**
+  /**
      * 获取部署后各阶段详情
      * @param {Object} params 请求参数：appCode, moduleId, env, deployId
      */
-    getDeployTimeline ({ commit, state }, { appCode, moduleId, env, deployId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy_phases/${deployId}/`;
-        return http.get(url, config);
-    },
+  getDeployTimeline ({ commit, state }, { appCode, moduleId, env, deployId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/deploy_phases/${deployId}/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取部署后日志
      * @param {Object} params 请求参数：appCode, moduleId, env, deployId
      */
-    getDeployLog ({ commit, state }, { appCode, moduleId, env, deployId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/`;
-        return http.get(url, config);
-    },
+  getDeployLog ({ commit, state }, { appCode, moduleId, env, deployId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取应用文档列表
      * @param {Object} params 请求参数：appCode, moduleId, env, deployId
      */
-    getAppDocLinks ({ commit, state }, { appCode, params }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/accessories/advised_documentary_links/?${json2Query(params)}`;
-        return http.get(url, config);
-    },
+  getAppDocLinks ({ commit, state }, { appCode, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/accessories/advised_documentary_links/?${json2Query(params)}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取架构信息
      * @param {Object} params 请求参数：appCode, moduleName, smart_revision
      */
-    getSchemaInfo ({ commit, state }, { appCode, moduleName, versionType, versionName }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/repo/revisions/${versionType}:${versionName}`;
-        return http.get(url, config);
-    },
+  getSchemaInfo ({ commit, state }, { appCode, moduleName, versionType, versionName }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleName}/repo/revisions/${versionType}:${versionName}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 停止部署
      *
      * @param {Object} params 请求参数：appCode, moduleId, deployId
      */
-    stopDeploy ({ commit, state }, { appCode, moduleId, deployId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/interruptions/`;
-        return http.post(url, {}, config);
-    },
+  stopDeploy ({ commit, state }, { appCode, moduleId, deployId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/interruptions/`;
+    return http.post(url, {}, config);
+  },
 
-    /**
+  /**
      * 获取当前模块的部署配置信息
      *
      * @param {Object} params 请求参数：appCode, moduleId
      */
-    getDeployConfig ({ commit, state }, { appCode, moduleId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_config/`;
-        return http.get(url, {}, config);
-    },
+  getDeployConfig ({ commit, state }, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_config/`;
+    return http.get(url, {}, config);
+  },
 
-    /**
+  /**
      * 更新当前模块的部署配置信息
      *
      * @param {Object} params 请求参数：appCode, moduleId
      */
-    updateDeployConfig ({ commit, state }, { appCode, moduleId, params }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_config/hooks/`;
-        return http.post(url, params, config);
-    },
+  updateDeployConfig ({ commit, state }, { appCode, moduleId, params }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_config/hooks/`;
+    return http.post(url, params, config);
+  },
 
-    /**
+  /**
      * 禁用当前模块的部署配置信息
      *
      * @param {Object} params 请求参数：appCode, moduleId
      */
-    closeDeployConfig ({ commit, state }, { appCode, moduleId, type }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_config/hooks/${type}/disable/`;
-        return http.put(url, {}, config);
-    },
+  closeDeployConfig ({ commit, state }, { appCode, moduleId, type }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_config/hooks/${type}/disable/`;
+    return http.put(url, {}, config);
+  },
 
-    /**
+  /**
      * 获取指定模块所有环境的增强服务使用信息
      *
      * @param {Object} params 请求参数：appCode, moduleId
      */
-    getCloudAppResource ({ commit, state }, { appCode, moduleId }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/info/`;
-        return http.get(url, config);
-    },
+  getCloudAppResource ({ commit, state }, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/info/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取云原生模块信息
      *
      * @param {Object} params 请求参数：appCode, moduleId
      */
-    getCloudAppYaml ({ commit, state }, { appCode, moduleId }, config = {}) {
-        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/mres/`;
-        return http.get(url, config);
-    },
+  getCloudAppYaml ({ commit, state }, { appCode, moduleId }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/mres/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 提交发送云原生模块信息
      *
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    sumbitCloudApp ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
-        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/`;
-        return http.post(url, params, config);
-    },
+  sumbitCloudApp ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/`;
+    return http.post(url, params, config);
+  },
 
-    /**
+  /**
      * 获取二次确认信息
      *
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getCloudAppInfo ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
-        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deploy_preps/`;
-        return http.post(url, params, config);
-    },
+  getCloudAppInfo ({ commit, state }, { appCode, moduleId, env, params }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deploy_preps/`;
+    return http.post(url, params, config);
+  },
 
-    /**
+  /**
      * 查看应用模型资源当前状态
      *
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getCloudAppStatus ({ commit, state }, { appCode, moduleId, env }, config = {}) {
-        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/status/`;
-        return http.get(url, config);
-    },
+  getCloudAppStatus ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/status/`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 查看应用模型状态YAML
      *
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getCloudAppDeployYaml ({ commit, state }, { appCode, moduleId, env, deployId }, config = {}) {
-        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/${deployId}/`;
-        return http.get(url, config);
-    },
-    /**
+  getCloudAppDeployYaml ({ commit, state }, { appCode, moduleId, env, deployId }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/${deployId}/`;
+    return http.get(url, config);
+  },
+  /**
      * 获取应用模型部署记录
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
-    getCloudAppDeployHistory ({ commit, state }, { appCode, moduleId, env, pageParams }, config = {}) {
-        const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/?${json2Query(pageParams)}`;
-        return http.get(url, config);
-    }
+  getCloudAppDeployHistory ({ commit, state }, { appCode, moduleId, env, pageParams }, config = {}) {
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/?${json2Query(pageParams)}`;
+    return http.get(url, config);
+  }
 };
 
 export default {
-    namespaced: true,
-    state,
-    getters,
-    mutations,
-    actions
+  namespaced: true,
+  state,
+  getters,
+  mutations,
+  actions
 };

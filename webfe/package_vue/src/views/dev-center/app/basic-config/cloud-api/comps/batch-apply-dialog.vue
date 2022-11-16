@@ -1,106 +1,158 @@
 <template lang="html">
-    <bk-dialog
-        v-model="visible"
-        theme="primary"
-        :width="845"
-        :mask-close="false"
-        header-position="left"
-        ext-cls="paasng-api-batch-apply-dialog"
-        :title="$t(title)"
-        @after-leave="handleAfterLeave">
-        <div class="content">
-            <paasng-alert>
-                <div slot="title">
-                    {{ `${$t('将申请')}${isComponent ? $t('系统') : $t('网关')} ${apiName} ${$t('下')}` }}
-                    <span style="color: #2dcb56;">{{ applyRows.length }}</span>
-                    {{ `${$t('个')}${isComponent ? $t('组件') : $t('网关')}${$t('API的权限')}` }}{{ renewalRows.length > 0 ? '，' : '。' }}
-                    <template v-if="renewalRows.length > 0">
-                        <span style="color: #ff9c01;">{{ renewalRows.length }}</span>
-                        {{ $t('个网关 API 已有权限，不可重复申请。') }}
-                    </template>
-                </div>
-            </paasng-alert>
-            <div class="api-batch-apply-content">
-                <table
-                    class="bk-table api-batch-apply-fixed-table">
-                    <colgroup>
-                        <col style="width: 200px;" />
-                        <col style="width: 200px;" />
-                        <col />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th style="padding-left: 20px;">{{ isComponent ? $t('系统') : $t('网关') }}</th>
-                            <th>API</th>
-                            <th> {{ $t('描述') }} </th>
-                        </tr>
-                    </thead>
-                </table>
-                <div
-                    :class="['api-batch-apply-table', { 'has-bottom-border': !isScrollBottom && rows.length > 4 }]"
-                    ref="apiTableRef"
-                    @scroll.stop="handleScroll($event)">
-                    <table
-                        class="bk-table has-table-hover">
-                        <colgroup>
-                            <col style="width: 200px;" />
-                            <col style="width: 200px;" />
-                            <col />
-                        </colgroup>
-                        <tbody style="background: #fff;">
-                            <template v-if="rows.length > 0">
-                                <tr v-for="(item, index) in rows"
-                                    :key="index">
-                                    <td style="text-align: left; padding-left: 20px;">
-                                        <span class="name">{{ isComponent ? item.system_name : item.api_name }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="api-batch-apply-name" :title="item.name">{{ item.name }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="desc" :title="item.description ? item.description : ''">
-                                            <template v-if="item.permission_action === 'renew'">
-                                                <span style="color: #ff9c01"> {{ $t('已有权限，不可重复申请') }} </span>
-                                            </template>
-                                            <template v-else>
-                                                {{ item.description || '--' }}
-                                            </template>
-                                        </span>
-                                    </td>
-                                </tr>
-                            </template>
-                            <template v-if="rows.length < 1">
-                                <tr>
-                                    <td colspan="3">
-                                        <div class="search-empty-wrapper">
-                                            <div class="empty-wrapper">
-                                                <i class="bk-icon icon-empty"></i>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <bk-form :label-width="80" :model="formData" style="margin-top: 25px;">
-                <bk-form-item :label="$t('申请理由')" required property="reason">
-                    <bk-input v-model="formData.reason" type="textarea" :maxlength="120"></bk-input>
-                </bk-form-item>
-                <bk-form-item :label="$t('有效时间')" required property="expired">
-                    <div class="bk-button-group bk-button-group-cls">
-                        <bk-button @click="formData.expired = 6" :class="formData.expired === 6 ? 'is-selected' : ''"> {{ $t('6个月') }} </bk-button>
-                        <bk-button @click="formData.expired = 12" :class="formData.expired === 12 ? 'is-selected' : ''"> {{ $t('12个月') }} </bk-button>
-                    </div>
-                </bk-form-item>
-            </bk-form>
+  <bk-dialog
+    v-model="visible"
+    theme="primary"
+    :width="845"
+    :mask-close="false"
+    header-position="left"
+    ext-cls="paasng-api-batch-apply-dialog"
+    :title="$t(title)"
+    @after-leave="handleAfterLeave"
+  >
+    <div class="content">
+      <paasng-alert>
+        <div slot="title">
+          {{ `${$t('将申请')}${isComponent ? $t('系统') : $t('网关')} ${apiName} ${$t('下')}` }}
+          <span style="color: #2dcb56;">{{ applyRows.length }}</span>
+          {{ `${$t('个')}${isComponent ? $t('组件') : $t('网关')}${$t('API的权限')}` }}{{ renewalRows.length > 0 ? '，' : '。' }}
+          <template v-if="renewalRows.length > 0">
+            <span style="color: #ff9c01;">{{ renewalRows.length }}</span>
+            {{ $t('个网关 API 已有权限，不可重复申请。') }}
+          </template>
         </div>
-        <template slot="footer">
-            <bk-button theme="primary" :disabled="formData.reason === ''" :loading="loading" @click="handleConfirm"> {{ $t('确定') }} </bk-button>
-            <bk-button style="margin-left: 10px;" @click="handleCancel"> {{ $t('取消') }} </bk-button>
-        </template>
-    </bk-dialog>
+      </paasng-alert>
+      <div class="api-batch-apply-content">
+        <table
+          class="bk-table api-batch-apply-fixed-table"
+        >
+          <colgroup>
+            <col style="width: 200px;">
+            <col style="width: 200px;">
+            <col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th style="padding-left: 20px;">
+                {{ isComponent ? $t('系统') : $t('网关') }}
+              </th>
+              <th>API</th>
+              <th> {{ $t('描述') }} </th>
+            </tr>
+          </thead>
+        </table>
+        <div
+          ref="apiTableRef"
+          :class="['api-batch-apply-table', { 'has-bottom-border': !isScrollBottom && rows.length > 4 }]"
+          @scroll.stop="handleScroll($event)"
+        >
+          <table
+            class="bk-table has-table-hover"
+          >
+            <colgroup>
+              <col style="width: 200px;">
+              <col style="width: 200px;">
+              <col>
+            </colgroup>
+            <tbody style="background: #fff;">
+              <template v-if="rows.length > 0">
+                <tr
+                  v-for="(item, index) in rows"
+                  :key="index"
+                >
+                  <td style="text-align: left; padding-left: 20px;">
+                    <span class="name">{{ isComponent ? item.system_name : item.api_name }}</span>
+                  </td>
+                  <td>
+                    <span
+                      class="api-batch-apply-name"
+                      :title="item.name"
+                    >{{ item.name }}</span>
+                  </td>
+                  <td>
+                    <span
+                      class="desc"
+                      :title="item.description ? item.description : ''"
+                    >
+                      <template v-if="item.permission_action === 'renew'">
+                        <span style="color: #ff9c01"> {{ $t('已有权限，不可重复申请') }} </span>
+                      </template>
+                      <template v-else>
+                        {{ item.description || '--' }}
+                      </template>
+                    </span>
+                  </td>
+                </tr>
+              </template>
+              <template v-if="rows.length < 1">
+                <tr>
+                  <td colspan="3">
+                    <div class="search-empty-wrapper">
+                      <div class="empty-wrapper">
+                        <i class="bk-icon icon-empty" />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <bk-form
+        :label-width="80"
+        :model="formData"
+        style="margin-top: 25px;"
+      >
+        <bk-form-item
+          :label="$t('申请理由')"
+          required
+          property="reason"
+        >
+          <bk-input
+            v-model="formData.reason"
+            type="textarea"
+            :maxlength="120"
+          />
+        </bk-form-item>
+        <bk-form-item
+          :label="$t('有效时间')"
+          required
+          property="expired"
+        >
+          <div class="bk-button-group bk-button-group-cls">
+            <bk-button
+              :class="formData.expired === 6 ? 'is-selected' : ''"
+              @click="formData.expired = 6"
+            >
+              {{ $t('6个月') }}
+            </bk-button>
+            <bk-button
+              :class="formData.expired === 12 ? 'is-selected' : ''"
+              @click="formData.expired = 12"
+            >
+              {{ $t('12个月') }}
+            </bk-button>
+          </div>
+        </bk-form-item>
+      </bk-form>
+    </div>
+    <template slot="footer">
+      <bk-button
+        theme="primary"
+        :disabled="formData.reason === ''"
+        :loading="loading"
+        @click="handleConfirm"
+      >
+        {{ $t('确定') }}
+      </bk-button>
+      <bk-button
+        style="margin-left: 10px;"
+        @click="handleCancel"
+      >
+        {{ $t('取消') }}
+      </bk-button>
+    </template>
+  </bk-dialog>
 </template>
 <script>
     import PaasngAlert from './paasng-alert';

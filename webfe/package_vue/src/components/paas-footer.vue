@@ -1,24 +1,54 @@
 <template lang="html">
-    <footer class="ps-sample-footer">
-        <template v-if="GLOBAL.APP_VERSION === 'te'">
-            <div class="info">
-                <bk-link theme="primary" :href="GLOBAL.LINK.BK_HELP" target="_blank"> {{ $t('联系BK助手') }} </bk-link>
-                |
-                <bk-link theme="primary" :href="GLOBAL.LINK.BK_DESKTOP" target="_blank"> {{ $t('蓝鲸桌面') }} </bk-link>
-            </div>
-            <div>Copyright © 2012-{{curYear}} Tencent BlueKing. All Rights Reserved.</div>
-        </template>
-        <template v-else>
-            <div class="info">
-                <bk-link theme="primary" href="https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true" target="_blank"> {{ $t('技术支持') }} </bk-link>
-                |
-                <bk-link theme="primary" href="https://bk.tencent.com/s-mart/community/" target="_blank"> {{ $t('社区论坛') }} </bk-link>
-                |
-                <bk-link theme="primary" href="https://bk.tencent.com/" target="_blank"> {{ $t('产品官网') }} </bk-link>
-            </div>
-            <div>Copyright © 2012-{{curYear}} Tencent BlueKing. All Rights Reserved. V{{paasVersion}}</div>
-        </template>
-    </footer>
+  <footer class="ps-sample-footer">
+    <template v-if="GLOBAL.APP_VERSION === 'te'">
+      <div class="info">
+        <bk-link
+          theme="primary"
+          :href="GLOBAL.LINK.BK_HELP"
+          target="_blank"
+        >
+          {{ $t('联系BK助手') }}
+        </bk-link>
+        |
+        <bk-link
+          theme="primary"
+          :href="GLOBAL.LINK.BK_DESKTOP"
+          target="_blank"
+        >
+          {{ $t('蓝鲸桌面') }}
+        </bk-link>
+      </div>
+      <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved.</div>
+    </template>
+    <template v-else>
+      <div class="info">
+        <bk-link
+          theme="primary"
+          href="https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true"
+          target="_blank"
+        >
+          {{ $t('技术支持') }}
+        </bk-link>
+        |
+        <bk-link
+          theme="primary"
+          href="https://bk.tencent.com/s-mart/community/"
+          target="_blank"
+        >
+          {{ $t('社区论坛') }}
+        </bk-link>
+        |
+        <bk-link
+          theme="primary"
+          href="https://bk.tencent.com/"
+          target="_blank"
+        >
+          {{ $t('产品官网') }}
+        </bk-link>
+      </div>
+      <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. V{{ paasVersion }}</div>
+    </template>
+  </footer>
 </template>
 
 <script>

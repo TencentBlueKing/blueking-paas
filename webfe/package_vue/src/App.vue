@@ -1,15 +1,25 @@
 <template>
-    <div id="app">
-        <paas-header></paas-header>
-        <div style="min-height: calc(100% - 70px); overflow: auto;">
-            <router-view></router-view>
-        </div>
-        <paas-footer></paas-footer>
-        <div class="login-dialog" v-if="showLoginModal">
-            <div class="hole-bg"></div>
-            <iframe :src="loginURL" scrolling="no" border="0" width="500" height="400" :class="GLOBAL.APP_VERSION !== 'te' ? 'small' : ''"></iframe>
-        </div>
+  <div id="app">
+    <paas-header />
+    <div style="min-height: calc(100% - 70px); overflow: auto;">
+      <router-view />
     </div>
+    <paas-footer />
+    <div
+      v-if="showLoginModal"
+      class="login-dialog"
+    >
+      <div class="hole-bg" />
+      <iframe
+        :src="loginURL"
+        scrolling="no"
+        border="0"
+        width="500"
+        height="400"
+        :class="GLOBAL.APP_VERSION !== 'te' ? 'small' : ''"
+      />
+    </div>
+  </div>
 </template>
 
 <script>
@@ -122,7 +132,7 @@
             height: 400px;
         }
     }
-    
+
     .notice {
         position: fixed;
         left: 0px;

@@ -1,5 +1,8 @@
 <template lang="html">
-    <service-general class="frame-wrapper" :data="apiData"></service-general>
+  <service-general
+    class="frame-wrapper"
+    :data="apiData"
+  />
 </template>
 
 <script>

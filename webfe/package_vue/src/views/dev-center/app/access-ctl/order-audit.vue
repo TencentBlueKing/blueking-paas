@@ -1,28 +1,43 @@
 <template lang="html">
-    <div class="right-main order-approve-wrapper" style="overflow: hidden; min-height: 500px;">
-        <app-top-bar
-            :title="$t('单据审批')"
-            :cur-module="curModule"
-            disabled
-            ref="moduleRef"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isLoading" placeholder="order-loading" :offset-top="25" class="app-container middle">
-            <section v-show="!isLoading">
-                <bk-tab
-                    class="mt5"
-                    :active.sync="orderStatus"
-                    type="unborder-card">
-                    <bk-tab-panel name="processing" :label="$t('未审批')">
-                        <processing-order @data-ready="handlerDataReady"></processing-order>
-                    </bk-tab-panel>
-                    <bk-tab-panel name="done" :label="$t('已审批')">
-                        <done-order @data-ready="handlerDataReady"></done-order>
-                    </bk-tab-panel>
-                </bk-tab>
-            </section>
-        </paas-content-loader>
-    </div>
+  <div
+    class="right-main order-approve-wrapper"
+    style="overflow: hidden; min-height: 500px;"
+  >
+    <app-top-bar
+      ref="moduleRef"
+      :title="$t('单据审批')"
+      :cur-module="curModule"
+      disabled
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="order-loading"
+      :offset-top="25"
+      class="app-container middle"
+    >
+      <section v-show="!isLoading">
+        <bk-tab
+          class="mt5"
+          :active.sync="orderStatus"
+          type="unborder-card"
+        >
+          <bk-tab-panel
+            name="processing"
+            :label="$t('未审批')"
+          >
+            <processing-order @data-ready="handlerDataReady" />
+          </bk-tab-panel>
+          <bk-tab-panel
+            name="done"
+            :label="$t('已审批')"
+          >
+            <done-order @data-ready="handlerDataReady" />
+          </bk-tab-panel>
+        </bk-tab>
+      </section>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

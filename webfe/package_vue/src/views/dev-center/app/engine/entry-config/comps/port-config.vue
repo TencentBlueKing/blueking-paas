@@ -1,231 +1,388 @@
 <template>
-    <div class="port-config">
-        <div class="ps-top-card">
-            <p class="main-title"> {{ $t('进程服务管理') }} </p>
-            <p class="desc"> {{ $t('进程服务管理允许你修改应用暴露服务的方式。使用前请先阅读') }}
-                <a :href="GLOBAL.DOC.PROCESS_SERVICE" target="blank"> {{ $t('详细使用说明') }} </a>
-            </p>
-        </div>
-        <div class="content">
-            <bk-tab :active.sync="env" type="unborder-card">
-                <bk-tab-panel
-                    v-for="(panel, panelIndex) in panels"
-                    v-bind="panel"
-                    :key="panelIndex">
-                    <section class="ps-accordion" v-bkloading="{ isLoading: isConfigLoading, opacity: 1 }" style="min-height: 70px;">
-                        <template v-if="processServices.length">
-                            <div class="item" v-for="(service, serviceIndex) of processServices" :key="serviceIndex">
-                                <div class="main" @click="service.isExpanded = !service.isExpanded">
-                                    <div class="toggle-icon">
-                                        <template v-if="service.isExpanded">
-                                            <i class="paasng-icon paasng-down-shape"></i>
-                                        </template>
-                                        <template v-else>
-                                            <i class="paasng-icon paasng-right-shape"></i>
-                                        </template>
-                                    </div>
-                                    <div class="metedata" style="cursor: pointer;">
-                                        <strong class="title">{{service.process_type}}</strong>
-                                        <p class="desc">
-                                            <label class="label"> {{ $t('端口规则：') }} {{service.ports.length}} {{ $t('个') }} </label>
-                                            <label class="label"> {{ $t('服务名称：') }} {{service.name}}</label>
-                                        </p>
-                                        <span class="mark" v-if="processIngress.service_name === service.name"> {{ $t('已设置为主入口') }} </span>
-                                    </div>
-                                    <div class="action" @click.stop.prevent="stop">
-                                        <bk-dropdown-menu :ref="`dropdown${serviceIndex}`" align="right">
-                                            <button class="ps-more-btn" slot="dropdown-trigger">
-                                                <i class="paasng-icon paasng-more"></i>
-                                            </button>
-                                            <ul class="bk-dropdown-list" slot="dropdown-content">
-                                                <li v-for="(port, index) of service.ports" :key="index" class="reset-dropdown-li" @click.stop.prevent="showDialog(service, port, serviceIndex)">
-                                                    <a href="javascript:;"
-                                                        :class="processIngress.service_port_name === port.name && processIngress.service_name === service.name ? 'disabled' : ''"
-                                                        :title="processIngress.service_port_name === port.name && processIngress.service_name === service.name ? `${port.name}端口已设置为主入口` : `设置${port.name}端口为主入口`">
-                                                        <template v-if="processIngress.service_port_name === port.name && processIngress.service_name === service.name">
-                                                            <span class="ps-text ps-text-ellipsis f12" style="max-width: 80px;">{{port.name}}</span> {{ $t('端口已设置为主入口') }}
-                                                        </template>
-                                                        <template v-else>
-                                                            {{ $t('设置') }} <span class="ps-text ps-text-ellipsis f12" style="max-width: 80px;">{{port.name}}</span> {{ $t('端口为主入口') }}
-                                                        </template>
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </bk-dropdown-menu>
-                                    </div>
-                                </div>
-                                <div class="params-box" v-if="service.isExpanded">
-                                    <div class="params-header">
-                                        <strong class="title"> {{ $t('端口配置') }} </strong>
-                                        <template v-if="!service.isEdited">
-                                            <button class="bk-text-button" @click.stop.prevent="service.isEdited = !service.isEdited"> {{ $t('编辑') }} </button>
-                                        </template>
-                                        <template v-else>
-                                            <button class="bk-text-button" @click.stop.prevent="service.isEdited = false"> {{ $t('取消') }} </button>
-                                            <button class="bk-text-button" @click.stop.prevent="updateServicePorts(service)"> {{ $t('保存') }} </button>
-                                        </template>
-                                    </div>
-
-                                    <template v-if="!service.isEdited">
-                                        <table class="ps-table" style="width: 100%;">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width: 200px;"> {{ $t('名称') }} </th>
-                                                    <th> {{ $t('协议') }} </th>
-                                                    <th style="width: 180px;"> {{ $t('服务端口') }} </th>
-                                                    <th style="width: 100px;"></th>
-                                                    <th style="width: 180px;"> {{ $t('进程内端口') }} </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr v-for="(port, portIndex) of service.ports" :key="portIndex">
-                                                    <td>
-                                                        <span>{{port.name}}</span>
-                                                        <label class="ps-label primary ml5" v-if="port.isMainEntry">
-                                                            <span> {{ $t('主入口') }} </span>
-                                                        </label>
-                                                    </td>
-                                                    <td>{{port.protocol}}</td>
-                                                    <td>{{port.port}}</td>
-                                                    <td>
-                                                        <i class="paasng-icon paasng-arrows-right f18"></i>
-                                                    </td>
-                                                    <td>{{port.target_port}}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </template>
-                                    <template v-else>
-                                        <table class="ps-table" style="width: 100%;">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width: 200px;"> {{ $t('名称') }} </th>
-                                                    <th> {{ $t('协议') }} </th>
-                                                    <th style="width: 150px;"> {{ $t('服务端口') }} </th>
-                                                    <th style="width: 80px;"></th>
-                                                    <th style="width: 150px;"> {{ $t('进程内端口') }} </th>
-                                                    <th style="width: 50px;"> {{ $t('操作') }} </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr v-for="(port, portIndex) of service.editPorts" :key="portIndex">
-                                                    <td>
-                                                        <bk-form :label-width="0" :model="port" style="padding-right: 25px;">
-                                                            <bk-form-item :rules="portRules.name" :property="'name'">
-                                                                <bk-input v-model="port.name" :maxlength="32" :placeholder="$t('请输入32个字符以内')" :readonly="port.isMainEntry"></bk-input>
-                                                            </bk-form-item>
-                                                        </bk-form>
-                                                    </td>
-                                                    <td>
-                                                        <bk-form :label-width="0" style="padding-right: 25px;">
-                                                            <bk-form-item>
-                                                                <bk-select
-                                                                    :clearable="false"
-                                                                    v-model="port.protocol">
-                                                                    <bk-option v-for="(option, index) in protocolList"
-                                                                        :key="index"
-                                                                        :id="option.id"
-                                                                        :name="option.name">
-                                                                    </bk-option>
-                                                                </bk-select>
-                                                            </bk-form-item>
-                                                        </bk-form>
-                                                    </td>
-                                                    <td>
-                                                        <bk-form :label-width="0" :model="port" style="padding-right: 25px;">
-                                                            <bk-form-item :rules="portRules.port" :property="'port'">
-                                                                <bk-num-input
-                                                                    type="number"
-                                                                    placeholder="1-65535"
-                                                                    style="display: inline-block;"
-                                                                    :min="1"
-                                                                    :max="65535"
-                                                                    :value.sync="port.port">
-                                                                </bk-num-input>
-                                                            </bk-form-item>
-                                                        </bk-form>
-                                                    </td>
-                                                    <td>
-                                                        <i class="paasng-icon paasng-arrows-right f18"></i>
-                                                    </td>
-                                                    <td>
-                                                        <bk-form :label-width="0" :model="port" style="padding-right: 25px;">
-                                                            <bk-form-item :rules="portRules.targetPort" :property="'target_port'">
-                                                                <bk-num-input
-                                                                    type="number"
-                                                                    placeholder="1-65535"
-                                                                    style="display: inline-block;"
-                                                                    :min="1"
-                                                                    :max="65535"
-                                                                    :value.sync="port.target_port">
-                                                                </bk-num-input>
-                                                            </bk-form-item>
-                                                        </bk-form>
-                                                    </td>
-                                                    <td>
-                                                        <template v-if="port.isMainEntry">
-                                                            <bk-popover :content="$t('不能删除主入口')">
-                                                                <button class="bk-text-button is-disabled" disabled> {{ $t('删除') }} </button>
-                                                            </bk-popover>
-                                                        </template>
-                                                        <template v-else>
-                                                            <template v-if="service.editPorts.length > 1">
-                                                                <button class="bk-text-button" @click="removeServicePort(service, portIndex)"> {{ $t('删除') }} </button>
-                                                            </template>
-                                                            <template v-else>
-                                                                <bk-popover :content="$t('至少保留一项')">
-                                                                    <button class="bk-text-button is-disabled" disabled> {{ $t('删除') }} </button>
-                                                                </bk-popover>
-                                                            </template>
-                                                        </template>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <button class="ps-block-btn" @click.stop.prevent="addServicePort(service)"> {{ $t('点击添加') }} </button>
-                                    </template>
-                                </div>
-                            </div>
-                        </template>
-                        <template v-else>
-                            <div class="ps-no-result" v-if="!isConfigLoading">
-                                <div class="text">
-                                    <p>
-                                        <i class="paasng-icon paasng-empty"></i>
-                                    </p>
-                                    <p class="f13">
-                                        {{ $t('未找到进程服务，请尝试') }}
-                                        <router-link
-                                            class="bk-text-button"
-                                            :to="{ name: 'appDeploy', params: { id: appCode }, query: { focus: env } }">
-                                            {{ $t('部署') }}
-                                        </router-link>
-                                        {{ $t('后刷新') }}
-                                    </p>
-                                </div>
-                            </div>
-                        </template>
-                    </section>
-                </bk-tab-panel>
-            </bk-tab>
-
-            <bk-dialog
-                width="650"
-                v-model="changeEntryDialog.visiable"
-                :theme="'primary'"
-                :mask-close="false"
-                :loading="changeEntryDialog.isLoading"
-                @confirm="setServiceMainEntry"
-                @cancel="changeEntryDialog.visiable = false">
-                <div slot="header">
-                    <p style="white-space: normal; line-height: 32px;">{{changeEntryDialog.title}}</p>
-                </div>
-                <div class="tc">
-                    {{ $t('切换主入口可能会造成应用无法正常访问，操作前请确认目标进程与端口运行正常') }}
-                </div>
-            </bk-dialog>
-        </div>
+  <div class="port-config">
+    <div class="ps-top-card">
+      <p class="main-title">
+        {{ $t('进程服务管理') }}
+      </p>
+      <p class="desc">
+        {{ $t('进程服务管理允许你修改应用暴露服务的方式。使用前请先阅读') }}
+        <a
+          :href="GLOBAL.DOC.PROCESS_SERVICE"
+          target="blank"
+        > {{ $t('详细使用说明') }} </a>
+      </p>
     </div>
+    <div class="content">
+      <bk-tab
+        :active.sync="env"
+        type="unborder-card"
+      >
+        <bk-tab-panel
+          v-for="(panel, panelIndex) in panels"
+          :key="panelIndex"
+          v-bind="panel"
+        >
+          <section
+            v-bkloading="{ isLoading: isConfigLoading, opacity: 1 }"
+            class="ps-accordion"
+            style="min-height: 70px;"
+          >
+            <template v-if="processServices.length">
+              <div
+                v-for="(service, serviceIndex) of processServices"
+                :key="serviceIndex"
+                class="item"
+              >
+                <div
+                  class="main"
+                  @click="service.isExpanded = !service.isExpanded"
+                >
+                  <div class="toggle-icon">
+                    <template v-if="service.isExpanded">
+                      <i class="paasng-icon paasng-down-shape" />
+                    </template>
+                    <template v-else>
+                      <i class="paasng-icon paasng-right-shape" />
+                    </template>
+                  </div>
+                  <div
+                    class="metedata"
+                    style="cursor: pointer;"
+                  >
+                    <strong class="title">{{ service.process_type }}</strong>
+                    <p class="desc">
+                      <label class="label"> {{ $t('端口规则：') }} {{ service.ports.length }} {{ $t('个') }} </label>
+                      <label class="label"> {{ $t('服务名称：') }} {{ service.name }}</label>
+                    </p>
+                    <span
+                      v-if="processIngress.service_name === service.name"
+                      class="mark"
+                    > {{ $t('已设置为主入口') }} </span>
+                  </div>
+                  <div
+                    class="action"
+                    @click.stop.prevent="stop"
+                  >
+                    <bk-dropdown-menu
+                      :ref="`dropdown${serviceIndex}`"
+                      align="right"
+                    >
+                      <button
+                        slot="dropdown-trigger"
+                        class="ps-more-btn"
+                      >
+                        <i class="paasng-icon paasng-more" />
+                      </button>
+                      <ul
+                        slot="dropdown-content"
+                        class="bk-dropdown-list"
+                      >
+                        <li
+                          v-for="(port, index) of service.ports"
+                          :key="index"
+                          class="reset-dropdown-li"
+                          @click.stop.prevent="showDialog(service, port, serviceIndex)"
+                        >
+                          <a
+                            href="javascript:;"
+                            :class="processIngress.service_port_name === port.name && processIngress.service_name === service.name ? 'disabled' : ''"
+                            :title="processIngress.service_port_name === port.name && processIngress.service_name === service.name ? `${port.name}端口已设置为主入口` : `设置${port.name}端口为主入口`"
+                          >
+                            <template v-if="processIngress.service_port_name === port.name && processIngress.service_name === service.name">
+                              <span
+                                class="ps-text ps-text-ellipsis f12"
+                                style="max-width: 80px;"
+                              >{{ port.name }}</span> {{ $t('端口已设置为主入口') }}
+                            </template>
+                            <template v-else>
+                              {{ $t('设置') }} <span
+                                class="ps-text ps-text-ellipsis f12"
+                                style="max-width: 80px;"
+                              >{{ port.name }}</span> {{ $t('端口为主入口') }}
+                            </template>
+                          </a>
+                        </li>
+                      </ul>
+                    </bk-dropdown-menu>
+                  </div>
+                </div>
+                <div
+                  v-if="service.isExpanded"
+                  class="params-box"
+                >
+                  <div class="params-header">
+                    <strong class="title"> {{ $t('端口配置') }} </strong>
+                    <template v-if="!service.isEdited">
+                      <button
+                        class="bk-text-button"
+                        @click.stop.prevent="service.isEdited = !service.isEdited"
+                      >
+                        {{ $t('编辑') }}
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button
+                        class="bk-text-button"
+                        @click.stop.prevent="service.isEdited = false"
+                      >
+                        {{ $t('取消') }}
+                      </button>
+                      <button
+                        class="bk-text-button"
+                        @click.stop.prevent="updateServicePorts(service)"
+                      >
+                        {{ $t('保存') }}
+                      </button>
+                    </template>
+                  </div>
+
+                  <template v-if="!service.isEdited">
+                    <table
+                      class="ps-table"
+                      style="width: 100%;"
+                    >
+                      <thead>
+                        <tr>
+                          <th style="width: 200px;">
+                            {{ $t('名称') }}
+                          </th>
+                          <th> {{ $t('协议') }} </th>
+                          <th style="width: 180px;">
+                            {{ $t('服务端口') }}
+                          </th>
+                          <th style="width: 100px;" />
+                          <th style="width: 180px;">
+                            {{ $t('进程内端口') }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(port, portIndex) of service.ports"
+                          :key="portIndex"
+                        >
+                          <td>
+                            <span>{{ port.name }}</span>
+                            <label
+                              v-if="port.isMainEntry"
+                              class="ps-label primary ml5"
+                            >
+                              <span> {{ $t('主入口') }} </span>
+                            </label>
+                          </td>
+                          <td>{{ port.protocol }}</td>
+                          <td>{{ port.port }}</td>
+                          <td>
+                            <i class="paasng-icon paasng-arrows-right f18" />
+                          </td>
+                          <td>{{ port.target_port }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </template>
+                  <template v-else>
+                    <table
+                      class="ps-table"
+                      style="width: 100%;"
+                    >
+                      <thead>
+                        <tr>
+                          <th style="width: 200px;">
+                            {{ $t('名称') }}
+                          </th>
+                          <th> {{ $t('协议') }} </th>
+                          <th style="width: 150px;">
+                            {{ $t('服务端口') }}
+                          </th>
+                          <th style="width: 80px;" />
+                          <th style="width: 150px;">
+                            {{ $t('进程内端口') }}
+                          </th>
+                          <th style="width: 50px;">
+                            {{ $t('操作') }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(port, portIndex) of service.editPorts"
+                          :key="portIndex"
+                        >
+                          <td>
+                            <bk-form
+                              :label-width="0"
+                              :model="port"
+                              style="padding-right: 25px;"
+                            >
+                              <bk-form-item
+                                :rules="portRules.name"
+                                :property="'name'"
+                              >
+                                <bk-input
+                                  v-model="port.name"
+                                  :maxlength="32"
+                                  :placeholder="$t('请输入32个字符以内')"
+                                  :readonly="port.isMainEntry"
+                                />
+                              </bk-form-item>
+                            </bk-form>
+                          </td>
+                          <td>
+                            <bk-form
+                              :label-width="0"
+                              style="padding-right: 25px;"
+                            >
+                              <bk-form-item>
+                                <bk-select
+                                  v-model="port.protocol"
+                                  :clearable="false"
+                                >
+                                  <bk-option
+                                    v-for="(option, index) in protocolList"
+                                    :id="option.id"
+                                    :key="index"
+                                    :name="option.name"
+                                  />
+                                </bk-select>
+                              </bk-form-item>
+                            </bk-form>
+                          </td>
+                          <td>
+                            <bk-form
+                              :label-width="0"
+                              :model="port"
+                              style="padding-right: 25px;"
+                            >
+                              <bk-form-item
+                                :rules="portRules.port"
+                                :property="'port'"
+                              >
+                                <bk-num-input
+                                  type="number"
+                                  placeholder="1-65535"
+                                  style="display: inline-block;"
+                                  :min="1"
+                                  :max="65535"
+                                  :value.sync="port.port"
+                                />
+                              </bk-form-item>
+                            </bk-form>
+                          </td>
+                          <td>
+                            <i class="paasng-icon paasng-arrows-right f18" />
+                          </td>
+                          <td>
+                            <bk-form
+                              :label-width="0"
+                              :model="port"
+                              style="padding-right: 25px;"
+                            >
+                              <bk-form-item
+                                :rules="portRules.targetPort"
+                                :property="'target_port'"
+                              >
+                                <bk-num-input
+                                  type="number"
+                                  placeholder="1-65535"
+                                  style="display: inline-block;"
+                                  :min="1"
+                                  :max="65535"
+                                  :value.sync="port.target_port"
+                                />
+                              </bk-form-item>
+                            </bk-form>
+                          </td>
+                          <td>
+                            <template v-if="port.isMainEntry">
+                              <bk-popover :content="$t('不能删除主入口')">
+                                <button
+                                  class="bk-text-button is-disabled"
+                                  disabled
+                                >
+                                  {{ $t('删除') }}
+                                </button>
+                              </bk-popover>
+                            </template>
+                            <template v-else>
+                              <template v-if="service.editPorts.length > 1">
+                                <button
+                                  class="bk-text-button"
+                                  @click="removeServicePort(service, portIndex)"
+                                >
+                                  {{ $t('删除') }}
+                                </button>
+                              </template>
+                              <template v-else>
+                                <bk-popover :content="$t('至少保留一项')">
+                                  <button
+                                    class="bk-text-button is-disabled"
+                                    disabled
+                                  >
+                                    {{ $t('删除') }}
+                                  </button>
+                                </bk-popover>
+                              </template>
+                            </template>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <button
+                      class="ps-block-btn"
+                      @click.stop.prevent="addServicePort(service)"
+                    >
+                      {{ $t('点击添加') }}
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                v-if="!isConfigLoading"
+                class="ps-no-result"
+              >
+                <div class="text">
+                  <p>
+                    <i class="paasng-icon paasng-empty" />
+                  </p>
+                  <p class="f13">
+                    {{ $t('未找到进程服务，请尝试') }}
+                    <router-link
+                      class="bk-text-button"
+                      :to="{ name: 'appDeploy', params: { id: appCode }, query: { focus: env } }"
+                    >
+                      {{ $t('部署') }}
+                    </router-link>
+                    {{ $t('后刷新') }}
+                  </p>
+                </div>
+              </div>
+            </template>
+          </section>
+        </bk-tab-panel>
+      </bk-tab>
+
+      <bk-dialog
+        v-model="changeEntryDialog.visiable"
+        width="650"
+        :theme="'primary'"
+        :mask-close="false"
+        :loading="changeEntryDialog.isLoading"
+        @confirm="setServiceMainEntry"
+        @cancel="changeEntryDialog.visiable = false"
+      >
+        <div slot="header">
+          <p style="white-space: normal; line-height: 32px;">
+            {{ changeEntryDialog.title }}
+          </p>
+        </div>
+        <div class="tc">
+          {{ $t('切换主入口可能会造成应用无法正常访问，操作前请确认目标进程与端口运行正常') }}
+        </div>
+      </bk-dialog>
+    </div>
+  </div>
 </template>
 
 <script type="text/javascript">

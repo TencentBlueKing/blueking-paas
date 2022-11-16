@@ -30,6 +30,7 @@ class ErrorCodes:
     STAGE_DEF_NOT_FOUND = ErrorCode(_("当前步骤在新的发布流程中被移除, 请重新发起部署流程或联系插件管理员"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_('插件应该至少拥有一个管理员'))
+    CANNOT_BE_DELETED = ErrorCode(_('不允许删除'))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

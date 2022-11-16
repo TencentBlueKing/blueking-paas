@@ -1,12 +1,12 @@
 <template functional>
-    <div class="paasng-api-layout">
-        <div class="left">
-            <slot />
-        </div>
-        <div class="right">
-            <slot name="right" />
-        </div>
+  <div class="paasng-api-layout">
+    <div class="left">
+      <slot />
     </div>
+    <div class="right">
+      <slot name="right" />
+    </div>
+  </div>
 </template>
 <style lang="scss" scoped>
     .paasng-api-layout {

@@ -1,220 +1,270 @@
 <template>
-    <div class="paasng-api-panel">
-        <div class="search-wrapper">
-            <bk-button
-                theme="primary"
-                :disabled="selectedAPIList.length < 1"
-                @click="handleBatchRenewal">
-                {{ $t('批量续期') }}
-            </bk-button>
-            <section class="fr">
-                <div class="label"> {{ $t('类型') }} </div>
-                <div class="select-wrapper">
-                    <bk-select
-                        v-model="typeValue"
-                        searchable
-                        :clearable="false"
-                        @selected="handleSelect">
-                        <bk-option v-for="option in typeList"
-                            :key="option.id"
-                            :id="option.id"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
-                </div>
-                <div class="checkbox-wrapper">
-                    <bk-checkbox
-                        :true-value="true"
-                        :false-value="false"
-                        v-model="isRenewalPerm"
-                        @change="handleChange">
-                        {{ $t('可续期权限') }}
-                    </bk-checkbox>
-                </div>
-                <div class="input-wrapper">
-                    <bk-input
-                        :placeholder="$t('输入API名称或描述，按Enter搜索')"
-                        clearable
-                        right-icon="paasng-icon paasng-search"
-                        v-model="searchValue"
-                        @input="handleSearch">
-                    </bk-input>
-                </div>
-                <div class="search-button">
-                    <bk-button theme="primary" @click="handlePageSearch"> {{ $t('查询') }} </bk-button>
-                </div>
-            </section>
+  <div class="paasng-api-panel">
+    <div class="search-wrapper">
+      <bk-button
+        theme="primary"
+        :disabled="selectedAPIList.length < 1"
+        @click="handleBatchRenewal"
+      >
+        {{ $t('批量续期') }}
+      </bk-button>
+      <section class="fr">
+        <div class="label">
+          {{ $t('类型') }}
         </div>
-        <paas-content-loader :is-loading="loading" :offset-top="0" placeholder="cloud-api-inner-loading" :height="300">
-            <div>
-                <paasng-alert :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')" style="margin-bottom: -1px;"></paasng-alert>
-                <bk-table
-                    :data="tableList"
-                    :size="'small'"
-                    :key="tableKey"
-                    :empty-text="$t('暂无数据')"
-                    :pagination="pagination"
-                    :show-pagination-info="true"
-                    :header-border="false"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange">
-                    <bk-table-column label="id" :render-header="renderHeader" width="60">
-                        <template slot-scope="props">
-                            <bk-checkbox
-                                :true-value="true"
-                                :false-value="false"
-                                :disabled="props.row.permission_action !== 'renew'"
-                                v-model="props.row.checked"
-                                @change="columChage(...arguments, props.row)">
-                            </bk-checkbox>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('API类型')">
-                        <template slot-scope="props">
-                            {{ typeMap[props.row.type] }}
-                        </template>
-                    </bk-table-column>
-                    <template v-if="tableList.length > 0">
-                        <bk-table-column
-                            :label="isComponentApi ? $t('系统') : $t('网关')"
-                            min-width="100"
-                            :prop="isComponentApi ? 'system_name' : 'api_name'"
-                            :filters="nameFilters"
-                            :filter-method="nameFilterMethod"
-                            :filter-multiple="true">
-                            <template slot-scope="props">
-                                <template v-if="isComponentApi">
-                                    {{ props.row.system_name }}
-                                </template>
-                                <template v-else>
-                                    {{ props.row.api_name }}
-                                </template>
-                            </template>
-                        </bk-table-column>
-                    </template>
-                    <template v-else>
-                        <bk-table-column :label="isComponentApi ? $t('系统') : $t('网关')" min-width="100">
-                            <template slot-scope="props">
-                                <template v-if="isComponentApi">
-                                    {{ props.row.system_name }}
-                                    <template v-if="!!props.row.tag">
-                                        <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
-                                            {{ props.row.tag }}
-                                        </span>
-                                    </template>
-                                </template>
-                                <template v-else>
-                                    {{ props.row.api_name }}
-                                </template>
-                            </template>
-                        </bk-table-column>
-                    </template>
-                    <bk-table-column label="API" min-width="120">
-                        <template slot-scope="props">
-                            <template v-if="props.row.doc_link">
-                                <a target="_blank" :href="props.row.doc_link">
-                                    <span v-html="highlight(props.row)"></span>
-                                    <i class="fa fa-book" aria-hidden="true"></i>
-                                </a>
-                            </template>
-                            <template v-else>
-                                <span v-html="highlight(props.row)"></span>
-                            </template>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('描述')" min-width="120">
-                        <template slot-scope="props">
-                            <span v-html="highlightDesc(props.row)" v-bk-tooltips="props.row.description"></span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('权限等级')">
-                        <template slot-scope="props">
-                            <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('权限期限')">
-                        <template slot-scope="props">
-                            {{ getComputedExpires(props.row) }}
-                        </template>
-                    </bk-table-column>
-                    <template v-if="tableList.length > 0">
-                        <bk-table-column :label="$t('状态')"
-                            prop="permission_status"
-                            :filters="statusFilters"
-                            :filter-method="statusFilterMethod"
-                            :filter-multiple="true">
-                            <template slot-scope="props">
-                                <template v-if="props.row.permission_status === 'owned'">
-                                    <span class="paasng-icon paasng-pass"></span> {{ $t('已拥有') }}
-                                </template>
-                                <template v-else-if="props.row.permission_status === 'need_apply'">
-                                    <span class="paasng-icon paasng-reject"></span> {{ $t('未申请') }}
-                                </template>
-                                <template v-else-if="props.row.permission_status === 'expired'">
-                                    <span class="paasng-icon paasng-reject"></span> {{ $t('已过期') }}
-                                </template>
-                                <template v-else-if="props.row.permission_status === 'rejected'">
-                                    <span class="paasng-icon paasng-reject"></span> {{ $t('已拒绝') }}
-                                </template>
-                                <template v-else>
-                                    <round-loading ext-cls="applying" /> {{ $t('申请中') }}
-                                </template>
-                            </template>
-                        </bk-table-column>
-                    </template>
-                    <template v-else>
-                        <bk-table-column :label="$t('状态')">
-                            <template slot-scope="props">
-                                <template v-if="props.row.permission_status === 'owned'">
-                                    <span class="paasng-icon paasng-pass"></span> {{ $t('已拥有') }}
-                                </template>
-                                <template v-else-if="props.row.permission_status === 'need_apply'">
-                                    <span class="paasng-icon paasng-reject"></span> {{ $t('未申请') }}
-                                </template>
-                                <template v-else-if="props.row.permission_status === 'expired'">
-                                    <span class="paasng-icon paasng-reject"></span> {{ $t('已过期') }}
-                                </template>
-                                <template v-else-if="props.row.permission_status === 'rejected'">
-                                    <span class="paasng-icon paasng-reject"></span> {{ $t('已拒绝') }}
-                                </template>
-                                <template v-else>
-                                    <round-loading ext-cls="applying" /> {{ $t('申请中') }}
-                                </template>
-                            </template>
-                        </bk-table-column>
-                    </template>
-                    <bk-table-column :label="$t('操作')" width="90">
-                        <template slot-scope="props">
-                            <div class="table-operate-buttons">
-                                <bk-button
-                                    style="padding: 0 0 0 10px;"
-                                    theme="primary"
-                                    :disabled="props.row.permission_action !== 'renew'"
-                                    size="small"
-                                    text
-                                    @click="handleRenewal(props.row)">
-                                    <template v-if="props.row.permission_action !== 'renew'">
-                                        <span v-bk-tooltips="$t('权限有效期大于30天')"> {{ $t('续期') }} </span>
-                                    </template>
-                                    <span v-else> {{ $t('续期') }} </span>
-                                </bk-button>
-                            </div>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
-        </paas-content-loader>
-
-        <renewal-dialog
-            :show.sync="renewalDialog.visiable"
-            :title="renewalDialog.title"
-            :rows="renewalDialog.rows"
-            :api-name="renewalDialog.name"
-            :app-code="appCode"
-            :is-component="isComponentApi"
-            @on-renewal="handleSuccessRenewal"
-            @after-leave="handleRenewalAfterLeave" />
+        <div class="select-wrapper">
+          <bk-select
+            v-model="typeValue"
+            searchable
+            :clearable="false"
+            @selected="handleSelect"
+          >
+            <bk-option
+              v-for="option in typeList"
+              :id="option.id"
+              :key="option.id"
+              :name="option.name"
+            />
+          </bk-select>
+        </div>
+        <div class="checkbox-wrapper">
+          <bk-checkbox
+            v-model="isRenewalPerm"
+            :true-value="true"
+            :false-value="false"
+            @change="handleChange"
+          >
+            {{ $t('可续期权限') }}
+          </bk-checkbox>
+        </div>
+        <div class="input-wrapper">
+          <bk-input
+            v-model="searchValue"
+            :placeholder="$t('输入API名称或描述，按Enter搜索')"
+            clearable
+            right-icon="paasng-icon paasng-search"
+            @input="handleSearch"
+          />
+        </div>
+        <div class="search-button">
+          <bk-button
+            theme="primary"
+            @click="handlePageSearch"
+          >
+            {{ $t('查询') }}
+          </bk-button>
+        </div>
+      </section>
     </div>
+    <paas-content-loader
+      :is-loading="loading"
+      :offset-top="0"
+      placeholder="cloud-api-inner-loading"
+      :height="300"
+    >
+      <div>
+        <paasng-alert
+          :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')"
+          style="margin-bottom: -1px;"
+        />
+        <bk-table
+          :key="tableKey"
+          :data="tableList"
+          :size="'small'"
+          :empty-text="$t('暂无数据')"
+          :pagination="pagination"
+          :show-pagination-info="true"
+          :header-border="false"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+        >
+          <bk-table-column
+            label="id"
+            :render-header="renderHeader"
+            width="60"
+          >
+            <template slot-scope="props">
+              <bk-checkbox
+                v-model="props.row.checked"
+                :true-value="true"
+                :false-value="false"
+                :disabled="props.row.permission_action !== 'renew'"
+                @change="columChage(...arguments, props.row)"
+              />
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('API类型')">
+            <template slot-scope="props">
+              {{ typeMap[props.row.type] }}
+            </template>
+          </bk-table-column>
+          <template v-if="tableList.length > 0">
+            <bk-table-column
+              :label="isComponentApi ? $t('系统') : $t('网关')"
+              min-width="100"
+              :prop="isComponentApi ? 'system_name' : 'api_name'"
+              :filters="nameFilters"
+              :filter-method="nameFilterMethod"
+              :filter-multiple="true"
+            >
+              <template slot-scope="props">
+                <template v-if="isComponentApi">
+                  {{ props.row.system_name }}
+                </template>
+                <template v-else>
+                  {{ props.row.api_name }}
+                </template>
+              </template>
+            </bk-table-column>
+          </template>
+          <template v-else>
+            <bk-table-column
+              :label="isComponentApi ? $t('系统') : $t('网关')"
+              min-width="100"
+            >
+              <template slot-scope="props">
+                <template v-if="isComponentApi">
+                  {{ props.row.system_name }}
+                  <template v-if="!!props.row.tag">
+                    <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
+                      {{ props.row.tag }}
+                    </span>
+                  </template>
+                </template>
+                <template v-else>
+                  {{ props.row.api_name }}
+                </template>
+              </template>
+            </bk-table-column>
+          </template>
+          <bk-table-column
+            label="API"
+            min-width="120"
+          >
+            <template slot-scope="props">
+              <template v-if="props.row.doc_link">
+                <a
+                  target="_blank"
+                  :href="props.row.doc_link"
+                >
+                  <span v-html="highlight(props.row)" />
+                  <i
+                    class="fa fa-book"
+                    aria-hidden="true"
+                  />
+                </a>
+              </template>
+              <template v-else>
+                <span v-html="highlight(props.row)" />
+              </template>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('描述')"
+            min-width="120"
+          >
+            <template slot-scope="props">
+              <span
+                v-bk-tooltips="props.row.description"
+                v-html="highlightDesc(props.row)"
+              />
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('权限等级')">
+            <template slot-scope="props">
+              <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('权限期限')">
+            <template slot-scope="props">
+              {{ getComputedExpires(props.row) }}
+            </template>
+          </bk-table-column>
+          <template v-if="tableList.length > 0">
+            <bk-table-column
+              :label="$t('状态')"
+              prop="permission_status"
+              :filters="statusFilters"
+              :filter-method="statusFilterMethod"
+              :filter-multiple="true"
+            >
+              <template slot-scope="props">
+                <template v-if="props.row.permission_status === 'owned'">
+                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'need_apply'">
+                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'expired'">
+                  <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'rejected'">
+                  <span class="paasng-icon paasng-reject" /> {{ $t('已拒绝') }}
+                </template>
+                <template v-else>
+                  <round-loading ext-cls="applying" /> {{ $t('申请中') }}
+                </template>
+              </template>
+            </bk-table-column>
+          </template>
+          <template v-else>
+            <bk-table-column :label="$t('状态')">
+              <template slot-scope="props">
+                <template v-if="props.row.permission_status === 'owned'">
+                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'need_apply'">
+                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'expired'">
+                  <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}
+                </template>
+                <template v-else-if="props.row.permission_status === 'rejected'">
+                  <span class="paasng-icon paasng-reject" /> {{ $t('已拒绝') }}
+                </template>
+                <template v-else>
+                  <round-loading ext-cls="applying" /> {{ $t('申请中') }}
+                </template>
+              </template>
+            </bk-table-column>
+          </template>
+          <bk-table-column
+            :label="$t('操作')"
+            width="90"
+          >
+            <template slot-scope="props">
+              <div class="table-operate-buttons">
+                <bk-button
+                  style="padding: 0 0 0 10px;"
+                  theme="primary"
+                  :disabled="props.row.permission_action !== 'renew'"
+                  size="small"
+                  text
+                  @click="handleRenewal(props.row)"
+                >
+                  <template v-if="props.row.permission_action !== 'renew'">
+                    <span v-bk-tooltips="$t('权限有效期大于30天')"> {{ $t('续期') }} </span>
+                  </template>
+                  <span v-else> {{ $t('续期') }} </span>
+                </bk-button>
+              </div>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </paas-content-loader>
+
+    <renewal-dialog
+      :show.sync="renewalDialog.visiable"
+      :title="renewalDialog.title"
+      :rows="renewalDialog.rows"
+      :api-name="renewalDialog.name"
+      :app-code="appCode"
+      :is-component="isComponentApi"
+      @on-renewal="handleSuccessRenewal"
+      @after-leave="handleRenewalAfterLeave"
+    />
+  </div>
 </template>
 
 <script>
@@ -436,7 +486,7 @@
                 this.initPageConf();
                 this.tableList = this.getDataByPage();
             },
-        
+
             /**
              * 初始化弹层翻页条
              */

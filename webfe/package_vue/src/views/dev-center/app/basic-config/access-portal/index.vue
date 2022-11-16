@@ -1,42 +1,65 @@
 <template lang="html">
-    <div class="container biz-create-success">
-        <div class="ps-top-bar">
-            <div class="header-title">
-                <span class="app-code">{{ curAppCode }}</span>
-                <i class="paasng-icon paasng-angle-down arrows"></i>
-                {{ $t('访问入口') }}
-            </div>
-        </div>
-        <paas-content-loader :is-loading="isLoading" placeholder="entry-loading" class="app-container middle">
-            <div class="app-container middle ps-main">
-                <!-- 访问入口暂时不展示 -->
-                <div class="ps-top-card">
-                    <p class="main-title"> {{ $t('访问入口') }} </p>
-                    <p class="desc">
-                        {{ $t('平台给应用分配的默认访问地址') }}
-                    </p>
-                    <table class="ps-table ps-table-border mt20" style="width: 100%;">
-                        <!-- 通过 type 判断是子域名还是子路径（1. 子路径 2. 子域名） -->
-                        <!-- 通过 is_running 判断域名是否可以访问，可访问前端样式为 href，不可访问时为普通文本 -->
-                        <tr v-for="(item, key) of moduleEntryInfo.entrancesTemplate" :key="key">
-                            <td class="has-right-border td-title">{{key === 'prod' ? $t('生产') : $t('预发布')}}{{ $t('环境') }} </td>
-                            <td>
-                                <div v-for="e in item" :key="e.address" class="pt10 pb10">
-                                    <span>{{e.address || '--'}}</span>
-                                    <a :href="e.address" target="_blank" class="card-edit ml5 f12" v-if="e.is_running">
-                                        {{ $t('点击访问') }}
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                <div class="ps-top-card config-wrapper">
-                    <Domain @closeLoading="changeLoading"></Domain>
-                </div>
-            </div>
-        </paas-content-loader>
+  <div class="container biz-create-success">
+    <div class="ps-top-bar">
+      <div class="header-title">
+        <span class="app-code">{{ curAppCode }}</span>
+        <i class="paasng-icon paasng-angle-down arrows" />
+        {{ $t('访问入口') }}
+      </div>
     </div>
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="entry-loading"
+      class="app-container middle"
+    >
+      <div class="app-container middle ps-main">
+        <!-- 访问入口暂时不展示 -->
+        <div class="ps-top-card">
+          <p class="main-title">
+            {{ $t('访问入口') }}
+          </p>
+          <p class="desc">
+            {{ $t('平台给应用分配的默认访问地址') }}
+          </p>
+          <table
+            class="ps-table ps-table-border mt20"
+            style="width: 100%;"
+          >
+            <!-- 通过 type 判断是子域名还是子路径（1. 子路径 2. 子域名） -->
+            <!-- 通过 is_running 判断域名是否可以访问，可访问前端样式为 href，不可访问时为普通文本 -->
+            <tr
+              v-for="(item, key) of moduleEntryInfo.entrancesTemplate"
+              :key="key"
+            >
+              <td class="has-right-border td-title">
+                {{ key === 'prod' ? $t('生产') : $t('预发布') }}{{ $t('环境') }}
+              </td>
+              <td>
+                <div
+                  v-for="e in item"
+                  :key="e.address"
+                  class="pt10 pb10"
+                >
+                  <span>{{ e.address || '--' }}</span>
+                  <a
+                    v-if="e.is_running"
+                    :href="e.address"
+                    target="_blank"
+                    class="card-edit ml5 f12"
+                  >
+                    {{ $t('点击访问') }}
+                  </a>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="ps-top-card config-wrapper">
+          <Domain @closeLoading="changeLoading" />
+        </div>
+      </div>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

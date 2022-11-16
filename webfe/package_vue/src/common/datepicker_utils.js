@@ -20,101 +20,101 @@ import _ from 'lodash';
 import moment from 'moment';
 
 class CustomRanges {
-    /*
+  /*
      * Custom Rranger object for generating custom range buttons for
      * bootstrap-daterangepicker options.
      */
-    constructor (values) {
-        this.SPEC_DATE = moment();
-        this.values = values;
+  constructor (values) {
+    this.SPEC_DATE = moment();
+    this.values = values;
 
-        // Init valuesMap
-        this.valuesMap = {};
-        _.forEach(this.values, (item) => {
-            this.valuesMap[item.label] = item.value;
-        });
+    // Init valuesMap
+    this.valuesMap = {};
+    _.forEach(this.values, (item) => {
+      this.valuesMap[item.label] = item.value;
+    });
 
-        // Init rangesMap
-        this.rangesMap = {};
-        _.forEach(this.values, (item, index) => {
-            const dtEnd = this.SPEC_DATE.clone();
-            let dtStart;
-            if (/^\d+(y|Q|M|w|d|h|m|s|ms)$/.test(item.value)) {
-                // item.value = '12h'
-                //  => .subtract(12, 'h')
-                dtStart = dtEnd.clone().subtract(
-                    parseInt(item.value.substring(0, item.value.length - 1)),
-                    item.value[item.value.length - 1]
-                );
-            } else {
-                dtStart = dtEnd.clone().subtract(index + 1, 's');
-            }
+    // Init rangesMap
+    this.rangesMap = {};
+    _.forEach(this.values, (item, index) => {
+      const dtEnd = this.SPEC_DATE.clone();
+      let dtStart;
+      if (/^\d+(y|Q|M|w|d|h|m|s|ms)$/.test(item.value)) {
+        // item.value = '12h'
+        //  => .subtract(12, 'h')
+        dtStart = dtEnd.clone().subtract(
+          parseInt(item.value.substring(0, item.value.length - 1)),
+          item.value[item.value.length - 1]
+        );
+      } else {
+        dtStart = dtEnd.clone().subtract(index + 1, 's');
+      }
 
-            this.rangesMap[item.label] = [dtStart, dtEnd];
-        });
-    }
-    hasLabel (label) {
-        return _.has(this.valuesMap, label);
-    }
-    getValue (label) {
-        return this.valuesMap[label];
-    }
-    getRanges (label) {
-        return this.rangesMap[label];
-    }
-    getRangesParam () {
-        return this.rangesMap;
-    }
+      this.rangesMap[item.label] = [dtStart, dtEnd];
+    });
+  }
+  hasLabel (label) {
+    return _.has(this.valuesMap, label);
+  }
+  getValue (label) {
+    return this.valuesMap[label];
+  }
+  getRanges (label) {
+    return this.rangesMap[label];
+  }
+  getRangesParam () {
+    return this.rangesMap;
+  }
 }
 
 const OPTIONS_DEFAULT = {
-    linkedCalendars: false,
-    autoUpdateInput: false,
-    showDropdowns: true,
-    timePicker: true,
-    timePicker24Hour: true,
-    timePickerIncrement: 1,
-    timePickerSeconds: false,
-    opens: 'right'
+  linkedCalendars: false,
+  autoUpdateInput: false,
+  showDropdowns: true,
+  timePicker: true,
+  timePicker24Hour: true,
+  timePickerIncrement: 1,
+  timePickerSeconds: false,
+  opens: 'right'
 };
 
 const OPTIONS_LOCALE_ZH = {
-    format: 'YYYY-MM-DD HH:mm:ss',
-    separator: ' 至 ',
-    applyLabel: '确定',
-    cancelLabel: '取消',
-    fromLabel: '从',
-    toLabel: '到',
-    weekLabel: '周',
-    customRangeLabel: '自定义',
-    daysOfWeek: [
-        '日',
-        '一',
-        '二',
-        '三',
-        '四',
-        '五',
-        '六'
-    ],
-    monthNames: [
-        '一月',
-        '二月',
-        '三月',
-        '四月',
-        '五月',
-        '六月',
-        '七月',
-        '八月',
-        '九月',
-        '十月',
-        '十一月',
-        '十二月'
-    ],
-    firstDay: 1
+  format: 'YYYY-MM-DD HH:mm:ss',
+  separator: ' 至 ',
+  applyLabel: '确定',
+  cancelLabel: '取消',
+  fromLabel: '从',
+  toLabel: '到',
+  weekLabel: '周',
+  customRangeLabel: '自定义',
+  daysOfWeek: [
+    '日',
+    '一',
+    '二',
+    '三',
+    '四',
+    '五',
+    '六'
+  ],
+  monthNames: [
+    '一月',
+    '二月',
+    '三月',
+    '四月',
+    '五月',
+    '六月',
+    '七月',
+    '八月',
+    '九月',
+    '十月',
+    '十一月',
+    '十二月'
+  ],
+  firstDay: 1
 };
 
 export {
-    CustomRanges,
-    OPTIONS_DEFAULT,
-    OPTIONS_LOCALE_ZH
+  CustomRanges,
+  OPTIONS_DEFAULT,
+  OPTIONS_LOCALE_ZH
 };

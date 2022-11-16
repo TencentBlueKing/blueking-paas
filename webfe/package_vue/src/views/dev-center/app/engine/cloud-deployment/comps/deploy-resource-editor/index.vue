@@ -1,6 +1,10 @@
 <!-- 资源视图yaml代码编辑器组件 -->
 <template>
-    <div class="resource-editor" :style="style" ref="editorRef"></div>
+  <div
+    ref="editorRef"
+    class="resource-editor"
+    :style="style"
+  />
 </template>
 <script>
     /* eslint-disable no-unused-expressions */

@@ -1,52 +1,99 @@
 <template lang="html">
-    <section v-if="isShowPage">
-        <h3 class="title">
-            {{ $t('配置信息') }}
-            <bk-button text size="small" theme="primary" style="font-weight: normal;" @click="handleOpenGuide"> {{ $t('使用指南') }} </bk-button>
-        </h3>
-        <section class="content">
-            <section class="item" v-for="(item, index) in listDisplay" :key="index" :class="index !== listDisplay.length - 1 ? 'mb' : ''">
-                <div class="config-label" :title="item.display_name">
-                    <span>{{item.display_name}}</span>
-                </div>
-                <div class="bk-button-group">
-                    <bk-button
-                        v-for="subItem in item.children"
-                        :key="subItem"
-                        @click="handleSelected(item, index, subItem)"
-                        :class="item.active === subItem ? 'is-selected' : ''"
-                        :disabled="computedDisabled(item, index, subItem)">
-                        {{subItem}}
-                    </bk-button>
-                </div>
-                <p class="error" v-if="item.showError">{{$t('请选择') + item.display_name}}</p>
-            </section>
-            <p class="info" v-if="mode === ''"> {{ $t('模块部署前可在“增强服务/管理实例”页面修改配置信息，部署后则不能再修改配置信息') }} </p>
-        </section>
-        <section class="action">
-            <template v-if="mode === ''">
-                <bk-button :loading="enableLoadingUse" @click="handleEnabled"> {{ $t('启用服务') }} </bk-button>
-            </template>
-            <template v-else>
-                <section>
-                    <bk-button :loading="saveLoadingUse" theme="primary" @click="handleSave"> {{ $t('保存') }} </bk-button>
-                    <bk-button style="margin-left: 4px;" @click="handleCancel"> {{ $t('取消') }} </bk-button>
-                </section>
-            </template>
-        </section>
-
-        <bk-sideslider
-            :is-show.sync="isShow"
-            :title="$t('使用指南')"
-            :width="640"
-            :quick-close="true">
-            <div slot="content">
-                <div id="markdown">
-                    <div v-html="compiledMarkdown" class="markdown-body"></div>
-                </div>
-            </div>
-        </bk-sideslider>
+  <section v-if="isShowPage">
+    <h3 class="title">
+      {{ $t('配置信息') }}
+      <bk-button
+        text
+        size="small"
+        theme="primary"
+        style="font-weight: normal;"
+        @click="handleOpenGuide"
+      >
+        {{ $t('使用指南') }}
+      </bk-button>
+    </h3>
+    <section class="content">
+      <section
+        v-for="(item, index) in listDisplay"
+        :key="index"
+        class="item"
+        :class="index !== listDisplay.length - 1 ? 'mb' : ''"
+      >
+        <div
+          class="config-label"
+          :title="item.display_name"
+        >
+          <span>{{ item.display_name }}</span>
+        </div>
+        <div class="bk-button-group">
+          <bk-button
+            v-for="subItem in item.children"
+            :key="subItem"
+            :class="item.active === subItem ? 'is-selected' : ''"
+            :disabled="computedDisabled(item, index, subItem)"
+            @click="handleSelected(item, index, subItem)"
+          >
+            {{ subItem }}
+          </bk-button>
+        </div>
+        <p
+          v-if="item.showError"
+          class="error"
+        >
+          {{ $t('请选择') + item.display_name }}
+        </p>
+      </section>
+      <p
+        v-if="mode === ''"
+        class="info"
+      >
+        {{ $t('模块部署前可在“增强服务/管理实例”页面修改配置信息，部署后则不能再修改配置信息') }}
+      </p>
     </section>
+    <section class="action">
+      <template v-if="mode === ''">
+        <bk-button
+          :loading="enableLoadingUse"
+          @click="handleEnabled"
+        >
+          {{ $t('启用服务') }}
+        </bk-button>
+      </template>
+      <template v-else>
+        <section>
+          <bk-button
+            :loading="saveLoadingUse"
+            theme="primary"
+            @click="handleSave"
+          >
+            {{ $t('保存') }}
+          </bk-button>
+          <bk-button
+            style="margin-left: 4px;"
+            @click="handleCancel"
+          >
+            {{ $t('取消') }}
+          </bk-button>
+        </section>
+      </template>
+    </section>
+
+    <bk-sideslider
+      :is-show.sync="isShow"
+      :title="$t('使用指南')"
+      :width="640"
+      :quick-close="true"
+    >
+      <div slot="content">
+        <div id="markdown">
+          <div
+            class="markdown-body"
+            v-html="compiledMarkdown"
+          />
+        </div>
+      </div>
+    </bk-sideslider>
+  </section>
 </template>
 
 <script>
@@ -302,7 +349,7 @@
         font-weight: 600;
         line-height: 1.25;
     }
-    
+
     #markdown h3 {
         color: #333;
         line-height: 52px;

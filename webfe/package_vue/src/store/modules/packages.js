@@ -33,39 +33,39 @@ const mutations = {
 
 // actions
 const actions = {
-    /**
+  /**
      * 获取应用包版本列表
      * @param {Object} params 请求参数：appCode, moduleId, params
      */
-    getAppPackageList ({ commit, state }, { isLesscodeApp, appCode, moduleId, params }, config = {}) {
-        const modules = isLesscodeApp ? `/modules/${moduleId}` : '';
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}${modules}/source_package/?${json2Query(params)}`;
-        return http.get(url, config);
-    },
+  getAppPackageList ({ commit, state }, { isLesscodeApp, appCode, moduleId, params }, config = {}) {
+    const modules = isLesscodeApp ? `/modules/${moduleId}` : '';
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}${modules}/source_package/?${json2Query(params)}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 提交包
      * @param {Object} params 请求参数：appCode, moduleId, signature
      */
-    commitPackage ({ commit, state }, { appCode, moduleId, signature }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/source_package/commit/${signature}/`;
-        return http.post(url, {}, config);
-    },
+  commitPackage ({ commit, state }, { appCode, moduleId, signature }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/source_package/commit/${signature}/`;
+    return http.post(url, {}, config);
+  },
 
-    /**
+  /**
      * 创建smart应用
      * @param {Object} params 请求参数：appCode, moduleId, signature
      */
-    createSmartApp ({ commit, state }, { appCode, moduleId, signature }, config = {}) {
-        const url = `${BACKEND_URL}/api/bkapps/s-mart/confirm/`;
-        return http.post(url, {}, config);
-    }
+  createSmartApp ({ commit, state }, { appCode, moduleId, signature }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/s-mart/confirm/`;
+    return http.post(url, {}, config);
+  }
 };
 
 export default {
-    namespaced: true,
-    state,
-    getters,
-    mutations,
-    actions
+  namespaced: true,
+  state,
+  getters,
+  mutations,
+  actions
 };

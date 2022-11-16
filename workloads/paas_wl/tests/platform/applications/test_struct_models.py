@@ -16,6 +16,7 @@ from paas_wl.platform.applications.struct_models import (
     ModuleEnvAttrFromName,
     PermissionsInPlace,
     StructuredApp,
+    get_env_by_engine_app_id,
     to_structured,
 )
 from tests.utils.mocks.platform import FakePlatformSvcClient, make_structured_app_data
@@ -65,11 +66,20 @@ class TestStructuredApp:
         module = obj.get_module_by_name('default')
         assert obj.get_env_by_environment(module, 'stag') is not None
 
+    def test_get_env_by_engine_app_id(self, structured_app_data):
+        obj = StructuredApp.from_json_data(structured_app_data)
+        assert obj.get_env_by_engine_app_id(obj.module_envs[0].engine_app_id) is not None
+
 
 @pytest.fixture(autouse=True)
 def _setup_clients():
     with mock.patch('paas_wl.platform.external.client._global_plat_client', new=FakePlatformSvcClient()):
         yield
+
+
+def test_get_env_by_engine_app_id(structured_app_data):
+    eid = structured_app_data['envs'][0]['engine_app_id']
+    assert get_env_by_engine_app_id(uuid.UUID(eid)) is not None
 
 
 class TestToStructured:

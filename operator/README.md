@@ -48,6 +48,12 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
     $ make fmt
     $ make lint
 
+更新 helm-chart
+
+    $ make update-helm-chart HELM_CHART_TARGET_DIR=/tmp/bkpaas-app-operator
+
+注意：需要根据检查到的 diff 结果，手动更新 values.yaml 文件
+
 ### 本地开发/调试
 
 下发 CRD 配置到 Kubernetes 集群：

@@ -1,46 +1,83 @@
 <template>
-    <div>
-        <div class="establish-tab" style="display: block;" v-if="isAuth">
-            <div id="shorter-loading-animate" class="mt10">
-                <div class="form-label"> {{ $t('代码仓库') }} </div>
-                <bk-select
-                    v-model="selected"
-                    :placeholder="$t('请选择')"
-                    :clearable="false"
-                    :searchable="true"
-                    :loading="isLoading"
-                    :key="selected"
-                    @selected="selectedFun">
-                    <bk-option
-                        v-for="(option, index) in repoList"
-                        :key="index"
-                        :id="option.id"
-                        :name="option.name">
-                    </bk-option>
-                </bk-select>
-                <label class="pl10" style="font-weight: unset; padding-top: 0px; font-size: 12px">
-                    <a @click="fetchMethod" style="cursor: pointer;"> {{ $t('刷新') }} </a>
-                </label>
-            </div>
+  <div>
+    <div
+      v-if="isAuth"
+      class="establish-tab"
+      style="display: block;"
+    >
+      <div
+        id="shorter-loading-animate"
+        class="mt10"
+      >
+        <div class="form-label">
+          {{ $t('代码仓库') }}
         </div>
-        <div class="lower-loading-animate establish-tab" style="padding-bottom: 9px" v-else>
-            <paas-loading :loading="isLoading">
-                <div slot="loadingContent" class="unbinded-prompt" v-if="gitControlType === 'tc_git' || gitControlType === 'github' || gitControlType === 'gitee'">
-                    <span style="color: #ff3737;">{{ alertText }}</span>
-                    <span v-if="gitControlType === 'tc_git'">{{ $t('首次使用工蜂，请先阅读') }}</span>
-                    <span v-else-if="gitControlType === 'github'">{{ $t('首次使用Github，请先阅读') }}</span>
-                    <span v-else>{{ $t('首次使用Gitee，请先阅读') }}</span>
-                    <a :href="authDocs" target="_blank"> {{ $t('授权指引文档') }} </a>
-                    <span style="float: right">
-                        <a @click="auth_associate(authAddress, fetchMethod)" style="cursor: pointer;"> {{ $t('已阅读') }}? {{ $t('去关联') }} </a>
-                    </span>
-                </div>
-                <div slot="loadingContent" class="unbinded-prompt tr" v-else>
-                    <a @click="auth_associate(authAddress, fetchMethod)" style="cursor: pointer;"> {{ $t('去关联') }} </a>
-                </div>
-            </paas-loading>
-        </div>
+        <bk-select
+          :key="selected"
+          v-model="selected"
+          :placeholder="$t('请选择')"
+          :clearable="false"
+          :searchable="true"
+          :loading="isLoading"
+          @selected="selectedFun"
+        >
+          <bk-option
+            v-for="(option, index) in repoList"
+            :id="option.id"
+            :key="index"
+            :name="option.name"
+          />
+        </bk-select>
+        <label
+          class="pl10"
+          style="font-weight: unset; padding-top: 0px; font-size: 12px"
+        >
+          <a
+            style="cursor: pointer;"
+            @click="fetchMethod"
+          > {{ $t('刷新') }} </a>
+        </label>
+      </div>
     </div>
+    <div
+      v-else
+      class="lower-loading-animate establish-tab"
+      style="padding-bottom: 9px"
+    >
+      <paas-loading :loading="isLoading">
+        <div
+          v-if="gitControlType === 'tc_git' || gitControlType === 'github' || gitControlType === 'gitee'"
+          slot="loadingContent"
+          class="unbinded-prompt"
+        >
+          <span style="color: #ff3737;">{{ alertText }}</span>
+          <span v-if="gitControlType === 'tc_git'">{{ $t('首次使用工蜂，请先阅读') }}</span>
+          <span v-else-if="gitControlType === 'github'">{{ $t('首次使用Github，请先阅读') }}</span>
+          <span v-else>{{ $t('首次使用Gitee，请先阅读') }}</span>
+          <a
+            :href="authDocs"
+            target="_blank"
+          > {{ $t('授权指引文档') }} </a>
+          <span style="float: right">
+            <a
+              style="cursor: pointer;"
+              @click="auth_associate(authAddress, fetchMethod)"
+            > {{ $t('已阅读') }}? {{ $t('去关联') }} </a>
+          </span>
+        </div>
+        <div
+          v-else
+          slot="loadingContent"
+          class="unbinded-prompt tr"
+        >
+          <a
+            style="cursor: pointer;"
+            @click="auth_associate(authAddress, fetchMethod)"
+          > {{ $t('去关联') }} </a>
+        </div>
+      </paas-loading>
+    </div>
+  </div>
 </template>
 
 <script>

@@ -1,10 +1,13 @@
 <template>
-    <div class="paas-deploy-process-status-item" :class="getClass()">
-        <span>
-            {{ status === 'Running' ? $t('成功') : ['Starting', 'Pending'].includes(status) ? $t('部署中') : $t('异常') }}
-            <template v-if="abnormalCount > 0">({{ abnormalCount }})</template>
-        </span>
-    </div>
+  <div
+    class="paas-deploy-process-status-item"
+    :class="getClass()"
+  >
+    <span>
+      {{ status === 'Running' ? $t('成功') : ['Starting', 'Pending'].includes(status) ? $t('部署中') : $t('异常') }}
+      <template v-if="abnormalCount > 0">({{ abnormalCount }})</template>
+    </span>
+  </div>
 </template>
 <script>
     export default {

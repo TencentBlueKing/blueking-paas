@@ -1,50 +1,83 @@
 <template lang="html">
-    <div v-if="baseInfo">
-        <h3>{{ baseInfo.envName }}</h3>
-        <dl>
-            <dd>
-                <div v-if="appDeployInfo.hasDeployed">
-                    <p>
-                        <i class="paasng-icon paasng-branch-line text-success middle-list-icon"></i>{{appDeployInfo.branch}}
-                    </p>
-                    <p>
-                        <i class="paasng-icon paasng-dynamic-line text-primary middle-list-icon"></i>
-                        {{ $t('由') }}<span class="gruy">{{appDeployInfo.username}}</span>{{ $t('于') }} {{smartTime(appDeployInfo.time,'smartShorten')}} {{appDeployInfo.isEnvOfflined ? $t('下架') : $t('部署')}}
-                    </p>
-                    <!-- <p v-if="baseInfo.canPublishToMarket && curAppModule.is_default"> -->
-                    <p v-if="curAppModule.is_default && environment === 'prod'">
-                        <i class="paasng-icon paasng-market-line text-warn middle-list-icon" style="top: 8px;font-size: 16px;"></i>
-                        {{baseInfo.marketPublished ? $t('已发布到应用市场') : $t('未发布到应用市场')}}
-                        <router-link :to="{ name: 'appMarket', params: { id: appCode } }" class="blue text-padding-default">[{{ $t('管理') }}]</router-link>
-                    </p>
-                    <div class="panel-controls">
-                        <a :href="appDeployInfo.url" class="bk-button bk-button-normal bk-success mr5" target="_blank" v-if="!appDeployInfo.isEnvOfflined"> {{ $t('访问') }} </a>
-                        <a class="bk-button bk-button-normal bk-success is-disabled mr5" v-else> {{ $t('访问') }} </a>
-                        <router-link class="bk-button bk-button-normal bk-primary is-outline" :to="baseInfo.appUrl">
-                            {{ $t('部署') }}
-                        </router-link>
-                    </div>
-                </div>
-                
-                <div class="grayPanel noDeploy" v-if="!appDeployInfo.hasDeployed">
-                    <p><i class="paasng-icon paasng-branch-line text-default middle-list-icon"></i> {{ $t('暂未部署') }} </p>
-                    <div class="panel-controls">
-                        <bk-button :disabled="true" class="mr5"> {{ $t('访问') }} </bk-button>
-                        <router-link class="bk-button bk-button-normal bk-primary is-outline" :to="baseInfo.appUrl">
-                            {{ $t('部署') }}
-                        </router-link>
-                    </div>
-                </div>
-            </dd>
-            <dd v-if="appDeployInfo.hasDeployed">
-                <p v-for="(pro, index) in appDeployInfo.proc" :key="index">
-                    {{pro.name}}
-                    <span :class="[{ 'green': pro.status === $t('正在运行') },{ 'danger': pro.status !== $t('正在运行') }]">→</span>
-                    {{pro.status}}
-                </p>
-            </dd>
-        </dl>
-    </div>
+  <div v-if="baseInfo">
+    <h3>{{ baseInfo.envName }}</h3>
+    <dl>
+      <dd>
+        <div v-if="appDeployInfo.hasDeployed">
+          <p>
+            <i class="paasng-icon paasng-branch-line text-success middle-list-icon" />{{ appDeployInfo.branch }}
+          </p>
+          <p>
+            <i class="paasng-icon paasng-dynamic-line text-primary middle-list-icon" />
+            {{ $t('由') }}<span class="gruy">{{ appDeployInfo.username }}</span>{{ $t('于') }} {{ smartTime(appDeployInfo.time,'smartShorten') }} {{ appDeployInfo.isEnvOfflined ? $t('下架') : $t('部署') }}
+          </p>
+          <!-- <p v-if="baseInfo.canPublishToMarket && curAppModule.is_default"> -->
+          <p v-if="curAppModule.is_default && environment === 'prod'">
+            <i
+              class="paasng-icon paasng-market-line text-warn middle-list-icon"
+              style="top: 8px;font-size: 16px;"
+            />
+            {{ baseInfo.marketPublished ? $t('已发布到应用市场') : $t('未发布到应用市场') }}
+            <router-link
+              :to="{ name: 'appMarket', params: { id: appCode } }"
+              class="blue text-padding-default"
+            >
+              [{{ $t('管理') }}]
+            </router-link>
+          </p>
+          <div class="panel-controls">
+            <a
+              v-if="!appDeployInfo.isEnvOfflined"
+              :href="appDeployInfo.url"
+              class="bk-button bk-button-normal bk-success mr5"
+              target="_blank"
+            > {{ $t('访问') }} </a>
+            <a
+              v-else
+              class="bk-button bk-button-normal bk-success is-disabled mr5"
+            > {{ $t('访问') }} </a>
+            <router-link
+              class="bk-button bk-button-normal bk-primary is-outline"
+              :to="baseInfo.appUrl"
+            >
+              {{ $t('部署') }}
+            </router-link>
+          </div>
+        </div>
+
+        <div
+          v-if="!appDeployInfo.hasDeployed"
+          class="grayPanel noDeploy"
+        >
+          <p><i class="paasng-icon paasng-branch-line text-default middle-list-icon" /> {{ $t('暂未部署') }} </p>
+          <div class="panel-controls">
+            <bk-button
+              :disabled="true"
+              class="mr5"
+            >
+              {{ $t('访问') }}
+            </bk-button>
+            <router-link
+              class="bk-button bk-button-normal bk-primary is-outline"
+              :to="baseInfo.appUrl"
+            >
+              {{ $t('部署') }}
+            </router-link>
+          </div>
+        </div>
+      </dd>
+      <dd v-if="appDeployInfo.hasDeployed">
+        <p
+          v-for="(pro, index) in appDeployInfo.proc"
+          :key="index"
+        >
+          {{ pro.name }}
+          <span :class="[{ 'green': pro.status === $t('正在运行') },{ 'danger': pro.status !== $t('正在运行') }]">→</span>
+          {{ pro.status }}
+        </p>
+      </dd>
+    </dl>
+  </div>
 </template>
 
 <script>

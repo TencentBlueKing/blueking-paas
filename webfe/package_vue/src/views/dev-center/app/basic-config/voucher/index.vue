@@ -1,77 +1,88 @@
 <template lang="html">
-    <div class="container biz-create-success">
-        <div class="ps-top-bar">
-            <div class="header-title">
-                <span class="app-code">{{ curAppCode }}</span>
-                <i class="paasng-icon paasng-angle-down arrows"></i>
-                <!-- <span class="arrows">></span> -->
-                {{ $t('镜像凭证') }}
-            </div>
-        </div>
-        <paas-content-loader class="app-container" :is-loading="isLoading" placeholder="roles-loading">
-            <div class="app-container middle ps-main">
-                <bk-button
-                    theme="primary"
-                    class="mb15"
-                    @click="handleVoucher">
-                    <i class="paasng-icon paasng-plus mr5"></i> {{ $t('新增凭证') }}
-                </bk-button>
-                <bk-table
-                    :data="voucherList"
-                    size="small"
-                    :pagination="pagination"
-                    v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange">
-                    <bk-table-column :label="$t('名称')">
-                        <template slot-scope="props">
-                            {{ props.row.name || '--' }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('账号')">
-                        <template slot-scope="props">
-                            {{ props.row.username || '--' }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('密码')">
-                        <span>******</span>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('描述')">
-                        <template slot-scope="props">
-                            {{ props.row.description || '--' }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column width="120" :label="$t('操作')">
-                        <template slot-scope="props">
-                            <bk-button
-                                class="mr10"
-                                text
-                                theme="primary"
-                                @click="handleEdit(props.row)">
-                                {{ $t('编辑') }}
-                            </bk-button>
-                            <bk-button
-                                class="mr10"
-                                text
-                                theme="primary"
-                                @click="handleDelete(props.row)">
-                                {{ $t('删除') }}
-                            </bk-button>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
-        </paas-content-loader>
-        <create-voucher
-            ref="voucherDialog"
-            :config="visiableDialogConfig"
-            :type="type"
-            :voucher-detail="voucherDetail"
-            @updata="updateVoucher"
-            @confirm="addVoucher"
-            @close="isCreateVoucher">
-        </create-voucher>
+  <div class="container biz-create-success">
+    <div class="ps-top-bar">
+      <div class="header-title">
+        <span class="app-code">{{ curAppCode }}</span>
+        <i class="paasng-icon paasng-angle-down arrows" />
+        <!-- <span class="arrows">></span> -->
+        {{ $t('镜像凭证') }}
+      </div>
     </div>
+    <paas-content-loader
+      class="app-container"
+      :is-loading="isLoading"
+      placeholder="roles-loading"
+    >
+      <div class="app-container middle ps-main">
+        <bk-button
+          theme="primary"
+          class="mb15"
+          @click="handleVoucher"
+        >
+          <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增凭证') }}
+        </bk-button>
+        <bk-table
+          v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+          :data="voucherList"
+          size="small"
+          :pagination="pagination"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+        >
+          <bk-table-column :label="$t('名称')">
+            <template slot-scope="props">
+              {{ props.row.name || '--' }}
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('账号')">
+            <template slot-scope="props">
+              {{ props.row.username || '--' }}
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('密码')">
+            <span>******</span>
+          </bk-table-column>
+          <bk-table-column :label="$t('描述')">
+            <template slot-scope="props">
+              {{ props.row.description || '--' }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            width="120"
+            :label="$t('操作')"
+          >
+            <template slot-scope="props">
+              <bk-button
+                class="mr10"
+                text
+                theme="primary"
+                @click="handleEdit(props.row)"
+              >
+                {{ $t('编辑') }}
+              </bk-button>
+              <bk-button
+                class="mr10"
+                text
+                theme="primary"
+                @click="handleDelete(props.row)"
+              >
+                {{ $t('删除') }}
+              </bk-button>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </paas-content-loader>
+    <create-voucher
+      ref="voucherDialog"
+      :config="visiableDialogConfig"
+      :type="type"
+      :voucher-detail="voucherDetail"
+      @updata="updateVoucher"
+      @confirm="addVoucher"
+      @close="isCreateVoucher"
+    />
+  </div>
 </template>
 
 <script>
@@ -146,7 +157,7 @@
                     }, 500);
                 }
             },
-            
+
             async addVoucher (formData) {
                 this.visiableDialogConfig.loading = true;
                 const appCode = this.appCode;

@@ -1,44 +1,82 @@
 <template lang="html">
-    <div class="right-main">
-        <div class="ps-top-bar" v-if="showTitle">
-            <h2>{{data.name}}</h2>
-        </div>
-        <div class="ps-container middle bnone">
-            <div class="service-ex">
-                <img v-bind:src="data.image" class="service-ex-img ex" alt="">
-                <h2 class="magicbox-h2">{{data.apititle}}</h2>
-                <p class="magicbox-p">{{data.apiexplain}}</p>
-                <a :href="data.link" target="_blank" class="ps-btn ps-btn-l ps-btn-primary-ghost ps-btn-service-try-now" v-if="data.hasLink" style="right: 0;">
-                    {{ $t('立即体验') }} <i class="paasng-icon paasng-angle-double-right"></i>
-                </a>
-            </div>
-            <div class="service-p" v-for="(item, index) in data.apiList" :key="index">
-                <h3>{{item.title}}</h3>
-                <div>
-                    <template v-if="item.hasOwnProperty('explainIsLink') && item.explainIsLink">
-                        <a :href="item.url" target="_blank" class="blue">{{item.explain}}</a>
-                    </template>
-                    <template v-else>
-                        {{item.explain}}
-                        <a :href="item.url" v-if="item.hasOwnProperty('url') && item.url !== ''" target="_blank" class="blue code-a">
-                            {{item.isDoc ? $t('查看文档') : $t('立即体验')}}
-                            <i class="paasng-icon paasng-angle-double-right"></i>
-                        </a>
-                    </template>
-                    <span class="action-links" v-if="item.action_links">
-                        <a v-for="(link, linkIndex) in item.action_links" :href="link.target_url" target="_blank" :key="linkIndex">
-                            {{link.text}}
-                        </a>
-                    </span>
-                </div>
-            </div>
-        </div>
+  <div class="right-main">
+    <div
+      v-if="showTitle"
+      class="ps-top-bar"
+    >
+      <h2>{{ data.name }}</h2>
     </div>
+    <div class="ps-container middle bnone">
+      <div class="service-ex">
+        <img
+          :src="data.image"
+          class="service-ex-img ex"
+          alt=""
+        >
+        <h2 class="magicbox-h2">
+          {{ data.apititle }}
+        </h2>
+        <p class="magicbox-p">
+          {{ data.apiexplain }}
+        </p>
+        <a
+          v-if="data.hasLink"
+          :href="data.link"
+          target="_blank"
+          class="ps-btn ps-btn-l ps-btn-primary-ghost ps-btn-service-try-now"
+          style="right: 0;"
+        >
+          {{ $t('立即体验') }} <i class="paasng-icon paasng-angle-double-right" />
+        </a>
+      </div>
+      <div
+        v-for="(item, index) in data.apiList"
+        :key="index"
+        class="service-p"
+      >
+        <h3>{{ item.title }}</h3>
+        <div>
+          <template v-if="item.hasOwnProperty('explainIsLink') && item.explainIsLink">
+            <a
+              :href="item.url"
+              target="_blank"
+              class="blue"
+            >{{ item.explain }}</a>
+          </template>
+          <template v-else>
+            {{ item.explain }}
+            <a
+              v-if="item.hasOwnProperty('url') && item.url !== ''"
+              :href="item.url"
+              target="_blank"
+              class="blue code-a"
+            >
+              {{ item.isDoc ? $t('查看文档') : $t('立即体验') }}
+              <i class="paasng-icon paasng-angle-double-right" />
+            </a>
+          </template>
+          <span
+            v-if="item.action_links"
+            class="action-links"
+          >
+            <a
+              v-for="(link, linkIndex) in item.action_links"
+              :key="linkIndex"
+              :href="link.target_url"
+              target="_blank"
+            >
+              {{ link.text }}
+            </a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
     export default {
-        name: 'service-general',
+        name: 'ServiceGeneral',
         props: {
             data: {
                 type: Object

@@ -669,7 +669,7 @@
                         if (spec.envOverlay && spec.envOverlay.envVariables) {
                             this.allEnvVarList.push(...spec.envOverlay.envVariables);
                         }
-                        
+
                         this.allEnvVarList.forEach(item => {
                             if (!item.envName) {
                                 this.$set(item, 'envName', '_global_');

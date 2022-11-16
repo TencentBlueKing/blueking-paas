@@ -270,6 +270,9 @@ export const PAAS_STATIC_CONFIG = {
                     "url": "apps"
                 },
                 {
+                    "text": staticI18n.$t("插件开发")
+                },
+                {
                     "text": staticI18n.$t("云 API")
                 },
                 {
@@ -618,6 +621,74 @@ export const PAAS_STATIC_CONFIG = {
                     }
                 ]
             },
+        ],
+        "pluginList": [
+            {
+                "name": "pluginSummary",
+                "label": staticI18n.$t("概览"),
+                "matchRouters": [
+                    "appSummaryEmpty",
+                    "pluginSummary"
+                ],
+                "iconfontName": "overview",
+                "supportModule": true,
+                "destRoute": {
+                    "name": "pluginSummary"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginVersionManager",
+                "label": staticI18n.$t("版本管理"),
+                "matchRouters": [
+                    "pluginVersionManager",
+                    "pluginVersionEditor",
+                    "pluginVersionRelease"
+                ],
+                "iconfontName": "publish-fill",
+                "supportModule": true,
+                "destRoute": {
+                    "name": "pluginVersionManager"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginLog",
+                "label": staticI18n.$t("日志查询"),
+                "matchRouters": ["pluginLog"],
+                "iconfontName": "log-2",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "pluginLog"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginConfigs",
+                "label": staticI18n.$t("基本设置"),
+                "iconfontName": "setting-2",
+                "children": [
+                    {
+                        "name": staticI18n.$t("基本信息"),
+                        "destRoute": {
+                          "name": "pluginBaseInfo"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("可见范围"),
+                        "destRoute": {
+                          "name": "pluginVisibleRange"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("成员管理"),
+                        "destRoute": {
+                          "name": "pluginRoles"
+                        }
+                    }
+                ]
+            },
+
         ],
         "list": [
             {

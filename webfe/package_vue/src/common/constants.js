@@ -63,3 +63,19 @@ export const DEFAULR_LANG_NAME = {
   'Go': 'Golang开发框架',
   'NodeJS': 'NodeJS开发框架'
 };
+
+export const PLUGIN_STATUS = {
+  'waiting-approval': '创建审批中',
+  'approval-failed': '创建审批失败',
+  'developing': '开发中',
+  'releasing': '发布中',
+  'released': '已发布'
+};
+
+export const PLUGIN_VERSION_STATUS = {
+  'successful': '成功',
+  'failed': '失败',
+  'pending': '发布中',
+  'initial': '发布中',
+  'interrupted': '已中断'
+};

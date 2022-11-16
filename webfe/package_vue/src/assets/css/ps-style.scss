@@ -20,6 +20,7 @@
 @import './components/tab.scss';
 @import './components/accordion.scss';
 @import './components/other.scss';
+@import './components/flex.scss';
 @import './pages/main.scss';
 @import './pages/overview.scss';
 @import './pages/service.scss';
@@ -143,10 +144,6 @@ span.ellipsis {
     /*! autoprefixer: off */
     -webkit-box-orient: vertical;
     /* autoprefixer: on */
-}
-
-/*日志查询 start*/
-.log-middle {
 }
 
 /*人员选择器focus边框样式覆盖默认*/
@@ -481,7 +478,6 @@ span.ellipsis {
         line-height: 42px;
         font-size: 20px;
         color: #fff;
-        float: left;
         margin-right: 12px;
         background-color: #DCDEE5;
         display: inline-block;

@@ -16,14 +16,19 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+from bkpaas_auth.core.constants import ProviderType
+from bkpaas_auth.core.encoder import user_id_encoder
+from django.conf import settings
+from django_filters import CharFilter
+from django_filters.rest_framework import FilterSet
 from rest_framework.filters import BaseFilterBackend
 
 from paasng.pluginscenter.iam_adaptor.policy.client import lazy_iam_client
-from paasng.pluginscenter.models import PluginInstance
+from paasng.pluginscenter.models import PluginInstance, PluginRelease
 
 
 class PluginInstancePermissionFilter(BaseFilterBackend):
-    """PluginPermissionFilter will filter those PluginInstance own by the request.user """
+    """PluginPermissionFilter will filter those PluginInstance own by the request.user"""
 
     def filter_queryset(self, request, queryset, view):
         # skip filter if queryset is not for PluginInstance
@@ -34,3 +39,19 @@ class PluginInstancePermissionFilter(BaseFilterBackend):
             return queryset.filter(filters)
         else:
             return queryset.none()
+
+
+class PluginReleaseFilter(FilterSet):
+    creator = CharFilter(method='creator_filter')
+    status = CharFilter(field_name="status")
+
+    class Meta:
+        model = PluginRelease
+        fields = ['creator', 'status']
+
+    def creator_filter(self, queryset, name, value):
+        return queryset.filter(
+            **{
+                "creator": user_id_encoder.encode(getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), value),
+            }
+        )

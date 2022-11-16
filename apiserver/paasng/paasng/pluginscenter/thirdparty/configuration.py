@@ -16,30 +16,13 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from .definitions import (
-    PluginBasicInfoDefinition,
-    PluginConfigInfoDefinition,
-    PluginDefinition,
-    PluginMarketInfoDefinition,
-)
-from .instances import (
-    ApprovalService,
-    PluginConfig,
-    PluginInstance,
-    PluginMarketInfo,
-    PluginRelease,
-    PluginReleaseStage,
-)
+from paasng.pluginscenter.models import PluginDefinition, PluginInstance
+from paasng.pluginscenter.thirdparty import utils
 
-__all__ = [
-    "PluginDefinition",
-    "PluginBasicInfoDefinition",
-    "PluginConfigInfoDefinition",
-    "PluginMarketInfoDefinition",
-    "PluginInstance",
-    "PluginConfig",
-    "PluginMarketInfo",
-    "PluginRelease",
-    "PluginReleaseStage",
-    "ApprovalService",
-]
+
+def sync_config(pd: PluginDefinition, instance: PluginInstance):
+    """同步插件开发者中心-插件配置至第三方系统"""
+    if pd.config_definition is None:
+        raise ValueError("this plugin does not support configuration feature")
+    data = [config.row for config in instance.configs.all()]
+    utils.make_client(pd.config_definition.sync_api).call(data=data, path_params={"plugin_id": instance.id})

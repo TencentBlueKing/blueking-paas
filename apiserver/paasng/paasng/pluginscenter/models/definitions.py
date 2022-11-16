@@ -26,6 +26,7 @@ from paasng.pluginscenter.definitions import (
     PluginBackendAPI,
     PluginBackendAPIResource,
     PluginCodeTemplate,
+    PluginConfigColumnDefinition,
     PluginCreateApproval,
     PluginLogConfig,
     ReleaseRevisionDefinition,
@@ -42,6 +43,9 @@ PluginLogConfigField = make_json_field("PluginLogConfigField", PluginLogConfig)
 PluginCreateApprovalField = make_json_field("PluginCreateApprovalField", PluginCreateApproval)
 PluginCodeTemplateListField = make_json_field("PluginCodeTemplateListField", List[PluginCodeTemplate])
 PluginExtraFieldField = make_json_field("PluginExtraFieldField", Dict[str, FieldSchema])
+PluginConfigColumnDefinitionField = make_json_field(
+    "PluginConfigColumnDefinitionField", List[PluginConfigColumnDefinition]
+)
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -93,3 +97,13 @@ class PluginMarketInfoDefinition(AuditedModel):
     category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+
+
+class PluginConfigInfoDefinition(AuditedModel):
+    pd = models.OneToOneField(
+        PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="config_definition"
+    )
+
+    title = models.CharField(verbose_name="「配置管理标题」", max_length=16)
+    sync_api: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
+    columns: List[PluginConfigColumnDefinition] = PluginConfigColumnDefinitionField(default=list)

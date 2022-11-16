@@ -1,6 +1,7 @@
 """Serializer for third-party api"""
 from rest_framework import serializers
 
+from paasng.engine.serializers import field_env_var_key
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
@@ -102,3 +103,13 @@ class PluginRoleSLZ(serializers.Serializer):
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
+
+
+class PluginConfigSLZ(serializers.Serializer):
+    """插件配置-环境变量的结构"""
+
+    key = field_env_var_key()
+    value = serializers.CharField(help_text="环境变量值", required=True, allow_blank=True)
+    description = serializers.CharField(
+        allow_blank=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+    )

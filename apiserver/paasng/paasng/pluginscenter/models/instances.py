@@ -23,7 +23,7 @@ from attrs import define
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.pluginscenter.constants import PluginReleaseStatus, PluginRole, PluginStatus
+from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.utils.models import AuditedModel, BkUserField, UuidAuditedModel, make_json_field
 
@@ -79,15 +79,6 @@ class PluginMarketInfo(AuditedModel):
     description = TranslatedFieldWithFallback(models.TextField(verbose_name="详细描述", null=True))
     contact = models.TextField(verbose_name="联系人", help_text="以分号(;)分割")
     extra_fields = models.JSONField(verbose_name="额外字段")
-
-
-class PluginMembership(AuditedModel):
-    """插件成员"""
-
-    plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
-
-    user = BkUserField()
-    role = models.IntegerField(default=PluginRole.DEVELOPER.value)
 
 
 class PluginReleaseVersionManager(models.Manager):
@@ -203,3 +194,14 @@ class ApprovalService(UuidAuditedModel):
 
     service_name = models.CharField(verbose_name="审批服务名称", max_length=64, unique=True)
     service_id = models.IntegerField(verbose_name="审批服务ID", help_text="用于在 ITSM 上提申请单据")
+
+
+class PluginConfig(AuditedModel):
+    """插件配置"""
+
+    plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="configs")
+    unique_key = models.CharField(verbose_name="唯一标识", max_length=64)
+    row = models.JSONField(verbose_name="配置内容(1行), 格式 {'column_key': 'value'}", default=dict)
+
+    class Meta:
+        unique_together = ("plugin", "unique_key")

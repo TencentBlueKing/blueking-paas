@@ -25,7 +25,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
-from paasng.pluginscenter.definitions import FieldSchema
+from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.models import (
     PluginDefinition,
@@ -413,3 +413,46 @@ class ItsmApprovalSLZ(serializers.Serializer):
     current_status = serializers.ChoiceField(label="单据当前状态", choices=ItsmTicketStatus.get_choices())
     approve_result = serializers.BooleanField(label="审批结果")
     token = serializers.CharField(label="回调token", help_text="可用于验证请求是否来自于 ITSM")
+
+
+class PluginConfigColumnSLZ(serializers.Serializer):
+    """插件「配置管理」表单-列定义"""
+
+    title = serializers.CharField(help_text="字段的标题")
+    description = serializers.CharField(help_text="字段描述(placeholder)")
+    pattern = serializers.CharField(required=False, help_text="校验字段的正则表达式")
+    options = serializers.DictField(required=False, help_text="字段的选项, 格式是 {'选项展示名称': '选项值'}")
+
+
+class PluginConfigSchemaSLZ(serializers.Serializer):
+    """插件「配置管理」表单范式"""
+
+    title = serializers.CharField(help_text="「配置管理」的标题")
+    columns = PluginConfigColumnSLZ(many=True)
+
+
+def make_config_column_field(column_definition: PluginConfigColumnDefinition) -> serializers.Field:
+    """Generate a Field for verifying a string according to the given column_definition"""
+    init_kwargs = {
+        "label": column_definition.title,
+        "help_text": column_definition.description,
+    }
+    if column_definition.pattern:
+        return serializers.RegexField(regex=column_definition.pattern, **init_kwargs)
+    return serializers.CharField(**init_kwargs)
+
+
+def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
+    """generate a SLZ for verifying the creation/update of "Plugin Config"
+    according to the PluginConfigDefinition definition"""
+    config_definition = pd.config_definition
+    fields = {
+        column_definition.title: make_config_column_field(column_definition)
+        for column_definition in config_definition.columns
+    }
+    fields["__id__"] = serializers.CharField(help_text="配置项id", source="unique_key")
+    return type("DynamicPluginConfigSerializer", (serializers.Serializer,), fields)
+
+
+class StubConfigSLZ(serializers.Serializer):
+    __id__ = serializers.CharField(help_text="配置项id", source="unique_key")

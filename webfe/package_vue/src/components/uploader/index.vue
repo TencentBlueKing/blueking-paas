@@ -1,53 +1,86 @@
 <template>
-    <article class="config-upload" :class="{ 'content-hover': beforeUpload, 'isdrag': isdrag }">
-        <!--上传界面-->
-        <section class="config-upload-content" v-if="beforeUpload">
-            <slot name="upload-content" v-bind="{ acceptTips }">
-                <span class="content-icon"><i class="paasng-icon paasng-upload-2"></i></span>
-                <span class="content-drop"> {{ $t('点击选择或拖拽文件至此') }} </span>
-                <span class="content-tip">{{ acceptTips }}</span>
-            </slot>
-        </section>
-        <!--上传过程-->
-        <section class="config-upload-file" v-else>
-            <slot name="upload-file" v-bind="{ beforeAbortUpload, file }">
-                <span class="file-abort"><i class="paasng-icon paasng-close-circle-shape" @click="beforeAbortUpload"></i></span>
-                <div class="file-info">
-                    <span class="info-icon"><i class="paasng-icon paasng-order-shape"></i></span>
-                    <div class="info-name"><span>{{ file.name || '' }}</span></div>
-                    <div class="info-progress">
-                        <div class="progress-bar"
-                            :class="{ 'fail-background': file.hasError }"
-                            :style="{ width: file.percentage || 0 }">
-                        </div>
-                    </div>
-                    <span class="info-status" :class="{ 'fail-message': file.hasError }">{{ fileStatusMap[file.status] || file.errorMsg }}</span>
-                </div>
-            </slot>
-        </section>
-        <!--上传文件框-->
-        <section class="config-upload-input" v-show="beforeUpload || file.hasError">
-            <slot name="upload-input" v-bind="{ file, handleChange, accept }">
-                <input
-                    ref="uploadel"
-                    :class="{ 'input-hide': file.hasError }"
-                    :accept="accept"
-                    :multiple="false"
-                    :name="name"
-                    title=""
-                    :disabled="!beforeUpload && !isdrag"
-                    type="file"
-                    @change="handleChange">
-            </slot>
-        </section>
-        <!--上传提示-->
-        <section class="config-upload-footer">
-            <slot name="upload-footer" v-bind="{ importConfigExplain }">
-                <div class="footer-explain">
-                </div>
-            </slot>
-        </section>
-    </article>
+  <article
+    class="config-upload"
+    :class="{ 'content-hover': beforeUpload, 'isdrag': isdrag }"
+  >
+    <!--上传界面-->
+    <section
+      v-if="beforeUpload"
+      class="config-upload-content"
+    >
+      <slot
+        name="upload-content"
+        v-bind="{ acceptTips }"
+      >
+        <span class="content-icon"><i class="paasng-icon paasng-upload-2" /></span>
+        <span class="content-drop"> {{ $t('点击选择或拖拽文件至此') }} </span>
+        <span class="content-tip">{{ acceptTips }}</span>
+      </slot>
+    </section>
+    <!--上传过程-->
+    <section
+      v-else
+      class="config-upload-file"
+    >
+      <slot
+        name="upload-file"
+        v-bind="{ beforeAbortUpload, file }"
+      >
+        <span class="file-abort"><i
+          class="paasng-icon paasng-close-circle-shape"
+          @click="beforeAbortUpload"
+        /></span>
+        <div class="file-info">
+          <span class="info-icon"><i class="paasng-icon paasng-order-shape" /></span>
+          <div class="info-name">
+            <span>{{ file.name || '' }}</span>
+          </div>
+          <div class="info-progress">
+            <div
+              class="progress-bar"
+              :class="{ 'fail-background': file.hasError }"
+              :style="{ width: file.percentage || 0 }"
+            />
+          </div>
+          <span
+            class="info-status"
+            :class="{ 'fail-message': file.hasError }"
+          >{{ fileStatusMap[file.status] || file.errorMsg }}</span>
+        </div>
+      </slot>
+    </section>
+    <!--上传文件框-->
+    <section
+      v-show="beforeUpload || file.hasError"
+      class="config-upload-input"
+    >
+      <slot
+        name="upload-input"
+        v-bind="{ file, handleChange, accept }"
+      >
+        <input
+          ref="uploadel"
+          :class="{ 'input-hide': file.hasError }"
+          :accept="accept"
+          :multiple="false"
+          :name="name"
+          title=""
+          :disabled="!beforeUpload && !isdrag"
+          type="file"
+          @change="handleChange"
+        >
+      </slot>
+    </section>
+    <!--上传提示-->
+    <section class="config-upload-footer">
+      <slot
+        name="upload-footer"
+        v-bind="{ importConfigExplain }"
+      >
+        <div class="footer-explain" />
+      </slot>
+    </section>
+  </article>
 </template>
 
 <script>
@@ -57,7 +90,7 @@
     //     return val;
     // };
     export default {
-        name: 'import-configuration-upload',
+        name: 'ImportConfigurationUpload',
         props: {
             // 上传至服务器的名称
             name: {

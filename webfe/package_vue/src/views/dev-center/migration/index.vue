@@ -1,398 +1,645 @@
 <template lang="html">
-    <div class="paas-content white mt50" :style="{ 'width': '1180px', 'margin': 'auto', 'min-height': `${minHeight}px` }">
-        <div class="wrap">
-            <div class="right-main">
-                <!-- 中间区域 start -->
-                <paas-content-loader :is-loading="loading" placeholder="migration-loading" :height="550">
-                    <div class="paas-migration-tit">
-                        <h2> {{ $t('旧应用迁移') }} </h2>
-                        <p> {{ $t('您可以将蓝鲸应用从旧版开发者中心迁移到新版，我们将为您提供更好的服务能力。') }} </p>
-                    </div>
-                    <!-- 迁移过程 start -->
-                    <div class="ps-alert ps-alert-plain" v-if="migrationState !== 'DEFAULT' && migrationState !== 'PRE_MIGRATION_CONFIRM'">
-                        <paas-loading :is-loading="!migrationStatus.finished_migrations">
-                            <div slot="loadingContent">
-                                <div class="ps-alert-icon">
-                                    <i class="fa fa-wrench ps-alert-l"></i>
-                                </div>
-                                <div class="ps-alert-content">
-                                    <h4>{{ processTitle }}</h4>
-                                    <p v-for="(operationItem, index) in migrationStatus.finished_operations" :key="index">
-                                        <i v-if="operationItem.successful" class="fa fa-check"></i>
-                                        <i v-if="!operationItem.successful" class="fa fa-times"></i>
-                                        <span v-if="operationItem.apply_type === &quot;migrate&quot;"> {{ $t('执行') }} </span>
-                                        <span v-else> {{ $t('回滚') }} </span>
-                                        - {{ operationItem.description }}
-                                        <pre class="error-detail" v-if="!operationItem.successful">{{ operationItem.failed_reason }}</pre>
-                                    </p>
-                                    <!-- 执行中 -->
-                                    <p v-if="migrationStatus.ongoing_migration">
-                                        <i class="fa fa-spinner init-loading"></i>
-                                        <span v-if="migrationStatus.ongoing_migration.apply_type === &quot;migrate&quot;"> {{ $t('执行') }} </span>
-                                        <span v-else> {{ $t('回滚') }} </span>
-                                        - {{ migrationStatus.ongoing_migration.description }}
-                                        <pre v-if="migrationStatus.ongoing_migration.log" class="detail">{{ migrationStatus.ongoing_migration.log }} </pre>
-                                    </p>
-                                    <div class="row spacing-x2" v-html="currentResult">
-                                    </div>
-                                    <div class="spacing-x2" style="border-bottom: solid 1px #e6e9ea"></div>
-                                    <!-- 迁移中 -->
-                                    <div class="row spacing-x2" v-show="migrationStatus.is_active">
-                                        {{ $t('在当前迁移流程完成前 [执行迁移-部署新应用-访问新应用-测试验证-确认迁移]，你将无法开始新的迁移工作。') }}
-                                    </div>
+  <div
+    class="paas-content white mt50"
+    :style="{ 'width': '1180px', 'margin': 'auto', 'min-height': `${minHeight}px` }"
+  >
+    <div class="wrap">
+      <div class="right-main">
+        <!-- 中间区域 start -->
+        <paas-content-loader
+          :is-loading="loading"
+          placeholder="migration-loading"
+          :height="550"
+        >
+          <div class="paas-migration-tit">
+            <h2> {{ $t('旧应用迁移') }} </h2>
+            <p> {{ $t('您可以将蓝鲸应用从旧版开发者中心迁移到新版，我们将为您提供更好的服务能力。') }} </p>
+          </div>
+          <!-- 迁移过程 start -->
+          <div
+            v-if="migrationState !== 'DEFAULT' && migrationState !== 'PRE_MIGRATION_CONFIRM'"
+            class="ps-alert ps-alert-plain"
+          >
+            <paas-loading :is-loading="!migrationStatus.finished_migrations">
+              <div slot="loadingContent">
+                <div class="ps-alert-icon">
+                  <i class="fa fa-wrench ps-alert-l" />
+                </div>
+                <div class="ps-alert-content">
+                  <h4>{{ processTitle }}</h4>
+                  <p
+                    v-for="(operationItem, index) in migrationStatus.finished_operations"
+                    :key="index"
+                  >
+                    <i
+                      v-if="operationItem.successful"
+                      class="fa fa-check"
+                    />
+                    <i
+                      v-if="!operationItem.successful"
+                      class="fa fa-times"
+                    />
+                    <span v-if="operationItem.apply_type === &quot;migrate&quot;"> {{ $t('执行') }} </span>
+                    <span v-else> {{ $t('回滚') }} </span>
+                    - {{ operationItem.description }}
+                    <pre
+                      v-if="!operationItem.successful"
+                      class="error-detail"
+                    >{{ operationItem.failed_reason }}</pre>
+                  </p>
+                  <!-- 执行中 -->
+                  <p v-if="migrationStatus.ongoing_migration">
+                    <i class="fa fa-spinner init-loading" />
+                    <span v-if="migrationStatus.ongoing_migration.apply_type === &quot;migrate&quot;"> {{ $t('执行') }} </span>
+                    <span v-else> {{ $t('回滚') }} </span>
+                    - {{ migrationStatus.ongoing_migration.description }}
+                    <pre
+                      v-if="migrationStatus.ongoing_migration.log"
+                      class="detail"
+                    >{{ migrationStatus.ongoing_migration.log }} </pre>
+                  </p>
+                  <div
+                    class="row spacing-x2"
+                    v-html="currentResult"
+                  />
+                  <div
+                    class="spacing-x2"
+                    style="border-bottom: solid 1px #e6e9ea"
+                  />
+                  <!-- 迁移中 -->
+                  <div
+                    v-show="migrationStatus.is_active"
+                    class="row spacing-x2"
+                  >
+                    {{ $t('在当前迁移流程完成前 [执行迁移-部署新应用-访问新应用-测试验证-确认迁移]，你将无法开始新的迁移工作。') }}
+                  </div>
 
-                                    <!-- 迁移结束 -->
-                                    <div class="row spacing-x2" v-show="migrationState === 'DONE_MIGRATION' ">
-                                        <p> {{ $t('接下来，您需要：') }} </p>
-                                        <template v-if="migrationFlagObj.is_third_app">
-                                            <p>{{ $t('1. 在新版开发者中心确认应用第三方地址是否正确') }}
-                                                <router-link class="ps-link" :to="{ name: 'appMarket', params: { id: currentMigrationId, moduleId: 'default' } }">
-                                                    <i class="paasng-icon paasng-angle-double-right"></i> {{ $t('访问应用') }}
-                                                </router-link>
-                                            </p>
-                                            <p>{{ $t('2. 当你确认一切功能正常运行后，便可以点击【确认迁移】按钮来完成迁移。') }}</p>
-                                        </template>
-                                        <template v-else>
-                                            <p>{{ $t('1. 在新版开发者中心部署应用，并确认应用功能都正常') }}
-                                                <router-link class="ps-link" :to="{ name: 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }">
-                                                    <i class="paasng-icon paasng-angle-double-right"></i> {{ $t('现在去部署') }}
-                                                </router-link>
-                                            </p>
-                                            <p>{{ $t('2. 当你确认一切功能正常运行后，便可以点击【确认迁移】按钮来完成迁移。') }}</p>
-                                            <p style="color: #ff0000"> {{ $t('“确认迁移”') }}&nbsp;{{ $t('将会停掉旧版本中的服务进程，并切换应用访问入口。') }}
-                                                <template v-if="!migrationStatus.is_v3_prod_available">
-                                                    {{ $t('已下架的应用桌面无法查看，重新部署生产环境可上架到桌面。') }}
-                                                </template>
-                                            </p>
-                                        </template>
-                                        <p>
-                                            <!-- 第三方应用可以直接确认迁移 -->
-                                            <template v-if="migrationFlagObj.is_third_app">
-                                                <a class="ps-btn ps-btn-primary ps-btn-margin" @click="confirmMigrationFinished" href="###"> {{ $t('确认迁移') }} </a>
-                                            </template>
-                                            <template v-else-if="(migrationStatus.is_v3_prod_available || migrationStatus.is_v3_stag_available) && confirmBtnEnabled">
-                                                <a class="ps-btn ps-btn-primary ps-btn-margin"
-                                                    href="###"
-                                                    @click="confirmMigrationFinished"
-                                                    v-if="!migrationFlagObj.is_prod_deployed && !migrationFlagObj.is_stag_deployed"> {{ $t('确认迁移') }} </a>
-                                                <template v-else>
-                                                    <bk-popover placement="top">
-                                                        <a class="ps-btn ps-btn-primary ps-btn-margin" disabled href="###"> {{ $t('确认迁移') }} </a>
-                                                        <div slot="content">
-                                                            <p>
-                                                                {{ migrationFlagObj.is_prod_deployed && migrationFlagObj.is_stag_deployed
-                                                                    ? $t('应用在旧版开发者中心的测试环境和正式环境都未下架') : migrationFlagObj.is_prod_deployed && !migrationFlagObj.is_stag_deployed ? $t('应用在旧版开发者中心的正式环境未下架') : $t('应用在旧版开发者中心的测试环境未下架') }}
-                                                                <a :href="migrationFlagObj.offline_url" target="_blank" class="blue"> {{ $t('现在去下架') }} </a>
-                                                            </p>
-                                                        </div>
-                                                    </bk-popover>
-                                                </template>
-                                            </template>
-                                            <template v-else>
-                                                <bk-popover placement="top">
-                                                    <a class="ps-btn ps-btn-primary ps-btn-margin" disabled href="###"> {{ $t('确认迁移') }} </a>
-                                                    <div slot="content">
-                                                        <p> {{ $t('请先部署应用并确认功能正常') }}
-                                                            <router-link class="ps-link" :to="{ name: 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }">
-                                                                <i class="paasng-icon paasng-angle-double-right"></i> {{ $t('现在去部署') }}
-                                                            </router-link>
-                                                        </p>
-                                                    </div>
-                                                </bk-popover>
-                                            </template>
-                                            <a href="###" class="ps-btn ps-btn-l ps-btn-link" v-if="!migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available" @click="rollbackCurrent"> {{ $t('经测试功能不正确，取消本次迁移') }} </a>
-                                            <template v-else>
-                                                <bk-popover placement="top">
-                                                    <a class="ps-btn ps-btn-primary ps-btn-margin" disabled href="###"> {{ $t('经测试功能不正确，取消本次迁移') }} </a>
-                                                    <div slot="content">
-                                                        <p>
-                                                            {{ migrationStatus.is_v3_prod_available && migrationStatus.is_v3_stag_available
-                                                                ? $t('应用预发布环境和生产环境都未下架') : migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available ? $t('应用生产环境未下架') : $t('应用预发布环境未下架') }}
-                                                            <router-link class="ps-link" :to="{ name: migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available ? 'appDeployForProd' : 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }">
-                                                                {{ $t('现在去下架') }}
-                                                            </router-link>
-                                                        </p>
-                                                    </div>
-                                                </bk-popover>
-                                            </template>
-                                        </p>
-                                    </div>
-                                </div>
+                  <!-- 迁移结束 -->
+                  <div
+                    v-show="migrationState === 'DONE_MIGRATION' "
+                    class="row spacing-x2"
+                  >
+                    <p> {{ $t('接下来，您需要：') }} </p>
+                    <template v-if="migrationFlagObj.is_third_app">
+                      <p>
+                        {{ $t('1. 在新版开发者中心确认应用第三方地址是否正确') }}
+                        <router-link
+                          class="ps-link"
+                          :to="{ name: 'appMarket', params: { id: currentMigrationId, moduleId: 'default' } }"
+                        >
+                          <i class="paasng-icon paasng-angle-double-right" /> {{ $t('访问应用') }}
+                        </router-link>
+                      </p>
+                      <p>{{ $t('2. 当你确认一切功能正常运行后，便可以点击【确认迁移】按钮来完成迁移。') }}</p>
+                    </template>
+                    <template v-else>
+                      <p>
+                        {{ $t('1. 在新版开发者中心部署应用，并确认应用功能都正常') }}
+                        <router-link
+                          class="ps-link"
+                          :to="{ name: 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }"
+                        >
+                          <i class="paasng-icon paasng-angle-double-right" /> {{ $t('现在去部署') }}
+                        </router-link>
+                      </p>
+                      <p>{{ $t('2. 当你确认一切功能正常运行后，便可以点击【确认迁移】按钮来完成迁移。') }}</p>
+                      <p style="color: #ff0000">
+                        {{ $t('“确认迁移”') }}&nbsp;{{ $t('将会停掉旧版本中的服务进程，并切换应用访问入口。') }}
+                        <template v-if="!migrationStatus.is_v3_prod_available">
+                          {{ $t('已下架的应用桌面无法查看，重新部署生产环境可上架到桌面。') }}
+                        </template>
+                      </p>
+                    </template>
+                    <p>
+                      <!-- 第三方应用可以直接确认迁移 -->
+                      <template v-if="migrationFlagObj.is_third_app">
+                        <a
+                          class="ps-btn ps-btn-primary ps-btn-margin"
+                          href="###"
+                          @click="confirmMigrationFinished"
+                        > {{ $t('确认迁移') }} </a>
+                      </template>
+                      <template v-else-if="(migrationStatus.is_v3_prod_available || migrationStatus.is_v3_stag_available) && confirmBtnEnabled">
+                        <a
+                          v-if="!migrationFlagObj.is_prod_deployed && !migrationFlagObj.is_stag_deployed"
+                          class="ps-btn ps-btn-primary ps-btn-margin"
+                          href="###"
+                          @click="confirmMigrationFinished"
+                        > {{ $t('确认迁移') }} </a>
+                        <template v-else>
+                          <bk-popover placement="top">
+                            <a
+                              class="ps-btn ps-btn-primary ps-btn-margin"
+                              disabled
+                              href="###"
+                            > {{ $t('确认迁移') }} </a>
+                            <div slot="content">
+                              <p>
+                                {{ migrationFlagObj.is_prod_deployed && migrationFlagObj.is_stag_deployed
+                                  ? $t('应用在旧版开发者中心的测试环境和正式环境都未下架') : migrationFlagObj.is_prod_deployed && !migrationFlagObj.is_stag_deployed ? $t('应用在旧版开发者中心的正式环境未下架') : $t('应用在旧版开发者中心的测试环境未下架') }}
+                                <a
+                                  :href="migrationFlagObj.offline_url"
+                                  target="_blank"
+                                  class="blue"
+                                > {{ $t('现在去下架') }} </a>
+                              </p>
                             </div>
-                        </paas-loading>
+                          </bk-popover>
+                        </template>
+                      </template>
+                      <template v-else>
+                        <bk-popover placement="top">
+                          <a
+                            class="ps-btn ps-btn-primary ps-btn-margin"
+                            disabled
+                            href="###"
+                          > {{ $t('确认迁移') }} </a>
+                          <div slot="content">
+                            <p>
+                              {{ $t('请先部署应用并确认功能正常') }}
+                              <router-link
+                                class="ps-link"
+                                :to="{ name: 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }"
+                              >
+                                <i class="paasng-icon paasng-angle-double-right" /> {{ $t('现在去部署') }}
+                              </router-link>
+                            </p>
+                          </div>
+                        </bk-popover>
+                      </template>
+                      <a
+                        v-if="!migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available"
+                        href="###"
+                        class="ps-btn ps-btn-l ps-btn-link"
+                        @click="rollbackCurrent"
+                      > {{ $t('经测试功能不正确，取消本次迁移') }} </a>
+                      <template v-else>
+                        <bk-popover placement="top">
+                          <a
+                            class="ps-btn ps-btn-primary ps-btn-margin"
+                            disabled
+                            href="###"
+                          > {{ $t('经测试功能不正确，取消本次迁移') }} </a>
+                          <div slot="content">
+                            <p>
+                              {{ migrationStatus.is_v3_prod_available && migrationStatus.is_v3_stag_available
+                                ? $t('应用预发布环境和生产环境都未下架') : migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available ? $t('应用生产环境未下架') : $t('应用预发布环境未下架') }}
+                              <router-link
+                                class="ps-link"
+                                :to="{ name: migrationStatus.is_v3_prod_available && !migrationStatus.is_v3_stag_available ? 'appDeployForProd' : 'appDeployForStag', params: { id: currentMigrationId, moduleId: 'default' } }"
+                              >
+                                {{ $t('现在去下架') }}
+                              </router-link>
+                            </p>
+                          </div>
+                        </bk-popover>
+                      </template>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </paas-loading>
+          </div>
+          <!-- 迁移过程 end -->
+          <div class="environment-list app-category">
+            <a
+              :class="{ 'active': currentEnv === 'todoMigrate' }"
+              @click="changeTabList('todoMigrate')"
+            > {{ $t('未完成迁移应用') }} ( {{ todoAppList.length }})</a>
+            <a
+              :class="{ 'active': currentEnv === 'doneMigrate' }"
+              @click="changeTabList('doneMigrate')"
+            > {{ $t('已迁移应用') }} ( {{ doneAppList.length }})</a>
+            <a
+              :class="{ 'active': currentEnv === 'cannotMigrate' }"
+              @click="changeTabList('cannotMigrate')"
+            > {{ $t('暂不支持迁移应用') }} ({{ cannotAppList.length }})</a>
+          </div>
+          <div>
+            <!-- 未完成迁移应用 start -->
+            <div
+              v-show="currentEnv === 'todoMigrate'"
+              class="environment"
+            >
+              <table class="ps-table ps-table-simple">
+                <colgroup>
+                  <col style="width: 20%">
+                  <col style="width: 10%">
+                  <col style="width: 10%">
+                  <col style="width: 15%">
+                  <col style="width: 10%">
+                  <col style="width: 10%">
+                  <col style="width: 20%">
+                </colgroup>
+                <tr>
+                  <th class="pl30">
+                    {{ $t('蓝鲸应用') }}
+                  </th>
+                  <th> {{ $t('开发语言') }} </th>
+                  <th> {{ $t('版本') }} </th>
+                  <th> {{ $t('创建时间') }} </th>
+                  <th class="center">
+                    {{ $t('蓝鲸桌面') }}
+                  </th>
+                  <th class="center">
+                    {{ $t('迁移状态') }}
+                  </th>
+                  <th class="center">
+                    {{ $t('操作') }}
+                  </th>
+                </tr>
+                <tr
+                  v-for="(appItem, appItemIndex) in todoAppList"
+                  :key="appItemIndex"
+                >
+                  <td class="pl30">
+                    <a
+                      :href="appItem.legacy_url"
+                      class="ps-table-app"
+                    >
+                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
+                      <fallback-image
+                        :url="appItem.logo"
+                        :url-fallback="defaultLogo"
+                        class="fleft applogo"
+                      />
+                      <span class="app-name-text">{{ appItem.name }}</span>
+                      <span class="app-code-text">{{ appItem.code }}</span>
+                    </a>
+                  </td>
+                  <td>{{ appItem.language }}</td>
+                  <td>{{ appItem.region }}</td>
+                  <td>{{ appItem.created }}</td>
+                  <td class="center">
+                    {{ appItem.is_prod_deployed ? $t('已上架') : $t('未上架') }}
+                  </td>
+                  <td class="center">
+                    {{ appItem.is_active ? $t('进行中') : $t('未启动') }}
+                  </td>
+                  <td class="center">
+                    <button
+                      v-if="!appItem.is_active"
+                      class="ps-btn ps-btn-primary"
+                      :disabled="migrationState === 'ON_MIGRATION' || migrationState === 'ON_ROLLBACK' || migrationState === 'ON_CONFIRMING' || migrationState === 'DONE_MIGRATION' "
+                      @click="makeMigration(appItem)"
+                    >
+                      <span> {{ $t('迁移到') }} </span> {{ $t('新版开发者中心') }}
+                    </button>
+                    <button
+                      v-else
+                      class="ps-btn ps-btn-primary"
+                      @click="viewMigrationStatus(appItem)"
+                    >
+                      {{ $t('查看进度') }}
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="todoAppList.length === 0">
+                  <td
+                    colspan="7"
+                    class="center"
+                  >
+                    <div class="ps-no-result">
+                      <div class="text">
+                        <p><i class="paasng-icon paasng-empty" /></p>
+                        <p> {{ $t('暂无应用') }} </p>
+                      </div>
                     </div>
-                    <!-- 迁移过程 end -->
-                    <div class="environment-list app-category">
-                        <a @click="changeTabList('todoMigrate')" :class="{ 'active': currentEnv === 'todoMigrate' }"> {{ $t('未完成迁移应用') }} ( {{ todoAppList.length }})</a>
-                        <a @click="changeTabList('doneMigrate')" :class="{ 'active': currentEnv === 'doneMigrate' }"> {{ $t('已迁移应用') }} ( {{ doneAppList.length }})</a>
-                        <a @click="changeTabList('cannotMigrate')" :class="{ 'active': currentEnv === 'cannotMigrate' }"> {{ $t('暂不支持迁移应用') }} ({{ cannotAppList.length }})</a>
-                    </div>
-                    <div>
-                        <!-- 未完成迁移应用 start -->
-                        <div class="environment" v-show="currentEnv === 'todoMigrate'">
-                            <table class="ps-table ps-table-simple">
-                                <colgroup>
-                                    <col style="width: 20%">
-                                    <col style="width: 10%">
-                                    <col style="width: 10%">
-                                    <col style="width: 15%">
-                                    <col style="width: 10%">
-                                    <col style="width: 10%">
-                                    <col style="width: 20%">
-                                </colgroup>
-                                <tr>
-                                    <th class="pl30"> {{ $t('蓝鲸应用') }} </th>
-                                    <th> {{ $t('开发语言') }} </th>
-                                    <th> {{ $t('版本') }} </th>
-                                    <th> {{ $t('创建时间') }} </th>
-                                    <th class="center"> {{ $t('蓝鲸桌面') }} </th>
-                                    <th class="center"> {{ $t('迁移状态') }} </th>
-                                    <th class="center"> {{ $t('操作') }} </th>
-                                </tr>
-                                <tr v-for="(appItem, appItemIndex) in todoAppList" :key="appItemIndex">
-                                    <td class="pl30">
-                                        <a :href="appItem.legacy_url" class="ps-table-app">
-                                            <!-- <img :src="appItem.logo" class="fleft applogo"> -->
-                                            <fallback-image :url="appItem.logo" :url-fallback="defaultLogo" class="fleft applogo" />
-                                            <span class="app-name-text">{{ appItem.name }}</span>
-                                            <span class="app-code-text">{{ appItem.code }}</span>
-                                        </a>
-                                    </td>
-                                    <td>{{ appItem.language }}</td>
-                                    <td>{{ appItem.region }}</td>
-                                    <td>{{ appItem.created }}</td>
-                                    <td class="center">{{ appItem.is_prod_deployed ? $t('已上架') : $t('未上架') }}</td>
-                                    <td class="center">{{ appItem.is_active ? $t('进行中') : $t('未启动') }}</td>
-                                    <td class="center">
-                                        <button v-if="!appItem.is_active" class="ps-btn ps-btn-primary"
-                                            :disabled="migrationState === 'ON_MIGRATION' || migrationState === 'ON_ROLLBACK' || migrationState === 'ON_CONFIRMING' || migrationState === 'DONE_MIGRATION' "
-                                            @click="makeMigration(appItem)"><span> {{ $t('迁移到') }} </span> {{ $t('新版开发者中心') }} </button>
-                                        <button v-else class="ps-btn ps-btn-primary" @click="viewMigrationStatus(appItem)"> {{ $t('查看进度') }} </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="todoAppList.length === 0">
-                                    <td colspan="7" class="center">
-                                        <div class="ps-no-result">
-                                            <div class="text">
-                                                <p><i class="paasng-icon paasng-empty"></i></p>
-                                                <p> {{ $t('暂无应用') }} </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        <!-- 未完成迁移应用 end -->
-
-                        <!-- 已迁移应用 start -->
-                        <div class="environment" v-show="currentEnv === 'doneMigrate'">
-                            <table class="ps-table  ps-table-simple">
-                                <colgroup>
-                                    <col style="width: 25%">
-                                    <col style="width: 10%">
-                                    <col style="width: 15%">
-                                    <col style="width: 20%">
-                                    <col style="width: 10%">
-                                    <col style="width: 20%">
-                                </colgroup>
-                                <tr>
-                                    <th class="pl30"> {{ $t('蓝鲸应用') }} </th>
-                                    <th> {{ $t('开发语言') }} </th>
-                                    <th> {{ $t('版本') }} </th>
-                                    <th> {{ $t('迁移时间') }} </th>
-                                    <th class="center"> {{ $t('蓝鲸桌面') }} </th>
-                                    <th class="center"> {{ $t('操作') }} </th>
-                                </tr>
-                                <tr v-for="(appItem, appItemIndex) in doneAppList" :key="appItemIndex">
-                                    <td class="pl30">
-                                        <a :href="GLOBAL.V3_APP_SUMMARY + appItem.code + '/'" class="ps-table-app">
-                                            <!-- <img :src="appItem.logo" class="fleft applogo"> -->
-                                            <fallback-image :url="appItem.logo" :url-fallback="defaultLogo" class="fleft applogo" />
-                                            <span class="app-name-text">{{ appItem.name }}</span>
-                                            <span class="app-code-text">{{ appItem.code }}</span>
-                                        </a>
-                                    </td>
-                                    <td>{{ appItem.language }}</td>
-                                    <td>{{ appItem.region }}</td>
-                                    <td>{{ appItem.migration_finished_date }}</td>
-                                    <td class="center">{{ appItem.is_prod_deployed ? $t('已上架') : $t('未上架') }}</td>
-                                    <td class="center">
-                                        <a href="###" class="ps-btn ps-btn-primary"
-                                            :disabled="migrationStatus.is_active || !appItem.has_prod_deployed_before_migration"
-                                            @click="rollbackMigrationBtnClick(appItem)"> {{ $t('回滚至旧版本') }} </a>
-                                    </td>
-                                </tr>
-                                <tr v-if="doneAppList.length === 0">
-                                    <td colspan="6" class="center">
-                                        <div class="ps-no-result">
-                                            <div class="text">
-                                                <p><i class="paasng-icon paasng-empty"></i></p>
-                                                <p> {{ $t('暂无应用') }} </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        <!-- 已迁移应用 end -->
-
-                        <!-- 暂不支持迁移应用 start -->
-                        <div class="environment" v-show="currentEnv === 'cannotMigrate'">
-                            <table class="ps-table ps-table-simple">
-                                <colgroup>
-                                    <col style="width: 25%">
-                                    <col style="width: 10%">
-                                    <col style="width: 10%">
-                                    <col style="width: 20%">
-                                    <col style="width: 35%">
-                                </colgroup>
-                                <tr>
-                                    <th class="pl30"> {{ $t('蓝鲸应用') }} </th>
-                                    <th> {{ $t('开发语言') }} </th>
-                                    <th> {{ $t('版本') }} </th>
-                                    <th> {{ $t('创建时间') }} </th>
-                                    <th> {{ $t('原因') }} </th>
-                                </tr>
-
-                                <tr v-for="(appItem, appItemIndex) in cannotAppList" :key="appItemIndex">
-                                    <td class="pl30">
-                                        <a :href="appItem.legacy_url" class="ps-table-app">
-                                            <!-- <img :src="appItem.logo" class="fleft applogo"> -->
-                                            <fallback-image :url="appItem.logo" :url-fallback="defaultLogo" class="fleft applogo" />
-                                            <span class="app-name-text">{{ appItem.name }}</span>
-                                            <span class="app-code-text">{{ appItem.code }}</span>
-                                        </a>
-                                    </td>
-                                    <td>{{ appItem.language }}</td>
-                                    <td>{{ appItem.region }}</td>
-                                    <td>{{ appItem.created }}</td>
-                                    <td>
-                                        <ul>
-                                            <li v-for="(reason, reasonIndex) in appItem.not_support_reasons" :key="reasonIndex">
-                                                {{reason}}
-                                            </li>
-                                        </ul>
-                                    </td>
-                                </tr>
-                                <tr v-if="cannotAppList.length === 0">
-                                    <td colspan="5" class="center">
-                                        <div class="ps-no-result">
-                                            <div class="text">
-                                                <p><i class="paasng-icon paasng-empty"></i></p>
-                                                <p> {{ $t('暂无应用') }} </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                            </table>
-                        </div>
-                        <!-- 暂不支持迁移应用 end -->
-                    </div>
-                </paas-content-loader>
-
-                <bk-dialog
-                    width="800"
-                    v-model="confirmDialog.visiable"
-                    :title="`迁移应用【${ currentApp.name }】到新版开发者中心`"
-                    :theme="'primary'"
-                    :mask-close="false"
-                    :loading="confirmDialog.isLoading"
-                    @after-close="afterDialogClose">
-                    <form class="ps-form" id="" method="POST" action="javascript:;" v-show="migrationState === 'PRE_MIGRATION_CONFIRM'">
-                        <div class="ps-form-content">
-                            <div class="ps-form-group">
-                                <p> {{ $t('开始前，请确认应用') }} 【{{ currentApp.name }}】 {{ $t('满足以下迁移前置条件，如果不满足，请联系') }} 【<a :href="GLOBAL.HELPER.href" v-if="GLOBAL.HELPER.href">{{GLOBAL.HELPER.name}}</a><span v-else> {{ $t('管理员') }} </span>】， {{ $t('我们将单独处理您的迁移请求。') }} </p>
-                                <p class="ps-form-item">
-                                    <label><input type="checkbox" class="ps-checkbox-default"
-                                        @change="readmeCheckboxChanged()"
-                                        v-model="noOutterAuthorize"></label>
-                                    <span class="ps-form-text"> {{ $t('应用没有访问某些添加了IP白名单的服务') }} <br />
-                                        <span class="ps-form-text-gray"> {{ $t('应用迁移到新版开发者中心后，出口IP将会发生变化') }} </span>
-                                    </span>
-                                </p>
-                                <p class="ps-form-item">
-                                    <label><input type="checkbox" class="ps-checkbox-default"
-                                        @change="readmeCheckboxChanged()"
-                                        v-model="noOutterDb"></label>
-                                    <span class="ps-form-text"> {{ $t('应用没有使用外部 DB') }} <br />
-                                        <span class="ps-form-text-gray"> {{ $t('如果使用外部DB, 需要根据') }} <a target="_blank" :href="GLOBAL.DOC.LEGACY_MIGRATION"> {{ $t('迁移文档') }} </a> {{ $t('的指引操作') }} </span>
-                                    </span>
-                                </p>
-                                <p class="ps-form-item">
-                                    <label><input type="checkbox" class="ps-checkbox-default"
-                                        @change="readmeCheckboxChanged()"
-                                        v-model="noStacklessPython"></label>
-                                    <span class="ps-form-text"> {{ $t('应用没有使用 Stackless Python 的相关特性') }} </span>
-                                </p>
-                                <p class="ps-form-item">
-                                    <label><input type="checkbox" class="ps-checkbox-default"
-                                        @change="readmeCheckboxChanged()"
-                                        v-model="noNfsOrFileupload"></label>
-                                    <span class="ps-form-text"> {{ $t('应用没有使用NFS服务（之前的文件上传采用的NFS）') }} </span>
-                                </p>
-                                <div>
-                                    <p class="ps-form-item">
-                                        <label><input type="checkbox" class="ps-checkbox-default"
-                                            @change="readmeCheckboxChanged()"
-                                            v-model="noApiGateway"></label>
-                                        <span class="ps-form-text"> {{ $t('应用如果对外提供了接口，需要通知调用方修改接口url') }} </span><br />
-                                    </p>
-                                    <span class="ps-form-info">1. {{ $t('没有使用api gateway，需要通知所有使用到接口的应用或服务 修改url') }}</span><br />
-                                    <span class="ps-form-info">2. {{ $t('使用了api gateway, 只需要再api gateway 上修改url即可') }}</span>
-                                </div>
-                                <p class="ps-form-item">
-                                    <label><input type="checkbox" class="ps-checkbox-default"
-                                        @change="readmeCheckboxChanged()"
-                                        v-model="noOutterLink"></label>
-                                    <span class="ps-form-text"> {{ $t('发给其他人或第三方系统的回调链接需要修改，比如邮件中的链接，权限审批链接等') }} </span>
-                                </p>
-                                <p class="ps-form-item">
-                                    <label><input type="checkbox" class="ps-checkbox-default"
-                                        @change="readmeCheckboxChanged()"
-                                        v-model="finshedMigrationReadme"></label>
-                                    <span class="ps-form-text">
-                                        {{ $t('已阅读') }}
-                                        <span @click.stop="appLegacy" class="legacy-title"> {{ $t('迁移文档') }} </span>
-                                    </span>
-                                </p>
-                                <p class="migrate-note"> {{ $t('点击【开启迁移】后，你的应用服务将不会受到任何影响') }} </p>
-                            </div>
-                        </div>
-                    </form>
-                    <div slot="footer">
-                        <bk-button theme="primary" :disabled="!bAllPreConfirmChecked" @click="startMigration">
-                            <span v-bk-tooltips="$t('请确认迁移注意事项')" v-if="!bAllPreConfirmChecked"> {{ $t('开启迁移') }} </span>
-                            <span v-else> {{ $t('开启迁移') }} </span>
-                        </bk-button>
-                        <bk-button @click="cancelMigration" style="margin-left: 6px;"> {{ $t('取消') }} </bk-button>
-                    </div>
-                </bk-dialog>
+                  </td>
+                </tr>
+              </table>
             </div>
-        </div>
-        <!-- 确认迁移 二次确认弹窗 -->
+            <!-- 未完成迁移应用 end -->
+
+            <!-- 已迁移应用 start -->
+            <div
+              v-show="currentEnv === 'doneMigrate'"
+              class="environment"
+            >
+              <table class="ps-table  ps-table-simple">
+                <colgroup>
+                  <col style="width: 25%">
+                  <col style="width: 10%">
+                  <col style="width: 15%">
+                  <col style="width: 20%">
+                  <col style="width: 10%">
+                  <col style="width: 20%">
+                </colgroup>
+                <tr>
+                  <th class="pl30">
+                    {{ $t('蓝鲸应用') }}
+                  </th>
+                  <th> {{ $t('开发语言') }} </th>
+                  <th> {{ $t('版本') }} </th>
+                  <th> {{ $t('迁移时间') }} </th>
+                  <th class="center">
+                    {{ $t('蓝鲸桌面') }}
+                  </th>
+                  <th class="center">
+                    {{ $t('操作') }}
+                  </th>
+                </tr>
+                <tr
+                  v-for="(appItem, appItemIndex) in doneAppList"
+                  :key="appItemIndex"
+                >
+                  <td class="pl30">
+                    <a
+                      :href="GLOBAL.V3_APP_SUMMARY + appItem.code + '/'"
+                      class="ps-table-app"
+                    >
+                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
+                      <fallback-image
+                        :url="appItem.logo"
+                        :url-fallback="defaultLogo"
+                        class="fleft applogo"
+                      />
+                      <span class="app-name-text">{{ appItem.name }}</span>
+                      <span class="app-code-text">{{ appItem.code }}</span>
+                    </a>
+                  </td>
+                  <td>{{ appItem.language }}</td>
+                  <td>{{ appItem.region }}</td>
+                  <td>{{ appItem.migration_finished_date }}</td>
+                  <td class="center">
+                    {{ appItem.is_prod_deployed ? $t('已上架') : $t('未上架') }}
+                  </td>
+                  <td class="center">
+                    <a
+                      href="###"
+                      class="ps-btn ps-btn-primary"
+                      :disabled="migrationStatus.is_active || !appItem.has_prod_deployed_before_migration"
+                      @click="rollbackMigrationBtnClick(appItem)"
+                    > {{ $t('回滚至旧版本') }} </a>
+                  </td>
+                </tr>
+                <tr v-if="doneAppList.length === 0">
+                  <td
+                    colspan="6"
+                    class="center"
+                  >
+                    <div class="ps-no-result">
+                      <div class="text">
+                        <p><i class="paasng-icon paasng-empty" /></p>
+                        <p> {{ $t('暂无应用') }} </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <!-- 已迁移应用 end -->
+
+            <!-- 暂不支持迁移应用 start -->
+            <div
+              v-show="currentEnv === 'cannotMigrate'"
+              class="environment"
+            >
+              <table class="ps-table ps-table-simple">
+                <colgroup>
+                  <col style="width: 25%">
+                  <col style="width: 10%">
+                  <col style="width: 10%">
+                  <col style="width: 20%">
+                  <col style="width: 35%">
+                </colgroup>
+                <tr>
+                  <th class="pl30">
+                    {{ $t('蓝鲸应用') }}
+                  </th>
+                  <th> {{ $t('开发语言') }} </th>
+                  <th> {{ $t('版本') }} </th>
+                  <th> {{ $t('创建时间') }} </th>
+                  <th> {{ $t('原因') }} </th>
+                </tr>
+
+                <tr
+                  v-for="(appItem, appItemIndex) in cannotAppList"
+                  :key="appItemIndex"
+                >
+                  <td class="pl30">
+                    <a
+                      :href="appItem.legacy_url"
+                      class="ps-table-app"
+                    >
+                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
+                      <fallback-image
+                        :url="appItem.logo"
+                        :url-fallback="defaultLogo"
+                        class="fleft applogo"
+                      />
+                      <span class="app-name-text">{{ appItem.name }}</span>
+                      <span class="app-code-text">{{ appItem.code }}</span>
+                    </a>
+                  </td>
+                  <td>{{ appItem.language }}</td>
+                  <td>{{ appItem.region }}</td>
+                  <td>{{ appItem.created }}</td>
+                  <td>
+                    <ul>
+                      <li
+                        v-for="(reason, reasonIndex) in appItem.not_support_reasons"
+                        :key="reasonIndex"
+                      >
+                        {{ reason }}
+                      </li>
+                    </ul>
+                  </td>
+                </tr>
+                <tr v-if="cannotAppList.length === 0">
+                  <td
+                    colspan="5"
+                    class="center"
+                  >
+                    <div class="ps-no-result">
+                      <div class="text">
+                        <p><i class="paasng-icon paasng-empty" /></p>
+                        <p> {{ $t('暂无应用') }} </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <!-- 暂不支持迁移应用 end -->
+          </div>
+        </paas-content-loader>
+
         <bk-dialog
-            width="540"
-            v-model="delAppDialog.visiable"
-            :title="$t('确认迁移？')"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="delAppDialog.isLoading"
-            @after-leave="hookAfterClose">
-            <form class="ps-form" @submit.prevent="submitMigrateApp" style="width: 480px;">
-                <div class="spacing-x1">
-                    {{ $t('该操作 ') }} <span style="font-weight: bold;"> {{ $t('无法撤回') }} </span> 。{{ $t('请在严格验证应用网页端、移动端等可以正常访问后，输入应用 ID') }} <code>{{ currentMigrationId }}</code> {{ $t('确认迁移：') }}
+          v-model="confirmDialog.visiable"
+          width="800"
+          :title="`迁移应用【${ currentApp.name }】到新版开发者中心`"
+          :theme="'primary'"
+          :mask-close="false"
+          :loading="confirmDialog.isLoading"
+          @after-close="afterDialogClose"
+        >
+          <form
+            v-show="migrationState === 'PRE_MIGRATION_CONFIRM'"
+            id=""
+            class="ps-form"
+            method="POST"
+            action="javascript:;"
+          >
+            <div class="ps-form-content">
+              <div class="ps-form-group">
+                <p>
+                  {{ $t('开始前，请确认应用') }} 【{{ currentApp.name }}】 {{ $t('满足以下迁移前置条件，如果不满足，请联系') }} 【<a
+                    v-if="GLOBAL.HELPER.href"
+                    :href="GLOBAL.HELPER.href"
+                  >{{ GLOBAL.HELPER.name }}</a><span v-else> {{ $t('管理员') }} </span>】， {{ $t('我们将单独处理您的迁移请求。') }}
+                </p>
+                <p class="ps-form-item">
+                  <label><input
+                    v-model="noOutterAuthorize"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    @change="readmeCheckboxChanged()"
+                  ></label>
+                  <span class="ps-form-text"> {{ $t('应用没有访问某些添加了IP白名单的服务') }} <br>
+                    <span class="ps-form-text-gray"> {{ $t('应用迁移到新版开发者中心后，出口IP将会发生变化') }} </span>
+                  </span>
+                </p>
+                <p class="ps-form-item">
+                  <label><input
+                    v-model="noOutterDb"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    @change="readmeCheckboxChanged()"
+                  ></label>
+                  <span class="ps-form-text"> {{ $t('应用没有使用外部 DB') }} <br>
+                    <span class="ps-form-text-gray"> {{ $t('如果使用外部DB, 需要根据') }} <a
+                      target="_blank"
+                      :href="GLOBAL.DOC.LEGACY_MIGRATION"
+                    > {{ $t('迁移文档') }} </a> {{ $t('的指引操作') }} </span>
+                  </span>
+                </p>
+                <p class="ps-form-item">
+                  <label><input
+                    v-model="noStacklessPython"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    @change="readmeCheckboxChanged()"
+                  ></label>
+                  <span class="ps-form-text"> {{ $t('应用没有使用 Stackless Python 的相关特性') }} </span>
+                </p>
+                <p class="ps-form-item">
+                  <label><input
+                    v-model="noNfsOrFileupload"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    @change="readmeCheckboxChanged()"
+                  ></label>
+                  <span class="ps-form-text"> {{ $t('应用没有使用NFS服务（之前的文件上传采用的NFS）') }} </span>
+                </p>
+                <div>
+                  <p class="ps-form-item">
+                    <label><input
+                      v-model="noApiGateway"
+                      type="checkbox"
+                      class="ps-checkbox-default"
+                      @change="readmeCheckboxChanged()"
+                    ></label>
+                    <span class="ps-form-text"> {{ $t('应用如果对外提供了接口，需要通知调用方修改接口url') }} </span><br>
+                  </p>
+                  <span class="ps-form-info">1. {{ $t('没有使用api gateway，需要通知所有使用到接口的应用或服务 修改url') }}</span><br>
+                  <span class="ps-form-info">2. {{ $t('使用了api gateway, 只需要再api gateway 上修改url即可') }}</span>
                 </div>
-                <div class="ps-form-group">
-                    <input v-model="formRemoveConfirmId" type="text" class="ps-form-control">
-                </div>
-            </form>
-            <template slot="footer">
-                <bk-button theme="primary" @click="submitMigrateApp" :disabled="!formRemoveValidated"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="delAppDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </template>
+                <p class="ps-form-item">
+                  <label><input
+                    v-model="noOutterLink"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    @change="readmeCheckboxChanged()"
+                  ></label>
+                  <span class="ps-form-text"> {{ $t('发给其他人或第三方系统的回调链接需要修改，比如邮件中的链接，权限审批链接等') }} </span>
+                </p>
+                <p class="ps-form-item">
+                  <label><input
+                    v-model="finshedMigrationReadme"
+                    type="checkbox"
+                    class="ps-checkbox-default"
+                    @change="readmeCheckboxChanged()"
+                  ></label>
+                  <span class="ps-form-text">
+                    {{ $t('已阅读') }}
+                    <span
+                      class="legacy-title"
+                      @click.stop="appLegacy"
+                    > {{ $t('迁移文档') }} </span>
+                  </span>
+                </p>
+                <p class="migrate-note">
+                  {{ $t('点击【开启迁移】后，你的应用服务将不会受到任何影响') }}
+                </p>
+              </div>
+            </div>
+          </form>
+          <div slot="footer">
+            <bk-button
+              theme="primary"
+              :disabled="!bAllPreConfirmChecked"
+              @click="startMigration"
+            >
+              <span
+                v-if="!bAllPreConfirmChecked"
+                v-bk-tooltips="$t('请确认迁移注意事项')"
+              > {{ $t('开启迁移') }} </span>
+              <span v-else> {{ $t('开启迁移') }} </span>
+            </bk-button>
+            <bk-button
+              style="margin-left: 6px;"
+              @click="cancelMigration"
+            >
+              {{ $t('取消') }}
+            </bk-button>
+          </div>
         </bk-dialog>
+      </div>
     </div>
+    <!-- 确认迁移 二次确认弹窗 -->
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="$t('确认迁移？')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="delAppDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <form
+        class="ps-form"
+        style="width: 480px;"
+        @submit.prevent="submitMigrateApp"
+      >
+        <div class="spacing-x1">
+          {{ $t('该操作 ') }} <span style="font-weight: bold;"> {{ $t('无法撤回') }} </span> 。{{ $t('请在严格验证应用网页端、移动端等可以正常访问后，输入应用 ID') }} <code>{{ currentMigrationId }}</code> {{ $t('确认迁移：') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmId"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+      </form>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitMigrateApp"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>
@@ -593,7 +840,7 @@
             viewMigrationStatus (appItem) {
                 this.reset();
                 this.currentLegacyAppID = appItem.legacy_app_id;
-                
+
                 this.currentMigrationId = appItem.code;
 
                 this.currentApp = _.find(this.todoAppList, (item) => {
@@ -607,7 +854,7 @@
                 if (!this.bAllPreConfirmChecked) {
                     return;
                 }
-          
+
                 this.processTitle = `${this.$t('应用 [')}${this.currentApp.name}${this.$t('] 正在进行')}${this.migrateType}...`;
                 // TODO: show loading icon
                 // this.$refs.confirmModal.close()
@@ -649,7 +896,7 @@
                     if (this.migrationStatus.id !== this.currentMigrationID) {
                         return;
                     }
-            
+
                     // update front end status
                     this.migrationState = this.valueToStatusCode(this.migrationStatus.status);
 

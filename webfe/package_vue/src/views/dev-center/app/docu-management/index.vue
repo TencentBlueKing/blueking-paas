@@ -1,230 +1,324 @@
 <template>
-    <div class="right-main paas-docu-manager-wrapper">
-        <div class="ps-top-bar">
-            <h2>
-                {{ $t('文档管理') }}
-                <a class="link fr" v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE" :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE" target="_blank"> {{ $t('蓝鲸SaaS研发管理参考规范') }} </a>
-            </h2>
-        </div>
-        <paas-content-loader class="app-container middle" :is-loading="isLoading" placeholder="docu-manager-loading">
-            <div v-if="!isLoading && tableList.length > 0">
-                <bk-alert type="warning" :title="curTitle"></bk-alert>
-                <table class="bk-table docu-manager-custom-table">
-                    <colgroup>
-                        <col style="width: 200px;" />
-                        <col style="width: 200px;" />
-                        <col style="width: 100px;" />
-                        <col style="width: 250px;" />
-                        <col style="width: 100px;" />
-                        <col />
-                        <col style="width: 102px;" />
-                    </colgroup>
-                    <thead>
-                        <th> {{ $t('文档分类') }} </th>
-                        <th> {{ $t('文档细项') }} </th>
-                        <th> {{ $t('是否使用') }} </th>
-                        <th> {{ $t('详细信息') }} </th>
-                        <th> {{ $t('更新人') }} </th>
-                        <th> {{ $t('更新时间') }} </th>
-                        <th> {{ $t('操作') }} </th>
-                    </thead>
-                    <tbody style="background: #fff;">
-                        <template v-for="row in tableList">
-                            <template v-if="row.children.length < 1">
-                                <tr :key="row.id">
-                                    <td>
-                                        <span class="name" v-bk-tooltips.top="row.name">{{ row.name }}</span>
-                                        <i class="is-required" v-if="row.is_required">*</i>
-                                    </td>
-                                    <td>--</td>
-                                    <td>
-                                        <template v-if="!row.isEdit">
-                                            <span :class="row.instance.is_used ? 'active' : ''">{{ row.instance.is_used ? $t('是') : $t('否') }}</span>
-                                        </template>
-                                        <template v-else>
-                                            <bk-switcher
-                                                :value="row.instance.is_used"
-                                                theme="primary"
-                                                @change="handleSwitchChange(...arguments, row)">
-                                            </bk-switcher>
-                                        </template>
-                                    </td>
-                                    <td class="url-td">
-                                        <template v-if="row.instance.is_used && row.is_required && !row.instance.url && !row.isEdit">
-                                            <span>
-                                                <i class="paasng-icon paasng-exclamation-circle" style="color: #ffb848;"></i>
-                                                {{ $t('请填写') }}
-                                            </span>
-                                        </template>
-                                        <template v-else>
-                                            <template v-if="!!row.instance.url">
-                                                <div v-if="!row.isEdit">
-                                                    <bk-popconfirm
-                                                        trigger="mouseenter"
-                                                        ext-cls=""
-                                                        confirm-button-is-text
-                                                        :confirm-text="$t('复制')"
-                                                        cancel-text=""
-                                                        @confirm="handleCopy(row)">
-                                                        <div slot="content">{{ row.instance.url }}</div>
-                                                        <span style="display: inline-block;
+  <div class="right-main paas-docu-manager-wrapper">
+    <div class="ps-top-bar">
+      <h2>
+        {{ $t('文档管理') }}
+        <a
+          v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
+          class="link fr"
+          :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
+          target="_blank"
+        > {{ $t('蓝鲸SaaS研发管理参考规范') }} </a>
+      </h2>
+    </div>
+    <paas-content-loader
+      class="app-container middle"
+      :is-loading="isLoading"
+      placeholder="docu-manager-loading"
+    >
+      <div v-if="!isLoading && tableList.length > 0">
+        <bk-alert
+          type="warning"
+          :title="curTitle"
+        />
+        <table class="bk-table docu-manager-custom-table">
+          <colgroup>
+            <col style="width: 200px;">
+            <col style="width: 200px;">
+            <col style="width: 100px;">
+            <col style="width: 250px;">
+            <col style="width: 100px;">
+            <col>
+            <col style="width: 102px;">
+          </colgroup>
+          <thead>
+            <th> {{ $t('文档分类') }} </th>
+            <th> {{ $t('文档细项') }} </th>
+            <th> {{ $t('是否使用') }} </th>
+            <th> {{ $t('详细信息') }} </th>
+            <th> {{ $t('更新人') }} </th>
+            <th> {{ $t('更新时间') }} </th>
+            <th> {{ $t('操作') }} </th>
+          </thead>
+          <tbody style="background: #fff;">
+            <template v-for="row in tableList">
+              <template v-if="row.children.length < 1">
+                <tr :key="row.id">
+                  <td>
+                    <span
+                      v-bk-tooltips.top="row.name"
+                      class="name"
+                    >{{ row.name }}</span>
+                    <i
+                      v-if="row.is_required"
+                      class="is-required"
+                    >*</i>
+                  </td>
+                  <td>--</td>
+                  <td>
+                    <template v-if="!row.isEdit">
+                      <span :class="row.instance.is_used ? 'active' : ''">{{ row.instance.is_used ? $t('是') : $t('否') }}</span>
+                    </template>
+                    <template v-else>
+                      <bk-switcher
+                        :value="row.instance.is_used"
+                        theme="primary"
+                        @change="handleSwitchChange(...arguments, row)"
+                      />
+                    </template>
+                  </td>
+                  <td class="url-td">
+                    <template v-if="row.instance.is_used && row.is_required && !row.instance.url && !row.isEdit">
+                      <span>
+                        <i
+                          class="paasng-icon paasng-exclamation-circle"
+                          style="color: #ffb848;"
+                        />
+                        {{ $t('请填写') }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <template v-if="!!row.instance.url">
+                        <div v-if="!row.isEdit">
+                          <bk-popconfirm
+                            trigger="mouseenter"
+                            ext-cls=""
+                            confirm-button-is-text
+                            :confirm-text="$t('复制')"
+                            cancel-text=""
+                            @confirm="handleCopy(row)"
+                          >
+                            <div slot="content">
+                              {{ row.instance.url }}
+                            </div>
+                            <span
+                              style="display: inline-block;
                                                             max-width: 220px;
                                                             overflow: hidden;
                                                             text-overflow: ellipsis;
-                                                            white-space: nowrap;">
-                                                            {{ row.instance.url }}
-                                                        </span>
-                                                    </bk-popconfirm>
-                                                </div>
-                                                <template v-if="row.isEdit">
-                                                    <bk-input
-                                                        type="textarea"
-                                                        :value="row.instance.url"
-                                                        @input="handleUrlInput(...arguments, row)">
-                                                    </bk-input>
-                                                </template>
-                                            </template>
-                                            <template v-else>
-                                                <span v-if="!row.isEdit">--</span>
-                                                <template v-else>
-                                                    <bk-input
-                                                        type="textarea"
-                                                        :value="row.instance.url"
-                                                        @input="handleUrlInput(...arguments, row)">
-                                                    </bk-input>
-                                                </template>
-                                            </template>
-                                        </template>
-                                    </td>
-                                    <td>
-                                        {{ row.instance ? row.instance.latest_operator || '--' : '--' }}
-                                    </td>
-                                    <td>
-                                        {{ row.instance ? row.instance.updated ? smartTime(row.instance.updated, 'fromNow') : '--' : '--' }}
-                                    </td>
-                                    <td>
-                                        <template v-if="!row.isEdit">
-                                            <bk-button theme="primary" text @click.native.stop @click="handleEdit(row)"> {{ $t('编辑') }} </bk-button>
-                                        </template>
-                                        <template v-else>
-                                            <bk-button theme="primary" text @click.stop="handleSave(row)"> {{ $t('保存') }} </bk-button>
-                                            <bk-button style="margin-left: 5px;" theme="primary" text @click.stop="handleCancel(row)"> {{ $t('取消') }} </bk-button>
-                                        </template>
-                                    </td>
-                                </tr>
+                                                            white-space: nowrap;"
+                            >
+                              {{ row.instance.url }}
+                            </span>
+                          </bk-popconfirm>
+                        </div>
+                        <template v-if="row.isEdit">
+                          <bk-input
+                            type="textarea"
+                            :value="row.instance.url"
+                            @input="handleUrlInput(...arguments, row)"
+                          />
+                        </template>
+                      </template>
+                      <template v-else>
+                        <span v-if="!row.isEdit">--</span>
+                        <template v-else>
+                          <bk-input
+                            type="textarea"
+                            :value="row.instance.url"
+                            @input="handleUrlInput(...arguments, row)"
+                          />
+                        </template>
+                      </template>
+                    </template>
+                  </td>
+                  <td>
+                    {{ row.instance ? row.instance.latest_operator || '--' : '--' }}
+                  </td>
+                  <td>
+                    {{ row.instance ? row.instance.updated ? smartTime(row.instance.updated, 'fromNow') : '--' : '--' }}
+                  </td>
+                  <td>
+                    <template v-if="!row.isEdit">
+                      <bk-button
+                        theme="primary"
+                        text
+                        @click.native.stop
+                        @click="handleEdit(row)"
+                      >
+                        {{ $t('编辑') }}
+                      </bk-button>
+                    </template>
+                    <template v-else>
+                      <bk-button
+                        theme="primary"
+                        text
+                        @click.stop="handleSave(row)"
+                      >
+                        {{ $t('保存') }}
+                      </bk-button>
+                      <bk-button
+                        style="margin-left: 5px;"
+                        theme="primary"
+                        text
+                        @click.stop="handleCancel(row)"
+                      >
+                        {{ $t('取消') }}
+                      </bk-button>
+                    </template>
+                  </td>
+                </tr>
+              </template>
+              <template v-else>
+                <tr :key="row.id">
+                  <td>
+                    <span
+                      v-bk-tooltips.top="row.name"
+                      class="name"
+                    >{{ row.name }}</span>
+                    <i
+                      v-if="row.is_required"
+                      class="is-required"
+                    >*</i>
+                  </td>
+                  <td
+                    colspan="6"
+                    class="children-td"
+                  >
+                    <table class="bk-table sub-table">
+                      <colgroup>
+                        <col style="width: 200px;">
+                        <col style="width: 100px;">
+                        <col style="width: 250px;">
+                        <col style="width: 100px;">
+                        <col>
+                        <col style="width: 102px;">
+                      </colgroup>
+                      <template v-for="subRow in row.children">
+                        <tr :key="subRow.id">
+                          <td>
+                            <span
+                              v-bk-tooltips.top="subRow.name"
+                              class="name"
+                            >{{ subRow.name }}</span>
+                            <i
+                              v-if="subRow.is_required"
+                              class="is-required"
+                            >*</i>
+                          </td>
+                          <td>
+                            <template v-if="!subRow.isEdit">
+                              <span :class="subRow.instance.is_used ? 'active' : ''">{{ subRow.instance.is_used ? $t('是') : $t('否') }}</span>
                             </template>
                             <template v-else>
-                                <tr :key="row.id">
-                                    <td>
-                                        <span class="name" v-bk-tooltips.top="row.name">{{ row.name }}</span>
-                                        <i class="is-required" v-if="row.is_required">*</i>
-                                    </td>
-                                    <td colspan="6" class="children-td">
-                                        <table class="bk-table sub-table">
-                                            <colgroup>
-                                                <col style="width: 200px;" />
-                                                <col style="width: 100px;" />
-                                                <col style="width: 250px;" />
-                                                <col style="width: 100px;" />
-                                                <col />
-                                                <col style="width: 102px;" />
-                                            </colgroup>
-                                            <template v-for="subRow in row.children">
-                                                <tr :key="subRow.id">
-                                                    <td>
-                                                        <span class="name" v-bk-tooltips.top="subRow.name">{{ subRow.name }}</span>
-                                                        <i class="is-required" v-if="subRow.is_required">*</i>
-                                                    </td>
-                                                    <td>
-                                                        <template v-if="!subRow.isEdit">
-                                                            <span :class="subRow.instance.is_used ? 'active' : ''">{{ subRow.instance.is_used ? $t('是') : $t('否') }}</span>
-                                                        </template>
-                                                        <template v-else>
-                                                            <bk-switcher
-                                                                :value="subRow.instance.is_used"
-                                                                theme="primary"
-                                                                @change="handleSwitchChange(...arguments, subRow)">
-                                                            </bk-switcher>
-                                                        </template>
-                                                    </td>
-                                                    <td class="url-td">
-                                                        <template v-if="subRow.instance.is_used && subRow.is_required && !subRow.instance.url && !subRow.isEdit">
-                                                            <span>
-                                                                <i class="paasng-icon paasng-exclamation-circle" style="color: #ffb848;"></i>
-                                                                {{ $t('请填写') }}
-                                                            </span>
-                                                        </template>
-                                                        <template v-else>
-                                                            <template v-if="!!subRow.instance.url">
-                                                                <div v-if="!subRow.isEdit">
-                                                                    <bk-popconfirm
-                                                                        trigger="mouseenter"
-                                                                        ext-cls=""
-                                                                        confirm-button-is-text
-                                                                        confirm-text="复制"
-                                                                        cancel-text=""
-                                                                        @confirm="handleCopy(subRow)">
-                                                                        <div slot="content">{{ subRow.instance.url }}</div>
-                                                                        <span style="display: inline-block;
+                              <bk-switcher
+                                :value="subRow.instance.is_used"
+                                theme="primary"
+                                @change="handleSwitchChange(...arguments, subRow)"
+                              />
+                            </template>
+                          </td>
+                          <td class="url-td">
+                            <template v-if="subRow.instance.is_used && subRow.is_required && !subRow.instance.url && !subRow.isEdit">
+                              <span>
+                                <i
+                                  class="paasng-icon paasng-exclamation-circle"
+                                  style="color: #ffb848;"
+                                />
+                                {{ $t('请填写') }}
+                              </span>
+                            </template>
+                            <template v-else>
+                              <template v-if="!!subRow.instance.url">
+                                <div v-if="!subRow.isEdit">
+                                  <bk-popconfirm
+                                    trigger="mouseenter"
+                                    ext-cls=""
+                                    confirm-button-is-text
+                                    confirm-text="复制"
+                                    cancel-text=""
+                                    @confirm="handleCopy(subRow)"
+                                  >
+                                    <div slot="content">
+                                      {{ subRow.instance.url }}
+                                    </div>
+                                    <span
+                                      style="display: inline-block;
                                                                             max-width: 220px;
                                                                             overflow: hidden;
                                                                             text-overflow: ellipsis;
-                                                                            white-space: nowrap;">
-                                                                            {{ subRow.instance.url }}
-                                                                        </span>
-                                                                    </bk-popconfirm>
-                                                                </div>
-                                                                <template v-if="subRow.isEdit">
-                                                                    <bk-input
-                                                                        type="textarea"
-                                                                        :value="subRow.instance.url"
-                                                                        @input="handleUrlInput(...arguments, subRow)">
-                                                                    </bk-input>
-                                                                </template>
-                                                            </template>
-                                                            <template v-else>
-                                                                <span v-if="!subRow.isEdit">--</span>
-                                                                <template v-else>
-                                                                    <bk-input
-                                                                        type="textarea"
-                                                                        :value="subRow.instance.url"
-                                                                        @input="handleUrlInput(...arguments, subRow)">
-                                                                    </bk-input>
-                                                                </template>
-                                                            </template>
-                                                        </template>
-                                                    </td>
-                                                    <td>
-                                                        {{ subRow.instance ? subRow.instance.latest_operator || '--' : '--' }}
-                                                    </td>
-                                                    <td>
-                                                        {{ subRow.instance ? subRow.instance.updated ? smartTime(subRow.instance.updated, 'fromNow') : '--' : '--' }}
-                                                    </td>
-                                                    <td>
-                                                        <template v-if="!subRow.isEdit">
-                                                            <bk-button theme="primary" text @click.native.stop @click="handleEdit(subRow)"> {{ $t('编辑') }} </bk-button>
-                                                        </template>
-                                                        <template v-else>
-                                                            <bk-button theme="primary" text @click.stop="handleSave(subRow)"> {{ $t('保存') }} </bk-button>
-                                                            <bk-button style="margin-left: 5px;" theme="primary" text @click.stop="handleCancel(subRow)"> {{ $t('取消') }} </bk-button>
-                                                        </template>
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </table>
-                                    </td>
-                                </tr>
+                                                                            white-space: nowrap;"
+                                    >
+                                      {{ subRow.instance.url }}
+                                    </span>
+                                  </bk-popconfirm>
+                                </div>
+                                <template v-if="subRow.isEdit">
+                                  <bk-input
+                                    type="textarea"
+                                    :value="subRow.instance.url"
+                                    @input="handleUrlInput(...arguments, subRow)"
+                                  />
+                                </template>
+                              </template>
+                              <template v-else>
+                                <span v-if="!subRow.isEdit">--</span>
+                                <template v-else>
+                                  <bk-input
+                                    type="textarea"
+                                    :value="subRow.instance.url"
+                                    @input="handleUrlInput(...arguments, subRow)"
+                                  />
+                                </template>
+                              </template>
                             </template>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-            <div class="empty-wrapper" v-if="!isLoading && tableList.length < 1">
-                <i class="bk-icon icon-empty"></i>
-                <div class="empty-text"> {{ $t('暂无数据') }} </div>
-            </div>
-        </paas-content-loader>
-    </div>
+                          </td>
+                          <td>
+                            {{ subRow.instance ? subRow.instance.latest_operator || '--' : '--' }}
+                          </td>
+                          <td>
+                            {{ subRow.instance ? subRow.instance.updated ? smartTime(subRow.instance.updated, 'fromNow') : '--' : '--' }}
+                          </td>
+                          <td>
+                            <template v-if="!subRow.isEdit">
+                              <bk-button
+                                theme="primary"
+                                text
+                                @click.native.stop
+                                @click="handleEdit(subRow)"
+                              >
+                                {{ $t('编辑') }}
+                              </bk-button>
+                            </template>
+                            <template v-else>
+                              <bk-button
+                                theme="primary"
+                                text
+                                @click.stop="handleSave(subRow)"
+                              >
+                                {{ $t('保存') }}
+                              </bk-button>
+                              <bk-button
+                                style="margin-left: 5px;"
+                                theme="primary"
+                                text
+                                @click.stop="handleCancel(subRow)"
+                              >
+                                {{ $t('取消') }}
+                              </bk-button>
+                            </template>
+                          </td>
+                        </tr>
+                      </template>
+                    </table>
+                  </td>
+                </tr>
+              </template>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <div
+        v-if="!isLoading && tableList.length < 1"
+        class="empty-wrapper"
+      >
+        <i class="bk-icon icon-empty" />
+        <div class="empty-text">
+          {{ $t('暂无数据') }}
+        </div>
+      </div>
+    </paas-content-loader>
+  </div>
 </template>
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin';

@@ -1,14 +1,19 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('部署管理')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isLoading" :placeholder="loaderPlaceholder" :offset-top="30" class="app-container middle overview">
-            <!-- 去掉 -->
-            <!-- <section class="deploy-panel deploy-metadata flex mt20">
+  <div class="right-main">
+    <app-top-bar
+      :title="$t('部署管理')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="isLoading"
+      :placeholder="loaderPlaceholder"
+      :offset-top="30"
+      class="app-container middle overview"
+    >
+      <!-- 去掉 -->
+      <!-- <section class="deploy-panel deploy-metadata flex mt20">
                 <div class="metadata-wrap">
                     <div class="data-logo">
                         <img src="/static/images/smart.png" v-if="isSmartApp" />
@@ -92,29 +97,44 @@
                 </div>
             </section> -->
 
-            <section class="deploy-panel deploy-main mt15">
-                <ul class="ps-tab" style="position: relative; z-index: 10;">
-                    <li :class="['item', { 'active': deployModule === 'stag' }]" @click="handleGoPage('appDeployForStag')">
-                        {{ $t('预发布环境') }}
-                        <router-link :to="{ name: 'appDeployForStag' }"></router-link>
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'prod' }]" @click="handleGoPage('appDeployForProd')">
-                        {{ $t('生产环境') }}
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'config' }]" @click="handleGoPage('appDeployForConfig')">
-                        {{ $t('部署配置') }}
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'history' }]" @click="handleGoPage('appDeployForHistory')">
-                        {{ $t('部署历史') }}
-                    </li>
-                </ul>
+      <section class="deploy-panel deploy-main mt15">
+        <ul
+          class="ps-tab"
+          style="position: relative; z-index: 10;"
+        >
+          <li
+            :class="['item', { 'active': deployModule === 'stag' }]"
+            @click="handleGoPage('appDeployForStag')"
+          >
+            {{ $t('预发布环境') }}
+            <router-link :to="{ name: 'appDeployForStag' }" />
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'prod' }]"
+            @click="handleGoPage('appDeployForProd')"
+          >
+            {{ $t('生产环境') }}
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'config' }]"
+            @click="handleGoPage('appDeployForConfig')"
+          >
+            {{ $t('部署配置') }}
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'history' }]"
+            @click="handleGoPage('appDeployForHistory')"
+          >
+            {{ $t('部署历史') }}
+          </li>
+        </ul>
 
-                <div class="deploy-content">
-                    <router-view :key="renderIndex"></router-view>
-                </div>
-            </section>
-        </paas-content-loader>
-    </div>
+        <div class="deploy-content">
+          <router-view :key="renderIndex" />
+        </div>
+      </section>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

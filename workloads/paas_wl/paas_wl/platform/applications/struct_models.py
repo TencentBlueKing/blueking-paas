@@ -197,6 +197,12 @@ def get_structured_app(
     return StructuredApp.from_json_data(data)
 
 
+def get_env_by_engine_app_id(engine_app_id: UUID) -> 'ModuleEnv':
+    """Get a module env object by engine app ID"""
+    app = get_structured_app(engine_app_id=engine_app_id)
+    return app.get_env_by_engine_app_id(engine_app_id)
+
+
 def to_structured(application: Application) -> 'StructuredApp':
     """Make a structured application(with modules and envs) from a pure Application object
 
@@ -243,6 +249,16 @@ class StructuredApp:
             if env_id == env.id:
                 return env
         raise AppSubResourceNotFound(f'environment_id={env_id}')
+
+    def get_env_by_engine_app_id(self, engine_app_id: UUID) -> ModuleEnv:
+        """Get a ModuleEnv object by engine app ID
+
+        :raise: AppSubResourceNotFound when no result can be found
+        """
+        for env in self.module_envs:
+            if engine_app_id == env.engine_app_id:
+                return env
+        raise AppSubResourceNotFound(f'engine_app_id={engine_app_id}')
 
     def get_envs_by_module(self, module: Module) -> List[ModuleEnv]:
         """Get ModuleEnv objects by module"""

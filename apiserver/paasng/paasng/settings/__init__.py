@@ -1113,6 +1113,10 @@ if ENABLE_OTEL_TRACE:
 # 开启后将总是使用静态值：{region}-{engine-app-name} ，仅限特殊路由规则的部署环境启用。
 FORCE_USING_LEGACY_SUB_PATH_VAR_VALUE = settings.get('FORCE_USING_LEGACY_SUB_PATH_VAR_VALUE', False)
 
+# 是否启用格式为 `/{region}-{engine_app_name}/` 的子路径，仅供某些需向前兼容的特殊
+# 环境下使用，默认关闭。
+USE_LEGACY_SUB_PATH_PATTERN = settings.get('USE_LEGACY_SUB_PATH_PATTERN', False)
+
 # 初始化的第三方应用(外链应用)的 code,多个以英文逗号分割
 THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 
@@ -1125,3 +1129,5 @@ PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
 
 # 插件开发中心在权限中心注册的系统 ID
 IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')
+
+MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

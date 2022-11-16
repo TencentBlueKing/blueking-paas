@@ -1,52 +1,79 @@
 <template lang="html">
-    <div class="right-main">
-        <div class="ps-top-bar">
-            <h2 v-if="categoryId === 1"> {{ $t('数据存储') }} </h2>
-            <h2 v-else-if="categoryId === 2"> {{ $t('健康监测') }} </h2>
-        </div>
-        <div class="ps-container service">
-            <paas-content-loader class="middle bnone" :is-loading="isLoading" placeholder="service-loading" :offset-top="15">
-                <div class="bk-button-group pt15" v-if="!isEmpty && uniqueRegionList.length > 1">
-                    <bk-button
-                        style="width: 130px;"
-                        theme="primary"
-                        :outline="tabActive !== 'all'"
-                        @click="tabActive = 'all'">
-                        {{ $t('全部') }}
-                    </bk-button>
-                    <bk-button
-                        v-for="(item, index) in categoryObject"
-                        :key="index"
-                        style="width: 130px;"
-                        theme="primary"
-                        :outline="tabActive !== index"
-                        @click="tabChange(index)"
-                        v-if="index !== 'all'">
-                        {{lauguageMap[index]}}
-                    </bk-button>
-                </div>
-
-                <div class="category-list">
-                    <ul class="service-list" v-if="categoryObject[tabActive] && categoryObject[tabActive].services && categoryObject[tabActive].services.length">
-                        <li v-for="(service, index) in categoryObject[tabActive].services" :key="index">
-                            <router-link :to="{ name: 'serviceInnerPage', params: { category_id: categoryId, name: service.name } }">
-                                <img v-bind:src="service.logo" class="service-list-img" alt="">
-                                <span class="service-list-tit">{{service.display_name}}</span>
-                                <span class="service-list-con">{{service.description}}</span>
-                            </router-link>
-                        </li>
-                    </ul>
-                </div>
-
-                <div v-if="isEmpty" style="height: 250px;">
-                    <div class="ps-no-result text">
-                        <p><i class="paasng-icon paasng-empty"></i></p>
-                        <p> {{ $t('暂无增强服务') }} </p>
-                    </div>
-                </div>
-            </paas-content-loader>
-        </div>
+  <div class="right-main">
+    <div class="ps-top-bar">
+      <h2 v-if="categoryId === 1">
+        {{ $t('数据存储') }}
+      </h2>
+      <h2 v-else-if="categoryId === 2">
+        {{ $t('健康监测') }}
+      </h2>
     </div>
+    <div class="ps-container service">
+      <paas-content-loader
+        class="middle bnone"
+        :is-loading="isLoading"
+        placeholder="service-loading"
+        :offset-top="15"
+      >
+        <div
+          v-if="!isEmpty && uniqueRegionList.length > 1"
+          class="bk-button-group pt15"
+        >
+          <bk-button
+            style="width: 130px;"
+            theme="primary"
+            :outline="tabActive !== 'all'"
+            @click="tabActive = 'all'"
+          >
+            {{ $t('全部') }}
+          </bk-button>
+          <bk-button
+            v-for="(item, index) in categoryObject"
+            v-if="index !== 'all'"
+            :key="index"
+            style="width: 130px;"
+            theme="primary"
+            :outline="tabActive !== index"
+            @click="tabChange(index)"
+          >
+            {{ lauguageMap[index] }}
+          </bk-button>
+        </div>
+
+        <div class="category-list">
+          <ul
+            v-if="categoryObject[tabActive] && categoryObject[tabActive].services && categoryObject[tabActive].services.length"
+            class="service-list"
+          >
+            <li
+              v-for="(service, index) in categoryObject[tabActive].services"
+              :key="index"
+            >
+              <router-link :to="{ name: 'serviceInnerPage', params: { category_id: categoryId, name: service.name } }">
+                <img
+                  :src="service.logo"
+                  class="service-list-img"
+                  alt=""
+                >
+                <span class="service-list-tit">{{ service.display_name }}</span>
+                <span class="service-list-con">{{ service.description }}</span>
+              </router-link>
+            </li>
+          </ul>
+        </div>
+
+        <div
+          v-if="isEmpty"
+          style="height: 250px;"
+        >
+          <div class="ps-no-result text">
+            <p><i class="paasng-icon paasng-empty" /></p>
+            <p> {{ $t('暂无增强服务') }} </p>
+          </div>
+        </div>
+      </paas-content-loader>
+    </div>
+  </div>
 </template>
 
 <script>

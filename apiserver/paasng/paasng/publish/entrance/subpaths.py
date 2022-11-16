@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, NamedTuple, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.conf import settings
 
 from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
@@ -137,7 +138,7 @@ def get_preallocated_path(
 class ModuleEnvSubpaths:
     """managing subpaths for module environment"""
 
-    # Reserved word of application code, safe for concating address
+    # Reserved word of application code, safe for concatenating address
     sep = '--'
 
     def __init__(self, env: ModuleEnvironment):
@@ -185,8 +186,9 @@ class ModuleEnvSubpaths:
         """Make all stable subpath."""
         subpaths = [
             self.make_subpath(self.part_env, self.part_module, self.part_code),
-            get_legacy_compatible_path(self.env),
         ]
+        if settings.USE_LEGACY_SUB_PATH_PATTERN:
+            subpaths.append(get_legacy_compatible_path(self.env))
         results = []
         for domain in self.sub_path_domains:
             for subpath in subpaths:

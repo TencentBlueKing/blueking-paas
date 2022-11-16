@@ -20,10 +20,13 @@ from typing import Dict, List, Literal
 
 import cattr
 import semver
+from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from django.conf import settings
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework import CharFilter, DjangoFilterBackend, FilterSet
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, status
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -41,7 +44,14 @@ from paasng.pluginscenter.iam_adaptor.policy.permissions import plugin_action_pe
 from paasng.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.itsm_adaptor.utils import submit_create_approval_ticket
-from paasng.pluginscenter.models import PluginDefinition, PluginInstance, PluginMarketInfo, PluginRelease
+from paasng.pluginscenter.models import (
+    PluginBasicInfoDefinition,
+    PluginDefinition,
+    PluginInstance,
+    PluginMarketInfo,
+    PluginRelease,
+)
+from paasng.pluginscenter.permissions import IsPluginCreator
 from paasng.pluginscenter.sourcectl import build_master_placeholder, get_plugin_repo_accessor
 from paasng.pluginscenter.thirdparty import log as log_api
 from paasng.pluginscenter.thirdparty import market as market_api
@@ -105,6 +115,15 @@ class SchemaViewSet(ViewSet):
             }
         )
 
+    def get_filter_params(self, request):
+        """Get plug-in list filtering parameters, such as plug-in type, development language, etc."""
+        return Response(
+            data={
+                "plugin_types": PluginDefinition.objects.values_list('identifier', flat=True),
+                "languages": PluginBasicInfoDefinition.get_languages(),
+            }
+        )
+
 
 class PluginInstanceMixin:
     """PluginInstanceMixin provide a shortcut method to get a plugin instance
@@ -147,9 +166,7 @@ class PluginInstanceMixin:
     _permission_classes(
         [
             IsAuthenticated,
-            plugin_action_permission_class(
-                [PluginPermissionActions.BASIC_DEVELOPMENT, PluginPermissionActions.DELETE_PLUGIN]
-            ),
+            IsPluginCreator,
         ]
     ),
     name="destroy",
@@ -158,8 +175,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
-    search_fields = ["id", "name_zh_cn", "name_en", "language", "pd__name", "pd__identifier", "status"]
+    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter, DjangoFilterBackend]
+    search_fields = ["id", "name_zh_cn", "name_en"]
+    filterset_fields = ['status', 'language', 'pd__identifier']
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubCreatePluginSLZ)
@@ -219,7 +237,36 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     @atomic
     def destroy(self, request, pd_id, plugin_id):
-        raise NotImplementedError
+        """仅创建审批失败的插件可删除"""
+        plugin = self.get_plugin_instance()
+        # 仅创建失败的状态的插件可删除
+        if plugin.status != constants.PluginStatus.APPROVAL_FAILED.value:
+            raise error_codes.CANNOT_BE_DELETED
+
+        plugin.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_compare_url(self, request, pd_id, plugin_id, from_revision, to_revision):
+        plugin = self.get_plugin_instance()
+        repo_accessor = get_plugin_repo_accessor(plugin)
+        compare_url = repo_accessor.build_compare_url(from_revision, to_revision)
+        return Response({"result": compare_url})
+
+
+class PluginReleaseFilter(FilterSet):
+    creator = CharFilter(method='creator_filter')
+    status = CharFilter(field_name="status")
+
+    class Meta:
+        model = PluginRelease
+        fields = ['creator', 'status']
+
+    def creator_filter(self, queryset, name, value):
+        return queryset.filter(
+            **{
+                "creator": user_id_encoder.encode(getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), value),
+            }
+        )
 
 
 @method_decorator(
@@ -237,14 +284,15 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     serializer_class = serializers.PluginReleaseVersionSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [OrderingFilter, SearchFilter]
+    filter_backends = [OrderingFilter, SearchFilter, DjangoFilterBackend]
+    filterset_class = PluginReleaseFilter
     permission_classes = [
         IsAuthenticated,
         plugin_action_permission_class(
             [PluginPermissionActions.BASIC_DEVELOPMENT, PluginPermissionActions.RELEASE_VERSION]
         ),
     ]
-    search_fields = ["version", "source_version_name", "source_hash", "status"]
+    search_fields = ["version", "source_version_name", "source_hash"]
     ordering = ('-created',)
 
     def retrieve(self, request, pd_id, plugin_id, release_id):
@@ -278,7 +326,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         data = slz.validated_data
 
         release = PluginRelease.objects.create(
-            plugin=plugin, source_location=plugin.repository, source_hash=source_hash, **data
+            plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
         )
         release.initial_stage_set()
         shim.execute_stage(release.current_stage, request.user.username)
@@ -298,9 +346,10 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def cancel_release(self, request, pd_id, plugin_id, release_id):
         release = self.get_queryset().get(pk=release_id)
-        release.all_stages.update(status=constants.PluginReleaseStatus.INTERRUPTED, fail_message="用户主动终止发布")
-        release.status = constants.PluginReleaseStatus.INTERRUPTED
-        release.save()
+        current_stage = release.current_stage
+        current_stage.status = constants.PluginReleaseStatus.INTERRUPTED
+        current_stage.fail_message = _("用户主动终止发布")
+        current_stage.save()
         return Response(data=self.get_serializer(release).data)
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})

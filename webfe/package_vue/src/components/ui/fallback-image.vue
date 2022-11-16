@@ -1,9 +1,14 @@
 <template>
-    <img :src="imageSrc" :class="cls" :alt="alt" ref="img">
+  <img
+    ref="img"
+    :src="imageSrc"
+    :class="cls"
+    :alt="alt"
+  >
 </template>
 <script>
     export default {
-        name: 'fallback-image',
+        name: 'FallbackImage',
         props: {
             url: {
                 type: String

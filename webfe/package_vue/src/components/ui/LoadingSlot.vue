@@ -1,21 +1,23 @@
 <template lang="html">
-    <!-- loading true时显示loading -->
-    <div class="paas-loading-content">
-        <slot v-if="loading">
-            <div class="paas-loading-panel">
-                <div class="text">
-                    <div class="bk-loading1">
-                        <div class="point point1"></div>
-                        <div class="point point2"></div>
-                        <div class="point point3"></div>
-                        <div class="point point4"></div>
-                    </div>
-                </div>
-            </div>
-        </slot>
-        <slot name="loadingContent" v-else></slot>
-    </div>
-
+  <!-- loading true时显示loading -->
+  <div class="paas-loading-content">
+    <slot v-if="loading">
+      <div class="paas-loading-panel">
+        <div class="text">
+          <div class="bk-loading1">
+            <div class="point point1" />
+            <div class="point point2" />
+            <div class="point point3" />
+            <div class="point point4" />
+          </div>
+        </div>
+      </div>
+    </slot>
+    <slot
+      v-else
+      name="loadingContent"
+    />
+  </div>
 </template>
 
 <script>

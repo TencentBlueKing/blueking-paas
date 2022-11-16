@@ -20,45 +20,45 @@ import { bkMessage } from 'bk-magic-vue';
 import i18n from '@/language/i18n.js';
 
 const vPaasCopy = {
-    bind (el, { value }) {
-        el.$value = value;
-        el.handler = ($event) => {
-            $event.stopPropagation();
-            if (!el.$value) {
-                bkMessage({
-                    theme: 'warning',
-                    message: i18n.t('无复制内容'),
-                    delay: 2000,
-                    dismissable: false
-                });
-                return;
-            }
-            const textarea = document.createElement('textarea');
-            textarea.readOnly = 'readonly';
-            textarea.style.position = 'absolute';
-            textarea.style.left = '-9999px';
-            textarea.value = el.$value;
-            document.body.appendChild(textarea);
-            textarea.select();
-            const result = document.execCommand('Copy');
-            if (result) {
-                bkMessage({
-                    theme: 'success',
-                    message: i18n.t('复制成功'),
-                    delay: 2000,
-                    dismissable: false
-                });
-            }
-            document.body.removeChild(textarea);
-        };
-        el.addEventListener('click', el.handler);
-    },
-    componentUpdated (el, { value }) {
-        el.$value = value;
-    },
-    unbind (el) {
-        el.removeEventListener('click', el.handler);
-    }
+  bind (el, { value }) {
+    el.$value = value;
+    el.handler = ($event) => {
+      $event.stopPropagation();
+      if (!el.$value) {
+        bkMessage({
+          theme: 'warning',
+          message: i18n.t('无复制内容'),
+          delay: 2000,
+          dismissable: false
+        });
+        return;
+      }
+      const textarea = document.createElement('textarea');
+      textarea.readOnly = 'readonly';
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      textarea.value = el.$value;
+      document.body.appendChild(textarea);
+      textarea.select();
+      const result = document.execCommand('Copy');
+      if (result) {
+        bkMessage({
+          theme: 'success',
+          message: i18n.t('复制成功'),
+          delay: 2000,
+          dismissable: false
+        });
+      }
+      document.body.removeChild(textarea);
+    };
+    el.addEventListener('click', el.handler);
+  },
+  componentUpdated (el, { value }) {
+    el.$value = value;
+  },
+  unbind (el) {
+    el.removeEventListener('click', el.handler);
+  }
 };
 
 export default vPaasCopy;

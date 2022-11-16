@@ -26,65 +26,65 @@ import { json2Query } from '@/common/tools';
 
 // actions
 const actions = {
-    fetchSearchApp: async function (_, { filterKey, params }) {
-        return Vue.http.get(BACKEND_URL + '/api/bkapps/applications/lists/search?keyword=' + filterKey, {
-            params
-        }).then((res) => {
-            return res.results.map(data => {
-                return {
-                    code: data.code,
-                    name: data.name,
-                    moduleId: data.default_module_name
-                };
-            });
-        }, (err) => {
-            console.error('fetchSearchApp Error', err);
-            return [];
-        });
-    },
-    fetchSearchDoc: async function (_, filterKey) {
-        return Vue.http.get(BACKEND_URL + `/api/document/search/?format=json&keyword=${filterKey}`).then(res => {
-            return res;
-        }, (err) => {
-            console.error('fetchSearchDoc Error', err);
-            return [];
-        });
-    },
+  fetchSearchApp: async function (_, { filterKey, params }) {
+    return Vue.http.get(BACKEND_URL + '/api/bkapps/applications/lists/search?keyword=' + filterKey, {
+      params
+    }).then((res) => {
+      return res.results.map(data => {
+        return {
+          code: data.code,
+          name: data.name,
+          moduleId: data.default_module_name
+        };
+      });
+    }, (err) => {
+      console.error('fetchSearchApp Error', err);
+      return [];
+    });
+  },
+  fetchSearchDoc: async function (_, filterKey) {
+    return Vue.http.get(BACKEND_URL + `/api/document/search/?format=json&keyword=${filterKey}`).then(res => {
+      return res;
+    }, (err) => {
+      console.error('fetchSearchDoc Error', err);
+      return [];
+    });
+  },
 
-    /**
+  /**
      * 获取搜索的应用
      */
-    getSearchApp ({ commit, state }, params, config = {}) {
-        const url = `${BACKEND_URL}/api/search/applications/?${json2Query(params)}`;
-        return http.get(url, config);
-    },
+  getSearchApp ({ commit, state }, params, config = {}) {
+    const url = `${BACKEND_URL}/api/search/applications/?${json2Query(params)}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取搜索的资料文档条目
      */
-    getSearchDocs ({ commit, state }, params, config = {}) {
-        const url = `${BACKEND_URL}/api/search/bk_docs/?${json2Query(params)}`;
-        return http.get(url, config);
-    },
+  getSearchDocs ({ commit, state }, params, config = {}) {
+    const url = `${BACKEND_URL}/api/search/bk_docs/?${json2Query(params)}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取搜索的iwiki
      */
-    getSearchIwiki ({ commit, state }, params, config = {}) {
-        const url = `${BACKEND_URL}/api/search/iwiki/?${json2Query(params)}`;
-        return http.get(url, config);
-    },
+  getSearchIwiki ({ commit, state }, params, config = {}) {
+    const url = `${BACKEND_URL}/api/search/iwiki/?${json2Query(params)}`;
+    return http.get(url, config);
+  },
 
-    /**
+  /**
      * 获取搜索的码客
      */
-    getSearchMk ({ commit, state }, params, config = {}) {
-        const url = `${BACKEND_URL}/api/search/mk/?${json2Query(params)}`;
-        return http.get(url, config);
-    }
+  getSearchMk ({ commit, state }, params, config = {}) {
+    const url = `${BACKEND_URL}/api/search/mk/?${json2Query(params)}`;
+    return http.get(url, config);
+  }
 };
 
 export default {
-    namespaced: true,
-    actions
+  namespaced: true,
+  actions
 };

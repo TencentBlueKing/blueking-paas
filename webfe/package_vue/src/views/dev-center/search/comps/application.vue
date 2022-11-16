@@ -1,71 +1,103 @@
 <template>
-    <div class="paas-app-wrapper apps-table-wrapper">
-        <div class="table-item" :class="{ 'mt': appIndex !== data.length - 1 }" v-for="(appItem, appIndex) in data" :key="appIndex">
-            <div class="item-header">
-                <div class="basic-info" @click="toPage(appItem)">
-                    <img :src="appItem.logo_url ? appItem.logo_url : defaultImg" class="app-logo">
-                    <span class="app-name">
-                        {{appItem.name}}
-                    </span>
-                </div>
-                <div class="region-info">
-                    <span
-                        :class="['reg-tag', { 'inner': appItem.region_name === $t('内部版') }, { 'clouds': appItem.region_name === $t('混合云版') }]">
-                        {{appItem.region_name}}
-                    </span>
-                </div>
-                <div class="module-info">
-                    <template v-if="appItem.config_info.engine_enabled">
-                        <span class="module-name" :class="appItem.expanded ? 'expanded' : ''">
-                            {{ $t('共') }}&nbsp; {{ appItem.modules.length}} &nbsp;{{ $t('个模块') }}
-                        </span>
-                    </template>
-                </div>
-                <div class="visit-operate">
-                    <div v-if="!Object.keys(appItem.deploy_info).length" class="app-operation-section">
-                        <bk-button theme="primary" text @click="toCloudAPI(appItem)" style="margin-left: 80px;">
-                            {{ $t('申请云API权限') }}
-                            <i class="paasng-icon paasng-keys"></i>
-                        </bk-button>
-                    </div>
-
-                    <div v-else class="app-operation-section">
-                        <bk-button :disabled="!appItem.deploy_info.stag.deployed" text
-                            @click="visitLink(appItem, 'stag')">
-                            <template v-if="!appItem.deploy_info.stag.deployed">
-                                <span v-bk-tooltips="$t('应用未部署，不能访问')">
-                                    {{ $t('预发布环境') }}
-                                    <i class="paasng-icon paasng-external-link"></i>
-                                </span>
-                            </template>
-                            <template v-else>
-                                <span>
-                                    {{ $t('预发布环境') }}
-                                    <i class="paasng-icon paasng-external-link"></i>
-                                </span>
-                            </template>
-                        </bk-button>
-                        <bk-button :disabled="!appItem.deploy_info.prod.deployed" text
-                            style="margin-left: 18px;"
-                            @click="visitLink(appItem, 'prod')">
-                            <template v-if="!appItem.deploy_info.prod.deployed">
-                                <span v-bk-tooltips="$t('应用未部署，不能访问')">
-                                    {{ $t('生产环境') }}
-                                    <i class="paasng-icon paasng-external-link"></i>
-                                </span>
-                            </template>
-                            <template v-else>
-                                <span>
-                                    {{ $t('生产环境') }}
-                                    <i class="paasng-icon paasng-external-link"></i>
-                                </span>
-                            </template>
-                        </bk-button>
-                    </div>
-                </div>
-            </div>
+  <div class="paas-app-wrapper apps-table-wrapper">
+    <div
+      v-for="(appItem, appIndex) in data"
+      :key="appIndex"
+      class="table-item"
+      :class="{ 'mt': appIndex !== data.length - 1 }"
+    >
+      <div class="item-header">
+        <div
+          class="basic-info"
+          @click="toPage(appItem)"
+        >
+          <img
+            :src="appItem.logo_url ? appItem.logo_url : defaultImg"
+            class="app-logo"
+          >
+          <span class="app-name">
+            {{ appItem.name }}
+          </span>
         </div>
+        <div class="region-info">
+          <span
+            :class="['reg-tag', { 'inner': appItem.region_name === $t('内部版') }, { 'clouds': appItem.region_name === $t('混合云版') }]"
+          >
+            {{ appItem.region_name }}
+          </span>
+        </div>
+        <div class="module-info">
+          <template v-if="appItem.config_info.engine_enabled">
+            <span
+              class="module-name"
+              :class="appItem.expanded ? 'expanded' : ''"
+            >
+              {{ $t('共') }}&nbsp; {{ appItem.modules.length }} &nbsp;{{ $t('个模块') }}
+            </span>
+          </template>
+        </div>
+        <div class="visit-operate">
+          <div
+            v-if="!Object.keys(appItem.deploy_info).length"
+            class="app-operation-section"
+          >
+            <bk-button
+              theme="primary"
+              text
+              style="margin-left: 80px;"
+              @click="toCloudAPI(appItem)"
+            >
+              {{ $t('申请云API权限') }}
+              <i class="paasng-icon paasng-keys" />
+            </bk-button>
+          </div>
+
+          <div
+            v-else
+            class="app-operation-section"
+          >
+            <bk-button
+              :disabled="!appItem.deploy_info.stag.deployed"
+              text
+              @click="visitLink(appItem, 'stag')"
+            >
+              <template v-if="!appItem.deploy_info.stag.deployed">
+                <span v-bk-tooltips="$t('应用未部署，不能访问')">
+                  {{ $t('预发布环境') }}
+                  <i class="paasng-icon paasng-external-link" />
+                </span>
+              </template>
+              <template v-else>
+                <span>
+                  {{ $t('预发布环境') }}
+                  <i class="paasng-icon paasng-external-link" />
+                </span>
+              </template>
+            </bk-button>
+            <bk-button
+              :disabled="!appItem.deploy_info.prod.deployed"
+              text
+              style="margin-left: 18px;"
+              @click="visitLink(appItem, 'prod')"
+            >
+              <template v-if="!appItem.deploy_info.prod.deployed">
+                <span v-bk-tooltips="$t('应用未部署，不能访问')">
+                  {{ $t('生产环境') }}
+                  <i class="paasng-icon paasng-external-link" />
+                </span>
+              </template>
+              <template v-else>
+                <span>
+                  {{ $t('生产环境') }}
+                  <i class="paasng-icon paasng-external-link" />
+                </span>
+              </template>
+            </bk-button>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </template>
 <script>
     export default {

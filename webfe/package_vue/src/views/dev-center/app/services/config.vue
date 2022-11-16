@@ -1,14 +1,23 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :paths="servicePaths"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule">
-        </app-top-bar>
-        <div class="app-container" v-bkloading="{ isLoading }">
-            <config-edit :list="definitions" :guide="serviceMarkdown" :value="values" :enable-loading="loading" @on-change="handleConfigChange" />
-        </div>
+  <div class="right-main">
+    <app-top-bar
+      :paths="servicePaths"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+    />
+    <div
+      v-bkloading="{ isLoading }"
+      class="app-container"
+    >
+      <config-edit
+        :list="definitions"
+        :guide="serviceMarkdown"
+        :value="values"
+        :enable-loading="loading"
+        @on-change="handleConfigChange"
+      />
     </div>
+  </div>
 </template>
 
 <script>

@@ -1,359 +1,666 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('模块管理')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isLoading" placeholder="module-manage-loading" :offset-top="25" class="app-container middle">
-            <section v-if="!isLoading">
-                <div class="module-info-item mt15">
-                    <div class="title"> {{ $t('基本信息') }} </div>
-                    <div class="info"> {{ $t('模块的基本信息') }} </div>
-                    <div class="content no-border">
-                        <table class="ps-table ps-table-border mt20">
-                            <tr>
-                                <td class="has-right-border" style="width: 220px;"> {{ $t('模块名称') }} </td>
-                                <td>{{moduleName || '--'}}</td>
-                            </tr>
-                            <tr v-if="curAppInfo.application.type === 'bk_plugin'">
-                                <td class="has-right-border" style="width: 220px;"> {{ $t('模块类型') }} </td>
-                                <td> {{ $t('蓝鲸插件') }} <a target="_blank" :href="GLOBAL.LINK.BK_PLUGIN" style="color: #3a84ff"> {{ $t('查看详情') }} </a></td>
-                            </tr>
-                            <tr v-if="curAppModule.web_config.templated_source_enabled">
-                                <td class="has-right-border" style="width: 220px;"> {{ $t('初始化模板类型') }} </td>
-                                <td>{{initTemplateTypeDisplay || '--'}}</td>
-                            </tr>
-                            <tr v-if="curAppModule.web_config.templated_source_enabled">
-                                <td class="has-right-border" style="width: 220px;"> {{ $t('初始化模板说明') }} </td>
-                                <td>
-                                    {{initTemplateDesc || '--'}}
-                                    <a class="ml5" href="javascript: void(0);" v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'" @click="handleDownloadTemplate"> {{ $t('下载模板代码') }} </a>
-                                </td>
-                            </tr>
-                            <tr v-if="curAppModule.web_config.runtime_type !== 'custom_image'">
-                                <td class="has-right-border" style="width: 220px;"> {{ $t('源码管理') }} </td>
-                                <td>
-                                    <template v-if="isSmartApp">
-                                        {{ $t('蓝鲸 S-mart 源码包') }}
-                                    </template>
-                                    <div v-else>
-                                        {{curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸可视化开发平台提供源码包')}}
-                                        <a v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :href="lessCodeData.address_in_lesscode || 'javascript:;'" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" class="ml5" @click="handleLessCode">{{ $t('查看') }}</a>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="module-info-item mt15">
-                    <div class="title"> {{ $t('主模块设置') }} </div>
-                    <div class="info"> {{ $t('每个应用拥有一个主模块，该模块地址将会被发布到蓝鲸市场等') }} </div>
-                    <div class="content no-border">
-                        <bk-button theme="primary" :disabled="hasBeenMainModule" @click="setMainModule" :loading="setModuleLoading">
-                            {{hasBeenMainModule ? $t('该模块已是主模块') : $t('设置该模块为主模块')}}
-                        </bk-button>
-                    </div>
-                </div>
+  <div class="right-main">
+    <app-top-bar
+      :title="$t('模块管理')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="module-manage-loading"
+      :offset-top="25"
+      class="app-container middle"
+    >
+      <section v-if="!isLoading">
+        <div class="module-info-item mt15">
+          <div class="title">
+            {{ $t('基本信息') }}
+          </div>
+          <div class="info">
+            {{ $t('模块的基本信息') }}
+          </div>
+          <div class="content no-border">
+            <table class="ps-table ps-table-border mt20">
+              <tr>
+                <td
+                  class="has-right-border"
+                  style="width: 220px;"
+                >
+                  {{ $t('模块名称') }}
+                </td>
+                <td>{{ moduleName || '--' }}</td>
+              </tr>
+              <tr v-if="curAppInfo.application.type === 'bk_plugin'">
+                <td
+                  class="has-right-border"
+                  style="width: 220px;"
+                >
+                  {{ $t('模块类型') }}
+                </td>
+                <td>
+                  {{ $t('蓝鲸插件') }} <a
+                    target="_blank"
+                    :href="GLOBAL.LINK.BK_PLUGIN"
+                    style="color: #3a84ff"
+                  > {{ $t('查看详情') }} </a>
+                </td>
+              </tr>
+              <tr v-if="curAppModule.web_config.templated_source_enabled">
+                <td
+                  class="has-right-border"
+                  style="width: 220px;"
+                >
+                  {{ $t('初始化模板类型') }}
+                </td>
+                <td>{{ initTemplateTypeDisplay || '--' }}</td>
+              </tr>
+              <tr v-if="curAppModule.web_config.templated_source_enabled">
+                <td
+                  class="has-right-border"
+                  style="width: 220px;"
+                >
+                  {{ $t('初始化模板说明') }}
+                </td>
+                <td>
+                  {{ initTemplateDesc || '--' }}
+                  <a
+                    v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'"
+                    class="ml5"
+                    href="javascript: void(0);"
+                    @click="handleDownloadTemplate"
+                  > {{ $t('下载模板代码') }} </a>
+                </td>
+              </tr>
+              <tr v-if="curAppModule.web_config.runtime_type !== 'custom_image'">
+                <td
+                  class="has-right-border"
+                  style="width: 220px;"
+                >
+                  {{ $t('源码管理') }}
+                </td>
+                <td>
+                  <template v-if="isSmartApp">
+                    {{ $t('蓝鲸 S-mart 源码包') }}
+                  </template>
+                  <div v-else>
+                    {{ curAppModule.source_origin === 1 || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP ? $t('代码库') : $t('蓝鲸可视化开发平台提供源码包') }}
+                    <a
+                      v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
+                      :href="lessCodeData.address_in_lesscode || 'javascript:;'"
+                      :target="lessCodeData.address_in_lesscode ? '_blank' : ''"
+                      class="ml5"
+                      @click="handleLessCode"
+                    >{{ $t('查看') }}</a>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="module-info-item mt15">
+          <div class="title">
+            {{ $t('主模块设置') }}
+          </div>
+          <div class="info">
+            {{ $t('每个应用拥有一个主模块，该模块地址将会被发布到蓝鲸市场等') }}
+          </div>
+          <div class="content no-border">
+            <bk-button
+              theme="primary"
+              :disabled="hasBeenMainModule"
+              :loading="setModuleLoading"
+              @click="setMainModule"
+            >
+              {{ hasBeenMainModule ? $t('该模块已是主模块') : $t('设置该模块为主模块') }}
+            </bk-button>
+          </div>
+        </div>
 
-                <div class="module-info-item mt15" v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.NORMAL_APP || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP">
-                    <div class="title"> {{ $t('代码源') }} </div>
-                    <div class="info"> {{ $t('修改模块绑定的源码仓库') }} </div>
-                    <div class="content no-border">
-                        <section class="code-depot">
-                            <div
-                                v-for="(item, index) in sourceControlTypes"
-                                :key="index"
-                                :class="['code-depot-item mr10', { 'on': item.value === selectedSourceControlType }, { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
-                                @click="changeSelectedSourceControl(item.value)">
-                                <img :src="'/static/images/' + item.imgSrc + '.png'" />
-                                <p class="sourceControlTypeInfo" :title="item.name">{{item.name}}</p>
-                            </div>
-                        </section>
-
-                        <!-- Git 相关额外代码 start -->
-                        <template v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
-                            <git-extend
-                                :git-control-type="selectedSourceControlType"
-                                :is-auth="gitExtendConfig[selectedSourceControlType].isAuth"
-                                :is-loading="gitExtendConfig[selectedSourceControlType].isLoading"
-                                :alert-text="gitExtendConfig[selectedSourceControlType].alertText"
-                                :auth-address="gitExtendConfig[selectedSourceControlType].authAddress"
-                                :auth-docs="gitExtendConfig[selectedSourceControlType].authDocs"
-                                :fetch-method="gitExtendConfig[selectedSourceControlType].fetchMethod"
-                                :repo-list="gitExtendConfig[selectedSourceControlType].repoList"
-                                :selected-repo-url.sync="gitExtendConfig[selectedSourceControlType].selectedRepoUrl"
-                                :key="selectedSourceControlType"
-                                @change="handleSelectedRepoUrlChange"
-                            />
-                            <div class="form-group">
-                                <label class="form-label">
-                                    {{ $t('部署目录') }}
-                                    <i class="paasng-icon paasng-info-circle" v-bk-tooltips="sourceDirTip"></i>
-                                </label>
-                                <div class="form-group-flex">
-                                    <p class="mt10">
-                                        <bk-input size="large" class="source-dir" :class="isSourceDirInvalid ? 'error' : ''"
-                                            :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
-                                            v-model="sourceControlChangeForm.sourceDir"></bk-input>
-                                        <ul class="parsley-errors-list" v-if="isSourceDirInvalid">
-                                            <li class="parsley-pattern"> {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }} </li>
-                                        </ul>
-                                    </p>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- 用户自定义git、svn账号信息 start -->
-                        <repo-info
-                            ref="repoInfo"
-                            v-if="curSourceControl && curSourceControl.auth_method === 'basic'"
-                            :type="selectedSourceControlType"
-                            :edited="isRepoInfoEdited"
-                            :key="renderRepoInfoIndex"
-                            :default-url="curAppModule.repo.trunk_url"
-                            :default-account="curAppModule.repo_auth_info.username"
-                            :default-dir="curAppModule.repo.source_dir"
-                            @change="handleRepoInfoChange">
-                        </repo-info>
-                        <!-- 用户自定义git、svn账号信息 end -->
-
-                        <!-- Git 相关额外代码 end -->
-                        <div class="switch-button">
-                            <template v-if="(curSourceControl && curSourceControl.auth_method === 'basic') && !isRepoInfoEdited">
-                                <bk-button theme="primary" @click="sureEditRepoInfo">
-                                    {{ $t('编辑源码仓库') }}
-                                </bk-button>
-                            </template>
-                            <template v-else>
-                                <bk-button theme="primary" :disabled="displaySwitchDisabled || isSourceDirInvalid" @click="sureSwitch" :loading="switchLoading">
-                                    {{ $t('切换源码仓库') }}
-                                </bk-button>
-                                <bk-button v-if="displaySwitchCancel" style="margin-left: 6px;" @click="resetSourceType" :disabled="switchLoading"> {{ $t('取消') }} </bk-button>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="module-info-item mt15" v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE">
-                    <div class="title"> {{ $t('镜像管理') }} </div>
-                    <div class="info"> {{ $t('修改模块绑定的镜像信息') }} </div>
-
-                    <bk-form :model="mirrorData" :rules="mirrorRules" ref="validate2" :label-width="80">
-                        <bk-form-item :label="$t('镜像类型')" style="margin-top: 20px;">
-                            <bk-radio-group v-model="mirrorData.type">
-                                <bk-radio value="public"> {{ $t('公开') }} </bk-radio>
-                                <bk-radio value="private" disabled> {{ $t('私有') }} </bk-radio>
-                            </bk-radio-group>
-                        </bk-form-item>
-                        <bk-form-item :label="$t('镜像地址')" :required="true" :property="'url'" error-display-type="normal">
-                            <bk-popover v-if="isText" :content="curAppModule.repo.repo_url" placement="bottom" class="urlText">
-                                <p>{{curAppModule.repo.repo_url}}</p>
-                            </bk-popover>
-                            <bk-input v-else style="width: 520px;" :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')" size="large" clearable v-model="mirrorData.url">
-                                <template slot="prepend" v-if="GLOBAL.APP_VERSION === 'te'">
-                                    <div class="group-text">mirrors.tencent.com/</div>
-                                </template>
-                            </bk-input>
-                        </bk-form-item>
-                    </bk-form>
-                    <div class="content no-border" style="margin-left: 80px;">
-                        <bk-button theme="primary" v-if="isText" @click="editDockerUrl" :loading="switchLoading"> {{ $t('编辑镜像地址') }} </bk-button>
-                        <bk-button theme="primary" v-else @click="switchDocker" :disabled="!mirrorData.url" :loading="switchLoading"> {{ $t('切换镜像') }} </bk-button>
-                        <bk-button theme="default" v-if="!isText" @click="isText = true"> {{ $t('取消') }} </bk-button>
-                    </div>
-                </div>
-
-                <div class="module-info-item mt15">
-                    <div class="title"> {{ $t('部署限制') }} </div>
-                    <div class="info"> {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }} </div>
-                    <div class="content no-border">
-                        <table class="ps-table ps-table-border mt20">
-                            <tr>
-                                <td class="has-right-border" style="width: 150px;"> {{ $t('预发布坏境') }} </td>
-                                <td>
-                                    <div class="">
-                                        <bk-switcher
-                                            v-model="deployLimit.stag"
-                                            theme="primary"
-                                            :disabled="isLimitDisabled"
-                                            @change="stagHandleChange(...arguments, 'stag')">
-                                        </bk-switcher>
-                                        <span class="switcher-content">{{deployLimitText.stag[deployLimit.stag]}}</span>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="has-right-border" style="width: 150px;"> {{ $t('生产环境') }} </td>
-                                <td>
-                                    <div class="">
-                                        <bk-switcher
-                                            v-model="deployLimit.prod"
-                                            theme="primary"
-                                            :disabled="isLimitDisabled"
-                                            @change="prodHandleChange(...arguments, 'prod')">
-                                        </bk-switcher>
-                                        <span class="switcher-content">{{deployLimitText.prod[deployLimit.prod]}}</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="module-info-item" v-if="engineEnabled">
-                    <div class="title"> {{ $t('出口 IP 管理') }} </div>
-                    <div class="info"> {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }} <strong class="strong"> {{ $t('每次打开开关后，需重新部署方可生效。') }} </strong></div>
-                    <div class="content no-border">
-                        <div class="pre-release-wrapper">
-                            <div class="header">
-                                <div class="header-title"> {{ $t('预发布环境') }} </div>
-                                <div class="switcher-wrapper">
-                                    <span class="f12 date-tip" v-if="gatewayInfos.stag.created !== 'Invalid date' && gatewayInfos.stag.node_ip_addresses.length && !gatewayInfosStagLoading" @click="stopCapturing">{{gatewayInfos.stag.created + $t('已获取')}}</span>
-                                    <bk-switcher v-model="gatewayEnabled.stag" :disabled="curStagDisabled" @change="gatewayInfosHandler(...arguments, 'stag')"></bk-switcher>
-                                </div>
-                            </div>
-                            <div class="ip-content" contenteditable="false">
-                                <div class="copy-wrapper" v-if="gatewayInfos.stag.node_ip_addresses.length" @click="handleCopyIp('stag')" :title="$t('复制')">
-                                    <i class="paasng-icon paasng-general-copy"></i>
-                                </div>
-                                <template v-if="gatewayInfos.stag.node_ip_addresses.length">
-                                    <div class="ip-item" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses" :key="nodeIpIndex">
-                                        {{nodeIp.internal_ip_address}}
-                                    </div>
-                                </template>
-                                <template v-else>
-                                    <div class="no-ip">
-                                        <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                                        <p> {{ $t('点击开关获取列表') }} </p>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                        <div class="production-wrapper has-left">
-                            <div class="header">
-                                <div class="header-title"> {{ $t('生产环境') }} </div>
-                                <div class="switcher-wrapper">
-                                    <span class="f12 date-tip" v-if="gatewayInfos.prod.created !== 'Invalid date' && gatewayInfos.prod.node_ip_addresses.length && !gatewayInfosProdLoading" @click="stopCapturing">{{gatewayInfos.prod.created + $t('已获取')}}</span>
-                                    <bk-switcher v-model="gatewayEnabled.prod" :disabled="curProdDisabled" @change="gatewayInfosHandler(...arguments, 'prod')"></bk-switcher>
-                                </div>
-                            </div>
-                            <div class="ip-content" contenteditable="false">
-                                <div class="copy-wrapper" v-if="gatewayInfos.prod.node_ip_addresses.length" @click="handleCopyIp('prod')" :title="$t('复制')">
-                                    <i class="paasng-icon paasng-general-copy"></i>
-                                </div>
-                                <template v-if="gatewayInfos.prod.node_ip_addresses.length">
-                                    <div class="ip-item" v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses" :key="nodeIpIndex">
-                                        {{nodeIp.internal_ip_address}}
-                                    </div>
-                                </template>
-                                <template v-else>
-                                    <div class="no-ip">
-                                        <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                                        <p> {{ $t('点击开关获取列表') }} </p>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                        <div class="ip-tips">
-                            <i class="paasng-icon paasng-info-circle"></i>
-                            {{ $t('注意：重复获取列表可能会获得不一样的结果，请及时刷新外部服务白名单列表') }}
-                        </div>
-                    </div>
-                </div>
-                <div class="module-info-item" v-if="canDeleteModule">
-                    <div class="title"> {{ $t('删除模块') }} </div>
-                    <div class="info"> {{ $t('模块被删除后，其所申请的所有增强服务资源也会被回收。请在删除前与应用其他成员沟通。') }} </div>
-                    <div class="content no-border">
-                        <bk-button
-                            theme="danger"
-                            @click="showRemovePrompt">
-                            {{ $t('删除模块') }}
-                        </bk-button>
-                        <div class="ps-text-warn spacing-x1"> {{ $t('该操作无法撤回') }} </div>
-                    </div>
-                </div>
+        <div
+          v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.NORMAL_APP || curAppModule.source_origin === GLOBAL.APP_TYPES.SCENE_APP"
+          class="module-info-item mt15"
+        >
+          <div class="title">
+            {{ $t('代码源') }}
+          </div>
+          <div class="info">
+            {{ $t('修改模块绑定的源码仓库') }}
+          </div>
+          <div class="content no-border">
+            <section class="code-depot">
+              <div
+                v-for="(item, index) in sourceControlTypes"
+                :key="index"
+                :class="['code-depot-item mr10', { 'on': item.value === selectedSourceControlType }, { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
+                @click="changeSelectedSourceControl(item.value)"
+              >
+                <img :src="'/static/images/' + item.imgSrc + '.png'">
+                <p
+                  class="sourceControlTypeInfo"
+                  :title="item.name"
+                >
+                  {{ item.name }}
+                </p>
+              </div>
             </section>
-        </paas-content-loader>
 
-        <bk-dialog
-            width="540"
-            v-model="delAppDialog.visiable"
-            :title="`${$t('确认删除模块')}【${curAppModule.name}】？`"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="delAppDialog.isLoading"
-            @after-leave="hookAfterClose">
-            <div class="ps-form">
-                <div class="spacing-x1">
-                    {{ $t('请完整输入') }} <code>{{curAppModule.name}}</code> {{ $t('来确认删除模块！') }}
+            <!-- Git 相关额外代码 start -->
+            <template v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
+              <git-extend
+                :key="selectedSourceControlType"
+                :git-control-type="selectedSourceControlType"
+                :is-auth="gitExtendConfig[selectedSourceControlType].isAuth"
+                :is-loading="gitExtendConfig[selectedSourceControlType].isLoading"
+                :alert-text="gitExtendConfig[selectedSourceControlType].alertText"
+                :auth-address="gitExtendConfig[selectedSourceControlType].authAddress"
+                :auth-docs="gitExtendConfig[selectedSourceControlType].authDocs"
+                :fetch-method="gitExtendConfig[selectedSourceControlType].fetchMethod"
+                :repo-list="gitExtendConfig[selectedSourceControlType].repoList"
+                :selected-repo-url.sync="gitExtendConfig[selectedSourceControlType].selectedRepoUrl"
+                @change="handleSelectedRepoUrlChange"
+              />
+              <div class="form-group">
+                <label class="form-label">
+                  {{ $t('部署目录') }}
+                  <i
+                    v-bk-tooltips="sourceDirTip"
+                    class="paasng-icon paasng-info-circle"
+                  />
+                </label>
+                <div class="form-group-flex">
+                  <p class="mt10">
+                    <bk-input
+                      v-model="sourceControlChangeForm.sourceDir"
+                      size="large"
+                      class="source-dir"
+                      :class="isSourceDirInvalid ? 'error' : ''"
+                      :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
+                    />
+                    <ul
+                      v-if="isSourceDirInvalid"
+                      class="parsley-errors-list"
+                    >
+                      <li class="parsley-pattern">
+                        {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
+                      </li>
+                    </ul>
+                  </p>
                 </div>
-                <div class="ps-form-group">
-                    <input v-model="formRemoveConfirmCode" type="text" class="ps-form-control">
+              </div>
+            </template>
+
+            <!-- 用户自定义git、svn账号信息 start -->
+            <repo-info
+              v-if="curSourceControl && curSourceControl.auth_method === 'basic'"
+              ref="repoInfo"
+              :key="renderRepoInfoIndex"
+              :type="selectedSourceControlType"
+              :edited="isRepoInfoEdited"
+              :default-url="curAppModule.repo.trunk_url"
+              :default-account="curAppModule.repo_auth_info.username"
+              :default-dir="curAppModule.repo.source_dir"
+              @change="handleRepoInfoChange"
+            />
+            <!-- 用户自定义git、svn账号信息 end -->
+
+            <!-- Git 相关额外代码 end -->
+            <div class="switch-button">
+              <template v-if="(curSourceControl && curSourceControl.auth_method === 'basic') && !isRepoInfoEdited">
+                <bk-button
+                  theme="primary"
+                  @click="sureEditRepoInfo"
+                >
+                  {{ $t('编辑源码仓库') }}
+                </bk-button>
+              </template>
+              <template v-else>
+                <bk-button
+                  theme="primary"
+                  :disabled="displaySwitchDisabled || isSourceDirInvalid"
+                  :loading="switchLoading"
+                  @click="sureSwitch"
+                >
+                  {{ $t('切换源码仓库') }}
+                </bk-button>
+                <bk-button
+                  v-if="displaySwitchCancel"
+                  style="margin-left: 6px;"
+                  :disabled="switchLoading"
+                  @click="resetSourceType"
+                >
+                  {{ $t('取消') }}
+                </bk-button>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE"
+          class="module-info-item mt15"
+        >
+          <div class="title">
+            {{ $t('镜像管理') }}
+          </div>
+          <div class="info">
+            {{ $t('修改模块绑定的镜像信息') }}
+          </div>
+
+          <bk-form
+            ref="validate2"
+            :model="mirrorData"
+            :rules="mirrorRules"
+            :label-width="80"
+          >
+            <bk-form-item
+              :label="$t('镜像类型')"
+              style="margin-top: 20px;"
+            >
+              <bk-radio-group v-model="mirrorData.type">
+                <bk-radio value="public">
+                  {{ $t('公开') }}
+                </bk-radio>
+                <bk-radio
+                  value="private"
+                  disabled
+                >
+                  {{ $t('私有') }}
+                </bk-radio>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('镜像地址')"
+              :required="true"
+              :property="'url'"
+              error-display-type="normal"
+            >
+              <bk-popover
+                v-if="isText"
+                :content="curAppModule.repo.repo_url"
+                placement="bottom"
+                class="urlText"
+              >
+                <p>{{ curAppModule.repo.repo_url }}</p>
+              </bk-popover>
+              <bk-input
+                v-else
+                v-model="mirrorData.url"
+                style="width: 520px;"
+                :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
+                size="large"
+                clearable
+              >
+                <template
+                  v-if="GLOBAL.APP_VERSION === 'te'"
+                  slot="prepend"
+                >
+                  <div class="group-text">
+                    mirrors.tencent.com/
+                  </div>
+                </template>
+              </bk-input>
+            </bk-form-item>
+          </bk-form>
+          <div
+            class="content no-border"
+            style="margin-left: 80px;"
+          >
+            <bk-button
+              v-if="isText"
+              theme="primary"
+              :loading="switchLoading"
+              @click="editDockerUrl"
+            >
+              {{ $t('编辑镜像地址') }}
+            </bk-button>
+            <bk-button
+              v-else
+              theme="primary"
+              :disabled="!mirrorData.url"
+              :loading="switchLoading"
+              @click="switchDocker"
+            >
+              {{ $t('切换镜像') }}
+            </bk-button>
+            <bk-button
+              v-if="!isText"
+              theme="default"
+              @click="isText = true"
+            >
+              {{ $t('取消') }}
+            </bk-button>
+          </div>
+        </div>
+
+        <div class="module-info-item mt15">
+          <div class="title">
+            {{ $t('部署限制') }}
+          </div>
+          <div class="info">
+            {{ $t('开启部署权限控制，仅管理员可部署、下架该模块') }}
+          </div>
+          <div class="content no-border">
+            <table class="ps-table ps-table-border mt20">
+              <tr>
+                <td
+                  class="has-right-border"
+                  style="width: 150px;"
+                >
+                  {{ $t('预发布坏境') }}
+                </td>
+                <td>
+                  <div class="">
+                    <bk-switcher
+                      v-model="deployLimit.stag"
+                      theme="primary"
+                      :disabled="isLimitDisabled"
+                      @change="stagHandleChange(...arguments, 'stag')"
+                    />
+                    <span class="switcher-content">{{ deployLimitText.stag[deployLimit.stag] }}</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td
+                  class="has-right-border"
+                  style="width: 150px;"
+                >
+                  {{ $t('生产环境') }}
+                </td>
+                <td>
+                  <div class="">
+                    <bk-switcher
+                      v-model="deployLimit.prod"
+                      theme="primary"
+                      :disabled="isLimitDisabled"
+                      @change="prodHandleChange(...arguments, 'prod')"
+                    />
+                    <span class="switcher-content">{{ deployLimitText.prod[deployLimit.prod] }}</span>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div
+          v-if="engineEnabled"
+          class="module-info-item"
+        >
+          <div class="title">
+            {{ $t('出口 IP 管理') }}
+          </div>
+          <div class="info">
+            {{ $t('如果模块环境需要访问设置了 IP 白名单的外部服务，你可以在这里获取应用的出口 IP 列表，以完成外部服务授权。') }} <strong class="strong"> {{ $t('每次打开开关后，需重新部署方可生效。') }} </strong>
+          </div>
+          <div class="content no-border">
+            <div class="pre-release-wrapper">
+              <div class="header">
+                <div class="header-title">
+                  {{ $t('预发布环境') }}
                 </div>
+                <div class="switcher-wrapper">
+                  <span
+                    v-if="gatewayInfos.stag.created !== 'Invalid date' && gatewayInfos.stag.node_ip_addresses.length && !gatewayInfosStagLoading"
+                    class="f12 date-tip"
+                    @click="stopCapturing"
+                  >{{ gatewayInfos.stag.created + $t('已获取') }}</span>
+                  <bk-switcher
+                    v-model="gatewayEnabled.stag"
+                    :disabled="curStagDisabled"
+                    @change="gatewayInfosHandler(...arguments, 'stag')"
+                  />
+                </div>
+              </div>
+              <div
+                class="ip-content"
+                contenteditable="false"
+              >
+                <div
+                  v-if="gatewayInfos.stag.node_ip_addresses.length"
+                  class="copy-wrapper"
+                  :title="$t('复制')"
+                  @click="handleCopyIp('stag')"
+                >
+                  <i class="paasng-icon paasng-general-copy" />
+                </div>
+                <template v-if="gatewayInfos.stag.node_ip_addresses.length">
+                  <div
+                    v-for="(nodeIp, nodeIpIndex) of gatewayInfos.stag.node_ip_addresses"
+                    :key="nodeIpIndex"
+                    class="ip-item"
+                  >
+                    {{ nodeIp.internal_ip_address }}
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="no-ip">
+                    <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
+                    <p> {{ $t('点击开关获取列表') }} </p>
+                  </div>
+                </template>
+              </div>
             </div>
-            <div slot="footer">
-                <bk-button theme="primary" @click="submitRemoveModule" :disabled="!formRemoveValidated"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="delAppDialog.visiable = false"> {{ $t('取消') }} </bk-button>
+            <div class="production-wrapper has-left">
+              <div class="header">
+                <div class="header-title">
+                  {{ $t('生产环境') }}
+                </div>
+                <div class="switcher-wrapper">
+                  <span
+                    v-if="gatewayInfos.prod.created !== 'Invalid date' && gatewayInfos.prod.node_ip_addresses.length && !gatewayInfosProdLoading"
+                    class="f12 date-tip"
+                    @click="stopCapturing"
+                  >{{ gatewayInfos.prod.created + $t('已获取') }}</span>
+                  <bk-switcher
+                    v-model="gatewayEnabled.prod"
+                    :disabled="curProdDisabled"
+                    @change="gatewayInfosHandler(...arguments, 'prod')"
+                  />
+                </div>
+              </div>
+              <div
+                class="ip-content"
+                contenteditable="false"
+              >
+                <div
+                  v-if="gatewayInfos.prod.node_ip_addresses.length"
+                  class="copy-wrapper"
+                  :title="$t('复制')"
+                  @click="handleCopyIp('prod')"
+                >
+                  <i class="paasng-icon paasng-general-copy" />
+                </div>
+                <template v-if="gatewayInfos.prod.node_ip_addresses.length">
+                  <div
+                    v-for="(nodeIp, nodeIpIndex) of gatewayInfos.prod.node_ip_addresses"
+                    :key="nodeIpIndex"
+                    class="ip-item"
+                  >
+                    {{ nodeIp.internal_ip_address }}
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="no-ip">
+                    <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
+                    <p> {{ $t('点击开关获取列表') }} </p>
+                  </div>
+                </template>
+              </div>
             </div>
-        </bk-dialog>
+            <div class="ip-tips">
+              <i class="paasng-icon paasng-info-circle" />
+              {{ $t('注意：重复获取列表可能会获得不一样的结果，请及时刷新外部服务白名单列表') }}
+            </div>
+          </div>
+        </div>
+        <div
+          v-if="canDeleteModule"
+          class="module-info-item"
+        >
+          <div class="title">
+            {{ $t('删除模块') }}
+          </div>
+          <div class="info">
+            {{ $t('模块被删除后，其所申请的所有增强服务资源也会被回收。请在删除前与应用其他成员沟通。') }}
+          </div>
+          <div class="content no-border">
+            <bk-button
+              theme="danger"
+              @click="showRemovePrompt"
+            >
+              {{ $t('删除模块') }}
+            </bk-button>
+            <div class="ps-text-warn spacing-x1">
+              {{ $t('该操作无法撤回') }}
+            </div>
+          </div>
+        </div>
+      </section>
+    </paas-content-loader>
 
-        <bk-dialog
-            width="625"
-            v-model="setMainModuleDialog.visiable"
-            :title="`${$t('确定需要切换主模块为')}${curAppModule.name}？`"
-            :header-position="'left'"
-            :theme="'primary'"
-            :mask-close="false"
-            class="set-main-module-dialog">
-            <div>
-                <p> {{ $t('切换后应用的短域名会指向到') }} {{curAppModule.name}} {{ $t('模块：') }} </p>
-                <p class="info-p">1、stag-dot- {{$route.params.id}}.{{curAppInfo.cluster.ingress_config.app_root_domain}} : {{ $t('指向到应用') }} <span>{{curAppModule.name}}</span> {{ $t('模块的预发布环境') }} </p>
-                <p class="info-p">2、prod-dot- {{$route.params.id}}.{{curAppInfo.cluster.ingress_config.app_root_domain}} ：{{ $t('指向到应用') }} <span>{{curAppModule.name}}</span> {{ $t('模块的生产环境') }} </p>
-                <p class="info-p">3、{{$route.params.id}}.{{curAppInfo.cluster.ingress_config.app_root_domain}} ：{{ $t('指向到应用') }} <span>{{curAppModule.name}}</span> {{ $t('模块的生产环境（应用市场和移动端默认使用该地址访问）') }} </p>
-                <p class="info-p"> {{ $t('请完全评估切换影响后，再进行主模块切换。') }}( <a class="a-link" target="_blank" :href="GLOBAL.DOC.MODULE_DEFAULT_INTRO"> {{ $t('文档：什么是主模块？') }} </a>)</p>
-            </div>
-            <div slot="footer">
-                <bk-button theme="primary" @click="submitSetModule"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="setMainModuleDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </div>
-        </bk-dialog>
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="`${$t('确认删除模块')}【${curAppModule.name}】？`"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="delAppDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <div class="ps-form">
+        <div class="spacing-x1">
+          {{ $t('请完整输入') }} <code>{{ curAppModule.name }}</code> {{ $t('来确认删除模块！') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveModule"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
 
-        <bk-dialog
-            width="540"
-            v-model="switchRepoDialog.visiable"
-            :theme="'primary'"
-            :mask-close="false"
-            @after-close="afterRepoClose">
-            <div slot="header">
-                <span v-bk-tooltips.top="`${$t('确认切换模块源码仓库为')} ${selectedSourceControlName}？`" class="top-middle">
-                    {{`${$t('确认切换模块源码仓库为')} ${selectedSourceControlName}？`}}
-                </span>
-            </div>
-            <div>
-                <p>{{ (curAppModule.repo.type === 'bk_svn' ? $t('该操作无法撤回，') : '') + $t('请确认已将当前源码与分支推送到新仓库中。') }}</p>
-            </div>
-            <div slot="footer">
-                <bk-button theme="primary" @click="sureSwitchRepo"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="switchRepoDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </div>
-        </bk-dialog>
+    <bk-dialog
+      v-model="setMainModuleDialog.visiable"
+      width="625"
+      :title="`${$t('确定需要切换主模块为')}${curAppModule.name}？`"
+      :header-position="'left'"
+      :theme="'primary'"
+      :mask-close="false"
+      class="set-main-module-dialog"
+    >
+      <div>
+        <p> {{ $t('切换后应用的短域名会指向到') }} {{ curAppModule.name }} {{ $t('模块：') }} </p>
+        <p class="info-p">
+          1、stag-dot- {{ $route.params.id }}.{{ curAppInfo.cluster.ingress_config.app_root_domain }} : {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的预发布环境') }}
+        </p>
+        <p class="info-p">
+          2、prod-dot- {{ $route.params.id }}.{{ curAppInfo.cluster.ingress_config.app_root_domain }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境') }}
+        </p>
+        <p class="info-p">
+          3、{{ $route.params.id }}.{{ curAppInfo.cluster.ingress_config.app_root_domain }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境（应用市场和移动端默认使用该地址访问）') }}
+        </p>
+        <p class="info-p">
+          {{ $t('请完全评估切换影响后，再进行主模块切换。') }}( <a
+            class="a-link"
+            target="_blank"
+            :href="GLOBAL.DOC.MODULE_DEFAULT_INTRO"
+          > {{ $t('文档：什么是主模块？') }} </a>)
+        </p>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          @click="submitSetModule"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="setMainModuleDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
 
-        <bk-dialog
-            width="540"
-            v-model="switchDockerDialog.visiable"
-            :title="`${$t('确认切换镜像')}`"
-            :theme="'primary'"
-            :mask-close="false">
-            <div>
-                <p> {{ $t('请确认已将镜像推送到新的镜像地址') }} </p>
-            </div>
-            <div slot="footer">
-                <bk-button theme="primary" @click="sureSwitchRepo"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="switchDockerDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </div>
-        </bk-dialog>
-    </div>
+    <bk-dialog
+      v-model="switchRepoDialog.visiable"
+      width="540"
+      :theme="'primary'"
+      :mask-close="false"
+      @after-close="afterRepoClose"
+    >
+      <div slot="header">
+        <span
+          v-bk-tooltips.top="`${$t('确认切换模块源码仓库为')} ${selectedSourceControlName}？`"
+          class="top-middle"
+        >
+          {{ `${$t('确认切换模块源码仓库为')} ${selectedSourceControlName}？` }}
+        </span>
+      </div>
+      <div>
+        <p>{{ (curAppModule.repo.type === 'bk_svn' ? $t('该操作无法撤回，') : '') + $t('请确认已将当前源码与分支推送到新仓库中。') }}</p>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          @click="sureSwitchRepo"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="switchRepoDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="switchDockerDialog.visiable"
+      width="540"
+      :title="`${$t('确认切换镜像')}`"
+      :theme="'primary'"
+      :mask-close="false"
+    >
+      <div>
+        <p> {{ $t('请确认已将镜像推送到新的镜像地址') }} </p>
+      </div>
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          @click="sureSwitchRepo"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="switchDockerDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>
@@ -598,8 +905,8 @@
                 }
 
                 if (match && match.authInfo) {
-                    return !this.sourceControlChangeForm.sourceRepoUrl || !match.authInfo.account
-                        || !match.authInfo.password || !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(match.sourceDir);
+                    return !this.sourceControlChangeForm.sourceRepoUrl || !match.authInfo.account ||
+                        !match.authInfo.password || !/^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/.test(match.sourceDir);
                 }
 
                 return true;
@@ -737,7 +1044,7 @@
                     this.selectedSourceControlType = this.curAppModule.repo.type;
                     this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
                     this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
-                    
+
                     if (this.curAppModule.repo.type !== 'bk_svn') {
                         const match = this.gitExtendConfig[this.selectedSourceControlType];
                         match.selectedRepoUrl = this.curAppModule.repo.trunk_url;

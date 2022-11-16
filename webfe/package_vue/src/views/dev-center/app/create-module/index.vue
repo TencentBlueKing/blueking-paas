@@ -1,231 +1,403 @@
 <template lang="html">
-    <div class="paas-content white">
-        <div class="wrap">
-            <div class="paas-application-tit establish-title mt30">
-                <span> {{ $t('创建模块') }} </span>
+  <div class="paas-content white">
+    <div class="wrap">
+      <div class="paas-application-tit establish-title mt30">
+        <span> {{ $t('创建模块') }} </span>
+      </div>
+      <div
+        v-if="canCreateModule"
+        class="establish mt50"
+      >
+        <form
+          id="form-create-app"
+          @submit.prevent="createAppModule"
+        >
+          <div class="create-item">
+            <div class="item-title">
+              {{ $t('基本信息') }}
             </div>
-            <div class="establish mt50" v-if="canCreateModule">
-                <form @submit.prevent="createAppModule" id="form-create-app">
-                    <div class="create-item">
-                        <div class="item-title">
-                            {{ $t('基本信息') }}
-                        </div>
-                        <div class="form-group pb0">
-                            <label class="form-label"> {{ $t('所属应用') }} </label>
-                            <div class="form-group-flex">
-                                <p class="app-name">{{curAppInfo.application.name}}</p>
-                            </div>
-                        </div>
-
-                        <div class="form-group pb0">
-                            <label class="form-label"> {{ $t('模块名称') }} </label>
-                            <div class="form-group-flex">
-                                <p>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        data-parsley-required="true"
-                                        :data-parsley-required-message="$t('该字段是必填项')"
-                                        data-parsley-maxlength="16"
-                                        data-parsley-pattern="[a-z][a-z0-9-]+"
-                                        :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')"
-                                        data-parsley-trigger="input blur"
-                                        class="ps-form-control"
-                                        :placeholder="$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符')" />
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="form-group" style="margin-top: 7px;margin-left: 10px" v-if="curUserFeature.ENABLE_TC_DOCKER">
-                            <label class="form-label"> {{ $t('构建方式') }} </label>
-                            <div class="form-group-flex-radio" style="width: 100%">
-                                <div class="form-group-radio mt10">
-                                    <bk-radio-group v-model="structureType" class="construction-manner">
-                                        <bk-radio :value="'soundCode'"> {{ $t('提供源码') }} </bk-radio>
-                                        <bk-radio :value="'mirror'"> {{ $t('提供镜像') }} </bk-radio>
-                                        <bk-radio :value="'isMirror'" disabled> {{ $t('从源码构建镜像') }} </bk-radio>
-                                    </bk-radio-group>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 镜像管理 -->
-                    <div v-if="structureType === 'mirror'" class="create-item" data-test-id="createDefault_item_baseInfo">
-                        <div class="item-title">
-                            {{ $t('镜像管理') }}
-                        </div>
-
-                        <div class="form-group" style="margin-top: 7px;">
-                            <label class="form-label"> {{ $t('镜像类型') }} </label>
-                            <div class="form-group-radio" style="margin-top: 5px;">
-                                <bk-radio-group v-model="mirrorData.type">
-                                    <bk-radio value="public"> {{ $t('公开') }} </bk-radio>
-                                    <bk-radio value="private" disabled> {{ $t('私有') }} </bk-radio>
-                                </bk-radio-group>
-                            </div>
-                        </div>
-
-                        <bk-form form-type="inline" :model="mirrorData" :rules="mirrorRules" ref="validate2">
-                            <bk-form-item :required="true" :property="'url'" error-display-type="normal" ext-cls="item-cls">
-                                <div class="form-group" style="margin-top: 10px;">
-                                    <label class="form-label"> {{ $t('镜像地址') }} </label>
-                                    <div class="form-input-flex">
-                                        <bk-input
-                                            class="mt10"
-                                            style="width: 520px;"
-                                            size="large" clearable
-                                            :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
-                                            v-model="mirrorData.url"
-                                        >
-                                            <template slot="prepend" v-if="GLOBAL.APP_VERSION === 'te'">
-                                                <div class="group-text">mirrors.tencent.com/</div>
-                                            </template>
-                                        </bk-input>
-                                    </div>
-                                </div>
-                            </bk-form-item>
-                        </bk-form>
-                    </div>
-
-                    <div class="create-item" v-if="sourceOrigin !== GLOBAL.APP_TYPES.IMAGE">
-                        <!-- 代码库 -->
-                        <div class="item-title">
-                            {{ $t('应用模板') }}
-                        </div>
-                        <div class="establish-tab">
-                            <section class="code-type">
-                                <label class="form-label"> {{ $t('模板来源') }} </label>
-                                <div class="tab-box">
-                                    <li :class="['tab-item', { 'active': localSourceOrigin === 1 }]" @click="handleCodeTypeChange(1)"> {{ $t('蓝鲸开发框架') }} </li>
-                                    <li :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
-                                        v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
-                                        @click="handleCodeTypeChange(2)">
-                                        {{ $t('蓝鲸可视化开发平台') }}
-                                    </li>
-                                </div>
-                            </section>
-                        </div>
-
-                        <div class="establish-tab pb0 mb0" v-show="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
-                            <section class="deploy-panel deploy-main">
-                                <ul class="ps-tab" style="position: relative; z-index: 10; padding: 0 10px;">
-                                    <li :class="['item', { 'active': language === langName }]" @click="changeLanguage(langName)"
-                                        v-for="(langItem, langName) in curLanguages" :key="langName">
-                                        {{$t(defaultlangName[langName])}}
-                                    </li>
-                                </ul>
-                            </section>
-
-                            <div class="form-group establish-main card-container" :style="establishStyle">
-                                <transition :name="langTransitionName" v-if="sourceControlType">
-                                    <template>
-                                        <div
-                                            class="options-card"
-                                            :key="langName"
-                                            v-for="(langItem, langName) in curLanguages"
-                                            v-if="langName === language">
-                                            <h2> {{ $t('初始化代码模板：') }} </h2>
-                                            <ul class="establish-main-list">
-                                                <li v-for="(item, itemIndex) in langItem" :key="itemIndex">
-                                                    <label class="pointer">
-                                                        <input type="radio" name="q" v-model="sourceInitTemplate" :value="item.name" class="ps-radio-default" checked />
-                                                        {{item.display_name}}
-                                                    </label>
-                                                    <p class="f12">{{item.description}}</p>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </template>
-                                </transition>
-                            </div>
-                        </div>
-
-                        <div class="ps-tip-block lesscode-info mt15" v-show="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP">
-                            <i style="color: #3A84FF;" class="paasng-icon paasng-info-circle"></i>
-                            {{ $t('默认模块需要') }} <a target="_blank" :href="GLOBAL.LINK.LESSCODE_INDEX" style="color: #3a84ff"> {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
-                        </div>
-                        <div v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules" class="error-tips pt10">
-                            {{ $t('蓝鲸可视化开发平台的应用 ID 只能由小写字母组成, 所属应用') }} {{curAppInfo.application.name}} {{$t('的应用 ID 为')}} {{curAppInfo.application.code}},
-                            {{ $t('故无法在当前应用下创建蓝鲸可视化开发平台的模块。') }}
-                        </div>
-
-                    </div>
-
-                    <div class="create-item" v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP" data-test-id="createDefault_item_appEngine">
-                        <div class="item-title"> {{ $t('源码管理') }} </div>
-                        <section class="code-depot">
-                            <label class="form-label">
-                                {{ $t('代码源') }}
-                            </label>
-                            <div
-                                v-for="(item, index) in sourceControlTypes"
-                                :key="index"
-                                :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }]"
-                                @click="changeSourceControl(item)">
-                                <img :src="'/static/images/' + item.imgSrc + '.png'" />
-                                <p class="sourceControlTypeInfo">{{item.name}}</p>
-                            </div>
-                        </section>
-
-                        <!-- Git 相关额外代码 start -->
-                        <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
-                            <!-- Git 相关额外代码 start -->
-                            <template v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
-                                <git-extend
-                                    :git-control-type="sourceControlType"
-                                    :is-auth="gitExtendConfig[sourceControlType].isAuth"
-                                    :is-loading="gitExtendConfig[sourceControlType].isLoading"
-                                    :alert-text="gitExtendConfig[sourceControlType].alertText"
-                                    :auth-address="gitExtendConfig[sourceControlType].authAddress"
-                                    :auth-docs="gitExtendConfig[sourceControlType].authDocs"
-                                    :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
-                                    :repo-list="gitExtendConfig[sourceControlType].repoList"
-                                    :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
-                                    :key="sourceControlType"
-                                />
-                                <div class="form-group-dir" style="margin-top: 10px;">
-                                    <label class="form-label mr10">
-                                        {{ $t('部署目录') }}
-                                        <i class="paasng-icon paasng-info-circle" v-bk-tooltips="sourceDirTip"></i>
-                                    </label>
-                                    <div class="form-group-flex">
-                                        <p class="mt10">
-                                            <bk-input size="large" class="source-dir" :class="sourceDirError ? 'error' : ''"
-                                                :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
-                                                v-model="sourceDirVal" @blur="validSourceDir"></bk-input>
-                                            <ul class="parsley-errors-list" v-if="sourceDirError">
-                                                <li class="parsley-pattern"> {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }} </li>
-                                            </ul>
-                                        </p>
-                                    </div>
-                                </div>
-                            </template>
-                            <!-- Git 相关额外代码 end -->
-
-                            <!-- 用户自定义git、svn账号信息 start -->
-                            <repo-info ref="repoInfo" v-if="curSourceControl && curSourceControl.auth_method === 'basic'" :type="sourceControlType" :key="sourceControlType"></repo-info>
-                            <!-- 用户自定义git、svn账号信息 end -->
-                        </template>
-                    </div>
-
-                    <div v-if="formLoading" class="form-loading">
-                        <img src="/static/images/create-app-loading.svg" />
-                        <p> {{ $t('模块创建中，请稍候') }} </p>
-                    </div>
-                    <div v-else class="form-actions">
-                        <button class="ps-btn ps-btn-l ps-btn-primary" type="submit" :class="{ 'ps-btn-isdisabled': sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules }" :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules" v-if="canCreateModule"> {{ $t('创建模块') }} </button>
-                        <div class="ps-btn-disabled" v-else v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"> {{ $t('创建模块') }} </div>
-                        <button class="ps-btn ps-btn-l ps-btn-default" @click.stop.prevent="goBack"> {{ $t('返回') }} </button>
-                    </div>
-                </form>
-
+            <div class="form-group pb0">
+              <label class="form-label"> {{ $t('所属应用') }} </label>
+              <div class="form-group-flex">
+                <p class="app-name">
+                  {{ curAppInfo.application.name }}
+                </p>
+              </div>
             </div>
-            <div v-else style="padding-top: 100px; text-align: center;">
-                {{ $t('非内部版应用 目前无法创建新模块') }}
+
+            <div class="form-group pb0">
+              <label class="form-label"> {{ $t('模块名称') }} </label>
+              <div class="form-group-flex">
+                <p>
+                  <input
+                    type="text"
+                    name="name"
+                    data-parsley-required="true"
+                    :data-parsley-required-message="$t('该字段是必填项')"
+                    data-parsley-maxlength="16"
+                    data-parsley-pattern="[a-z][a-z0-9-]+"
+                    :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母')"
+                    data-parsley-trigger="input blur"
+                    class="ps-form-control"
+                    :placeholder="$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符')"
+                  >
+                </p>
+              </div>
             </div>
-        </div>
+
+            <div
+              v-if="curUserFeature.ENABLE_TC_DOCKER"
+              class="form-group"
+              style="margin-top: 7px;margin-left: 10px"
+            >
+              <label class="form-label"> {{ $t('构建方式') }} </label>
+              <div
+                class="form-group-flex-radio"
+                style="width: 100%"
+              >
+                <div class="form-group-radio mt10">
+                  <bk-radio-group
+                    v-model="structureType"
+                    class="construction-manner"
+                  >
+                    <bk-radio :value="'soundCode'">
+                      {{ $t('提供源码') }}
+                    </bk-radio>
+                    <bk-radio :value="'mirror'">
+                      {{ $t('提供镜像') }}
+                    </bk-radio>
+                    <bk-radio
+                      :value="'isMirror'"
+                      disabled
+                    >
+                      {{ $t('从源码构建镜像') }}
+                    </bk-radio>
+                  </bk-radio-group>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 镜像管理 -->
+          <div
+            v-if="structureType === 'mirror'"
+            class="create-item"
+            data-test-id="createDefault_item_baseInfo"
+          >
+            <div class="item-title">
+              {{ $t('镜像管理') }}
+            </div>
+
+            <div
+              class="form-group"
+              style="margin-top: 7px;"
+            >
+              <label class="form-label"> {{ $t('镜像类型') }} </label>
+              <div
+                class="form-group-radio"
+                style="margin-top: 5px;"
+              >
+                <bk-radio-group v-model="mirrorData.type">
+                  <bk-radio value="public">
+                    {{ $t('公开') }}
+                  </bk-radio>
+                  <bk-radio
+                    value="private"
+                    disabled
+                  >
+                    {{ $t('私有') }}
+                  </bk-radio>
+                </bk-radio-group>
+              </div>
+            </div>
+
+            <bk-form
+              ref="validate2"
+              form-type="inline"
+              :model="mirrorData"
+              :rules="mirrorRules"
+            >
+              <bk-form-item
+                :required="true"
+                :property="'url'"
+                error-display-type="normal"
+                ext-cls="item-cls"
+              >
+                <div
+                  class="form-group"
+                  style="margin-top: 10px;"
+                >
+                  <label class="form-label"> {{ $t('镜像地址') }} </label>
+                  <div class="form-input-flex">
+                    <bk-input
+                      v-model="mirrorData.url"
+                      class="mt10"
+                      style="width: 520px;"
+                      size="large"
+                      clearable
+                      :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
+                    >
+                      <template
+                        v-if="GLOBAL.APP_VERSION === 'te'"
+                        slot="prepend"
+                      >
+                        <div class="group-text">
+                          mirrors.tencent.com/
+                        </div>
+                      </template>
+                    </bk-input>
+                  </div>
+                </div>
+              </bk-form-item>
+            </bk-form>
+          </div>
+
+          <div
+            v-if="sourceOrigin !== GLOBAL.APP_TYPES.IMAGE"
+            class="create-item"
+          >
+            <!-- 代码库 -->
+            <div class="item-title">
+              {{ $t('应用模板') }}
+            </div>
+            <div class="establish-tab">
+              <section class="code-type">
+                <label class="form-label"> {{ $t('模板来源') }} </label>
+                <div class="tab-box">
+                  <li
+                    :class="['tab-item', { 'active': localSourceOrigin === 1 }]"
+                    @click="handleCodeTypeChange(1)"
+                  >
+                    {{ $t('蓝鲸开发框架') }}
+                  </li>
+                  <li
+                    v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
+                    :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
+                    @click="handleCodeTypeChange(2)"
+                  >
+                    {{ $t('蓝鲸可视化开发平台') }}
+                  </li>
+                </div>
+              </section>
+            </div>
+
+            <div
+              v-show="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP"
+              class="establish-tab pb0 mb0"
+            >
+              <section class="deploy-panel deploy-main">
+                <ul
+                  class="ps-tab"
+                  style="position: relative; z-index: 10; padding: 0 10px;"
+                >
+                  <li
+                    v-for="(langItem, langName) in curLanguages"
+                    :key="langName"
+                    :class="['item', { 'active': language === langName }]"
+                    @click="changeLanguage(langName)"
+                  >
+                    {{ $t(defaultlangName[langName]) }}
+                  </li>
+                </ul>
+              </section>
+
+              <div
+                class="form-group establish-main card-container"
+                :style="establishStyle"
+              >
+                <transition
+                  v-if="sourceControlType"
+                  :name="langTransitionName"
+                >
+                  <template>
+                    <div
+                      v-for="(langItem, langName) in curLanguages"
+                      v-if="langName === language"
+                      :key="langName"
+                      class="options-card"
+                    >
+                      <h2> {{ $t('初始化代码模板：') }} </h2>
+                      <ul class="establish-main-list">
+                        <li
+                          v-for="(item, itemIndex) in langItem"
+                          :key="itemIndex"
+                        >
+                          <label class="pointer">
+                            <input
+                              v-model="sourceInitTemplate"
+                              type="radio"
+                              name="q"
+                              :value="item.name"
+                              class="ps-radio-default"
+                              checked
+                            >
+                            {{ item.display_name }}
+                          </label>
+                          <p class="f12">
+                            {{ item.description }}
+                          </p>
+                        </li>
+                      </ul>
+                    </div>
+                  </template>
+                </transition>
+              </div>
+            </div>
+
+            <div
+              v-show="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP"
+              class="ps-tip-block lesscode-info mt15"
+            >
+              <i
+                style="color: #3A84FF;"
+                class="paasng-icon paasng-info-circle"
+              />
+              {{ $t('默认模块需要') }} <a
+                target="_blank"
+                :href="GLOBAL.LINK.LESSCODE_INDEX"
+                style="color: #3a84ff"
+              > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
+            </div>
+            <div
+              v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
+              class="error-tips pt10"
+            >
+              {{ $t('蓝鲸可视化开发平台的应用 ID 只能由小写字母组成, 所属应用') }} {{ curAppInfo.application.name }} {{ $t('的应用 ID 为') }} {{ curAppInfo.application.code }},
+              {{ $t('故无法在当前应用下创建蓝鲸可视化开发平台的模块。') }}
+            </div>
+          </div>
+
+          <div
+            v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP"
+            class="create-item"
+            data-test-id="createDefault_item_appEngine"
+          >
+            <div class="item-title">
+              {{ $t('源码管理') }}
+            </div>
+            <section class="code-depot">
+              <label class="form-label">
+                {{ $t('代码源') }}
+              </label>
+              <div
+                v-for="(item, index) in sourceControlTypes"
+                :key="index"
+                :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }]"
+                @click="changeSourceControl(item)"
+              >
+                <img :src="'/static/images/' + item.imgSrc + '.png'">
+                <p class="sourceControlTypeInfo">
+                  {{ item.name }}
+                </p>
+              </div>
+            </section>
+
+            <!-- Git 相关额外代码 start -->
+            <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
+              <!-- Git 相关额外代码 start -->
+              <template v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
+                <git-extend
+                  :key="sourceControlType"
+                  :git-control-type="sourceControlType"
+                  :is-auth="gitExtendConfig[sourceControlType].isAuth"
+                  :is-loading="gitExtendConfig[sourceControlType].isLoading"
+                  :alert-text="gitExtendConfig[sourceControlType].alertText"
+                  :auth-address="gitExtendConfig[sourceControlType].authAddress"
+                  :auth-docs="gitExtendConfig[sourceControlType].authDocs"
+                  :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
+                  :repo-list="gitExtendConfig[sourceControlType].repoList"
+                  :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
+                />
+                <div
+                  class="form-group-dir"
+                  style="margin-top: 10px;"
+                >
+                  <label class="form-label mr10">
+                    {{ $t('部署目录') }}
+                    <i
+                      v-bk-tooltips="sourceDirTip"
+                      class="paasng-icon paasng-info-circle"
+                    />
+                  </label>
+                  <div class="form-group-flex">
+                    <p class="mt10">
+                      <bk-input
+                        v-model="sourceDirVal"
+                        size="large"
+                        class="source-dir"
+                        :class="sourceDirError ? 'error' : ''"
+                        :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
+                        @blur="validSourceDir"
+                      />
+                      <ul
+                        v-if="sourceDirError"
+                        class="parsley-errors-list"
+                      >
+                        <li class="parsley-pattern">
+                          {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
+                        </li>
+                      </ul>
+                    </p>
+                  </div>
+                </div>
+              </template>
+              <!-- Git 相关额外代码 end -->
+
+              <!-- 用户自定义git、svn账号信息 start -->
+              <repo-info
+                v-if="curSourceControl && curSourceControl.auth_method === 'basic'"
+                ref="repoInfo"
+                :key="sourceControlType"
+                :type="sourceControlType"
+              />
+              <!-- 用户自定义git、svn账号信息 end -->
+            </template>
+          </div>
+
+          <div
+            v-if="formLoading"
+            class="form-loading"
+          >
+            <img src="/static/images/create-app-loading.svg">
+            <p> {{ $t('模块创建中，请稍候') }} </p>
+          </div>
+          <div
+            v-else
+            class="form-actions"
+          >
+            <button
+              v-if="canCreateModule"
+              class="ps-btn ps-btn-l ps-btn-primary"
+              type="submit"
+              :class="{ 'ps-btn-isdisabled': sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules }"
+              :disabled="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
+            >
+              {{ $t('创建模块') }}
+            </button>
+            <div
+              v-else
+              v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
+              class="ps-btn-disabled"
+            >
+              {{ $t('创建模块') }}
+            </div>
+            <button
+              class="ps-btn ps-btn-l ps-btn-default"
+              @click.stop.prevent="goBack"
+            >
+              {{ $t('返回') }}
+            </button>
+          </div>
+        </form>
+      </div>
+      <div
+        v-else
+        style="padding-top: 100px; text-align: center;"
+      >
+        {{ $t('非内部版应用 目前无法创建新模块') }}
+      </div>
     </div>
+  </div>
 </template>
 
 <script>

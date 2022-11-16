@@ -1,53 +1,64 @@
 <template lang="html">
-    <div class="env-container">
-        <paas-content-loader :is-loading="isLoading" placeholder="deploy-env-loading" class="app-container middle">
-            <section v-show="!isLoading">
-                <p class="desc-env">
-                    {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
-                    <span class="built-in-env" @click="handleShoEnvDialog">{{ $t('查看内置环境变量') }}</span>
-                </p>
-                <div class="filter-list">
-                    <div class="label">
-                        <i class="paasng-icon paasng-funnel"></i>
-                        {{ $t('生效环境：') }}
-                    </div>
-                    <div class="bk-button-group">
-                        <bk-button
-                            theme="primary"
-                            style="width: 130px;"
-                            :outline="curStage !== '_global_'"
-                            @click="changeConfigVarByEnv('_global_')">
-                            {{ $t('所有环境') }}
-                        </bk-button>
-                        <bk-button
-                            theme="primary"
-                            style="width: 130px;"
-                            :outline="curStage !== 'stag'"
-                            @click="changeConfigVarByEnv('stag')">
-                            {{ $t('仅预发布环境') }}
-                        </bk-button>
-                        <bk-button
-                            theme="primary"
-                            style="width: 130px;"
-                            :outline="curStage !== 'prod'"
-                            @click="changeConfigVarByEnv('prod')">
-                            {{ $t('仅生产环境') }}
-                        </bk-button>
-                    </div>
-                    <!-- 默认不展示 -->
-                    <bk-button
-                        v-if="curStage !== ''"
-                        ext-cls="reset-button"
-                        theme="primary"
-                        text
-                        @click="handleReset">
-                        {{ $t('重置') }}
-                    </bk-button>
-                    <!-- <bk-button ext-cls="env-sort-btn" slot="dropdown-trigger" @click="handleSort">
+  <div class="env-container">
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="deploy-env-loading"
+      class="app-container middle"
+    >
+      <section v-show="!isLoading">
+        <p class="desc-env">
+          {{ $t('环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。') }}
+          <span
+            class="built-in-env"
+            @click="handleShoEnvDialog"
+          >{{ $t('查看内置环境变量') }}</span>
+        </p>
+        <div class="filter-list">
+          <div class="label">
+            <i class="paasng-icon paasng-funnel" />
+            {{ $t('生效环境：') }}
+          </div>
+          <div class="bk-button-group">
+            <bk-button
+              theme="primary"
+              style="width: 130px;"
+              :outline="curStage !== '_global_'"
+              @click="changeConfigVarByEnv('_global_')"
+            >
+              {{ $t('所有环境') }}
+            </bk-button>
+            <bk-button
+              theme="primary"
+              style="width: 130px;"
+              :outline="curStage !== 'stag'"
+              @click="changeConfigVarByEnv('stag')"
+            >
+              {{ $t('仅预发布环境') }}
+            </bk-button>
+            <bk-button
+              theme="primary"
+              style="width: 130px;"
+              :outline="curStage !== 'prod'"
+              @click="changeConfigVarByEnv('prod')"
+            >
+              {{ $t('仅生产环境') }}
+            </bk-button>
+          </div>
+          <!-- 默认不展示 -->
+          <bk-button
+            v-if="curStage !== ''"
+            ext-cls="reset-button"
+            theme="primary"
+            text
+            @click="handleReset"
+          >
+            {{ $t('重置') }}
+          </bk-button>
+          <!-- <bk-button ext-cls="env-sort-btn" slot="dropdown-trigger" @click="handleSort">
                         <i class="paasng-icon paasng-general-sort sort-icon"></i>
                         <span class="text"> {{ $t('排序') }} </span>
                     </bk-button> -->
-                    <!-- <bk-dropdown-menu
+          <!-- <bk-dropdown-menu
                         ext-cls="env-sort-btn"
                         trigger="click"
                         align="right"
@@ -63,131 +74,205 @@
                             <li><a href="javascript:;" style="margin: 0;" :class="curSortKey === 'key' ? 'active' : ''" @click="handleSort">{{ $t('KEY 名称(A-Z)') }}</a></li>
                         </ul>
                     </bk-dropdown-menu> -->
-                </div>
-                <table v-if="envVarList.length" class="ps-table ps-table-default ps-table-width-overflowed" style="margin-bottom: 24px;" v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }">
-                    <tr v-for="(varItem, index) in envVarList" :key="index">
-                        <td>
-                            <bk-form form-type="inline" :model="varItem" ref="envRef">
-                                <bk-form-item :rules="varRules.name" :property="'name'" style="flex: 1 1 25%;">
-                                    <bk-input
-                                        placeholder="NAME"
-                                        :clearable="false"
-                                        :readonly="isReadOnlyRow(index)"
-                                        @enter="handleEnter(index)"
-                                        v-model="varItem.name">
-                                    </bk-input>
-                                </bk-form-item>
-                                <bk-form-item :rules="varRules.value" :property="'value'" style="flex: 1 1 25%;">
-                                    <template v-if="isReadOnlyRow(index)">
-                                        <div class="desc-form-content" v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }">
-                                            {{varItem.value}}
-                                        </div>
-                                    </template>
-                                    <template v-else>
-                                        <bk-input
-                                            placeholder="VALUE"
-                                            :clearable="false"
-                                            :readonly="isReadOnlyRow(index)"
-                                            @enter="handleEnter(index)"
-                                            v-model="varItem.value">
-                                        </bk-input>
-                                    </template>
-                                </bk-form-item>
-                                <bk-form-item style="flex: 1 1 18%;">
-                                    <bk-select
-                                        v-model="varItem.envName"
-                                        :disabled="isReadOnlyRow(index)"
-                                        :placeholder="$t('请选择')"
-                                        :clearable="false">
-                                        <bk-option
-                                            v-for="(option, optionIndex) in envSelectList"
-                                            :key="optionIndex"
-                                            :id="option.id"
-                                            :name="option.text">
-                                        </bk-option>
-                                    </bk-select>
-                                </bk-form-item>
-                                <bk-form-item style="text-align: right; min-width: 80px;">
-                                    <template v-if="isReadOnlyRow(index)">
-                                        <a class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
-                                            @click="editingRowToggle(varItem, index)">
-                                        </a>
-                                        <tooltip-confirm
-                                            ref="deleteTooltip"
-                                            :ok-text="$t('确定')"
-                                            :cancel-text="'取消'"
-                                            :theme="'ps-tooltip'"
-                                            @ok="deleteEnvData(index, varItem)">
-                                            <a slot="trigger" class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
-                                                v-show="isReadOnlyRow(index)">
-                                            </a>
-                                        </tooltip-confirm>
-                                    </template>
-                                    <template v-else>
-                                        <a class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
-                                            type="submit"
-                                            @click="updateEnvData(index, varItem)">
-                                        </a>
-                                        <a class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
-                                            style="margin-left: 0;"
-                                            @click="editingRowToggle(varItem, index, 'cancel')">
-                                        </a>
-                                    </template>
-                                </bk-form-item>
-                            </bk-form>
-                        </td>
-                    </tr>
-                </table>
-                <div class="ps-no-result" v-else>
-                    <div class="text">
-                        <img class="img-exception" src="/static/images/empty.png" alt="">
-                        <p class="text-exception"> {{ $t('暂无数据') }} </p>
+        </div>
+        <table
+          v-if="envVarList.length"
+          v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+          class="ps-table ps-table-default ps-table-width-overflowed"
+          style="margin-bottom: 24px;"
+        >
+          <tr
+            v-for="(varItem, index) in envVarList"
+            :key="index"
+          >
+            <td>
+              <bk-form
+                ref="envRef"
+                form-type="inline"
+                :model="varItem"
+              >
+                <bk-form-item
+                  :rules="varRules.name"
+                  :property="'name'"
+                  style="flex: 1 1 25%;"
+                >
+                  <bk-input
+                    v-model="varItem.name"
+                    placeholder="NAME"
+                    :clearable="false"
+                    :readonly="isReadOnlyRow(index)"
+                    @enter="handleEnter(index)"
+                  />
+                </bk-form-item>
+                <bk-form-item
+                  :rules="varRules.value"
+                  :property="'value'"
+                  style="flex: 1 1 25%;"
+                >
+                  <template v-if="isReadOnlyRow(index)">
+                    <div
+                      v-bk-tooltips="{ content: varItem.value, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      class="desc-form-content"
+                    >
+                      {{ varItem.value }}
                     </div>
-                </div>
-                <bk-button
-                    theme="primary"
-                    :outline="true"
-                    @click.stop.prevent="addEnvData">
-                    {{ $t('添加') }}
-                </bk-button>
-            </section>
-        </paas-content-loader>
+                  </template>
+                  <template v-else>
+                    <bk-input
+                      v-model="varItem.value"
+                      placeholder="VALUE"
+                      :clearable="false"
+                      :readonly="isReadOnlyRow(index)"
+                      @enter="handleEnter(index)"
+                    />
+                  </template>
+                </bk-form-item>
+                <bk-form-item style="flex: 1 1 18%;">
+                  <bk-select
+                    v-model="varItem.envName"
+                    :disabled="isReadOnlyRow(index)"
+                    :placeholder="$t('请选择')"
+                    :clearable="false"
+                  >
+                    <bk-option
+                      v-for="(option, optionIndex) in envSelectList"
+                      :id="option.id"
+                      :key="optionIndex"
+                      :name="option.text"
+                    />
+                  </bk-select>
+                </bk-form-item>
+                <bk-form-item style="text-align: right; min-width: 80px;">
+                  <template v-if="isReadOnlyRow(index)">
+                    <a
+                      class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
+                      @click="editingRowToggle(varItem, index)"
+                    />
+                    <tooltip-confirm
+                      ref="deleteTooltip"
+                      :ok-text="$t('确定')"
+                      :cancel-text="'取消'"
+                      :theme="'ps-tooltip'"
+                      @ok="deleteEnvData(index, varItem)"
+                    >
+                      <a
+                        v-show="isReadOnlyRow(index)"
+                        slot="trigger"
+                        class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
+                      />
+                    </tooltip-confirm>
+                  </template>
+                  <template v-else>
+                    <a
+                      class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
+                      type="submit"
+                      @click="updateEnvData(index, varItem)"
+                    />
+                    <a
+                      class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
+                      style="margin-left: 0;"
+                      @click="editingRowToggle(varItem, index, 'cancel')"
+                    />
+                  </template>
+                </bk-form-item>
+              </bk-form>
+            </td>
+          </tr>
+        </table>
+        <div
+          v-else
+          class="ps-no-result"
+        >
+          <div class="text">
+            <img
+              class="img-exception"
+              src="/static/images/empty.png"
+              alt=""
+            >
+            <p class="text-exception">
+              {{ $t('暂无数据') }}
+            </p>
+          </div>
+        </div>
+        <bk-button
+          theme="primary"
+          :outline="true"
+          @click.stop.prevent="addEnvData"
+        >
+          {{ $t('添加') }}
+        </bk-button>
+      </section>
+    </paas-content-loader>
 
-        <bk-sideslider
-            :is-show.sync="envSidesliderConf.visiable"
-            :width="800"
-            :title="$t('内置环境变量')"
-            :quick-close="true"
-            @shown="showEnvVariable">
-            <div slot="content" class="slider-env-content" v-bkloading="{ isLoading: envLoading, zIndex: 10 }">
-                <div v-if="basicInfo.length">
-                    <p class="env-title mb10">{{ $t('应用基本信息') }}</p>
-                    <div ref="basicInfoWrapper">
-                        <p v-for="item in basicInfo" :key="item.label" class="env-item">
-                            <span v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }" ref="basicText">{{ item.label }}: {{ item.value }}</span>
-                        </p>
-                    </div>
-                </div>
-                <div v-if="appRuntimeInfo.length">
-                    <p class="env-title mt15 mb10">{{ $t('应用运行时信息') }}</p>
-                    <div ref="appRuntimeInfoWrapper">
-                        <p v-for="item in appRuntimeInfo" :key="item.label" class="env-item">
-                            <span v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }" ref="appRuntimeText">{{ item.label }}: {{ item.value }}</span>
-                        </p>
-                    </div>
-                </div>
-                <div v-if="bkPlatformInfo.length">
-                    <p class="env-title mt15 mb10">{{ $t('蓝鲸体系内平台地址') }}</p>
-                    <div ref="bkPlatformInfoWrapper">
-                        <p v-for="item in bkPlatformInfo" :key="item.label" class="env-item">
-                            <span v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }" ref="bkPlatformText">{{ item.label }}={{ item.value }}</span>
-                        </p>
-                    </div>
-                </div>
-                <p class="reminder">{{ $t('增强服务也会写入相关的环境变量，可在增强服务的“实例详情”页面的“配置信息”中查看') }}</p>
-            </div>
-        </bk-sideslider>
-    </div>
+    <bk-sideslider
+      :is-show.sync="envSidesliderConf.visiable"
+      :width="800"
+      :title="$t('内置环境变量')"
+      :quick-close="true"
+      @shown="showEnvVariable"
+    >
+      <div
+        slot="content"
+        v-bkloading="{ isLoading: envLoading, zIndex: 10 }"
+        class="slider-env-content"
+      >
+        <div v-if="basicInfo.length">
+          <p class="env-title mb10">
+            {{ $t('应用基本信息') }}
+          </p>
+          <div ref="basicInfoWrapper">
+            <p
+              v-for="item in basicInfo"
+              :key="item.label"
+              class="env-item"
+            >
+              <span
+                ref="basicText"
+                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
+              >{{ item.label }}: {{ item.value }}</span>
+            </p>
+          </div>
+        </div>
+        <div v-if="appRuntimeInfo.length">
+          <p class="env-title mt15 mb10">
+            {{ $t('应用运行时信息') }}
+          </p>
+          <div ref="appRuntimeInfoWrapper">
+            <p
+              v-for="item in appRuntimeInfo"
+              :key="item.label"
+              class="env-item"
+            >
+              <span
+                ref="appRuntimeText"
+                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
+              >{{ item.label }}: {{ item.value }}</span>
+            </p>
+          </div>
+        </div>
+        <div v-if="bkPlatformInfo.length">
+          <p class="env-title mt15 mb10">
+            {{ $t('蓝鲸体系内平台地址') }}
+          </p>
+          <div ref="bkPlatformInfoWrapper">
+            <p
+              v-for="item in bkPlatformInfo"
+              :key="item.label"
+              class="env-item"
+            >
+              <span
+                ref="bkPlatformText"
+                v-bk-tooltips="{ content: `${item.label}: ${item.value}`, disabled: item.isTips }"
+              >{{ item.label }}={{ item.value }}</span>
+            </p>
+          </div>
+        </div>
+        <p class="reminder">
+          {{ $t('增强服务也会写入相关的环境变量，可在增强服务的“实例详情”页面的“配置信息”中查看') }}
+        </p>
+      </div>
+    </bk-sideslider>
+  </div>
 </template>
 
 <script>
@@ -312,7 +397,7 @@
                     bkPlatformLoading: false
                 },
                 globalSelectList: [
-                    
+
                 ],
                 envSelectList: [
                     { id: '_global_', text: this.$t('所有环境') },
@@ -400,20 +485,24 @@
                     if (val.spec) {
                         this.localCloudAppData = _.cloneDeep(val);
                         // 所有环境
-                        this.allEnvVarList = [...val.spec.configuration.env, ...val.spec.envOverlay.envVariables];
+                        this.allEnvVarList = [...val.spec.configuration.env];
+                        if (val.spec.envOverlay && val.spec.envOverlay.envVariables) {
+                            this.allEnvVarList.push(...val.spec.envOverlay.envVariables);
+                        }
                         this.allEnvVarList.forEach(item => {
                             if (!item.envName) {
                                 this.$set(item, 'envName', '_global_');
                             }
                         });
-                        const envOverlay = _.cloneDeep(this.localCloudAppData.spec.envOverlay);
                         this.envVarList = val.spec.configuration.env;
-                        
+
                         if (this.curStage === '') {
-                            const all = [...this.envVarList, ...val.spec.envOverlay.envVariables];
+                            const all = [...this.envVarList];
+                            if (val.spec.envOverlay && val.spec.envOverlay.envVariables) {
+                                all.push(...val.spec.envOverlay.envVariables);
+                            }
                             this.envVarList = all;
                         }
-                        this.allReplicaList = envOverlay.envVariables;
 
                         setTimeout(() => {
                             this.isLoading = false;
@@ -424,11 +513,11 @@
                 immediate: true
                 // deep: true
             },
-            allReplicaList: {
-                handler (val) {
-                    this.envReplicaList = val.filter(item => item.envName === this.curStage);
-                }
-            },
+            // allReplicaList: {
+            //     handler (val) {
+            //         this.envReplicaList = val.filter(item => item.envName === this.curStage);
+            //     }
+            // },
             curStage (value) {
                 this.isTableLoading = true;
                 if (!value) {
@@ -550,11 +639,10 @@
                     }
                     // 该环境是否已存在
                     if (this.curStage === '') {
-                        this.setLocalCloudAppData();
-                        // const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
-                        // const otherEnvList = this.envVarList.filter(item => item.envName !== '_global_');
-                        // this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
-                        // this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
+                        const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
+                        const otherEnvList = this.envVarList.filter(item => item.envName !== '_global_');
+                        this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
+                        this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);
                     } else {
                         if (this.curStage === '_global_') {
                             if (rowItem.envName === '_global_') {
@@ -576,8 +664,12 @@
                     }
                     this.$nextTick(() => {
                         // 更新数据源
-                        // const spec = this.localCloudAppData.spec;
-                        // this.allEnvVarList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                        const spec = this.localCloudAppData.spec;
+                        this.allEnvVarList = [...spec.configuration.env];
+                        if (spec.envOverlay && spec.envOverlay.envVariables) {
+                            this.allEnvVarList.push(...spec.envOverlay.envVariables);
+                        }
+                        
                         this.allEnvVarList.forEach(item => {
                             if (!item.envName) {
                                 this.$set(item, 'envName', '_global_');
@@ -598,6 +690,10 @@
                 this.updateEnvData(i);
             },
             addEnvData () {
+                const isAdd = this.envVarList.find(item => item.isAdd);
+                if (isAdd) {
+                    return;
+                }
                 this.envVarList.push({
                     name: '',
                     value: '',
@@ -606,12 +702,20 @@
                 });
                 this.editRowList.push(this.envVarList.length - 1);
             },
+            // 保留当前的新建
             deleteEnvData (rowIndex, rowItem) {
                 this.isTableLoading = true;
                 // this.envVarList.splice(rowIndex, 1);
                 if (!this.localCloudAppData.spec.envOverlay) {
                     this.$set(this.localCloudAppData.spec, 'envOverlay', {});
                 }
+                const editEnvList = this.envVarList.filter((item, index) => !this.isReadOnlyRow(index) || item.isAdd);
+                this.allEnvVarList = this.allEnvVarList.filter((item, index) => {
+                    const isEdit = this.isReadOnlyRow(index);
+                    if (!item.isAdd && isEdit) {
+                        return true;
+                    }
+                });
                 if (this.curStage === '') {
                     if (rowItem.envName === '_global_') {
                         const results = this.allEnvVarList.filter(item => item.envName === '_global_' && item.name !== rowItem.name);
@@ -649,7 +753,10 @@
                 this.$nextTick(() => {
                     // 更新
                     const spec = this.localCloudAppData.spec;
-                    this.allEnvVarList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                    this.allEnvVarList = [...spec.configuration.env];
+                    if (spec.envOverlay && spec.envOverlay.envVariables) {
+                        this.allEnvVarList.push(...spec.envOverlay.envVariables);
+                    }
                     this.allEnvVarList.forEach(item => {
                         if (!item.envName) {
                             this.$set(item, 'envName', '_global_');
@@ -658,11 +765,18 @@
                             delete item.isAdd;
                         }
                     });
+                    // 并把当前项改为编辑状态
+                    this.allEnvVarList.push(...editEnvList);
                     // 重新获取环境列表
                     this.envVarList = this.allEnvVarList;
                     if (this.curStage) {
                         this.envVarList = this.allEnvVarList.filter(item => item.envName === this.curStage);
                     }
+                    this.envVarList.forEach((item, index) => {
+                        if (item.isAdd) {
+                            this.editRowList.push(index);
+                        }
+                    });
                     setTimeout(() => {
                         this.isTableLoading = false;
                     }, 200);
@@ -782,7 +896,7 @@
                 }
                 return list;
             },
-            
+
             // 文字溢出显示tooltips
             contrastTextWitch (parentRef, childRef, data) {
                 const containerWitch = this.$refs[parentRef].offsetWidth;
@@ -792,7 +906,7 @@
                     }
                 });
             },
-            
+
             // 切换对应环境
             changeConfigVarByEnv (env) {
                 this.curStage = env;
@@ -800,7 +914,10 @@
 
             isExistsVarName (curItem) {
                 const spec = this.localCloudAppData.spec;
-                const sourceList = [...spec.configuration.env, ...spec.envOverlay.envVariables];
+                const sourceList = [...spec.configuration.env];
+                if (spec.envOverlay && spec.envOverlay.envVariables) {
+                    sourceList.push(...spec.envOverlay.envVariables);
+                }
                 const flag = sourceList.find(item => item.name === curItem.name && item.envName === curItem.envName);
                 if (flag) {
                     this.$paasMessage({

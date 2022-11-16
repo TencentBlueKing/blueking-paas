@@ -19,39 +19,39 @@
 import echarts from 'echarts';
 
 export default {
-    bind: (el, binding) => {
-        setTimeout(() => {
-            el.echartsInstance = echarts.init(el);
+  bind: (el, binding) => {
+    setTimeout(() => {
+      el.echartsInstance = echarts.init(el);
 
-            if (binding.value) {
-                el.echartsInstance.setOption(binding.value);
-            }
+      if (binding.value) {
+        el.echartsInstance.setOption(binding.value);
+      }
 
-            el.resizeEventHandler = function () {
-                el.echartsInstance.resize();
-            };
+      el.resizeEventHandler = function () {
+        el.echartsInstance.resize();
+      };
 
-            if (window.attachEvent) {
-                window.attachEvent('onresize', el.resizeEventHandler);
-            } else {
-                window.addEventListener('resize', el.resizeEventHandler, false);
-            }
-        }, 1300);
-    },
-    update: (el, binding) => {
-        setTimeout(() => {
-            el.echartsInstance.setOption(binding.value);
-        }, 1300);
-    },
-    unbind: (el) => {
-        setTimeout(() => {
-            el.echartsInstance.dispose();
-            const _this = el;
-            if (window.attachEvent) {
-                window.detachEvent('onresize', _this.resizeEventHandler);
-            } else {
-                window.removeEventListener('resize', _this.resizeEventHandler, false);
-            }
-        }, 1300);
-    }
+      if (window.attachEvent) {
+        window.attachEvent('onresize', el.resizeEventHandler);
+      } else {
+        window.addEventListener('resize', el.resizeEventHandler, false);
+      }
+    }, 1300);
+  },
+  update: (el, binding) => {
+    setTimeout(() => {
+      el.echartsInstance.setOption(binding.value);
+    }, 1300);
+  },
+  unbind: (el) => {
+    setTimeout(() => {
+      el.echartsInstance.dispose();
+      const _this = el;
+      if (window.attachEvent) {
+        window.detachEvent('onresize', _this.resizeEventHandler);
+      } else {
+        window.removeEventListener('resize', _this.resizeEventHandler, false);
+      }
+    }, 1300);
+  }
 };

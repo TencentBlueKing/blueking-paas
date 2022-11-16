@@ -1,49 +1,82 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :paths="servicePaths"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule">
-        </app-top-bar>
+  <div class="right-main">
+    <app-top-bar
+      :paths="servicePaths"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+    />
 
-        <div class="app-container">
-            <paas-content-loader :is-loading="isLoading" placeholder="data-inner-shared-loading" :height="600" :offset-top="0">
-                <section class="detail-item">
-                    <h4> {{ $t('服务说明') }} </h4>
-                    <p> {{ $t('本服务共享自') }} {{ refModuleName }} {{ $t('模块的对应服务实例。') }} </p>
-                    <bk-button @click="handleViewDetail"> {{ $t('查看原有实例详情') }} </bk-button>
-                </section>
-                <section class="detail-item mt20">
-                    <h4> {{ $t('解除共享') }} </h4>
-                    <p> {{ $t('解除共享关系后，当前模块将无法获取') }} {{ refModuleName }} {{ $t('模块的') }} {{ servieceName }} {{ $t('服务的所有环境变量。') }} </p>
-                    <bk-button @click="handleOpenRemoveDialog"> {{ $t('解除服务共享') }} </bk-button>
-                </section>
-            </paas-content-loader>
-        </div>
-
-        <bk-dialog
-            width="540"
-            v-model="removeSharedDialog.visiable"
-            :title="$t('确认解除服务共享')"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="removeSharedDialog.isLoading"
-            @after-leave="hookAfterClose">
-            <form class="ps-form" @submit.prevent="submitRemoveShared">
-                <div class="spacing-x1">
-                    {{ $t('请完整输入应用 ID ') }}<code>{{ appCode }}</code> {{ $t('确认：') }}
-                </div>
-                <div class="ps-form-group">
-                    <input v-model="formRemoveConfirmCode" type="text" class="ps-form-control">
-                </div>
-                <bk-alert style="margin-top: 10px;" type="error" :title="errorTips"></bk-alert>
-            </form>
-            <template slot="footer">
-                <bk-button theme="primary" @click="submitRemoveShared" :loading="removeSharedDialog.isLoading" :disabled="!formRemoveValidated"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="removeSharedDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </template>
-        </bk-dialog>
+    <div class="app-container">
+      <paas-content-loader
+        :is-loading="isLoading"
+        placeholder="data-inner-shared-loading"
+        :height="600"
+        :offset-top="0"
+      >
+        <section class="detail-item">
+          <h4> {{ $t('服务说明') }} </h4>
+          <p> {{ $t('本服务共享自') }} {{ refModuleName }} {{ $t('模块的对应服务实例。') }} </p>
+          <bk-button @click="handleViewDetail">
+            {{ $t('查看原有实例详情') }}
+          </bk-button>
+        </section>
+        <section class="detail-item mt20">
+          <h4> {{ $t('解除共享') }} </h4>
+          <p> {{ $t('解除共享关系后，当前模块将无法获取') }} {{ refModuleName }} {{ $t('模块的') }} {{ servieceName }} {{ $t('服务的所有环境变量。') }} </p>
+          <bk-button @click="handleOpenRemoveDialog">
+            {{ $t('解除服务共享') }}
+          </bk-button>
+        </section>
+      </paas-content-loader>
     </div>
+
+    <bk-dialog
+      v-model="removeSharedDialog.visiable"
+      width="540"
+      :title="$t('确认解除服务共享')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="removeSharedDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <form
+        class="ps-form"
+        @submit.prevent="submitRemoveShared"
+      >
+        <div class="spacing-x1">
+          {{ $t('请完整输入应用 ID ') }}<code>{{ appCode }}</code> {{ $t('确认：') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+        <bk-alert
+          style="margin-top: 10px;"
+          type="error"
+          :title="errorTips"
+        />
+      </form>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :loading="removeSharedDialog.isLoading"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveShared"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="removeSharedDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>

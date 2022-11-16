@@ -906,11 +906,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "django-filter"
-version = "1.0.4"
+version = "22.1"
 description = "Django-filter is a reusable Django application for allowing users to filter querysets dynamically."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
+
+[package.dependencies]
+Django = ">=3.2"
 
 [package.source]
 type = "legacy"
@@ -3244,7 +3247,7 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "dcf02ca297b04fff1dd99cbea9ef174e53d4b8f9357871b4fcf42893a3cedd48"
+content-hash = "3f4682111ef237dcda3792681cf101c1c9d73f0c017913e48233acf3ec61884d"
 
 [metadata.files]
 aenum = [
@@ -3311,7 +3314,7 @@ bkapi-component-open = [
     {file = "bkapi-component-open-1.1.0.tar.gz", hash = "md5:7e3ca24196f7c2cff9cdf4e3b4a86a06"},
 ]
 bkpaas-auth = [
-    {file = "bkpaas-auth-2.0.2.tar.gz", hash = "md5:d9c23bd9870bb5aa112b5dd330b6864e"},
+    {file = "bkpaas-auth-2.0.2.tar.gz", hash = "md5:89de6ec08ef91c65a5e58c7d2ed78e82"},
     {file = "bkpaas_auth-2.0.2-py3-none-any.whl", hash = "md5:1e12c3c69c282ac309860d02fc92f376"},
 ]
 bkstorages = [
@@ -3565,8 +3568,8 @@ django-environ = [
     {file = "django_environ-0.8.1-py2.py3-none-any.whl", hash = "sha256:42593bee519a527602a467c7b682aee1a051c2597f98c45f4f4f44169ecdb6e5"},
 ]
 django-filter = [
-    {file = "django-filter-1.0.4.tar.gz", hash = "sha256:e44620d4e707beaff7396ac8df765dc015a07467df813b9c1663fe4017934b58"},
-    {file = "django_filter-1.0.4-py2.py3-none-any.whl", hash = "sha256:6ef1611aeacfda8f13a075a992ff65687afbd5cc8fcb0f3f1563a9ad4fe2d1b0"},
+    {file = "django-filter-22.1.tar.gz", hash = "sha256:ed473b76e84f7e83b2511bb2050c3efb36d135207d0128dfe3ae4b36e3594ba5"},
+    {file = "django_filter-22.1-py3-none-any.whl", hash = "sha256:ed429e34760127e3520a67f415bec4c905d4649fbe45d0d6da37e6ff5e0287eb"},
 ]
 django-imagekit = [
     {file = "django-imagekit-4.0.1.tar.gz", hash = "sha256:ed6c68b0efe87a1f21696f37eff4e1366ec25ebfcdd8b0614f7df45f904c6b1e"},

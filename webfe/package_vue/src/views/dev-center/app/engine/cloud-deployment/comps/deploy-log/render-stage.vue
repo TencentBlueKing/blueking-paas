@@ -1,29 +1,56 @@
 <template>
-    <div :class="['paas-deploy-log-stage-wrapper', extCls]">
-        <label class="title" v-if="isShowTitle">{{ title }}</label>
-        <section class="content-wrapper">
-            <section class="content" ref="content">
-                <pre v-for="(item, index) in data" :key="index" v-html="item" class="log-item"></pre>
-            </section>
-            <div class="screen-wrapper" v-if="isShowFullScreen" @click.stop="handleFullScreen">
-                <i class="paasng-icon paasng-full-screen-new"></i>
-            </div>
-        </section>
+  <div :class="['paas-deploy-log-stage-wrapper', extCls]">
+    <label
+      v-if="isShowTitle"
+      class="title"
+    >{{ title }}</label>
+    <section class="content-wrapper">
+      <section
+        ref="content"
+        class="content"
+      >
+        <pre
+          v-for="(item, index) in data"
+          :key="index"
+          class="log-item"
+          v-html="item"
+        />
+      </section>
+      <div
+        v-if="isShowFullScreen"
+        class="screen-wrapper"
+        @click.stop="handleFullScreen"
+      >
+        <i class="paasng-icon paasng-full-screen-new" />
+      </div>
+    </section>
 
-        <bk-dialog
-            v-model="fullDialogVisiable"
-            fullscreen
-            :show-footer="false"
-            ext-cls="paas-deploy-log-full-screen-cls"
-            title="">
-            <div class="screen-icon-wrapper" @click="fullDialogVisiable = false">
-                <i class="paasng-icon paasng-restore-screen"></i>
-            </div>
-            <div class="dialog-log-content" ref="dialogContent">
-                <pre v-for="(item, index) in data" :key="index" v-html="item" class="log-item"></pre>
-            </div>
-        </bk-dialog>
-    </div>
+    <bk-dialog
+      v-model="fullDialogVisiable"
+      fullscreen
+      :show-footer="false"
+      ext-cls="paas-deploy-log-full-screen-cls"
+      title=""
+    >
+      <div
+        class="screen-icon-wrapper"
+        @click="fullDialogVisiable = false"
+      >
+        <i class="paasng-icon paasng-restore-screen" />
+      </div>
+      <div
+        ref="dialogContent"
+        class="dialog-log-content"
+      >
+        <pre
+          v-for="(item, index) in data"
+          :key="index"
+          class="log-item"
+          v-html="item"
+        />
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 <script>
     export default {

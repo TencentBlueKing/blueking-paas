@@ -22,66 +22,66 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取所有运行时基础镜像
          */
-        getAllImages ({ commit, state }, { appCode, moduleId }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/list/`;
-            return http.get(url);
-        },
+    getAllImages ({ commit, state }, { appCode, moduleId }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/list/`;
+      return http.get(url);
+    },
 
-        /**
+    /**
          * 获取运行时基础信息
          */
-        getRuntimeInfo ({ commit, state }, { appCode, moduleId }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
-            return http.get(url);
-        },
+    getRuntimeInfo ({ commit, state }, { appCode, moduleId }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
+      return http.get(url);
+    },
 
-        /**
+    /**
          * 保存运行时基础信息
          */
-        updateRuntimeInfo ({ commit, state }, { appCode, moduleId, data }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
-            return http.post(url, data);
-        },
+    updateRuntimeInfo ({ commit, state }, { appCode, moduleId, data }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/runtime/`;
+      return http.post(url, data);
+    },
 
-        /**
+    /**
          * 从模块导入环境变量
          * @param {Object} params 包括appCode, moduleId, sourceModuleName
          */
-        exportModuleEnv ({ commit, state }, { appCode, moduleId, sourceModuleName }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/clone_from/${sourceModuleName}`;
-            return http.post(url, {});
-        },
+    exportModuleEnv ({ commit, state }, { appCode, moduleId, sourceModuleName }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/clone_from/${sourceModuleName}`;
+      return http.post(url, {});
+    },
 
-        /**
+    /**
          * 应用基本信息
          */
-        getBasicInfo ({ commit, state }, { appCode }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/app/`;
-            return http.get(url);
-        },
+    getBasicInfo ({ commit, state }, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/app/`;
+      return http.get(url);
+    },
 
-        /**
+    /**
          * 应用运行时信息
          */
-        getBkPlatformInfo ({ commit, state }, { appCode }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/bk_platform/`;
-            return http.get(url);
-        },
+    getBkPlatformInfo ({ commit, state }, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/bk_platform/`;
+      return http.get(url);
+    },
 
-        /**
+    /**
          * 蓝鲸体系内平台信息
          */
-        getAppRuntimeInfo ({ commit, state }, { appCode }) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/runtime/`;
-            return http.get(url);
-        }
+    getAppRuntimeInfo ({ commit, state }, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/runtime/`;
+      return http.get(url);
     }
+  }
 };

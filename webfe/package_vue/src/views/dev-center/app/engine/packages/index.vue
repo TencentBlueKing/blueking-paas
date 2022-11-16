@@ -1,24 +1,42 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('包版本管理')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="isLesscodeApp ? curAppModuleList : ''">
-        </app-top-bar>
-        <paas-content-loader :is-loading="isPageLoading" placeholder="packages-loading" :offset-top="30" class="app-container middle overview">
-            <div class="ps-table-bar mb15 mt15">
-                <bk-button
-                    v-if="isSmartApp"
-                    theme="default"
-                    @click="handleUpload">
-                    <i class="paasng-icon paasng-plus mr5"></i> {{ $t('上传新版本') }}
-                </bk-button>
-                <div class="info-wrapper" v-if="isLesscodeApp">
-                    <bk-alert type="info" :title="$t('该模块部署版本包由“蓝鲸可视化开发平台”提供')"></bk-alert>
-                    <a v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :href="lessCodeData.address_in_lesscode || 'javascript:;'" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" class="link" @click="handleLessCode"> {{ $t('点击前往') }} <i class="paasng-icon paasng-jump-link"></i></a>
-                </div>
-                <!-- <div class="bk-alert bk-alert-info mb10" v-if="isLesscodeApp">
+  <div class="right-main">
+    <app-top-bar
+      :title="$t('包版本管理')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="isLesscodeApp ? curAppModuleList : ''"
+    />
+    <paas-content-loader
+      :is-loading="isPageLoading"
+      placeholder="packages-loading"
+      :offset-top="30"
+      class="app-container middle overview"
+    >
+      <div class="ps-table-bar mb15 mt15">
+        <bk-button
+          v-if="isSmartApp"
+          theme="default"
+          @click="handleUpload"
+        >
+          <i class="paasng-icon paasng-plus mr5" /> {{ $t('上传新版本') }}
+        </bk-button>
+        <div
+          v-if="isLesscodeApp"
+          class="info-wrapper"
+        >
+          <bk-alert
+            type="info"
+            :title="$t('该模块部署版本包由“蓝鲸可视化开发平台”提供')"
+          />
+          <a
+            v-if="lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
+            :href="lessCodeData.address_in_lesscode || 'javascript:;'"
+            :target="lessCodeData.address_in_lesscode ? '_blank' : ''"
+            class="link"
+            @click="handleLessCode"
+          > {{ $t('点击前往') }} <i class="paasng-icon paasng-jump-link" /></a>
+        </div>
+        <!-- <div class="bk-alert bk-alert-info mb10" v-if="isLesscodeApp">
                     <i class="bk-icon icon-info"></i>
                     <div class="bk-alert-content">
                         <div class="bk-alert-title">该模块部署版本包由“蓝鲸可视化开发平台”提供</div>
@@ -26,111 +44,202 @@
                     </div>
                     <a :href="GLOBAL.LINK.LESSCODE_INDEX" target="_blank"> {{ $t('点击前往') }} <i class="paasng-icon paasng-jump-link"></i></a>
                 </div> -->
-            </div>
-            <bk-table
-                :data="packageList"
-                :size="'small'"
-                :pagination="pagination"
-                v-bkloading="{ isLoading: isDataLoading }"
-                @page-change="pageChange"
-                @page-limit-change="limitChange"
-                @sort-change="sortChange">
-                <bk-table-column :label="$t('版本')" :show-overflow-tooltip="true">
-                    <template slot-scope="props">
-                        <span>{{props.row.version || '--'}}</span>
-                    </template>
-                </bk-table-column>
-                <bk-table-column :label="$t('文件名')" :show-overflow-tooltip="true">
-                    <template slot-scope="props">
-                        <span>{{props.row.package_name || '--'}}</span>
-                    </template>
-                </bk-table-column>
-                <bk-table-column :label="$t('文件大小')" sortable="custom" prop="package_size">
-                    <template slot-scope="props">
-                        <span>{{props.row.size || '--'}} MB</span>
-                    </template>
-                </bk-table-column>
-                <bk-table-column :label="$t('摘要')" :show-overflow-tooltip="false">
-                    <template slot-scope="props">
-                        <span v-bk-tooltips="props.row.sha256_signature || '--'">{{props.row.sha256_signature ? props.row.sha256_signature.substring(0, 8) : '--'}}</span>
-                    </template>
-                </bk-table-column>
-                <bk-table-column :label="$t('上传人')">
-                    <template slot-scope="props">
-                        <span>{{props.row.operator || '--'}}</span>
-                    </template>
-                </bk-table-column>
-                <bk-table-column :label="$t('上传时间')" sortable="custom" prop="updated">
-                    <template slot-scope="props">
-                        <span>{{props.row.updated || '--'}}</span>
-                    </template>
-                </bk-table-column>
-            </bk-table>
-        </paas-content-loader>
+      </div>
+      <bk-table
+        v-bkloading="{ isLoading: isDataLoading }"
+        :data="packageList"
+        :size="'small'"
+        :pagination="pagination"
+        @page-change="pageChange"
+        @page-limit-change="limitChange"
+        @sort-change="sortChange"
+      >
+        <bk-table-column
+          :label="$t('版本')"
+          :show-overflow-tooltip="true"
+        >
+          <template slot-scope="props">
+            <span>{{ props.row.version || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('文件名')"
+          :show-overflow-tooltip="true"
+        >
+          <template slot-scope="props">
+            <span>{{ props.row.package_name || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('文件大小')"
+          sortable="custom"
+          prop="package_size"
+        >
+          <template slot-scope="props">
+            <span>{{ props.row.size || '--' }} MB</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('摘要')"
+          :show-overflow-tooltip="false"
+        >
+          <template slot-scope="props">
+            <span v-bk-tooltips="props.row.sha256_signature || '--'">{{ props.row.sha256_signature ? props.row.sha256_signature.substring(0, 8) : '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('上传人')">
+          <template slot-scope="props">
+            <span>{{ props.row.operator || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('上传时间')"
+          sortable="custom"
+          prop="updated"
+        >
+          <template slot-scope="props">
+            <span>{{ props.row.updated || '--' }}</span>
+          </template>
+        </bk-table-column>
+      </bk-table>
+    </paas-content-loader>
 
-        <bk-dialog
-            v-model="uploadDialogConf.isShow"
-            :title="uploadDialogConf.title"
-            :header-position="'left'"
-            :close-icon="false"
-            :width="640">
-            <div v-if="uploadDialogConf.package">
-                <div class="package-data-box mb20">
-                    <p class="package-data-title"> {{ $t('基本信息') }} </p>
-                    <bk-container :col="12" :margin="0">
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14 " :span="2"><span class="confirm-key"> {{ $t('应用ID：') }} </span></bk-col>
-                            <bk-col class="pl0 f14" :span="8"><span class="confirm-value">{{uploadDialogConf.package.app_description.code}}</span></bk-col>
-                        </bk-row>
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14" :span="2"><span class="confirm-key"> {{ $t('应用名称：') }} </span></bk-col>
-                            <bk-col class="pl0 f14" :span="8"><span class="confirm-value">{{uploadDialogConf.package.app_description.name}}</span></bk-col>
-                        </bk-row>
-                    </bk-container>
-                </div>
+    <bk-dialog
+      v-model="uploadDialogConf.isShow"
+      :title="uploadDialogConf.title"
+      :header-position="'left'"
+      :close-icon="false"
+      :width="640"
+    >
+      <div v-if="uploadDialogConf.package">
+        <div class="package-data-box mb20">
+          <p class="package-data-title">
+            {{ $t('基本信息') }}
+          </p>
+          <bk-container
+            :col="12"
+            :margin="0"
+          >
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14 "
+                :span="2"
+              >
+                <span class="confirm-key"> {{ $t('应用ID：') }} </span>
+              </bk-col>
+              <bk-col
+                class="pl0 f14"
+                :span="8"
+              >
+                <span class="confirm-value">{{ uploadDialogConf.package.app_description.code }}</span>
+              </bk-col>
+            </bk-row>
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14"
+                :span="2"
+              >
+                <span class="confirm-key"> {{ $t('应用名称：') }} </span>
+              </bk-col>
+              <bk-col
+                class="pl0 f14"
+                :span="8"
+              >
+                <span class="confirm-value">{{ uploadDialogConf.package.app_description.name }}</span>
+              </bk-col>
+            </bk-row>
+          </bk-container>
+        </div>
 
-                <div class="package-data-box mb20" v-for="(packageItem, key) of uploadDialogConf.package.app_description.modules" :key="key">
-                    <p class="package-data-title">{{ key }}<span v-if="packageItem.is_default"> ({{ $t('主') }}) </span></p>
-                    <bk-container :col="12" :margin="0">
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14 " :span="2"><span class="confirm-key"> {{ $t('开发语言：') }} </span></bk-col>
-                            <bk-col class="pl0 f14" :span="8"><span class="confirm-value">{{packageItem.language}}</span></bk-col>
-                        </bk-row>
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14" :span="2"><span class="confirm-key"> {{ $t('增强服务') }} </span></bk-col>
-                            <bk-col class="f12 pr0 pl0 mt2" :span="10"><span class="confirm-value"> {{ $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）') }} </span></bk-col>
-                        </bk-row>
-                    </bk-container>
-                    <ul class="package-data-services">
-                        <li
-                            :class="uploadDialogConf.package.supported_services.includes(service.name) ? 'added' : 'not_supported'"
-                            class="package-data-rel"
-                            v-for="(service, index) of packageItem.services"
-                            :key="index">
-                            {{service.name}}
-                            <i v-if="service.shared_from" class="paasng-icon paasng-info-circle info-icon" v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"></i>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div v-else>
-                <uploader
-                    :action="uploadUrl"
-                    :with-credentials="true"
-                    :name="'package'"
-                    :key="renderUploaderIndex"
-                    :accept-tips="$t('仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件')"
-                    :headers="uploadHeader"
-                    :on-upload-success="handleSuccess"
-                    :on-upload-error="handleError">
-                </uploader>
-            </div>
-            <div slot="footer">
-                <bk-button class="mr5" theme="primary" :disabled="!uploadDialogConf.package" @click="handleCommitPackage" :loading="isDataCommiting"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="handleCancelCommit"> {{ $t('取消') }} </bk-button>
-            </div>
-        </bk-dialog>
-    </div>
+        <div
+          v-for="(packageItem, key) of uploadDialogConf.package.app_description.modules"
+          :key="key"
+          class="package-data-box mb20"
+        >
+          <p class="package-data-title">
+            {{ key }}<span v-if="packageItem.is_default"> ({{ $t('主') }}) </span>
+          </p>
+          <bk-container
+            :col="12"
+            :margin="0"
+          >
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14 "
+                :span="2"
+              >
+                <span class="confirm-key"> {{ $t('开发语言：') }} </span>
+              </bk-col>
+              <bk-col
+                class="pl0 f14"
+                :span="8"
+              >
+                <span class="confirm-value">{{ packageItem.language }}</span>
+              </bk-col>
+            </bk-row>
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14"
+                :span="2"
+              >
+                <span class="confirm-key"> {{ $t('增强服务') }} </span>
+              </bk-col>
+              <bk-col
+                class="f12 pr0 pl0 mt2"
+                :span="10"
+              >
+                <span class="confirm-value"> {{ $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）') }} </span>
+              </bk-col>
+            </bk-row>
+          </bk-container>
+          <ul class="package-data-services">
+            <li
+              v-for="(service, index) of packageItem.services"
+              :key="index"
+              :class="uploadDialogConf.package.supported_services.includes(service.name) ? 'added' : 'not_supported'"
+              class="package-data-rel"
+            >
+              {{ service.name }}
+              <i
+                v-if="service.shared_from"
+                v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
+                class="paasng-icon paasng-info-circle info-icon"
+              />
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div v-else>
+        <uploader
+          :key="renderUploaderIndex"
+          :action="uploadUrl"
+          :with-credentials="true"
+          :name="'package'"
+          :accept-tips="$t('仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件')"
+          :headers="uploadHeader"
+          :on-upload-success="handleSuccess"
+          :on-upload-error="handleError"
+        />
+      </div>
+      <div slot="footer">
+        <bk-button
+          class="mr5"
+          theme="primary"
+          :disabled="!uploadDialogConf.package"
+          :loading="isDataCommiting"
+          @click="handleCommitPackage"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="handleCancelCommit"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>

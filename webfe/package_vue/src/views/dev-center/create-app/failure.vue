@@ -1,30 +1,59 @@
 <template lang="html">
-    <div class="paas-content white">
-        <div class="wrap">
-            <div class="establish-success">
-                <!-- 创建成功 start -->
-                <div class="establish-success-fleft">
-                    <i class="paasng-icon paasng-close-circle-shape text-fail"></i>
-                    <h2> {{ $t('创建失败') }} </h2>
-                    <p> {{ $t('很遗憾！您的') }} <a href="javascript:" class="blue">{{appname}}</a> {{ $t('应用创建失败') }} </p>
-                    <p class="fail-reason">{{reason}}</p>
-                    <p><router-link :to="{ name: 'createApp' }" class="ps-btn ps-btn-primary ps-btn-l"> {{ $t('重试') }} </router-link></p>
-                </div>
-                <!-- 创建成功 end -->
-
-                <!-- 帮助 start -->
-                <div class="overview-sub-fright">
-                    <dl class="overview-sub-dl">
-                        <dt> {{ $t('帮助') }} </dt>
-                        <dd><a href="javascript:" class="blue"> {{ $t('如何搭建本地开发环境？') }} </a></dd>
-                        <dd><a href="javascript:" class="blue"> {{ $t('如何部署蓝鲸应用？') }} </a></dd>
-                        <dd><a href="javascript:" class="blue"> {{ $t('如何使用蓝鲸开发框架？') }} </a></dd>
-                    </dl>
-                </div>
-                <!-- 帮助 end -->
-            </div>
+  <div class="paas-content white">
+    <div class="wrap">
+      <div class="establish-success">
+        <!-- 创建成功 start -->
+        <div class="establish-success-fleft">
+          <i class="paasng-icon paasng-close-circle-shape text-fail" />
+          <h2> {{ $t('创建失败') }} </h2>
+          <p>
+            {{ $t('很遗憾！您的') }} <a
+              href="javascript:"
+              class="blue"
+            >{{ appname }}</a> {{ $t('应用创建失败') }}
+          </p>
+          <p class="fail-reason">
+            {{ reason }}
+          </p>
+          <p>
+            <router-link
+              :to="{ name: 'createApp' }"
+              class="ps-btn ps-btn-primary ps-btn-l"
+            >
+              {{ $t('重试') }}
+            </router-link>
+          </p>
         </div>
+        <!-- 创建成功 end -->
+
+        <!-- 帮助 start -->
+        <div class="overview-sub-fright">
+          <dl class="overview-sub-dl">
+            <dt> {{ $t('帮助') }} </dt>
+            <dd>
+              <a
+                href="javascript:"
+                class="blue"
+              > {{ $t('如何搭建本地开发环境？') }} </a>
+            </dd>
+            <dd>
+              <a
+                href="javascript:"
+                class="blue"
+              > {{ $t('如何部署蓝鲸应用？') }} </a>
+            </dd>
+            <dd>
+              <a
+                href="javascript:"
+                class="blue"
+              > {{ $t('如何使用蓝鲸开发框架？') }} </a>
+            </dd>
+          </dl>
+        </div>
+        <!-- 帮助 end -->
+      </div>
     </div>
+  </div>
 </template>
 
 <script>

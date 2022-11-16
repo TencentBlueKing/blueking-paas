@@ -1,18 +1,24 @@
 <template>
-    <div class="paas-docu-wrapper">
-        <section
-            class="docu-item"
-            v-for="(item, index) in data"
-            :key="index">
-            <p class="name" @click.stop="handleOpen(item)">
-                <span v-html="handleHighlight(item.title)"></span>
-            </p>
-            <div class="digest-content"
-                v-html="handleContentHighlight(item.digest)"
-                v-if="isShowContent(item.digest)"
-                @click.stop="handleOpen(item)"></div>
-        </section>
-    </div>
+  <div class="paas-docu-wrapper">
+    <section
+      v-for="(item, index) in data"
+      :key="index"
+      class="docu-item"
+    >
+      <p
+        class="name"
+        @click.stop="handleOpen(item)"
+      >
+        <span v-html="handleHighlight(item.title)" />
+      </p>
+      <div
+        v-if="isShowContent(item.digest)"
+        class="digest-content"
+        @click.stop="handleOpen(item)"
+        v-html="handleContentHighlight(item.digest)"
+      />
+    </section>
+  </div>
 </template>
 <script>
     export default {

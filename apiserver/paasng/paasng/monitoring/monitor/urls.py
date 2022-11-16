@@ -18,6 +18,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from django.conf.urls import url
+from django.urls import path
 
 from . import views
 
@@ -39,4 +40,12 @@ urlpatterns = [
         r'api/monitor/record/applications/summary/$',
         views.EventRecordView.as_view({'get': 'app_summary'}),
     ),
+    path(
+        'api/monitor/applications/<slug:code>/modules/<slug:module_name>/alert_rules/',
+        views.AlertRulesView.as_view({'get': 'list'}),
+    ),
+    path(
+        'api/monitor/applications/<slug:code>/alert_rules/<int:id>/', views.AlertRulesView.as_view({'put': 'update'})
+    ),
+    path('api/monitor/supported_alerts/', views.AlertRulesView.as_view({'get': 'list_supported_alerts'})),
 ]

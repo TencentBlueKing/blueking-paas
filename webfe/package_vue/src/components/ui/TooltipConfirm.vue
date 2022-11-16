@@ -1,16 +1,30 @@
 <template lang="html">
-    <dropdown
-        :options="defaultOptions"
-        ref="tooltip">
-        <div slot="trigger" style="display: inline">
-            <slot name="trigger"></slot>
-        </div>
-        <div slot="content" :class="['tooltip-default',theme]" @mouseover="mouseoverHandler" @mouseout="mouseoutHandler">
-            <a class="tooltip-btn okBtn" @click="ok">{{ okText }}</a>
-            <a class="tooltip-btn cancelBtn" @click="cancel">{{ cancelText }}</a>
-        </div>
-    </dropdown>
-
+  <dropdown
+    ref="tooltip"
+    :options="defaultOptions"
+  >
+    <div
+      slot="trigger"
+      style="display: inline"
+    >
+      <slot name="trigger" />
+    </div>
+    <div
+      slot="content"
+      :class="['tooltip-default',theme]"
+      @mouseover="mouseoverHandler"
+      @mouseout="mouseoutHandler"
+    >
+      <a
+        class="tooltip-btn okBtn"
+        @click="ok"
+      >{{ okText }}</a>
+      <a
+        class="tooltip-btn cancelBtn"
+        @click="cancel"
+      >{{ cancelText }}</a>
+    </div>
+  </dropdown>
 </template>
 
 <script>

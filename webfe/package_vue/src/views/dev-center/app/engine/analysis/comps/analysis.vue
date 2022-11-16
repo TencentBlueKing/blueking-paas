@@ -1,183 +1,279 @@
 <template lang="html">
-    <section>
-        <div class="ps-top-card mt20">
-            <section class="content no-border">
-                <div
-                    :class="['content-header', { 'mt15': engineEnabled }]">
-                    <div class="bk-button-group fl" v-if="engineEnabled">
-                        <bk-button
-                            theme="primary"
-                            style="width: 101px;"
-                            :outline="curEnv !== 'stag'"
-                            @click="curEnv = 'stag'">
-                            {{ $t('预发布环境') }}
-                        </bk-button>
-                        <bk-button
-                            theme="primary"
-                            style="width: 101px;"
-                            :outline="curEnv !== 'prod'"
-                            @click="curEnv = 'prod'">
-                            {{ $t('生产环境') }}
-                        </bk-button>
-                    </div>
-                    <div class="f12 fl" style="color: #666;" v-else>
-                        {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
-                        <bk-button
-                            text
-                            class="info-button"
-                            @click.stop="isShowSideslider = true">
-                            {{ $t('接入指引') }}
-                        </bk-button>
-                    </div>
-                    <bk-date-picker
-                        class="fr"
-                        v-model="initDateTimeRange"
-                        :placeholder="$t('选择日期范围')"
-                        :type="'daterange'"
-                        placement="bottom-end"
-                        :shortcuts="shortcuts"
-                        :shortcut-close="true"
-                        :options="dateOptions"
-                        @change="handleDateChange">
-                    </bk-date-picker>
-                </div>
-
-                <div class="desc f12 fix" v-if="engineEnabled && tabName === 'webAnalysis'">
-                    {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
-                    <bk-button
-                        text
-                        class="info-button"
-                        @click.stop="isShowSideslider = true">
-                        {{ $t('接入指引') }}
-                    </bk-button>
-                </div>
-                <div class="desc f12 fix" v-if="tabName === 'logAnalysis'">
-                    {{ $t('基于应用访问日志进行访问量统计') }}
-                    <a :href="GLOBAL.DOC.PA_ANALYSIS_INGRESS" target="_blank" class="f12 ml5 mr15"> {{ $t('数据说明') }} </a>
-                    <bk-popover v-if="!isLogEnabled">
-                        <a href="javascript: void(0);" class="f12 ml5 mr15" @click="handleEnableLog">
-                            <div class="icon-wrapper">
-                                <i class="paasng-icon paasng-cog" style="vertical-align: middle;" v-if="!isEditLoading"></i>
-                                <round-loading ext-cls="analysis-round-loading" v-else />
-                            </div>
-                            {{ $t('手动开启') }}
-                        </a>
-                        <div slot="content" style="width: 300px; text-align: left;">
-                            {{ $t('日志统计功能会在应用部署后自动打开，你也可以点这手动开启。该功能打开后暂不支持关闭') }}
-                        </div>
-                    </bk-popover>
-                </div>
-                
-                <div class="analysis-box" :class="!engineEnabled && tabName === 'webAnalysis' ? 'set-margin-top' : ''">
-                    <div class="summary">
-                        <div class="pv">
-                            <strong class="title">{{summaryData.pv || 0}}</strong>
-                            <p class="desc"> {{ $t('访问数（PV）') }} </p>
-                        </div>
-                        <div class="uv">
-                            <strong class="title">{{summaryData.uv || 0}}</strong>
-                            <p class="desc">
-                                {{ $t('独立访客数（UV）') }}
-                                <i class="paasng-icon paasng-exclamation-circle uv-tips" v-if="tabName === 'webAnalysis'" v-bk-tooltips="tootipsText"></i>
-                                <bk-popover placement="top" :transfer="true">
-                                    <i class="paasng-icon paasng-exclamation-circle uv-tips" v-if="tabName === 'logAnalysis'"></i>
-                                    <div slot="content">
-                                        <p> {{ $t('独立访客数通过 IP 和 User-Agent 数据计算而来') }}
-                                            <a :href="GLOBAL.DOC.PA_ANALYSIS_INGRESS_UV" target="_blank" class="ps-link">
-                                                <i class="paasng-icon paasng-angle-double-right"></i> {{ $t('查看详细规则') }}
-                                            </a>
-                                        </p>
-                                    </div>
-                                </bk-popover>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="chart-wrapper">
-                        <div class="chart-box">
-                            <div class="chart-action">
-                                <ul class="dimension fl">
-                                    <li :class="{ 'active': chartFilterType.pv }" @click="handleChartFilte('pv')">
-                                        <span class="dot warning"></span> PV
-                                    </li>
-                                    <li :class="{ 'active': chartFilterType.uv }" @click="handleChartFilte('uv')">
-                                        <span class="dot primary"></span> UV
-                                    </li>
-                                </ul>
-
-                                <ul class="time fr">
-                                    <li :class="{ 'active': defaultRange === '5m' }" v-if="allowRanges.includes('5m')" @click="handleRangeChange('5m')"> {{ $t('5分钟') }} </li>
-                                    <li :class="{ 'active': defaultRange === '1h', 'disabled': !allowRanges.includes('1h') }" v-if="allowRanges.includes('1h')" @click="handleRangeChange('1h')"> {{ $t('小时') }} </li>
-                                    <li :class="{ 'active': defaultRange === '1d' }" v-if="allowRanges.includes('1d')" @click="handleRangeChange('1d')">{{ $t('天') }}</li>
-                                </ul>
-                            </div>
-                            <chart
-                                :options="chartOption"
-                                :key="renderChartIndex"
-                                ref="chart"
-                                auto-resize
-                                style="width: 100%; height: 240px; background: #1e1e21;">
-                            </chart>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-header mt15">
-                    <bk-select
-                        v-model="dimensionType"
-                        style="width: 202px;"
-                        :placeholder="$t('选择分组维度')"
-                        :searchable="false"
-                        :clearable="false"
-                        @selected="handleDimensionChange">
-                        <bk-option v-for="option in dimensionList"
-                            :key="option.value"
-                            :id="option.value"
-                            :name="option.name">
-                        </bk-option>
-                    </bk-select>
-                    <bk-button
-                        class="export-button"
-                        theme="default"
-                        :disabled="!pathData.length"
-                        :loading="exportLoading"
-                        @click="handleExportToExcel"> {{ $t('导出') }} </bk-button>
-                </div>
-                <bk-table style="margin-top: 15px;"
-                    :data="pathData"
-                    :size="'small'"
-                    :pagination="pagination"
-                    v-bkloading="{ isLoading: isPathDataLoading }"
-                    @page-change="pageChange"
-                    @page-limit-change="limitChange"
-                    @sort-change="sortChange">
-                    <bk-table-column
-                        :column-key="field.prop"
-                        :label="$t(field.name)"
-                        :prop="field.prop"
-                        v-for="field of fieldList"
-                        :key="field.prop"
-                        :sortable="field.sortable">
-                        <template slot-scope="{ row }">
-                            <span v-bk-tooltips="row.description" v-if="row.display_name && field.prop === 'name'" class="display-name">
-                                {{ row.display_name }}
-                            </span>
-                            <span v-else>
-                                {{ row[field.prop] }}
-                            </span>
-                            <template v-if="field.prop === 'name' && row.display_name && row.link">
-                                ，<a target="_blank" :href="row.link"> {{ $t('更多') }} </a>
-                            </template>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </section>
+  <section>
+    <div class="ps-top-card mt20">
+      <section class="content no-border">
+        <div
+          :class="['content-header', { 'mt15': engineEnabled }]"
+        >
+          <div
+            v-if="engineEnabled"
+            class="bk-button-group fl"
+          >
+            <bk-button
+              theme="primary"
+              style="width: 101px;"
+              :outline="curEnv !== 'stag'"
+              @click="curEnv = 'stag'"
+            >
+              {{ $t('预发布环境') }}
+            </bk-button>
+            <bk-button
+              theme="primary"
+              style="width: 101px;"
+              :outline="curEnv !== 'prod'"
+              @click="curEnv = 'prod'"
+            >
+              {{ $t('生产环境') }}
+            </bk-button>
+          </div>
+          <div
+            v-else
+            class="f12 fl"
+            style="color: #666;"
+          >
+            {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
+            <bk-button
+              text
+              class="info-button"
+              @click.stop="isShowSideslider = true"
+            >
+              {{ $t('接入指引') }}
+            </bk-button>
+          </div>
+          <bk-date-picker
+            v-model="initDateTimeRange"
+            class="fr"
+            :placeholder="$t('选择日期范围')"
+            :type="'daterange'"
+            placement="bottom-end"
+            :shortcuts="shortcuts"
+            :shortcut-close="true"
+            :options="dateOptions"
+            @change="handleDateChange"
+          />
         </div>
-        <render-sideslider
-            :is-show.sync="isShowSideslider"
-            :title="sidesliderTitle"
-            :engine-enable="curAppInfo.web_config.engine_enabled"
-            :site-name="siteDisplayName" />
-    </section>
+
+        <div
+          v-if="engineEnabled && tabName === 'webAnalysis'"
+          class="desc f12 fix"
+        >
+          {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
+          <bk-button
+            text
+            class="info-button"
+            @click.stop="isShowSideslider = true"
+          >
+            {{ $t('接入指引') }}
+          </bk-button>
+        </div>
+        <div
+          v-if="tabName === 'logAnalysis'"
+          class="desc f12 fix"
+        >
+          {{ $t('基于应用访问日志进行访问量统计') }}
+          <a
+            :href="GLOBAL.DOC.PA_ANALYSIS_INGRESS"
+            target="_blank"
+            class="f12 ml5 mr15"
+          > {{ $t('数据说明') }} </a>
+          <bk-popover v-if="!isLogEnabled">
+            <a
+              href="javascript: void(0);"
+              class="f12 ml5 mr15"
+              @click="handleEnableLog"
+            >
+              <div class="icon-wrapper">
+                <i
+                  v-if="!isEditLoading"
+                  class="paasng-icon paasng-cog"
+                  style="vertical-align: middle;"
+                />
+                <round-loading
+                  v-else
+                  ext-cls="analysis-round-loading"
+                />
+              </div>
+              {{ $t('手动开启') }}
+            </a>
+            <div
+              slot="content"
+              style="width: 300px; text-align: left;"
+            >
+              {{ $t('日志统计功能会在应用部署后自动打开，你也可以点这手动开启。该功能打开后暂不支持关闭') }}
+            </div>
+          </bk-popover>
+        </div>
+
+        <div
+          class="analysis-box"
+          :class="!engineEnabled && tabName === 'webAnalysis' ? 'set-margin-top' : ''"
+        >
+          <div class="summary">
+            <div class="pv">
+              <strong class="title">{{ summaryData.pv || 0 }}</strong>
+              <p class="desc">
+                {{ $t('访问数（PV）') }}
+              </p>
+            </div>
+            <div class="uv">
+              <strong class="title">{{ summaryData.uv || 0 }}</strong>
+              <p class="desc">
+                {{ $t('独立访客数（UV）') }}
+                <i
+                  v-if="tabName === 'webAnalysis'"
+                  v-bk-tooltips="tootipsText"
+                  class="paasng-icon paasng-exclamation-circle uv-tips"
+                />
+                <bk-popover
+                  placement="top"
+                  :transfer="true"
+                >
+                  <i
+                    v-if="tabName === 'logAnalysis'"
+                    class="paasng-icon paasng-exclamation-circle uv-tips"
+                  />
+                  <div slot="content">
+                    <p>
+                      {{ $t('独立访客数通过 IP 和 User-Agent 数据计算而来') }}
+                      <a
+                        :href="GLOBAL.DOC.PA_ANALYSIS_INGRESS_UV"
+                        target="_blank"
+                        class="ps-link"
+                      >
+                        <i class="paasng-icon paasng-angle-double-right" /> {{ $t('查看详细规则') }}
+                      </a>
+                    </p>
+                  </div>
+                </bk-popover>
+              </p>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-box">
+              <div class="chart-action">
+                <ul class="dimension fl">
+                  <li
+                    :class="{ 'active': chartFilterType.pv }"
+                    @click="handleChartFilte('pv')"
+                  >
+                    <span class="dot warning" /> PV
+                  </li>
+                  <li
+                    :class="{ 'active': chartFilterType.uv }"
+                    @click="handleChartFilte('uv')"
+                  >
+                    <span class="dot primary" /> UV
+                  </li>
+                </ul>
+
+                <ul class="time fr">
+                  <li
+                    v-if="allowRanges.includes('5m')"
+                    :class="{ 'active': defaultRange === '5m' }"
+                    @click="handleRangeChange('5m')"
+                  >
+                    {{ $t('5分钟') }}
+                  </li>
+                  <li
+                    v-if="allowRanges.includes('1h')"
+                    :class="{ 'active': defaultRange === '1h', 'disabled': !allowRanges.includes('1h') }"
+                    @click="handleRangeChange('1h')"
+                  >
+                    {{ $t('小时') }}
+                  </li>
+                  <li
+                    v-if="allowRanges.includes('1d')"
+                    :class="{ 'active': defaultRange === '1d' }"
+                    @click="handleRangeChange('1d')"
+                  >
+                    {{ $t('天') }}
+                  </li>
+                </ul>
+              </div>
+              <chart
+                :key="renderChartIndex"
+                ref="chart"
+                :options="chartOption"
+                auto-resize
+                style="width: 100%; height: 240px; background: #1e1e21;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="content-header mt15">
+          <bk-select
+            v-model="dimensionType"
+            style="width: 202px;"
+            :placeholder="$t('选择分组维度')"
+            :searchable="false"
+            :clearable="false"
+            @selected="handleDimensionChange"
+          >
+            <bk-option
+              v-for="option in dimensionList"
+              :id="option.value"
+              :key="option.value"
+              :name="option.name"
+            />
+          </bk-select>
+          <bk-button
+            class="export-button"
+            theme="default"
+            :disabled="!pathData.length"
+            :loading="exportLoading"
+            @click="handleExportToExcel"
+          >
+            {{ $t('导出') }}
+          </bk-button>
+        </div>
+        <bk-table
+          v-bkloading="{ isLoading: isPathDataLoading }"
+          style="margin-top: 15px;"
+          :data="pathData"
+          :size="'small'"
+          :pagination="pagination"
+          @page-change="pageChange"
+          @page-limit-change="limitChange"
+          @sort-change="sortChange"
+        >
+          <bk-table-column
+            v-for="field of fieldList"
+            :key="field.prop"
+            :column-key="field.prop"
+            :label="$t(field.name)"
+            :prop="field.prop"
+            :sortable="field.sortable"
+          >
+            <template slot-scope="{ row }">
+              <span
+                v-if="row.display_name && field.prop === 'name'"
+                v-bk-tooltips="row.description"
+                class="display-name"
+              >
+                {{ row.display_name }}
+              </span>
+              <span v-else>
+                {{ row[field.prop] }}
+              </span>
+              <template v-if="field.prop === 'name' && row.display_name && row.link">
+                ，<a
+                  target="_blank"
+                  :href="row.link"
+                > {{ $t('更多') }} </a>
+              </template>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </section>
+    </div>
+    <render-sideslider
+      :is-show.sync="isShowSideslider"
+      :title="sidesliderTitle"
+      :engine-enable="curAppInfo.web_config.engine_enabled"
+      :site-name="siteDisplayName"
+    />
+  </section>
 </template>
 
 <script>
@@ -433,7 +529,7 @@
                 try {
                     const appCode = this.appCode;
                     const moduleId = this.curModuleId;
-                    
+
                     const res = await this.$store.dispatch('analysis/getAnalysisStatus', {
                         appCode,
                         moduleId
@@ -528,7 +624,7 @@
                     const fields = this.fieldList.map(item => item.name);
                     const props = this.fieldList.map(item => item.prop);
                     const data = this.formatJson(props, results);
-                    
+
                     const getCurTabText = () => {
                         if (this.tabName === 'webAnalysis') {
                             return '_website_browsing_statistics_';
@@ -597,7 +693,7 @@
                     const moduleId = this.curModuleId;
                     const env = this.curEnv;
                     const backendType = this.backendType;
-   
+
                     const res = await this.$store.dispatch('analysis/getAnalysisConfig', {
                         appCode,
                         moduleId,

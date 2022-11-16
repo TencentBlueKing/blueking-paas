@@ -19,137 +19,137 @@
 import _ from 'lodash';
 
 class NavDataProcessor {
-    constructor () {
-        this.navItems = [];
-        this.navCategories = [];
-        this.id = 0;
-    }
+  constructor () {
+    this.navItems = [];
+    this.navCategories = [];
+    this.id = 0;
+  }
 
-    _refineItem (item) {
-        // Use desRoute as default
-        const matchRouters = item.matchRouters || [item.destRoute.name];
-        const matchRouterParams = item.matchRouterParams || item.destRoute.params;
-        this.id++;
-        return {
-            ...item,
-            matchRouters: matchRouters,
-            matchRouterParams: matchRouterParams,
-            id: this.id,
-            type: 'item'
-        };
-    }
+  _refineItem (item) {
+    // Use desRoute as default
+    const matchRouters = item.matchRouters || [item.destRoute.name];
+    const matchRouterParams = item.matchRouterParams || item.destRoute.params;
+    this.id++;
+    return {
+      ...item,
+      matchRouters: matchRouters,
+      matchRouterParams: matchRouterParams,
+      id: this.id,
+      type: 'item'
+    };
+  }
 
-    addNavItem (item) {
-        this.navItems.push(this._refineItem(item));
-    }
+  addNavItem (item) {
+    this.navItems.push(this._refineItem(item));
+  }
 
-    simpleAddNavItem (categoryName, destRouter, name) {
-        this.addNavItem({
-            'categoryName': categoryName,
-            'name': name,
-            'matchRouters': [destRouter],
-            'destRoute': {
-                'name': destRouter
-            }
-        });
-    }
+  simpleAddNavItem (categoryName, destRouter, name) {
+    this.addNavItem({
+      'categoryName': categoryName,
+      'name': name,
+      'matchRouters': [destRouter],
+      'destRoute': {
+        'name': destRouter
+      }
+    });
+  }
 
-    addServiceNavItem (id, name) {
-        this.addNavItem({
-            'categoryName': 'appServices',
-            'name': name,
-            'matchRouters': ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
-            'destRoute': {
-                'name': 'appService',
-                'params': {
-                    'category_id': id.toString()
-                }
-            }
-        });
-    }
-
-    addPermissionNavItem (type) {
-        const nav = {
-            user_access_control: {
-                'categoryName': 'appPermissions',
-                'name': '用户限制',
-                'matchRouters': ['appPermissionUser', 'appPermissionPathExempt'],
-                'destRoute': {
-                    'name': 'appPermissionUser'
-                }
-            },
-            ip_access_control: {
-                'categoryName': 'appPermissions',
-                'name': 'IP限制',
-                'matchRouters': ['appPermissionIP'],
-                'destRoute': {
-                    'name': 'appPermissionIP'
-                }
-            },
-            approval: {
-                'categoryName': 'appPermissions',
-                'name': '单据审批',
-                'matchRouters': ['appOrderAudit'],
-                'destRoute': {
-                    'name': 'appOrderAudit'
-                }
-            }
-        };
-        if (type && nav[type]) {
-            this.addNavItem(nav[type]);
+  addServiceNavItem (id, name) {
+    this.addNavItem({
+      'categoryName': 'appServices',
+      'name': name,
+      'matchRouters': ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
+      'destRoute': {
+        'name': 'appService',
+        'params': {
+          'category_id': id.toString()
         }
+      }
+    });
+  }
+
+  addPermissionNavItem (type) {
+    const nav = {
+      user_access_control: {
+        'categoryName': 'appPermissions',
+        'name': '用户限制',
+        'matchRouters': ['appPermissionUser', 'appPermissionPathExempt'],
+        'destRoute': {
+          'name': 'appPermissionUser'
+        }
+      },
+      ip_access_control: {
+        'categoryName': 'appPermissions',
+        'name': 'IP限制',
+        'matchRouters': ['appPermissionIP'],
+        'destRoute': {
+          'name': 'appPermissionIP'
+        }
+      },
+      approval: {
+        'categoryName': 'appPermissions',
+        'name': '单据审批',
+        'matchRouters': ['appOrderAudit'],
+        'destRoute': {
+          'name': 'appOrderAudit'
+        }
+      }
+    };
+    if (type && nav[type]) {
+      this.addNavItem(nav[type]);
     }
+  }
 
-    feedOldStructures (data) {
-        // Flat legacy sturecture
-        _.forEach(data, (item) => {
-            if (item.visible === false) {
-                return;
-            }
+  feedOldStructures (data) {
+    // Flat legacy sturecture
+    _.forEach(data, (item) => {
+      if (item.visible === false) {
+        return;
+      }
 
-            if (item.sublist) {
-                const categoryId = this.id;
-                this.id++;
-                const navCategory = {
-                    ...item,
-                    id: categoryId,
-                    type: 'category'
-                };
+      if (item.sublist) {
+        const categoryId = this.id;
+        this.id++;
+        const navCategory = {
+          ...item,
+          id: categoryId,
+          type: 'category'
+        };
 
-                item.sublist.forEach((subitem) => {
-                    if (subitem.visible === false) {
-                        return;
-                    }
+        item.sublist.forEach((subitem) => {
+          if (subitem.visible === false) {
+            return;
+          }
 
-                    this.navItems.push({
-                        ...this._refineItem(subitem),
-                        categoryName: navCategory.name
-                    });
-                });
-
-                delete navCategory.sublist;
-                this.navCategories.push(navCategory);
-            } else {
-                this.navItems.push({
-                    ...this._refineItem(item),
-                    categoryName: null
-                });
-            }
+          this.navItems.push({
+            ...this._refineItem(subitem),
+            categoryName: navCategory.name
+          });
         });
-    }
+
+        delete navCategory.sublist;
+        this.navCategories.push(navCategory);
+      } else {
+        this.navItems.push({
+          ...this._refineItem(item),
+          categoryName: null
+        });
+      }
+    });
+  }
 }
 
 export {
-    NavDataProcessor
+  NavDataProcessor
 };
 
 export function processNavData (data) {
-    const processer = new NavDataProcessor();
-    processer.feedOldStructures(data);
-    return {
-        'navItems': processer.navItems,
-        'navCategories': processer.navCategories
-    };
+  const processer = new NavDataProcessor();
+  processer.feedOldStructures(data);
+  return {
+    'navItems': processer.navItems,
+    'navCategories': processer.navCategories
+  };
 }
 
 /**
@@ -160,15 +160,15 @@ export function processNavData (data) {
  * @return {number} 高度值
  */
 export function getActualTop (node) {
-    let actualTop = node.offsetTop;
-    let current = node.offsetParent;
+  let actualTop = node.offsetTop;
+  let current = node.offsetParent;
 
-    while (current !== null) {
-        actualTop += current.offsetTop;
-        current = current.offsetParent;
-    }
+  while (current !== null) {
+    actualTop += current.offsetTop;
+    current = current.offsetParent;
+  }
 
-    return actualTop;
+  return actualTop;
 }
 
 /**
@@ -179,13 +179,13 @@ export function getActualTop (node) {
  * @return {number} 宽度值
  */
 export function getActualLeft (node) {
-    let actualLeft = node.offsetLeft;
-    let current = node.offsetParent;
+  let actualLeft = node.offsetLeft;
+  let current = node.offsetParent;
 
-    while (current !== null) {
-        actualLeft += current.offsetLeft;
-        current = current.offsetParent;
-    }
+  while (current !== null) {
+    actualLeft += current.offsetLeft;
+    current = current.offsetParent;
+  }
 
-    return actualLeft;
+  return actualLeft;
 }

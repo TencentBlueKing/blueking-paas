@@ -1,41 +1,76 @@
 <template>
-    <div>
-        <div class="establish-tab" style="display: block;" v-if="isAuth">
-            <label class="form-label" style="font-weight: unset; padding-top: 0px; display:flex; justify-content: space-between;">
-                <span> {{ $t('绑定项目源码仓库：') }} </span>
-                <a @click="fetchMethod" style="cursor: pointer;"> {{ $t('刷新') }} </a>
-            </label>
-            <div id="shorter-loading-animate" class="mt10">
-                <bk-select
-                    v-model="selected"
-                    :placeholder="$t('请选择')"
-                    :clearable="false"
-                    :searchable="true">
-                    <bk-option
-                        v-for="(option, optionIndex) in repoList"
-                        :key="optionIndex"
-                        :id="option.id"
-                        :name="option.name">
-                    </bk-option>
-                </bk-select>
-            </div>
-        </div>
-        <div class="lower-loading-animate establish-tab" style="padding-bottom: 9px" v-else>
-            <paas-loading :loading="isLoading">
-                <div slot="loadingContent" class="unbinded-prompt" v-if="gitControlType === 'tc_git'">
-                    <span style="color: #ff3737;">{{ alertText }}</span>
-                    {{ $t('首次使用工蜂，请先阅读') }}
-                    <a :href="GLOBAL.DOC.TC_GIT_AUTH" target="_blank"> {{ $t('授权指引文档') }} </a>
-                    <span style="float: right">
-                        <a @click="auth_associate(authAddress, fetchMethod)" style="cursor: pointer;"> {{ $t('已阅读? 去关联') }} </a>
-                    </span>
-                </div>
-                <div slot="loadingContent" class="unbinded-prompt tr" v-else>
-                    <a @click="auth_associate(authAddress, fetchMethod)" style="cursor: pointer;"> {{ $t('去关联') }} </a>
-                </div>
-            </paas-loading>
-        </div>
+  <div>
+    <div
+      v-if="isAuth"
+      class="establish-tab"
+      style="display: block;"
+    >
+      <label
+        class="form-label"
+        style="font-weight: unset; padding-top: 0px; display:flex; justify-content: space-between;"
+      >
+        <span> {{ $t('绑定项目源码仓库：') }} </span>
+        <a
+          style="cursor: pointer;"
+          @click="fetchMethod"
+        > {{ $t('刷新') }} </a>
+      </label>
+      <div
+        id="shorter-loading-animate"
+        class="mt10"
+      >
+        <bk-select
+          v-model="selected"
+          :placeholder="$t('请选择')"
+          :clearable="false"
+          :searchable="true"
+        >
+          <bk-option
+            v-for="(option, optionIndex) in repoList"
+            :id="option.id"
+            :key="optionIndex"
+            :name="option.name"
+          />
+        </bk-select>
+      </div>
     </div>
+    <div
+      v-else
+      class="lower-loading-animate establish-tab"
+      style="padding-bottom: 9px"
+    >
+      <paas-loading :loading="isLoading">
+        <div
+          v-if="gitControlType === 'tc_git'"
+          slot="loadingContent"
+          class="unbinded-prompt"
+        >
+          <span style="color: #ff3737;">{{ alertText }}</span>
+          {{ $t('首次使用工蜂，请先阅读') }}
+          <a
+            :href="GLOBAL.DOC.TC_GIT_AUTH"
+            target="_blank"
+          > {{ $t('授权指引文档') }} </a>
+          <span style="float: right">
+            <a
+              style="cursor: pointer;"
+              @click="auth_associate(authAddress, fetchMethod)"
+            > {{ $t('已阅读? 去关联') }} </a>
+          </span>
+        </div>
+        <div
+          v-else
+          slot="loadingContent"
+          class="unbinded-prompt tr"
+        >
+          <a
+            style="cursor: pointer;"
+            @click="auth_associate(authAddress, fetchMethod)"
+          > {{ $t('去关联') }} </a>
+        </div>
+      </paas-loading>
+    </div>
+  </div>
 </template>
 
 <script>

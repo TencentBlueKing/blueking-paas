@@ -1,5 +1,5 @@
 <template>
-    <canvas></canvas>
+  <canvas />
 </template>
 <script>
     import QRious from 'qrious';

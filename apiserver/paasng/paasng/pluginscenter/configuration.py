@@ -22,6 +22,7 @@ from typing import Dict
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 
+from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.models import PluginConfig, PluginDefinition, PluginInstance
 
 
@@ -49,6 +50,9 @@ class PluginConfigManager:
                 return instance
             # unique_key changed, delete old instance and create new one
             PluginConfig.objects.filter(plugin=self.plugin, unique_key=config_id).delete()
+
+        if PluginConfig.objects.filter(plugin=self.plugin, unique_key=unique_key).exists():
+            raise error_codes.CONFIGURATION_CONFLICT.f(conflict_fields=self.build_conflict_message(config_dict))
         return PluginConfig.objects.create(plugin=self.plugin, unique_key=unique_key, row=config_dict)
 
     def delete(self, unique_key: str):
@@ -60,6 +64,15 @@ class PluginConfigManager:
 
     def unique_key(self, config_dict: Dict) -> str:
         """calculate an unique key for a config dict"""
-        unique_columns = [column.title for column in self.pd.config_definition.columns if column.unique]
+        unique_columns = [column.name for column in self.pd.config_definition.columns if column.unique]
         values = [config_dict[column] for column in unique_columns]
         return hashlib.sha256(":".join(values).encode()).hexdigest()
+
+    def build_conflict_message(self, config_dict: Dict) -> str:
+        """build the unique key conflict message"""
+        parts = [
+            f"{column.title}={config_dict[column.name]}"
+            for column in self.pd.config_definition.columns
+            if column.unique
+        ]
+        return ",".join(parts)

@@ -314,10 +314,16 @@ class PluginLogQueryParamsSLZ(serializers.Serializer):
         return attrs
 
 
+class PluginLogQueryDSLSLZ(serializers.Serializer):
+    """查询插件日志的 DSL 参数"""
+
+    query_string = serializers.CharField(help_text="查询语句", default="", allow_blank=True)
+
+
 class PluginLogQueryBodySLZ(serializers.Serializer):
     """查询插件标准输出的 body 参数"""
 
-    query_string = serializers.CharField(help_text="查询语句", default="")
+    query = PluginLogQueryDSLSLZ()
 
 
 class StandardOutputLogLineSLZ(serializers.Serializer):
@@ -418,6 +424,7 @@ class ItsmApprovalSLZ(serializers.Serializer):
 class PluginConfigColumnSLZ(serializers.Serializer):
     """插件「配置管理」表单-列定义"""
 
+    name = serializers.CharField(help_text="该字段对应的变量名")
     title = serializers.CharField(help_text="字段的标题")
     description = serializers.CharField(help_text="字段描述(placeholder)")
     pattern = serializers.CharField(required=False, help_text="校验字段的正则表达式")
@@ -449,10 +456,10 @@ def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
     according to the PluginConfigDefinition definition"""
     config_definition = pd.config_definition
     fields = {
-        column_definition.title: make_config_column_field(column_definition)
+        column_definition.name: make_config_column_field(column_definition)
         for column_definition in config_definition.columns
     }
-    fields["__id__"] = serializers.CharField(help_text="配置项id", source="unique_key")
+    fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
     return type("DynamicPluginConfigSerializer", (serializers.Serializer,), fields)
 
 

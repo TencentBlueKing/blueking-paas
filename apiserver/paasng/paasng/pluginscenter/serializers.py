@@ -427,7 +427,9 @@ class PluginConfigColumnSLZ(serializers.Serializer):
 class PluginConfigSchemaSLZ(serializers.Serializer):
     """插件「配置管理」表单范式"""
 
-    title = serializers.CharField(help_text="「配置管理」的标题")
+    title = TranslatedCharField(help_text="「配置管理」的标题")
+    description = TranslatedCharField(help_text="「配置管理」的描述")
+    docs = serializers.CharField(default=None)
     columns = PluginConfigColumnSLZ(many=True)
 
 
@@ -455,4 +457,9 @@ def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
 
 
 class StubConfigSLZ(serializers.Serializer):
+    """A stub Serializer for creation/update  `Configuration`, just be used to generate docs
+
+    Please see the specific implementation at `make_config_slz_class`
+    """
+
     __id__ = serializers.CharField(help_text="配置项id", source="unique_key")

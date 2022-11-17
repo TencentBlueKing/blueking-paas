@@ -482,7 +482,7 @@
                 left: 20px;
                 right: auto;
                 z-index: 2;
-                color: #666;
+                color: #979BA5;
                 font-size: 18px;
             }
 

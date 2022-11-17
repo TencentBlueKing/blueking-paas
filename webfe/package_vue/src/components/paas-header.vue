@@ -1,5 +1,5 @@
 <template>
-  <div :class="[&quot;ps-header&quot;,&quot;clearfix&quot;,{ &quot;bk-header-static&quot;: is_static }]">
+  <div :class="['ps-header','clearfix',{ 'bk-header-static': is_static }]">
     <div class="ps-header-visible clearfix">
       <router-link
         :to="{ name: 'index' }"
@@ -130,7 +130,7 @@
                   v-if="isShowInput"
                   v-model="filterKey"
                   type="text"
-                  :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
+                  :placeholder="`${$t('输入')} 'FAQ' ${$t('看看')}`"
                   @keydown.down.prevent="emitChildKeyDown"
                   @keydown.up.prevent="emitChildKeyUp"
                   @keypress.enter="enterCallBack($event)"
@@ -250,7 +250,7 @@
       </ul>
     </div>
     <div
-      :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus&quot;: navIndex === 3, &quot;hoverStatus2&quot;: navIndex === 4, &quot;hoverStatus3&quot;: navIndex === 5 }]"
+      :class="['ps-header-invisible','invisible1','clearfix',{ 'hoverStatus': navIndex === 3, 'hoverStatus2': navIndex === 4, 'hoverStatus3': navIndex === 5 }]"
       @mouseover.stop.prevent="showSubNav(navIndex)"
       @mouseout.stop.prevent="hideSubNav"
     >

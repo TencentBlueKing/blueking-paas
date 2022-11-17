@@ -24,6 +24,7 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
+from paasng.pluginscenter.constants import MarketInfoStorageType
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
     ApprovalService,
@@ -71,6 +72,7 @@ def pd():
             "update": make_api_resource("update-market-{ plugin_id }"),
         },
         category=make_api_resource("list-category"),
+        storage=MarketInfoStorageType.PLATFORM,
     )
     pd.basic_info_definition = G(
         PluginBasicInfoDefinition,

@@ -88,6 +88,14 @@ class PluginReleaseStatus(str, StructuredEnum):
     INITIAL = EnumField("initial", label="初始化")
     INTERRUPTED = EnumField('interrupted', label='已中断')
 
+    @classmethod
+    def abnormal_status(cls):
+        return [cls.FAILED, cls.INTERRUPTED]
+
+    @classmethod
+    def running_status(cls):
+        return [cls.INITIAL, cls.PENDING]
+
 
 class LogTimeChoices(str, StructuredEnum):
     """日志搜索-日期范围可选值"""

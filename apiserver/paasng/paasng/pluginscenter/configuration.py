@@ -47,9 +47,8 @@ class PluginConfigManager:
                 instance.row = config_dict
                 instance.save(update_fields=["row", "updated"])
                 return instance
-            else:
-                # unique_key changed, delete old instance and create new one
-                PluginConfig.objects.filter(plugin=self.plugin, unique_key=config_id).delete()
+            # unique_key changed, delete old instance and create new one
+            PluginConfig.objects.filter(plugin=self.plugin, unique_key=config_id).delete()
         return PluginConfig.objects.create(plugin=self.plugin, unique_key=unique_key, row=config_dict)
 
     def delete(self, unique_key: str):

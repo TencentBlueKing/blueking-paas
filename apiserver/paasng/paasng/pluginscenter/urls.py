@@ -54,12 +54,24 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"post": "enter_next_stage"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/back/",
+        views.PluginReleaseViewSet.as_view({"post": "back_to_previous_stage"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/cancel/",
         views.PluginReleaseViewSet.as_view({"post": "cancel_release"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/reset/",
+        views.PluginReleaseViewSet.as_view({"post": "re_release"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/",
         views.PluginReleaseStageViewSet.as_view({"get": "retrieve"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/rerun/",
+        views.PluginReleaseStageViewSet.as_view({"post": "rerun"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/market/",

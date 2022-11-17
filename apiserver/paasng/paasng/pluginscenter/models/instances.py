@@ -61,7 +61,7 @@ class PluginInstance(UuidAuditedModel):
     status = models.CharField(
         verbose_name="插件状态", max_length=16, choices=PluginStatus.get_choices(), default=PluginStatus.WAITING_APPROVAL
     )
-    itsm_detail: ItsmDetail = ItsmDetailField(default=None, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")
 
@@ -106,9 +106,7 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(
-                plugin=plugin, status__in=[PluginReleaseStatus.PENDING, PluginReleaseStatus.INITIAL]
-            ).latest('created')
+            return self.filter(plugin=plugin, status__in=PluginReleaseStatus.running_status()).latest('created')
         except self.model.DoesNotExist:
             return None
 
@@ -164,7 +162,8 @@ class PluginRelease(AuditedModel):
             )
         self.current_stage = next_stage
         self.stages_shortcut = stages_shortcut[::-1]
-        self.save(update_fields=["current_stage", "stages_shortcut", "updated"])
+        self.status = PluginReleaseStatus.PENDING
+        self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
 
 
 class PluginReleaseStage(AuditedModel):
@@ -180,13 +179,27 @@ class PluginReleaseStage(AuditedModel):
 
     status = models.CharField(verbose_name="发布状态", default=PluginReleaseStatus.INITIAL, max_length=16)
     fail_message = models.TextField(verbose_name="错误原因")
-    itsm_detail: ItsmDetail = ItsmDetailField(default=None, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     api_detail = models.JSONField(verbose_name="API 详情", null=True, help_text="该字段仅 invoke_method = api 时可用")
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
 
     class Meta:
         unique_together = ("release", "stage_id")
+
+    def reset(self):
+        """reset release-stage to not executed state"""
+        self.status = PluginReleaseStatus.INITIAL
+        self.fail_message = ""
+        self.itsm_detail = None
+        self.api_detail = None
+        self.save(update_fields=["status", "fail_message", "itsm_detail", "api_detail", "updated"])
+
+    def update_status(self, status: PluginReleaseStatus, fail_message: str = ""):
+        self.status = status
+        if fail_message:
+            self.fail_message = fail_message
+        self.save(update_fields=["status", "fail_message", "updated"])
 
 
 class ApprovalService(UuidAuditedModel):

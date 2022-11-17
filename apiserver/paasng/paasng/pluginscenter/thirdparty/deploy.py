@@ -75,12 +75,10 @@ def check_deploy_result(pd: PluginDefinition, plugin: PluginInstance, version: P
 
     current_stage.api_detail = data
     status = PluginReleaseStatus(data["status"])
-    if status == PluginReleaseStatus.FAILED or status == PluginReleaseStatus.INTERRUPTED:
-        current_stage.fail_message = data["detail"]
-        current_stage.status = status
+    if status in PluginReleaseStatus.abnormal_status():
+        current_stage.update_status(status, fail_message=data["detail"])
     elif status == PluginReleaseStatus.SUCCESSFUL:
-        current_stage.status = status
-    current_stage.save()
+        current_stage.update_status(status)
     return status
 
 

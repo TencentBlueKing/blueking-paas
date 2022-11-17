@@ -52,6 +52,7 @@ from paasng.pluginscenter.models import (
     PluginRelease,
 )
 from paasng.pluginscenter.permissions import IsPluginCreator
+from paasng.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
 from paasng.pluginscenter.sourcectl import build_master_placeholder, get_plugin_repo_accessor
 from paasng.pluginscenter.thirdparty import log as log_api
 from paasng.pluginscenter.thirdparty import market as market_api
@@ -240,14 +241,10 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     pagination_class = LimitOffsetPagination
     filter_backends = [OrderingFilter, SearchFilter, DjangoFilterBackend]
     filterset_class = PluginReleaseFilter
-    permission_classes = [
-        IsAuthenticated,
-        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.RELEASE_VERSION]),
-    ]
+    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
     search_fields = ["version", "source_version_name", "source_hash"]
     ordering = ('-created',)
 
-    @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])])
     def retrieve(self, request, pd_id, plugin_id, release_id):
         release = self.get_queryset().get(pk=release_id)
         return Response(data=self.get_serializer(release).data)
@@ -263,11 +260,12 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         request_body=serializers.StubCreatePluginReleaseVersionSLZ,
         responses={201: serializers.PluginReleaseVersionSLZ},
     )
+    @_permission_classes(
+        [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.RELEASE_VERSION])]
+    )
     def create(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
-        if plugin.all_versions.filter(
-            status__in=[constants.PluginReleaseStatus.INITIAL, constants.PluginReleaseStatus.PENDING]
-        ):
+        if plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
         version_type = request.data["source_version_type"]
@@ -288,27 +286,42 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
         )
         release.initial_stage_set()
-        shim.execute_stage(release.current_stage, request.user.username)
-        release.status = constants.PluginReleaseStatus.PENDING
-        release.save()
+        PluginReleaseExecutor(release).execute_current_stage(operator=request.user.username)
+        release.refresh_from_db()
         return Response(data=self.get_serializer(release).data, status=status.HTTP_201_CREATED)
 
     @atomic
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def enter_next_stage(self, request, pd_id, plugin_id, release_id):
+        """进入下一发布步骤"""
         release = self.get_queryset().get(pk=release_id)
-        shim.enter_next_stage(release.current_stage, request.user.username)
+        PluginReleaseExecutor(release).enter_next_stage(operator=request.user.username)
+        release.refresh_from_db()
+        return Response(data=self.get_serializer(release).data)
+
+    @atomic
+    def back_to_previous_stage(self, request, pd_id, plugin_id, release_id):
+        """返回上一发布步骤, 重置当前步骤和上一步骤的执行状态, 并重新执行上一步。"""
+        release = self.get_queryset().get(pk=release_id)
+        PluginReleaseExecutor(release).back_to_previous_stage(operator=request.user.username)
+        release.refresh_from_db()
+        return Response(data=self.get_serializer(release).data)
+
+    @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
+    def re_release(self, request, pd_id, plugin_id, release_id):
+        """重新发布版本"""
+        release = self.get_queryset().get(pk=release_id)
+        PluginReleaseExecutor(release).reset_release(operator=request.user.username)
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
 
     @atomic
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def cancel_release(self, request, pd_id, plugin_id, release_id):
+        """取消发布"""
         release = self.get_queryset().get(pk=release_id)
         current_stage = release.current_stage
-        current_stage.status = constants.PluginReleaseStatus.INTERRUPTED
-        current_stage.fail_message = _("用户主动终止发布")
-        current_stage.save()
+        current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
         return Response(data=self.get_serializer(release).data)
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})
@@ -369,7 +382,17 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
         plugin = self.get_plugin_instance()
         release = plugin.all_versions.get(pk=release_id)
         stage = release.all_stages.get(stage_id=stage_id)
-        return Response(data=shim.render_release_stage(stage))
+        return Response(data=init_stage_controller(stage).render_to_view())
+
+    @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
+    def rerun(self, request, pd_id, plugin_id, release_id, stage_id):
+        """重新执行发布步骤"""
+        release = self.get_queryset().get(pk=release_id)
+        if release.current_stage.stage_id != stage_id:
+            raise error_codes.CANNOT_RERUN_ONGOING_STEPS.f(_("仅支持重试当前阶段"))
+        PluginReleaseExecutor(release).rerun_current_stage(operator=request.user.username)
+        release.refresh_from_db()
+        return Response(data=self.get_serializer(release).data)
 
 
 class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
@@ -410,8 +433,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
         # 如果当前插件正处于完善市场信息的发布阶段, 则设置该阶段的状态为 successful(允许进入下一阶段)
         if release := plugin.all_versions.get_ongoing_release():
             if release.current_stage and release.current_stage.stage_id == "market":
-                release.current_stage.status = constants.PluginReleaseStatus.SUCCESSFUL
-                release.current_stage.save()
+                release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
         return Response(data=self.get_serializer(market_info).data)
 
 

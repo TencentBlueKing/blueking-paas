@@ -51,7 +51,9 @@
           </bk-table-column>
           <bk-table-column :label="$t('角色')">
             <template slot-scope="props">
-              <span class="role-name">{{ $t(roleNames[props.row.role.name]) }}</span>
+              <span class="role-label" v-for="role in props.row.roles">
+                {{ $t(roleNames[role.name]) }}
+              </span>
             </template>
           </bk-table-column>
           <bk-table-column

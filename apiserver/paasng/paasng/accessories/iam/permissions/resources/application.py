@@ -138,7 +138,7 @@ class ApplicationPermission(Permission):
         perm_ctx.validate_resource_id()
         return self.can_multi_actions(
             perm_ctx,
-            [AppAction.MANAGE_APP_MARKET, AppAction.EDIT_BASIC_INFO, AppAction.VIEW_BASIC_INFO],
+            [AppAction.MANAGE_APP_MARKET, AppAction.VIEW_BASIC_INFO],
             raise_exception,
         )
 

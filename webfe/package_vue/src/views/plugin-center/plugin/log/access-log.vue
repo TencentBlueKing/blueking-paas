@@ -56,7 +56,6 @@
           >
             <bk-checkbox
               v-for="field of fieldList"
-              v-show="!staticFileds.includes(field.name)"
               :key="field.name"
               class="ps-field-checkbox"
               :value="field.name"
@@ -82,7 +81,7 @@
         ref="logContent"
         class="log-content"
       >
-        <div
+        <!-- <div
           v-bkloading="{ isLoading: isChartLoading }"
           class="chart-box mb20"
           style="width: 100%;"
@@ -97,191 +96,76 @@
             class="chart-placeholder"
             src="/static/images/chart-default.svg"
           >
-        </div>
+        </div> -->
 
         <!-- 查询结果 start -->
         <div
           ref="tableBox"
           v-bkloading="{ isLoading: isLogListLoading }"
-          class="table-wrapper"
+          class="table-wrapper log-table"
         >
-          <table
-            id="log-table"
-            :key="renderIndex"
-            class="ps-table ps-table-default ps-log-table"
-          >
-            <thead>
-              <tr>
-                <th
-                  style="min-width: 200px;"
-                  class="time-th"
-                >
-                  <div class="filter-normal-label">
-                    Time
-                  </div>
-                </th>
-                <template v-for="(field, fieldIndex) of fieldSelectedList">
-                  <template v-if="fieldOptions[field] && fieldOptions[field].length">
-                    <th :key="fieldIndex">
-                      <div class="filter-wrapper">
-                        <div class="filter-label">
-                          <span
-                            class="filter-label-text"
-                            :title="field"
-                          >{{ field }}</span>
-                          <div
-                            class="paasng-icon paasng-funnel filter-icon"
-                            @click.stop.prevent="handleShowFilter(field)"
-                          >
-                            <div
-                              v-if="fieldPopoverShow[field]"
-                              :key="renderFilter"
-                              class="filter-popover"
-                            >
-                              <bk-input
-                                v-model="filterKeyword"
-                                :placeholder="$t('搜索')"
-                                :left-icon="'paasng-icon paasng-search'"
-                                :clearable="true"
-                              />
-                              <template v-if="!fieldOptions[field].filter(option => option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1).length">
-                                <div class="not-found">
-                                  {{ $t('没找到') }}
-                                </div>
-                              </template>
-                              <bk-checkbox-group
-                                :key="JSON.stringify(fieldChecked)"
-                                v-model="fieldChecked[field]"
-                              >
-                                <bk-checkbox
-                                  v-for="option of fieldOptions[field]"
-                                  v-show="option.text.toLowerCase().indexOf(filterKeyword.toLowerCase()) !== -1"
-                                  :key="option.value"
-                                  :value="`${field}:${option.value}`"
-                                >
-                                  <span :title="option.text">{{ option.text }}</span>
-                                </bk-checkbox>
-                              </bk-checkbox-group>
-                              <div class="field-actions">
-                                <button
-                                  class="confirm"
-                                  @click.prevent.stop="handleFilterChange(field)"
-                                >
-                                  {{ $t('确定') }}
-                                </button>
-                                <button
-                                  class="cancel"
-                                  @click.prevent.stop="handleCancelFilterChange(field)"
-                                >
-                                  {{ $t('取消') }}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </th>
-                  </template>
-                  <template v-else>
-                    <th :key="fieldIndex">
-                      <div class="filter-wrapper">
-                        <div
-                          class="filter-label"
-                          style="cursor: pointer;"
-                          @click="toggleSort"
-                        >
-                          <span
-                            class="filter-label-text"
-                            :title="field"
-                          >{{ field }}</span>
-                          <span
-                            class="caret-wrapper"
-                            :class="{ 'asc': tableSortTypes[field] === 'asc', 'desc': tableSortTypes[field] === 'desc' }"
-                          >
-                            <i class="sort-caret ascending" />
-                            <i class="sort-caret descending" />
-                          </span>
-                        </div>
-                      </div>
-                    </th>
-                  </template>
-                </template>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-if="logList.length">
-                <template v-for="(log, index) of logList">
-                  <tr
-                    :key="index"
-                    @click="toggleDetail(log)"
-                  >
-                    <td class="log-time">
-                      <i :class="['paasng-icon ps-toggle-btn', { 'paasng-right-shape': !log.isToggled, 'paasng-down-shape': log.isToggled }]" />
-                      {{ log.ts }}
-                    </td>
-                    <template v-for="field of fieldSelectedList">
-                      <td
-                        :key="field"
-                        class="field"
-                      >
-                        <div v-html="log.detail[field] || '--'" />
-                      </td>
-                    </template>
-                  </tr>
-                  <tr
-                    v-if="log.isToggled"
-                    :key="index"
-                  >
-                    <td
-                      :colspan="fieldSelectedList.length + 2"
-                      style="padding: 0; border-top: none;"
-                    >
-                      <ul class="detail-box">
-                        <li
-                          v-for="(keyItem, key) of log.detail"
-                          :key="key"
-                        >
-                          <span class="key">{{ key }}：</span>
-                          <pre
-                            class="value"
-                            v-html="keyItem || '--'"
-                          />
-                        </li>
-                      </ul>
-                    </td>
-                  </tr>
-                </template>
-              </template>
-              <template v-else>
-                <tr>
-                  <td :colspan="fieldSelectedList.length + 2">
-                    <div class="ps-no-result">
-                      <div class="text">
-                        <p>
-                          <i class="paasng-icon paasng-empty" />
-                        </p>
-                        <p> {{ $t('暂无数据') }} </p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-        <div
-          v-if="pagination.count"
-          class="ps-page ml0 mr0"
-        >
-          <bk-pagination
+          <bk-table
+            :data="logs"
             size="small"
-            align="right"
-            :current.sync="pagination.current"
-            :count="pagination.count"
-            :limit="pagination.limit"
-            @change="handlePageChange"
-            @limit-change="handlePageSizeChange"
-          />
+            :outer-border="false"
+            :pagination="pagination"
+            @page-change="pageChange"
+            @page-limit-change="limitChange"
+          >
+            <bk-table-column
+              type="expand"
+              width="30"
+            >
+              <template slot-scope="props">
+                <div
+                  class="log-wrapper"
+                >
+                  <div
+                    v-for="(log, index) in logKeyList"
+                    :key="index"
+                    class="log-item-info"
+                  >
+                    <div
+                      class="left-title"
+                    >
+                      {{ log }}:
+                    </div>
+                    <div
+                      class="left-val"
+                    >
+                      {{ props.row[log] }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              label="Time"
+              prop="timestamp"
+            />
+            <bk-table-column
+              label="method"
+              prop="method"
+            />
+            <bk-table-column
+              label="path"
+              prop="path"
+            />
+            <bk-table-column
+              label="status_code"
+              prop="status_code"
+            />
+            <bk-table-column
+              label="response_time"
+              prop="response_time"
+            />
+            <bk-table-column
+              v-for="field in fieldSelectedList"
+              :key="field"
+              :label="field"
+              :prop="field"
+            />
+          </bk-table>
         </div>
       </div>
     </div>
@@ -302,7 +186,7 @@
     const logXss = new xss.FilterXSS(xssOptions);
     const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
     const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
-
+    const EXIST_LOG_KEY = ['timestamp', 'method', 'path', 'status_code', 'response_time'];
     export default {
         components: {
             logFilter
@@ -321,7 +205,6 @@
                 tableMaxWidth: 700,
                 isShowDate: true,
                 lastScrollId: '',
-                staticFileds: ['method', 'path', 'status_code', 'response_time'],
                 initDateTimeRange: [initStartDate, initEndDate],
                 pagination: {
                     current: 1,
@@ -356,7 +239,10 @@
                     time_range: '1h'
                 },
                 fieldSelectedList: [],
-                isFilter: false
+                isFilter: false,
+                logs: [],
+                logKeyList: [],
+                existFieldList: EXIST_LOG_KEY
             };
         },
         computed: {
@@ -411,6 +297,12 @@
                     return true;
                 }
                 return false;
+            },
+            pdId () {
+                return this.$route.params.pluginTypeId;
+            },
+            pluginId () {
+                return this.$route.params.id;
             }
         },
         watch: {
@@ -430,24 +322,6 @@
                     this.resetParams();
                     this.loadData();
                 }
-            },
-            fieldSelectedList () {
-                const keys = Object.keys(this.fieldChecked);
-                this.fieldSelectedList.forEach(item => {
-                    if (!this.fieldChecked.hasOwnProperty(item)) {
-                        this.fieldChecked[item] = [];
-                        this.fieldPopoverShow[item] = false;
-                    }
-                });
-                keys.forEach(item => {
-                    if (!this.fieldSelectedList.includes(item)) {
-                        delete this.fieldChecked[item];
-                        delete this.fieldPopoverShow[item];
-                    }
-                });
-                this.renderIndex++;
-                this.hideAllFilterPopover();
-                // this.loadData(false)
             }
         },
         beforeRouteLeave (to, from, next) {
@@ -471,7 +345,7 @@
         mounted () {
             this.isLogListLoading = false;
             this.isLoading = false;
-            // this.init();
+            this.init();
         },
         methods: {
             /**
@@ -529,8 +403,7 @@
                 return {
                     start_time: this.logParams.start_time,
                     end_time: this.logParams.end_time,
-                    time_range: this.logParams.time_range,
-                    log_type: 'INGRESS'
+                    time_range: this.logParams.time_range
                 };
             },
 
@@ -595,9 +468,7 @@
                 this.tableSortTypes = {};
                 this.$refs.accessLogFilter.setAutoLoad();
                 this.pagination.current = 1;
-                this.getChartData();
                 this.getLogList();
-                isLoadFilter && this.getFilterData();
             },
 
             /**
@@ -709,29 +580,51 @@
                 return message.replace(/\[bk-mark\]/g, '<bk-highlight-mark>').replace(/\[\/bk-mark\]/g, '</bk-highlight-mark>');
             },
 
+            pageChange (newPage) {
+                this.pagination.current = newPage;
+                this.getLogList(newPage);
+            },
+
+            limitChange (limit) {
+                this.pagination.limit = limit;
+                this.pagination.current = 1;
+                this.getLogList(this.pagination.current);
+            },
+
             /**
              * 获取日志数据
              * @param  {Number} page 第几页数据
              */
             async getLogList (page = 1) {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
+                const curPage = page || this.pagination.current;
                 const params = this.getParams();
-                const pageSize = this.pagination.limit;
+                // const pageSize = this.pagination.limit;
+                params.limit = this.pagination.limit;
+                params.offset = this.pagination.limit * (curPage - 1);
                 const filter = this.getFilterParams();
                 this.isLogListLoading = true;
                 try {
-                    const res = await this.$store.dispatch('log/getAccessLogList', {
-                        appCode,
-                        moduleId,
-                        params,
-                        page,
-                        pageSize,
-                        filter
+                    const res = await this.$store.dispatch('plugin/getAccessLogList', {
+                        pdId: this.pdId,
+                        pluginId: this.pluginId,
+                        pageParams: params,
+                        data: filter
                     });
-                    const data = res.data.logs;
+                    const data = res.logs;
+                    this.logKeyList = Object.keys(res.logs[0]);
+                    // 字段列表
+                    this.fieldList = this.logKeyList.map(logKey => {
+                        if (!this.existFieldList.includes(logKey)) {
+                            return {
+                                name: logKey
+                            };
+                        }
+                        return false;
+                    });
+                    this.fieldList = this.fieldList.filter(item => item);
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
+                        item.timestamp = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
                         if (item.detail) {
                             for (const key in item.detail) {
                                 item.detail[key] = this.highlight(logXss.process(item.detail[key]));
@@ -739,74 +632,21 @@
                         }
                         item.isToggled = false;
                     });
-
+                    this.logs = data;
                     this.logList.splice(0, this.logList.length, ...data);
-                    this.pagination.count = res.data.page.total;
+                    this.pagination.count = res.total;
                     this.pagination.current = page;
-                    if (!this.fieldSelectedList.length) {
-                        this.fieldSelectedList = [...this.staticFileds];
-                    }
                 } catch (res) {
                     this.$paasMessage({
                         theme: 'error',
                         message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
                     });
-                    this.logList.splice(0, this.logList.length, ...[]);
                     this.pagination.count = 0;
                 } finally {
                     setTimeout(() => {
                         this.isLogListLoading = false;
                         this.isLoading = false;
                     }, 500);
-                }
-            },
-
-            async getFilterData () {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
-                const params = this.getParams();
-
-                try {
-                    const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
-                    const filters = [];
-                    const fieldList = [];
-                    const data = res.data;
-
-                    data.forEach(item => {
-                        const condition = {
-                            id: item.key,
-                            name: item.name,
-                            text: item.chinese_name || item.name,
-                            list: []
-                        };
-                        item.options.forEach(option => {
-                            condition.list.push({
-                                id: option[0],
-                                text: option[0]
-                            });
-                        });
-                        if (condition.id === 'environment') {
-                            this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
-                            this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
-                            this.streamList = condition.list;
-                        } else {
-                            fieldList.push(condition);
-                        }
-                        filters.push(condition);
-                    });
-                    this.filterData = filters;
-                    this.fieldList = fieldList;
-                    this.$refs.accessLogFilter && this.$refs.accessLogFilter.handleSetParams();
-                } catch (res) {
-                    this.envList = [];
-                    this.processList = [];
-                    this.streamList = [];
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
                 }
             },
 
@@ -898,19 +738,6 @@
 
             handleHideFilter (field) {
                 this.fieldPopoverShow[field] = false;
-            },
-
-            toggleSort () {
-                if (this.tableSortTypes['response_time'] === 'desc') {
-                    this.tableSortTypes['response_time'] = 'asc';
-                } else if (this.tableSortTypes['response_time'] === 'asc') {
-                    this.tableSortTypes['response_time'] = '';
-                } else {
-                    this.tableSortTypes['response_time'] = 'desc';
-                }
-                this.getChartData();
-                this.getLogList();
-                this.renderIndex++;
             }
         }
     };
@@ -1333,5 +1160,26 @@
                 bottom: -1px;
             }
         }
+    }
+    .log-wrapper {
+        padding: 5px 0;
+        background-color: #fafbfd;
+        .log-item-info {
+            display: flex;
+            line-height: 18px;
+            .left-title {
+                width: 130px;
+                text-align: right;
+            }
+            .left-val {
+                flex: 1;
+                padding-left: 10px;
+            }
+        }
+    }
+</style>
+<style>
+    .table-wrapper.log-table .bk-table .bk-table-body td.bk-table-expanded-cell {
+        padding: 0;
     }
 </style>

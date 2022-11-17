@@ -104,7 +104,6 @@
                         'appSummary', // 概览
                         'appEngine', // 应用引擎
                         'appServices', // 增强服务
-                        'appMarketing', // 市场推广
                         'appConfigs', // 基本设置
                         'moduleManage', // 模块管理
                         'appAnalysis', // 数据统计

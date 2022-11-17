@@ -35,7 +35,7 @@ class AppAction(str, StructuredEnum):
 
     # 应用基础信息查看
     VIEW_BASIC_INFO = EnumField('view_basic_info', label=_('基础信息查看'))
-    # 应用基础信息编辑（含文档管理）s
+    # 应用基础信息编辑（含文档管理）
     EDIT_BASIC_INFO = EnumField('edit_basic_info', label=_('基础信息编辑'))
     # 应用删除/下架
     DELETE_APPLICATION = EnumField('delete_application', label=_('应用删除'))

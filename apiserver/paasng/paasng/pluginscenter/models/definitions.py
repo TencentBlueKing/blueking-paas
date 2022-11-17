@@ -104,6 +104,8 @@ class PluginConfigInfoDefinition(AuditedModel):
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="config_definition"
     )
 
-    title = models.CharField(verbose_name="「配置管理标题」", max_length=16)
+    title = TranslatedFieldWithFallback(models.CharField(verbose_name="「配置管理标题」", max_length=16))
+    description = TranslatedFieldWithFallback(models.TextField(default=""))
+    docs = models.CharField(max_length=255, default="")
     sync_api: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     columns: List[PluginConfigColumnDefinition] = PluginConfigColumnDefinitionField(default=list)

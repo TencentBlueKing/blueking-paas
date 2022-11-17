@@ -11,7 +11,7 @@
     "build:te": "cross-env NODE_ENV=production APP_VERSION=te node build/build.js",
     "build:ee": "cross-env NODE_ENV=production APP_VERSION=ee node build/build.js",
     "build:ce": "cross-env NODE_ENV=production APP_VERSION=ce node build/build.js",
-    "build": "cross-env NODE_ENV=${NODE_ENV:-production} APP_VERSION=${APP_VERSION:-ce} node build/build.js",
+    "build": "cross-env NODE_ENV=production APP_VERSION=$APP_VERSION node build/build.js",
     "lint": "eslint --fix --ext .js,.vue src"
   },
   "dependencies": {

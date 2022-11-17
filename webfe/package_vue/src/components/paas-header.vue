@@ -31,20 +31,20 @@
             v-if="index === 0"
             :to="{ name: 'index' }"
           >
-            {{ item.text }}{{ index }}
+            {{ item.text }}
           </router-link>
           <router-link
             v-else-if="index === 1"
             :class="{ 'has-angle': index !== 1 }"
             :to="{ name: 'myApplications' }"
           >
-            {{ item.text }}{{ index }}
+            {{ item.text }}
           </router-link>
           <router-link
             v-else-if="index === 2"
             :to="{ name: 'plugin' }"
           >
-            {{ item.text }}{{ index }}
+            {{ item.text }}
           </router-link>
           <a
             v-else

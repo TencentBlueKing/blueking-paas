@@ -9,14 +9,19 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture()
-def cluster_envs():
-    os.environ["PAAS_WL_CLUSTER_APP_ROOT_DOMAIN"] = "apps1.example.com"
-    os.environ["PAAS_WL_CLUSTER_SUB_PATH_DOMAIN"] = "apps2.example.com"
-    os.environ["PAAS_WL_CLUSTER_HTTP_PORT"] = "880"
-    os.environ["PAAS_WL_CLUSTER_HTTPS_PORT"] = "8443"
-    os.environ["PAAS_WL_CLUSTER_NODE_SELECTOR"] = "{key-c='value-c', key-c2='value-c2'}"
-    os.environ["PAAS_WL_CLUSTER_TOLERATIONS"] = "[{key='app', operator='Equal', value='value1', effect='NoExecute'}]"
-    os.environ["PAAS_WL_CLUSTER_API_SERVER_URLS"] = "['https://kubernetes.default.svc.cluster.localroot']"
+def cluster_envs(monkeypatch):
+    monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
+    monkeypatch.setenv("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", "apps2.example.com")
+    monkeypatch.setenv("PAAS_WL_CLUSTER_HTTP_PORT", "880")
+    monkeypatch.setenv("PAAS_WL_CLUSTER_HTTPS_PORT", "8443")
+    monkeypatch.setenv("PAAS_WL_CLUSTER_NODE_SELECTOR", "{\"dedicated\":\"bkSaas\"}")
+    monkeypatch.setenv(
+        "PAAS_WL_CLUSTER_TOLERATIONS",
+        "[{\"effect\":\"NoSchedule\",\"key\":\"dedicated\",\"operator\":\"Equal\",\"value\":\"bkSaas\"}]",
+    )
+    monkeypatch.setenv(
+        "PAAS_WL_CLUSTER_API_SERVER_URLS", "https://kubernetes.default.svc.cluster.localroot;https://10.0.0.1"
+    )
 
 
 @pytest.mark.parametrize(
@@ -29,7 +34,7 @@ def cluster_envs():
 def test_init_cluster(cluster_envs, https_enabled, expect):
     os.environ["PAAS_WL_CLUSTER_ENABLED_HTTPS_BY_DEFAULT"] = https_enabled
 
-    call_command("initial_cluster")
+    call_command("initial_default_cluster")
 
     cluster = Cluster.objects.get(name="default-main")
 
@@ -41,9 +46,8 @@ def test_init_cluster(cluster_envs, https_enabled, expect):
     assert ingress_config.port_map.http == 880
     assert ingress_config.port_map.https == 8443
     assert cluster.default_tolerations == [
-        {"key": "app", "operator": "Equal", "value": "value1", "effect": "NoExecute"}
+        {'effect': 'NoSchedule', 'key': 'dedicated', 'operator': 'Equal', 'value': 'bkSaas'}
     ]
-    assert cluster.default_node_selector == {"key-c": "value-c", "key-c2": "value-c2"}
-
+    assert cluster.default_node_selector == {"dedicated": "bkSaas"}
     urls = APIServer.objects.filter(cluster=cluster).values_list("host", flat=True)
-    assert list(urls) == ['https://kubernetes.default.svc.cluster.localroot']
+    assert set(urls) == set(['https://kubernetes.default.svc.cluster.localroot', "https://10.0.0.1"])

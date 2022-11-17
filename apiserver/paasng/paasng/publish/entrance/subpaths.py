@@ -25,7 +25,7 @@ from django.conf import settings
 
 from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.models import IngressConfig, PortMap
+from paasng.engine.controller.models import IngressConfig, PortMap, Domain as DomainCfg
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.publish.entrance.utils import URL, to_dns_safe
 
@@ -93,73 +93,39 @@ def get_preallocated_path(
     if not ingress_config.sub_path_domains:
         return None
 
-    safe_app_code = to_dns_safe(app_code)
+    allocator = SubPathAllocator(app_code, ingress_config.port_map)
+    domain_cfg = ingress_config.default_sub_path_domain
     if not module_name:
         # No module name was given, return shorten address which pointed to application's "default" module
         # automatically.
         return PreSubpaths(
-            stag=Subpath(
-                subpath=ModuleEnvSubpaths.make_subpath('stag', safe_app_code),
-                host=ingress_config.default_sub_path_domain.name,
-                https_enabled=ingress_config.default_sub_path_domain.https_enabled,
-                type=SubpathPriorityType.WITHOUT_MODULE,
-                port_map=ingress_config.port_map,
-            ),
-            prod=Subpath(
-                subpath=f'/{safe_app_code}/',
-                host=ingress_config.default_sub_path_domain.name,
-                https_enabled=ingress_config.default_sub_path_domain.https_enabled,
-                type=SubpathPriorityType.ONLY_CODE,
-                port_map=ingress_config.port_map,
-            ),
+            stag=allocator.for_default_module(domain_cfg, 'stag'),
+            prod=allocator.for_default_module_prod_env(domain_cfg),
         )
     else:
         # Generate address which always include module name
-        safe_module_name = to_dns_safe(module_name)
         return PreSubpaths(
-            stag=Subpath(
-                subpath=ModuleEnvSubpaths.make_subpath('stag', safe_module_name, safe_app_code),
-                host=ingress_config.default_sub_path_domain.name,
-                https_enabled=ingress_config.default_sub_path_domain.https_enabled,
-                type=SubpathPriorityType.STABLE,
-                port_map=ingress_config.port_map,
-            ),
-            prod=Subpath(
-                subpath=ModuleEnvSubpaths.make_subpath('prod', safe_module_name, safe_app_code),
-                host=ingress_config.default_sub_path_domain.name,
-                https_enabled=ingress_config.default_sub_path_domain.https_enabled,
-                type=SubpathPriorityType.STABLE,
-                port_map=ingress_config.port_map,
-            ),
+            stag=allocator.for_universal(domain_cfg, module_name, 'stag'),
+            prod=allocator.for_universal(domain_cfg, module_name, 'prod'),
         )
 
 
 class ModuleEnvSubpaths:
     """managing subpaths for module environment"""
 
-    # Reserved word of application code, safe for concatenating address
-    sep = '--'
-
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.application = env.module.application
-        self.engine_app = env.engine_app
-
-        self.part_env = to_dns_safe(env.environment)
-        self.part_module = to_dns_safe(env.module.name)
-        self.part_code = to_dns_safe(self.application.code)
-
-        ingress_config = self.get_ingress_config()
-        self.sub_path_domains = ingress_config.sub_path_domains
-        self.port_map = ingress_config.port_map
+        self.ingress_config = self.get_ingress_config()
+        self.allocator = SubPathAllocator(self.application.code, self.ingress_config.port_map)
 
     def get_ingress_config(self) -> IngressConfig:
         """Get ingress config from cluster info"""
-        cluster = get_engine_app_cluster(self.application.region, self.engine_app.name)
+        cluster = get_engine_app_cluster(self.application.region, self.env.engine_app.name)
         return cluster.ingress_config
 
     def get_shortest(self) -> Optional[Subpath]:
-        """Get the shorted subpath object"""
+        """Get the shortest subpath object"""
         subpaths = self.all()
         if not subpaths:
             return None
@@ -167,90 +133,36 @@ class ModuleEnvSubpaths:
 
     def all(self) -> List[Subpath]:
         """Get all assigned subpaths for current env"""
-        if not self.sub_path_domains:
+        sub_path_domains = self.ingress_config.sub_path_domains
+        if not sub_path_domains:
             return []
 
-        # TODO: Add legacy subpath
-        subpaths = [*self.make_stable()]
-        if self.env.module.is_default:
-            subpaths.extend(self.make_without_module())
-
-            # Assign a shortest domain for "prod" environment of "default" module
-            if self.env.environment == AppEnvName.PROD:
-                subpaths.extend(self.make_only_code())
-
-        return subpaths
-
-    def make_stable(self) -> List[Subpath]:
-        """Make all stable subpath."""
-        subpaths = [
-            self.make_subpath(self.part_env, self.part_module, self.part_code),
-        ]
-        if settings.USE_LEGACY_SUB_PATH_PATTERN:
-            subpaths.append(get_legacy_compatible_path(self.env))
-        results = []
-        for domain in self.sub_path_domains:
-            for subpath in subpaths:
-                results.append(
-                    Subpath(
-                        subpath=subpath,
-                        host=domain.name,
-                        type=SubpathPriorityType.STABLE,
-                        https_enabled=domain.https_enabled,
-                        port_map=self.port_map,
-                    )
-                )
-        return results
-
-    def make_without_module(self) -> List[Subpath]:
-        """Make all subpath for default module."""
-        return [
-            Subpath(
-                subpath=self.make_subpath(self.part_env, self.part_code),
-                host=domain.name,
-                type=SubpathPriorityType.WITHOUT_MODULE,
-                https_enabled=domain.https_enabled,
-                port_map=self.port_map,
-            )
-            for domain in self.sub_path_domains
-        ]
-
-    def make_only_code(self) -> List[Subpath]:
-        """Make all subpath for default module prod env."""
-        return [
-            Subpath(
-                subpath=self.make_subpath(self.part_code),
-                host=domain.name,
-                type=SubpathPriorityType.ONLY_CODE,
-                https_enabled=domain.https_enabled,
-                port_map=self.port_map,
-            )
-            for domain in self.sub_path_domains
-        ]
-
-    def make_user_preferred_one(self) -> Optional[Subpath]:
-        """Make the subpath with user prefer root domain"""
-        preferred = self.env.module.user_preferred_root_domain
-        if not preferred:
-            return None
-
-        parts = [self.part_env, self.part_module, self.part_code]
-        if self.env.module.is_default:
-            parts = [self.part_env, self.part_code]
-            if self.env.environment == "prod":
-                parts = [self.part_code]
-        return Subpath(
-            subpath=self.make_subpath(*parts),
-            host=preferred,
-            type=SubpathPriorityType.USER_PREFERRED,
-            https_enabled=any(domain.name == preferred and domain.https_enabled for domain in self.sub_path_domains),
-            port_map=self.port_map,
+        items = self.allocator.list_available(
+            sub_path_domains, self.env.module.name, self.env.environment, self.env.module.is_default
         )
 
-    @classmethod
-    def make_subpath(cls, *parts):
-        """Make a subpath"""
-        return '/{}/'.format(cls.sep.join(parts).lower())
+        # Add legacy subpaths if configured
+        if settings.USE_LEGACY_SUB_PATH_PATTERN:
+            legacy_path = get_legacy_compatible_path(self.env)
+            items.extend([self.allocator.make_stable_obj(c, legacy_path) for c in sub_path_domains])
+            # Sort items because legacy subpath obj has low priority type
+            items.sort(key=Subpath.sort_by_type)
+        return items
+
+    def make_user_preferred_one(self) -> Optional[Subpath]:
+        """Make the subpath with user preferred root domain"""
+        host = self.env.module.user_preferred_root_domain
+        if not host:
+            return None
+
+        # Make a virtual domain config, use it to get the domain object
+        cfg = DomainCfg(name=host, https_enabled=self.ingress_config.find_https_enabled(host))
+        p = self.allocator.get_highest_priority(
+            cfg, self.env.module.name, self.env.environment, self.env.module.is_default
+        )
+        # Modify the subpath type manually
+        p.type = SubpathPriorityType.USER_PREFERRED
+        return p
 
 
 def get_legacy_compatible_path(env: ModuleEnvironment) -> str:
@@ -260,3 +172,90 @@ def get_legacy_compatible_path(env: ModuleEnvironment) -> str:
     """
     name = env.engine_app.name
     return f'/{env.module.region}-{name}/'
+
+
+class SubPathAllocator:
+    """Allocate subpath objects
+
+    :param port_map: The PortMap config
+    """
+
+    # Reserved word of application code, safe for concatenating address
+    sep = '--'
+
+    def __init__(self, app_code: str, port_map: PortMap):
+        self.app_code = app_code
+        self.port_map = port_map
+
+    def list_available(
+        self, domain_cfgs: List[DomainCfg], module_name: str, env_name: str, is_default: bool
+    ) -> List[Subpath]:
+        """Get all available subpath objects, the result was sorted by type,
+        see `SubpathPriorityType` for more details
+
+        :param domain_cfgs: A list of domain configs
+        :param module: Name of module
+        :param env_name: Name of environment, "stag" or "prod"
+        :param is_default: Whether current module is "default" module
+        """
+        subpaths = [self.for_universal(c, module_name, env_name) for c in domain_cfgs]
+        if is_default:
+            subpaths.extend([self.for_default_module(c, env_name) for c in domain_cfgs])
+            if env_name == AppEnvName.PROD.value:
+                subpaths.extend([self.for_default_module_prod_env(c) for c in domain_cfgs])
+        return subpaths
+
+    def get_highest_priority(
+        self, domain_cfg: DomainCfg, module_name: str, env_name: str, is_default: bool
+    ) -> Subpath:
+        """Get the subpath object for given environment, it will return the object
+        with the highest priority, see `SubpathPriorityType` for more details.
+        """
+        subpaths = self.list_available([domain_cfg], module_name, env_name, is_default)
+        return subpaths[-1]
+
+    def for_universal(self, domain_cfg: DomainCfg, module_name: str, env_name: str) -> Subpath:
+        """Return subpath object whose value depends on app_code, module and
+        environment name, suitable for all environments.
+        """
+        return self.make_stable_obj(domain_cfg, self._make_subpath(env_name, module_name, self.app_code))
+
+    def for_default_module(self, domain_cfg: DomainCfg, env_name: str) -> Subpath:
+        """Return subpath object whose value depends on app_code and environment name,
+        always bound to default module.
+        """
+        return Subpath(
+            subpath=self._make_subpath(env_name, self.app_code),
+            host=domain_cfg.name,
+            type=SubpathPriorityType.WITHOUT_MODULE,
+            https_enabled=domain_cfg.https_enabled,
+            port_map=self.port_map,
+        )
+
+    def for_default_module_prod_env(self, domain_cfg: DomainCfg) -> Subpath:
+        """Return subpath object whose value depends on app_code only, always bound
+        to the default module's prod environment.
+        """
+        return Subpath(
+            subpath=self._make_subpath(self.app_code),
+            host=domain_cfg.name,
+            type=SubpathPriorityType.ONLY_CODE,
+            https_enabled=domain_cfg.https_enabled,
+            port_map=self.port_map,
+        )
+
+    def make_stable_obj(self, domain_cfg: DomainCfg, subpath: str) -> Subpath:
+        """Make a subpath object with "STABLE" type."""
+        return Subpath(
+            subpath=subpath,
+            host=domain_cfg.name,
+            type=SubpathPriorityType.STABLE,
+            https_enabled=domain_cfg.https_enabled,
+            port_map=self.port_map,
+        )
+
+    @classmethod
+    def _make_subpath(cls, *parts: str) -> str:
+        """Make a subpath"""
+        safe_parts = [to_dns_safe(p) for p in parts]
+        return '/{}/'.format(cls.sep.join(safe_parts).lower())

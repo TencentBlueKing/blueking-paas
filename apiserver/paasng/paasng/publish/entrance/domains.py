@@ -25,11 +25,9 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.models import Domain as DomainCfg
 from paasng.engine.controller.models import IngressConfig, PortMap
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.engine.constants import AppEnvName
 from paasng.publish.entrance.utils import URL, to_dns_safe
-
-PROD_ENV_NAME = AppEnvironment.PRODUCTION.value
 
 
 class DomainPriorityType(int, StructuredEnum):
@@ -165,7 +163,7 @@ class SubDomainAllocator:
     ) -> List[Domain]:
         """Get all available domain objects, the result was sorted by `DomainPriorityType`
 
-        :param domain_cfgs: A list of domain configs
+        :param domain_cfgs: A list of domain configs, usually defined in ingress config
         :param module: Name of module
         :param env_name: Name of environment, "stag" or "prod"
         :param is_default: Whether current module is "default" module
@@ -173,14 +171,13 @@ class SubDomainAllocator:
         domains = [self.for_universal(c, module_name, env_name) for c in domain_cfgs]
         if is_default:
             domains.extend([self.for_default_module(c, env_name) for c in domain_cfgs])
-            if env_name == PROD_ENV_NAME:
+            if env_name == AppEnvName.PROD.value:
                 domains.extend([self.for_default_module_prod_env(c) for c in domain_cfgs])
         return domains
 
     def get_highest_priority(self, domain_cfg: DomainCfg, module_name: str, env_name: str, is_default: bool) -> Domain:
-        """Get the default Domain object for given environment, it will return
-        the object with the highest priority, see `DomainPriorityType` for more
-        details.
+        """Get the Domain object for given environment, it will return the object
+        with the highest priority, see `DomainPriorityType` for more details.
         """
         domains = self.list_available([domain_cfg], module_name, env_name, is_default)
         return domains[-1]
@@ -188,10 +185,6 @@ class SubDomainAllocator:
     def for_universal(self, domain_cfg: DomainCfg, module_name: str, env_name: str) -> Domain:
         """Return a Domain object whose host depends on app_code, module and
         environment name, suitable for all environments.
-
-        :param domain_cfg: Domain config object, usually defined in ingress config
-        :param module: Name of module
-        :param env_name: Name of environment, "stag" or "prod"
         """
         return Domain(
             host=self._make_host(domain_cfg.name, env_name, module_name, self.app_code),
@@ -213,7 +206,7 @@ class SubDomainAllocator:
 
     def for_default_module_prod_env(self, domain_cfg: DomainCfg) -> Domain:
         """Return a Domain object whose host depends on app_code only, always bound
-        to main module's prod environment.
+        to the default module's prod environment.
         """
         return Domain(
             host=self._make_host(domain_cfg.name, self.app_code),

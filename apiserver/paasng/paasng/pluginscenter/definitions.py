@@ -116,7 +116,7 @@ class PluginBasicInfoDefinition(BaseModel):
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
-    sync_members: PluginBackendAPIResource = Field(description="人员同步接口")
+    syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
 
 
 @registry
@@ -199,7 +199,7 @@ class PluginConfigDefinition(BaseModel):
     """插件配置定义"""
 
     title: str = Field(default="配置管理", description="「配置管理」标题")
-    sync_api: PluginBackendAPIResource = Field(description="「配置管理」同步接口")
+    syncAPI: PluginBackendAPIResource = Field(description="「配置管理」同步接口")
     columns: List[PluginConfigColumnDefinition] = Field(default_factory=list, min_items=1)
 
 

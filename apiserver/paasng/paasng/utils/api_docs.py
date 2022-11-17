@@ -34,6 +34,6 @@ def is_rendering_openapi(request: Request) -> bool:
     """判断是否正在渲染 openapi 文档"""
     return (
         len(request.data) == 0
-        and site_perm_class(SiteAction.VISIT_ADMIN42).has_permission(request)
+        and site_perm_class(SiteAction.VISIT_ADMIN42)().has_permission(request)
         and request.accepted_media_type == 'application/openapi+json'
     )

@@ -24,6 +24,7 @@ from .definitions import (
 )
 from .instances import (
     ApprovalService,
+    OperationRecord,
     PluginConfig,
     PluginInstance,
     PluginMarketInfo,
@@ -42,4 +43,5 @@ __all__ = [
     "PluginRelease",
     "PluginReleaseStage",
     "ApprovalService",
+    "OperationRecord",
 ]

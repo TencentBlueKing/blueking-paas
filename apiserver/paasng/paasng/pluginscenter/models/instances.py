@@ -20,10 +20,11 @@ from typing import List, Optional
 
 import cattr
 from attrs import define
+from bkpaas_auth import get_user_by_user_id
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
+from paasng.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.utils.models import AuditedModel, BkUserField, UuidAuditedModel, make_json_field
 
@@ -218,3 +219,29 @@ class PluginConfig(AuditedModel):
 
     class Meta:
         unique_together = ("plugin", "unique_key")
+
+
+class OperationRecord(AuditedModel):
+    """插件操作记录
+    动作 (具体的) 主体
+    -----------------
+    新建  0.0.1  版本
+    启动  web    进程
+    修改         配置信息
+    修改         应用市场新
+    """
+
+    plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
+    operator = BkUserField()
+    action = models.CharField(max_length=32, choices=ActionTypes.get_choices())
+    specific = models.CharField(max_length=255, null=True)
+    subject = models.CharField(max_length=32, choices=SubjectTypes.get_choices())
+
+    def get_display_text(self):
+        action_text = ActionTypes.get_choice_label(self.action)
+        subject_text = SubjectTypes.get_choice_label(self.subject)
+        username = get_user_by_user_id(self.operator).username
+
+        if self.specific:
+            return f"{username} {action_text} {self.specific} {subject_text}"
+        return f"{username} {action_text}{subject_text}"

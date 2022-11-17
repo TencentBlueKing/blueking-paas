@@ -45,6 +45,7 @@ from paasng.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.itsm_adaptor.utils import submit_create_approval_ticket
 from paasng.pluginscenter.models import (
+    OperationRecord,
     PluginBasicInfoDefinition,
     PluginDefinition,
     PluginInstance,
@@ -181,6 +182,13 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         else:
             shim.init_plugin_in_view(plugin, request.user.username)
 
+        # 操作记录: 创建插件
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.CREATE.value,
+            subject=constants.SubjectTypes.PLUGIN.value,
+        )
         return Response(
             data=self.get_serializer(plugin).data,
             status=status.HTTP_201_CREATED,
@@ -208,6 +216,14 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         plugin.save()
         if pd.basic_info_definition.api.update:
             update_instance(pd, plugin, operator=request.user.pk)
+
+        # 操作记录: 修改基本信息
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY.value,
+            subject=constants.SubjectTypes.BASIC_INFO.value,
+        )
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
@@ -220,6 +236,13 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             raise error_codes.CANNOT_BE_DELETED
 
         plugin.delete()
+        # 操作记录: 删除插件
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.DELETE.value,
+            subject=constants.SubjectTypes.PLUGIN.value,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_filter_params(self, request):
@@ -288,6 +311,14 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         release.initial_stage_set()
         PluginReleaseExecutor(release).execute_current_stage(operator=request.user.username)
         release.refresh_from_db()
+        # 操作记录: 新建 xx 版本
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.ADD.value,
+            specific=release.version,
+            subject=constants.SubjectTypes.VERSION.value,
+        )
         return Response(data=self.get_serializer(release).data, status=status.HTTP_201_CREATED)
 
     @atomic
@@ -322,6 +353,15 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         release = self.get_queryset().get(pk=release_id)
         current_stage = release.current_stage
         current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
+        # 操作记录: 终止发布 xx 版本
+        plugin = self.get_plugin_instance()
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.TERMINATE.value,
+            specific=release.version,
+            subject=constants.SubjectTypes.VERSION.value,
+        )
         return Response(data=self.get_serializer(release).data)
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})
@@ -434,6 +474,14 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
         if release := plugin.all_versions.get_ongoing_release():
             if release.current_stage and release.current_stage.stage_id == "market":
                 release.current_stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+
+        # 操作记录: 修改市场信息
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY.value,
+            subject=constants.SubjectTypes.MARKET_INFO.value,
+        )
         return Response(data=self.get_serializer(market_info).data)
 
 
@@ -649,6 +697,14 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         mgr.save(data)
         # 同步配置
         sync_config(pd=pd, instance=plugin)
+
+        # 操作记录: 修改配置信息
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY.value,
+            subject=constants.SubjectTypes.CONFIG_INFO.value,
+        )
         return Response(status=status.HTTP_200_OK)
 
     def destroy(self, request, pd_id, plugin_id, config_id: str):
@@ -659,6 +715,14 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         mgr.delete(config_id)
         # 同步配置
         sync_config(pd=pd, instance=plugin)
+
+        # 操作记录: 修改配置信息
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY.value,
+            subject=constants.SubjectTypes.CONFIG_INFO.value,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

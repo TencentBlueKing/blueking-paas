@@ -1,172 +1,291 @@
 <template>
-    <div class="establish">
-        <form id="form-create-app" @submit.stop.prevent="submitCreateForm" data-test-id="createDefault_form_appInfo">
-            <div class="ps-tip-block default-info mt15">
-                <i style="color: #3A84FF;" class="paasng-icon paasng-info-circle"></i>
-                {{ $t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力。') }}
-            </div>
+  <div class="establish">
+    <form
+      id="form-create-app"
+      data-test-id="createDefault_form_appInfo"
+      @submit.stop.prevent="submitCreateForm"
+    >
+      <div class="ps-tip-block default-info mt15">
+        <i
+          style="color: #3A84FF;"
+          class="paasng-icon paasng-info-circle"
+        />
+        {{ $t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力。') }}
+      </div>
 
-            <!-- 基本信息 -->
-            <div class="create-item" data-test-id="createDefault_item_baseInfo">
-                <div class="item-title"> {{ $t('基本信息') }} </div>
-                <div class="form-group" style="margin-top: 10px;">
-                    <label class="form-label"> {{ $t('应用 ID') }} </label>
-                    <div class="form-group-flex">
-                        <p>
-                            <input type="text" autocomplete="off"
-                                name="code"
-                                data-parsley-required="true"
-                                :data-parsley-required-message="$t('该字段是必填项')"
-                                data-parsley-maxlength="16"
-                                data-parsley-pattern="[a-z][a-z0-9-]+"
-                                :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
-                                data-parsley-trigger="input blur"
-                                class="ps-form-control"
-                                :placeholder="$t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')" />
-                        </p>
-                        <p class="whole-item-tips"> {{ $t('应用的唯一标识，创建后不可修改') }} </p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label"> {{ $t('应用名称') }} </label>
-                    <p class="form-group-flex">
-                        <input type="text" autocomplete="off"
-                            name="name"
-                            data-parsley-required="true"
-                            :data-parsley-required-message="$t('该字段是必填项')"
-                            data-parsley-maxlength="20"
-                            data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5]+"
-                            :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')"
-                            data-parsley-trigger="input blur"
-                            class="ps-form-control" :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')" />
-                    </p>
-                </div>
-                <div class="form-group" style="margin-top: 7px;" v-if="platformFeature.REGION_DISPLAY">
-                    <label class="form-label"> {{ $t('应用版本') }} </label>
-                    <div class="form-group-flex-radio" :key="region.key" v-for="region in regionChoices">
-                        <div class="form-group-radio">
-                            <bk-radio-group v-model="regionChoose" style="width: 72px;">
-                                <bk-radio :value="region.key" :key="region.key">{{region.value}}</bk-radio>
-                            </bk-radio-group>
-                            <p class="whole-item-tips">{{region.description}}</p>
-                        </div>
-                    </div>
-                </div>
+      <!-- 基本信息 -->
+      <div
+        class="create-item"
+        data-test-id="createDefault_item_baseInfo"
+      >
+        <div class="item-title">
+          {{ $t('基本信息') }}
+        </div>
+        <div
+          class="form-group"
+          style="margin-top: 10px;"
+        >
+          <label class="form-label"> {{ $t('应用 ID') }} </label>
+          <div class="form-group-flex">
+            <p>
+              <input
+                type="text"
+                autocomplete="off"
+                name="code"
+                data-parsley-required="true"
+                :data-parsley-required-message="$t('该字段是必填项')"
+                data-parsley-maxlength="16"
+                data-parsley-pattern="[a-z][a-z0-9-]+"
+                :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
+                data-parsley-trigger="input blur"
+                class="ps-form-control"
+                :placeholder="$t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')"
+              >
+            </p>
+            <p class="whole-item-tips">
+              {{ $t('应用的唯一标识，创建后不可修改') }}
+            </p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"> {{ $t('应用名称') }} </label>
+          <p class="form-group-flex">
+            <input
+              type="text"
+              autocomplete="off"
+              name="name"
+              data-parsley-required="true"
+              :data-parsley-required-message="$t('该字段是必填项')"
+              data-parsley-maxlength="20"
+              data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5]+"
+              :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')"
+              data-parsley-trigger="input blur"
+              class="ps-form-control"
+              :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')"
+            >
+          </p>
+        </div>
+        <div
+          v-if="platformFeature.REGION_DISPLAY"
+          class="form-group"
+          style="margin-top: 7px;"
+        >
+          <label class="form-label"> {{ $t('应用版本') }} </label>
+          <div
+            v-for="region in regionChoices"
+            :key="region.key"
+            class="form-group-flex-radio"
+          >
+            <div class="form-group-radio">
+              <bk-radio-group
+                v-model="regionChoose"
+                style="width: 72px;"
+              >
+                <bk-radio
+                  :key="region.key"
+                  :value="region.key"
+                >
+                  {{ region.value }}
+                </bk-radio>
+              </bk-radio-group>
+              <p class="whole-item-tips">
+                {{ region.description }}
+              </p>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div class="create-item" data-test-id="createDefault_item_baseInfo">
-                <div class="item-title">
-                    {{ $t('容器信息') }}
-                    <i class="paasng-icon paasng-info-circle" v-bk-tooltips="cloudInfoTip"></i>
-                </div>
-                <div class="form-group-dir form-group" style="margin-top: 10px;">
-                    <label class="form-label">
-                        {{ $t('镜像地址') }}
-                        <i class="paasng-icon paasng-info-circle" v-bk-tooltips="mirrorUrlTip"></i>
-                    </label>
-                    <!-- ((https|http|ftp|rtsp|mms)?:\/\/) -->
-                    <div class="form-group-flex">
-                        <p>
-                            <input type="text" autocomplete="off"
-                                ref="imageUrl"
-                                name="source_tp_url"
-                                data-parsley-required="true"
-                                :data-parsley-required-message="$t('该字段是必填项')"
-                                data-parsley-pattern="^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$"
-                                :data-parsley-pattern-message="$t('地址格式不正确')"
-                                data-parsley-trigger="input blur"
-                                class="ps-form-control" :placeholder="$t('请输入带标签的镜像地址')" />
-                        </p>
-                        <p class="whole-item-tips">
-                            {{ $t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest') }}&nbsp;
-                            <span class="whole-item-tips-text" @click="useExample">{{ $t('使用示例镜像') }}</span>
-                        </p>
-                        <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                            <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                            <a target="_blank" :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC">{{ $t('帮助：如何构建镜像') }}</a>
-                        </p>
-                        <!-- <p class="whole-item-tips"> {{ $t('示例镜像：mirrors.tencent.com/foo/bar') }} </p>
+      <div
+        class="create-item"
+        data-test-id="createDefault_item_baseInfo"
+      >
+        <div class="item-title">
+          {{ $t('容器信息') }}
+          <i
+            v-bk-tooltips="cloudInfoTip"
+            class="paasng-icon paasng-info-circle"
+          />
+        </div>
+        <div
+          class="form-group-dir form-group"
+          style="margin-top: 10px;"
+        >
+          <label class="form-label">
+            {{ $t('镜像地址') }}
+            <i
+              v-bk-tooltips="mirrorUrlTip"
+              class="paasng-icon paasng-info-circle"
+            />
+          </label>
+          <!-- ((https|http|ftp|rtsp|mms)?:\/\/) -->
+          <div class="form-group-flex">
+            <p>
+              <input
+                ref="imageUrl"
+                type="text"
+                autocomplete="off"
+                name="source_tp_url"
+                data-parsley-required="true"
+                :data-parsley-required-message="$t('该字段是必填项')"
+                data-parsley-pattern="^(?:(?=[^:\/]{1,253})(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*(?::[0-9]{1,5})?\/)?((?![._-])(?:[a-z0-9._-]*)(?<![._-])(?:\/(?![._-])[a-z0-9._-]*(?<![._-]))*)(?::(?![.-])[a-zA-Z0-9_.-]{1,128})?$"
+                :data-parsley-pattern-message="$t('地址格式不正确')"
+                data-parsley-trigger="input blur"
+                class="ps-form-control"
+                :placeholder="$t('请输入带标签的镜像地址')"
+              >
+            </p>
+            <p class="whole-item-tips">
+              {{ $t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest') }}&nbsp;
+              <span
+                class="whole-item-tips-text"
+                @click="useExample"
+              >{{ $t('使用示例镜像') }}</span>
+            </p>
+            <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
+              <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
+              <a
+                target="_blank"
+                :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
+              >{{ $t('帮助：如何构建镜像') }}</a>
+            </p>
+            <!-- <p class="whole-item-tips"> {{ $t('示例镜像：mirrors.tencent.com/foo/bar') }} </p>
                         <p class="whole-item-tips"> {{ $t('镜像应监听环境变量值$PORT端口，提供HTTP服务') }} </p> -->
-                    </div>
-                </div>
+          </div>
+        </div>
 
-                <div class="form-group-dir" style="margin-top: 10px;">
-                    <label class="form-label"> {{ $t('启动命令') }} </label>
-                    <div class="form-group-flex">
-                        <bk-tag-input
-                            ext-cls="tag-extra"
-                            v-model="command"
-                            :placeholder="$t('留空将使用镜像的默认 entry point 命令')"
-                            :allow-create="allowCreate"
-                            :allow-auto-match="true"
-                            :has-delete-icon="hasDeleteIcon"
-                            :paste-fn="copyCommand">
-                        </bk-tag-input>
-                        <p class="whole-item-tips"> {{ $t('示例：start_server，多个命令可用回车键分隔') }} </p>
-                    </div>
-                </div>
+        <div
+          class="form-group-dir"
+          style="margin-top: 10px;"
+        >
+          <label class="form-label"> {{ $t('启动命令') }} </label>
+          <div class="form-group-flex">
+            <bk-tag-input
+              v-model="command"
+              ext-cls="tag-extra"
+              :placeholder="$t('留空将使用镜像的默认 entry point 命令')"
+              :allow-create="allowCreate"
+              :allow-auto-match="true"
+              :has-delete-icon="hasDeleteIcon"
+              :paste-fn="copyCommand"
+            />
+            <p class="whole-item-tips">
+              {{ $t('示例：start_server，多个命令可用回车键分隔') }}
+            </p>
+          </div>
+        </div>
 
-                <div class="form-group-dir" style="margin-top: 10px;">
-                    <label class="form-label"> {{ $t('命令参数') }} </label>
-                    <div class="form-group-flex">
-                        <bk-tag-input
-                            ext-cls="tag-extra"
-                            v-model="args"
-                            :placeholder="$t('请输入命令参数')"
-                            :allow-create="allowCreate"
-                            :allow-auto-match="true"
-                            :has-delete-icon="hasDeleteIcon"
-                            :paste-fn="copyCommandParameter">
-                        </bk-tag-input>
-                        <p class="whole-item-tips"> {{ $t('示例：--env prod，多个参数可用回车键分隔') }} </p>
-                    </div>
-                </div>
+        <div
+          class="form-group-dir"
+          style="margin-top: 10px;"
+        >
+          <label class="form-label"> {{ $t('命令参数') }} </label>
+          <div class="form-group-flex">
+            <bk-tag-input
+              v-model="args"
+              ext-cls="tag-extra"
+              :placeholder="$t('请输入命令参数')"
+              :allow-create="allowCreate"
+              :allow-auto-match="true"
+              :has-delete-icon="hasDeleteIcon"
+              :paste-fn="copyCommandParameter"
+            />
+            <p class="whole-item-tips">
+              {{ $t('示例：--env prod，多个参数可用回车键分隔') }}
+            </p>
+          </div>
+        </div>
 
-                <div class="form-group-dir" style="margin-top: 10px;">
-                    <label class="form-label"> {{ $t('容器端口') }} </label>
-                    <div class="form-group-flex">
-                        <p>
-                            <input type="text" autocomplete="off"
-                                name="target_port"
-                                :data-parsley-pattern-message="$t('只能输入数字')"
-                                data-parsley-pattern="^[0-9]*$"
-                                data-parsley-trigger="input blur"
-                                class="ps-form-control" :placeholder="$t('请输入 1 - 65535 的整数，非必填')" />
-                        </p>
-                        <p class="whole-item-tips"> {{ $t('请求将会被发往容器的这个端口。推荐不指定具体端口号，让容器监听 $PORT 环境变量') }} </p>
-                    </div>
-                </div>
-            </div>
+        <div
+          class="form-group-dir"
+          style="margin-top: 10px;"
+        >
+          <label class="form-label"> {{ $t('容器端口') }} </label>
+          <div class="form-group-flex">
+            <p>
+              <input
+                type="text"
+                autocomplete="off"
+                name="target_port"
+                :data-parsley-pattern-message="$t('只能输入数字')"
+                data-parsley-pattern="^[0-9]*$"
+                data-parsley-trigger="input blur"
+                class="ps-form-control"
+                :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
+              >
+            </p>
+            <p class="whole-item-tips">
+              {{ $t('请求将会被发往容器的这个端口。推荐不指定具体端口号，让容器监听 $PORT 环境变量') }}
+            </p>
+          </div>
+        </div>
+      </div>
 
-            <div class="create-item" v-if="isShowAdvancedOptions" data-test-id="createDefault_item_appSelect">
-                <div class="item-title"> {{ $t('高级选项') }} </div>
-                <div class="form-group-dir" id="choose-cluster">
-                    <label class="form-label"> {{ $t('选择集群') }} </label>
-                    <bk-select
-                        style="width: 520px; margin-top: 7px;"
-                        searchable
-                        :style="errorSelectStyle"
-                        v-model="clusterName">
-                        <bk-option v-for="option in clusterList"
-                            :key="option"
-                            :id="option"
-                            :name="option">
-                        </bk-option>
-                    </bk-select>
-                    <p v-if="isShowError" class="error-tips"> {{ $t('该字段是必填项') }} </p>
-                </div>
-            </div>
+      <div
+        v-if="isShowAdvancedOptions"
+        class="create-item"
+        data-test-id="createDefault_item_appSelect"
+      >
+        <div class="item-title">
+          {{ $t('高级选项') }}
+        </div>
+        <div
+          id="choose-cluster"
+          class="form-group-dir"
+        >
+          <label class="form-label"> {{ $t('选择集群') }} </label>
+          <bk-select
+            v-model="clusterName"
+            style="width: 520px; margin-top: 7px;"
+            searchable
+            :style="errorSelectStyle"
+          >
+            <bk-option
+              v-for="option in clusterList"
+              :id="option"
+              :key="option"
+              :name="option"
+            />
+          </bk-select>
+          <p
+            v-if="isShowError"
+            class="error-tips"
+          >
+            {{ $t('该字段是必填项') }}
+          </p>
+        </div>
+      </div>
 
-            <div v-if="formLoading" class="form-loading">
-                <img src="/static/images/create-app-loading.svg" />
-                <p> {{ $t('应用创建中，请稍候') }} </p>
-            </div>
-            <div v-else class="form-actions" data-test-id="createDefault_btn_createApp">
-                <bk-button theme="primary" size="large" class="submit-mr" type="submit"> {{ $t('创建应用') }} </bk-button>
-                <bk-button size="large" @click.prevent="back" class="reset-ml ml15"> {{ $t('返回') }} </bk-button>
-            </div>
-        </form>
-    </div>
+      <div
+        v-if="formLoading"
+        class="form-loading"
+      >
+        <img src="/static/images/create-app-loading.svg">
+        <p> {{ $t('应用创建中，请稍候') }} </p>
+      </div>
+      <div
+        v-else
+        class="form-actions"
+        data-test-id="createDefault_btn_createApp"
+      >
+        <bk-button
+          theme="primary"
+          size="large"
+          class="submit-mr"
+          type="submit"
+        >
+          {{ $t('创建应用') }}
+        </bk-button>
+        <bk-button
+          size="large"
+          class="reset-ml ml15"
+          @click.prevent="back"
+        >
+          {{ $t('返回') }}
+        </bk-button>
+      </div>
+    </form>
+  </div>
 </template>
 <script>
     import _ from 'lodash';

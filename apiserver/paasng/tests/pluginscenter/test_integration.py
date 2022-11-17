@@ -21,9 +21,9 @@ from unittest import mock
 import pytest
 from django.utils.translation import gettext_lazy as _
 
-from paasng.pluginscenter.constants import PluginReleaseStatus
+from paasng.pluginscenter.constants import ActionTypes, PluginReleaseStatus, SubjectTypes
 from paasng.pluginscenter.exceptions import error_codes
-from paasng.pluginscenter.models import PluginRelease
+from paasng.pluginscenter.models import OperationRecord, PluginRelease
 from tests.pluginscenter.conftest import make_api_resource
 
 pytestmark = pytest.mark.django_db
@@ -178,9 +178,27 @@ class TestReleaseStages:
         # - 渲染 stage 时隐含了更新 status 的操作(后面需要重构成后台任务轮训更新状态)
         release.refresh_from_db()
         assert release.current_stage.status == PluginReleaseStatus.SUCCESSFUL
-        assert release.status == PluginReleaseStatus.PENDING
-        resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
-        assert resp.status_code == 200
-
-        release.refresh_from_db()
+        # 最后一个步骤成功, 自动部署成功
         assert release.status == PluginReleaseStatus.SUCCESSFUL
+
+
+class TestOperationRecord:
+    """测试操作记录"""
+
+    def test_record(self, plugin, bk_user):
+        record = OperationRecord.objects.create(
+            plugin=plugin,
+            operator=bk_user.pk,
+            action=ActionTypes.DELETE.value,
+            subject=SubjectTypes.PLUGIN.value,
+        )
+        assert record.get_display_text() == f"{bk_user.username} 删除插件"
+
+        record1 = OperationRecord.objects.create(
+            plugin=plugin,
+            operator=bk_user.pk,
+            action=ActionTypes.ADD.value,
+            specific="0.0.1",
+            subject=SubjectTypes.VERSION.value,
+        )
+        assert record1.get_display_text() == f"{bk_user.username} 新建 0.0.1 版本"

@@ -1,34 +1,47 @@
 <template>
-    <paas-content-loader :is-loading="isLoading" placeholder="deploy-resource-loading" :offset-top="20" :offset-left="20" class="deploy-action-box">
-        <div class="resource-contanier">
-            <div class="resource-item mb20">
-                <div class="pb10">
-                    <span class="item-title">{{ $t('增强服务') }}</span>
-                    <router-link :to="{ path: `/developer-center/apps/${appCode}/default/service/1` }" class="link pl20">
-                        {{ $t('管理增强服务') }}
-                    </router-link>
-                </div>
-                <div class="item-data">
-                    {{$t('启用未创建')}}: {{notCreated || '无'}}
-                </div>
-                <div class="item-data">
-                    {{$t('已创建实例')}}: {{created || '无'}}
-                </div>
-            </div>
-            <div class="resource-item no-border">
-                <div class="item-title-content">
-                    <span class="item-title pb10">
-                        {{ $t('服务发现') }}
-                    </span>
-                    <span>{{ $t('（其他 SaaS）') }}</span>
-                </div>
-                <div class="item-data">
-                    {{$t('通过环境变量获取其他Saas应用的访问地址')}}
-                    <a target="_blank" :href="GLOBAL.DOC.SERVE_DISCOVERY" style="color: #3a84ff">{{ $t('查看使用帮助') }}</a>
-                </div>
-            </div>
+  <paas-content-loader
+    :is-loading="isLoading"
+    placeholder="deploy-resource-loading"
+    :offset-top="20"
+    :offset-left="20"
+    class="deploy-action-box"
+  >
+    <div class="resource-contanier">
+      <div class="resource-item mb20">
+        <div class="pb10">
+          <span class="item-title">{{ $t('增强服务') }}</span>
+          <router-link
+            :to="{ path: `/developer-center/apps/${appCode}/default/service/1` }"
+            class="link pl20"
+          >
+            {{ $t('管理增强服务') }}
+          </router-link>
         </div>
-    </paas-content-loader>
+        <div class="item-data">
+          {{ $t('启用未创建') }}: {{ notCreated || '无' }}
+        </div>
+        <div class="item-data">
+          {{ $t('已创建实例') }}: {{ created || '无' }}
+        </div>
+      </div>
+      <div class="resource-item no-border">
+        <div class="item-title-content">
+          <span class="item-title pb10">
+            {{ $t('服务发现') }}
+          </span>
+          <span>{{ $t('（其他 SaaS）') }}</span>
+        </div>
+        <div class="item-data">
+          {{ $t('通过环境变量获取其他Saas应用的访问地址') }}
+          <a
+            target="_blank"
+            :href="GLOBAL.DOC.SERVE_DISCOVERY"
+            style="color: #3a84ff"
+          >{{ $t('查看使用帮助') }}</a>
+        </div>
+      </div>
+    </div>
+  </paas-content-loader>
 </template>
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin.js';

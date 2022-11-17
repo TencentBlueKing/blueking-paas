@@ -1,79 +1,110 @@
 <template lang="html">
-    <div class="mobile-config-part">
-        <div class="ps-top-card">
-            <p class="main-title"> {{ $t('移动端配置') }} </p>
-            <p class="desc"> {{ $t('开启移动端配置允许通过微信访问蓝鲸应用。使用前请先阅读') }}
-                <a :href="GLOBAL.DOC.APP_ENTRY_INTRO" target="blank"> {{ $t('详细使用说明') }} </a>
-            </p>
-        </div>
-
-        <div class="result-table-content" v-if="isInitLoading">
-            <paas-loading :loading="isInitLoading">
-                <div class="ps-loading-placeholder"></div>
-            </paas-loading>
-        </div>
-        <div class="content" v-else-if="mobileConfig.canReleaseToMobile">
-            <div class="controller">
-                <div class="switch-wrapper ps-card" v-for="key of ['stag', 'prod']">
-                    <div class="header">
-                        <span class="title">{{key === 'stag' ? $t('预发布环境') : $t('生产环境')}}</span>
-                        <div @click.stop.prevent="onToggleChange(key)" class="action">
-                            <bk-switcher
-                                v-model="mobileConfig[key].is_enabled">
-                            </bk-switcher>
-                        </div>
-                    </div>
-                    <div class="content" style="height: 140px;">
-                        <template v-if="mobileConfig[key].is_enabled">
-                            <wx-qiye-qrcode
-                                style="border: 1px solid #F0F1F5; border-radius: 2px;"
-                                :url="mobileConfig[key].access_domain"
-                                :size="96">
-                            </wx-qiye-qrcode>
-                            <div class="guide">
-                                <div class="path">
-                                    <strong>{{ $t('微信请访问') }}:</strong>
-                                    <p>
-                                        <span> {{ $t('微信') }} </span>
-                                        <i class="paasng-icon paasng-angle-right"></i>
-                                        <span> {{ $t('通讯录') }} </span>
-                                        <i class="paasng-icon paasng-angle-right"></i>
-                                        <span> {{ $t('腾讯企业号') }} </span>
-                                        <i class="paasng-icon paasng-angle-right"></i>
-                                        <span>{{key === 'stag' ? `${GLOBAL.HELPER.name}测试` : `${GLOBAL.HELPER.name}`}}</span>
-                                    </p>
-                                </div>
-                                <div class="path">
-                                    <strong>{{ $t('企业微信请访问') }}:</strong>
-                                    <p>
-                                        <span> {{ $t('企业微信') }} </span>
-                                        <i class="paasng-icon paasng-angle-right"></i>
-                                        <span> {{ $t('工作台') }} </span>
-                                        <i class="paasng-icon paasng-angle-right"></i>
-                                        <span> {{ $t('更多') }} </span>
-                                        <i class="paasng-icon paasng-angle-right"></i>
-                                        <span>{{key === 'stag' ? `${GLOBAL.HELPER.name}测试` : `${GLOBAL.HELPER.name}`}}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </template>
-                        <template v-else>
-                            <div class="ps-guide-box" style="margin-top: 30px;">
-                                {{ $t('如需在微信 / 企业微信进行访问') }} <br> {{ $t('请先开启') }}{{key === 'stag' ? $t('预发布环境') : $t('生产环境')}}
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="content" v-else>
-            <p class="description">
-                {{ $t('该功能暂未开放，如需体验请联系') }}
-                <a :href="GLOBAL.HELPER.href" v-if="GLOBAL.HELPER.href">{{GLOBAL.HELPER.name}}</a>
-                <span v-else> {{ $t('管理员') }} </span>
-            </p>
-        </div>
+  <div class="mobile-config-part">
+    <div class="ps-top-card">
+      <p class="main-title">
+        {{ $t('移动端配置') }}
+      </p>
+      <p class="desc">
+        {{ $t('开启移动端配置允许通过微信访问蓝鲸应用。使用前请先阅读') }}
+        <a
+          :href="GLOBAL.DOC.APP_ENTRY_INTRO"
+          target="blank"
+        > {{ $t('详细使用说明') }} </a>
+      </p>
     </div>
+
+    <div
+      v-if="isInitLoading"
+      class="result-table-content"
+    >
+      <paas-loading :loading="isInitLoading">
+        <div class="ps-loading-placeholder" />
+      </paas-loading>
+    </div>
+    <div
+      v-else-if="mobileConfig.canReleaseToMobile"
+      class="content"
+    >
+      <div class="controller">
+        <div
+          v-for="key of ['stag', 'prod']"
+          :key="key"
+          class="switch-wrapper ps-card"
+        >
+          <div class="header">
+            <span class="title">{{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
+            <div
+              class="action"
+              @click.stop.prevent="onToggleChange(key)"
+            >
+              <bk-switcher
+                v-model="mobileConfig[key].is_enabled"
+              />
+            </div>
+          </div>
+          <div
+            class="content"
+            style="height: 140px;"
+          >
+            <template v-if="mobileConfig[key].is_enabled">
+              <wx-qiye-qrcode
+                style="border: 1px solid #F0F1F5; border-radius: 2px;"
+                :url="mobileConfig[key].access_domain"
+                :size="96"
+              />
+              <div class="guide">
+                <div class="path">
+                  <strong>{{ $t('微信请访问') }}:</strong>
+                  <p>
+                    <span> {{ $t('微信') }} </span>
+                    <i class="paasng-icon paasng-angle-right" />
+                    <span> {{ $t('通讯录') }} </span>
+                    <i class="paasng-icon paasng-angle-right" />
+                    <span> {{ $t('腾讯企业号') }} </span>
+                    <i class="paasng-icon paasng-angle-right" />
+                    <span>{{ key === 'stag' ? `${GLOBAL.HELPER.name}测试` : `${GLOBAL.HELPER.name}` }}</span>
+                  </p>
+                </div>
+                <div class="path">
+                  <strong>{{ $t('企业微信请访问') }}:</strong>
+                  <p>
+                    <span> {{ $t('企业微信') }} </span>
+                    <i class="paasng-icon paasng-angle-right" />
+                    <span> {{ $t('工作台') }} </span>
+                    <i class="paasng-icon paasng-angle-right" />
+                    <span> {{ $t('更多') }} </span>
+                    <i class="paasng-icon paasng-angle-right" />
+                    <span>{{ key === 'stag' ? `${GLOBAL.HELPER.name}测试` : `${GLOBAL.HELPER.name}` }}</span>
+                  </p>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                class="ps-guide-box"
+                style="margin-top: 30px;"
+              >
+                {{ $t('如需在微信 / 企业微信进行访问') }} <br> {{ $t('请先开启') }}{{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }}
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      v-else
+      class="content"
+    >
+      <p class="description">
+        {{ $t('该功能暂未开放，如需体验请联系') }}
+        <a
+          v-if="GLOBAL.HELPER.href"
+          :href="GLOBAL.HELPER.href"
+        >{{ GLOBAL.HELPER.name }}</a>
+        <span v-else> {{ $t('管理员') }} </span>
+      </p>
+    </div>
+  </div>
 </template>
 
 <script>

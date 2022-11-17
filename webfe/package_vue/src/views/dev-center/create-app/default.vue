@@ -1,332 +1,616 @@
 <template lang="html">
-    <div class="establish">
-        <form id="form-create-app" @submit.stop.prevent="submitCreateForm" data-test-id="createDefault_form_appInfo">
-            <div class="ps-tip-block default-info mt15">
-                <i style="color: #3A84FF;" class="paasng-icon paasng-info-circle"></i>
-                {{ $t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。') }}
+  <div class="establish">
+    <form
+      id="form-create-app"
+      data-test-id="createDefault_form_appInfo"
+      @submit.stop.prevent="submitCreateForm"
+    >
+      <div class="ps-tip-block default-info mt15">
+        <i
+          style="color: #3A84FF;"
+          class="paasng-icon paasng-info-circle"
+        />
+        {{ $t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。') }}
+      </div>
+      <!-- 基本信息 -->
+      <div
+        class="create-item"
+        data-test-id="createDefault_item_baseInfo"
+      >
+        <div class="item-title">
+          {{ $t('基本信息') }}
+        </div>
+        <div
+          class="form-group"
+          style="margin-top: 10px;"
+        >
+          <label class="form-label"> {{ $t('应用 ID') }} </label>
+          <div class="form-group-flex">
+            <p>
+              <input
+                type="text"
+                autocomplete="off"
+                name="code"
+                data-parsley-required="true"
+                :data-parsley-required-message="$t('该字段是必填项')"
+                data-parsley-maxlength="16"
+                :data-parsley-pattern="isLessCodeRule ? '[a-z]+' : '[a-z][a-z0-9-]+'"
+                :data-parsley-pattern-message="isLessCodeRule ? $t('格式不正确，由小写字母组成，长度小于 16 个字符') : $t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
+                data-parsley-trigger="input blur"
+                class="ps-form-control"
+                :placeholder="isLessCodeRule ? $t('由小写字母组成，长度小于 16 个字符') : $t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')"
+              >
+            </p>
+            <p class="whole-item-tips">
+              {{ $t('应用的唯一标识，创建后不可修改') }}
+            </p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"> {{ $t('应用名称') }} </label>
+          <p class="form-group-flex">
+            <input
+              type="text"
+              autocomplete="off"
+              name="name"
+              data-parsley-required="true"
+              :data-parsley-required-message="$t('该字段是必填项')"
+              data-parsley-maxlength="20"
+              data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5]+"
+              :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')"
+              data-parsley-trigger="input blur"
+              class="ps-form-control"
+              :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')"
+            >
+          </p>
+        </div>
+        <div
+          v-if="platformFeature.REGION_DISPLAY"
+          class="form-group"
+          style="margin-top: 7px;"
+        >
+          <label class="form-label"> {{ $t('应用版本') }} </label>
+          <div
+            v-for="region in regionChoices"
+            :key="region.key"
+            class="form-group-flex-radio"
+          >
+            <div class="form-group-radio">
+              <bk-radio-group
+                v-model="regionChoose"
+                style="width: 72px;"
+              >
+                <bk-radio
+                  :key="region.key"
+                  :value="region.key"
+                >
+                  {{ region.value }}
+                </bk-radio>
+              </bk-radio-group>
+              <p class="whole-item-tips">
+                {{ region.description }}
+              </p>
             </div>
-            <!-- 基本信息 -->
-            <div class="create-item" data-test-id="createDefault_item_baseInfo">
-                <div class="item-title">
-                    {{ $t('基本信息') }}
-                </div>
-                <div class="form-group" style="margin-top: 10px;">
-                    <label class="form-label"> {{ $t('应用 ID') }} </label>
-                    <div class="form-group-flex">
-                        <p>
-                            <input type="text" autocomplete="off"
-                                name="code"
-                                data-parsley-required="true"
-                                :data-parsley-required-message="$t('该字段是必填项')"
-                                data-parsley-maxlength="16"
-                                :data-parsley-pattern="isLessCodeRule ? '[a-z]+' : '[a-z][a-z0-9-]+'"
-                                :data-parsley-pattern-message="isLessCodeRule ? $t('格式不正确，由小写字母组成，长度小于 16 个字符') : $t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
-                                data-parsley-trigger="input blur"
-                                class="ps-form-control" :placeholder="isLessCodeRule ? $t('由小写字母组成，长度小于 16 个字符') : $t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')" />
-                        </p>
-                        <p class="whole-item-tips"> {{ $t('应用的唯一标识，创建后不可修改') }} </p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label"> {{ $t('应用名称') }} </label>
-                    <p class="form-group-flex">
-                        <input type="text" autocomplete="off"
-                            name="name"
-                            data-parsley-required="true"
-                            :data-parsley-required-message="$t('该字段是必填项')"
-                            data-parsley-maxlength="20"
-                            data-parsley-pattern="[a-zA-Z\d\u4e00-\u9fa5]+"
-                            :data-parsley-pattern-message="$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')"
-                            data-parsley-trigger="input blur"
-                            class="ps-form-control"
-                            :placeholder="$t('由汉字、英文字母、数字组成，长度小于 20 个字符')" />
-                    </p>
-                </div>
-                <div class="form-group" style="margin-top: 7px;" v-if="platformFeature.REGION_DISPLAY">
-                    <label class="form-label"> {{ $t('应用版本') }} </label>
-                    <div class="form-group-flex-radio" :key="region.key" v-for="region in regionChoices">
-                        <div class="form-group-radio">
-                            <bk-radio-group v-model="regionChoose" style="width: 72px;">
-                                <bk-radio :value="region.key" :key="region.key">{{region.value}}</bk-radio>
-                            </bk-radio-group>
-                            <p class="whole-item-tips">{{region.description}}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top: 7px;margin-left: 10px" v-if="curUserFeature.ENABLE_TC_DOCKER">
-                    <label class="form-label"> {{ $t('构建方式') }} </label>
-                    <div class="form-group-flex-radio" style="width: 100%">
-                        <div class="form-group-radio" style="margin-top: 5px;">
-                            <bk-radio-group v-model="structureType" class="construction-manner">
-                                <bk-radio :value="'soundCode'"> {{ $t('提供源码') }} </bk-radio>
-                                <bk-radio :value="'mirror'"> {{ $t('提供镜像') }} </bk-radio>
-                                <bk-radio :value="'isMirror'" :disabled="isShowRadio"> {{ $t('从源码构建镜像') }} </bk-radio>
-                            </bk-radio-group>
-                        </div>
-                    </div>
-                </div>
+          </div>
+        </div>
+        <div
+          v-if="curUserFeature.ENABLE_TC_DOCKER"
+          class="form-group"
+          style="margin-top: 7px;margin-left: 10px"
+        >
+          <label class="form-label"> {{ $t('构建方式') }} </label>
+          <div
+            class="form-group-flex-radio"
+            style="width: 100%"
+          >
+            <div
+              class="form-group-radio"
+              style="margin-top: 5px;"
+            >
+              <bk-radio-group
+                v-model="structureType"
+                class="construction-manner"
+              >
+                <bk-radio :value="'soundCode'">
+                  {{ $t('提供源码') }}
+                </bk-radio>
+                <bk-radio :value="'mirror'">
+                  {{ $t('提供镜像') }}
+                </bk-radio>
+                <bk-radio
+                  :value="'isMirror'"
+                  :disabled="isShowRadio"
+                >
+                  {{ $t('从源码构建镜像') }}
+                </bk-radio>
+              </bk-radio-group>
             </div>
-            <!-- 镜像管理 -->
-            <div v-if="structureType === 'mirror'" class="create-item" data-test-id="createDefault_item_baseInfo">
-                <div class="item-title">
-                    {{ $t('镜像管理') }}
-                </div>
+          </div>
+        </div>
+      </div>
+      <!-- 镜像管理 -->
+      <div
+        v-if="structureType === 'mirror'"
+        class="create-item"
+        data-test-id="createDefault_item_baseInfo"
+      >
+        <div class="item-title">
+          {{ $t('镜像管理') }}
+        </div>
 
-                <div class="form-group" style="margin-top: 7px;">
-                    <label class="form-label"> {{ $t('镜像类型') }} </label>
-                    <div class="form-group-radio" style="margin-top: 5px;">
-                        <bk-radio-group v-model="mirrorData.type">
-                            <bk-radio value="public"> {{ $t('公开') }} </bk-radio>
-                            <bk-radio value="private" disabled> {{ $t('私有') }} </bk-radio>
-                        </bk-radio-group>
-                    </div>
-                </div>
+        <div
+          class="form-group"
+          style="margin-top: 7px;"
+        >
+          <label class="form-label"> {{ $t('镜像类型') }} </label>
+          <div
+            class="form-group-radio"
+            style="margin-top: 5px;"
+          >
+            <bk-radio-group v-model="mirrorData.type">
+              <bk-radio value="public">
+                {{ $t('公开') }}
+              </bk-radio>
+              <bk-radio
+                value="private"
+                disabled
+              >
+                {{ $t('私有') }}
+              </bk-radio>
+            </bk-radio-group>
+          </div>
+        </div>
 
-                <bk-form form-type="inline" :model="mirrorData" :rules="mirrorRules" ref="validate2" ext-cls="item-cls">
-                    <bk-form-item :required="true" :property="'url'" error-display-type="normal">
-                        <div class="form-group mt10">
-                            <label class="form-label"> {{ $t('镜像地址') }} </label>
-                            <div class="form-input-flex">
-                                <!-- <input type="text" autocomplete="off"
+        <bk-form
+          ref="validate2"
+          form-type="inline"
+          :model="mirrorData"
+          :rules="mirrorRules"
+          ext-cls="item-cls"
+        >
+          <bk-form-item
+            :required="true"
+            :property="'url'"
+            error-display-type="normal"
+          >
+            <div class="form-group mt10">
+              <label class="form-label"> {{ $t('镜像地址') }} </label>
+              <div class="form-input-flex">
+                <!-- <input type="text" autocomplete="off"
                                     name="source_tp_url"
                                     data-parsley-required-message="该字段是必填项"
                                     data-parsley-pattern="^((https|http|ftp|rtsp|mms)?:\/\/)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/?[A-Za-z0-9]+(\/?))*$"
                                     data-parsley-pattern-message="地址格式不正确"
                                     data-parsley-trigger="input blur"
                                     class="ps-form-control" placeholder="请输入正确的地址" /> -->
-                                <bk-input style="width: 520px;" :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')" size="large" class="mt10" clearable v-model="mirrorData.url">
-                                    <template slot="prepend" v-if="GLOBAL.APP_VERSION === 'te'">
-                                        <div class="group-text">mirrors.tencent.com/</div>
-                                    </template>
-                                </bk-input>
-                            </div>
-                        </div>
-                    </bk-form-item>
-                </bk-form>
+                <bk-input
+                  v-model="mirrorData.url"
+                  style="width: 520px;"
+                  :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
+                  size="large"
+                  class="mt10"
+                  clearable
+                >
+                  <template
+                    v-if="GLOBAL.APP_VERSION === 'te'"
+                    slot="prepend"
+                  >
+                    <div class="group-text">
+                      mirrors.tencent.com/
+                    </div>
+                  </template>
+                </bk-input>
+              </div>
             </div>
+          </bk-form-item>
+        </bk-form>
+      </div>
 
-            <!-- 应用引擎 -->
-            <div v-if="structureType !== 'mirror'" class="create-item" data-test-id="createDefault_item_appEngine">
-                <div class="item-title">
-                    {{ $t('应用模板') }}
-                </div>
-                <template v-if="isOpenEngine">
-                    <!-- 代码库 -->
-                    <div class="establish-tab">
-                        <section class="code-type">
-                            <label class="form-label"> {{ $t('模板来源') }} </label>
-                            <div class="tab-box">
-                                <li :class="['tab-item', { 'active': localSourceOrigin === 1 }]" @click="handleCodeTypeChange(1)"> {{ $t('蓝鲸开发框架') }} </li>
-                                <li :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
-                                    v-if="allRegionsSpecs[regionChoose] && allRegionsSpecs[regionChoose].allow_deploy_app_by_lesscode"
-                                    @click="handleCodeTypeChange(2)">
-                                    {{ $t('蓝鲸可视化开发平台') }}
-                                </li>
-                                <li :class="['tab-item', { 'active': localSourceOrigin === 3 }]"
-                                    v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && allowPluginCreation(regionChoose)"
-                                    @click="handleCodeTypeChange(3)">
-                                    {{ $t('蓝鲸插件') }}
-                                </li>
-                                <li :class="['tab-item', { 'active': localSourceOrigin === 5 }]"
-                                    v-if="sceneTemplateList.length"
-                                    @click="handleCodeTypeChange(5)">
-                                    {{ $t('场景模版') }}
-                                </li>
-                            </div>
-                        </section>
-                    </div>
+      <!-- 应用引擎 -->
+      <div
+        v-if="structureType !== 'mirror'"
+        class="create-item"
+        data-test-id="createDefault_item_appEngine"
+      >
+        <div class="item-title">
+          {{ $t('应用模板') }}
+        </div>
+        <template v-if="isOpenEngine">
+          <!-- 代码库 -->
+          <div class="establish-tab">
+            <section class="code-type">
+              <label class="form-label"> {{ $t('模板来源') }} </label>
+              <div class="tab-box">
+                <li
+                  :class="['tab-item', { 'active': localSourceOrigin === 1 }]"
+                  @click="handleCodeTypeChange(1)"
+                >
+                  {{ $t('蓝鲸开发框架') }}
+                </li>
+                <li
+                  v-if="allRegionsSpecs[regionChoose] && allRegionsSpecs[regionChoose].allow_deploy_app_by_lesscode"
+                  :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
+                  @click="handleCodeTypeChange(2)"
+                >
+                  {{ $t('蓝鲸可视化开发平台') }}
+                </li>
+                <li
+                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && allowPluginCreation(regionChoose)"
+                  :class="['tab-item', { 'active': localSourceOrigin === 3 }]"
+                  @click="handleCodeTypeChange(3)"
+                >
+                  {{ $t('蓝鲸插件') }}
+                </li>
+                <li
+                  v-if="sceneTemplateList.length"
+                  :class="['tab-item', { 'active': localSourceOrigin === 5 }]"
+                  @click="handleCodeTypeChange(5)"
+                >
+                  {{ $t('场景模版') }}
+                </li>
+              </div>
+            </section>
+          </div>
 
-                    <div class="plugin-container" v-show="isBkPlugin">
-                        <ul class="establish-main-list">
-                            <li>
-                                <label class="pointer">
-                                    <bk-radio-group v-model="isOpenSupportPlus">
-                                        <bk-radio :value="'yes'" disabled> {{ $t('Python 语言') }} </bk-radio>
-                                    </bk-radio-group>
-                                </label>
-                                <p class="f12">
-                                    <a target="_blank" :href="GLOBAL.LINK.BK_PLUGIN" style="color: #3a84ff">Python + bk-plugin-framework，{{ $t('集成插件开发框架，插件版本管理，插件运行时等模块') }}</a>
-                                </p>
-                            </li>
-                        </ul>
-                    </div>
+          <div
+            v-show="isBkPlugin"
+            class="plugin-container"
+          >
+            <ul class="establish-main-list">
+              <li>
+                <label class="pointer">
+                  <bk-radio-group v-model="isOpenSupportPlus">
+                    <bk-radio
+                      :value="'yes'"
+                      disabled
+                    > {{ $t('Python 语言') }} </bk-radio>
+                  </bk-radio-group>
+                </label>
+                <p class="f12">
+                  <a
+                    target="_blank"
+                    :href="GLOBAL.LINK.BK_PLUGIN"
+                    style="color: #3a84ff"
+                  >Python + bk-plugin-framework，{{ $t('集成插件开发框架，插件版本管理，插件运行时等模块') }}</a>
+                </p>
+              </li>
+            </ul>
+          </div>
 
-                    <div class="plugin-container-scene" v-if="!isBkPlugin && sceneLocalSourceOrigin === 5 && sceneTemplateList.length">
-                        <div v-bkloading="{ isLoading: sceneListIsLoading, theme: 'primary', zIndex: 10 }">
-                            <div class="serch-wrapper" v-if="sceneTemplateList.length > 6">
-                                <bk-input
-                                    :clearable="true"
-                                    style="margin-top: 10px;"
-                                    :placeholder="'场景名称'"
-                                    :right-icon="'bk-icon icon-search'"
-                                    v-model="sceneName"
-                                    @input="handleSearch">
-                                </bk-input>
-                            </div>
-                            <ul :class="['scene-wrapper', !isUnfold ? 'wrapper-height' : '']" v-bkloading="{ isLoading: sceneIsLoading, theme: 'primary', zIndex: 10 }" v-if="filterSceneTemplateList.length">
-                                <li v-for="(item, index) in filterSceneTemplateList" :key="index" :class="['scene-item', item.isActive ? 'cartActive' : '']" @click="cartActive(item)">
-                                    <div class="scene-item-header">
-                                        <h3 :title="item.display_name">{{ item.display_name }}</h3>
-                                        <a target="_blank" :href="item.repo_url" style="color: #3a84ff"> {{ $t('查看详情') }} </a>
-                                    </div>
-                                    <div class="scene-item-body">
-                                        <bk-popover placement="bottom-start" width="300">
-                                            <div class="text">{{ item.description }}</div>
-                                            <div slot="content" style="white-space: normal;">
-                                                <div class="pt10 pb5 pl10 pr10">{{ item.description }}</div>
-                                            </div>
-                                        </bk-popover>
-                                    </div>
-                                    <div class="scene-tags-wrapper">
-                                        <span class="tags mr5" v-for="tag in item.tags" :key="tag">{{ tag }}</span>
-                                    </div>
-                                </li>
-                            </ul>
-                            <div v-else>
-                                <div style="width: 100%; height: 128px;">
-                                    <chart id="visitedchart" style="width: 100%; height: 128px;"></chart>
-                                    <div class="ps-no-result" style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%);">
-                                        <div class="text">
-                                            <p><i class="paasng-icon paasng-empty" style="font-size: 50px;"></i></p>
-                                            <p> {{ $t('暂无数据') }} </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+          <div
+            v-if="!isBkPlugin && sceneLocalSourceOrigin === 5 && sceneTemplateList.length"
+            class="plugin-container-scene"
+          >
+            <div v-bkloading="{ isLoading: sceneListIsLoading, theme: 'primary', zIndex: 10 }">
+              <div
+                v-if="sceneTemplateList.length > 6"
+                class="serch-wrapper"
+              >
+                <bk-input
+                  v-model="sceneName"
+                  :clearable="true"
+                  style="margin-top: 10px;"
+                  :placeholder="'场景名称'"
+                  :right-icon="'bk-icon icon-search'"
+                  @input="handleSearch"
+                />
+              </div>
+              <ul
+                v-if="filterSceneTemplateList.length"
+                v-bkloading="{ isLoading: sceneIsLoading, theme: 'primary', zIndex: 10 }"
+                :class="['scene-wrapper', !isUnfold ? 'wrapper-height' : '']"
+              >
+                <li
+                  v-for="(item, index) in filterSceneTemplateList"
+                  :key="index"
+                  :class="['scene-item', item.isActive ? 'cartActive' : '']"
+                  @click="cartActive(item)"
+                >
+                  <div class="scene-item-header">
+                    <h3 :title="item.display_name">
+                      {{ item.display_name }}
+                    </h3>
+                    <a
+                      target="_blank"
+                      :href="item.repo_url"
+                      style="color: #3a84ff"
+                    > {{ $t('查看详情') }} </a>
+                  </div>
+                  <div class="scene-item-body">
+                    <bk-popover
+                      placement="bottom-start"
+                      width="300"
+                    >
+                      <div class="text">
+                        {{ item.description }}
+                      </div>
+                      <div
+                        slot="content"
+                        style="white-space: normal;"
+                      >
+                        <div class="pt10 pb5 pl10 pr10">
+                          {{ item.description }}
                         </div>
-                        <div class="icon-wrapper" v-if="filterSceneTemplateList.length > 6">
-                            <i :class="['bk-icon', 'icon-angle-up', 'icon-triangle', isUnfold ? 'icon-rotate' : '']" @click.self="expandableListView"></i>
-                        </div>
-                    </div>
-
-                    <div class="ps-tip-block lesscode-info mt15" v-show="!isBkPlugin && sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && !sceneLocalSourceOrigin">
-                        <i style="color: #3A84FF;" class="paasng-icon paasng-info-circle"></i>
-                        {{ $t('默认模块需要') }} <a target="_blank" :href="GLOBAL.LINK.LESSCODE_INDEX" style="color: #3a84ff"> {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }} </div>
-
-                    <div class="establish-tab" v-show="!isBkPlugin && sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP && sceneLocalSourceOrigin !== 5">
-
-                        <section class="deploy-panel deploy-main">
-                            <ul class="ps-tab" style="position: relative; z-index: 10; padding: 0 10px">
-                                <li :class="['item', { 'active': language === langName }]" @click="changeLanguage(langName)"
-                                    v-for="(langItem, langName) in curLanguages" :key="langName">
-                                    {{$t(defaultlangName[langName])}}
-                                </li>
-                            </ul>
-                        </section>
-
-                        <div class="form-group establish-main card-container" :style="establishStyle">
-                            <transition :name="langTransitionName" v-if="sourceControlType">
-                                <template>
-                                    <div
-                                        class="options-card"
-                                        :key="langName"
-                                        v-for="(langItem, langName) in curLanguages"
-                                        v-if="langName === language">
-                                        <ul class="establish-main-list">
-                                            <li v-for="(item, index) in langItem" :key="index">
-                                                <label class="pointer">
-                                                    <input type="radio" name="q" v-model="sourceInitTemplate" :value="item.name" class="ps-radio-default" checked />
-                                                    {{item.display_name}}
-                                                </label>
-                                                <p class="f12">
-                                                    <template>
-                                                        {{item.description}}
-                                                    </template>
-                                                </p>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </template>
-                            </transition>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div class="create-item" v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP && structureType !== 'mirror'" data-test-id="createDefault_item_appEngine">
-                <div class="item-title"> {{ $t('源码管理') }} </div>
-                <section class="code-depot">
-                    <label class="form-label">
-                        {{ $t('代码源') }}
-                    </label>
-                    <div
-                        v-for="(item, index) in sourceControlTypes"
-                        :key="index"
-                        :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }]"
-                        @click="changeSourceControl(item)">
-                        <img :src="'/static/images/' + item.imgSrc + '.png'" />
-                        <p class="source-control-title" :title="item.name">{{item.name}}</p>
-                    </div>
-                </section>
-
-                <!-- Git 相关额外代码 start -->
-                <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
-                    <div v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
-                        <git-extend
-                            :git-control-type="sourceControlType"
-                            :is-auth="gitExtendConfig[sourceControlType].isAuth"
-                            :is-loading="gitExtendConfig[sourceControlType].isLoading"
-                            :auth-docs="gitExtendConfig[sourceControlType].authDocs"
-                            :alert-text="gitExtendConfig[sourceControlType].alertText"
-                            :auth-address="gitExtendConfig[sourceControlType].authAddress"
-                            :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
-                            :repo-list="gitExtendConfig[sourceControlType].repoList"
-                            :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
-                            :key="sourceControlType"
+                      </div>
+                    </bk-popover>
+                  </div>
+                  <div class="scene-tags-wrapper">
+                    <span
+                      v-for="tag in item.tags"
+                      :key="tag"
+                      class="tags mr5"
+                    >{{ tag }}</span>
+                  </div>
+                </li>
+              </ul>
+              <div v-else>
+                <div style="width: 100%; height: 128px;">
+                  <chart
+                    id="visitedchart"
+                    style="width: 100%; height: 128px;"
+                  />
+                  <div
+                    class="ps-no-result"
+                    style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%);"
+                  >
+                    <div class="text">
+                      <p>
+                        <i
+                          class="paasng-icon paasng-empty"
+                          style="font-size: 50px;"
                         />
-                        <div class="form-group-dir" style="margin-top: 10px;" v-if="deploymentIsShow">
-                            <label class="form-label">
-                                {{ $t('部署目录') }}
-                                <i class="paasng-icon paasng-info-circle" v-bk-tooltips="sourceDirTip"></i>
-                            </label>
-                            <div class="form-group-flex">
-                                <p>
-                                    <bk-input class="source-dir" :class="sourceDirError ? 'error' : ''"
-                                        :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
-                                        v-model="sourceDirVal" @blur="validSourceDir"></bk-input>
-                                    <ul class="parsley-errors-list" v-if="sourceDirError">
-                                        <li class="parsley-pattern"> {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }} </li>
-                                    </ul>
-                                </p>
-                            </div>
-                        </div>
+                      </p>
+                      <p> {{ $t('暂无数据') }} </p>
                     </div>
-                    <!-- 用户自定义git、svn账号信息 start -->
-                    <repo-info ref="repoInfo" v-if="curSourceControl && curSourceControl.auth_method === 'basic'" :type="sourceControlType" :key="sourceControlType" :deployment-is-show="deploymentIsShow"></repo-info>
-                    <!-- 用户自定义git、svn账号信息 end -->
-                </template>
-
-            </div>
-
-            <div class="create-item" v-if="isShowAdvancedOptions" data-test-id="createDefault_item_appSelect">
-                <div class="item-title"> {{ $t('高级选项') }} </div>
-                <div class="form-group-dir" id="choose-cluster">
-                    <label class="form-label"> {{ $t('选择集群') }} </label>
-                    <bk-select
-                        style="width: 520px; margin-top: 7px;"
-                        searchable
-                        :style="errorSelectStyle"
-                        v-model="clusterName">
-                        <bk-option v-for="option in clusterList"
-                            :key="option"
-                            :id="option"
-                            :name="option">
-                        </bk-option>
-                    </bk-select>
-                    <p v-if="isShowError" class="error-tips"> {{ $t('该字段是必填项') }} </p>
+                  </div>
                 </div>
+              </div>
             </div>
+            <div
+              v-if="filterSceneTemplateList.length > 6"
+              class="icon-wrapper"
+            >
+              <i
+                :class="['bk-icon', 'icon-angle-up', 'icon-triangle', isUnfold ? 'icon-rotate' : '']"
+                @click.self="expandableListView"
+              />
+            </div>
+          </div>
 
-            <div v-if="formLoading" class="form-loading">
-                <img src="/static/images/create-app-loading.svg" />
-                <p> {{ $t('应用创建中，请稍候') }} </p>
+          <div
+            v-show="!isBkPlugin && sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && !sceneLocalSourceOrigin"
+            class="ps-tip-block lesscode-info mt15"
+          >
+            <i
+              style="color: #3A84FF;"
+              class="paasng-icon paasng-info-circle"
+            />
+            {{ $t('默认模块需要') }} <a
+              target="_blank"
+              :href="GLOBAL.LINK.LESSCODE_INDEX"
+              style="color: #3a84ff"
+            > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
+          </div>
+
+          <div
+            v-show="!isBkPlugin && sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP && sceneLocalSourceOrigin !== 5"
+            class="establish-tab"
+          >
+            <section class="deploy-panel deploy-main">
+              <ul
+                class="ps-tab"
+                style="position: relative; z-index: 10; padding: 0 10px"
+              >
+                <li
+                  v-for="(langItem, langName) in curLanguages"
+                  :key="langName"
+                  :class="['item', { 'active': language === langName }]"
+                  @click="changeLanguage(langName)"
+                >
+                  {{ $t(defaultlangName[langName]) }}
+                </li>
+              </ul>
+            </section>
+
+            <div
+              class="form-group establish-main card-container"
+              :style="establishStyle"
+            >
+              <transition
+                v-if="sourceControlType"
+                :name="langTransitionName"
+              >
+                <template>
+                  <div
+                    v-for="(langItem, langName) in curLanguages"
+                    v-if="langName === language"
+                    :key="langName"
+                    class="options-card"
+                  >
+                    <ul class="establish-main-list">
+                      <li
+                        v-for="(item, index) in langItem"
+                        :key="index"
+                      >
+                        <label class="pointer">
+                          <input
+                            v-model="sourceInitTemplate"
+                            type="radio"
+                            name="q"
+                            :value="item.name"
+                            class="ps-radio-default"
+                            checked
+                          >
+                          {{ item.display_name }}
+                        </label>
+                        <p class="f12">
+                          <template>
+                            {{ item.description }}
+                          </template>
+                        </p>
+                      </li>
+                    </ul>
+                  </div>
+                </template>
+              </transition>
             </div>
-            <div v-else class="form-actions" data-test-id="createDefault_btn_createApp">
-                <bk-button theme="primary" size="large" class="submit-mr" type="submit"> {{ $t('创建应用') }} </bk-button>
-                <bk-button size="large" @click.prevent="back" class="reset-ml ml15"> {{ $t('返回') }} </bk-button>
+          </div>
+        </template>
+      </div>
+
+      <div
+        v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP && structureType !== 'mirror'"
+        class="create-item"
+        data-test-id="createDefault_item_appEngine"
+      >
+        <div class="item-title">
+          {{ $t('源码管理') }}
+        </div>
+        <section class="code-depot">
+          <label class="form-label">
+            {{ $t('代码源') }}
+          </label>
+          <div
+            v-for="(item, index) in sourceControlTypes"
+            :key="index"
+            :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }]"
+            @click="changeSourceControl(item)"
+          >
+            <img :src="'/static/images/' + item.imgSrc + '.png'">
+            <p
+              class="source-control-title"
+              :title="item.name"
+            >
+              {{ item.name }}
+            </p>
+          </div>
+        </section>
+
+        <!-- Git 相关额外代码 start -->
+        <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
+          <div v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
+            <git-extend
+              :key="sourceControlType"
+              :git-control-type="sourceControlType"
+              :is-auth="gitExtendConfig[sourceControlType].isAuth"
+              :is-loading="gitExtendConfig[sourceControlType].isLoading"
+              :auth-docs="gitExtendConfig[sourceControlType].authDocs"
+              :alert-text="gitExtendConfig[sourceControlType].alertText"
+              :auth-address="gitExtendConfig[sourceControlType].authAddress"
+              :fetch-method="gitExtendConfig[sourceControlType].fetchMethod"
+              :repo-list="gitExtendConfig[sourceControlType].repoList"
+              :selected-repo-url.sync="gitExtendConfig[sourceControlType].selectedRepoUrl"
+            />
+            <div
+              v-if="deploymentIsShow"
+              class="form-group-dir"
+              style="margin-top: 10px;"
+            >
+              <label class="form-label">
+                {{ $t('部署目录') }}
+                <i
+                  v-bk-tooltips="sourceDirTip"
+                  class="paasng-icon paasng-info-circle"
+                />
+              </label>
+              <div class="form-group-flex">
+                <p>
+                  <bk-input
+                    v-model="sourceDirVal"
+                    class="source-dir"
+                    :class="sourceDirError ? 'error' : ''"
+                    :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
+                    @blur="validSourceDir"
+                  />
+                  <ul
+                    v-if="sourceDirError"
+                    class="parsley-errors-list"
+                  >
+                    <li class="parsley-pattern">
+                      {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
+                    </li>
+                  </ul>
+                </p>
+              </div>
             </div>
-        </form>
-    </div>
+          </div>
+          <!-- 用户自定义git、svn账号信息 start -->
+          <repo-info
+            v-if="curSourceControl && curSourceControl.auth_method === 'basic'"
+            ref="repoInfo"
+            :key="sourceControlType"
+            :type="sourceControlType"
+            :deployment-is-show="deploymentIsShow"
+          />
+          <!-- 用户自定义git、svn账号信息 end -->
+        </template>
+      </div>
+
+      <div
+        v-if="isShowAdvancedOptions"
+        class="create-item"
+        data-test-id="createDefault_item_appSelect"
+      >
+        <div class="item-title">
+          {{ $t('高级选项') }}
+        </div>
+        <div
+          id="choose-cluster"
+          class="form-group-dir"
+        >
+          <label class="form-label"> {{ $t('选择集群') }} </label>
+          <bk-select
+            v-model="clusterName"
+            style="width: 520px; margin-top: 7px;"
+            searchable
+            :style="errorSelectStyle"
+          >
+            <bk-option
+              v-for="option in clusterList"
+              :id="option"
+              :key="option"
+              :name="option"
+            />
+          </bk-select>
+          <p
+            v-if="isShowError"
+            class="error-tips"
+          >
+            {{ $t('该字段是必填项') }}
+          </p>
+        </div>
+      </div>
+
+      <div
+        v-if="formLoading"
+        class="form-loading"
+      >
+        <img src="/static/images/create-app-loading.svg">
+        <p> {{ $t('应用创建中，请稍候') }} </p>
+      </div>
+      <div
+        v-else
+        class="form-actions"
+        data-test-id="createDefault_btn_createApp"
+      >
+        <bk-button
+          theme="primary"
+          size="large"
+          class="submit-mr"
+          type="submit"
+        >
+          {{ $t('创建应用') }}
+        </bk-button>
+        <bk-button
+          size="large"
+          class="reset-ml ml15"
+          @click.prevent="back"
+        >
+          {{ $t('返回') }}
+        </bk-button>
+      </div>
+    </form>
+  </div>
 </template>
 
 <script>
@@ -544,10 +828,10 @@
                 }
             },
             sourceInitTemplate (value) {
-                if (value === 'dj18_hello_world'
-                    || value === 'go_gin_hello_world'
-                    || value === 'nodejs_express_hello_world'
-                    || value === 'nodejs_koa_hello_world') {
+                if (value === 'dj18_hello_world' ||
+                    value === 'go_gin_hello_world' ||
+                    value === 'nodejs_express_hello_world' ||
+                    value === 'nodejs_koa_hello_world') {
                     // this.marketDisabled = true
                     // this.appMarketDisabled = true
                     // this.appMarketValue = 'no'
@@ -1075,7 +1359,7 @@
             expandableListView () {
                 this.isUnfold = !this.isUnfold;
             },
-            
+
             handleSearch () {
                 if (!this.sceneTemplateList.length) {
                     return;
@@ -1247,7 +1531,7 @@
     .scene-item-body {
         height: 55px;
         margin-top: 5px;
-        
+
         .text {
             font-size: 10px;
             line-height: 16px;

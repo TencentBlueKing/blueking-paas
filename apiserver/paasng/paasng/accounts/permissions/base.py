@@ -17,49 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-"""Permission handlers for PaaSNG
-"""
-from builtins import object
 from collections import OrderedDict
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
-from django.db.models import Model
-from past.builtins import basestring
-
-from paasng.platform.modules.models import Module
+from paasng.accounts.constants import SiteRole
 
 
-class ResourceMapper(object):
-    """A mapper to manager the mapping of some class to ProtectedResource object"""
-
-    def __init__(self):
-        self.map = {}
-
-    def add_new_mapping(self, obj_class, resource_obj):
-        """Add a new mapping
-
-        :param obj_class: Support two types of obj_class
-            - Django Model
-            - String
-        """
-        if isinstance(obj_class, basestring):
-            self.map[obj_class] = resource_obj
-        elif issubclass(obj_class, Model):
-            self.map[obj_class] = resource_obj
-
-    def get_resource(self, obj):
-        if isinstance(obj, basestring):
-            return self.map.get(obj)
-        elif isinstance(obj, Model):
-            # module 权限继承 Application 的
-            if isinstance(obj, Module):
-                return self.map.get(obj.application.__class__)
-
-            return self.map.get(obj.__class__)
-
-
-class ProtectedResource(object):
-    """Resource been protected, it can be refers to anything"""
+class ProtectedResource:
+    """Resource been protected, it can be referred to anything"""
 
     permissions: List[Tuple[str, str]] = []
 
@@ -74,7 +39,7 @@ class ProtectedResource(object):
         """Check if an permission name is valid"""
         return perm_name in self._permissions
 
-    def add_role(self, name, permissions_map):
+    def add_role(self, name: SiteRole, permissions_map: Dict):
         """Add a new role"""
         if set(permissions_map.keys()) != set(self._permissions.keys()):
             raise ValueError(
@@ -85,7 +50,7 @@ class ProtectedResource(object):
         self.roles[name] = ObjectRole(self, name, permissions_map)
 
     def add_nobody_role(self):
-        self.roles['nobody'] = ObjectNobodyRole()
+        self.roles[SiteRole.NOBODY] = ObjectNobodyRole()
 
     def get_role(self, name):
         return self.roles[name]
@@ -97,7 +62,7 @@ class ProtectedResource(object):
         raise NotImplementedError
 
 
-class Permission(object):
+class Permission:
     def __init__(self, codename, description):
         self.codename = codename
         self.description = description
@@ -106,7 +71,7 @@ class Permission(object):
         return '<Permission %s>' % self.codename
 
 
-class ObjectRole(object):
+class ObjectRole:
     """Role object"""
 
     def __init__(self, resource, name, permissions_map):
@@ -114,17 +79,17 @@ class ObjectRole(object):
         self.name = name
         self.permissions_map = permissions_map
 
-    def has_perm(self, perm_name):
-        result = self.permissions_map.get(perm_name, None)
+    def has_perm(self, action):
+        result = self.permissions_map.get(action, None)
         if result is None:
-            raise ValueError('"%s" is not a valid permission name' % perm_name)
+            raise ValueError('"%s" is not a valid action name' % action)
         return result
 
 
-class ObjectNobodyRole(object):
+class ObjectNobodyRole:
     """A special role which has not rights to do anything"""
 
-    name = "nobody"
+    name = SiteRole.NOBODY
 
     def has_perm(self, perm_name):
         return False

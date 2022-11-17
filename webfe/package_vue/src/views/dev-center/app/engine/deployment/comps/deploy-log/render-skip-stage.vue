@@ -1,8 +1,8 @@
 <template functional>
-    <div class="paas-deploy-log-skip-wrapper">
-        <i class="paasng-icon paasng-exclamation-circle-shape"></i>
-        {{ $t('未对蓝盾授权，无法执行，已跳过') }}
-    </div>
+  <div class="paas-deploy-log-skip-wrapper">
+    <i class="paasng-icon paasng-exclamation-circle-shape" />
+    {{ $t('未对蓝盾授权，无法执行，已跳过') }}
+  </div>
 </template>
 <style lang="scss" scoped>
     .paas-deploy-log-skip-wrapper {

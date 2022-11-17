@@ -17,17 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-"""Plugins for service proxy"""
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.accounts.models import User
-from paasng.accounts.permissions.application import application_resource
+from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import global_site_resource
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 from .serializers import AppInstanceInfoSLZ
 
@@ -44,8 +45,9 @@ def get_current_instances(user: User, path: str, include_perms_map: bool = True)
     :param include_perms_map: Whether include permission data
     :returns: List of instance info, structure: [{'type': 'application', 'value': ..., 'perms_map': ...}, ...]
     """
-    site_role = global_site_resource.get_role_of_user(user, None)
-    site_inst = {'type': INST_TYPE_SITE, 'value': site_role.name}
+    obj_role = global_site_resource.get_role_of_user(user, None)
+    site_role = obj_role.name
+    site_inst = {'type': INST_TYPE_SITE, 'value': site_role.name.lower()}
     if include_perms_map:
         site_inst["perms_map"] = list_site_permissions(user)
 
@@ -138,17 +140,20 @@ class ApplicationInPathExtractor:
 
 def list_application_permissions(user: User, obj: Application) -> Dict[str, bool]:
     """List user's all permissions on an application"""
-    role = application_resource.get_role_of_user(user, obj)
-    result = {}
-    for name, _ in application_resource.permissions:
-        result[name] = role.has_perm(name)
-    return result
+    perm = ApplicationPermission()
+    perm_ctx = AppPermCtx(code=obj.code, username=get_username_by_bkpaas_user_id(user.pk))
+
+    return perm.resource_inst_multi_actions_allowed(
+        username=perm_ctx.username,
+        action_ids=[action for action in AppAction],
+        resources=perm.make_res_request(perm_ctx).make_resources(perm_ctx.resource_id),
+    )
 
 
-def list_site_permissions(user: User) -> Dict[str, bool]:
+def list_site_permissions(user: User) -> Dict[SiteAction, bool]:
     """List user's all permissions on site"""
     role = global_site_resource.get_role_of_user(user, None)
     result = {}
-    for name, _ in global_site_resource.permissions:
-        result[name] = role.has_perm(name)
+    for action, _ in global_site_resource.permissions:
+        result[action] = role.has_perm(action)
     return result

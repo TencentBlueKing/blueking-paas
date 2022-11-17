@@ -23,13 +23,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import SourceOrigin
 
 
 class LesscodeModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def retrieve(self, request, code, module_name):
         """查询模块在 lesscode 平台上对应的访问地址"""

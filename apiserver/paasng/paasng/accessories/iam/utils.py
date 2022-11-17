@@ -48,11 +48,11 @@ def gen_grade_member_desc(app_code: str) -> str:
 def gen_user_group_name(app_code: str, role: ApplicationRole) -> str:
     """
     根据指定的用户角色，生成对应的用户组名称（最大字符数限制 32）
-    中：开发者中心-{app_code}-管理者 ｜ 开发者中心-{app_code}-开发者 ｜ 开发者中心-{app_code}-运营者
+    中：开发者中心-{app_code}-管理员 ｜ 开发者中心-{app_code}-开发者 ｜ 开发者中心-{app_code}-运营者
     英：PaaS-{app_code}-admin | PaaS-{app_code}-dev | PaaS-{app_code}-ops
     """
     if role == ApplicationRole.ADMINISTRATOR:
-        return _('开发者中心-{}-管理者').format(app_code)
+        return _('开发者中心-{}-管理员').format(app_code)
     elif role == ApplicationRole.DEVELOPER:
         return _('开发者中心-{}-开发者').format(app_code)
     elif role == ApplicationRole.OPERATOR:
@@ -63,7 +63,7 @@ def gen_user_group_name(app_code: str, role: ApplicationRole) -> str:
 def gen_user_group_desc(app_code: str, role: ApplicationRole) -> str:
     """
     根据指定的用户角色，生成对应的用户组名称
-    中：开发者中心应用（{app_code}）管理者，拥有应用的全部权限。
+    中：开发者中心应用（{app_code}）管理员，拥有应用的全部权限。
         开发者中心应用（{app_code}）开发者，拥有应用的开发权限，如基础开发，云 API 管理等。
         开发者中心应用（{app_code}）运营者，拥有应用的运营权限，如基础信息编辑，访问控制管理，应用市场管理等。
     英：The developer center application ({app_code}) administrator, has all the permissions of the application.
@@ -73,7 +73,7 @@ def gen_user_group_desc(app_code: str, role: ApplicationRole) -> str:
             such as basic information editing, access control management, application market management, etc.
     """
     if role == ApplicationRole.ADMINISTRATOR:
-        return _('开发者中心应用（{}）管理者，拥有应用的全部权限。').format(app_code)
+        return _('开发者中心应用（{}）管理员，拥有应用的全部权限。').format(app_code)
     elif role == ApplicationRole.DEVELOPER:
         return _('开发者中心应用（{}）开发者，拥有应用的开发权限，如基础开发，云 API 管理等。').format(app_code)
     elif role == ApplicationRole.OPERATOR:
@@ -98,6 +98,7 @@ def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
     elif role == ApplicationRole.DEVELOPER:
         return [
             AppAction.VIEW_BASIC_INFO,
+            AppAction.MANAGE_APP_MARKET,
             AppAction.DATA_STATISTICS,
             AppAction.BASIC_DEVELOP,
             AppAction.MANAGE_CLOUD_API,

@@ -17,7 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from paasng.accounts.permissions.global_site import site_perm_required
+from rest_framework.permissions import IsAuthenticated
+
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.models.deployment import Deployment
 from paasng.plat_admin.admin42.serializers.engine import DeploymentForListSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -28,6 +31,7 @@ class DeploymentListView(GenericTemplateView):
 
     name = "部署概览"
     serializer_class = DeploymentForListSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/applications/list_deployments.html"
 
     def get_queryset(self):
@@ -58,6 +62,5 @@ class DeploymentListView(GenericTemplateView):
         kwargs['pagination'] = self.get_pagination_context(self.request)
         return kwargs
 
-    @site_perm_required("admin:read:application")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)

@@ -17,17 +17,20 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+from collections import defaultdict
 from typing import List
 
-from bkpaas_auth.core.constants import ProviderType
-from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.iam.client import BKIAMClient
+from paasng.accessories.iam.constants import NEVER_EXPIRE_DAYS
+from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+from paasng.accessories.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.engine.models import EngineApp
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.mgrlegacy.constants import AppMember
 from paasng.platform.mgrlegacy.models import MigrationProcess
@@ -36,6 +39,7 @@ from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.oauth2.models import OAuth2Client
 from paasng.publish.sync_market.handlers import application_oauth_handler
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 from .base import BaseMigration
 
@@ -103,15 +107,17 @@ class MainInfoMigration(BaseMigration):
     def get_description(self):
         return _("同步应用基本信息")
 
-    def add_application_role(self, memebers: List[AppMember]) -> bool:
+    def add_application_role(self, app_members: List[AppMember]) -> bool:
         """sync application roles"""
-        for m in memebers:
-            # 允许重入
-            ApplicationMembership.objects.get_or_create(
-                user=user_id_encoder.encode(username=m.username, provider_type=settings.USER_TYPE),
-                application=self.context.app,
-                defaults=dict(role=m.role, region=self.context.app.region),
-            )
+        self._register_builtin_user_groups_and_grade_manager(self.context.app)
+
+        role_members = defaultdict(list)
+        for m in app_members:
+            role_members[m.role].append(m.username)
+
+        for role, members in role_members.items():
+            add_role_members(app_code=self.context.app.code, role=ApplicationRole(role), usernames=members)
+
         return True
 
     def add_engine_app(self):
@@ -165,8 +171,8 @@ class MainInfoMigration(BaseMigration):
             post_save.connect(receiver=application_oauth_handler, sender=OAuth2Client)
 
         # 添加应用成员
-        app_memebers = self.context.legacy_app_proxy.get_app_members(self.context.owner)
-        self.add_application_role(app_memebers)
+        app_members = self.context.legacy_app_proxy.get_app_members(self.context.owner)
+        self.add_application_role(app_members)
 
     def rollback(self):
         # rollback oauth2
@@ -183,4 +189,34 @@ class MainInfoMigration(BaseMigration):
             EngineApp.objects.filter(id__in=engine_app_ids).delete()
 
         # rollback developers and administrators
-        self.context.app.applicationmembership_set.all().delete()
+        usernames = [m['username'] for m in fetch_application_members(self.context.app.code)]
+        remove_user_all_roles(self.context.app.code, usernames)
+
+    @staticmethod
+    def _register_builtin_user_groups_and_grade_manager(application: Application):
+        """旧版本应用迁移时，需要注册用户组及分级管理员信息"""
+
+        cli = BKIAMClient()
+        creator = get_username_by_bkpaas_user_id(application.creator)
+
+        # 1. 创建分级管理员，并记录分级管理员 ID
+        grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
+        ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=grade_manager_id)
+
+        # 2. 将创建者，添加为分级管理员的成员
+        cli.add_grade_manager_members(grade_manager_id, [creator])
+
+        # 3. 创建默认的 管理者，开发者，运营者用户组
+        user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
+        ApplicationUserGroup.objects.bulk_create(
+            [
+                ApplicationUserGroup(app_code=application.code, role=group['role'], user_group_id=group['id'])
+                for group in user_groups
+            ]
+        )
+
+        # 4. 为默认的三个用户组授权
+        cli.grant_user_group_policies(application.code, application.name, user_groups)
+
+        # 5. 将创建者添加到管理者用户组，返回数据中第一个即为管理者用户组信息
+        cli.add_user_group_members(user_groups[0]['id'], [creator], NEVER_EXPIRE_DAYS)

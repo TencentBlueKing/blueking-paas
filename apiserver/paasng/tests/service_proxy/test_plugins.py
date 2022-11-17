@@ -19,16 +19,26 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.global_site import global_site_resource
 from paasng.service_proxy.plugins import (
     ApplicationInPathExtractor,
     ExtractedAppBasicInfo,
     get_current_instances,
-    list_application_permissions,
     list_site_permissions,
 )
+from tests.utils import mock
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def patch_list_app_perms():
+    with mock.patch(
+        'paasng.service_proxy.plugins.list_application_permissions',
+        new=lambda *args, **kwargs: {action: True for action in AppAction},
+    ):
+        yield
 
 
 def test_get_current_instances(bk_user, bk_app):
@@ -91,12 +101,6 @@ class TestApplicationInPathExtractor:
         assert ret.module and ret.module.name == 'default'
         assert ret.module_env and ret.module_env.environment == 'stag'
         assert ret.engine_app and ret.engine_app.name is not None
-
-
-def test_list_application_permissions(bk_user, bk_app):
-    perms_map = list_application_permissions(bk_user, bk_app)
-    assert isinstance(perms_map, dict)
-    assert perms_map['manage_deploy'] is True
 
 
 def test_list_site_permissions(bk_user, site_permissions):

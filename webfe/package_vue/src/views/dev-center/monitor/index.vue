@@ -1,134 +1,196 @@
 <template lang="html">
-    <div class="bk-apps-wrapper mt30" :style="{ 'min-height': `${minHeight}px` }">
-        <div class="wrap">
-            <div class="paas-application-tit">
-                <h2> {{ $t('我的告警') }} </h2>
+  <div
+    class="bk-apps-wrapper mt30"
+    :style="{ 'min-height': `${minHeight}px` }"
+  >
+    <div class="wrap">
+      <div class="paas-application-tit">
+        <h2> {{ $t('我的告警') }} </h2>
 
-                <div class="fright">
-                    <div :class="['data-search', { 'reset-left': curDateType !== 'custom' }]" v-bk-clickoutside="hideDatePicker">
-                        <bk-date-picker
-                            v-model="initDateTimeRange"
-                            :shortcuts="dateShortCut"
-                            :shortcuts-type="'relative'"
-                            :format="'yyyy-MM-dd HH:mm:ss'"
-                            :placement="'bottom-end'"
-                            :placeholder="$t('选择日期时间范围')"
-                            :shortcut-close="true"
-                            :type="'datetimerange'"
-                            :options="datePickerOption"
-                            :open="isDatePickerOpen"
-                            @change="handlerChange"
-                            @pick-success="handlerPickSuccess">
-                            <div slot="trigger" @click="toggleDatePicker" style="width: 310px;">
-                                <button class="action-btn timer">
-                                    <i class="left-icon paasng-icon paasng-clock f16"></i>
-                                    <span class="text">{{ timerDisplay }}</span>
-                                    <i class="right-icon paasng-icon paasng-down-shape f12"></i>
-                                </button>
-                            </div>
-                        </bk-date-picker>
-                    </div>
-                    <div class="paas-search">
-                        <bk-input
-                            :placeholder="$t('输入应用名称、ID，按Enter搜索')"
-                            :clearable="true"
-                            :right-icon="'paasng-icon paasng-search'"
-                            v-model="filterKey"
-                            @enter="searchApp">
-                        </bk-input>
-                    </div>
-                </div>
-            </div>
-
-            <div v-bkloading="{ isLoading: isLoading, opacity: 0 }" :class="['apps-table-wrapper', { 'min-h': isLoading }, { 'reset-min-h': !isLoading && !curPageData.length }]">
-                <template v-if="curPageData.length">
-                    <div class="table-item" :class="{ 'mt': appIndex !== curPageData.length - 1 }" v-for="(appItem, appIndex) in curPageData" :key="appIndex">
-                        <div class="item-header">
-                            <div class="basic-info" @click="toPage(appItem)">
-                                <img :src="appItem.logo_url ? appItem.logo_url : defaultImg" class="app-logo">
-                                <span class="app-name">
-                                    {{appItem.app_name}}
-                                </span>
-                            </div>
-                            <div class="module-info" @click="expandedPanel(appItem)">
-                                <template>
-                                    <span class="module-name">
-                                        {{$t('告警次数')}}&nbsp;({{ appItem.count || 0}})
-                                        <i class="paasng-icon unfold-icon expanded-icon" :class="appItem.expanded ? 'paasng-angle-up' : 'paasng-angle-down'"></i>
-                                    </span>
-                                </template>
-                            </div>
-                            <div class="visit-operate">
-                                <div class="app-operation-section">
-                                    <bk-button theme="primary" text @click="toMonitorRecord(appItem)" style="margin-left: 80px;">
-                                        {{ $t('更多') }}
-                                        <i class="paasng-icon paasng-external-link"></i>
-                                    </bk-button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="item-content" v-if="appItem.expanded">
-                            <div class="apps-table-wrapper paas-monitor-table"
-                                v-bkloading="{ isLoading: appItem.tableLoading, opacity: 1 }">
-                                <bk-table
-                                    v-if="!appItem.tableLoading"
-                                    :data="appItem.alarmList"
-                                    size="small"
-                                    ext-cls="alarm-list-table"
-                                    :outer-border="false"
-                                    :header-border="false">
-                                    <bk-table-column :label="$t('告警模块')" width="180">
-                                        <template slot-scope="{ row }">
-                                            <span>{{row.module}}</span>
-                                        </template>
-                                    </bk-table-column>
-                                    <bk-table-column :label="$t('告警环境')" width="90">
-                                        <template slot-scope="{ row }">
-                                            <span>{{row.env === 'prod' ? $t('生产环境') : $t('预发布环境')}}</span>
-                                        </template>
-                                    </bk-table-column>
-                                    <bk-table-column :label="$t('告警类型')" width="200">
-                                        <template slot-scope="{ row }">
-                                            <span v-bk-tooltips="row.genre.name">{{row.genre.name || '--'}}</span>
-                                        </template>
-                                    </bk-table-column>
-                                    <bk-table-column :label="$t('告警次数')" prop="count" width="80"></bk-table-column>
-                                    <bk-table-column :label="$t('最近一次告警开始时间')" prop="start" width="150"></bk-table-column>
-                                    <bk-table-column :label="$t('最近一次告警内容')">
-                                        <template slot-scope="{ row }">
-                                            <span v-bk-tooltips="row.message">{{row.message || '--'}}</span>
-                                        </template>
-                                    </bk-table-column>
-                                </bk-table>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-                <template v-if="!isLoading && !curPageData.length">
-                    <div class="ps-no-result">
-                        <div class="text">
-                            <p>
-                                <i class="paasng-icon paasng-empty"></i>
-                            </p>
-                            <p> {{ $t('暂无数据') }} </p>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div v-if="pageConf.count" style="margin: 20px 0;">
-                <bk-pagination
-                    size="small"
-                    align="right"
-                    :current.sync="pageConf.current"
-                    :count="pageConf.count"
-                    :limit="pageConf.limit"
-                    @change="pageChange"
-                    @limit-change="handlePageSizeChange">
-                </bk-pagination>
-            </div>
+        <div class="fright">
+          <div
+            v-bk-clickoutside="hideDatePicker"
+            :class="['data-search', { 'reset-left': curDateType !== 'custom' }]"
+          >
+            <bk-date-picker
+              v-model="initDateTimeRange"
+              :shortcuts="dateShortCut"
+              :shortcuts-type="'relative'"
+              :format="'yyyy-MM-dd HH:mm:ss'"
+              :placement="'bottom-end'"
+              :placeholder="$t('选择日期时间范围')"
+              :shortcut-close="true"
+              :type="'datetimerange'"
+              :options="datePickerOption"
+              :open="isDatePickerOpen"
+              @change="handlerChange"
+              @pick-success="handlerPickSuccess"
+            >
+              <div
+                slot="trigger"
+                style="width: 310px;"
+                @click="toggleDatePicker"
+              >
+                <button class="action-btn timer">
+                  <i class="left-icon paasng-icon paasng-clock f16" />
+                  <span class="text">{{ timerDisplay }}</span>
+                  <i class="right-icon paasng-icon paasng-down-shape f12" />
+                </button>
+              </div>
+            </bk-date-picker>
+          </div>
+          <div class="paas-search">
+            <bk-input
+              v-model="filterKey"
+              :placeholder="$t('输入应用名称、ID，按Enter搜索')"
+              :clearable="true"
+              :right-icon="'paasng-icon paasng-search'"
+              @enter="searchApp"
+            />
+          </div>
         </div>
+      </div>
+
+      <div
+        v-bkloading="{ isLoading: isLoading, opacity: 0 }"
+        :class="['apps-table-wrapper', { 'min-h': isLoading }, { 'reset-min-h': !isLoading && !curPageData.length }]"
+      >
+        <template v-if="curPageData.length">
+          <div
+            v-for="(appItem, appIndex) in curPageData"
+            :key="appIndex"
+            class="table-item"
+            :class="{ 'mt': appIndex !== curPageData.length - 1 }"
+          >
+            <div class="item-header">
+              <div
+                class="basic-info"
+                @click="toPage(appItem)"
+              >
+                <img
+                  :src="appItem.logo_url ? appItem.logo_url : defaultImg"
+                  class="app-logo"
+                >
+                <span class="app-name">
+                  {{ appItem.app_name }}
+                </span>
+              </div>
+              <div
+                class="module-info"
+                @click="expandedPanel(appItem)"
+              >
+                <template>
+                  <span class="module-name">
+                    {{ $t('告警次数') }}&nbsp;({{ appItem.count || 0 }})
+                    <i
+                      class="paasng-icon unfold-icon expanded-icon"
+                      :class="appItem.expanded ? 'paasng-angle-up' : 'paasng-angle-down'"
+                    />
+                  </span>
+                </template>
+              </div>
+              <div class="visit-operate">
+                <div class="app-operation-section">
+                  <bk-button
+                    theme="primary"
+                    text
+                    style="margin-left: 80px;"
+                    @click="toMonitorRecord(appItem)"
+                  >
+                    {{ $t('更多') }}
+                    <i class="paasng-icon paasng-external-link" />
+                  </bk-button>
+                </div>
+              </div>
+            </div>
+            <div
+              v-if="appItem.expanded"
+              class="item-content"
+            >
+              <div
+                v-bkloading="{ isLoading: appItem.tableLoading, opacity: 1 }"
+                class="apps-table-wrapper paas-monitor-table"
+              >
+                <bk-table
+                  v-if="!appItem.tableLoading"
+                  :data="appItem.alarmList"
+                  size="small"
+                  ext-cls="alarm-list-table"
+                  :outer-border="false"
+                  :header-border="false"
+                >
+                  <bk-table-column
+                    :label="$t('告警模块')"
+                    width="180"
+                  >
+                    <template slot-scope="{ row }">
+                      <span>{{ row.module }}</span>
+                    </template>
+                  </bk-table-column>
+                  <bk-table-column
+                    :label="$t('告警环境')"
+                    width="90"
+                  >
+                    <template slot-scope="{ row }">
+                      <span>{{ row.env === 'prod' ? $t('生产环境') : $t('预发布环境') }}</span>
+                    </template>
+                  </bk-table-column>
+                  <bk-table-column
+                    :label="$t('告警类型')"
+                    width="200"
+                  >
+                    <template slot-scope="{ row }">
+                      <span v-bk-tooltips="row.genre.name">{{ row.genre.name || '--' }}</span>
+                    </template>
+                  </bk-table-column>
+                  <bk-table-column
+                    :label="$t('告警次数')"
+                    prop="count"
+                    width="80"
+                  />
+                  <bk-table-column
+                    :label="$t('最近一次告警开始时间')"
+                    prop="start"
+                    width="150"
+                  />
+                  <bk-table-column :label="$t('最近一次告警内容')">
+                    <template slot-scope="{ row }">
+                      <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
+                    </template>
+                  </bk-table-column>
+                </bk-table>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template v-if="!isLoading && !curPageData.length">
+          <div class="ps-no-result">
+            <div class="text">
+              <p>
+                <i class="paasng-icon paasng-empty" />
+              </p>
+              <p> {{ $t('暂无数据') }} </p>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div
+        v-if="pageConf.count"
+        style="margin: 20px 0;"
+      >
+        <bk-pagination
+          size="small"
+          align="right"
+          :current.sync="pageConf.current"
+          :count="pageConf.count"
+          :limit="pageConf.limit"
+          @change="pageChange"
+          @limit-change="handlePageSizeChange"
+        />
+      </div>
     </div>
+  </div>
 </template>
 
 <script>

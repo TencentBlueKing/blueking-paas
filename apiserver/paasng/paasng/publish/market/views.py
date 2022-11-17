@@ -25,7 +25,8 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accounts.permissions.application import application_perm_class, check_application_perms
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.publish.market import serializers
@@ -62,7 +63,7 @@ class ProductCreateViewSet(ProductBaseViewSet):
         if "application" not in self.request.data:
             return None
         application = get_object_or_404(Application, code=self.request.data["application"])
-        check_application_perms(self.request.user, ['manage_product'], application)
+        check_application_perm(self.request.user, application, AppAction.MANAGE_APP_MARKET)
         return application
 
     queryset = Product.objects.all()
@@ -87,7 +88,7 @@ class ProductCombinedViewSet(ProductBaseViewSet):
         if "code" not in self.kwargs:
             return None
         application = get_object_or_404(Application, code=self.kwargs["code"])
-        check_application_perms(self.request.user, ['manage_product'], application)
+        check_application_perm(self.request.user, application, AppAction.MANAGE_APP_MARKET)
         return application
 
     def update(self, request, *args, **kwargs):
@@ -140,7 +141,7 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """查看与管理应用的市场相关配置"""
 
     serializer_class = serializers.MarketConfigSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_product')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_APP_MARKET)]
 
     @swagger_auto_schema(Response={200: serializers.MarketConfigSLZ}, tags=["应用市场"])
     def retrieve(self, request, code):
@@ -180,7 +181,7 @@ class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与发布应用到市场相关 ViewSet"""
 
     serializer_class = serializers.MarketConfigSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_product')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_APP_MARKET)]
 
     @swagger_auto_schema(response_serializer=serializers.PublishProtectionSLZ)
     def check_preparations(self, request, code):
@@ -195,7 +196,7 @@ class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class MarketAvailableAddressViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_product')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_APP_MARKET)]
 
     @swagger_auto_schema(responses={200: serializers.AvailableAddressSLZ(many=True)}, tags=["应用市场"])
     def list(self, request, code):

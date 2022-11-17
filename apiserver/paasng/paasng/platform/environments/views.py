@@ -21,6 +21,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
@@ -32,7 +33,7 @@ from .models import EnvRoleProtection
 class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
     queryset = EnvRoleProtection.objects.all()
     serializer_class = serializers.EnvRoleProtectionSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('manage_env_protection')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_ENV_PROTECTION)]
 
     def get_permissions(self):
         if self.action in ['list']:

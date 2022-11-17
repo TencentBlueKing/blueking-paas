@@ -1,16 +1,32 @@
 <template>
-    <div class="paas-deploy-log-wrapper">
-        <stage-item :title="$t('准备阶段')" :data="readyList" ref="readyStageRef" v-if="isShowReady" />
-        <stage-item :title="$t('构建阶段')" can-full-screen :data="buildList" style="margin-top: 8px;" ref="buildStageRef" v-if="isShowBuild" />
-        <deploy-stage-item
-            :loading="processLoading"
-            :data="processList"
-            style="margin-top: 8px;"
-            ref="nowStageRef"
-            :environment="environment"
-            v-if="isShowRelease" />
-        <skip-stage-item style="margin-top: 8px;" v-if="isShowSkip" />
-    </div>
+  <div class="paas-deploy-log-wrapper">
+    <stage-item
+      v-if="isShowReady"
+      ref="readyStageRef"
+      :title="$t('准备阶段')"
+      :data="readyList"
+    />
+    <stage-item
+      v-if="isShowBuild"
+      ref="buildStageRef"
+      :title="$t('构建阶段')"
+      can-full-screen
+      :data="buildList"
+      style="margin-top: 8px;"
+    />
+    <deploy-stage-item
+      v-if="isShowRelease"
+      ref="nowStageRef"
+      :loading="processLoading"
+      :data="processList"
+      style="margin-top: 8px;"
+      :environment="environment"
+    />
+    <skip-stage-item
+      v-if="isShowSkip"
+      style="margin-top: 8px;"
+    />
+  </div>
 </template>
 <script>
     import StageItem from './render-stage';

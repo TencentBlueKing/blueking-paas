@@ -20,45 +20,45 @@ import { PAAS_STATIC_CONFIG as staticList } from '../../static/json/paas_static.
 
 // The header's static infomations mixin
 export const psHeaderInfo = {
-    data () {
-        return {
-            headerStaticInfo: staticList.header
-        };
-    }
+  data () {
+    return {
+      headerStaticInfo: staticList.header
+    };
+  }
 };
 
 // The footer's static infomations mixin
 export const psFooterInfo = {
-    data () {
-        return {
-            footerStaticInfo: staticList.footer
-        };
-    }
+  data () {
+    return {
+      footerStaticInfo: staticList.footer
+    };
+  }
 };
 
 // The homepage's static infomations mixin
 export const psIndexInfo = {
-    data () {
-        return {
-            homePageStaticInfo: staticList.index
-        };
-    }
+  data () {
+    return {
+      homePageStaticInfo: staticList.index
+    };
+  }
 };
 
 // The App page nav's static infomations mixin
 export const psAppNavInfo = {
-    data () {
-        return {
-            appNavStaticInfo: staticList.app_nav
-        };
-    }
+  data () {
+    return {
+      appNavStaticInfo: staticList.app_nav
+    };
+  }
 };
 
 // The Service page nav's static infomations mixin
 export const psServiceNavInfo = {
-    data () {
-        return {
-            serviceNavStaticInfo: staticList.bk_service
-        };
-    }
+  data () {
+    return {
+      serviceNavStaticInfo: staticList.bk_service
+    };
+  }
 };

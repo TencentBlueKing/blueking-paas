@@ -23,6 +23,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
@@ -37,8 +38,7 @@ logger = logging.getLogger(__name__)
 class AdvisedDocumentaryLinksViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Viewset for documentary links"""
 
-    # serializer_class = DocumentaryLinkSLZ
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def list(self, request, code, module_name):
         application = self.get_application()

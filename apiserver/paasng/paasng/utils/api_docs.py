@@ -23,7 +23,8 @@ from django.utils.translation import gettext_lazy as _
 from drf_yasg import openapi
 from rest_framework.request import Request
 
-from paasng.accounts.permissions.global_site import SitePermission
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 
 openapi_empty_schema = openapi.Schema(type=openapi.TYPE_OBJECT)
 openapi_empty_response = openapi.Response(_('操作成功后的空响应'), schema=openapi_empty_schema)
@@ -33,6 +34,6 @@ def is_rendering_openapi(request: Request) -> bool:
     """判断是否正在渲染 openapi 文档"""
     return (
         len(request.data) == 0
-        and SitePermission("visit_admin").has_permission(request)
+        and site_perm_class(SiteAction.VISIT_ADMIN42)().has_permission(request)
         and request.accepted_media_type == 'application/openapi+json'
     )

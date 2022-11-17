@@ -21,10 +21,13 @@ from typing import Type
 
 from django.db import transaction
 from django.db.models import QuerySet
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from rest_framework.viewsets import ModelViewSet
 
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.runtime import (
     AppBuildPackSLZ,
     AppSlugBuilderSLZ,
@@ -51,6 +54,7 @@ class RuntimeAdminViewGenerator:
             queryset = self.queryset.all()
             serializer_class = self.serializer_class
             template_name = self.template_name
+            permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
             def get_context_data(self, **kwargs):
                 kwargs = super().get_context_data(**kwargs)

@@ -1,63 +1,106 @@
 <template>
-    <div class="paas-search-wrapper mt30" :style="{ 'min-height': `${minHeight}px` }">
-        <h4 class="title"> {{ $t('搜索') }} </h4>
-        <section class="search-hearder">
-            <bk-input
-                v-model="value"
-                clearable
-                :placeholder="$t('输入搜索内容')"
-                style="width: 766px;"
-                ext-cls="paas-search-input"
-                @enter="handleSearch">
-            </bk-input>
-            <bk-button theme="primary" icon="search" ext-cls="paas-search-button" size="large" @click="handleSearch"> {{ $t('搜索') }} </bk-button>
-        </section>
-        <paas-content-loader class="content-wrapper" :is-loading="isLoading" placeholder="search-loading" :height="450">
-            <bk-tab
-                v-show="isShowTab"
-                :active.sync="curTab"
-                type="unborder-card"
-                ext-cls="paas-search-tab-cls"
-                ref="tabRef"
-                @tab-change="handleSwitchTab">
-                <bk-tab-panel
-                    v-for="(panel, index) in panels"
-                    v-bind="panel"
-                    :key="index">
-                    <template slot="label">
-                        <span class="panel-name">{{ panel.label }}</span>
-                        <i :class="['panel-count', { active: panel.name === curTab }]">{{ panel.count }}</i>
-                    </template>
-                </bk-tab-panel>
-            </bk-tab>
-            <div class="table-content" v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                <template v-if="isEmpty">
-                    <section class="empty-wrapper">
-                        <i class="paasng-icon paasng-empty"></i>
-                        <p class="text"> {{ $t('暂无数据') }} </p>
-                    </section>
-                </template>
-                <template v-else>
-                    <app :data="searchData[curTab].list" v-if="curTab === 'app'" />
-                    <docu :data="searchData[curTab].list" :filter-key="filterKey" v-if="curTab === 'docu'" />
-                    <iwiki :data="searchData[curTab].list" :filter-key="filterKey" v-if="curTab === 'iwiki'" />
-                    <mk :data="searchData[curTab].list" :filter-key="filterKey" v-if="curTab === 'mk'" />
-                </template>
-            </div>
-            <div :class="['mb20 mt20', { 'set-padding': isSetPadding }]" v-if="isShowPageConf">
-                <bk-pagination
-                    size="small"
-                    align="right"
-                    :current.sync="pageConf.curPage"
-                    :count="pageConf.count"
-                    :limit="pageConf.limit"
-                    :limit-list="pageConf.limitList"
-                    @change="pageChange"
-                    @limit-change="handlePageSizeChange">
-                </bk-pagination>
-            </div>
-        </paas-content-loader>
-    </div>
+  <div
+    class="paas-search-wrapper mt30"
+    :style="{ 'min-height': `${minHeight}px` }"
+  >
+    <h4 class="title">
+      {{ $t('搜索') }}
+    </h4>
+    <section class="search-hearder">
+      <bk-input
+        v-model="value"
+        clearable
+        :placeholder="$t('输入搜索内容')"
+        style="width: 766px;"
+        ext-cls="paas-search-input"
+        @enter="handleSearch"
+      />
+      <bk-button
+        theme="primary"
+        icon="search"
+        ext-cls="paas-search-button"
+        size="large"
+        @click="handleSearch"
+      >
+        {{ $t('搜索') }}
+      </bk-button>
+    </section>
+    <paas-content-loader
+      class="content-wrapper"
+      :is-loading="isLoading"
+      placeholder="search-loading"
+      :height="450"
+    >
+      <bk-tab
+        v-show="isShowTab"
+        ref="tabRef"
+        :active.sync="curTab"
+        type="unborder-card"
+        ext-cls="paas-search-tab-cls"
+        @tab-change="handleSwitchTab"
+      >
+        <bk-tab-panel
+          v-for="(panel, index) in panels"
+          :key="index"
+          v-bind="panel"
+        >
+          <template slot="label">
+            <span class="panel-name">{{ panel.label }}</span>
+            <i :class="['panel-count', { active: panel.name === curTab }]">{{ panel.count }}</i>
+          </template>
+        </bk-tab-panel>
+      </bk-tab>
+      <div
+        v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
+        class="table-content"
+      >
+        <template v-if="isEmpty">
+          <section class="empty-wrapper">
+            <i class="paasng-icon paasng-empty" />
+            <p class="text">
+              {{ $t('暂无数据') }}
+            </p>
+          </section>
+        </template>
+        <template v-else>
+          <app
+            v-if="curTab === 'app'"
+            :data="searchData[curTab].list"
+          />
+          <docu
+            v-if="curTab === 'docu'"
+            :data="searchData[curTab].list"
+            :filter-key="filterKey"
+          />
+          <iwiki
+            v-if="curTab === 'iwiki'"
+            :data="searchData[curTab].list"
+            :filter-key="filterKey"
+          />
+          <mk
+            v-if="curTab === 'mk'"
+            :data="searchData[curTab].list"
+            :filter-key="filterKey"
+          />
+        </template>
+      </div>
+      <div
+        v-if="isShowPageConf"
+        :class="['mb20 mt20', { 'set-padding': isSetPadding }]"
+      >
+        <bk-pagination
+          size="small"
+          align="right"
+          :current.sync="pageConf.curPage"
+          :count="pageConf.count"
+          :limit="pageConf.limit"
+          :limit-list="pageConf.limitList"
+          @change="pageChange"
+          @limit-change="handlePageSizeChange"
+        />
+      </div>
+    </paas-content-loader>
+  </div>
 </template>
 <script>
     import merge from 'webpack-merge';

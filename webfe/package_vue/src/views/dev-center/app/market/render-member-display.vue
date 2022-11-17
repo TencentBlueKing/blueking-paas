@@ -1,24 +1,30 @@
 <template>
-    <div class="paasng-member-display-wrapper">
-        <label class="label">
-            <i :class="['paasng-icon', 'icon', icon]"></i>
-            <span class="name">{{ title }}</span>
-        </label>
-        <div class="content">
-            <div v-for="(item, index) in data"
-                :key="index"
-                class="member-item"
-                :title="isDepartment ? item.name : item.display_name !== '' ? `${item.name}(${item.display_name})` : item.name">
-                <span class="member-name">
-                    {{ item.name }}
-                </span>
-                <template v-if="!isDepartment && item.display_name">
-                    <span class="display_name">({{ item.display_name }})</span>
-                </template>
-                <i class="paasng-icon paasng-close-circle-shape remove-icon" v-if="isEdit" @click="handleDelete(item.id)"></i>
-            </div>
-        </div>
+  <div class="paasng-member-display-wrapper">
+    <label class="label">
+      <i :class="['paasng-icon', 'icon', icon]" />
+      <span class="name">{{ title }}</span>
+    </label>
+    <div class="content">
+      <div
+        v-for="(item, index) in data"
+        :key="index"
+        class="member-item"
+        :title="isDepartment ? item.name : item.display_name !== '' ? `${item.name}(${item.display_name})` : item.name"
+      >
+        <span class="member-name">
+          {{ item.name }}
+        </span>
+        <template v-if="!isDepartment && item.display_name">
+          <span class="display_name">({{ item.display_name }})</span>
+        </template>
+        <i
+          v-if="isEdit"
+          class="paasng-icon paasng-close-circle-shape remove-icon"
+          @click="handleDelete(item.id)"
+        />
+      </div>
     </div>
+  </div>
 </template>
 <script>
     export default {

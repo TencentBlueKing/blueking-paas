@@ -17,20 +17,24 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List
+
+from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.models import EnvRoleProtection
 
 
-def env_role_protection_check(operation: str, env: ModuleEnvironment, role: int):
+def env_role_protection_check(operation: str, env: ModuleEnvironment, roles: List[ApplicationRole]):
     """检查是否存在环境保护"""
     protections = EnvRoleProtection.objects.filter(operation=operation, module_env=env)
 
     # 未开启任何保护
-    if not protections:
+    if not protections.exists():
         return
 
-    if role not in protections.values_list('allowed_role', flat=True):
-        raise RoleNotAllowError()
+    # 取交集，如果结果不为空，则说明有允许的角色
+    if set(roles) & set(protections.values_list('allowed_role', flat=True)):
+        return
 
-    return
+    raise RoleNotAllowError()

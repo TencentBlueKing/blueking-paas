@@ -22,9 +22,11 @@ from typing import Dict, List
 
 import cattr
 from django.conf import settings
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import AppEnvName
 from paasng.engine.models.processes import ProcessManager
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -49,6 +51,7 @@ class ProcessSpecPlanManageView(GenericTemplateView):
     """ProcessSpecPlan 管理页"""
 
     name = "应用资源方案"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/platformmgr/process_spec_plans.html"
 
     def get_context_data(self, **kwargs):
@@ -64,7 +67,6 @@ class ProcessSpecPlanManageView(GenericTemplateView):
         ]
         return kwargs
 
-    @site_perm_required("admin:manage:workloads")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -116,6 +118,5 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
         kwargs["processes"] = processes
         return kwargs
 
-    @site_perm_required("admin:manage:workloads")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)

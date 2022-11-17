@@ -1,169 +1,297 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :paths="servicePaths"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule">
-        </app-top-bar>
+  <div class="right-main">
+    <app-top-bar
+      :paths="servicePaths"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+    />
 
-        <div class="app-container">
-            <section>
-                <bk-tab
-                    class="mt5"
-                    :active.sync="curServiceTab"
-                    type="unborder-card">
-                    <bk-tab-panel name="detail" :label="$t('实例详情')">
-                        <paas-content-loader :is-loading="isLoading" placeholder="data-inner-loading" :height="600" :offset-top="0">
-                            <div class="dataStore-middle health-wrapper" style="min-height: 200px;">
-                                <bk-alert
-                                    v-if="delAppDialog.moduleList.length > 0"
-                                    style="margin-bottom: 10px;"
-                                    type="info"
-                                    :title="pageTips" />
-                                <div v-if="!isLoading">
-                                    <table class="ps-table ps-table-default" style="width: 100%;">
-                                        <tr class="ps-table-environment-header">
-                                            <th style="width: 120px"> {{ $t('实例ID') }} </th>
-                                            <th style="width: 420px;"> {{ $t('配置信息') }} </th>
-                                            <th style="width: 180px"> {{ $t('使用环境') }} </th>
-                                            <th style="width: 120px" v-if="hasAdminUrl"> {{ $t('管理入口') }} </th>
-                                        </tr>
-                                        <template v-if="instanceCount !== 0">
-                                            <tr class="ps-table-slide-up" v-for="(item, index) in instanceList" :key="index">
-                                                <td>#{{index + 1}}</td>
-                                                <template v-if="item.service_instance.config.hasOwnProperty('is_done') && !item.service_instance.config.is_done">
-                                                    <td>
-                                                        <p class="mt15 mb15"> {{ $t('服务正在创建中，请通过“管理入口”查看进度') }} </p>
-                                                    </td>
-                                                </template>
-                                                <template v-else>
-                                                    <td>
-                                                        <div v-for="(value, key) in item.service_instance.credentials" :key="key" class="config-width">
-                                                            <i class="gray">{{key}}: </i><span class="break-all">{{value}}</span><br />
-                                                        </div>
-                                                        <div v-for="(key, fieldsIndex) in item.service_instance.sensitive_fields" :key="fieldsIndex">
-                                                            <i class="gray">{{key}}: </i>************
-                                                            <i class="paasng-icon paasng-question-circle" v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"></i>
-                                                        </div>
-                                                        <div v-for="(value, key) in item.service_instance.hidden_fields" :key="key">
-                                                            <i class="gray">{{key}}: </i>
-                                                            <span
-                                                                v-if="hFieldstoggleStatus[index][key]"
-                                                                class="break-all">
-                                                                {{value}}
-                                                            </span>
-                                                            <span class="break-all" v-else>********</span>
-                                                            <button
-                                                                v-bk-tooltips="$t('敏感字段，点击后显示')"
-                                                                class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"
-                                                                @click="$set(hFieldstoggleStatus[index], key, !hFieldstoggleStatus[index][key])">
-                                                                {{ hFieldstoggleText[hFieldstoggleStatus[index][key] || false] }}
-                                                            </button>
-                                                        </div>
-                                                        <div v-if="!item.service_instance.sensitive_fields.length" class="copy-container">
-                                                            <span @click="handleCopy(item)"> {{ $t('复制') }} </span>
-                                                        </div>
-                                                    </td>
-                                                </template>
-                                                <td>{{item.environment_name}}</td>
-                                                <td v-if="hasAdminUrl">
-                                                    <p>
-                                                        <template v-if="item.service_instance.config.admin_url">
-                                                            <a :href="item.service_instance.config.admin_url" class="blue" target="_blank"> {{ $t('查看') }} </a>
-                                                        </template>
-                                                        <template v-else>
-                                                            --
-                                                        </template>
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                        <tr class="ps-table-slide-up" v-if="instanceCount === 0">
-                                            <td :colspan="hasAdminUrl ? 4 : 3">
-                                                <div class="paas-loading-panel">
-                                                    <div class="text">
-                                                        <p><i class="paasng-icon paasng-empty"></i></p>
-                                                        <p> {{ $t('暂无增强服务配置信息') }} </p>
-                                                        {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
-                                                        <router-link :to="{ name: 'appDeploy', params: { id: appCode }, query: { focus: 'stag' } }" class="blue pl27">
-                                                            {{ $t('部署应用') }}
-                                                        </router-link>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <div class="middle" v-if="!isLoading">
-                                <div class="dataStore-middle">
-                                    <h3 style="font-size: 16px;">
-                                        {{ $t('使用指南') }}
-                                    </h3>
-                                    <div v-if="!isGuardLoading">
-                                        <div class="data-store-use" id="markdown">
-                                            <div v-html="compiledMarkdown" class="markdown-body"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </paas-content-loader>
-                    </bk-tab-panel>
-                    <bk-tab-panel name="manager" :label="$t('管理实例')">
-                        <div class="manager-example">
-                            <section class="config-info" v-if="specifications.length">
-                                <template v-if="showConfigInfo">
-                                    <config-view :can-edit="canEditConfig" :loading="editLoading" :list="specifications" @on-edit="handleConfigEdit" />
-                                </template>
-                                <template v-else>
-                                    <config-edit mode="edit" :list="definitions" :guide="serviceMarkdown" :value="values" :save-loading="saveLoading" @on-change="handleConfigChange" />
-                                </template>
-                            </section>
-                            <div class="delete-title"> {{ $t('删除服务') }} </div>
-                            <p class="delete-tips"> {{ $t('所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。') }} </p>
-                            <div class="delete-button">
-                                <bk-popover :content="$t('S-mart应用暂不支持删除增强服务')" v-if="isSmartApp">
-                                    <bk-button theme="danger" disabled> {{ $t('删除服务') }} </bk-button>
-                                </bk-popover>
-                                <bk-button theme="danger" @click="showRemovePrompt" v-else> {{ $t('删除服务') }} </bk-button>
-                            </div>
-                        </div>
-                    </bk-tab-panel>
-                </bk-tab>
-            </section>
-        </div>
-
-        <bk-dialog
-            width="540"
-            v-model="delAppDialog.visiable"
-            :title="`确认删除${name}实例？`"
-            :theme="'primary'"
-            :mask-close="false"
-            :header-position="'left'"
-            :loading="delAppDialog.isLoading"
-            @after-leave="hookAfterClose">
-            <form class="ps-form"
-                style="min-height: 63px;"
-                @submit.prevent="submitRemoveInstance">
-                <div class="spacing-x1">
-                    {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
-                </div>
-                <div class="ps-form-group">
-                    <input v-model="formRemoveConfirmCode" type="text" class="ps-form-control">
-                </div>
+    <div class="app-container">
+      <section>
+        <bk-tab
+          class="mt5"
+          :active.sync="curServiceTab"
+          type="unborder-card"
+        >
+          <bk-tab-panel
+            name="detail"
+            :label="$t('实例详情')"
+          >
+            <paas-content-loader
+              :is-loading="isLoading"
+              placeholder="data-inner-loading"
+              :height="600"
+              :offset-top="0"
+            >
+              <div
+                class="dataStore-middle health-wrapper"
+                style="min-height: 200px;"
+              >
                 <bk-alert
-                    v-if="delAppDialog.moduleList.length > 0"
-                    style="margin-top: 10px;"
-                    type="error"
-                    :title="errorTips" />
-            </form>
-            <template slot="footer">
-                <bk-button theme="primary" @click="submitRemoveInstance" :disabled="!formRemoveValidated"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="delAppDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </template>
-        </bk-dialog>
+                  v-if="delAppDialog.moduleList.length > 0"
+                  style="margin-bottom: 10px;"
+                  type="info"
+                  :title="pageTips"
+                />
+                <div v-if="!isLoading">
+                  <table
+                    class="ps-table ps-table-default"
+                    style="width: 100%;"
+                  >
+                    <tr class="ps-table-environment-header">
+                      <th style="width: 120px">
+                        {{ $t('实例ID') }}
+                      </th>
+                      <th style="width: 420px;">
+                        {{ $t('配置信息') }}
+                      </th>
+                      <th style="width: 180px">
+                        {{ $t('使用环境') }}
+                      </th>
+                      <th
+                        v-if="hasAdminUrl"
+                        style="width: 120px"
+                      >
+                        {{ $t('管理入口') }}
+                      </th>
+                    </tr>
+                    <template v-if="instanceCount !== 0">
+                      <tr
+                        v-for="(item, index) in instanceList"
+                        :key="index"
+                        class="ps-table-slide-up"
+                      >
+                        <td>#{{ index + 1 }}</td>
+                        <template v-if="item.service_instance.config.hasOwnProperty('is_done') && !item.service_instance.config.is_done">
+                          <td>
+                            <p class="mt15 mb15">
+                              {{ $t('服务正在创建中，请通过“管理入口”查看进度') }}
+                            </p>
+                          </td>
+                        </template>
+                        <template v-else>
+                          <td>
+                            <div
+                              v-for="(value, key) in item.service_instance.credentials"
+                              :key="key"
+                              class="config-width"
+                            >
+                              <i class="gray">{{ key }}: </i><span class="break-all">{{ value }}</span><br>
+                            </div>
+                            <div
+                              v-for="(key, fieldsIndex) in item.service_instance.sensitive_fields"
+                              :key="fieldsIndex"
+                            >
+                              <i class="gray">{{ key }}: </i>************
+                              <i
+                                v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
+                                class="paasng-icon paasng-question-circle"
+                              />
+                            </div>
+                            <div
+                              v-for="(value, key) in item.service_instance.hidden_fields"
+                              :key="key"
+                            >
+                              <i class="gray">{{ key }}: </i>
+                              <span
+                                v-if="hFieldstoggleStatus[index][key]"
+                                class="break-all"
+                              >
+                                {{ value }}
+                              </span>
+                              <span
+                                v-else
+                                class="break-all"
+                              >********</span>
+                              <button
+                                v-bk-tooltips="$t('敏感字段，点击后显示')"
+                                class="btn-display-hidden-field ps-btn ps-btn-default ps-btn-xs"
+                                @click="$set(hFieldstoggleStatus[index], key, !hFieldstoggleStatus[index][key])"
+                              >
+                                {{ hFieldstoggleText[hFieldstoggleStatus[index][key] || false] }}
+                              </button>
+                            </div>
+                            <div
+                              v-if="!item.service_instance.sensitive_fields.length"
+                              class="copy-container"
+                            >
+                              <span @click="handleCopy(item)"> {{ $t('复制') }} </span>
+                            </div>
+                          </td>
+                        </template>
+                        <td>{{ item.environment_name }}</td>
+                        <td v-if="hasAdminUrl">
+                          <p>
+                            <template v-if="item.service_instance.config.admin_url">
+                              <a
+                                :href="item.service_instance.config.admin_url"
+                                class="blue"
+                                target="_blank"
+                              > {{ $t('查看') }} </a>
+                            </template>
+                            <template v-else>
+                              --
+                            </template>
+                          </p>
+                        </td>
+                      </tr>
+                    </template>
+                    <tr
+                      v-if="instanceCount === 0"
+                      class="ps-table-slide-up"
+                    >
+                      <td :colspan="hasAdminUrl ? 4 : 3">
+                        <div class="paas-loading-panel">
+                          <div class="text">
+                            <p><i class="paasng-icon paasng-empty" /></p>
+                            <p> {{ $t('暂无增强服务配置信息') }} </p>
+                            {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
+                            <router-link
+                              :to="{ name: 'appDeploy', params: { id: appCode }, query: { focus: 'stag' } }"
+                              class="blue pl27"
+                            >
+                              {{ $t('部署应用') }}
+                            </router-link>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <div
+                v-if="!isLoading"
+                class="middle"
+              >
+                <div class="dataStore-middle">
+                  <h3 style="font-size: 16px;">
+                    {{ $t('使用指南') }}
+                  </h3>
+                  <div v-if="!isGuardLoading">
+                    <div
+                      id="markdown"
+                      class="data-store-use"
+                    >
+                      <div
+                        class="markdown-body"
+                        v-html="compiledMarkdown"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </paas-content-loader>
+          </bk-tab-panel>
+          <bk-tab-panel
+            name="manager"
+            :label="$t('管理实例')"
+          >
+            <div class="manager-example">
+              <section
+                v-if="specifications.length"
+                class="config-info"
+              >
+                <template v-if="showConfigInfo">
+                  <config-view
+                    :can-edit="canEditConfig"
+                    :loading="editLoading"
+                    :list="specifications"
+                    @on-edit="handleConfigEdit"
+                  />
+                </template>
+                <template v-else>
+                  <config-edit
+                    mode="edit"
+                    :list="definitions"
+                    :guide="serviceMarkdown"
+                    :value="values"
+                    :save-loading="saveLoading"
+                    @on-change="handleConfigChange"
+                  />
+                </template>
+              </section>
+              <div class="delete-title">
+                {{ $t('删除服务') }}
+              </div>
+              <p class="delete-tips">
+                {{ $t('所有已申请实例的相关数据将被销毁。应用与服务之间的绑定关系也会被解除。') }}
+              </p>
+              <div class="delete-button">
+                <bk-popover
+                  v-if="isSmartApp"
+                  :content="$t('S-mart应用暂不支持删除增强服务')"
+                >
+                  <bk-button
+                    theme="danger"
+                    disabled
+                  >
+                    {{ $t('删除服务') }}
+                  </bk-button>
+                </bk-popover>
+                <bk-button
+                  v-else
+                  theme="danger"
+                  @click="showRemovePrompt"
+                >
+                  {{ $t('删除服务') }}
+                </bk-button>
+              </div>
+            </div>
+          </bk-tab-panel>
+        </bk-tab>
+      </section>
     </div>
+
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="`确认删除${name}实例？`"
+      :theme="'primary'"
+      :mask-close="false"
+      :header-position="'left'"
+      :loading="delAppDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <form
+        class="ps-form"
+        style="min-height: 63px;"
+        @submit.prevent="submitRemoveInstance"
+      >
+        <div class="spacing-x1">
+          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemoveConfirmCode"
+            type="text"
+            class="ps-form-control"
+          >
+        </div>
+        <bk-alert
+          v-if="delAppDialog.moduleList.length > 0"
+          style="margin-top: 10px;"
+          type="error"
+          :title="errorTips"
+        />
+      </form>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="submitRemoveInstance"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
+  </div>
 </template>
 
 <script>
@@ -510,7 +638,7 @@
             handleCopy (payload) {
                 const credentials = payload.service_instance.credentials;
                 const hiddenFields = payload.service_instance.hidden_fields;
-                
+
                 for (const key in credentials) {
                     this.copyContent += key + ':' + credentials[key] + '\n';
                 }

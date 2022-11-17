@@ -1,90 +1,206 @@
 le<template lang="html">
-    <div class="right-main">
-        <section class="app-container middle">
-            <paas-content-loader placeholder="process-loading" :offset-top="10">
-                <div class="title mb15">{{$t('部署状态')}}</div>
-                <bk-tab
-                    :active.sync="environment"
-                    :key="routeName"
-                    type="unborder-card"
-                    ext-cls="status-tab-wrapper"
-                    @tab-change="changeEnv">
-                    <bk-tab-panel v-for="(panelItem, index) in panels" :key="index"
-                        :name="panelItem.env" :label="panelItem.env === 'stag' ? $t('预发布环境') : $t('生产环境')">
-                        <div class="environment environment-instance">
-                            <div class="ps-deploy-container mb20" v-if="Object.keys(statusData.deployment).length">
-                                <bk-alert type="error" :show-icon="false" v-if="statusData.deployment.status === 'error'">
-                                    <div slot="title">
-                                        <i style="color: #EA3636;" :class="['icon paasng-icon', 'paasng-close-circle-shape']"></i>
-                                        {{ $t('由') }} {{statusData.deployment.operator}} {{ $t('于') }} {{deploymentCreatedTime}} {{$t('部署失败')}}
-                                        <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
-                                        <div class="pl15 message-container" v-for="(item, i) in deployFailData" :key="i">
-                                            {{item.type}}: {{item.reason}}, {{item.message || '无'}}
-                                            <i v-if="item.status === 'True'" class="paasng-icon paasng-correct success-icon"></i>
-                                            <i v-if="item.status === 'False'" class="paasng-icon paasng-icon-close error-icon"></i>
-                                            <i v-if="item.status === 'Unknown'" class="pl10 paasng-icon paasng-exclamation-circle warning-icon"></i>
-                                        </div>
-                                    </div>
-                                </bk-alert>
-                                <bk-alert type="success" :show-icon="false" v-else-if="statusData.deployment.status === 'ready'">
-                                    <div slot="title">
-                                        <i style="color: #2DCB56;" :class="['icon paasng-icon', 'paasng-check-circle-shape']"></i>
-                                        {{ $t('由') }} {{statusData.deployment.operator}} {{ $t('于') }} {{deploymentCreatedTime}} {{$t('部署成功')}}
-                                        <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
-                                        <div class="pl15 message-container" v-for="(item, i) in deployFailData" :key="i">
-                                            {{item.type}}: {{item.reason}}, {{item.message || '无'}}
-                                            <i v-if="item.status === 'True'" class="paasng-icon paasng-correct success-icon"></i>
-                                            <i v-if="item.status === 'False'" class="paasng-icon paasng-icon-close error-icon"></i>
-                                            <i v-if="item.status === 'Unknown'" class="pl10 paasng-icon paasng-exclamation-circle warning-icon"></i>
-                                        </div>
-                                    </div>
-                                </bk-alert>
-                                <bk-alert type="info" :show-icon="false" v-else>
-                                    <div slot="title">
-                                        <round-loading style="margin-bottom: 3px" size="mini" ext-cls="deploy-round-load" />
-                                        {{ $t('发布中，请等待更新完成') }}
-                                        <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
-                                        <div class="pl15 message-container" v-for="(item, i) in deployFailData" :key="i">
-                                            {{item.type}}: {{item.reason}}, {{item.message || '无'}}
-                                            <i v-if="item.status === 'True'" class="paasng-icon paasng-correct success-icon"></i>
-                                            <i v-if="item.status === 'False'" class="paasng-icon paasng-icon-close error-icon"></i>
-                                            <i v-if="item.status === 'Unknown'" class="pl10 paasng-icon paasng-exclamation-circle warning-icon"></i>
-                                        </div>
-                                    </div>
-                                </bk-alert>
-                            </div>
-                            <div class="ps-tip-record mb20">
-                                <div class="left-contanier">{{statusData.deployment.tag}}</div>
-                                <div class="right-contanier" v-if="Object.keys(statusData.deployment).length">
-                                    {{ $t('操作记录') }}：{{ $t('由') }} {{statusData.deployment.operator}} {{ $t('于') }} {{deploymentCreatedTime}} {{ $t('发布') }}
-                                    <a class="ml20" target="_blank" :href="statusData.ingress.url"> {{ $t('点击访问') }} </a>
-                                </div>
-                                <div class="right-contanier" v-else>{{ $t('操作记录：暂无') }}</div>
-                            </div>
-                            <bk-tab v-if="activeIndex === index" :key="active" :active.sync="active" ext-cls="status-tab-cls">
-                                <bk-tab-panel name="status" key="status" v-bind="tabData[0]">
-                                    <process-operation
-                                        style="padding: 0 20px;"
-                                        v-if="active === 'status'"
-                                        :app-code="appCode"
-                                        :environment="panelItem.env"
-                                        :ref="panelItem.env + 'Component'"
-                                        @data-ready="handlerDataReady">
-                                    </process-operation>
-                                </bk-tab-panel>
-                                <bk-tab-panel ref="yamlRef" name="yaml" key="yaml" v-bind="tabData[1]">
-                                    <process-yaml :deployId="deployId" :key="yamlKey" :env="environment" @getCloudAppInfo="getCloudAppInfo" v-if="active === 'yaml'"></process-yaml>
-                                </bk-tab-panel>
-                                <bk-tab-panel name="version" key="version" v-bind="tabData[2]">
-                                    <process-version :env="environment" :key="versionKey" v-if="active === 'version'"></process-version>
-                                </bk-tab-panel>
-                            </bk-tab>
-                        </div>
-                    </bk-tab-panel>
-                </bk-tab>
-            </paas-content-loader>
-        </section>
-    </div>
+  <div class="right-main">
+    <section class="app-container middle">
+      <paas-content-loader
+        placeholder="process-loading"
+        :offset-top="10"
+      >
+        <div class="title mb15">
+          {{ $t('部署状态') }}
+        </div>
+        <bk-tab
+          :key="routeName"
+          :active.sync="environment"
+          type="unborder-card"
+          ext-cls="status-tab-wrapper"
+          @tab-change="changeEnv"
+        >
+          <bk-tab-panel
+            v-for="(panelItem, index) in panels"
+            :key="index"
+            :name="panelItem.env"
+            :label="panelItem.env === 'stag' ? $t('预发布环境') : $t('生产环境')"
+          >
+            <div class="environment environment-instance">
+              <div
+                v-if="Object.keys(statusData.deployment).length"
+                class="ps-deploy-container mb20"
+              >
+                <bk-alert
+                  v-if="statusData.deployment.status === 'error'"
+                  type="error"
+                  :show-icon="false"
+                >
+                  <div slot="title">
+                    <i
+                      style="color: #EA3636;"
+                      :class="['icon paasng-icon', 'paasng-close-circle-shape']"
+                    />
+                    {{ $t('由') }} {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('部署失败') }}
+                    <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
+                    <div
+                      v-for="(item, i) in deployFailData"
+                      :key="i"
+                      class="pl15 message-container"
+                    >
+                      {{ item.type }}: {{ item.reason }}, {{ item.message || '无' }}
+                      <i
+                        v-if="item.status === 'True'"
+                        class="paasng-icon paasng-correct success-icon"
+                      />
+                      <i
+                        v-if="item.status === 'False'"
+                        class="paasng-icon paasng-icon-close error-icon"
+                      />
+                      <i
+                        v-if="item.status === 'Unknown'"
+                        class="pl10 paasng-icon paasng-exclamation-circle warning-icon"
+                      />
+                    </div>
+                  </div>
+                </bk-alert>
+                <bk-alert
+                  v-else-if="statusData.deployment.status === 'ready'"
+                  type="success"
+                  :show-icon="false"
+                >
+                  <div slot="title">
+                    <i
+                      style="color: #2DCB56;"
+                      :class="['icon paasng-icon', 'paasng-check-circle-shape']"
+                    />
+                    {{ $t('由') }} {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('部署成功') }}
+                    <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
+                    <div
+                      v-for="(item, i) in deployFailData"
+                      :key="i"
+                      class="pl15 message-container"
+                    >
+                      {{ item.type }}: {{ item.reason }}, {{ item.message || '无' }}
+                      <i
+                        v-if="item.status === 'True'"
+                        class="paasng-icon paasng-correct success-icon"
+                      />
+                      <i
+                        v-if="item.status === 'False'"
+                        class="paasng-icon paasng-icon-close error-icon"
+                      />
+                      <i
+                        v-if="item.status === 'Unknown'"
+                        class="pl10 paasng-icon paasng-exclamation-circle warning-icon"
+                      />
+                    </div>
+                  </div>
+                </bk-alert>
+                <bk-alert
+                  v-else
+                  type="info"
+                  :show-icon="false"
+                >
+                  <div slot="title">
+                    <round-loading
+                      style="margin-bottom: 3px"
+                      size="mini"
+                      ext-cls="deploy-round-load"
+                    />
+                    {{ $t('发布中，请等待更新完成') }}
+                    <!-- <bk-button class="pl20" theme="primary" text style="font-size: 12px;"> {{ $t('查看日志') }} </bk-button> -->
+                    <div
+                      v-for="(item, i) in deployFailData"
+                      :key="i"
+                      class="pl15 message-container"
+                    >
+                      {{ item.type }}: {{ item.reason }}, {{ item.message || '无' }}
+                      <i
+                        v-if="item.status === 'True'"
+                        class="paasng-icon paasng-correct success-icon"
+                      />
+                      <i
+                        v-if="item.status === 'False'"
+                        class="paasng-icon paasng-icon-close error-icon"
+                      />
+                      <i
+                        v-if="item.status === 'Unknown'"
+                        class="pl10 paasng-icon paasng-exclamation-circle warning-icon"
+                      />
+                    </div>
+                  </div>
+                </bk-alert>
+              </div>
+              <div class="ps-tip-record mb20">
+                <div class="left-contanier">
+                  {{ statusData.deployment.tag }}
+                </div>
+                <div
+                  v-if="Object.keys(statusData.deployment).length"
+                  class="right-contanier"
+                >
+                  {{ $t('操作记录') }}：{{ $t('由') }} {{ statusData.deployment.operator }} {{ $t('于') }} {{ deploymentCreatedTime }} {{ $t('发布') }}
+                  <a
+                    class="ml20"
+                    target="_blank"
+                    :href="statusData.ingress.url"
+                  > {{ $t('点击访问') }} </a>
+                </div>
+                <div
+                  v-else
+                  class="right-contanier"
+                >
+                  {{ $t('操作记录：暂无') }}
+                </div>
+              </div>
+              <bk-tab
+                v-if="activeIndex === index"
+                :key="active"
+                :active.sync="active"
+                ext-cls="status-tab-cls"
+              >
+                <bk-tab-panel
+                  key="status"
+                  name="status"
+                  v-bind="tabData[0]"
+                >
+                  <process-operation
+                    v-if="active === 'status'"
+                    :ref="panelItem.env + 'Component'"
+                    style="padding: 0 20px;"
+                    :app-code="appCode"
+                    :environment="panelItem.env"
+                    @data-ready="handlerDataReady"
+                  />
+                </bk-tab-panel>
+                <bk-tab-panel
+                  ref="yamlRef"
+                  key="yaml"
+                  name="yaml"
+                  v-bind="tabData[1]"
+                >
+                  <process-yaml
+                    v-if="active === 'yaml'"
+                    :key="yamlKey"
+                    :deploy-id="deployId"
+                    :env="environment"
+                    @getCloudAppInfo="getCloudAppInfo"
+                  />
+                </bk-tab-panel>
+                <bk-tab-panel
+                  key="version"
+                  name="version"
+                  v-bind="tabData[2]"
+                >
+                  <process-version
+                    v-if="active === 'version'"
+                    :key="versionKey"
+                    :env="environment"
+                  />
+                </bk-tab-panel>
+              </bk-tab>
+            </div>
+          </bk-tab-panel>
+        </bk-tab>
+      </paas-content-loader>
+    </section>
+  </div>
 </template>
 
 <script>
@@ -94,7 +210,7 @@ le<template lang="html">
     import appBaseMixin from '@/mixins/app-base-mixin';
     import moment from 'moment';
     import i18n from '@/language/i18n.js';
-    
+
     export default {
         components: {
             processOperation,

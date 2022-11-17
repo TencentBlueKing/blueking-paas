@@ -1,336 +1,545 @@
 <template>
+  <div>
     <div>
-        <div>
-            <div class="process-table-wrapper" :class="!allProcesses.length ? 'reset-style' : ''">
-                <div class="ps-no-result" v-if="allProcesses.length === 0">
-                    <div class="text">
-                        <p><i class="paasng-icon paasng-empty"></i></p>
-                        <p> {{ $t('暂无数据') }} </p>
-                    </div>
-                </div>
-                <div v-else v-for="(process, index) in allProcesses" class="process-item" :key="index">
-                    <div class="process-item-header" :key="process.status">
-                        <div class="process-basic-info" @click="showProcessDetail(process)">
-                            <a class="ps-icon-btn-circle no-border expanded-icon">
-                                <i :class="['paasng-icon paasng-bold',{ 'paasng-down-shape': process.name === curProcessKey, 'paasng-right-shape': process !== curProcess || !curProcessKey }]"></i>
-                            </a>
-                            <b class="process-name" v-bk-tooltips="process.name">{{process.name}}</b>
-                            <div class="instance-count">
-                                <span>{{process.available_instance_count}} / {{process.desired_replicas}}</span>
-                            </div>
-                        </div>
-                        <div class="process-command" @click="showProcessDetail(process)">{{process.cmd}}</div>
-                        <div class="process-operate">
-                            <a v-bk-tooltips="$t('进程详情')" class="icon-info-l icon-info-base ps-icon-btn-circle no-border" slot="trigger" @click="showProcessDetailDialog(process, index)">
-                                <i class="paasng-icon paasng-info-line"></i>
-                            </a>
-                            <a v-bk-tooltips="$t('访问控制台')" v-if="platformFeature.ENABLE_WEB_CONSOLE" class="icon-info-d icon-info-base ps-icon-btn-circle no-border" slot="trigger" @click="showProcessDetail(process)">
-                                <i class="paasng-icon paasng-diff-2"></i>
-                            </a>
-                            <template v-if="process.targetStatus === 'start'">
-                                <div
-                                    class="tool-confirm-wrapper"
-                                    v-bk-tooltips="process.operateIconTitle"
-                                    @click="confirmClick(process)"
-                                    @mouseover="clearTooltipTimer(process)"
-                                    @mouseout="hideTooltipConfirm(process)">
-                                    <tooltip-confirm
-                                        ref="tooltipConfirm"
-                                        :ok-text="$t('确定')"
-                                        :cancel-text="$t('取消')"
-                                        :theme="'ps-tooltip'"
-                                        @ok="updateProcess(process, index)"
-                                        @cancel="closeProcess(process)"
-                                        @mouseover="clearTooltipTimer(process, 'show')"
-                                        @mouseout="hideTooltipConfirm(process)">
-                                        <a
-                                            slot="trigger"
-                                            class="ps-icon-btn-circle operate-process-icon stop"
-                                            href="javascript:;"
-                                            :class="{ 'disabled': isAppOfflined }">
-                                            <div class="square-icon"></div>
-                                            <!-- <i></i> -->
-                                            <img src="/static/images/btn_loading.gif" class="loading" style="margin-right: 0;" />
-                                        </a>
-                                    </tooltip-confirm>
-                                </div>
-                            </template>
-                            <template v-else>
-                                <a
-                                    class="ps-icon-btn-circle operate-process-icon on start"
-                                    href="javascript:"
-                                    :class="{ 'disabled': isAppOfflined }"
-                                    v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
-                                    @click="patchProcess(process, index)">
-                                    <i></i>
-                                    <img src="/static/images/btn_loading.gif" class="loading" style="margin-right: 0;" />
-                                </a>
-                            </template>
-
-                            <dropdown :options="{ position: 'bottom right' }" ref="operateDropRef">
-                                <a href="javascript:void(0);" class="ps-icon-btn-circle no-border a-more" slot="trigger">
-                                    <i class="paasng-icon paasng-icon-more"></i>
-                                </a>
-                                <div slot="content">
-                                    <ul class="ps-list-group-link spacing-x0">
-                                        <li>
-                                            <a href="javascript:void(0);" class="blue" @click="showProcessConfigDialog(process, index)"> {{ $t('调整实例数') }} </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </dropdown>
-                        </div>
-                        <div class="process-status" v-if="process.status === 'Running'">
-                            <img src="/static/images/btn_loading.gif" class="loading" />
-                            <span>
-                                {{process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...')}}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="process-item-table" v-if="process.name === curProcessKey">
-                        <div class="header-shadow"></div>
-                        <div class="process-item-table-wrapper">
-                            <table class="ps-table ps-table-default ps-instances-table ps-table-special">
-                                <thead>
-                                    <th> {{ $t('实例名称') }} </th>
-                                    <th> {{ $t('状态') }} </th>
-                                    <th> {{ $t('创建时间') }} </th>
-                                    <th style="min-width: 250px;"> {{ $t('操作') }} </th>
-                                </thead>
-                                <tbody>
-                                    <template v-if="curProcess && curProcess.instances.length">
-                                        <tr v-for="(instance, instanceIndex) in curProcess.instances" :key="instanceIndex">
-                                            <td class="name">
-                                                <p>{{instance.display_name}}</p>
-                                            </td>
-                                            <td class="run-state">
-                                                <i class="paasng-icon" :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"></i>
-                                                {{instance.state}}
-                                            </td>
-                                            <td class="time">
-                                                <template v-if="instance.date_time !== 'Invalid date'"> {{ $t('创建于') }} {{ timeFormat(timeN[instance.display_name], instance.date_time) }}
-                                                </template>
-                                                <template v-else>--</template>
-                                            </td>
-                                            <td class="operate">
-                                                <a href="javascript:void(0);" class="blue" @click="showInstanceLog(instance, process)"> {{ $t('查看日志') }} </a>
-                                                <a href="javascript:void(0);" class="blue ml5" @click="showInstanceConsole(instance, process)" v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"> {{ $t('访问控制台') }} </a>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                    <template v-if="!curProcess || !curProcess.instances.length">
-                                        <tr>
-                                            <td colspan="4">
-                                                <div class="ps-no-result">
-                                                    <div class="text">
-                                                        <p>
-                                                            <i class="paasng-icon paasng-empty"></i></p>
-                                                        <p> {{ $t('暂无实例') }} </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <bk-sideslider
-                :width="800"
-                :is-show.sync="processSlider.isShow"
-                :title="processSlider.title"
-                :quick-close="true">
-                <div class="p0 instance-log-wrapper paas-log-box" slot="content" id="log-container">
-                    <div class="action-box">
-                        <bk-button
-                            class="fr p0 f12 refresh-btn"
-                            style="width: 32px; min-width: 32px;"
-                            :key="isLogsLoading"
-                            :disabled="isLogsLoading"
-                            @click="loadInstanceLog">
-                            <span class="bk-icon icon-refresh f18"></span>
-                        </bk-button>
-
-                        <bk-form form-type="inline" class="fr mr5">
-                            <bk-form-item :label="$t('时间段：')">
-                                <bk-select v-model="curLogTimeRange" style="width: 250px;" :clearable="false" :disabled="isLogsLoading">
-                                    <bk-option v-for="(option, index) in chartRangeList"
-                                        :key="index"
-                                        :id="option.id"
-                                        :name="option.name">
-                                    </bk-option>
-                                </bk-select>
-                            </bk-form-item>
-                        </bk-form>
-                    </div>
-                    <div class="instance-textarea">
-                        <div class="textarea" style="height: 100%;">
-                            <template v-if="!isLogsLoading && instanceLogs.length">
-                                <ul>
-                                    <li v-for="(log, index) of instanceLogs" :key="index" class="stream-log">
-                                        <span class="mr10" style="min-width: 140px;">{{log.timestamp}}</span>
-                                        <span class="pod-name">{{log.podShortName}}</span>
-                                        <pre class="message" v-html="log.message || '--'"></pre>
-                                    </li>
-                                </ul>
-                            </template>
-                            <template v-else-if="isLogsLoading">
-                                <div class="log-loading-container">
-                                    <div class="log-loading">
-                                        {{ $t('日志获取中...') }}
-                                    </div>
-                                </div>
-                            </template>
-                            <template v-else>
-                                <p>
-                                    {{ $t('暂时没有日志记录') }}
-                                </p>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-            </bk-sideslider>
-
-            <bk-sideslider
-                :width="750"
-                :is-show.sync="chartSlider.isShow"
-                :title="chartSlider.title"
-                :quick-close="true"
-                @hidden="handlerChartHide">
-                <div class="p0 chart-wrapper" slot="content">
-                    <div class="action-box" v-bk-clickoutside="hideDatePicker" v-if="curAppInfo.feature.RESOURCE_METRICS">
-                        <bk-form form-type="inline" style="float: right;">
-                            <bk-date-picker
-                                v-model="initDateTimeRange"
-                                style="margin-top: 4px;"
-                                :shortcuts="dateShortCut"
-                                :shortcuts-type="'relative'"
-                                :format="'yyyy-MM-dd HH:mm:ss'"
-                                :placement="'bottom-end'"
-                                :placeholder="$t('选择日期时间范围')"
-                                :shortcut-close="true"
-                                :type="'datetimerange'"
-                                :options="datePickerOption"
-                                :open="isDatePickerOpen"
-                                @change="handlerChange"
-                                @pick-success="handlerPickSuccess">
-                                <div slot="trigger" @click="toggleDatePicker" style="width: 310px; height: 28px;">
-                                    <button class="action-btn timer fr">
-                                        <i class="left-icon paasng-icon paasng-clock f16"></i>
-                                        <span class="text">{{$t(timerDisplay)}}</span>
-                                        <i class="right-icon paasng-icon paasng-down-shape f12"></i>
-                                    </button>
-                                </div>
-                            </bk-date-picker>
-                        </bk-form>
-                    </div>
-                    <div class="chart-box" v-if="curAppInfo.feature.RESOURCE_METRICS">
-                        <strong class="title"> {{ $t('CPU使用') }} <span class="sub-title"> {{ $t('（单位：核）') }} </span></strong>
-                        <chart :options="cpuLine" ref="cpuLine" auto-resize style="width: 750px; height: 300px; background: #1e1e21;"></chart>
-                    </div>
-                    <div class="chart-box" v-if="curAppInfo.feature.RESOURCE_METRICS">
-                        <strong class="title"> {{ $t('内存使用') }} <span class="sub-title"> {{ $t('（单位：MB）') }} </span></strong>
-                        <chart :options="memoryLine" ref="memoryLine" auto-resize style="width: 750px; height: 300px; background: #1e1e21;"></chart>
-                    </div>
-                    <div class="slider-detail-wrapper">
-                        <label class="title"> {{ $t('详细信息') }} </label>
-                        <section class="detail-item">
-                            <label class="label"> {{ $t('类型：') }} </label>
-                            <div class="content">{{processPlan.processType}}</div>
-                        </section>
-                        <section class="detail-item">
-                            <label class="label"> {{ $t('实例数上限：') }} </label>
-                            <div class="content">{{processPlan.maxReplicas}}</div>
-                        </section>
-                        <section class="detail-item">
-                            <label class="label"> {{ $t('单实例资源配额：') }} </label>
-                            <div class="content"> {{ $t('内存:') }} {{processPlan.memLimit}} \ CPU: {{processPlan.cpuLimit}}</div>
-                        </section>
-                        <section class="detail-item">
-                            <label class="label"> {{ $t('进程间访问链接：') }} </label>
-                            <div class="content">{{processPlan.clusterLink}}</div>
-                        </section>
-                        <p style="padding-left: 112px; margin-top: -10px; color: #c4c6cc;">
-                            {{ $t('更多进程间通信的说明，请参看') }} <a target="_blank" :href="GLOBAL.DOC.PROCESS_SERVICE"> {{ $t('进程间通信') }} </a>
-                        </p>
-                    </div>
-                </div>
-            </bk-sideslider>
-        </div>
-
-        <!-- 进程实时日志 start -->
-        <div class="instance-box" v-if="isLogShow">
-            <h3>{{curProcessType.toUpperCase()}} {{ $t('进程实时日志') }} </h3>
-            <div class="instance-p">
-                <div class="instance-input">
-                    <input class="ps-form-control" type="text" :placeholder="$t('请输入关键字')" v-model="filterKeys" />
-                    <input class="ps-btn ps-btn-primary" type="button" :value="$t('过滤')" @click.stop.prevent="handleLogsFilter" />
-                </div>
-                <label @click="toggleRealTimeLog">
-                    <input type="checkbox" class="ps-checkbox-default" value="true" checked="checked" />
-                    <span> {{ $t('实时滚动') }} </span>
-                </label>
-            </div>
-            <div class="logscroll">
-                <div class="instance-textarea">
-                    <div class="textarea">
-                        <div class="inner">
-                            <p v-for="(item, itemIndex) in logDetail" v-html="item" :key="itemIndex"></p>
-                        </div>
-                        <div class="log-loading-container">
-                            <div class="log-loading">
-                                {{ $t('实时日志获取中...') }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- 进程实时日志 end -->
-
-        <!-- 进程设置 -->
-        <bk-dialog
-            width="400"
-            :title="$t('调整实例数')"
-            v-model="processConfigDialog.visiable"
-            :header-position="'left'"
-            :loading="processConfigDialog.isLoading"
-            :theme="'primary'"
-            :mask-close="false"
-            @confirm="saveProcessConfig"
-            @cancel="closeProcessConfig"
-            @after-leave="afterCloseProcessConfig">
-            <div v-if="processConfigDialog.showForm" style="min-height: 65px;">
-                <bk-form :label-width="100" :model="processPlan" ref="processConfigForm">
-                    <bk-form-item :label="$t('类型：')">
-                        <bk-input v-model="processPlan.processType" :disabled="true"></bk-input>
-                    </bk-form-item>
-                    <bk-form-item :label="$t('实例数：')" :required="true" :rules="processPlanRules.targetReplicas" :property="'targetReplicas'">
-                        <num-input type="number" :placeholder="$t('请输入')" :min="0" :value.sync="processPlan.targetReplicas"></num-input>
-                    </bk-form-item>
-                </bk-form>
-            </div>
-        </bk-dialog>
-        <!-- 进程设置 end -->
-
-        <!-- 无法使用控制台 -->
-        <bk-dialog
-            width="650"
-            v-model="processRefuseDialog.visiable" :title="$t('无法使用控制台功能')"
-            :theme="'primary'"
-            :mask-close="false"
-            :loading="processRefuseDialog.isLoading"
+      <div
+        class="process-table-wrapper"
+        :class="!allProcesses.length ? 'reset-style' : ''"
+      >
+        <div
+          v-if="allProcesses.length === 0"
+          class="ps-no-result"
         >
-            <div>
-                {{processRefuseDialog.description}}
-                <div class="mt10"><a :href="processRefuseDialog.link" target="_blank"> {{ $t('文档：') }} {{processRefuseDialog.title}}</a></div>
+          <div class="text">
+            <p><i class="paasng-icon paasng-empty" /></p>
+            <p> {{ $t('暂无数据') }} </p>
+          </div>
+        </div>
+        <div
+          v-for="(process, index) in allProcesses"
+          v-else
+          :key="index"
+          class="process-item"
+        >
+          <div
+            :key="process.status"
+            class="process-item-header"
+          >
+            <div
+              class="process-basic-info"
+              @click="showProcessDetail(process)"
+            >
+              <a class="ps-icon-btn-circle no-border expanded-icon">
+                <i :class="['paasng-icon paasng-bold',{ 'paasng-down-shape': process.name === curProcessKey, 'paasng-right-shape': process !== curProcess || !curProcessKey }]" />
+              </a>
+              <b
+                v-bk-tooltips="process.name"
+                class="process-name"
+              >{{ process.name }}</b>
+              <div class="instance-count">
+                <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
+              </div>
             </div>
-        </bk-dialog>
-        <!-- 无法使用控制台 end -->
+            <div
+              class="process-command"
+              @click="showProcessDetail(process)"
+            >
+              {{ process.cmd }}
+            </div>
+            <div class="process-operate">
+              <a
+                slot="trigger"
+                v-bk-tooltips="$t('进程详情')"
+                class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
+                @click="showProcessDetailDialog(process, index)"
+              >
+                <i class="paasng-icon paasng-info-line" />
+              </a>
+              <a
+                v-if="platformFeature.ENABLE_WEB_CONSOLE"
+                slot="trigger"
+                v-bk-tooltips="$t('访问控制台')"
+                class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
+                @click="showProcessDetail(process)"
+              >
+                <i class="paasng-icon paasng-diff-2" />
+              </a>
+              <template v-if="process.targetStatus === 'start'">
+                <div
+                  v-bk-tooltips="process.operateIconTitle"
+                  class="tool-confirm-wrapper"
+                  @click="confirmClick(process)"
+                  @mouseover="clearTooltipTimer(process)"
+                  @mouseout="hideTooltipConfirm(process)"
+                >
+                  <tooltip-confirm
+                    ref="tooltipConfirm"
+                    :ok-text="$t('确定')"
+                    :cancel-text="$t('取消')"
+                    :theme="'ps-tooltip'"
+                    @ok="updateProcess(process, index)"
+                    @cancel="closeProcess(process)"
+                    @mouseover="clearTooltipTimer(process, 'show')"
+                    @mouseout="hideTooltipConfirm(process)"
+                  >
+                    <a
+                      slot="trigger"
+                      class="ps-icon-btn-circle operate-process-icon stop"
+                      href="javascript:;"
+                      :class="{ 'disabled': isAppOfflined }"
+                    >
+                      <div class="square-icon" />
+                      <!-- <i></i> -->
+                      <img
+                        src="/static/images/btn_loading.gif"
+                        class="loading"
+                        style="margin-right: 0;"
+                      >
+                    </a>
+                  </tooltip-confirm>
+                </div>
+              </template>
+              <template v-else>
+                <a
+                  v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
+                  class="ps-icon-btn-circle operate-process-icon on start"
+                  href="javascript:"
+                  :class="{ 'disabled': isAppOfflined }"
+                  @click="patchProcess(process, index)"
+                >
+                  <i />
+                  <img
+                    src="/static/images/btn_loading.gif"
+                    class="loading"
+                    style="margin-right: 0;"
+                  >
+                </a>
+              </template>
+
+              <dropdown
+                ref="operateDropRef"
+                :options="{ position: 'bottom right' }"
+              >
+                <a
+                  slot="trigger"
+                  href="javascript:void(0);"
+                  class="ps-icon-btn-circle no-border a-more"
+                >
+                  <i class="paasng-icon paasng-icon-more" />
+                </a>
+                <div slot="content">
+                  <ul class="ps-list-group-link spacing-x0">
+                    <li>
+                      <a
+                        href="javascript:void(0);"
+                        class="blue"
+                        @click="showProcessConfigDialog(process, index)"
+                      > {{ $t('调整实例数') }} </a>
+                    </li>
+                  </ul>
+                </div>
+              </dropdown>
+            </div>
+            <div
+              v-if="process.status === 'Running'"
+              class="process-status"
+            >
+              <img
+                src="/static/images/btn_loading.gif"
+                class="loading"
+              >
+              <span>
+                {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+              </span>
+            </div>
+          </div>
+          <div
+            v-if="process.name === curProcessKey"
+            class="process-item-table"
+          >
+            <div class="header-shadow" />
+            <div class="process-item-table-wrapper">
+              <table class="ps-table ps-table-default ps-instances-table ps-table-special">
+                <thead>
+                  <th> {{ $t('实例名称') }} </th>
+                  <th> {{ $t('状态') }} </th>
+                  <th> {{ $t('创建时间') }} </th>
+                  <th style="min-width: 250px;">
+                    {{ $t('操作') }}
+                  </th>
+                </thead>
+                <tbody>
+                  <template v-if="curProcess && curProcess.instances.length">
+                    <tr
+                      v-for="(instance, instanceIndex) in curProcess.instances"
+                      :key="instanceIndex"
+                    >
+                      <td class="name">
+                        <p>{{ instance.display_name }}</p>
+                      </td>
+                      <td class="run-state">
+                        <i
+                          class="paasng-icon"
+                          :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
+                        />
+                        {{ instance.state }}
+                      </td>
+                      <td class="time">
+                        <template v-if="instance.date_time !== 'Invalid date'">
+                          {{ $t('创建于') }} {{ timeFormat(timeN[instance.display_name], instance.date_time) }}
+                        </template>
+                        <template v-else>
+                          --
+                        </template>
+                      </td>
+                      <td class="operate">
+                        <a
+                          href="javascript:void(0);"
+                          class="blue"
+                          @click="showInstanceLog(instance, process)"
+                        > {{ $t('查看日志') }} </a>
+                        <a
+                          v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
+                          href="javascript:void(0);"
+                          class="blue ml5"
+                          @click="showInstanceConsole(instance, process)"
+                        > {{ $t('访问控制台') }} </a>
+                      </td>
+                    </tr>
+                  </template>
+                  <template v-if="!curProcess || !curProcess.instances.length">
+                    <tr>
+                      <td colspan="4">
+                        <div class="ps-no-result">
+                          <div class="text">
+                            <p>
+                              <i class="paasng-icon paasng-empty" />
+                            </p>
+                            <p> {{ $t('暂无实例') }} </p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <bk-sideslider
+        :width="800"
+        :is-show.sync="processSlider.isShow"
+        :title="processSlider.title"
+        :quick-close="true"
+      >
+        <div
+          id="log-container"
+          slot="content"
+          class="p0 instance-log-wrapper paas-log-box"
+        >
+          <div class="action-box">
+            <bk-button
+              :key="isLogsLoading"
+              class="fr p0 f12 refresh-btn"
+              style="width: 32px; min-width: 32px;"
+              :disabled="isLogsLoading"
+              @click="loadInstanceLog"
+            >
+              <span class="bk-icon icon-refresh f18" />
+            </bk-button>
+
+            <bk-form
+              form-type="inline"
+              class="fr mr5"
+            >
+              <bk-form-item :label="$t('时间段：')">
+                <bk-select
+                  v-model="curLogTimeRange"
+                  style="width: 250px;"
+                  :clearable="false"
+                  :disabled="isLogsLoading"
+                >
+                  <bk-option
+                    v-for="(option, index) in chartRangeList"
+                    :id="option.id"
+                    :key="index"
+                    :name="option.name"
+                  />
+                </bk-select>
+              </bk-form-item>
+            </bk-form>
+          </div>
+          <div class="instance-textarea">
+            <div
+              class="textarea"
+              style="height: 100%;"
+            >
+              <template v-if="!isLogsLoading && instanceLogs.length">
+                <ul>
+                  <li
+                    v-for="(log, index) of instanceLogs"
+                    :key="index"
+                    class="stream-log"
+                  >
+                    <span
+                      class="mr10"
+                      style="min-width: 140px;"
+                    >{{ log.timestamp }}</span>
+                    <span class="pod-name">{{ log.podShortName }}</span>
+                    <pre
+                      class="message"
+                      v-html="log.message || '--'"
+                    />
+                  </li>
+                </ul>
+              </template>
+              <template v-else-if="isLogsLoading">
+                <div class="log-loading-container">
+                  <div class="log-loading">
+                    {{ $t('日志获取中...') }}
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <p>
+                  {{ $t('暂时没有日志记录') }}
+                </p>
+              </template>
+            </div>
+          </div>
+        </div>
+      </bk-sideslider>
+
+      <bk-sideslider
+        :width="750"
+        :is-show.sync="chartSlider.isShow"
+        :title="chartSlider.title"
+        :quick-close="true"
+        @hidden="handlerChartHide"
+      >
+        <div
+          slot="content"
+          class="p0 chart-wrapper"
+        >
+          <div
+            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-bk-clickoutside="hideDatePicker"
+            class="action-box"
+          >
+            <bk-form
+              form-type="inline"
+              style="float: right;"
+            >
+              <bk-date-picker
+                v-model="initDateTimeRange"
+                style="margin-top: 4px;"
+                :shortcuts="dateShortCut"
+                :shortcuts-type="'relative'"
+                :format="'yyyy-MM-dd HH:mm:ss'"
+                :placement="'bottom-end'"
+                :placeholder="$t('选择日期时间范围')"
+                :shortcut-close="true"
+                :type="'datetimerange'"
+                :options="datePickerOption"
+                :open="isDatePickerOpen"
+                @change="handlerChange"
+                @pick-success="handlerPickSuccess"
+              >
+                <div
+                  slot="trigger"
+                  style="width: 310px; height: 28px;"
+                  @click="toggleDatePicker"
+                >
+                  <button class="action-btn timer fr">
+                    <i class="left-icon paasng-icon paasng-clock f16" />
+                    <span class="text">{{ $t(timerDisplay) }}</span>
+                    <i class="right-icon paasng-icon paasng-down-shape f12" />
+                  </button>
+                </div>
+              </bk-date-picker>
+            </bk-form>
+          </div>
+          <div
+            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            class="chart-box"
+          >
+            <strong class="title"> {{ $t('CPU使用') }} <span class="sub-title"> {{ $t('（单位：核）') }} </span></strong>
+            <chart
+              ref="cpuLine"
+              :options="cpuLine"
+              auto-resize
+              style="width: 750px; height: 300px; background: #1e1e21;"
+            />
+          </div>
+          <div
+            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            class="chart-box"
+          >
+            <strong class="title"> {{ $t('内存使用') }} <span class="sub-title"> {{ $t('（单位：MB）') }} </span></strong>
+            <chart
+              ref="memoryLine"
+              :options="memoryLine"
+              auto-resize
+              style="width: 750px; height: 300px; background: #1e1e21;"
+            />
+          </div>
+          <div class="slider-detail-wrapper">
+            <label class="title"> {{ $t('详细信息') }} </label>
+            <section class="detail-item">
+              <label class="label"> {{ $t('类型：') }} </label>
+              <div class="content">
+                {{ processPlan.processType }}
+              </div>
+            </section>
+            <section class="detail-item">
+              <label class="label"> {{ $t('实例数上限：') }} </label>
+              <div class="content">
+                {{ processPlan.maxReplicas }}
+              </div>
+            </section>
+            <section class="detail-item">
+              <label class="label"> {{ $t('单实例资源配额：') }} </label>
+              <div class="content">
+                {{ $t('内存:') }} {{ processPlan.memLimit }} \ CPU: {{ processPlan.cpuLimit }}
+              </div>
+            </section>
+            <section class="detail-item">
+              <label class="label"> {{ $t('进程间访问链接：') }} </label>
+              <div class="content">
+                {{ processPlan.clusterLink }}
+              </div>
+            </section>
+            <p style="padding-left: 112px; margin-top: -10px; color: #c4c6cc;">
+              {{ $t('更多进程间通信的说明，请参看') }} <a
+                target="_blank"
+                :href="GLOBAL.DOC.PROCESS_SERVICE"
+              > {{ $t('进程间通信') }} </a>
+            </p>
+          </div>
+        </div>
+      </bk-sideslider>
     </div>
+
+    <!-- 进程实时日志 start -->
+    <div
+      v-if="isLogShow"
+      class="instance-box"
+    >
+      <h3>{{ curProcessType.toUpperCase() }} {{ $t('进程实时日志') }} </h3>
+      <div class="instance-p">
+        <div class="instance-input">
+          <input
+            v-model="filterKeys"
+            class="ps-form-control"
+            type="text"
+            :placeholder="$t('请输入关键字')"
+          >
+          <input
+            class="ps-btn ps-btn-primary"
+            type="button"
+            :value="$t('过滤')"
+            @click.stop.prevent="handleLogsFilter"
+          >
+        </div>
+        <label @click="toggleRealTimeLog">
+          <input
+            type="checkbox"
+            class="ps-checkbox-default"
+            value="true"
+            checked="checked"
+          >
+          <span> {{ $t('实时滚动') }} </span>
+        </label>
+      </div>
+      <div class="logscroll">
+        <div class="instance-textarea">
+          <div class="textarea">
+            <div class="inner">
+              <p
+                v-for="(item, itemIndex) in logDetail"
+                :key="itemIndex"
+                v-html="item"
+              />
+            </div>
+            <div class="log-loading-container">
+              <div class="log-loading">
+                {{ $t('实时日志获取中...') }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 进程实时日志 end -->
+
+    <!-- 进程设置 -->
+    <bk-dialog
+      v-model="processConfigDialog.visiable"
+      width="400"
+      :title="$t('调整实例数')"
+      :header-position="'left'"
+      :loading="processConfigDialog.isLoading"
+      :theme="'primary'"
+      :mask-close="false"
+      @confirm="saveProcessConfig"
+      @cancel="closeProcessConfig"
+      @after-leave="afterCloseProcessConfig"
+    >
+      <div
+        v-if="processConfigDialog.showForm"
+        style="min-height: 65px;"
+      >
+        <bk-form
+          ref="processConfigForm"
+          :label-width="100"
+          :model="processPlan"
+        >
+          <bk-form-item :label="$t('类型：')">
+            <bk-input
+              v-model="processPlan.processType"
+              :disabled="true"
+            />
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('实例数：')"
+            :required="true"
+            :rules="processPlanRules.targetReplicas"
+            :property="'targetReplicas'"
+          >
+            <num-input
+              type="number"
+              :placeholder="$t('请输入')"
+              :min="0"
+              :value.sync="processPlan.targetReplicas"
+            />
+          </bk-form-item>
+        </bk-form>
+      </div>
+    </bk-dialog>
+    <!-- 进程设置 end -->
+
+    <!-- 无法使用控制台 -->
+    <bk-dialog
+      v-model="processRefuseDialog.visiable"
+      width="650"
+      :title="$t('无法使用控制台功能')"
+      :theme="'primary'"
+      :mask-close="false"
+      :loading="processRefuseDialog.isLoading"
+    >
+      <div>
+        {{ processRefuseDialog.description }}
+        <div class="mt10">
+          <a
+            :href="processRefuseDialog.link"
+            target="_blank"
+          > {{ $t('文档：') }} {{ processRefuseDialog.title }}</a>
+        </div>
+      </div>
+    </bk-dialog>
+    <!-- 无法使用控制台 end -->
+  </div>
 </template>
 
 <script>
@@ -1537,7 +1746,7 @@
                     target_replicas: this.processPlan.targetReplicas
                 };
                 this.pendingProcessList.push(processType);
-                
+
                 try {
                     await this.$store.dispatch('processes/updateProcess', {
                         appCode: this.appCode,

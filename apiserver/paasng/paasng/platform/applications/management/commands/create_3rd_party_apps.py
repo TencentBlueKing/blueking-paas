@@ -30,10 +30,11 @@ from django.db import IntegrityError as DjangoIntegrityError
 from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
+from paasng.accessories.iam.helpers import add_role_members, delete_builtin_user_groups
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.handlers import application_logo_updated
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import before_finishing_application_creation
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import create_default_module
@@ -49,6 +50,7 @@ from paasng.publish.sync_market.handlers import (
     sync_external_url_to_market,
 )
 from paasng.publish.sync_market.managers import AppManger
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -149,8 +151,10 @@ class Command(BaseCommand):
             logger.info("app(name:%s) exists, skip create", app_desc.name)
             return
 
-        ApplicationMembership.objects.update_or_create(
-            user=application.creator, application=application, role=ApplicationRole.ADMINISTRATOR.value
+        add_role_members(
+            app_code=application.code,
+            role=ApplicationRole.ADMINISTRATOR,
+            usernames=get_username_by_bkpaas_user_id(application.creator),
         )
 
         if created:
@@ -159,7 +163,7 @@ class Command(BaseCommand):
             except IntegrityError as e:
                 logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create")
                 # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容
-                ApplicationMembership.objects.filter(application=application).delete()
+                delete_builtin_user_groups(application.code)
                 Application.objects.filter(code=app_desc.code).delete()
                 return
 

@@ -28,14 +28,13 @@ from django.db.models import Model
 from django.utils.translation import gettext as _
 from pydantic import BaseModel
 
-from paasng.engine.constants import JobStatus, OperationTypes, RuntimeType
+from paasng.engine.constants import JobStatus, RuntimeType
 from paasng.engine.controller.state import controller_client
 from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, OfflineOperationExistError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
-from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
 from paasng.engine.models.steps import DeployStepPicker
 from paasng.platform.applications.signals import module_environment_offline_event
@@ -98,24 +97,15 @@ class OfflineManager:
             source_comment=deployment.source_comment,
         )
 
-        # send offline event
+        # send offline event to create operation record
         module_environment_offline_event.send(
             sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
-        )
-
-        ModuleEnvironmentOperations.objects.create(
-            operator=offline_operation.operator,
-            app_environment=offline_operation.app_environment,
-            application=offline_operation.app_environment.application,
-            operation_type=OperationTypes.OFFLINE.value,
-            object_uid=offline_operation.pk,
         )
 
         engine_app = self.env.engine_app
         controller_client.archive_app(
             region=engine_app.region, app_name=engine_app.name, operation_id=str(offline_operation.pk)
         )
-
         return offline_operation
 
 

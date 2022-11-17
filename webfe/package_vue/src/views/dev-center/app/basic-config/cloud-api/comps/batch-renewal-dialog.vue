@@ -1,61 +1,109 @@
 <template lang="html">
-    <bk-dialog
-        v-model="visible"
-        theme="primary"
-        :width="845"
-        :mask-close="false"
-        header-position="left"
-        ext-cls="paasng-api-batch-renewal-dialog"
-        :title="$t(title)"
-        @after-leave="handleAfterLeave">
-        <div class="content">
-            <paasng-alert>
-                <div slot="title">
-                    {{ $t('将续期') }} <span style="color: #34d97b;">{{renewalRows.length}}</span> {{ $t('个') }}{{ isComponent ? $t('组件API') : $t('网关API') }} {{ $t('权限') }} {{ applyRows.length > 0 ? '；' : '。' }}
-                    <template v-if="applyRows.length > 0">
-                        <span style="color: #ff5656;">{{ applyRows.length }}</span> {{ $t('个权限不可续期，无权限、权限已过期、权限大于30天不支持续期。') }}
-                    </template>
-                </div>
-            </paasng-alert>
-            <div class="api-batch-apply-content">
-                <bk-table
-                    :data="rows"
-                    :size="'small'"
-                    :max-height="250"
-                    :key="renewKey">
-                    <bk-table-column :label="isComponent ? $t('系统') : $t('网关')">
-                        <template slot-scope="props">
-                            {{ isComponent ? props.row.system_name : props.row.api_name }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column label="API" prop="name" :show-overflow-tooltip="true"></bk-table-column>
-                    <bk-table-column :label="$t('续期前的过期时间')" prop="expires">
-                        <template slot-scope="props">
-                            {{ getExpiredTime(props.row) }}
-                        </template>
-                    </bk-table-column>
-                    <bk-table-column :label="$t('续期后的过期时间')" prop="expires">
-                        <template slot-scope="props">
-                            <span style="color: #ff5656;" v-if="props.row.permission_action === 'apply'"> {{ $t('无权限，不可续期') }} </span>
-                            <span v-else style="color: #ffb400;">{{applyNewTime}}</span>
-                        </template>
-                    </bk-table-column>
-                </bk-table>
-            </div>
-            <bk-form :label-width="80" :model="formData" style="margin-top: 25px;">
-                <bk-form-item :label="$t('有效时间')" required property="expired">
-                    <div class="bk-button-group bk-button-group-cls">
-                        <bk-button @click="formData.expired = 6" :class="formData.expired === 6 ? 'is-selected' : ''"> {{ $t('6个月') }} </bk-button>
-                        <bk-button @click="formData.expired = 12" :class="formData.expired === 12 ? 'is-selected' : ''"> {{ $t('12个月') }} </bk-button>
-                    </div>
-                </bk-form-item>
-            </bk-form>
+  <bk-dialog
+    v-model="visible"
+    theme="primary"
+    :width="845"
+    :mask-close="false"
+    header-position="left"
+    ext-cls="paasng-api-batch-renewal-dialog"
+    :title="$t(title)"
+    @after-leave="handleAfterLeave"
+  >
+    <div class="content">
+      <paasng-alert>
+        <div slot="title">
+          {{ $t('将续期') }} <span style="color: #34d97b;">{{ renewalRows.length }}</span> {{ $t('个') }}{{ isComponent ? $t('组件API') : $t('网关API') }} {{ $t('权限') }} {{ applyRows.length > 0 ? '；' : '。' }}
+          <template v-if="applyRows.length > 0">
+            <span style="color: #ff5656;">{{ applyRows.length }}</span> {{ $t('个权限不可续期，无权限、权限已过期、权限大于30天不支持续期。') }}
+          </template>
         </div>
-        <template slot="footer">
-            <bk-button theme="primary" :disabled="formData.reason === ''" :loading="loading" @click="handleConfirm"> {{ $t('确定') }} </bk-button>
-            <bk-button style="margin-left: 10px;" @click="handleCancel"> {{ $t('取消') }} </bk-button>
-        </template>
-    </bk-dialog>
+      </paasng-alert>
+      <div class="api-batch-apply-content">
+        <bk-table
+          :key="renewKey"
+          :data="rows"
+          :size="'small'"
+          :max-height="250"
+        >
+          <bk-table-column :label="isComponent ? $t('系统') : $t('网关')">
+            <template slot-scope="props">
+              {{ isComponent ? props.row.system_name : props.row.api_name }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            label="API"
+            prop="name"
+            :show-overflow-tooltip="true"
+          />
+          <bk-table-column
+            :label="$t('续期前的过期时间')"
+            prop="expires"
+          >
+            <template slot-scope="props">
+              {{ getExpiredTime(props.row) }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('续期后的过期时间')"
+            prop="expires"
+          >
+            <template slot-scope="props">
+              <span
+                v-if="props.row.permission_action === 'apply'"
+                style="color: #ff5656;"
+              > {{ $t('无权限，不可续期') }} </span>
+              <span
+                v-else
+                style="color: #ffb400;"
+              >{{ applyNewTime }}</span>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+      <bk-form
+        :label-width="80"
+        :model="formData"
+        style="margin-top: 25px;"
+      >
+        <bk-form-item
+          :label="$t('有效时间')"
+          required
+          property="expired"
+        >
+          <div class="bk-button-group bk-button-group-cls">
+            <bk-button
+              :class="formData.expired === 6 ? 'is-selected' : ''"
+              @click="formData.expired = 6"
+            >
+              {{ $t('6个月') }}
+            </bk-button>
+            <bk-button
+              :class="formData.expired === 12 ? 'is-selected' : ''"
+              @click="formData.expired = 12"
+            >
+              {{ $t('12个月') }}
+            </bk-button>
+          </div>
+        </bk-form-item>
+      </bk-form>
+    </div>
+    <template slot="footer">
+      <bk-button
+        theme="primary"
+        :disabled="formData.reason === ''"
+        :loading="loading"
+        @click="handleConfirm"
+      >
+        {{ $t('确定') }}
+      </bk-button>
+      <bk-button
+        style="margin-left: 10px;"
+        @click="handleCancel"
+      >
+        {{ $t('取消') }}
+      </bk-button>
+    </template>
+  </bk-dialog>
 </template>
 <script>
     import { formatDate } from '@/common/tools';

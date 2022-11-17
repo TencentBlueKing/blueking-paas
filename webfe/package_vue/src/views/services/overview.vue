@@ -1,83 +1,121 @@
 <template lang="html">
-    <div class="right-main bk-service-overview">
-        <div class="overview-tit">
-            <h2>
-                <span class="expert"><router-link :to="{ name: 'serviceVas' }"> {{ $t('增强服务') }} </router-link></span>
-                {{serviceObject.display_name}}
-            </h2>
+  <div class="right-main bk-service-overview">
+    <div class="overview-tit">
+      <h2>
+        <span class="expert"><router-link :to="{ name: 'serviceVas' }"> {{ $t('增强服务') }} </router-link></span>
+        {{ serviceObject.display_name }}
+      </h2>
+    </div>
+
+    <paas-content-loader
+      class="ps-container"
+      :is-loading="loading"
+      placeholder="service-inner-loading"
+    >
+      <div :class="{ 'fadeIn': !loading }">
+        <div
+          v-if="!loading"
+          class="middle bnone"
+        >
+          <div class="service-ex">
+            <img
+              :src="serviceObject.logo"
+              class="service-ex-img"
+              alt=""
+            >
+            <h2>{{ serviceObject.display_name }}</h2>
+            <p>
+              <span
+                v-for="(item, index) in serviceObject.available_languages"
+                :key="index"
+                :class="['box green',{ 'purple1': index === 1 },{ 'purple2': index === 2 }]"
+              >{{ item }}</span>
+            </p>
+          </div>
+          <div class="service-p">
+            <h3> {{ $t('可用环境：') }} </h3>
+            <p>{{ enabledRegions.join('/') || '--' }}</p>
+          </div>
+          <div class="service-p">
+            <h3> {{ $t('服务简介：') }} </h3>
+            <p>{{ serviceObject.description }}</p>
+          </div>
+          <div class="service-p">
+            <h3> {{ $t('服务说明：') }} </h3>
+            <p>
+              <span v-if="serviceObject.long_description">{{ serviceObject.long_description }}，</span><a
+                :href="GLOBAL.DOC.SERVICE_INDEX"
+                target="_blank"
+              > {{ $t('查看帮助文档') }} </a>
+            </p>
+          </div>
         </div>
 
-        <paas-content-loader class="ps-container" :is-loading="loading" placeholder="service-inner-loading">
-            <div :class="{ 'fadeIn': !loading }">
-                <div class="middle bnone" v-if="!loading">
-                    <div class="service-ex">
-                        <img v-bind:src="serviceObject.logo" class="service-ex-img" alt="">
-                        <h2>{{serviceObject.display_name}}</h2>
-                        <p>
-                            <span v-for="(item, index) in serviceObject.available_languages" :key="index" :class="['box green',{ 'purple1': index === 1 },{ 'purple2': index === 2 }]">{{item}}</span>
-                        </p>
-                    </div>
-                    <div class="service-p">
-                        <h3> {{ $t('可用环境：') }} </h3>
-                        <p>{{enabledRegions.join('/') || '--'}}</p>
-                    </div>
-                    <div class="service-p">
-                        <h3> {{ $t('服务简介：') }} </h3>
-                        <p>{{serviceObject.description}}</p>
-                    </div>
-                    <div class="service-p">
-                        <h3> {{ $t('服务说明：') }} </h3>
-                        <p><span v-if="serviceObject.long_description">{{serviceObject.long_description}}，</span><a :href="GLOBAL.DOC.SERVICE_INDEX" target="_blank"> {{ $t('查看帮助文档') }} </a></p>
-                    </div>
+        <div class="enable">
+          <h2> {{ $t('您有') }} <span class="ps-btn-xs">{{ pageConf.count }}</span> {{ $t('款应用已启用该服务') }} </h2>
+          <bk-table
+            v-bkloading="{ isLoading: isDataLoading }"
+            :data="attList"
+            :size="'small'"
+            :empty-text="$t('暂无应用启用该服务')"
+            :pagination="pageConf"
+            :show-pagination-info="true"
+            :header-border="false"
+            @page-change="handlePageChange"
+            @page-limit-change="handlePageSizeChange"
+          >
+            <bk-table-column
+              :label="$t('应用信息')"
+              min-width="200"
+            >
+              <template slot-scope="props">
+                <div
+                  class="ps-table-app"
+                  @click="toServiceInner(props.row)"
+                >
+                  <img
+                    :src="props.row.application ? (props.row.application.logo_url ? props.row.application.logo_url : defaultImg) : defaultImg"
+                    class="fleft applogo"
+                  >
+                  <span class="app-name-text">
+                    <em>{{ props.row.application.name }}</em>
+                  </span>
                 </div>
-
-                <div class="enable">
-                    <h2> {{ $t('您有') }} <span class="ps-btn-xs">{{pageConf.count}}</span> {{ $t('款应用已启用该服务') }} </h2>
-                    <bk-table
-                        :data="attList"
-                        :size="'small'"
-                        :empty-text="$t('暂无应用启用该服务')"
-                        :pagination="pageConf"
-                        :show-pagination-info="true"
-                        :header-border="false"
-                        v-bkloading="{ isLoading: isDataLoading }"
-                        @page-change="handlePageChange"
-                        @page-limit-change="handlePageSizeChange">
-                        <bk-table-column :label="$t('应用信息')" min-width="200">
-                            <template slot-scope="props">
-                                <div class="ps-table-app" @click="toServiceInner(props.row)">
-                                    <img :src="props.row.application ? (props.row.application.logo_url ? props.row.application.logo_url : defaultImg) : defaultImg" class="fleft applogo">
-                                    <span class="app-name-text">
-                                        <em>{{props.row.application.name}}</em>
-                                    </span>
-                                </div>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('模块')" prop="module_name"></bk-table-column>
-                        <bk-table-column :label="$t('启用时间')" prop="created" :render-header="renderHeader"></bk-table-column>
-                        <bk-table-column :label="$t('应用版本')">
-                            <template slot-scope="props">
-                                <span>{{lauguageMap[props.row.region] || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('操作')">
-                            <template slot-scope="props">
-                                <div class="table-operate-buttons">
-                                    <bk-button
-                                        theme="primary"
-                                        size="small"
-                                        text
-                                        @click="userDetail(props.row)">
-                                        {{ $t('使用详情') }}
-                                    </bk-button>
-                                </div>
-                            </template>
-                        </bk-table-column>
-                    </bk-table>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('模块')"
+              prop="module_name"
+            />
+            <bk-table-column
+              :label="$t('启用时间')"
+              prop="created"
+              :render-header="renderHeader"
+            />
+            <bk-table-column :label="$t('应用版本')">
+              <template slot-scope="props">
+                <span>{{ lauguageMap[props.row.region] || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('操作')">
+              <template slot-scope="props">
+                <div class="table-operate-buttons">
+                  <bk-button
+                    theme="primary"
+                    size="small"
+                    text
+                    @click="userDetail(props.row)"
+                  >
+                    {{ $t('使用详情') }}
+                  </bk-button>
                 </div>
-            </div>
-        </paas-content-loader>
-    </div>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </div>
+      </div>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

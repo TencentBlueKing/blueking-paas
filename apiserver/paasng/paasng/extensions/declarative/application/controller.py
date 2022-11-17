@@ -27,8 +27,9 @@ from typing import Dict, List, Optional
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.models import User, UserProfile
-from paasng.accounts.permissions.tools import user_has_perm
+from paasng.accounts.permissions.application import user_has_app_action_perm
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import ServiceSharingManager
@@ -137,7 +138,7 @@ class AppDeclarativeController:
         if not desc.region:
             desc.region = application.region
 
-        if not user_has_perm(self.user, 'manage_deploy', application):
+        if not user_has_app_action_perm(self.user, application, AppAction.BASIC_DEVELOP):
             raise DescriptionValidationError({APP_CODE_FIELD: _('你没有权限操作当前应用')})
 
         # Handle field modifications

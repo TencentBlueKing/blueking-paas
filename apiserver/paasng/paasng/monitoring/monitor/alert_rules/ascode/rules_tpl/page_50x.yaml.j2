@@ -1,0 +1,23 @@
+name: '{{ alert_rule_display_name }}'
+enabled: {{ enabled }}
+
+labels:
+  - BKPAAS
+
+query:
+  data_source: bk_monitor
+  data_type: time_series
+  query_configs:
+  - metric: gather_app_http_status
+
+detect: # 检测配置
+  algorithm: # 检测算法
+    fatal: # 告警级别
+    - type: Threshold # 算法类型
+      config: "{{ threshold_expr }}" # 算法配置
+
+  trigger: 5/10/6 # 触发条件
+
+notice: # 通知配置
+  user_groups: # 通知组配置
+  - '{{ notice_group_name }}'

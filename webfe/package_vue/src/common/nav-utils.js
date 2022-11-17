@@ -19,55 +19,55 @@
 import _ from 'lodash';
 
 function excludeNavItemsByCategoryNames (navItems, categoryNames) {
-    const invalidCategoryNames = categoryNames;
-    navItems = _.filter(navItems, (item) => {
-        return item && (!_.includes(invalidCategoryNames, item.categoryName));
-    });
-    return navItems;
+  const invalidCategoryNames = categoryNames;
+  navItems = _.filter(navItems, (item) => {
+    return item && (!_.includes(invalidCategoryNames, item.categoryName));
+  });
+  return navItems;
 }
 
 function filterNavItemsByRole (appRole, navItems) {
-    let result = [];
-    if (appRole === 'administrator') {
-        result = navItems;
-    } else if (appRole === 'developer') {
-        const validCategoryNames = [
-            'appEngine',
-            'appServices',
-            'appMarketing',
-            'appConfigs',
-            'appPermissions'
-        ];
+  let result = [];
+  if (appRole === 'administrator') {
+    result = navItems;
+  } else if (appRole === 'developer') {
+    const validCategoryNames = [
+      'appEngine',
+      'appServices',
+      'appMarketing',
+      'appConfigs',
+      'appPermissions'
+    ];
 
-        result = _.find(navItems, (item) => {
-            return item.destRoute.name === 'appSummary';
-        });
-        result = [
-            result,
-            ..._.filter(navItems, (item) => {
-                return _.includes(validCategoryNames, item.categoryName);
-            })
-        ];
-    } else if (appRole === 'operator') {
-        const validCategoryNames = [
-            'appMarketing',
-            'appConfigs',
-            'appPermissions'
-        ];
-        result = _.find(navItems, (item) => {
-            return item.destRoute.name === 'appSummary';
-        });
-        result = [
-            result,
-            ..._.filter(navItems, (item) => {
-                return _.includes(validCategoryNames, item.categoryName);
-            })
-        ];
-    }
-    return result;
+    result = _.find(navItems, (item) => {
+      return item.destRoute.name === 'appSummary';
+    });
+    result = [
+      result,
+      ..._.filter(navItems, (item) => {
+        return _.includes(validCategoryNames, item.categoryName);
+      })
+    ];
+  } else if (appRole === 'operator') {
+    const validCategoryNames = [
+      'appMarketing',
+      'appConfigs',
+      'appPermissions'
+    ];
+    result = _.find(navItems, (item) => {
+      return item.destRoute.name === 'appSummary';
+    });
+    result = [
+      result,
+      ..._.filter(navItems, (item) => {
+        return _.includes(validCategoryNames, item.categoryName);
+      })
+    ];
+  }
+  return result;
 }
 
 export default {
-    excludeNavItemsByCategoryNames,
-    filterNavItemsByRole
+  excludeNavItemsByCategoryNames,
+  filterNavItemsByRole
 };

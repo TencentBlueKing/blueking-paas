@@ -1,158 +1,233 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('自定义事件统计')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList"
-            v-if="engineEnabled">
-        </app-top-bar>
-        <div class="ps-top-bar" v-else>
-            <h2> {{ $t('自定义事件统计') }} </h2>
-        </div>
-        <paas-content-loader :is-loading="isPageLoading" placeholder="analysis-loading" :offset-top="20" class="app-container middle">
-            <div class="ps-top-card mt20">
-                <section class="content no-border">
-                    <div
-                        :class="['content-header', { 'mt15': engineEnabled }]">
-                        <div class="bk-button-group fl" v-if="engineEnabled">
-                            <bk-button
-                                theme="primary"
-                                style="width: 101px;"
-                                :outline="curEnv !== 'stag'"
-                                @click="curEnv = 'stag'">
-                                {{ $t('预发布环境') }}
-                            </bk-button>
-                            <bk-button
-                                theme="primary"
-                                style="width: 101px;"
-                                :outline="curEnv !== 'prod'"
-                                @click="curEnv = 'prod'">
-                                {{ $t('生产环境') }}
-                            </bk-button>
-                        </div>
-                        <div class="f12 fl" style="color: #666;" v-else>
-                            {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
-                            <bk-button
-                                text
-                                class="info-button"
-                                @click.stop="isShowSideslider = true">
-                                {{ $t('接入指引') }}
-                            </bk-button>
-                        </div>
-                        <bk-date-picker
-                            class="fr"
-                            v-model="initDateTimeRange"
-                            :placeholder="$t('选择日期范围')"
-                            :type="'daterange'"
-                            placement="bottom-end"
-                            :shortcuts="shortcuts"
-                            :shortcut-close="true"
-                            :options="dateOptions"
-                            @change="handleDateChange">
-                        </bk-date-picker>
-                    </div>
-
-                    <div class="desc f12 fix" v-if="engineEnabled">
-                        {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
-                        <bk-button
-                            text
-                            class="info-button"
-                            @click.stop="isShowSideslider = true">
-                            {{ $t('接入指引') }}
-                        </bk-button>
-                    </div>
-                    
-                    <div class="analysis-box" :class="!engineEnabled ? 'set-margin-top' : ''">
-                        <div class="summary">
-                            <div class="pv">
-                                <strong class="title">{{summaryData.ev || 0}}</strong>
-                                <p class="desc"> {{ $t('事件总数') }} </p>
-                            </div>
-                            <div class="uv">
-                                <strong class="title">{{summaryData.ue || 0}}</strong>
-                                <p class="desc">
-                                    {{ $t('唯一身份事件数') }}
-                                    <i class="paasng-icon paasng-exclamation-circle event-tips" v-bk-tooltips="tootipsText"></i>
-                                </p>
-                            </div>
-                        </div>
-                        <div class="chart-wrapper">
-                            <div class="chart-box">
-                                <div class="chart-action">
-                                    <ul class="dimension fl">
-                                        <li :class="{ 'active': chartFilterType.ue }" @click="handleChartFilte('ue')">
-                                            <span class="dot warning"></span> {{ $t('事件总数') }}
-                                        </li>
-                                        <li :class="{ 'active': chartFilterType.ev }" @click="handleChartFilte('ev')">
-                                            <span class="dot primary"></span> {{ $t('唯一身份事件数') }}
-                                        </li>
-                                    </ul>
-
-                                    <ul class="time fr">
-                                        <li :class="{ 'active': defaultRange === '5m' }" v-if="allowRanges.includes('5m')" @click="handleRangeChange('5m')"> {{ $t('5分钟') }} </li>
-                                        <li :class="{ 'active': defaultRange === '1h', 'disabled': !allowRanges.includes('1h') }" v-if="allowRanges.includes('1h')" @click="handleRangeChange('1h')"> {{ $t('小时') }} </li>
-                                        <li :class="{ 'active': defaultRange === '1d' }" v-if="allowRanges.includes('1d')" @click="handleRangeChange('1d')"> {{ $t('天') }} </li>
-                                    </ul>
-                                </div>
-                                <chart
-                                    :options="chartOption"
-                                    ref="chart"
-                                    auto-resize
-                                    style="width: 100%; height: 240px; background: #1e1e21;">
-                                </chart>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="content-header mt15">
-                        <div class="event-title-wrapper">
-                            <span :class="['title', { 'has-cursor': curCategory !== '' }]" @click="handleBackEventList"> {{ $t('类别列表') }} </span>
-                            <i class="paasng-icon paasng-ps-arrow-right" v-if="curCategory !== ''"></i>
-                            <span class="cur-event-name" v-if="curCategory !== ''">{{ curCategory }}</span>
-                        </div>
-                        <bk-button
-                            class="export-button"
-                            theme="default"
-                            :disabled="!pathData.length"
-                            :loading="exportLoading"
-                            @click="handleExportToExcel"> {{ $t('导出') }} </bk-button>
-                    </div>
-                    <bk-table style="margin-top: 15px;"
-                        :data="pathData"
-                        :size="'small'"
-                        :pagination="pagination"
-                        v-bkloading="{ isLoading: isPathDataLoading }"
-                        @page-change="pageChange"
-                        @page-limit-change="limitChange"
-                        @sort-change="sortChange">
-                        <bk-table-column
-                            v-for="field of fieldList"
-                            :column-key="field.prop"
-                            :label="$t(field.name)"
-                            :prop="field.prop"
-                            :key="field.prop"
-                            :sortable="field.sortable">
-                            <template slot-scope="{ row }">
-                                <span v-if="field.prop === 'category'" class="display-name" @click.stop="handleViewDetail(row[field.prop])">
-                                    {{ row[field.prop] }}
-                                </span>
-                                <span v-else>
-                                    {{ row[field.prop] }}
-                                </span>
-                            </template>
-                        </bk-table-column>
-                    </bk-table>
-                </section>
-            </div>
-            <render-sideslider
-                is-event
-                :is-show.sync="isShowSideslider"
-                :title="sidesliderTitle"
-                :engine-enable="curAppInfo.web_config.engine_enabled"
-                :site-name="siteDisplayName" />
-        </paas-content-loader>
+  <div class="right-main">
+    <app-top-bar
+      v-if="engineEnabled"
+      :title="$t('自定义事件统计')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
+    <div
+      v-else
+      class="ps-top-bar"
+    >
+      <h2> {{ $t('自定义事件统计') }} </h2>
     </div>
+    <paas-content-loader
+      :is-loading="isPageLoading"
+      placeholder="analysis-loading"
+      :offset-top="20"
+      class="app-container middle"
+    >
+      <div class="ps-top-card mt20">
+        <section class="content no-border">
+          <div
+            :class="['content-header', { 'mt15': engineEnabled }]"
+          >
+            <div
+              v-if="engineEnabled"
+              class="bk-button-group fl"
+            >
+              <bk-button
+                theme="primary"
+                style="width: 101px;"
+                :outline="curEnv !== 'stag'"
+                @click="curEnv = 'stag'"
+              >
+                {{ $t('预发布环境') }}
+              </bk-button>
+              <bk-button
+                theme="primary"
+                style="width: 101px;"
+                :outline="curEnv !== 'prod'"
+                @click="curEnv = 'prod'"
+              >
+                {{ $t('生产环境') }}
+              </bk-button>
+            </div>
+            <div
+              v-else
+              class="f12 fl"
+              style="color: #666;"
+            >
+              {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
+              <bk-button
+                text
+                class="info-button"
+                @click.stop="isShowSideslider = true"
+              >
+                {{ $t('接入指引') }}
+              </bk-button>
+            </div>
+            <bk-date-picker
+              v-model="initDateTimeRange"
+              class="fr"
+              :placeholder="$t('选择日期范围')"
+              :type="'daterange'"
+              placement="bottom-end"
+              :shortcuts="shortcuts"
+              :shortcut-close="true"
+              :options="dateOptions"
+              @change="handleDateChange"
+            />
+          </div>
+
+          <div
+            v-if="engineEnabled"
+            class="desc f12 fix"
+          >
+            {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
+            <bk-button
+              text
+              class="info-button"
+              @click.stop="isShowSideslider = true"
+            >
+              {{ $t('接入指引') }}
+            </bk-button>
+          </div>
+
+          <div
+            class="analysis-box"
+            :class="!engineEnabled ? 'set-margin-top' : ''"
+          >
+            <div class="summary">
+              <div class="pv">
+                <strong class="title">{{ summaryData.ev || 0 }}</strong>
+                <p class="desc">
+                  {{ $t('事件总数') }}
+                </p>
+              </div>
+              <div class="uv">
+                <strong class="title">{{ summaryData.ue || 0 }}</strong>
+                <p class="desc">
+                  {{ $t('唯一身份事件数') }}
+                  <i
+                    v-bk-tooltips="tootipsText"
+                    class="paasng-icon paasng-exclamation-circle event-tips"
+                  />
+                </p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div class="chart-box">
+                <div class="chart-action">
+                  <ul class="dimension fl">
+                    <li
+                      :class="{ 'active': chartFilterType.ue }"
+                      @click="handleChartFilte('ue')"
+                    >
+                      <span class="dot warning" /> {{ $t('事件总数') }}
+                    </li>
+                    <li
+                      :class="{ 'active': chartFilterType.ev }"
+                      @click="handleChartFilte('ev')"
+                    >
+                      <span class="dot primary" /> {{ $t('唯一身份事件数') }}
+                    </li>
+                  </ul>
+
+                  <ul class="time fr">
+                    <li
+                      v-if="allowRanges.includes('5m')"
+                      :class="{ 'active': defaultRange === '5m' }"
+                      @click="handleRangeChange('5m')"
+                    >
+                      {{ $t('5分钟') }}
+                    </li>
+                    <li
+                      v-if="allowRanges.includes('1h')"
+                      :class="{ 'active': defaultRange === '1h', 'disabled': !allowRanges.includes('1h') }"
+                      @click="handleRangeChange('1h')"
+                    >
+                      {{ $t('小时') }}
+                    </li>
+                    <li
+                      v-if="allowRanges.includes('1d')"
+                      :class="{ 'active': defaultRange === '1d' }"
+                      @click="handleRangeChange('1d')"
+                    >
+                      {{ $t('天') }}
+                    </li>
+                  </ul>
+                </div>
+                <chart
+                  ref="chart"
+                  :options="chartOption"
+                  auto-resize
+                  style="width: 100%; height: 240px; background: #1e1e21;"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="content-header mt15">
+            <div class="event-title-wrapper">
+              <span
+                :class="['title', { 'has-cursor': curCategory !== '' }]"
+                @click="handleBackEventList"
+              > {{ $t('类别列表') }} </span>
+              <i
+                v-if="curCategory !== ''"
+                class="paasng-icon paasng-ps-arrow-right"
+              />
+              <span
+                v-if="curCategory !== ''"
+                class="cur-event-name"
+              >{{ curCategory }}</span>
+            </div>
+            <bk-button
+              class="export-button"
+              theme="default"
+              :disabled="!pathData.length"
+              :loading="exportLoading"
+              @click="handleExportToExcel"
+            >
+              {{ $t('导出') }}
+            </bk-button>
+          </div>
+          <bk-table
+            v-bkloading="{ isLoading: isPathDataLoading }"
+            style="margin-top: 15px;"
+            :data="pathData"
+            :size="'small'"
+            :pagination="pagination"
+            @page-change="pageChange"
+            @page-limit-change="limitChange"
+            @sort-change="sortChange"
+          >
+            <bk-table-column
+              v-for="field of fieldList"
+              :key="field.prop"
+              :column-key="field.prop"
+              :label="$t(field.name)"
+              :prop="field.prop"
+              :sortable="field.sortable"
+            >
+              <template slot-scope="{ row }">
+                <span
+                  v-if="field.prop === 'category'"
+                  class="display-name"
+                  @click.stop="handleViewDetail(row[field.prop])"
+                >
+                  {{ row[field.prop] }}
+                </span>
+                <span v-else>
+                  {{ row[field.prop] }}
+                </span>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </section>
+      </div>
+      <render-sideslider
+        is-event
+        :is-show.sync="isShowSideslider"
+        :title="sidesliderTitle"
+        :engine-enable="curAppInfo.web_config.engine_enabled"
+        :site-name="siteDisplayName"
+      />
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>
@@ -550,7 +625,7 @@
                     const appCode = this.appCode;
                     const moduleId = this.curModuleId;
                     const env = this.curEnv;
-   
+
                     const res = await this.$store.dispatch('analysis/getEventAnalysisConfig', {
                         appCode,
                         moduleId,

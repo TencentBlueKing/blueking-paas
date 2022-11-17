@@ -1,61 +1,81 @@
 <template lang="html">
-    <div class="git-main">
-        <div slot="loadingContent" class="middle">
-            <section v-for="(oauth, index) in oauth2Backends" :key="index">
-                <div class="middle-oauth-title">
-                    <h3>{{titleInfo[oauth.name]}}</h3>
-                    <div class="ps-text-info">{{infoMap[oauth.name]}}</div>
-                </div>
-                <div class="backend-wrapper">
-                    <ul class="backend-content-wrapper clearfix">
-                        <template v-if="isTokenExist">
-                            <li class="backend-list">
-                                <p class="correct-mark">
-                                    <i class="icon paasng-icon paasng-correct"></i>
-                                </p>
-                                <div class="show-content">
-                                    <!-- logo 无需格式化-->
-                                    <div class="img-wrapper">
-                                        <template v-if="oauth.name === 'tc_git'">
-                                            <img class="devops-icon" src="../../../../../static/images/devops.png" alt="">
-                                            <div class="devops-icon-inner"></div>
-                                        </template>
-                                        <span class="paasng-icon paasng-gitlab logo-icon" v-else></span>
-                                    </div>
-                                    <div class="desc-wrapper">
-                                        <h4 class="title">
-                                            {{oauth.display_info.display_name}}
-                                        </h4>
-                                        <p class="text">
-                                            <span>{{oauth.display_info.description}}</span>
-                                            <span class="scope" v-if="oauth.name === 'tc_git'">
-                                                {{ make_scope_readable(oauth.scope) }}
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </li>
-                        </template>
-                        <template v-else>
-                            <li
-                                :class="['backend-list', 'no-impower']" @click.stop="auth_associate(oauth)">
-                                <div class="show-content">
-                                    <div class="img-wrapper">
-                                        <span class="paasng-icon paasng-plus-thick logo-icon"></span>
-                                    </div>
-                                    <div class="desc-wrapper">
-                                        <h4 class="oauth-title">
-                                            <span> {{ $t('点击立即授权') }} </span>
-                                        </h4>
-                                    </div>
-                                </div>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-            </section>
+  <div class="git-main">
+    <div
+      slot="loadingContent"
+      class="middle"
+    >
+      <section
+        v-for="(oauth, index) in oauth2Backends"
+        :key="index"
+      >
+        <div class="middle-oauth-title">
+          <h3>{{ titleInfo[oauth.name] }}</h3>
+          <div class="ps-text-info">
+            {{ infoMap[oauth.name] }}
+          </div>
         </div>
+        <div class="backend-wrapper">
+          <ul class="backend-content-wrapper clearfix">
+            <template v-if="isTokenExist">
+              <li class="backend-list">
+                <p class="correct-mark">
+                  <i class="icon paasng-icon paasng-correct" />
+                </p>
+                <div class="show-content">
+                  <!-- logo 无需格式化-->
+                  <div class="img-wrapper">
+                    <template v-if="oauth.name === 'tc_git'">
+                      <img
+                        class="devops-icon"
+                        src="../../../../../static/images/devops.png"
+                        alt=""
+                      >
+                      <div class="devops-icon-inner" />
+                    </template>
+                    <span
+                      v-else
+                      class="paasng-icon paasng-gitlab logo-icon"
+                    />
+                  </div>
+                  <div class="desc-wrapper">
+                    <h4 class="title">
+                      {{ oauth.display_info.display_name }}
+                    </h4>
+                    <p class="text">
+                      <span>{{ oauth.display_info.description }}</span>
+                      <span
+                        v-if="oauth.name === 'tc_git'"
+                        class="scope"
+                      >
+                        {{ make_scope_readable(oauth.scope) }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </li>
+            </template>
+            <template v-else>
+              <li
+                :class="['backend-list', 'no-impower']"
+                @click.stop="auth_associate(oauth)"
+              >
+                <div class="show-content">
+                  <div class="img-wrapper">
+                    <span class="paasng-icon paasng-plus-thick logo-icon" />
+                  </div>
+                  <div class="desc-wrapper">
+                    <h4 class="oauth-title">
+                      <span> {{ $t('点击立即授权') }} </span>
+                    </h4>
+                  </div>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </section>
     </div>
+  </div>
 </template>
 
 <script>

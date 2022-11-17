@@ -1,41 +1,60 @@
 <template lang="html">
-    <ul class="app-nav">
-        <template v-for="(category, categoryIndex) in navTree">
-            <li
-                :key="categoryIndex"
-                :class="{
-                    'on': category.isActived && !category.isExpanded
-                }"
-                v-if="category.children && category.children.length">
-                <a class="overview-text" href="javascript:" @click.stop.prevent="toggleNavCategory(category)">
-                    {{category.label}}
-                    <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]"></i>
-                </a>
-                <span :class="getIconClass(category)"></span>
-                <transition @enter="enter" @after-enter="afterEnter" @leave="leave">
-                    <div class="overview-text-slide" v-if="category.isExpanded">
-                        <a :class="{ 'on': navItem.isSelected }"
-                            href="javascript: void(0);"
-                            v-for="(navItem, navIndex) in category.children"
-                            :key="navIndex"
-                            @click.stop.prevent="goPage(navItem)">
-                            {{$t(navItem.name)}}
-                        </a>
-                    </div>
-                </transition>
-            </li>
+  <ul class="app-nav">
+    <template v-for="(category, categoryIndex) in navTree">
+      <li
+        v-if="category.children && category.children.length"
+        :key="categoryIndex"
+        :class="{
+          'on': category.isActived && !category.isExpanded
+        }"
+      >
+        <a
+          class="overview-text"
+          href="javascript:"
+          @click.stop.prevent="toggleNavCategory(category)"
+        >
+          {{ category.label }}
+          <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]" />
+        </a>
+        <span :class="getIconClass(category)" />
+        <transition
+          @enter="enter"
+          @after-enter="afterEnter"
+          @leave="leave"
+        >
+          <div
+            v-if="category.isExpanded"
+            class="overview-text-slide"
+          >
+            <a
+              v-for="(navItem, navIndex) in category.children"
+              :key="navIndex"
+              :class="{ 'on': navItem.isSelected }"
+              href="javascript: void(0);"
+              @click.stop.prevent="goPage(navItem)"
+            >
+              {{ $t(navItem.name) }}
+            </a>
+          </div>
+        </transition>
+      </li>
 
-            <li
-                :key="categoryIndex"
-                :class="{ 'no-child-actived': category.isActived }"
-                v-else-if="category.destRoute">
-                <a class="overview-text" href="javascript:" @click.stop.prevent="goPage(category)">
-                    {{category.label}}
-                </a>
-                <span :class="getIconClass(category)"></span>
-            </li>
-        </template>
-    </ul>
+      <li
+        v-else-if="category.destRoute"
+        :key="categoryIndex"
+        :class="{ 'no-child-actived': category.isActived }"
+      >
+        <a
+          class="overview-text"
+          href="javascript:"
+          @click.stop.prevent="goPage(category)"
+        >
+          {{ category.label }}
+        </a>
+        <span :class="getIconClass(category)" />
+      </li>
+    </template>
+  </ul>
 </template>
 
 <script>
@@ -68,7 +87,6 @@
                         'appSummary', // 概览
                         'appEngine', // 应用引擎
                         'appServices', // 增强服务
-                        'appPermissions', // 权限管理
                         'appMarketing', // 市场推广
                         'appConfigs', // 基本设置
                         'moduleManage', // 模块管理
@@ -84,8 +102,7 @@
                         'appConfigs', // 基本设置
                         'appAnalysis', // 数据统计
                         'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appCloudAPI' // 云 API 权限管理
+                        'docuManagement' // 文档管理
                     ]
                 }
             };
@@ -134,7 +151,7 @@
                     this.navTree = await this.initNavByRegion(appNav.list);
                     await this.initRouterPermission();
                 }
-                
+
                 await this.selectRouterByName(this.curRouteName);
             },
 
@@ -183,6 +200,11 @@
                                 nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
                             }
                         });
+                    }
+
+                    // 当角色为开发者时，过滤部分功能入口
+                    if (this.curAppInfo.role.name === 'developer') {
+                        navTree = navTree.filter(nav => this.roleAllowRouters['developer'].includes(nav.name));
                     }
 
                     // 当角色运营者时，过滤部分功能入口

@@ -1,41 +1,66 @@
 <template>
-    <ul class="paas-deploy-timeline" :class="extCls" :style="{ width: `${width}px` }">
-        <li
-            class="paas-timeline-dot"
-            v-for="(item, index) in list"
-            :key="index"
-            :class="['paas-timeline-dot', makeClass(item, index)]"
-            @click="toggle(item)"
-            @mouseenter="handleMouseenter(item)"
-            @mouseleave="handleMouseleave(item)">
-            <template v-if="isNeedIconcool(item)">
-                <round-loading ext-cls="paas-deploy-timeline-loading" v-if="item.loading" />
-                <div class="paas-timeline-icon" v-else>
-                    <i :class="['paasng-icon', `paasng-deploy-${item.stage}`]" :style="{ color: computedIconColor(item) }"></i>
-                </div>
-            </template>
-            <template v-else>
-                <round-loading ext-cls="paas-deploy-timeline-loading" v-if="item.status === 'pending'" />
-                <div class="paas-timeline-node-icon" :class="item.status" v-else></div>
-            </template>
+  <ul
+    class="paas-deploy-timeline"
+    :class="extCls"
+    :style="{ width: `${width}px` }"
+  >
+    <li
+      v-for="(item, index) in list"
+      :key="index"
+      class="paas-timeline-dot"
+      :class="['paas-timeline-dot', makeClass(item, index)]"
+      @click="toggle(item)"
+      @mouseenter="handleMouseenter(item)"
+      @mouseleave="handleMouseleave(item)"
+    >
+      <template v-if="isNeedIconcool(item)">
+        <round-loading
+          v-if="item.loading"
+          ext-cls="paas-deploy-timeline-loading"
+        />
+        <div
+          v-else
+          class="paas-timeline-icon"
+        >
+          <i
+            :class="['paasng-icon', `paasng-deploy-${item.stage}`]"
+            :style="{ color: computedIconColor(item) }"
+          />
+        </div>
+      </template>
+      <template v-else>
+        <round-loading
+          v-if="item.status === 'pending'"
+          ext-cls="paas-deploy-timeline-loading"
+        />
+        <div
+          v-else
+          class="paas-timeline-node-icon"
+          :class="item.status"
+        />
+      </template>
 
-            <div class="paas-timeline-section">
-                <div
-                    :class="['paas-timeline-title', { 'is-weight': !!item.stage }, { 'is-default': item.status === 'default' && !item.stage }]"
-                    v-if="item.tag !== ''">
-                    <template v-if="item.status === 'skip'">
-                        <s style="color: #c4c6cc;">{{ item.tag }}</s>
-                    </template>
-                    <template v-else>
-                        {{ item.tag }}
-                    </template>
-                </div>
-                <div class="paas-timeline-content" v-if="item.content">
-                    {{ item.content }}
-                </div>
-            </div>
-        </li>
-    </ul>
+      <div class="paas-timeline-section">
+        <div
+          v-if="item.tag !== ''"
+          :class="['paas-timeline-title', { 'is-weight': !!item.stage }, { 'is-default': item.status === 'default' && !item.stage }]"
+        >
+          <template v-if="item.status === 'skip'">
+            <s style="color: #c4c6cc;">{{ item.tag }}</s>
+          </template>
+          <template v-else>
+            {{ item.tag }}
+          </template>
+        </div>
+        <div
+          v-if="item.content"
+          class="paas-timeline-content"
+        >
+          {{ item.content }}
+        </div>
+      </div>
+    </li>
+  </ul>
 </template>
 <script>
     // 当前节点的5种状态: successful: 成功, failed: 失败, pending: 当前进行中, skip: 跳过, default: 默认(未开始)
@@ -237,7 +262,7 @@
             makeClass (templateData, index) {
                 const classPrefix = 'paas-timeline-item-';
                 const classNames = [];
-                    
+
                 if (templateData && templateData.status && this.statusReg.test(templateData.status)) {
                     if (['successful', 'failed', 'pending'].includes(templateData.status)) {
                         classNames.push(`${classPrefix}${templateData.status}`);
@@ -245,7 +270,7 @@
                         classNames.push(`${classPrefix}default`);
                     }
                 }
-                
+
                 if (!this.disabled) {
                     if (templateData.stage) {
                         classNames.push('stage-item');
@@ -362,7 +387,7 @@
                 background: #FFF;
                 display: inline-block;
                 transform: translateY(-50%);
-                
+
                 &::after {
                     width: 9px;
                     height: 9px;
@@ -431,7 +456,7 @@
                 cursor: pointer;
                 background: #FFF;
                 transition: all ease 0.3s;
-                
+
                 &.active-step-item {
                     background: #f3f7fe;
 

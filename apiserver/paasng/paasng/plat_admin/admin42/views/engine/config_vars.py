@@ -21,6 +21,8 @@ import logging
 
 from rest_framework.permissions import IsAuthenticated
 
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.config_var import ConfigVar
 from paasng.engine.views import ConfigVarViewSet as BaseConfigVarViewSet
@@ -50,7 +52,7 @@ class ConfigVarManageView(ApplicationDetailBaseView):
 class ConfigVarViewSet(BaseConfigVarViewSet):
     schema = None
     serializer_class = ConfigVarSLZ
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_queryset(self):
         application = self.get_application()

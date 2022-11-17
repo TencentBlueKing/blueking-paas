@@ -1,66 +1,93 @@
 <template lang="html">
-    <div class="right-main">
-        <app-top-bar
-            :title="$t('代码检查')"
-            :can-create="canCreateModule"
-            :cur-module="curAppModule"
-            :module-list="curAppModuleList">
-        </app-top-bar>
+  <div class="right-main">
+    <app-top-bar
+      :title="$t('代码检查')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
 
-        <paas-content-loader class="app-container middle" :is-loading="isLoading" placeholder="code-review-loading" :offset-top="30">
-            <template v-if="showPage && !isLoading">
-                <div v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
-                    <bk-table
-                        :data="reviewList"
-                        size="small"
-                        :pagination="pagination"
-                        @page-change="pageChange"
-                        @page-limit-change="limitChange">
-                        <bk-table-column :label="$t('检查版本')">
-                            <template slot-scope="{ row }">
-                                <span v-bk-tooltips="row.deployment.repo.revision || ''">{{row.deployment.repo.revision.substring(0, 8) || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('检查分支')">
-                            <template slot-scope="{ row }">
-                                <span>{{row.deployment.repo.name || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('检查时间')">
-                            <template slot-scope="{ row }">
-                                <span>{{row.created || '--'}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('执行状态')">
-                            <template slot-scope="{ row }">
-                                <span :style="{ color: computedColor(row.status) }">{{statusMap[row.status]}}</span>
-                            </template>
-                        </bk-table-column>
-                        <bk-table-column :label="$t('检查结果')" width="120">
-                            <template slot-scope="{ row }">
-                                <bk-button text @click="handleViewDetail(row)"> {{ $t('查看详情') }} </bk-button>
-                            </template>
-                        </bk-table-column>
-                    </bk-table>
-                </div>
-                <div class="hlep-docu">
-                    <label class="label"> {{ $t('帮助文档') }} </label>
-                    <div style="margin-top: 10px;">
-                        <bk-button text @click="handleCodeDocu" style="padding-left: 0;"> {{ $t('代码检查服务说明') }} </bk-button>
-                    </div>
-                </div>
-            </template>
-            <template v-if="!showPage && !isLoading">
-                <div class="mt50 tc">
-                    <span class="paasng-icon paasng-empty warn-icon"></span>
-                    <p class="no-git-wrapper"> {{ $t('该模块暂不支持代码检查功能，可通过') }}
-                        <bk-button text @click="handleCodeDocu" style="padding-left: 0;"> {{ $t('代码检查服务说明') }} </bk-button>
-                        {{ $t('了解详情') }}
-                    </p>
-                </div>
-            </template>
-        </paas-content-loader>
-    </div>
+    <paas-content-loader
+      class="app-container middle"
+      :is-loading="isLoading"
+      placeholder="code-review-loading"
+      :offset-top="30"
+    >
+      <template v-if="showPage && !isLoading">
+        <div v-bkloading="{ isLoading: tableLoading, opacity: 1 }">
+          <bk-table
+            :data="reviewList"
+            size="small"
+            :pagination="pagination"
+            @page-change="pageChange"
+            @page-limit-change="limitChange"
+          >
+            <bk-table-column :label="$t('检查版本')">
+              <template slot-scope="{ row }">
+                <span v-bk-tooltips="row.deployment.repo.revision || ''">{{ row.deployment.repo.revision.substring(0, 8) || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('检查分支')">
+              <template slot-scope="{ row }">
+                <span>{{ row.deployment.repo.name || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('检查时间')">
+              <template slot-scope="{ row }">
+                <span>{{ row.created || '--' }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('执行状态')">
+              <template slot-scope="{ row }">
+                <span :style="{ color: computedColor(row.status) }">{{ statusMap[row.status] }}</span>
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('检查结果')"
+              width="120"
+            >
+              <template slot-scope="{ row }">
+                <bk-button
+                  text
+                  @click="handleViewDetail(row)"
+                >
+                  {{ $t('查看详情') }}
+                </bk-button>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </div>
+        <div class="hlep-docu">
+          <label class="label"> {{ $t('帮助文档') }} </label>
+          <div style="margin-top: 10px;">
+            <bk-button
+              text
+              style="padding-left: 0;"
+              @click="handleCodeDocu"
+            >
+              {{ $t('代码检查服务说明') }}
+            </bk-button>
+          </div>
+        </div>
+      </template>
+      <template v-if="!showPage && !isLoading">
+        <div class="mt50 tc">
+          <span class="paasng-icon paasng-empty warn-icon" />
+          <p class="no-git-wrapper">
+            {{ $t('该模块暂不支持代码检查功能，可通过') }}
+            <bk-button
+              text
+              style="padding-left: 0;"
+              @click="handleCodeDocu"
+            >
+              {{ $t('代码检查服务说明') }}
+            </bk-button>
+            {{ $t('了解详情') }}
+          </p>
+        </div>
+      </template>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>

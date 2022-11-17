@@ -1,24 +1,82 @@
 <template lang="html">
-    <div class="paas-content white" data-test-id="create_content_App">
-        <div class="big-title mt30">
-            <span> {{ $t('创建应用') }} </span>
-        </div>
-        <div class="tab-box mt10" v-if="userFeature.ALLOW_CREATE_SMART_APP">
-            <li :class="['tab-item', { 'active': appType === 'default' }, { 'tab-item-nosmart': !cloudFlag }]" @click="handleToggleType('default')"> {{ $t('普通应用') }} </li>
-            <li :class="['tab-item', { 'active': appType === 'cloud' }, { 'tab-item-nosmart': !cloudFlag }]" @click="handleToggleType('cloud')" v-if="cloudFlag">{{ $t('云原生应用') }}</li>
-            <li :class="['tab-item', { 'active': appType === 'smart' }, { 'tab-item-nosmart': !cloudFlag }]" @click="handleToggleType('smart')">{{ $t('S-mart 应用') }}</li>
-            <li :class="['tab-item', { 'active': appType === 'external' }, { 'tab-item-nosmart': !cloudFlag }]" @click="handleToggleType('external')"> {{ $t('外链应用') }} </li>
-        </div>
-        <div class="tab-box mt10" v-else>
-            <li :class="['tab-item tab-item-nosmart', { 'active': appType === 'default' }, { 'tab-item-nocloud': !cloudFlag }]" @click="handleToggleType('default')"> {{ $t('普通应用') }} </li>
-            <li :class="['tab-item tab-item-nosmart', { 'active': appType === 'cloud' }, { 'tab-item-nocloud': !cloudFlag }]" @click="handleToggleType('cloud')" v-if="cloudFlag">{{ $t('云原生应用') }}</li>
-            <li :class="['tab-item tab-item-nosmart', { 'active': appType === 'external' }, { 'tab-item-nocloud': !cloudFlag }]" @click="handleToggleType('external')"> {{ $t('外链应用') }} </li>
-        </div>
-        <create-default-app v-if="appType === 'default'" :key="appType"></create-default-app>
-        <create-cloud-app v-else-if="appType === 'cloud'" key="cloud"></create-cloud-app>
-        <create-external-app v-else-if="appType === 'external'" key="external"></create-external-app>
-        <create-smart-app v-else key="smart"></create-smart-app>
+  <div
+    class="paas-content white"
+    data-test-id="create_content_App"
+  >
+    <div class="big-title mt30">
+      <span> {{ $t('创建应用') }} </span>
     </div>
+    <div
+      v-if="userFeature.ALLOW_CREATE_SMART_APP"
+      class="tab-box mt10"
+    >
+      <li
+        :class="['tab-item', { 'active': appType === 'default' }, { 'tab-item-nosmart': !cloudFlag }]"
+        @click="handleToggleType('default')"
+      >
+        {{ $t('普通应用') }}
+      </li>
+      <li
+        v-if="cloudFlag"
+        :class="['tab-item', { 'active': appType === 'cloud' }, { 'tab-item-nosmart': !cloudFlag }]"
+        @click="handleToggleType('cloud')"
+      >
+        {{ $t('云原生应用') }}
+      </li>
+      <li
+        :class="['tab-item', { 'active': appType === 'smart' }, { 'tab-item-nosmart': !cloudFlag }]"
+        @click="handleToggleType('smart')"
+      >
+        {{ $t('S-mart 应用') }}
+      </li>
+      <li
+        :class="['tab-item', { 'active': appType === 'external' }, { 'tab-item-nosmart': !cloudFlag }]"
+        @click="handleToggleType('external')"
+      >
+        {{ $t('外链应用') }}
+      </li>
+    </div>
+    <div
+      v-else
+      class="tab-box mt10"
+    >
+      <li
+        :class="['tab-item tab-item-nosmart', { 'active': appType === 'default' }, { 'tab-item-nocloud': !cloudFlag }]"
+        @click="handleToggleType('default')"
+      >
+        {{ $t('普通应用') }}
+      </li>
+      <li
+        v-if="cloudFlag"
+        :class="['tab-item tab-item-nosmart', { 'active': appType === 'cloud' }, { 'tab-item-nocloud': !cloudFlag }]"
+        @click="handleToggleType('cloud')"
+      >
+        {{ $t('云原生应用') }}
+      </li>
+      <li
+        :class="['tab-item tab-item-nosmart', { 'active': appType === 'external' }, { 'tab-item-nocloud': !cloudFlag }]"
+        @click="handleToggleType('external')"
+      >
+        {{ $t('外链应用') }}
+      </li>
+    </div>
+    <create-default-app
+      v-if="appType === 'default'"
+      :key="appType"
+    />
+    <create-cloud-app
+      v-else-if="appType === 'cloud'"
+      key="cloud"
+    />
+    <create-external-app
+      v-else-if="appType === 'external'"
+      key="external"
+    />
+    <create-smart-app
+      v-else
+      key="smart"
+    />
+  </div>
 </template>
 
 <script>

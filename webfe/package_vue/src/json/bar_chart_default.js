@@ -17,96 +17,96 @@
 */
 
 const option = {
-    'color': ['#3a84ff'],
-    'yAxis': [
-        {
-            'name': '',
-            'minInterval': 1,
-            'nameTextStyle': {
-                'color': 'red'
-            },
-            'boundaryGap': [0, '20%'],
-            'type': 'value',
-            'axisLine': {
-                'show': true,
-                'lineStyle': {
-                    'color': '#dde4eb'
-                }
-            },
-            'axisTick': {
-                'alignWithLabel': true,
-                'length': 0,
-                'lineStyle': {
-                    'color': 'red'
-                }
-            },
-            'axisLabel': {
-                'color': '#868b97'
-            },
-            'splitLine': {
-                'show': true,
-                'lineStyle': {
-                    'color': ['#ebf0f5'],
-                    'type': 'dashed'
-                }
-            }
+  'color': ['#3a84ff'],
+  'yAxis': [
+    {
+      'name': '',
+      'minInterval': 1,
+      'nameTextStyle': {
+        'color': 'red'
+      },
+      'boundaryGap': [0, '20%'],
+      'type': 'value',
+      'axisLine': {
+        'show': true,
+        'lineStyle': {
+          'color': '#dde4eb'
         }
-    ],
-    'title': {
-        'text': '',
-        'x': 'center',
-        'textStyle': {
-            'color': '#63656e',
-            'fontSize': 13,
-            'align': 'center'
+      },
+      'axisTick': {
+        'alignWithLabel': true,
+        'length': 0,
+        'lineStyle': {
+          'color': 'red'
         }
-    },
-    'series': [],
-    'tooltip': {
-        'axisPointer': {
-            'type': 'shadow'
-        },
-        'trigger': 'item',
-        'formatter': function (data) {
-            return '';
+      },
+      'axisLabel': {
+        'color': '#868b97'
+      },
+      'splitLine': {
+        'show': true,
+        'lineStyle': {
+          'color': ['#ebf0f5'],
+          'type': 'dashed'
         }
-    },
-    'grid': {
-        'show': false,
-        'top': '15%',
-        'left': '3%',
-        'right': '3%',
-        'bottom': '11%',
-        'containLabel': true
-    },
-    'xAxis': {
-        'data': [],
-        'type': 'category',
-        'axisLine': {
-            'show': true,
-            'lineStyle': {
-                'color': '#dde4eb'
-            }
-        },
-        'axisLabel': {
-            'show': true,
-            'color': '#878c97'
-        },
-        'axisTick': {
-            'alignWithLabel': true,
-            'length': 5,
-            'lineStyle': {
-                'color': '#ebf0f5'
-            }
-        },
-        'splitLine': {
-            'show': true,
-            'lineStyle': {
-                'color': ['#ebf0f5'],
-                'type': 'dashed'
-            }
-        }
+      }
     }
+  ],
+  'title': {
+    'text': '',
+    'x': 'center',
+    'textStyle': {
+      'color': '#63656e',
+      'fontSize': 13,
+      'align': 'center'
+    }
+  },
+  'series': [],
+  'tooltip': {
+    'axisPointer': {
+      'type': 'shadow'
+    },
+    'trigger': 'item',
+    'formatter': function (data) {
+      return '';
+    }
+  },
+  'grid': {
+    'show': false,
+    'top': '15%',
+    'left': '3%',
+    'right': '3%',
+    'bottom': '11%',
+    'containLabel': true
+  },
+  'xAxis': {
+    'data': [],
+    'type': 'category',
+    'axisLine': {
+      'show': true,
+      'lineStyle': {
+        'color': '#dde4eb'
+      }
+    },
+    'axisLabel': {
+      'show': true,
+      'color': '#878c97'
+    },
+    'axisTick': {
+      'alignWithLabel': true,
+      'length': 5,
+      'lineStyle': {
+        'color': '#ebf0f5'
+      }
+    },
+    'splitLine': {
+      'show': true,
+      'lineStyle': {
+        'color': ['#ebf0f5'],
+        'type': 'dashed'
+      }
+    }
+  }
 };
 
 export default option;

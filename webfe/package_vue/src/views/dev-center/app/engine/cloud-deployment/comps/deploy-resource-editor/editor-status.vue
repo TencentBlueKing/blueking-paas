@@ -1,8 +1,8 @@
 <template>
-    <div :class="['editor-status bcs-ellipsis', theme]">
-        <i :class="['icon paasng-icon', 'paasng-close-circle-shape']"></i>
-        <span class="message">{{ message }}</span>
-    </div>
+  <div :class="['editor-status bcs-ellipsis', theme]">
+    <i :class="['icon paasng-icon', 'paasng-close-circle-shape']" />
+    <span class="message">{{ message }}</span>
+  </div>
 </template>
 <script>
     import { computed, defineComponent, toRefs } from '@vue/composition-api';

@@ -99,6 +99,9 @@ class ApplicationPermission(Permission):
     resource_type: str = ResourceType.Application
     resource_request_cls: Type[ResourceRequest] = AppRequest
 
+    def get_method_by_action(self, action: AppAction):
+        return getattr(self, f'can_{action.value}')
+
     def can_view_basic_info(self, perm_ctx: AppPermCtx, raise_exception: bool = True) -> bool:
         perm_ctx.validate_resource_id()
         return self.can_action(perm_ctx, AppAction.VIEW_BASIC_INFO, raise_exception)

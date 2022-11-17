@@ -44,7 +44,7 @@ class ExportToDjangoView(APIView):
             logger.info("enable prometheus using multi processes mode")
             registry = prometheus_client.CollectorRegistry()
             multiprocess.MultiProcessCollector(registry)
-            registry.register(cb_gauge_collector)
+            registry.register(cb_gauge_collector)  # type: ignore
         else:
             logger.info("enable prometheus using single process mode")
             registry = prometheus_client.REGISTRY

@@ -24,12 +24,15 @@ from django.conf import settings
 from django.test import TestCase
 from django_dynamic_fixture import G
 
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application, ApplicationMembership, UserApplicationFilter
+from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.models import Application, UserApplicationFilter
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from tests.utils.auth import create_user
+from tests.utils.helpers import register_iam_after_create_application
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +67,7 @@ class BaseCaseWithApps:
             region=settings.DEFAULT_REGION_NAME,
             type=ApplicationType.DEFAULT,
         )
+        register_iam_after_create_application(self.app1)
         create_default_module(self.app1, source_origin=SourceOrigin.AUTHORIZED_VCS, language='Python')
         self.app_another1 = G(
             Application,
@@ -73,6 +77,7 @@ class BaseCaseWithApps:
             region=settings.DEFAULT_REGION_NAME,
             type=ApplicationType.BK_PLUGIN,
         )
+        register_iam_after_create_application(self.app_another1)
         create_default_module(self.app_another1, source_origin=SourceOrigin.AUTHORIZED_VCS, language='PHP')
         self.app_another2 = G(
             Application,
@@ -81,6 +86,7 @@ class BaseCaseWithApps:
             language='Python',
             region=settings.DEFAULT_REGION_NAME,
         )
+        register_iam_after_create_application(self.app_another2)
         create_default_module(self.app_another2, source_origin=SourceOrigin.BK_LESS_CODE, language='Python')
         self.app_another3 = G(
             Application,
@@ -89,12 +95,14 @@ class BaseCaseWithApps:
             language='PHP',
             region=settings.DEFAULT_REGION_NAME,
         )
+        register_iam_after_create_application(self.app_another3)
         create_default_module(self.app_another3, source_origin=SourceOrigin.BK_LESS_CODE, language='PHP')
 
-        # Add self.user as collaborators
-        G(ApplicationMembership, application=self.app1, user=self.user.pk, region=settings.DEFAULT_REGION_NAME)
-        G(ApplicationMembership, application=self.app_another1, user=self.user.pk, region=settings.DEFAULT_REGION_NAME)
-        G(ApplicationMembership, application=self.app_another2, user=self.user.pk, region=settings.DEFAULT_REGION_NAME)
+        # Add self.user as developer
+        username = get_username_by_bkpaas_user_id(self.user.pk)
+        add_role_members(self.app1.code, ApplicationRole.DEVELOPER, username)
+        add_role_members(self.app_another1.code, ApplicationRole.DEVELOPER, username)
+        add_role_members(self.app_another2.code, ApplicationRole.DEVELOPER, username)
 
 
 class TestApplicationManager(BaseCaseWithApps):
@@ -103,7 +111,9 @@ class TestApplicationManager(BaseCaseWithApps):
         assert set(apps) == {self.app1, self.app_another1, self.app_another2}
 
     def test_filter_by_userremove(self):
-        ApplicationMembership.objects.filter(application=self.app_another2).delete()
+        usernames = [m['username'] for m in fetch_application_members(self.app_another2.code)]
+        remove_user_all_roles(self.app_another2.code, usernames)
+
         apps = Application.objects.filter_by_user(self.user)
         assert set(apps) == {self.app1, self.app_another1}
 

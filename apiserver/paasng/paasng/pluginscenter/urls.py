@@ -22,6 +22,10 @@ from . import views
 from .iam_adaptor.views import PluginSelectionView
 
 urlpatterns = [
+    path(
+        "api/bkplugins/filter_params/",
+        views.PluginInstanceViewSet.as_view({"get": "get_filter_params"}),
+    ),
     path("api/bkplugins/lists/", views.PluginInstanceViewSet.as_view({"get": "list"})),
     path("api/bkplugins/<str:pd_id>/plugins/", views.PluginInstanceViewSet.as_view({"post": "create"})),
     path(
@@ -31,7 +35,7 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/repo/commit-diff-external/"
         + "<str:from_revision>/<str:to_revision>/",
-        views.PluginInstanceViewSet.as_view({"get": "get_compare_url"}),
+        views.PluginReleaseViewSet.as_view({"get": "get_compare_url"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
@@ -50,12 +54,24 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"post": "enter_next_stage"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/back/",
+        views.PluginReleaseViewSet.as_view({"post": "back_to_previous_stage"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/cancel/",
         views.PluginReleaseViewSet.as_view({"post": "cancel_release"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/reset/",
+        views.PluginReleaseViewSet.as_view({"post": "re_release"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/",
         views.PluginReleaseStageViewSet.as_view({"get": "retrieve"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/rerun/",
+        views.PluginReleaseStageViewSet.as_view({"post": "rerun"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/market/",
@@ -90,6 +106,22 @@ urlpatterns = [
         views.PluginMembersViewSet.as_view({"delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/configurations/",
+        views.PluginConfigViewSet.as_view({"get": "list", "post": "upsert"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/configurations/<str:config_id>/",
+        views.PluginConfigViewSet.as_view({"delete": "destroy"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/leave/",
+        views.PluginMembersViewSet.as_view({"post": "leave"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/<str:username>/",
+        views.PluginMembersViewSet.as_view({"delete": "destroy"}),
+    ),
+    path(
         "api/bkplugins/plugin_definitions/schemas/",
         views.SchemaViewSet.as_view({"get": "get_plugins_schema"}),
     ),
@@ -102,8 +134,8 @@ urlpatterns = [
         views.SchemaViewSet.as_view({"get": "get_basic_info_schema"}),
     ),
     path(
-        "api/bkplugins/filter_params/",
-        views.SchemaViewSet.as_view({"get": "get_filter_params"}),
+        "api/bkplugins/plugin_definitions/<str:pd_id>/configuration_schema/",
+        views.SchemaViewSet.as_view({"get": "get_config_schema"}),
     ),
     # iam selection api
     path(

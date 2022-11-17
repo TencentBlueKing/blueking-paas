@@ -20,86 +20,86 @@
  * @file echarts 图表配置
  */
 export default {
-    title: {
-        show: false
+  title: {
+    show: false
+  },
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'line',
+      animation: true,
+      label: {
+        backgroundColor: '#6a7985'
+      }
     },
-    tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-            type: 'line',
-            animation: true,
-            label: {
-                backgroundColor: '#6a7985'
-            }
-        },
-        formatter (params, ticket, callback) {
-            let ret = `<div>${params[0].axisValueLabel}</div>`;
-            params.forEach(item => {
-                let val = parseFloat(item.value).toFixed(2);
-                if (val === '0.00') {
-                    val = 0;
-                }
-                ret += `<div>${item.seriesName}：${val}</div>`;
-            });
-            return ret;
+    formatter (params, ticket, callback) {
+      let ret = `<div>${params[0].axisValueLabel}</div>`;
+      params.forEach(item => {
+        let val = parseFloat(item.value).toFixed(2);
+        if (val === '0.00') {
+          val = 0;
         }
+        ret += `<div>${item.seriesName}：${val}</div>`;
+      });
+      return ret;
+    }
+  },
+  toolbox: {
+    show: false
+  },
+  grid: {
+    top: '3%',
+    left: '0%',
+    right: '4%',
+    bottom: '5%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    // 设置横轴坐标刻度
+    axisTick: {
+      show: false
     },
-    toolbox: {
-        show: false
+    axisLine: {
+      show: true,
+      lineStyle: {
+        color: '#dde3ea'
+      }
     },
-    grid: {
-        top: '3%',
-        left: '0%',
-        right: '4%',
-        bottom: '5%',
-        containLabel: true
-    },
-    xAxis: {
-        type: 'category',
-        // 设置横轴坐标刻度
-        axisTick: {
-            show: false
-        },
-        axisLine: {
-            show: true,
-            lineStyle: {
-                color: '#dde3ea'
-            }
-        },
-        // 设置横轴文字
-        axisLabel: {
-            color: '#8a8f99',
-            formatter (value, index) {
-                let ret = value;
-                if (value) {
-                    ret = value.replace(' ', '\n');
-                }
-                return ret;
-            }
-        },
-        data: []
-    },
-    yAxis: {
-        boundaryGap: [0, '2%'],
-        type: 'value',
-        // 设置纵轴线条
-        axisLine: {
-            show: true,
-            lineStyle: {
-                color: '#dde3ea'
-            }
-        },
-        // 设置纵轴刻度
-        axisTick: {
-            show: false
-        },
-        // 设置纵轴文字
-        axisLabel: {
-            color: '#8a8f99',
-            formatter (value, index) {
-                return `${value}`;
-            }
+    // 设置横轴文字
+    axisLabel: {
+      color: '#8a8f99',
+      formatter (value, index) {
+        let ret = value;
+        if (value) {
+          ret = value.replace(' ', '\n');
         }
+        return ret;
+      }
     },
-    series: []
+    data: []
+  },
+  yAxis: {
+    boundaryGap: [0, '2%'],
+    type: 'value',
+    // 设置纵轴线条
+    axisLine: {
+      show: true,
+      lineStyle: {
+        color: '#dde3ea'
+      }
+    },
+    // 设置纵轴刻度
+    axisTick: {
+      show: false
+    },
+    // 设置纵轴文字
+    axisLabel: {
+      color: '#8a8f99',
+      formatter (value, index) {
+        return `${value}`;
+      }
+    }
+  },
+  series: []
 };

@@ -16,12 +16,18 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from .definitions import PluginBasicInfoDefinition, PluginDefinition, PluginMarketInfoDefinition
+from .definitions import (
+    PluginBasicInfoDefinition,
+    PluginConfigInfoDefinition,
+    PluginDefinition,
+    PluginMarketInfoDefinition,
+)
 from .instances import (
     ApprovalService,
+    OperationRecord,
+    PluginConfig,
     PluginInstance,
     PluginMarketInfo,
-    PluginMembership,
     PluginRelease,
     PluginReleaseStage,
 )
@@ -29,11 +35,13 @@ from .instances import (
 __all__ = [
     "PluginDefinition",
     "PluginBasicInfoDefinition",
+    "PluginConfigInfoDefinition",
     "PluginMarketInfoDefinition",
     "PluginInstance",
+    "PluginConfig",
     "PluginMarketInfo",
-    "PluginMembership",
     "PluginRelease",
     "PluginReleaseStage",
     "ApprovalService",
+    "OperationRecord",
 ]

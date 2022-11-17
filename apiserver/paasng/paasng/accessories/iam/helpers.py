@@ -92,9 +92,7 @@ def delete_role_members(app_code: str, role: ApplicationRole, usernames: Union[L
 
 
 def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
-    """
-    原实现中用户只会有一个角色，但是接入权限中心后，角色表现为用户组，同一用户可能有多个角色
-    """
+    """原实现中用户只会有一个角色，但是接入权限中心后，角色表现为用户组，同一用户可能有多个角色"""
     user_roles = []
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
         if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
@@ -104,6 +102,15 @@ def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
         return [ApplicationRole.NOBODY]
 
     return user_roles
+
+
+def fetch_user_main_role(app_code: str, username: str) -> ApplicationRole:
+    """获取用户在某个应用中最高优先级的角色"""
+    for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
+        if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
+            return group.role
+
+    return ApplicationRole.NOBODY
 
 
 def remove_user_all_roles(app_code: str, usernames: Union[List[str], str]):

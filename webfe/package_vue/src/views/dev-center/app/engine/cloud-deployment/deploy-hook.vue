@@ -1,51 +1,75 @@
 <template>
-    <paas-content-loader :is-loading="isLoading" placeholder="deploy-hook-loading" :offset-top="20" :offset-left="20" class="deploy-action-box">
-        <div class="form-pre">
-            <div class="item-title-container">
-                <div class="item-title">
-                    {{ $t('部署前置命令') }}
-                </div>
-                <div>
-                    <div class="ps-switcher-wrapper" @click="togglePermission">
-                        <bk-switcher
-                            v-model="preFormData.loaclEnabled">
-                        </bk-switcher>
-                    </div>
-                    <span>{{preFormData.loaclEnabled ? $t('已启用') : $t('未启用')}}</span>
-                </div>
-            </div>
-            <bk-form v-if="preFormData.loaclEnabled" :model="preFormData" class="info-special-form form-pre-command">
-                <div class="item-info">
-                    {{ $t('容器镜像地址') }} <i class="paasng-icon paasng-info-circle" v-bk-tooltips="cloudInfoTip"></i>：
-                    {{processData[0].image}}
-                </div>
-                <bk-form-item :label="$t('启动命令')" class="pt20" style="width: 510px; position:relative; margin-left: 5px">
-                    <bk-tag-input
-                        style="width: 500px"
-                        v-model="preFormData.command"
-                        :placeholder="$t('请输入启动命令')"
-                        :allow-create="allowCreate"
-                        :allow-auto-match="true"
-                        :has-delete-icon="hasDeleteIcon"
-                        :paste-fn="copyCommand">
-                    </bk-tag-input>
-                    <span class="whole-item-tips">{{ $t('该命令使用web进程的配置，在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} ./bin/pre-task.sh</span>
-                </bk-form-item>
-                <bk-form-item :label="$t('命令参数')" class="pt20" style="width: 510px; position:relative; margin-left: 5px;">
-                    <bk-tag-input
-                        style="width: 500px"
-                        ext-cls="tag-extra"
-                        v-model="preFormData.args"
-                        :placeholder="$t('请输入命令参数')"
-                        :allow-create="allowCreate"
-                        :allow-auto-match="true"
-                        :has-delete-icon="hasDeleteIcon"
-                        :paste-fn="copyCommandParameter">
-                    </bk-tag-input>
-                </bk-form-item>
-            </bk-form>
+  <paas-content-loader
+    :is-loading="isLoading"
+    placeholder="deploy-hook-loading"
+    :offset-top="20"
+    :offset-left="20"
+    class="deploy-action-box"
+  >
+    <div class="form-pre">
+      <div class="item-title-container">
+        <div class="item-title">
+          {{ $t('部署前置命令') }}
         </div>
-    </paas-content-loader>
+        <div>
+          <div
+            class="ps-switcher-wrapper"
+            @click="togglePermission"
+          >
+            <bk-switcher
+              v-model="preFormData.loaclEnabled"
+            />
+          </div>
+          <span>{{ preFormData.loaclEnabled ? $t('已启用') : $t('未启用') }}</span>
+        </div>
+      </div>
+      <bk-form
+        v-if="preFormData.loaclEnabled"
+        :model="preFormData"
+        class="info-special-form form-pre-command"
+      >
+        <div class="item-info">
+          {{ $t('容器镜像地址') }} <i
+            v-bk-tooltips="cloudInfoTip"
+            class="paasng-icon paasng-info-circle"
+          />：
+          {{ processData[0].image }}
+        </div>
+        <bk-form-item
+          :label="$t('启动命令')"
+          class="pt20"
+          style="width: 510px; position:relative; margin-left: 5px"
+        >
+          <bk-tag-input
+            v-model="preFormData.command"
+            style="width: 500px"
+            :placeholder="$t('请输入启动命令')"
+            :allow-create="allowCreate"
+            :allow-auto-match="true"
+            :has-delete-icon="hasDeleteIcon"
+            :paste-fn="copyCommand"
+          />
+          <span class="whole-item-tips">{{ $t('该命令使用web进程的配置，在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} ./bin/pre-task.sh</span>
+        </bk-form-item>
+        <bk-form-item
+          :label="$t('命令参数')"
+          class="pt20"
+          style="width: 510px; position:relative; margin-left: 5px;"
+        >
+          <bk-tag-input
+            v-model="preFormData.args"
+            style="width: 500px"
+            ext-cls="tag-extra"
+            :placeholder="$t('请输入命令参数')"
+            :allow-create="allowCreate"
+            :allow-auto-match="true"
+            :has-delete-icon="hasDeleteIcon"
+            :paste-fn="copyCommandParameter"
+          />
+        </bk-form-item>
+      </bk-form>
+    </div>
+  </paas-content-loader>
 </template>
 
 <script>

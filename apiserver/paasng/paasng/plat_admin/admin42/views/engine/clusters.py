@@ -19,7 +19,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.permissions import IsAuthenticated
 
-from paasng.accounts.permissions.global_site import SitePermission
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.region.models import get_all_regions
 
@@ -29,9 +30,8 @@ class ClusterManageView(GenericTemplateView):
 
     name = "应用集群管理"
     template_name = "admin42/platformmgr/clusters.html"
-
     # 仅管理员可导入导出
-    permission_classes = [IsAuthenticated, SitePermission("admin:manage:workloads")]
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
         if 'view' not in kwargs:

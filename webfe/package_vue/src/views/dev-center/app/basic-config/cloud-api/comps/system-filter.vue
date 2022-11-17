@@ -1,47 +1,52 @@
 <template lang="html">
-    <div class="paasng-api-sys-filter"
-        ref="filterRef">
-        <div style="height: 100%">
-            <section style="padding: 0 10px;">
-                <label class="title">
-                    {{ isGateway ? $t('网关列表') : $t('系统列表') }}
-                    <span class="fr mt2 paasng-badge">{{ curList.length }}</span>
-                </label>
-                <bk-input
-                    :placeholder="isGateway ? $t('请输入网关名称、描述') : $t('请输入系统名称、描述')"
-                    v-model="searchValue"
-                    clearable
-                    right-icon="bk-icon icon-search"
-                    @input="handleSearch">
-                </bk-input>
-            </section>
-            <div class="system-list">
-                <template v-if="curList.length > 0">
-                    <div
-                        v-for="(item, index) in curList"
-                        :key="index"
-                        :class="['item', { active: curSelect === item.id }]"
-                        @click="handleSelectSys(item)">
-                        <p class="name">
-                            <span v-html="highlight(item)"></span>
-                            <template v-if="!isGateway && item.tag !== ''">
-                                <span :class="['tag', { inner: [$t('内部版'), $t('互娱外部版')].includes(item.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(item.tag) }]">
-                                    {{ item.tag }}
-                                </span>
-                            </template>
-
-                        </p>
-                        <p class="desc" v-html="highlightDesc(item)"></p>
-                    </div>
-                </template>
-                <template v-else>
-                    <div class="empty-wrapper">
-                        <i class="bk-icon icon-empty"></i>
-                    </div>
-                </template>
-            </div>
-        </div>
+  <div
+    ref="filterRef"
+    class="paasng-api-sys-filter"
+  >
+    <div style="height: 100%">
+      <section style="padding: 0 10px;">
+        <label class="title">
+          {{ isGateway ? $t('网关列表') : $t('系统列表') }}
+          <span class="fr mt2 paasng-badge">{{ curList.length }}</span>
+        </label>
+        <bk-input
+          v-model="searchValue"
+          :placeholder="isGateway ? $t('请输入网关名称、描述') : $t('请输入系统名称、描述')"
+          clearable
+          right-icon="bk-icon icon-search"
+          @input="handleSearch"
+        />
+      </section>
+      <div class="system-list">
+        <template v-if="curList.length > 0">
+          <div
+            v-for="(item, index) in curList"
+            :key="index"
+            :class="['item', { active: curSelect === item.id }]"
+            @click="handleSelectSys(item)"
+          >
+            <p class="name">
+              <span v-html="highlight(item)" />
+              <template v-if="!isGateway && item.tag !== ''">
+                <span :class="['tag', { inner: [$t('内部版'), $t('互娱外部版')].includes(item.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(item.tag) }]">
+                  {{ item.tag }}
+                </span>
+              </template>
+            </p>
+            <p
+              class="desc"
+              v-html="highlightDesc(item)"
+            />
+          </div>
+        </template>
+        <template v-else>
+          <div class="empty-wrapper">
+            <i class="bk-icon icon-empty" />
+          </div>
+        </template>
+      </div>
     </div>
+  </div>
 </template>
 <script>
     export default {
@@ -100,7 +105,7 @@
         },
         mounted () {
             window.addEventListener('scroll', this.handleScroll);
-            
+
             window.addEventListener('resize', this.handleResize);
 
             this.$once('hook:beforeDestroy', () => {
@@ -119,7 +124,7 @@
                     return (item.name && !!item.name.match(regex)) || (item.description && !!item.description.match(regex));
                 });
             },
-            
+
             // 根据query参数选择对应网关
             querySelect () {
                 const query = this.$route.query;

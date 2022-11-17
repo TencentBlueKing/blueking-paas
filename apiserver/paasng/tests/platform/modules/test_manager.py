@@ -35,6 +35,7 @@ from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.oauth2.utils import create_oauth2_client
+from tests.utils.helpers import register_iam_after_create_application
 
 pytestmark = pytest.mark.django_db
 
@@ -45,6 +46,7 @@ def raw_module(bk_user) -> Module:
     application = G(
         Application, owner=bk_user.pk, code='awesome-app', language='Python', region=settings.DEFAULT_REGION_NAME
     )
+    register_iam_after_create_application(application)
     module = create_default_module(application)
     create_oauth2_client(application.code, application.region)
     return module

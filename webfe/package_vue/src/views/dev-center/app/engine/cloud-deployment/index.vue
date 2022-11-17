@@ -1,78 +1,136 @@
 <template lang="html">
-    <div class="right-main">
-        <paas-content-loader :is-loading="isLoading" :placeholder="loaderPlaceholder" :offset-top="30" class="app-container middle overview">
-            <div class="title">{{$t('应用编排')}}</div>
-            <section class="deploy-panel deploy-main mt15">
-                <ul class="ps-tab" style="position: relative; z-index: 10;">
-                    <li :class="['item', { 'active': deployModule === 'process' }]" @click="handleGoPage('cloudAppDeployForProcess')">
-                        {{ $t('进程配置') }}
-                        <router-link :to="{ name: 'appDeployForStag' }"></router-link>
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'hook' }]" @click="handleGoPage('cloudAppDeployForHook')">
-                        {{ $t('钩子命令') }}
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'env' }]" @click="handleGoPage('cloudAppDeployForEnv')">
-                        {{ $t('环境变量') }}
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'resource' }]" @click="handleGoPage('cloudAppDeployForResource')">
-                        {{ $t('依赖资源') }}
-                    </li>
-                    <li :class="['item', { 'active': deployModule === 'yaml' }]" @click="handleGoPage('cloudAppDeployForYaml')">
-                        {{ $t('YAML') }}
-                    </li>
-                </ul>
+  <div class="right-main">
+    <paas-content-loader
+      :is-loading="isLoading"
+      :placeholder="loaderPlaceholder"
+      :offset-top="30"
+      class="app-container middle overview"
+    >
+      <div class="title">
+        {{ $t('应用编排') }}
+      </div>
+      <section class="deploy-panel deploy-main mt15">
+        <ul
+          class="ps-tab"
+          style="position: relative; z-index: 10;"
+        >
+          <li
+            :class="['item', { 'active': deployModule === 'process' }]"
+            @click="handleGoPage('cloudAppDeployForProcess')"
+          >
+            {{ $t('进程配置') }}
+            <router-link :to="{ name: 'appDeployForStag' }" />
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'hook' }]"
+            @click="handleGoPage('cloudAppDeployForHook')"
+          >
+            {{ $t('钩子命令') }}
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'env' }]"
+            @click="handleGoPage('cloudAppDeployForEnv')"
+          >
+            {{ $t('环境变量') }}
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'resource' }]"
+            @click="handleGoPage('cloudAppDeployForResource')"
+          >
+            {{ $t('依赖资源') }}
+          </li>
+          <li
+            :class="['item', { 'active': deployModule === 'yaml' }]"
+            @click="handleGoPage('cloudAppDeployForYaml')"
+          >
+            {{ $t('YAML') }}
+          </li>
+        </ul>
 
-                <div class="deploy-content">
-                    <router-view ref="square" :key="renderIndex" :cloudAppData="cloudAppData"></router-view>
-                </div>
-            </section>
+        <div class="deploy-content">
+          <router-view
+            ref="square"
+            :key="renderIndex"
+            :cloud-app-data="cloudAppData"
+          />
+        </div>
+      </section>
 
-            <div class="deploy-btn-wrapper">
-                <bk-dropdown-menu
-                    ref="dropdown"
-                    align="right"
-                    trigger="click"
-                    @show="dropdownShow"
-                    @hide="dropdownHide">
-                    <bk-button
-                        :loading="buttonLoading"
-                        class="pl20 pr20"
-                        :theme="'primary'"
-                        slot="dropdown-trigger">
-                        {{ $t('发布') }}
-                        <i :class="['paasng-icon paasng-down-shape f12',{ 'paasng-up-shape': isDropdownShow }]" style="top: -1px;"></i>
-                    </bk-button>
-                    <ul class="bk-dropdown-list" slot="dropdown-content">
-                        <li><a href="javascript:;" style="margin: 0;" @click="deployDialog('stag')"> {{ $t('预发布环境') }} </a></li>
-                        <li><a href="javascript:;" style="margin: 0;" @click="deployDialog('prod')"> {{ $t('生产环境') }} </a></li>
-                    </ul>
-                </bk-dropdown-menu>
-            </div>
+      <div class="deploy-btn-wrapper">
+        <bk-dropdown-menu
+          ref="dropdown"
+          align="right"
+          trigger="click"
+          @show="dropdownShow"
+          @hide="dropdownHide"
+        >
+          <bk-button
+            slot="dropdown-trigger"
+            :loading="buttonLoading"
+            class="pl20 pr20"
+            :theme="'primary'"
+          >
+            {{ $t('发布') }}
+            <i
+              :class="['paasng-icon paasng-down-shape f12',{ 'paasng-up-shape': isDropdownShow }]"
+              style="top: -1px;"
+            />
+          </bk-button>
+          <ul
+            slot="dropdown-content"
+            class="bk-dropdown-list"
+          >
+            <li>
+              <a
+                href="javascript:;"
+                style="margin: 0;"
+                @click="deployDialog('stag')"
+              > {{ $t('预发布环境') }} </a>
+            </li>
+            <li>
+              <a
+                href="javascript:;"
+                style="margin: 0;"
+                @click="deployDialog('prod')"
+              > {{ $t('生产环境') }} </a>
+            </li>
+          </ul>
+        </bk-dropdown-menu>
+      </div>
 
-            <bk-dialog v-model="deployDialogConfig.visible"
-                theme="primary"
-                width="700"
-                ext-cls="deploy-dialog"
-                :mask-close="false"
-                :ok-text="$t('确认发布')"
-                :header-position="deployDialogConfig.headerPosition"
-                :title="$t(`确认发布至${deployDialogConfig.stageTitle}`)"
-                @confirm="sumbitCloudApp(deployDialogConfig.stage)"
-                @after-leave="dialogAfterLeave">
-                <div>
-                    {{ $t('请关注以下问题：') }}
-                    <div class="stage-info">
-                        <p class="info-title">{{ $t('进程副本数变更') }}</p>
-                        <p>{{ $t('目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。') }}</p>
-                        <p class="info-tips">{{ $t('副本数将发生以下变化：') }}</p>
-                        <template v-for="item in replicasChanges">
-                            <p><span class="info-label">{{ item.proc_type }}：</span>{{ item.old }}（{{ deployDialogConfig.stageTitle }}） -> {{ item.new }} {{ $t('（当前模型）') }}</p>
-                        </template>
-                    </div>
-                </div>
-            </bk-dialog>
-        </paas-content-loader>
-    </div>
+      <bk-dialog
+        v-model="deployDialogConfig.visible"
+        theme="primary"
+        width="700"
+        ext-cls="deploy-dialog"
+        :mask-close="false"
+        :ok-text="$t('确认发布')"
+        :header-position="deployDialogConfig.headerPosition"
+        :title="$t(`确认发布至${deployDialogConfig.stageTitle}`)"
+        @confirm="sumbitCloudApp(deployDialogConfig.stage)"
+        @after-leave="dialogAfterLeave"
+      >
+        <div>
+          {{ $t('请关注以下问题：') }}
+          <div class="stage-info">
+            <p class="info-title">
+              {{ $t('进程副本数变更') }}
+            </p>
+            <p>{{ $t('目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。') }}</p>
+            <p class="info-tips">
+              {{ $t('副本数将发生以下变化：') }}
+            </p>
+            <p
+              v-for="(item, index) in replicasChanges"
+              :key="index"
+            >
+              <span class="info-label">{{ item.proc_type }}：</span>{{ item.old }}（{{ deployDialogConfig.stageTitle }}） -> {{ item.new }} {{ $t('（当前模型）') }}
+            </p>
+          </div>
+        </div>
+      </bk-dialog>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>
@@ -188,7 +246,7 @@
             dialogAfterLeave () {
                 this.buttonLoading = false;
             },
-            
+
             // 发布二次确认信息
             async getCloudAppInfo (env) {
                 try {
@@ -338,7 +396,7 @@
                         break;
                     }
                 }
-                
+
                 if (!flag) {
                     return;
                 }

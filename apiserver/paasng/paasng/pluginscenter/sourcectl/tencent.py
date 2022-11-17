@@ -305,5 +305,5 @@ class PluginRepoInitializer:
     def _enable_ci(self, project_id: int):
         """开启工蜂 CI 特性"""
         _url = f"api/v3/projects/{project_id}/ci/enable"
-        resp = self._session.put(urljoin(self._api_url, _url))
+        resp = self._session.put(urljoin(self._api_url, _url), params={"enable_ci": True})
         validate_response(resp)

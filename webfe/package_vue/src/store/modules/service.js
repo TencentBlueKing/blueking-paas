@@ -22,78 +22,78 @@
 import http from '@/api';
 
 export default {
-    namespaced: true,
-    state: {},
-    getters: {},
-    mutations: {},
-    actions: {
-        /**
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
          * 获取增强服务的规格详情
          */
-        getServicesSpecsDetail ({ commit, state }, { id, region }, config = {}) {
-            const url = `${BACKEND_URL}/api/services/${id}/regions/${region}/specs`;
-            return http.get(url, config);
-        },
-        
-        /**
+    getServicesSpecsDetail ({ commit, state }, { id, region }, config = {}) {
+      const url = `${BACKEND_URL}/api/services/${id}/regions/${region}/specs`;
+      return http.get(url, config);
+    },
+
+    /**
          * 获取已启用的增强服务规格
          */
-        getEnableSpecs ({ commit, state }, { appCode, moduleId, service }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/specs`;
-            return http.get(url, config);
-        },
+    getEnableSpecs ({ commit, state }, { appCode, moduleId, service }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/specs`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 启用增强服务
          */
-        enableServices ({ commit, state }, params, config = {}) {
-            const url = `${BACKEND_URL}/api/services/service-attachments/`;
-            return http.post(url, params, config);
-        },
+    enableServices ({ commit, state }, params, config = {}) {
+      const url = `${BACKEND_URL}/api/services/service-attachments/`;
+      return http.post(url, params, config);
+    },
 
-        /**
+    /**
          * 获取某服务可被共享的模块
          */
-        getServicesShareableModule ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shareable_modules/`;
-            return http.get(url, config);
-        },
+    getServicesShareableModule ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shareable_modules/`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 创建增强服务共享关系
          */
-        createSharedAttachment ({ commit, state }, params, config = {}) {
-            const requestParams = Object.assign({}, params);
-            const { appCode, moduleId, serviceId } = requestParams;
-            delete requestParams.appCode;
-            delete requestParams.moduleId;
-            delete requestParams.serviceId;
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shared_attachment`;
-            return http.post(url, requestParams, config);
-        },
+    createSharedAttachment ({ commit, state }, params, config = {}) {
+      const requestParams = Object.assign({}, params);
+      const { appCode, moduleId, serviceId } = requestParams;
+      delete requestParams.appCode;
+      delete requestParams.moduleId;
+      delete requestParams.serviceId;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shared_attachment`;
+      return http.post(url, requestParams, config);
+    },
 
-        /**
+    /**
          * 解除共享关系
          */
-        deleteSharedAttachment ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shared_attachment`;
-            return http.delete(url, config);
-        },
+    deleteSharedAttachment ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shared_attachment`;
+      return http.delete(url, config);
+    },
 
-        /**
+    /**
          * 查看模块增强服务被共享引用情况
          */
-        getServicesShareDetail ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/sharing_references/related_modules/`;
-            return http.get(url, config);
-        },
+    getServicesShareDetail ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/sharing_references/related_modules/`;
+      return http.get(url, config);
+    },
 
-        /**
+    /**
          * 查看已创建的共享关系
          */
-        getSharedAttachmentDetail ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
-            const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shared_attachment`;
-            return http.get(url, config);
-        }
+    getSharedAttachmentDetail ({ commit, state }, { appCode, moduleId, serviceId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/shared_attachment`;
+      return http.get(url, config);
     }
+  }
 };

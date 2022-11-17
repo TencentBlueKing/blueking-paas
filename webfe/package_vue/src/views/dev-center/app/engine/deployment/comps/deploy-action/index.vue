@@ -1,578 +1,1073 @@
 <template lang="html">
-    <paas-content-loader :is-loading="isLoading" placeholder="deploy-inner-loading" :offset-top="20" :offset-left="20" class="deploy-action-box">
-        <!-- isWatchDeploying: {{isWatchDeploying}} ||
+  <paas-content-loader
+    :is-loading="isLoading"
+    placeholder="deploy-inner-loading"
+    :offset-top="20"
+    :offset-left="20"
+    class="deploy-action-box"
+  >
+    <!-- isWatchDeploying: {{isWatchDeploying}} ||
         isDeploySuccess: {{isDeploySuccess}} ||
         isDeployFail: {{isDeployFail}} ||
         isDeployInterrupted: {{isDeployInterrupted}} ||
         isDeployInterrupting: {{isDeployInterrupting}} ||
         isScrollFixed: {{isScrollFixed}} -->
-        <template v-if="isWatchDeploying || isWatchOfflineing || isDeploySuccess || isDeployFail">
-            <!-- 部署中 -->
-            <div id="deploying-box" class="summary-box" :style="scrollStyle.summary" v-if="isWatchDeploying">
-                <div class="wrapper primary">
-                    <div class="fl">
-                        <round-loading size="small" ext-cls="deploy-round-loading" />
-                    </div>
-                    <section style="position: relative; margin-left: 60px;">
-                        <p class="deploy-pending-text"> {{ $t('正在部署中...') }} </p>
-                        <p class="deploy-text-wrapper">
-                            <span class="branch-text" v-if="!isLesscodeApp"> {{ $t('分支：') }} {{branchSelection.split(':')[1]}}</span>
-                            <span class="version-text"> {{ $t('版本：') }} {{curDeployId}}</span>
-                            <span class="time-text" v-if="deployTotalTime"> {{ $t('耗时：') }} {{deployTotalTimeDisplay}}</span>
-                        </p>
-                        <section class="action-wrapper" v-if="appearDeployState.includes('build') || appearDeployState.includes('release')">
-                            <bk-button :text="true" @click="stopDeploy"> {{ $t('停止部署') }} </bk-button>
-                        </section>
-                    </section>
+    <template v-if="isWatchDeploying || isWatchOfflineing || isDeploySuccess || isDeployFail">
+      <!-- 部署中 -->
+      <div
+        v-if="isWatchDeploying"
+        id="deploying-box"
+        class="summary-box"
+        :style="scrollStyle.summary"
+      >
+        <div class="wrapper primary">
+          <div class="fl">
+            <round-loading
+              size="small"
+              ext-cls="deploy-round-loading"
+            />
+          </div>
+          <section style="position: relative; margin-left: 60px;">
+            <p class="deploy-pending-text">
+              {{ $t('正在部署中...') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span
+                v-if="!isLesscodeApp"
+                class="branch-text"
+              > {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}</span>
+              <span class="version-text"> {{ $t('版本：') }} {{ curDeployId }}</span>
+              <span
+                v-if="deployTotalTime"
+                class="time-text"
+              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+            </p>
+            <section
+              v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
+              class="action-wrapper"
+            >
+              <bk-button
+                :text="true"
+                @click="stopDeploy"
+              >
+                {{ $t('停止部署') }}
+              </bk-button>
+            </section>
+          </section>
+        </div>
+      </div>
+
+      <!-- 下架中 -->
+      <div
+        v-if="isWatchOfflineing"
+        id="offlineing-box"
+        class="summary-box"
+        :style="scrollStyle.summary"
+      >
+        <div class="wrapper primary">
+          <div class="fl">
+            <round-loading
+              size="small"
+              ext-cls="deploy-round-loading"
+            />
+          </div>
+          <section style="margin-left: 60px;">
+            <p class="deploy-pending-text">
+              {{ $t('正在下架中...') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span
+                v-if="!isLesscodeApp"
+                class="branch-text"
+              > {{ $t('分支：') }} {{ deploymentInfo.repo.name }}</span>
+              <span class="version-text"> {{ $t('版本：') }} {{ deploymentInfo.repo.version }}</span>
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <!-- 部署失败 -->
+      <div
+        v-if="isDeployFail"
+        id="fail-box"
+        class="summary-box"
+        :style="scrollStyle.summary"
+      >
+        <div class="wrapper danger">
+          <div class="fl">
+            <span class="paasng-icon paasng-info-circle-shape" />
+          </div>
+          <section style="position: relative; margin-left: 50px;">
+            <p class="deploy-pending-text">
+              {{ $t('部署失败') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span class="reason mr5">{{ curDeployResult.possible_reason }}</span>
+              <template v-if="curDeployResult.result === 'failed'">
+                <span
+                  v-for="(help, index) in curDeployResult.error_tips.helpers"
+                  :key="index"
+                >
+                  <a
+                    :href="help.link"
+                    target="_blank"
+                    class="mr10"
+                  >
+                    {{ help.text }}
+                  </a>
+                </span>
+              </template>
+            </p>
+            <section class="action-wrapper">
+              <bk-button
+                theme="danger"
+                ext-cls="paas-deploy-failed-btn"
+                outline
+                @click="handleDeploy"
+              >
+                {{ $t('重新部署') }}
+              </bk-button>
+              <bk-button
+                style="margin-left: 6px;"
+                theme="danger"
+                ext-cls="paas-deploy-failed-btn"
+                outline
+                @click="handleFailCallback"
+              >
+                {{ $t('返回') }}
+              </bk-button>
+            </section>
+          </section>
+        </div>
+      </div>
+
+      <!-- 部署成功 -->
+      <div
+        v-if="isDeploySuccess"
+        id="success-box"
+        class="summary-box"
+        :style="scrollStyle.summary"
+      >
+        <div class="wrapper success">
+          <div class="fl">
+            <span class="paasng-icon paasng-check-circle-shape" />
+          </div>
+          <section style="position: relative; margin-left: 50px;">
+            <div class="deploy-pending-text">
+              <div v-if="environment === 'stag'">
+                {{ $t('应用部署成功') }}
+              </div>
+              <div v-else-if="environment === 'prod'">
+                <p v-if="appMarketPublished && curAppModule.is_default">
+                  {{ $t('应用部署成功，已发布至蓝鲸应用市场') }}
+                </p>
+                <p v-else-if="!appMarketPublished && curAppModule.is_default">
+                  {{ $t('应用部署成功，未发布至蓝鲸应用市场') }}
+                  <router-link
+                    class="ml5 fn"
+                    :to="{ name: 'appMarket', params: { id: appCode } }"
+                  >
+                    {{ $t('去设置') }}
+                  </router-link>
+                </p>
+                <p v-else>
+                  {{ $t('应用部署成功') }}
+                </p>
+              </div>
+            </div>
+            <p class="deploy-text-wrapper">
+              <span
+                v-if="!isLesscodeApp"
+                class="branch-text"
+              > {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}</span>
+              <span class="version-text"> {{ $t('版本：') }} {{ curDeployId }}</span>
+              <span
+                v-if="deployTotalTime"
+                class="time-text"
+              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+            </p>
+            <section class="action-wrapper">
+              <bk-button
+                theme="success"
+                ext-cls="paas-deploy-success-btn"
+                outline
+                @click="handleOpenLink"
+              >
+                {{ $t('访问') }}
+              </bk-button>
+              <bk-button
+                style="margin-left: 6px;"
+                theme="success"
+                ext-cls="paas-deploy-success-btn"
+                outline
+                @click="handleSuccessCallback"
+              >
+                {{ $t('返回') }}
+              </bk-button>
+            </section>
+          </section>
+        </div>
+      </div>
+    </template>
+
+    <template v-else-if="isDeployInterrupted || isDeployInterrupting">
+      <!-- 停止部署 -->
+      <div
+        v-if="isDeployInterrupting"
+        id="deploying-box"
+        class="summary-box"
+        :style="scrollStyle.summary"
+      >
+        <div class="wrapper warning">
+          <div class="fl">
+            <round-loading
+              size="small"
+              ext-cls="deploy-round-loading"
+            />
+          </div>
+          <section style="position: relative; margin-left: 60px;">
+            <p class="deploy-pending-text">
+              {{ $t('部署停止中...') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span
+                v-if="!isLesscodeApp"
+                class="branch-text"
+              > {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}</span>
+              <span class="version-text"> {{ $t('版本：') }} {{ curDeployId }}</span>
+              <span
+                v-if="deployTotalTime"
+                class="time-text"
+              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+            </p>
+            <section
+              v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
+              class="action-wrapper"
+            >
+              <bk-button
+                :text="true"
+                disabled
+              >
+                {{ $t('停止中') }}
+              </bk-button>
+            </section>
+          </section>
+        </div>
+      </div>
+      <div
+        v-if="isDeployInterrupted"
+        id="deploying-box"
+        class="summary-box"
+        :style="scrollStyle.summary"
+      >
+        <div class="wrapper warning">
+          <div class="fl">
+            <span
+              style="position: relative; top: 4px; font-size: 32px;"
+              class="paasng-icon paasng-info-circle-shape"
+            />
+          </div>
+          <section style="position: relative; margin-left: 50px;">
+            <p class="deploy-pending-text">
+              {{ $t('部署已中断') }}
+            </p>
+            <p class="deploy-text-wrapper">
+              <span>
+                由 {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
+              </span>
+              <span>
+                <bk-button
+                  style="vertical-align: top; font-size: 12px; margin-left: 20px;"
+                  :text="true"
+                  @click="goProcessView"
+                > {{ $t('查看进程状态') }} </bk-button>
+              </span>
+            </p>
+            <section class="action-wrapper">
+              <bk-button
+                theme="warning"
+                class="paas-deploy-interrupt-btn"
+                outline
+                @click="handleDeploy"
+              >
+                {{ $t('重新部署') }}
+              </bk-button>
+              <bk-button
+                style="margin-left: 6px; "
+                class="paas-deploy-interrupt-btn"
+                theme="warning"
+                outline
+                @click="handleFailCallback"
+              >
+                {{ $t('返回') }}
+              </bk-button>
+            </section>
+          </section>
+        </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <!-- 最近部署失败 或者 停止部署 -->
+      <div
+        v-if="lastDeploymentInfo && (lastDeploymentInfo.status === 'failed' || lastDeploymentInfo.status === 'interrupted')"
+        class="summary-box status"
+        style="position: relative; z-index: 1;"
+      >
+        <div class="wrapper default-box warning">
+          <div class="fl">
+            <span class="paasng-icon paasng-paas-remind-fill mr5 f16" />
+          </div>
+          <div class="fl mr25">
+            {{ $t('最近部署：') }}
+            <span> {{ $t('版本：') }} {{ lastDeploymentInfo.repo.version }}，</span>
+            <span v-if="!isLesscodeApp"> {{ $t('分支：') }} {{ lastDeploymentInfo.repo.name }}，</span>
+            <span>
+              {{ $t('由') }} {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }}
+              <template>{{ lastDeploymentInfo.status === 'failed' ? $t('部署失败') : $t('手动停止部署') }}</template>
+            </span>
+          </div>
+
+          <router-link
+            class="fr mr5"
+            :to="{ name: 'appDeployForHistory', params: { id: appCode, moduleId: curModuleId } , query: { deployId: lastDeploymentInfo.id } }"
+          >
+            {{ $t('查看部署日志') }}
+          </router-link>
+        </div>
+      </div>
+
+      <!-- 已经部署成功 -->
+      <div
+        v-if="deploymentInfo"
+        class="summary-box status"
+        :style="{ 'margin-top': lastDeploymentInfo && lastDeploymentInfo.status === 'failed' ? '-5px' : '0' }"
+      >
+        <div class="wrapper default-box">
+          <div class="fl mr25">
+            {{ $t('当前版本：') }} {{ deploymentInfo.repo.version }}
+          </div>
+          <div
+            v-if="!isLesscodeApp"
+            class="fl"
+          >
+            {{ $t('分支：') }} {{ deploymentInfo.repo.name }}
+          </div>
+          <div class="span fl" />
+          <div class="fl">
+            {{ $t('由') }} {{ deploymentInfo.operator.username }} {{ $t(' 于 ') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
+          </div>
+
+          <bk-dropdown-menu
+            v-if="!isAppOffline"
+            ref="dropdown"
+            class="fr"
+            style="height: auto;"
+          >
+            <div
+              slot="dropdown-trigger"
+              class="dropdown-trigger-btn"
+            >
+              <span class="paasng-icon paasng-icon-more f16" />
+            </div>
+            <ul
+              slot="dropdown-content"
+              class="bk-dropdown-list"
+            >
+              <li>
+                <a
+                  href="javascript:;"
+                  style="width: 66px;"
+                  @click="handleOfflineApp"
+                > {{ $t('下架') }} </a>
+              </li>
+            </ul>
+          </bk-dropdown-menu>
+          <a
+            v-if="exposedLink"
+            class="fr mr10"
+            :href="exposedLink"
+            target="_blank"
+          > {{ $t('点击访问') }} </a>
+        </div>
+      </div>
+
+      <!-- 未部署过 -->
+      <div
+        v-else-if="!lastDeploymentInfo"
+        class="summary-box status tc"
+      >
+        <div class="wrapper not-deploy f14">
+          {{ $t('暂未部署') }}
+        </div>
+      </div>
+
+      <div class="deploy-action mt mt20">
+        <div v-if="deployPreparations.all_conditions_matched">
+          <strong class="f14 mb10"> {{ $t('选择部署') }} {{ isLesscodeApp ? $t('版本') : $t('分支') }}</strong>
+          <div class="branch">
+            <bk-select
+              v-model="branchSelection"
+              :placeholder="$t('请选择')"
+              style="width: 420px; display: inline-block; vertical-align: middle;"
+              :popover-min-width="420"
+              :clearable="false"
+              :searchable="true"
+              :loading="isBranchesLoading"
+              :empty-text="branchEmptyText"
+              @selected="handleBranchSelect"
+            >
+              <bk-option-group
+                v-for="(branch, index) in branchList"
+                :key="index"
+                class="option-group"
+                :name="branch.name"
+              >
+                <bk-button
+                  ext-cls="paas-branch-btn"
+                  theme="primary"
+                  text
+                  @click="getModuleBranches"
+                >
+                  {{ $t('刷新') }}
+                </bk-button>
+                <bk-option
+                  v-for="option in branch.children"
+                  :id="option.id"
+                  :key="option.id"
+                  :name="option.text"
+                />
+              </bk-option-group>
+              <div
+                v-if="curAppModule.repo.type === 'bk_svn'"
+                slot="extension"
+                style="cursor: pointer;"
+                @click="handleCreateBranch"
+              >
+                <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署') }} {{ isLesscodeApp ? $t('版本') : $t('分支') }}
+              </div>
+            </bk-select>
+            <bk-button
+              :theme="'primary'"
+              class="ml10 mr15 vm"
+              style="min-width: 120px;"
+              :loading="isDeploying"
+              :disabled="deployDisabled"
+              @click="handleDeploy"
+            >
+              <span>{{ `${$t('部署至')}${envName}` }}</span>
+            </bk-button>
+            <!-- <a class="vm" href="javascript: void(0);" @click="handleShowCommits" v-if="canShowCommits"> {{ $t('查看代码版本差异') }} </a> -->
+            <div
+              v-if="canShowCommits || (deploymentInfo && !isAppOffline)"
+              class="operate"
+            >
+              <bk-dropdown-menu
+                ref="dropdown"
+                font-size="medium"
+                @show="dropdownShow"
+                @hide="dropdownHide"
+              >
+                <div
+                  slot="dropdown-trigger"
+                  class="dropdown-trigger-btn-branch"
+                  style="padding-left: 19px;"
+                >
+                  <span> {{ $t('更多操作') }} </span>
+                  <i :class="['bk-icon icon-angle-down',{ 'icon-flip': isDropdownShow }]" />
                 </div>
+                <ul
+                  slot="dropdown-content"
+                  class="bk-dropdown-list"
+                >
+                  <li v-if="canShowCommits">
+                    <a
+                      href="javascript: void(0);"
+                      @click="handleShowCommits"
+                    > {{ $t('查看代码版本差异') }} </a>
+                  </li>
+                  <li v-if="!isAppOffline">
+                    <a
+                      href="javascript:;"
+                      @click="handleOfflineApp"
+                    > {{ $t('下架') }} </a>
+                  </li>
+                </ul>
+              </bk-dropdown-menu>
             </div>
+          </div>
 
-            <!-- 下架中 -->
-            <div id="offlineing-box" class="summary-box" :style="scrollStyle.summary" v-if="isWatchOfflineing">
-                <div class="wrapper primary">
-                    <div class="fl">
-                        <round-loading size="small" ext-cls="deploy-round-loading" />
-                    </div>
-                    <section style="margin-left: 60px;">
-                        <p class="deploy-pending-text"> {{ $t('正在下架中...') }} </p>
-                        <p class="deploy-text-wrapper">
-                            <span class="branch-text" v-if="!isLesscodeApp"> {{ $t('分支：') }} {{deploymentInfo.repo.name}}</span>
-                            <span class="version-text"> {{ $t('版本：') }} {{deploymentInfo.repo.version}}</span>
-                        </p>
-                    </section>
-                </div>
-            </div>
-
-            <!-- 部署失败 -->
-            <div id="fail-box" class="summary-box" :style="scrollStyle.summary" v-if="isDeployFail">
-                <div class="wrapper danger">
-                    <div class="fl">
-                        <span class="paasng-icon paasng-info-circle-shape"></span>
-                    </div>
-                    <section style="position: relative; margin-left: 50px;">
-                        <p class="deploy-pending-text"> {{ $t('部署失败') }} </p>
-                        <p class="deploy-text-wrapper">
-                            <span class="reason mr5">{{curDeployResult.possible_reason}}</span>
-                            <template v-if="curDeployResult.result === 'failed'">
-                                <span v-for="(help, index) in curDeployResult.error_tips.helpers" :key="index">
-                                    <a :href="help.link" target="_blank" class="mr10">
-                                        {{help.text}}
-                                    </a>
-                                </span>
-                            </template>
-                        </p>
-                        <section class="action-wrapper">
-                            <bk-button theme="danger" ext-cls="paas-deploy-failed-btn" outline @click="handleDeploy"> {{ $t('重新部署') }} </bk-button>
-                            <bk-button style="margin-left: 6px;" theme="danger" ext-cls="paas-deploy-failed-btn" outline @click="handleFailCallback"> {{ $t('返回') }} </bk-button>
-                        </section>
-                    </section>
-                </div>
-            </div>
-
-            <!-- 部署成功 -->
-            <div id="success-box" class="summary-box" :style="scrollStyle.summary" v-if="isDeploySuccess">
-                <div class="wrapper success">
-                    <div class="fl">
-                        <span class="paasng-icon paasng-check-circle-shape"></span>
-                    </div>
-                    <section style="position: relative; margin-left: 50px;">
-                        <div class="deploy-pending-text">
-                            <div v-if="environment === 'stag'">
-                                {{ $t('应用部署成功') }}
-                            </div>
-                            <div v-else-if="environment === 'prod'">
-                                <p v-if="appMarketPublished && curAppModule.is_default">
-                                    {{ $t('应用部署成功，已发布至蓝鲸应用市场') }}
-                                </p>
-                                <p v-else-if="!appMarketPublished && curAppModule.is_default">
-                                    {{ $t('应用部署成功，未发布至蓝鲸应用市场') }}
-                                    <router-link class="ml5 fn" :to="{ name: 'appMarket', params: { id: appCode } }"> {{ $t('去设置') }} </router-link>
-                                </p>
-                                <p v-else>
-                                    {{ $t('应用部署成功') }}
-                                </p>
-                            </div>
-                        </div>
-                        <p class="deploy-text-wrapper">
-                            <span class="branch-text" v-if="!isLesscodeApp"> {{ $t('分支：') }} {{branchSelection.split(':')[1]}}</span>
-                            <span class="version-text"> {{ $t('版本：') }} {{curDeployId}}</span>
-                            <span class="time-text" v-if="deployTotalTime"> {{ $t('耗时：') }} {{deployTotalTimeDisplay}}</span>
-                        </p>
-                        <section class="action-wrapper">
-                            <bk-button theme="success" ext-cls="paas-deploy-success-btn" outline @click="handleOpenLink"> {{ $t('访问') }} </bk-button>
-                            <bk-button style="margin-left: 6px;" theme="success" ext-cls="paas-deploy-success-btn" outline @click="handleSuccessCallback"> {{ $t('返回') }} </bk-button>
-                        </section>
-                    </section>
-                </div>
-            </div>
-        </template>
-
-        <template v-else-if="isDeployInterrupted || isDeployInterrupting">
-            <!-- 停止部署 -->
-            <div id="deploying-box" class="summary-box" :style="scrollStyle.summary" v-if="isDeployInterrupting">
-                <div class="wrapper warning">
-                    <div class="fl">
-                        <round-loading size="small" ext-cls="deploy-round-loading" />
-                    </div>
-                    <section style="position: relative; margin-left: 60px;">
-                        <p class="deploy-pending-text"> {{ $t('部署停止中...') }} </p>
-                        <p class="deploy-text-wrapper">
-                            <span class="branch-text" v-if="!isLesscodeApp"> {{ $t('分支：') }} {{branchSelection.split(':')[1]}}</span>
-                            <span class="version-text"> {{ $t('版本：') }} {{curDeployId}}</span>
-                            <span class="time-text" v-if="deployTotalTime"> {{ $t('耗时：') }} {{deployTotalTimeDisplay}}</span>
-                        </p>
-                        <section class="action-wrapper" v-if="appearDeployState.includes('build') || appearDeployState.includes('release')">
-                            <bk-button :text="true" disabled> {{ $t('停止中') }} </bk-button>
-                        </section>
-                    </section>
-                </div>
-            </div>
-            <div id="deploying-box" class="summary-box" :style="scrollStyle.summary" v-if="isDeployInterrupted">
-                <div class="wrapper warning">
-                    <div class="fl">
-                        <span style="position: relative; top: 4px; font-size: 32px;" class="paasng-icon paasng-info-circle-shape"></span>
-                    </div>
-                    <section style="position: relative; margin-left: 50px;">
-                        <p class="deploy-pending-text"> {{ $t('部署已中断') }} </p>
-                        <p class="deploy-text-wrapper">
-                            <span>
-                                由 {{lastDeploymentInfo.operator.username}} {{ $t('于') }} {{lastDeploymentInfo.created}} {{ $t(' 手动停止部署') }}
-                            </span>
-                            <span>
-                                <bk-button style="vertical-align: top; font-size: 12px; margin-left: 20px;" :text="true" @click="goProcessView"> {{ $t('查看进程状态') }} </bk-button>
-                            </span>
-                        </p>
-                        <section class="action-wrapper">
-                            <bk-button theme="warning" class="paas-deploy-interrupt-btn" outline @click="handleDeploy"> {{ $t('重新部署') }} </bk-button>
-                            <bk-button style="margin-left: 6px; " class="paas-deploy-interrupt-btn" theme="warning" outline @click="handleFailCallback"> {{ $t('返回') }} </bk-button>
-                        </section>
-                    </section>
-                </div>
-            </div>
-        </template>
-
-        <template v-else>
-            <!-- 最近部署失败 或者 停止部署 -->
-            <div class="summary-box status" v-if="lastDeploymentInfo && (lastDeploymentInfo.status === 'failed' || lastDeploymentInfo.status === 'interrupted')" style="position: relative; z-index: 1;">
-                <div class="wrapper default-box warning">
-                    <div class="fl">
-                        <span class="paasng-icon paasng-paas-remind-fill mr5 f16"></span>
-                    </div>
-                    <div class="fl mr25">
-                        {{ $t('最近部署：') }}
-                        <span> {{ $t('版本：') }} {{lastDeploymentInfo.repo.version}}，</span>
-                        <span v-if="!isLesscodeApp"> {{ $t('分支：') }} {{lastDeploymentInfo.repo.name}}，</span>
-                        <span>
-                            {{ $t('由') }} {{lastDeploymentInfo.operator.username}} {{ $t('于') }} {{lastDeploymentInfo.created}}
-                            <template>{{lastDeploymentInfo.status === 'failed' ? $t('部署失败') : $t('手动停止部署')}}</template>
-                        </span>
-                    </div>
-
-                    <router-link class="fr mr5" :to="{ name: 'appDeployForHistory', params: { id: appCode, moduleId: curModuleId } , query: { deployId: lastDeploymentInfo.id } }"> {{ $t('查看部署日志') }} </router-link>
-                </div>
-            </div>
-
-            <!-- 已经部署成功 -->
-            <div class="summary-box status" v-if="deploymentInfo" :style="{ 'margin-top': lastDeploymentInfo && lastDeploymentInfo.status === 'failed' ? '-5px' : '0' }">
-                <div class="wrapper default-box">
-                    <div class="fl mr25"> {{ $t('当前版本：') }} {{deploymentInfo.repo.version}}</div>
-                    <div class="fl" v-if="!isLesscodeApp"> {{ $t('分支：') }} {{deploymentInfo.repo.name}}</div>
-                    <div class="span fl"></div>
-                    <div class="fl"> {{ $t('由') }} {{deploymentInfo.operator.username}} {{ $t(' 于 ') }} {{deploymentInfo.created}} {{isAppOffline ? $t('下架') : $t('部署')}}</div>
-
-                    <bk-dropdown-menu ref="dropdown" class="fr" v-if="!isAppOffline" style="height: auto;">
-                        <div class="dropdown-trigger-btn" slot="dropdown-trigger">
-                            <span class="paasng-icon paasng-icon-more f16"></span>
-                        </div>
-                        <ul class="bk-dropdown-list" slot="dropdown-content">
-                            <li>
-                                <a href="javascript:;" style="width: 66px;" @click="handleOfflineApp"> {{ $t('下架') }} </a>
-                            </li>
-                        </ul>
-                    </bk-dropdown-menu>
-                    <a class="fr mr10" :href="exposedLink" target="_blank" v-if="exposedLink"> {{ $t('点击访问') }} </a>
-                </div>
-            </div>
-
-            <!-- 未部署过 -->
-            <div class="summary-box status tc" v-else-if="!lastDeploymentInfo">
-                <div class="wrapper not-deploy f14"> {{ $t('暂未部署') }} </div>
-            </div>
-
-            <div class="deploy-action mt mt20">
-                <div v-if="deployPreparations.all_conditions_matched">
-                    <strong class="f14 mb10"> {{ $t('选择部署') }} {{isLesscodeApp ? $t('版本') : $t('分支') }}</strong>
-                    <div class="branch">
-                        <bk-select
-                            v-model="branchSelection"
-                            :placeholder="$t('请选择')"
-                            style="width: 420px; display: inline-block; vertical-align: middle;"
-                            :popover-min-width="420"
-                            :clearable="false"
-                            :searchable="true"
-                            :loading="isBranchesLoading"
-                            :empty-text="branchEmptyText"
-                            @selected="handleBranchSelect">
-                            <bk-option-group
-                                class="option-group"
-                                v-for="(branch, index) in branchList"
-                                :name="branch.name"
-                                :key="index">
-                                <bk-button ext-cls="paas-branch-btn" theme="primary" text @click="getModuleBranches"> {{ $t('刷新') }} </bk-button>
-                                <bk-option v-for="option in branch.children"
-                                    :key="option.id"
-                                    :id="option.id"
-                                    :name="option.text">
-                                </bk-option>
-                            </bk-option-group>
-                            <div slot="extension" @click="handleCreateBranch" style="cursor: pointer;" v-if="curAppModule.repo.type === 'bk_svn'">
-                                <i class="bk-icon icon-plus-circle mr5"></i> {{ $t('新建部署') }} {{isLesscodeApp ? $t('版本') : $t('分支')}}
-                            </div>
-                        </bk-select>
-                        <bk-button
-                            :theme="'primary'"
-                            class="ml10 mr15 vm"
-                            style="min-width: 120px;"
-                            :loading="isDeploying"
-                            :disabled="deployDisabled"
-                            @click="handleDeploy">
-                            <span>{{ `${$t('部署至')}${envName}`}}</span>
-                        </bk-button>
-                        <!-- <a class="vm" href="javascript: void(0);" @click="handleShowCommits" v-if="canShowCommits"> {{ $t('查看代码版本差异') }} </a> -->
-                        <div class="operate" v-if="canShowCommits || (deploymentInfo && !isAppOffline)">
-                            <bk-dropdown-menu @show="dropdownShow" @hide="dropdownHide" ref="dropdown" font-size="medium">
-                                <div class="dropdown-trigger-btn-branch" style="padding-left: 19px;" slot="dropdown-trigger">
-                                    <span> {{ $t('更多操作') }} </span>
-                                    <i :class="['bk-icon icon-angle-down',{ 'icon-flip': isDropdownShow }]"></i>
-                                </div>
-                                <ul class="bk-dropdown-list" slot="dropdown-content">
-                                    <li v-if="canShowCommits"><a href="javascript: void(0);" @click="handleShowCommits"> {{ $t('查看代码版本差异') }} </a></li>
-                                    <li v-if="!isAppOffline"><a href="javascript:;" @click="handleOfflineApp"> {{ $t('下架') }} </a></li>
-                                </ul>
-                            </bk-dropdown-menu>
-                        </div>
-                    </div>
-
-                    <div class="paas-cost-box mt15" v-if="environment === 'prod' && platformFeature.DEVELOPMENT_TIME_RECORD">
-                        <bk-checkbox
-                            class="vm"
-                            :true-value="true"
-                            :false-value="false"
-                            v-model="costConf.enable"> {{ $t('记录开发成本：开发本次发布内容耗时') }} </bk-checkbox>
-                        <bk-input
-                            :clearable="false"
-                            :show-controls="false"
-                            type="number"
-                            :min="0"
-                            :precision="0"
-                            placeholder=" "
-                            style="display: inline-block; width: 50px;"
-                            v-model="costConf.hour">
-                        </bk-input>
-                        <span>{{ $t('时') }}</span>
-                        <bk-input
-                            :clearable="false"
-                            :show-controls="false"
-                            type="number"
-                            :max="59"
-                            :min="0"
-                            :precision="0"
-                            placeholder=" "
-                            style="display: inline-block; width: 50px;"
-                            v-model="costConf.minute">
-                        </bk-input>
-                        <span>{{ $t('分') }}</span>
-                    </div>
-                </div>
-
-                <div v-else>
-                    <strong class="f14 mb10"> {{ $t('部署前需完成以下准备工作') }} </strong>
-                    <div class="preparation-list">
-                        <div class="preparation-item" v-for="item of deployPreparations.failed_conditions" :key="item.action_name">
-                            <span class="paasng-icon paasng-exclamation-triangle-shape"></span>
-                            <p class="desc" v-bk-overflow-tips>{{item.message}}</p>
-                            <a href="javascript: void(0);" class="action" @click="handleFixPreparation(item)" v-if="item.action_name !== 'CHECK_ENV_PROTECTION'"> {{ $t('立即处理') }} </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </template>
-
-        <div class="deploy-view" :style="{ 'margin-top': `${isScrollFixed ? '104px' : '0'}` }">
-            <div id="deploy-timeline-box" style="width: 230px">
-                <deploy-timeline
-                    ref="deployTimelineRef"
-                    :list="timeLineList"
-                    :stage="curDeployStage"
-                    :key="timelineComKey"
-                    :disabled="isWatchDeploying || isDeploySuccess || isDeployFail || isDeployInterrupted || isDeployInterrupting"
-                    @select="handleTimelineSelect">
-                </deploy-timeline>
-            </div>
-            <deploy-log
-                ref="deployLogRef"
-                :build-list="streamLogs"
-                :ready-list="readyLogs"
-                :process-list="allProcesses"
-                :state-process="appearDeployState"
-                :process-loading="processLoading"
-                :environment="environment"
-                v-if="isWatchDeploying || isDeploySuccess || isDeployFail || isDeployInterrupted || isDeployInterrupting">
-            </deploy-log>
-            <div class="pre-deploy-detail" v-else-if="curTimeline">
-                <div class="metadata-card" v-for="metadata of curTimeline.displayBlocks" :key="metadata.key">
-                    <strong class="card-title">
-                        {{metadata.name}}
-                        <router-link
-                            class="card-edit"
-                            v-bk-tooltips="metadata.name === $t('访问地址') ? $t('查看') : $t('配置')"
-                            v-if="metadata.routerName "
-                            :to="{ name: metadata.routerName, params: { id: appCode, moduleId: curModuleId } }">
-                            <span class="paasng-icon paasng-chain" v-if="metadata.name === $t('访问地址')"></span>
-                            <!-- lesscode 应用 和 smart 应用不展示这个 配置按钮 -->
-                            <template v-else>
-                                <span class="paasng-icon paasng-cog" v-if="isShowConfig"></span>
-                            </template>
-                        </router-link>
-                    </strong>
-                    <ul class="card-list">
-                        <li class="card-item" v-for="(item, index) of metadata.infos" :key="index">
-                            <template v-if="metadata.type === 'key-value'">
-                                <div class="card-key">{{item.text}}：</div>
-                                <template v-if="Array.isArray(item.value)">
-                                    <div class="card-value" v-if="item.value.length">
-                                        <template v-if="isSmartApp && item.text === $t('源码管理')">
-                                            {{ $t('蓝鲸 S-mart 源码包') }}
-                                        </template>
-                                        <span class="card-value-item mr5" v-for="(subItem, subIndex) of item.value" :key="subIndex">
-                                            <router-link :to="subItem.route">
-                                                {{subItem.name}}
-                                            </router-link>
-                                        </span>
-                                    </div>
-                                    <div class="card-value" v-else>{{ $t('无') }}</div>
-                                </template>
-                                <template v-else>
-                                    <div class="card-value">
-                                        <template v-if="item.text === $t('地址')">
-                                            <template v-if="item.value">
-                                                <span v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE">{{ item.value }}</span>
-                                                <a :href="item.value" target="_blank" v-else>{{ item.value }}</a>
-                                            </template>
-                                            <span v-else>{{ $t('无') }}</span>
-                                        </template>
-                                        <template v-else>
-                                            {{item.value || $t('无')}}
-                                        </template>
-                                        <span v-if="item.value && item.href"><a target="_blank" :href="item.href" style="color: #3a84ff">{{item.hrefText}}</a></span>
-                                        <a class="ml5" href="javascript: void(0);" v-if="!curAppModule.repo.linked_to_internal_svn && item.downloadBtn" @click="item.downloadBtn">{{item.downloadBtnText}}</a>
-                                        <!-- <a :href="item.value" target="_blank" v-if="item.text === $t('地址')"> {{ $t('点击访问') }} </a> -->
-                                        <a v-if="item.text === $t('源码管理') && lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP" :target="lessCodeData.address_in_lesscode ? '_blank' : ''" :href="lessCodeData.address_in_lesscode || 'javascript:;'" @click="handleLessCode"> {{ $t('我要开发') }} </a>
-                                    </div>
-                                    
-                                </template>
-                            </template>
-                            <template v-else>
-                                <a :href="item.value" target="_blank">{{$t(item.text)}}</a>
-                            </template>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+          <div
+            v-if="environment === 'prod' && platformFeature.DEVELOPMENT_TIME_RECORD"
+            class="paas-cost-box mt15"
+          >
+            <bk-checkbox
+              v-model="costConf.enable"
+              class="vm"
+              :true-value="true"
+              :false-value="false"
+            >
+              {{ $t('记录开发成本：开发本次发布内容耗时') }}
+            </bk-checkbox>
+            <bk-input
+              v-model="costConf.hour"
+              :clearable="false"
+              :show-controls="false"
+              type="number"
+              :min="0"
+              :precision="0"
+              placeholder=" "
+              style="display: inline-block; width: 50px;"
+            />
+            <span>{{ $t('时') }}</span>
+            <bk-input
+              v-model="costConf.minute"
+              :clearable="false"
+              :show-controls="false"
+              type="number"
+              :max="59"
+              :min="0"
+              :precision="0"
+              placeholder=" "
+              style="display: inline-block; width: 50px;"
+            />
+            <span>{{ $t('分') }}</span>
+          </div>
         </div>
 
-        <bk-dialog
-            width="740"
-            v-model="commitDialog.visiable"
-            :title="$t('查看版本差异')"
-            :theme="'primary'"
-            :mask-close="true"
-            :show-footer="false">
-            <div class="result">
-                <paas-loading :loading="commitDialog.isLoading">
-                    <div slot="loadingContent" v-if="!commitDialog.isLoading">
-                        <form class="ps-form ps-form-horizontal" v-if="deploymentInfo">
-                            <div class="middle-list mb15">
-                                <span class="">
-                                    {{ $t('已选中分支：') }}
-                                    <strong>{{ branchSelection.split(':')[1] || '--' }}</strong>
-                                </span>
-                                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
-                                <span class="">
-                                    {{ $t('已部署分支：') }}
-                                    <strong>
-                                        {{ deploymentInfo.repo.name }}
-                                        （{{ $t('版本号') }}: {{ deploymentInfo.repo.version }} ）
-                                    </strong>
-                                </span>
-                            </div>
-                        </form>
-                        <table class="ps-table ps-table-default ps-table-outline">
-                            <colgroup>
-                                <col style="width:150px">
-                                <col style="width:150px">
-                                <col style="width:170px">
-                                <col style="width:250px">
-                            </colgroup>
-                            <tr class="ps-table-environment-header">
-                                <th> {{ $t('版本号') }} </th>
-                                <th> {{ $t('提交人') }} </th>
-                                <th> {{ $t('提交时间') }} </th>
-                                <th> {{ $t('注释') }} </th>
-                            </tr>
-                            <tr class="ps-table-slide-up" v-if="!commitsList.length">
-                                <td colspan="4">
-                                    <div class="ps-no-result">
-                                        <div class="text">
-                                            <p><i class="paasng-icon paasng-empty no-data"></i></p>
-                                            <p> {{ $t('暂无版本差异记录') }} </p>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tbody :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]" v-for="(cItem, index) in commitsList" v-else :key="index">
-                                <tr class="ps-table-slide-up" @click.stop.prevent="handleToggleCommitsDetail(index)">
-                                    <td class="pl50">
-                                        <i class="icon"></i>
-                                        <a>{{cItem.revision}}</a>
-                                    </td>
-                                    <td>{{cItem.author}}</td>
-                                    <td>{{cItem.date}}</td>
-                                    <td>{{cItem.message}}</td>
-                                </tr>
-                                <tr class="ps-table-slide-down">
-                                    <td colspan="4">
-                                        <pre>
-                                            <p v-for="(chagnItem, chagnItemIndex) in cItem.changelist" :key="chagnItemIndex">{{chagnItem[0]}} {{chagnItem[1]}}</p>
-                                        </pre>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </paas-loading>
+        <div v-else>
+          <strong class="f14 mb10"> {{ $t('部署前需完成以下准备工作') }} </strong>
+          <div class="preparation-list">
+            <div
+              v-for="item of deployPreparations.failed_conditions"
+              :key="item.action_name"
+              class="preparation-item"
+            >
+              <span class="paasng-icon paasng-exclamation-triangle-shape" />
+              <p
+                v-bk-overflow-tips
+                class="desc"
+              >
+                {{ item.message }}
+              </p>
+              <a
+                v-if="item.action_name !== 'CHECK_ENV_PROTECTION'"
+                href="javascript: void(0);"
+                class="action"
+                @click="handleFixPreparation(item)"
+              > {{ $t('立即处理') }} </a>
             </div>
-        </bk-dialog>
+          </div>
+        </div>
+      </div>
+    </template>
 
-        <bk-dialog
-            width="450"
-            v-model="offlineAppDialog.visiable"
-            :title="`${$t('下架模块')}${curAppModule.name}${environment === 'stag' ? $t('预发布环境') : $t('生产环境') }`"
-            :theme="'primary'"
-            :header-position="'left'"
-            :mask-close="false"
-            :loading="offlineAppDialog.isLoading"
-            @confirm="confirmOfflineApp"
-            @cancel="cancelOfflineApp">
-            <div class="tl">
-                {{ $t('模块下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留，确认下架？') }}
-            </div>
-        </bk-dialog>
-
-        <bk-dialog
-            width="480"
-            :title="confirmDeployConf.title"
-            :theme="'primary'"
-            :mask-close="false"
-            :draggable="false"
-            v-model="confirmDeployConf.visiable"
-            header-position="left"
-            :show-footer="!schemaIsLoading"
-            @confirm="createDeploy"
-            @cancel="handleCancelDeploy">
-            <template slot="footer">
-                <bk-button v-if="confirmDeployConf.architecture !== 'arm64'" :theme="'primary'" :title="$t('主要按钮')" @click="createDeploy" class="mr10">
-                    {{ $t('确定') }}
-                </bk-button>
-                <bk-button :theme="'default'" type="submit" :title="$t('基础按钮')" @click="handleCancelDeploy" class="mr10">
-                    {{ $t('取消') }}
-                </bk-button>
-            </template>
-            <bk-container :col="12" :margin="0">
-                <bk-row class="mb15" v-if="!isLesscodeApp && curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE">
-                    <bk-col class="pr0 f14 " :span="3"><span class="confirm-key"> {{ $t('镜像标签：') }} </span></bk-col>
-                    <bk-col class="pl0 f14" :span="9"><span class="confirm-value">{{confirmDeployConf.branchName}}</span></bk-col>
-                </bk-row>
-                <bk-row class="mb15" v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE">
-                    <bk-col class="pr0 f14 " :span="3"><span class="confirm-key"> {{ $t('分支名称：') }} </span></bk-col>
-                    <bk-col class="pl0 f14" :span="9"><span class="confirm-value">{{confirmDeployConf.branchName}}</span></bk-col>
-                </bk-row>
-                <bk-row class="mb15" v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE">
-                    <bk-col class="pr0 f14 " :span="3"><span class="confirm-key"> {{ $t('版本：') }} </span></bk-col>
-                    <bk-col class="pl0 f14" :span="9"><span class="confirm-value">{{confirmDeployConf.version}}</span></bk-col>
-                </bk-row>
-                <template v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE">
-                    <bk-row class="mb15" v-if="confirmDeployConf.updateTime">
-                        <bk-col class="pr0 f14" :span="3"><span class="confirm-key"> {{ $t('最近更新时间：') }} </span></bk-col>
-                        <bk-col class="pl0 f14" :span="9"><span class="confirm-value">{{changeTime(confirmDeployConf.updateTime)}}</span></bk-col>
-                    </bk-row>
-                    <bk-row class="mb15" v-if="confirmDeployConf.message">
-                        <bk-col class="pr0 f14" :span="3"><span class="confirm-key"> {{ $t('版本描述：') }} </span></bk-col>
-                        <bk-col class="pl0 f14" :span="9"><pre class="confirm-value desc">{{confirmDeployConf.message}}</pre></bk-col>
-                    </bk-row>
-                    <template v-if="branchInfoType === 'image'">
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14" :span="10">
-                                <bk-checkbox :true-value="'Always'" :false-value="'IfNotPresent'" v-model="imagePullPolicy"> {{ $t('总在创建进程实例前拉取镜像') }} </bk-checkbox>
-                            </bk-col>
-                            <bk-col class="pr0 f14" :span="12">
-                                <p class="mirrorInfo"> {{ $t('每个镜像版本默认仅拉取一次，如版本内容有更新，请勾选该项') }} </p>
-                            </bk-col>
-                        </bk-row>
+    <div
+      class="deploy-view"
+      :style="{ 'margin-top': `${isScrollFixed ? '104px' : '0'}` }"
+    >
+      <div
+        id="deploy-timeline-box"
+        style="width: 230px"
+      >
+        <deploy-timeline
+          ref="deployTimelineRef"
+          :key="timelineComKey"
+          :list="timeLineList"
+          :stage="curDeployStage"
+          :disabled="isWatchDeploying || isDeploySuccess || isDeployFail || isDeployInterrupted || isDeployInterrupting"
+          @select="handleTimelineSelect"
+        />
+      </div>
+      <deploy-log
+        v-if="isWatchDeploying || isDeploySuccess || isDeployFail || isDeployInterrupted || isDeployInterrupting"
+        ref="deployLogRef"
+        :build-list="streamLogs"
+        :ready-list="readyLogs"
+        :process-list="allProcesses"
+        :state-process="appearDeployState"
+        :process-loading="processLoading"
+        :environment="environment"
+      />
+      <div
+        v-else-if="curTimeline"
+        class="pre-deploy-detail"
+      >
+        <div
+          v-for="metadata of curTimeline.displayBlocks"
+          :key="metadata.key"
+          class="metadata-card"
+        >
+          <strong class="card-title">
+            {{ metadata.name }}
+            <router-link
+              v-if="metadata.routerName "
+              v-bk-tooltips="metadata.name === $t('访问地址') ? $t('查看') : $t('配置')"
+              class="card-edit"
+              :to="{ name: metadata.routerName, params: { id: appCode, moduleId: curModuleId } }"
+            >
+              <span
+                v-if="metadata.name === $t('访问地址')"
+                class="paasng-icon paasng-chain"
+              />
+              <!-- lesscode 应用 和 smart 应用不展示这个 配置按钮 -->
+              <template v-else>
+                <span
+                  v-if="isShowConfig"
+                  class="paasng-icon paasng-cog"
+                />
+              </template>
+            </router-link>
+          </strong>
+          <ul class="card-list">
+            <li
+              v-for="(item, index) of metadata.infos"
+              :key="index"
+              class="card-item"
+            >
+              <template v-if="metadata.type === 'key-value'">
+                <div class="card-key">
+                  {{ item.text }}：
+                </div>
+                <template v-if="Array.isArray(item.value)">
+                  <div
+                    v-if="item.value.length"
+                    class="card-value"
+                  >
+                    <template v-if="isSmartApp && item.text === $t('源码管理')">
+                      {{ $t('蓝鲸 S-mart 源码包') }}
                     </template>
+                    <span
+                      v-for="(subItem, subIndex) of item.value"
+                      :key="subIndex"
+                      class="card-value-item mr5"
+                    >
+                      <router-link :to="subItem.route">
+                        {{ subItem.name }}
+                      </router-link>
+                    </span>
+                  </div>
+                  <div
+                    v-else
+                    class="card-value"
+                  >
+                    {{ $t('无') }}
+                  </div>
                 </template>
                 <template v-else>
-                    <paas-content-loader :is-loading="schemaIsLoading" placeholder="index-loading" :offset-top="0" :height="140" class="app-container middle framework-wrapper">
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14" :span="3"><span class="confirm-key"> {{ $t('镜像架构：') }} </span></bk-col>
-                            <bk-col class="pl0 f14" :span="9"><span class="confirm-value">{{confirmDeployConf.architecture || '--'}}</span></bk-col>
-                        </bk-row>
-                        <bk-row class="mb15">
-                            <bk-col class="pr0 f14" :span="3"><span class="confirm-key"> {{ $t('最近更新时间：') }} </span></bk-col>
-                            <bk-col class="pl0 f14" :span="9"><span class="confirm-value">{{changeTime(confirmDeployConf.lastUpdate) || '--'}}</span></bk-col>
-                        </bk-row>
-                        <bk-row class="mb15" v-if="confirmDeployConf.architecture === 'amd64'">
-                            <bk-col class="pr0 f14" :span="10">
-                                <bk-checkbox :true-value="'Always'" :false-value="'IfNotPresent'" v-model="imagePullPolicy"> {{ $t('总在创建进程实例前拉取镜像') }} </bk-checkbox>
-                            </bk-col>
-                            <bk-col class="pr0 f14" :span="12">
-                                <p class="mirrorInfo"> {{ $t('每个镜像标签（Tag）默认仅拉取一次，如旧标签内容有更新，请勾选该项') }} </p>
-                            </bk-col>
-                        </bk-row>
-                        <bk-row class="mb15" v-else>
-                            <template v-if="confirmDeployConf.architecture">
-                                <bk-col class="pr0 f14" :span="12">
-                                    <div :class="['ps-tip-block', 'error-wrapper', 'is-danger']">
-                                        <p> {{ $t('当前不支持') }} {{confirmDeployConf.architecture}} {{ $t('架构的镜像部署，请参考') }} <a :href="GLOBAL.DOC.ARCHITECTURE_PLATFORM_IMAGE" target="_blank" class="doc-style"> {{ $t('文档重新构建镜像') }} </a></p>
-                                    </div>
-                                </bk-col>
-                            </template>
-                        </bk-row>
-                    </paas-content-loader>
+                  <div class="card-value">
+                    <template v-if="item.text === $t('地址')">
+                      <template v-if="item.value">
+                        <span v-if="curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE">{{ item.value }}</span>
+                        <a
+                          v-else
+                          :href="item.value"
+                          target="_blank"
+                        >{{ item.value }}</a>
+                      </template>
+                      <span v-else>{{ $t('无') }}</span>
+                    </template>
+                    <template v-else>
+                      {{ item.value || $t('无') }}
+                    </template>
+                    <span v-if="item.value && item.href"><a
+                      target="_blank"
+                      :href="item.href"
+                      style="color: #3a84ff"
+                    >{{ item.hrefText }}</a></span>
+                    <a
+                      v-if="!curAppModule.repo.linked_to_internal_svn && item.downloadBtn"
+                      class="ml5"
+                      href="javascript: void(0);"
+                      @click="item.downloadBtn"
+                    >{{ item.downloadBtnText }}</a>
+                    <!-- <a :href="item.value" target="_blank" v-if="item.text === $t('地址')"> {{ $t('点击访问') }} </a> -->
+                    <a
+                      v-if="item.text === $t('源码管理') && lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
+                      :target="lessCodeData.address_in_lesscode ? '_blank' : ''"
+                      :href="lessCodeData.address_in_lesscode || 'javascript:;'"
+                      @click="handleLessCode"
+                    > {{ $t('我要开发') }} </a>
+                  </div>
                 </template>
-            </bk-container>
+              </template>
+              <template v-else>
+                <a
+                  :href="item.value"
+                  target="_blank"
+                >{{ $t(item.text) }}</a>
+              </template>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
-        </bk-dialog>
+    <bk-dialog
+      v-model="commitDialog.visiable"
+      width="740"
+      :title="$t('查看版本差异')"
+      :theme="'primary'"
+      :mask-close="true"
+      :show-footer="false"
+    >
+      <div class="result">
+        <paas-loading :loading="commitDialog.isLoading">
+          <div
+            v-if="!commitDialog.isLoading"
+            slot="loadingContent"
+          >
+            <form
+              v-if="deploymentInfo"
+              class="ps-form ps-form-horizontal"
+            >
+              <div class="middle-list mb15">
+                <span class="">
+                  {{ $t('已选中分支：') }}
+                  <strong>{{ branchSelection.split(':')[1] || '--' }}</strong>
+                </span>
+                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
+                <span class="">
+                  {{ $t('已部署分支：') }}
+                  <strong>
+                    {{ deploymentInfo.repo.name }}
+                    （{{ $t('版本号') }}: {{ deploymentInfo.repo.version }} ）
+                  </strong>
+                </span>
+              </div>
+            </form>
+            <table class="ps-table ps-table-default ps-table-outline">
+              <colgroup>
+                <col style="width:150px">
+                <col style="width:150px">
+                <col style="width:170px">
+                <col style="width:250px">
+              </colgroup>
+              <tr class="ps-table-environment-header">
+                <th> {{ $t('版本号') }} </th>
+                <th> {{ $t('提交人') }} </th>
+                <th> {{ $t('提交时间') }} </th>
+                <th> {{ $t('注释') }} </th>
+              </tr>
+              <tr
+                v-if="!commitsList.length"
+                class="ps-table-slide-up"
+              >
+                <td colspan="4">
+                  <div class="ps-no-result">
+                    <div class="text">
+                      <p><i class="paasng-icon paasng-empty no-data" /></p>
+                      <p> {{ $t('暂无版本差异记录') }} </p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tbody
+                v-for="(cItem, index) in commitsList"
+                v-else
+                :key="index"
+                :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]"
+              >
+                <tr
+                  class="ps-table-slide-up"
+                  @click.stop.prevent="handleToggleCommitsDetail(index)"
+                >
+                  <td class="pl50">
+                    <i class="icon" />
+                    <a>{{ cItem.revision }}</a>
+                  </td>
+                  <td>{{ cItem.author }}</td>
+                  <td>{{ cItem.date }}</td>
+                  <td>{{ cItem.message }}</td>
+                </tr>
+                <tr class="ps-table-slide-down">
+                  <td colspan="4">
+                    <pre>
+                                            <p
+v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
+:key="chagnItemIndex"
+>{{ chagnItem[0] }} {{ chagnItem[1] }}</p>
+                                        </pre>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </paas-loading>
+      </div>
+    </bk-dialog>
 
-        <bk-dialog
-            width="480"
-            :title="stopDeployConf.title"
-            :theme="'primary'"
-            :mask-close="false"
-            :draggable="false"
-            v-model="stopDeployConf.visiable"
-            header-position="left"
-            @confirm="confirmStopDeploy"
-            @cancel="cancelStopDeploy"
-            @after-leave="afterLeaveStopDeploy">
-            <div v-if="stopDeployConf.stage === 'build'"> {{ $t('数据库如有变更操作') }}， <span style="color: #f00;">
-                {{ $t('数据库变更可能会异常中断且无法回滚') }} </span> ，{{ $t('请留意表结构') }}。
-            </div>
-            <div v-else>
-                {{ $t('部署命令已经下发') }}， <span style="color: #f00;">{{ $t('仅停止检查部署结果') }} </span> ，{{ $t('请留意进程状态') }}。
-            </div>
-        </bk-dialog>
-    </paas-content-loader>
+    <bk-dialog
+      v-model="offlineAppDialog.visiable"
+      width="450"
+      :title="`${$t('下架模块')}${curAppModule.name}${environment === 'stag' ? $t('预发布环境') : $t('生产环境') }`"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :loading="offlineAppDialog.isLoading"
+      @confirm="confirmOfflineApp"
+      @cancel="cancelOfflineApp"
+    >
+      <div class="tl">
+        {{ $t('模块下架，会停止当前模块下所有进程，增强服务等模块的资源仍然保留，确认下架？') }}
+      </div>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="confirmDeployConf.visiable"
+      width="480"
+      :title="confirmDeployConf.title"
+      :theme="'primary'"
+      :mask-close="false"
+      :draggable="false"
+      header-position="left"
+      :show-footer="!schemaIsLoading"
+      @confirm="createDeploy"
+      @cancel="handleCancelDeploy"
+    >
+      <template slot="footer">
+        <bk-button
+          v-if="confirmDeployConf.architecture !== 'arm64'"
+          :theme="'primary'"
+          :title="$t('主要按钮')"
+          class="mr10"
+          @click="createDeploy"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          :theme="'default'"
+          type="submit"
+          :title="$t('基础按钮')"
+          class="mr10"
+          @click="handleCancelDeploy"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+      <bk-container
+        :col="12"
+        :margin="0"
+      >
+        <bk-row
+          v-if="!isLesscodeApp && curAppModule.source_origin === GLOBAL.APP_TYPES.IMAGE"
+          class="mb15"
+        >
+          <bk-col
+            class="pr0 f14 "
+            :span="3"
+          >
+            <span class="confirm-key"> {{ $t('镜像标签：') }} </span>
+          </bk-col>
+          <bk-col
+            class="pl0 f14"
+            :span="9"
+          >
+            <span class="confirm-value">{{ confirmDeployConf.branchName }}</span>
+          </bk-col>
+        </bk-row>
+        <bk-row
+          v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE"
+          class="mb15"
+        >
+          <bk-col
+            class="pr0 f14 "
+            :span="3"
+          >
+            <span class="confirm-key"> {{ $t('分支名称：') }} </span>
+          </bk-col>
+          <bk-col
+            class="pl0 f14"
+            :span="9"
+          >
+            <span class="confirm-value">{{ confirmDeployConf.branchName }}</span>
+          </bk-col>
+        </bk-row>
+        <bk-row
+          v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE"
+          class="mb15"
+        >
+          <bk-col
+            class="pr0 f14 "
+            :span="3"
+          >
+            <span class="confirm-key"> {{ $t('版本：') }} </span>
+          </bk-col>
+          <bk-col
+            class="pl0 f14"
+            :span="9"
+          >
+            <span class="confirm-value">{{ confirmDeployConf.version }}</span>
+          </bk-col>
+        </bk-row>
+        <template v-if="curAppModule.source_origin !== GLOBAL.APP_TYPES.IMAGE">
+          <bk-row
+            v-if="confirmDeployConf.updateTime"
+            class="mb15"
+          >
+            <bk-col
+              class="pr0 f14"
+              :span="3"
+            >
+              <span class="confirm-key"> {{ $t('最近更新时间：') }} </span>
+            </bk-col>
+            <bk-col
+              class="pl0 f14"
+              :span="9"
+            >
+              <span class="confirm-value">{{ changeTime(confirmDeployConf.updateTime) }}</span>
+            </bk-col>
+          </bk-row>
+          <bk-row
+            v-if="confirmDeployConf.message"
+            class="mb15"
+          >
+            <bk-col
+              class="pr0 f14"
+              :span="3"
+            >
+              <span class="confirm-key"> {{ $t('版本描述：') }} </span>
+            </bk-col>
+            <bk-col
+              class="pl0 f14"
+              :span="9"
+            >
+              <pre class="confirm-value desc">{{ confirmDeployConf.message }}</pre>
+            </bk-col>
+          </bk-row>
+          <template v-if="branchInfoType === 'image'">
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14"
+                :span="10"
+              >
+                <bk-checkbox
+                  v-model="imagePullPolicy"
+                  :true-value="'Always'"
+                  :false-value="'IfNotPresent'"
+                >
+                  {{ $t('总在创建进程实例前拉取镜像') }}
+                </bk-checkbox>
+              </bk-col>
+              <bk-col
+                class="pr0 f14"
+                :span="12"
+              >
+                <p class="mirrorInfo">
+                  {{ $t('每个镜像版本默认仅拉取一次，如版本内容有更新，请勾选该项') }}
+                </p>
+              </bk-col>
+            </bk-row>
+          </template>
+        </template>
+        <template v-else>
+          <paas-content-loader
+            :is-loading="schemaIsLoading"
+            placeholder="index-loading"
+            :offset-top="0"
+            :height="140"
+            class="app-container middle framework-wrapper"
+          >
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14"
+                :span="3"
+              >
+                <span class="confirm-key"> {{ $t('镜像架构：') }} </span>
+              </bk-col>
+              <bk-col
+                class="pl0 f14"
+                :span="9"
+              >
+                <span class="confirm-value">{{ confirmDeployConf.architecture || '--' }}</span>
+              </bk-col>
+            </bk-row>
+            <bk-row class="mb15">
+              <bk-col
+                class="pr0 f14"
+                :span="3"
+              >
+                <span class="confirm-key"> {{ $t('最近更新时间：') }} </span>
+              </bk-col>
+              <bk-col
+                class="pl0 f14"
+                :span="9"
+              >
+                <span class="confirm-value">{{ changeTime(confirmDeployConf.lastUpdate) || '--' }}</span>
+              </bk-col>
+            </bk-row>
+            <bk-row
+              v-if="confirmDeployConf.architecture === 'amd64'"
+              class="mb15"
+            >
+              <bk-col
+                class="pr0 f14"
+                :span="10"
+              >
+                <bk-checkbox
+                  v-model="imagePullPolicy"
+                  :true-value="'Always'"
+                  :false-value="'IfNotPresent'"
+                >
+                  {{ $t('总在创建进程实例前拉取镜像') }}
+                </bk-checkbox>
+              </bk-col>
+              <bk-col
+                class="pr0 f14"
+                :span="12"
+              >
+                <p class="mirrorInfo">
+                  {{ $t('每个镜像标签（Tag）默认仅拉取一次，如旧标签内容有更新，请勾选该项') }}
+                </p>
+              </bk-col>
+            </bk-row>
+            <bk-row
+              v-else
+              class="mb15"
+            >
+              <template v-if="confirmDeployConf.architecture">
+                <bk-col
+                  class="pr0 f14"
+                  :span="12"
+                >
+                  <div :class="['ps-tip-block', 'error-wrapper', 'is-danger']">
+                    <p>
+                      {{ $t('当前不支持') }} {{ confirmDeployConf.architecture }} {{ $t('架构的镜像部署，请参考') }} <a
+                        :href="GLOBAL.DOC.ARCHITECTURE_PLATFORM_IMAGE"
+                        target="_blank"
+                        class="doc-style"
+                      > {{ $t('文档重新构建镜像') }} </a>
+                    </p>
+                  </div>
+                </bk-col>
+              </template>
+            </bk-row>
+          </paas-content-loader>
+        </template>
+      </bk-container>
+    </bk-dialog>
+
+    <bk-dialog
+      v-model="stopDeployConf.visiable"
+      width="480"
+      :title="stopDeployConf.title"
+      :theme="'primary'"
+      :mask-close="false"
+      :draggable="false"
+      header-position="left"
+      @confirm="confirmStopDeploy"
+      @cancel="cancelStopDeploy"
+      @after-leave="afterLeaveStopDeploy"
+    >
+      <div v-if="stopDeployConf.stage === 'build'">
+        {{ $t('数据库如有变更操作') }}， <span style="color: #f00;">
+          {{ $t('数据库变更可能会异常中断且无法回滚') }} </span> ，{{ $t('请留意表结构') }}。
+      </div>
+      <div v-else>
+        {{ $t('部署命令已经下发') }}， <span style="color: #f00;">{{ $t('仅停止检查部署结果') }} </span> ，{{ $t('请留意进程状态') }}。
+      </div>
+    </bk-dialog>
+  </paas-content-loader>
 </template>
 
 <script>
@@ -836,7 +1331,7 @@
                     };
                 }
             },
-                      
+
             branchEmptyText () {
                 const sourceType = this.overview.repo.source_type;
                 if (['bare_svn', 'bare_git'].includes(sourceType)) {
@@ -1193,9 +1688,9 @@
             handleDeploy () {
                 this.schemaIsLoading = true;
                 this.getBranchInfoType();
-                
+
                 this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE ? this.getSchemaInfo() : this.schemaIsLoading = false;
- 
+
                 if (this.deployDisabled) {
                     return false;
                 }
@@ -1229,14 +1724,14 @@
                     });
                     return false;
                 }
-                
+
                 this.confirmDeployConf.branchName = branchInfo.name;
                 this.confirmDeployConf.version = this.formatRevision(branchInfo.revision);
                 this.confirmDeployConf.message = branchInfo.message || '';
                 this.confirmDeployConf.updateTime = branchInfo.last_update || '';
                 this.confirmDeployConf.visiable = true;
             },
-            
+
             /**
              * 获取架构信息
              */
@@ -1549,7 +2044,7 @@
                         moduleId: this.curModuleId,
                         pageParams
                     });
-                    
+
                     const operation = res.results[0];
                     const reg = RegExp('^[a-z0-9]{40}$');
                     if (operation && operation.operation_type === 'online') {
@@ -1628,7 +2123,7 @@
 
             handleBranchSelect (value, option) {
             },
- 
+
             /**
              * 查看代码提交记录
              */
@@ -1757,7 +2252,7 @@
                             message: this.$t('请联系应用管理员')
                         });
                         break;
-                    
+
                     // 未完善进程启动命令
                     case 'NEED_TO_COMPLETE_PROCFILE':
                         this.$router.push({
@@ -2372,7 +2867,7 @@
                             downloadBtnText: this.initTemplateDesc === '--' ? '' : this.$t('下载模板代码')
                         });
                     }
-                    
+
                     if (this.curAppModule.web_config.runtime_type !== 'custom_image') {
                         const smartRoute = [
                             {
@@ -2600,7 +3095,7 @@
                     });
                 }
             },
-            
+
             /**
              * 初始化模板说明
              */

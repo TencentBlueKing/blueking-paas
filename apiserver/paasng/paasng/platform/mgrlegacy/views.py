@@ -27,7 +27,8 @@ from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
-from paasng.accounts.permissions.application import application_perm_required
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import check_application_perm
 from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.platform.mgrlegacy.constants import MigrationStatus
@@ -84,10 +85,10 @@ class LegacyAppViewset(viewsets.ViewSet):
             serializer = LegacyAppSLZ(serializer_data, many=True)
             return Response({'count': len(result_list), 'data': serializer.data})
 
-    @application_perm_required('view_application')
     def exposed_url_info(self, request, code, module_name=None):
         """根据 app code 查询应用的访问地址"""
         application = Application.objects.get(code=code)
+        check_application_perm(request.user, application, AppAction.VIEW_BASIC_INFO)
         module = application.get_module(module_name)
 
         return Response(

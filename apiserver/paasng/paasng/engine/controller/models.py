@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from itertools import chain
 from operator import attrgetter
 from typing import List
 
@@ -56,6 +57,17 @@ class IngressConfig:
     def __attrs_post_init__(self):
         self.app_root_domains = sorted(self.app_root_domains, key=attrgetter("reserved"))
         self.sub_path_domains = sorted(self.sub_path_domains, key=attrgetter("reserved"))
+
+    def find_https_enabled(self, host: str) -> bool:
+        """Find "https-enabled" status by looping over all configured domains,
+        return false if no matched domains can be found by given host.
+
+        :param host: Any valid host name
+        """
+        for d in chain(self.app_root_domains, self.sub_path_domains):
+            if d.name == host:
+                return d.https_enabled
+        return False
 
     @property
     def default_root_domain(self) -> Domain:

@@ -421,11 +421,11 @@ def get_preallocated_address(
         cluster = helper.get_default_cluster()
 
     ingress_config = cluster.ingress_config
-    pre_subpathes = get_preallocated_path(app_code, ingress_config, module_name=module_name)
-    if pre_subpathes:
+    pre_subpaths = get_preallocated_path(app_code, ingress_config, module_name=module_name)
+    if pre_subpaths:
         return PreAddresses(
-            stag=pre_subpathes.stag.as_url().as_address(),
-            prod=pre_subpathes.prod.as_url().as_address(),
+            stag=pre_subpaths.stag.as_url().as_address(),
+            prod=pre_subpaths.prod.as_url().as_address(),
         )
 
     pre_subdomains = get_preallocated_domain(app_code, ingress_config, module_name=module_name)

@@ -21,7 +21,7 @@ from pathlib import PosixPath
 
 import pytest
 
-from paasng.changelog.log import Changelog
+from paasng.changelog.query import Changelog
 
 
 class TestChangelog:

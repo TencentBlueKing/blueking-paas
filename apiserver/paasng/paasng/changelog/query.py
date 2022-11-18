@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 
 
 class Changelog:
+    """
+    变更(版本)日志
+
+    :param log_path: 版本日志存放目录. 目录下包含语言子目录, 如 /xxx/changelog/zh-cn
+    """
+
     def __init__(self, log_path: str = settings.CHANGELOG_PATH):
         self.log_path = Path(log_path) / get_language()
 

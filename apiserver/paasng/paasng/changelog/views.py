@@ -20,7 +20,7 @@ to the current version of the project delivered to anyone in the future.
 from rest_framework import viewsets
 from rest_framework.response import Response
 
-from .log import Changelog
+from .query import Changelog
 
 
 class ChangelogViewSet(viewsets.ViewSet):

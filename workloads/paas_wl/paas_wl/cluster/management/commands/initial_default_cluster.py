@@ -65,7 +65,7 @@ class Command(BaseCommand):
     def render_data(self) -> InitialClusterData:
         try:
             data = {
-                "region": "default",
+                "region": env.str("PAAS_WL_CLUSTER_REGION", "default"),
                 "name": "default-main",
                 "description": "默认应用集群",
                 "is_default": True,

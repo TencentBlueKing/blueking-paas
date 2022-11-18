@@ -343,7 +343,6 @@
                         releaseId: this.$route.query.release_id,
                         stageId: this.stageId
                     };
-                    console.log('params11', params);
                     const res = await this.$store.dispatch('plugin/getPluginRelease', params);
                     this.stageId = res.stage_id;
                     this.isNext = res.status === 'successful';

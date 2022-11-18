@@ -17,17 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
-from rest_framework.response import Response
-
-from .query import Changelog
+from rest_framework import serializers
 
 
-class ChangelogViewSet(viewsets.ViewSet):
-    def list_versions(self, request):
-        versions = Changelog().list_versions()
-        return Response(versions)
-
-    def get_log_detail(self, request, version):
-        detail = Changelog().get_log_detail(version)
-        return Response(detail)
+class LogDetailSLZ(serializers.Serializer):
+    version = serializers.CharField()
+    date = serializers.CharField()
+    content = serializers.CharField()

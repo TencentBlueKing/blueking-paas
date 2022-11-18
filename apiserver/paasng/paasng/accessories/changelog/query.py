@@ -20,13 +20,23 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import time
 from pathlib import Path, PosixPath
-from typing import Dict, List, Tuple
+from typing import List
 
+from attrs import define
 from django.conf import settings
 from django.utils.translation import get_language
 from packaging.version import InvalidVersion, Version, parse
 
+from .exceptions import InvalidChangelogError
+
 logger = logging.getLogger(__name__)
+
+
+@define
+class LogDetail:
+    version: str
+    date: str
+    content: str
 
 
 class Changelog:
@@ -39,58 +49,43 @@ class Changelog:
     def __init__(self, log_path: str = settings.CHANGELOG_PATH):
         self.log_path = Path(log_path) / get_language()
 
-    def list_versions(self) -> List[Dict[str, str]]:
-        """查询版本列表"""
+    def list_logs(self) -> List[LogDetail]:
+        """查询所有日志. 按照版本号语义降序排序"""
         if not self.log_path.is_dir():
             return []
 
-        versions = []
-        for file in self._iter_log_path():
-            version, date = self._extract_version_and_date(file.stem)
-            versions.append({'version': version, 'date': date})
-
-        # 按照版本号从新到旧的排序
-        versions = sorted(versions, key=lambda v: Version(v['version']), reverse=True)
-        return versions
-
-    def get_log_detail(self, version: str) -> str:
-        """查询版本详情"""
-        if not self.log_path.is_dir():
-            return ''
-
-        for file in self._iter_log_path():
-            v, _ = self._extract_version_and_date(file.stem)
-            if version == v:
-                return file.read_text()
-
-        return ''
-
-    def _iter_log_path(self):
-        """迭代目录下有效的 changelog 文件"""
+        logs = []
         for file in self.log_path.iterdir():
-            if file.is_file() and self._is_valid_file_name(file):
-                yield file
+            # 非文件或者非 md 结尾的文件忽略
+            if not file.is_file():
+                logger.error(f'ignore changelog file {file.name}')
+                continue
 
-    def _is_valid_file_name(self, file: PosixPath) -> bool:
-        """判断 changelog 文件名是否有效.
+            try:
+                detail = self._parse_log(file)
+            except InvalidChangelogError as e:
+                logger.error(f'invalid changelog file name {file.name}: {e}')
+            else:
+                logs.append(detail)
 
-        有效的文件名格式如 v1.1.1_2022-11-17.md
+        # 按照版本号语义降序排序
+        logs = sorted(logs, key=lambda l: Version(l.version), reverse=True)
+        return logs
+
+    def _parse_log(self, file: PosixPath) -> LogDetail:
+        """解析日志文件, 获取版本, 日期以及日志内容
+
+        :raise InvalidChangelogError. 表示解析到的日志文件无效. 有效的文件名格式如 v1.1.1_2022-11-17.md
         """
         if file.suffix != '.md':
-            return False
+            raise InvalidChangelogError('file name not end with .md')
 
-        version, date = self._extract_version_and_date(file.stem)
+        version, _, date = file.stem.partition('_')
 
         try:
             parse(version)
             time.strptime(date, '%Y-%m-%d')
         except (TypeError, ValueError, InvalidVersion):
-            logger.error(f'invalid file name {file.name}')
-            return False
-        else:
-            return True
+            raise InvalidChangelogError('file name contains invalid version or date time')
 
-    def _extract_version_and_date(self, file_stem: str) -> Tuple[str, str]:
-        """从文件名中提取出版本和日期信息"""
-        version, _, date = file_stem.partition('_')
-        return version, date
+        return LogDetail(version=version, date=date, content=file.read_text())

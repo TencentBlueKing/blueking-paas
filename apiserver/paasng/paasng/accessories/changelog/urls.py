@@ -17,25 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from pathlib import PosixPath
+from django.urls import path
 
-import pytest
+from .views import ChangelogViewSet
 
-from paasng.changelog.query import Changelog
-
-
-class TestChangelog:
-    @pytest.mark.parametrize(
-        'file_name, is_valid',
-        [
-            ('v1.0.0_2022-10-17.md', True),
-            ('V1.0.0_2022-10-17.md', True),
-            ('V1.0.0-beta_2022-10-17.md', True),
-            ('V1.0.1-2022-10-17.md', False),
-            ('V1.0.1_2022-13-17.md', False),
-            ('v1.0.0_2022-10-17.txt', False),
-        ],
-    )
-    def test_is_valid_file_name(self, file_name, is_valid):
-        changelog = Changelog()
-        assert changelog._is_valid_file_name(PosixPath(file_name)) is is_valid
+urlpatterns = [
+    path('api/changelogs/', ChangelogViewSet.as_view({'get': 'list'})),
+]

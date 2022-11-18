@@ -77,5 +77,5 @@ urlpatterns = [
     url(r'^', include('paasng.service_proxy.urls')),
     # switch language
     url(r'^i18n/setlang/$', django_i18n_views.set_language, name="set_language"),
-    path('api/changelog/', include('paasng.changelog.urls')),
+    path('', include('paasng.accessories.changelog.urls')),
 ]

@@ -17,11 +17,15 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from django.urls import path
+from rest_framework import viewsets
+from rest_framework.response import Response
 
-from .views import ChangelogViewSet
+from .query import Changelog
+from .serializers import LogDetailSLZ
 
-urlpatterns = [
-    path('versions/', ChangelogViewSet.as_view({'get': 'list_versions'})),
-    path('versions/<str:version>/log_detail/', ChangelogViewSet.as_view({'get': 'get_log_detail'})),
-]
+
+class ChangelogViewSet(viewsets.ViewSet):
+    def list(self, request):
+        logs = Changelog().list_logs()
+        serializer = LogDetailSLZ(logs, many=True)
+        return Response(serializer.data)

@@ -19,13 +19,14 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
+from functools import cmp_to_key
 from pathlib import Path, PosixPath
 from typing import List
 
 from attrs import define
 from django.conf import settings
 from django.utils.translation import get_language
-from packaging.version import InvalidVersion, Version, parse
+from semver import VersionInfo, compare
 
 from .exceptions import InvalidChangelogError
 
@@ -37,6 +38,12 @@ class LogDetail:
     version: str
     date: str
     content: str
+
+
+def _compare_by_semver(x: LogDetail, y: LogDetail):
+    """通过语义版本号比较大小"""
+    # 去除版本号中的前缀 V
+    return compare(x.version[1:], y.version[1:])
 
 
 class Changelog:
@@ -56,36 +63,38 @@ class Changelog:
 
         logs = []
         for file in self.log_path.iterdir():
-            # 非文件或者非 md 结尾的文件忽略
-            if not file.is_file():
-                logger.error(f'ignore changelog file {file.name}')
-                continue
-
             try:
                 detail = self._parse_log(file)
             except InvalidChangelogError as e:
-                logger.error(f'invalid changelog file name {file.name}: {e}')
+                logger.error(f'invalid changelog file {file.name}: {e}')
             else:
                 logs.append(detail)
 
         # 按照版本号语义降序排序
-        logs = sorted(logs, key=lambda l: Version(l.version), reverse=True)
+        logs = sorted(logs, key=cmp_to_key(_compare_by_semver), reverse=True)
         return logs
 
     def _parse_log(self, file: PosixPath) -> LogDetail:
         """解析日志文件, 获取版本, 日期以及日志内容
 
-        :raise InvalidChangelogError. 表示解析到的日志文件无效. 有效的文件名格式如 v1.1.1_2022-11-17.md
+        :raise InvalidChangelogError. 表示解析到的日志文件无效. 有效的文件名格式如 V1.1.1_2022-11-17.md
         """
+        if not file.is_file():
+            raise InvalidChangelogError('not a file')
+
         if file.suffix != '.md':
-            raise InvalidChangelogError('file name not end with .md')
+            raise InvalidChangelogError('file name does not ends with .md')
+
+        if not file.name.startswith('V'):
+            raise InvalidChangelogError('file name must starts with letter V')
 
         version, _, date = file.stem.partition('_')
 
         try:
-            parse(version)
+            # 去除版本号中的前缀 V 后校验语义版本
+            VersionInfo.parse(version[1:])
             time.strptime(date, '%Y-%m-%d')
-        except (TypeError, ValueError, InvalidVersion):
+        except (TypeError, ValueError):
             raise InvalidChangelogError('file name contains invalid version or date time')
 
         return LogDetail(version=version, date=date, content=file.read_text())

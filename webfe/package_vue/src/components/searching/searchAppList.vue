@@ -69,7 +69,9 @@
         watch: {
             filterKey () {
                 this.curActiveIndex = -1;
-                this.fetchObj();
+                if (this.$route.path.indexOf('/plugin-center') === -1) {
+                    this.fetchObj();
+                }
             }
         },
         created () {

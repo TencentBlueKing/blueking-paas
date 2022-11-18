@@ -38,10 +38,7 @@
             :class="{ 'has-angle': index !== 1 }"
             :to="{ name: 'myApplications' }"
           >
-            {{ item.text }}<i
-              v-show="index !== 1"
-              class="paasng-icon paasng-angle-down"
-            />
+            {{ item.text }}
           </router-link>
           <router-link
             v-else-if="index === 2"

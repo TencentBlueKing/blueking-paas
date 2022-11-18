@@ -287,7 +287,8 @@
                 if (status === 'pending') {
                     console.log(status);
                 } else {
-                    this.fetchPluginRelease();
+                    this.pluginDeploy();
+                    // this.fetchPluginRelease();
                 }
             },
 
@@ -369,6 +370,7 @@
                             this.curStep = 1;
                             break;
                     }
+                    console.log('this.stepsData', this.stepsData);
                     // if (res.status === 'successful') {
                     //     this.stagesIndex = this.stagesIndex + 1;
                     //     this.curStep = this.stagesIndex + 1;
@@ -424,17 +426,29 @@
                         ...params,
                         data
                     });
-                    console.log('res', res);
+                    this.stageId = res.stage_id;
+                    this.status = res.status;
+                    const query = JSON.parse(JSON.stringify(this.$route.query));
+                    query.stage_id = this.stageId;
+                    this.$router.push({ name: 'pluginVersionRelease', query });
+                    this.fetchPluginRelease();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
                         message: e.detail || e.message || this.$t('接口异常')
                     });
+                } finally {
+                    setTimeout(() => {
+                        this.isTableLoading = false;
+                        this.isLoading = false;
+                    }, 200);
                 }
             },
 
             modifyStepsData (data) {
                 return data.map(item => {
+                    console.log('satus', item.status);
+                    // da根据 steps[i].status 来决定当前部署的状态
                     item.time = this.computedDeployTime(item.start_time, item.complete_time);
                     if (item.status === 'successful' || item.status === 'failed') {
                         item.tag = `

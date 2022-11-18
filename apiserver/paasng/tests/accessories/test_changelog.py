@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 """
 Tencent is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.

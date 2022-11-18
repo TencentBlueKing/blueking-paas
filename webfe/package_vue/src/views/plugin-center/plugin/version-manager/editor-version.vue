@@ -92,6 +92,7 @@
               </bk-select>
               <div class="ribbon">
                 <div
+                  v-if="curVersion.current_release"
                   class="mr10"
                   @click="handleShowCommits"
                 >

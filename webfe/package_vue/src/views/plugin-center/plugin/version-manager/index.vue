@@ -27,7 +27,7 @@
             v-model="keyword"
             class="fr"
             :clearable="true"
-            :placeholder="$t('版本号、代码分支、代码Commit')"
+            :placeholder="$t('版本号、代码分支')"
             :right-icon="'bk-icon icon-search'"
             style="width: 480px;"
             @enter="handleSearch"
@@ -76,9 +76,6 @@
           <bk-table-column
             :label="$t('创建人')"
             prop="creator"
-            column-key="creator"
-            :filters="creatorFilters"
-            :filter-multiple="false"
           >
             <template slot-scope="{ row }">
               <span>{{ row.creator || '--' }}</span>
@@ -273,8 +270,7 @@
                 versionDetailLoading: true,
                 versionStatus: PLUGIN_VERSION_STATUS,
                 filterCreator: '',
-                filterStatus: '',
-                allVersionList: []
+                filterStatus: ''
             };
         },
         computed: {
@@ -286,16 +282,6 @@
             },
             pluginId () {
                 return this.$route.params.id;
-            },
-            creatorFilters () {
-                // 根据当前列表进行赛选
-                const creatorList = this.allVersionList.map(versionItem => {
-                    return {
-                        value: versionItem.creator,
-                        text: versionItem.creator
-                    };
-                });
-                return creatorList;
             },
             statusFilters () {
                 const statusList = [];
@@ -370,9 +356,6 @@
                     const res = await this.$store.dispatch('plugin/getVersionsManagerList', { data, pageParams });
                     this.versionList = res.results;
                     this.pagination.count = res.count;
-                    if (!this.filterStatus && !this.filterCreator && !this.keyword) {
-                        this.allVersionList = res.results;
-                    }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

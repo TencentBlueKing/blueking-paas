@@ -343,6 +343,7 @@
                         releaseId: this.$route.query.release_id,
                         stageId: this.stageId
                     };
+                    console.log('params11', params);
                     const res = await this.$store.dispatch('plugin/getPluginRelease', params);
                     this.stageId = res.stage_id;
                     this.isNext = res.status === 'successful';
@@ -402,6 +403,29 @@
                         return e;
                     });
                     this.allStages = stagesData;
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                }
+            },
+
+            // 重新部署
+            async pluginDeploy () {
+                const params = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: this.$route.query.release_id,
+                    stageId: this.stageId
+                };
+                const data = {};
+                try {
+                    const res = await this.$store.dispatch('plugin/pluginDeploy', {
+                        ...params,
+                        data
+                    });
+                    console.log('res', res);
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

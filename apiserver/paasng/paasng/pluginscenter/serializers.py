@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Optional, Type
 
 import semver
+from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -55,6 +56,15 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
         exclude = ("uuid", "identifier", "created", "updated", "release_revision", "release_stages", "log_config")
 
 
+class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
+    id = serializers.CharField(source="identifier")
+    name = TranslatedCharField()
+
+    class Meta:
+        model = PluginDefinition
+        fields = ("id", "name")
+
+
 class PlainReleaseStageSLZ(serializers.Serializer):
     id = serializers.CharField(help_text="阶段id")
     name = serializers.CharField(help_text="阶段名称")
@@ -78,6 +88,13 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data['creator']:
+            user = get_user_by_user_id(data['creator'])
+            data['creator'] = user.username
+        return data
 
     class Meta:
         model = PluginRelease

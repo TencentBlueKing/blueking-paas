@@ -59,3 +59,11 @@ class AlertRuleSLZ(serializers.ModelSerializer):
 class SupportedAlertSLZ(serializers.Serializer):
     alert_code = serializers.CharField()
     display_name = serializers.CharField()
+
+
+class ListAlertEvents(serializers.Serializer):
+    alert_code = serializers.CharField(required=False)
+    environment = serializers.ChoiceField(choices=('stag', 'prod'), required=False)
+    status = serializers.ChoiceField(choices=('ABNORMAL', 'CLOSED', 'RECOVERED'), required=False)
+
+    # MINE, ABNORMAL, CLOSED, RECOVERED

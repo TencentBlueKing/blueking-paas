@@ -247,9 +247,10 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     def get_filter_params(self, request):
         """Get plug-in list filtering parameters, such as plug-in type, development language, etc."""
+        pds = PluginDefinition.objects.all()
         return Response(
             data={
-                "plugin_types": PluginDefinition.objects.values_list('identifier', flat=True),
+                "plugin_types": serializers.PluginDefinitionBasicSLZ(pds, many=True).data,
                 "languages": PluginBasicInfoDefinition.get_languages(),
             }
         )

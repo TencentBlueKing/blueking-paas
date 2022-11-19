@@ -77,7 +77,7 @@ class Changelog:
     def _parse_log(self, file: PosixPath) -> LogDetail:
         """解析日志文件, 获取版本, 日期以及日志内容
 
-        :raise InvalidChangelogError. 表示解析到的日志文件无效. 有效的文件名格式如 V1.1.1_2022-11-17.md
+        :raises 解析到的日志文件无效时, 抛出 InvalidChangelogError 异常. 有效的文件名格式如 V1.1.1_2022-11-17.md
         """
         if not file.is_file():
             raise InvalidChangelogError('not a file')

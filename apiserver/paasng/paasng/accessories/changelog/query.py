@@ -40,12 +40,6 @@ class LogDetail:
     content: str
 
 
-def _compare_by_semver(x: LogDetail, y: LogDetail):
-    """通过语义版本号比较大小"""
-    # 去除版本号中的前缀 V
-    return compare(x.version[1:], y.version[1:])
-
-
 class Changelog:
     """
     变更(版本)日志
@@ -98,3 +92,9 @@ class Changelog:
             raise InvalidChangelogError('file name contains invalid version or date time')
 
         return LogDetail(version=version, date=date, content=file.read_text())
+
+
+def _compare_by_semver(x: LogDetail, y: LogDetail):
+    """通过语义版本号比较大小"""
+    # 去除版本号中的前缀 V
+    return compare(x.version[1:], y.version[1:])

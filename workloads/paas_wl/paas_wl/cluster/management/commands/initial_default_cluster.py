@@ -65,33 +65,33 @@ class Command(BaseCommand):
     def render_data(self) -> InitialClusterData:
         try:
             data = {
-                "region": "default",
+                "region": env.str("PAAS_WL_CLUSTER_REGION", "default"),
                 "name": "default-main",
                 "description": "默认应用集群",
                 "is_default": True,
                 "ingress_config": {
-                    "default_ingress_domain_tmpl": "%s." + env.str("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN"),
-                    "frontend_ingress_ip": env.str("PAAS_WL_CLUSTER_FRONTEND_INGRESS_IP"),
+                    "default_ingress_domain_tmpl": "%s." + env.str("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", ""),
+                    "frontend_ingress_ip": env.str("PAAS_WL_CLUSTER_FRONTEND_INGRESS_IP", ""),
                     "app_root_domains": [
                         {
-                            "name": env.str("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN"),
-                            "https_enabled": env.bool("PAAS_WL_CLUSTER_ENABLED_HTTPS_BY_DEFAULT"),
+                            "name": env.str("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", ""),
+                            "https_enabled": env.bool("PAAS_WL_CLUSTER_ENABLED_HTTPS_BY_DEFAULT", False),
                         }
                     ],
                     "sub_path_domains": [
                         {
-                            "name": env.str("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN"),
-                            "https_enabled": env.bool("PAAS_WL_CLUSTER_ENABLED_HTTPS_BY_DEFAULT"),
+                            "name": env.str("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", ""),
+                            "https_enabled": env.bool("PAAS_WL_CLUSTER_ENABLED_HTTPS_BY_DEFAULT", False),
                         }
                     ],
                     "port_map": {
-                        "http": env.int("PAAS_WL_CLUSTER_HTTP_PORT"),
-                        "https": env.int("PAAS_WL_CLUSTER_HTTPS_PORT"),
+                        "http": env.int("PAAS_WL_CLUSTER_HTTP_PORT", 80),
+                        "https": env.int("PAAS_WL_CLUSTER_HTTPS_PORT", 443),
                     },
                 },
                 "annotations": {
-                    "bcs_cluster_id": env.str("PAAS_WL_CLUSTER_BCS_CLUSTER_ID"),
-                    "bcs_project_id": env.str("PAAS_WL_CLUSTER_BCS_PROJECT_ID"),
+                    "bcs_cluster_id": env.str("PAAS_WL_CLUSTER_BCS_CLUSTER_ID", ""),
+                    "bcs_project_id": env.str("PAAS_WL_CLUSTER_BCS_PROJECT_ID", ""),
                 },
                 "ca_data": env.str("PAAS_WL_CLUSTER_CA_DATA", ""),
                 "cert_data": env.str("PAAS_WL_CLUSTER_CERT_DATA", ""),

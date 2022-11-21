@@ -2,6 +2,7 @@ import os
 
 import pytest
 from django.core.management import call_command
+from django.utils.crypto import get_random_string
 
 from paas_wl.cluster.models import APIServer, Cluster
 
@@ -10,6 +11,8 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture()
 def cluster_envs(monkeypatch):
+    monkeypatch.setenv("PAAS_WL_CLUSTER_REGION", get_random_string(6))
+    monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", "apps2.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_HTTP_PORT", "880")

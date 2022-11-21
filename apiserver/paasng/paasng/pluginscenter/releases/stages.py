@@ -75,6 +75,7 @@ class DeployAPIStage(BaseStageController):
         basic_info = super().render_to_view()
         # TODO: 在异步任务轮询查询部署结果
         check_deploy_result(self.pd, self.plugin, self.release)
+        self.stage.refresh_from_db()
         return {
             **basic_info,
             "detail": {"steps": self.stage.api_detail["steps"], **get_deploy_logs(self.pd, self.plugin, self.release)},
@@ -131,7 +132,7 @@ class BuiltinStage(BaseStageController):
             self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
 
     def render_to_view(self) -> Dict:
-        basic_info = self.render_to_view()
+        basic_info = super().render_to_view()
         if self.stage.stage_id == "market":
             market_info = self.plugin.pluginmarketinfo
             if self.pd.market_info_definition.storage == constants.MarketInfoStorageType.THIRD_PARTY:

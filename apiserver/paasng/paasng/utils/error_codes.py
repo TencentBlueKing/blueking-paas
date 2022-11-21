@@ -137,6 +137,12 @@ class ErrorCodes:
     # Admin 相关
     CONTROLLER_INTERNAL_ERROR = ErrorCode(_('engine 服务错误'))
 
+    # 权限中心相关
+    INITIALIZE_APP_MEMBERS_ERROR = ErrorCode(_('初始化应用成员信息失败'))
+    CREATE_APP_MEMBERS_ERROR = ErrorCode(_('添加应用成员失败'))
+    UPDATE_APP_MEMBERS_ERROR = ErrorCode(_('修改应用成员失败'))
+    DELETE_APP_MEMBERS_ERROR = ErrorCode(_('删除应用成员失败'))
+
     # 平台升级提醒
     ACTION_NOT_AVAILABLE = ErrorCode(_('因该功能正在升级改造，操作暂不可用。'), status_code=503)
 

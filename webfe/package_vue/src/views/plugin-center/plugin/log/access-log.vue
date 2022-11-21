@@ -611,17 +611,19 @@
                         data: filter
                     });
                     const data = res.logs;
-                    this.logKeyList = Object.keys(res.logs[0]);
-                    // 字段列表
-                    this.fieldList = this.logKeyList.map(logKey => {
-                        if (!this.existFieldList.includes(logKey)) {
-                            return {
-                                name: logKey
-                            };
-                        }
-                        return false;
-                    });
-                    this.fieldList = this.fieldList.filter(item => item);
+                    if (data.length) {
+                        this.logKeyList = Object.keys(res.logs[0]);
+                        // 字段列表
+                        this.fieldList = this.logKeyList.map(logKey => {
+                            if (!this.existFieldList.includes(logKey)) {
+                                return {
+                                    name: logKey
+                                };
+                            }
+                            return false;
+                        });
+                        this.fieldList = this.fieldList.filter(item => item);
+                    }
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
                         item.timestamp = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');

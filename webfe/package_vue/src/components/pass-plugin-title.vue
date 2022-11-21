@@ -14,6 +14,8 @@
   </div>
 </template>
 <script>
+    import { bus } from '@/common/bus';
+
     export default {
         props: {
             name: {
@@ -47,7 +49,12 @@
         },
         methods: {
             goBack () {
-                this.$router.go(-1);
+                if (this.version) {
+                    bus.$emit('stop-deploy', true);
+                    this.$router.push({ name: 'pluginVersionManager' });
+                } else {
+                    this.$router.go(-1);
+                }
             }
         }
     };

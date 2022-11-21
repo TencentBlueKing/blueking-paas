@@ -209,6 +209,24 @@ export default {
     },
 
     /**
+         * 重新发布
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    republishRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/reset/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 部署上一步
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    backRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/back/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
          * 获取访问日志数据
          * @param {Object} params 请求参数：pdId, pluginId, releaseId
          */

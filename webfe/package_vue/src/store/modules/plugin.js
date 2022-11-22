@@ -209,6 +209,24 @@ export default {
     },
 
     /**
+         * 重新发布
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    republishRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/reset/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 部署上一步
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    backRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/back/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
          * 获取访问日志数据
          * @param {Object} params 请求参数：pdId, pluginId, releaseId
          */
@@ -227,6 +245,42 @@ export default {
          */
     deletePlugin ({ commit, state }, { pdId, pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/ `;
+      return http.delete(url, config);
+    },
+
+    /**
+         * 获取配置管理
+         * @param {Object} params 请求参数：pdId
+         */
+    getConfiguration ({ commit, state }, { pdId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/plugin_definitions/${pdId}/configuration_schema/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取环境变量配置
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getEnvVarList ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/configurations/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 添加/更新环境变量
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    editEnvVar ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/configurations/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 删除环境变量
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    deleteEnvVar ({ commit, state }, { pdId, pluginId, configId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/configurations/${configId}/`;
       return http.delete(url, config);
     }
   }

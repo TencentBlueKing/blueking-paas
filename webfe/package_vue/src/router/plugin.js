@@ -65,6 +65,12 @@ const pluginRoles = () => import(/* webpackChunkName: 'plugin-config' */'@/views
   window.showDeployTip(error);
 });
 
+const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/deploy-env/index').then(module => {
+  return module;
+}).catch(error => {
+  window.showDeployTip(error);
+});
+
 export const pluginRouter = [
   {
     path: '/plugin-center/',
@@ -105,6 +111,15 @@ export const pluginRouter = [
         name: 'pluginVersionManager',
         meta: {
           pathName: '版本管理',
+          capture403Error: false
+        }
+      },
+      {
+        path: ':pluginTypeId/:id/deploy-env',
+        component: pluginDeployEnv,
+        name: 'pluginDeployEnv',
+        meta: {
+          pathName: '环境变量',
           capture403Error: false
         }
       },

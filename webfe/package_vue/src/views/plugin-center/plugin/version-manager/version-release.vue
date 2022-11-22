@@ -175,6 +175,7 @@
   </div>
 </template>
 <script>
+    import { bus } from '@/common/bus';
     import user from '@/components/user';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import releaseTimeline from './release-timeline';
@@ -216,6 +217,8 @@
                 timer: null,
                 logs: [],
                 failedMessage: '',
+                titleVersion: '',
+                isStopDeploy: false,
                 rules: {
                     category: [
                         {
@@ -256,13 +259,18 @@
                 return this.$route.params.id;
             },
             curVersion () {
-                return this.$route.query.version;
+                return this.$route.query.version || this.titleVersion;
             },
             stagesData () {
                 return this.$store.state.plugin.stagesData;
             }
         },
         watch: {},
+        created () {
+            bus.$on('stop-deploy', () => {
+                this.isStopDeploy = true;
+            });
+        },
         mounted () {
             if (this.stagesData.length) {
                 this.allStages = this.stagesData;
@@ -270,11 +278,18 @@
                 this.getVersionDetail();
             }
             this.stageId = this.$route.query.stage_id;
-            if (this.stageId === 'market') {
+            // 重新发布
+            if (this.$route.query.isRepublish === 'republish') {
+                this.republish();
                 this.fetchCategoryList();
                 this.fetchMarketInfo();
             } else {
-                this.fetchPluginRelease();
+                if (this.stageId === 'market') {
+                    this.fetchCategoryList();
+                    this.fetchMarketInfo();
+                } else {
+                    this.fetchPluginRelease();
+                }
             }
         },
         methods: {
@@ -287,7 +302,8 @@
                 if (status === 'pending') {
                     console.log(status);
                 } else {
-                    this.fetchPluginRelease();
+                    this.pluginDeploy();
+                    // this.fetchPluginRelease();
                 }
             },
 
@@ -336,6 +352,10 @@
             },
             // 获取部署详情
             async fetchPluginRelease () {
+                // 点击返回，停止部署接口轮询
+                if (this.isStopDeploy) {
+                    return;
+                }
                 try {
                     const params = {
                         pdId: this.pdId,
@@ -343,7 +363,6 @@
                         releaseId: this.$route.query.release_id,
                         stageId: this.stageId
                     };
-                    console.log('params11', params);
                     const res = await this.$store.dispatch('plugin/getPluginRelease', params);
                     this.stageId = res.stage_id;
                     this.isNext = res.status === 'successful';
@@ -370,6 +389,7 @@
                             this.curStep = 1;
                             break;
                     }
+                    console.log('this.stepsData', this.stepsData);
                     // if (res.status === 'successful') {
                     //     this.stagesIndex = this.stagesIndex + 1;
                     //     this.curStep = this.stagesIndex + 1;
@@ -402,6 +422,7 @@
                         e.title = e.name;
                         return e;
                     });
+                    this.titleVersion = `${res.version} (${res.source_version_name})`;
                     this.allStages = stagesData;
                 } catch (e) {
                     this.$bkMessage({
@@ -425,7 +446,38 @@
                         ...params,
                         data
                     });
-                    console.log('res', res);
+                    this.stageId = res.stage_id;
+                    this.status = res.status;
+                    const query = JSON.parse(JSON.stringify(this.$route.query));
+                    query.stage_id = this.stageId;
+                    this.$router.push({ name: 'pluginVersionRelease', query });
+                    this.fetchPluginRelease();
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                } finally {
+                    setTimeout(() => {
+                        this.isTableLoading = false;
+                        this.isLoading = false;
+                    }, 200);
+                }
+            },
+
+            // 重新发布, 重置之前的发布状态
+            async republish () {
+                const params = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: this.$route.query.release_id
+                };
+                try {
+                    const res = await this.$store.dispatch('plugin/republishRelease', {
+                        ...params
+                    });
+                    this.stageId = res.current_stage && res.current_stage.stage_id;
+                    this.status = res.status;
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -436,6 +488,7 @@
 
             modifyStepsData (data) {
                 return data.map(item => {
+                    // da根据 steps[i].status 来决定当前部署的状态
                     item.time = this.computedDeployTime(item.start_time, item.complete_time);
                     if (item.status === 'successful' || item.status === 'failed') {
                         item.tag = `

@@ -131,7 +131,14 @@
               >
                 {{ $t('发布进度') }}
               </bk-button>
-              <!-- <bk-button theme="primary" text> {{ $t('重新发布') }} </bk-button> -->
+              <bk-button
+                v-if="row.status === 'interrupted'"
+                theme="primary"
+                text
+                @click="handleRelease(row, 'republish')"
+              >
+                {{ $t('重新发布') }}
+              </bk-button>
             </template>
           </bk-table-column>
         </bk-table>
@@ -430,7 +437,7 @@
             },
 
             // 发布
-            handleRelease (data) {
+            handleRelease (data, isRepublish) {
                 const stagesData = data.all_stages.map((e, i) => {
                     e.icon = i + 1;
                     e.title = e.name;
@@ -443,7 +450,8 @@
                     query: {
                         stage_id: data.current_stage.stage_id,
                         release_id: data.id,
-                        version: curVersion
+                        version: curVersion,
+                        isRepublish
                     }
                 });
             }

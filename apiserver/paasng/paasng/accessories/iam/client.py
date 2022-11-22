@@ -70,8 +70,8 @@ class BKIAMClient:
         """
         data = {
             'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-            'name': utils.gen_grade_member_name(app_code),
-            'description': utils.gen_grade_member_desc(app_code),
+            'name': utils.gen_grade_manager_name(app_code),
+            'description': utils.gen_grade_manager_desc(app_code),
             'members': [creator],
             # 仅可对指定的单个应用授权
             'authorization_scopes': [
@@ -148,7 +148,7 @@ class BKIAMClient:
             logger.exception(f"fetch iam grade managers error, message:{resp['message']}")
             raise BKIAMApiError(resp['message'], resp['code'])
 
-        manager_name = utils.gen_grade_member_name(app_code)
+        manager_name = utils.gen_grade_manager_name(app_code)
         for manager in resp['data']['results']:
             if manager['name'] == manager_name:
                 return manager['id']

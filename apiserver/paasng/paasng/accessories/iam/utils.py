@@ -26,7 +26,7 @@ from .constants import NEVER_EXPIRE_TIMESTAMP, ONE_DAY_SECONDS
 from .permissions.resources.application import AppAction
 
 
-def gen_grade_member_name(app_code: str) -> str:
+def gen_grade_manager_name(app_code: str) -> str:
     """
     生成分级管理员名称（最大字符数限制 32）
     中：开发者中心-{app_code}
@@ -35,7 +35,7 @@ def gen_grade_member_name(app_code: str) -> str:
     return _('开发者中心-{}').format(app_code)
 
 
-def gen_grade_member_desc(app_code: str) -> str:
+def gen_grade_manager_desc(app_code: str) -> str:
     """
     生成分级管理员描述
     中：开发者中心应用（{app_code}）分级管理员，拥有审批用户加入管理者/开发者/运营者用户组权限。

@@ -1327,7 +1327,6 @@
             loadConfigVar () {
                 this.isVarLoading = true;
                 this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + `/config_vars/?order_by=${this.curSortKey}`).then((response) => {
-                    console.log('response', response);
                     if (this.activeEnvTab === '') {
                         this.envVarList = [...response];
                     } else {

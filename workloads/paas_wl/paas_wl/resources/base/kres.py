@@ -569,6 +569,10 @@ class KSecret(BaseKresource):
     kind = 'Secret'
 
 
+class KEvent(BaseKresource):
+    kind = "Event"
+
+
 # Individual resource types end
 
 

@@ -304,10 +304,7 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch('paasng.platform.applications.handlers.BKIAMClient', new=StubBKIAMClient), mock.patch(
-        'paasng.platform.mgrlegacy.app_migrations.basic.BKIAMClient',
-        new=StubBKIAMClient,
-    ), mock.patch(
+    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(

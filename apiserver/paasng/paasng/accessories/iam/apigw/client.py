@@ -19,6 +19,11 @@ from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationG
 
 
 class Group(OperationGroup):
+    # 查询分级管理员列表
+    management_grade_managers_list = bind_property(
+        Operation, name="management_grade_managers_list", method="GET", path="/api/v1/open/management/grade_managers/"
+    )
+
     # 创建分级管理员
     management_grade_managers = bind_property(
         Operation, name="management_grade_managers", method="POST", path="/api/v1/open/management/grade_managers/"

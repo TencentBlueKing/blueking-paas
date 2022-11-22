@@ -22,11 +22,11 @@ from typing import Dict, List, NamedTuple, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.models import Domain as DomainCfg
 from paasng.engine.controller.models import IngressConfig, PortMap
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.engine.constants import AppEnvName
 from paasng.publish.entrance.utils import URL, to_dns_safe
 
 
@@ -137,7 +137,8 @@ class ModuleEnvDomains:
             return None
 
         # Make a virtual domain config and use it to get the domain object
-        cfg = DomainCfg(name=host, https_enabled=self.ingress_config.find_https_enabled(host))
+        d = self.ingress_config.find_subdomain_domain(host)
+        cfg = DomainCfg(name=host, https_enabled=d.https_enabled if d else False)
         domain = self.allocator.get_highest_priority(
             cfg, self.env.module.name, self.env.environment, self.env.module.is_default
         )

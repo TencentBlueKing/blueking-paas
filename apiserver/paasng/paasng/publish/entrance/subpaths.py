@@ -25,7 +25,8 @@ from django.conf import settings
 
 from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.models import IngressConfig, PortMap, Domain as DomainCfg
+from paasng.engine.controller.models import Domain as DomainCfg
+from paasng.engine.controller.models import IngressConfig, PortMap
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.publish.entrance.utils import URL, to_dns_safe
 
@@ -156,7 +157,8 @@ class ModuleEnvSubpaths:
             return None
 
         # Make a virtual domain config, use it to get the domain object
-        cfg = DomainCfg(name=host, https_enabled=self.ingress_config.find_https_enabled(host))
+        d = self.ingress_config.find_subpath_domain(host)
+        cfg = DomainCfg(name=host, https_enabled=d.https_enabled if d else False)
         p = self.allocator.get_highest_priority(
             cfg, self.env.module.name, self.env.environment, self.env.module.is_default
         )

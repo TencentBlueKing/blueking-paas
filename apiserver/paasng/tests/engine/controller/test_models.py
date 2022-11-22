@@ -1,23 +1,29 @@
 import cattr
-import pytest
 
 from paasng.engine.controller.models import IngressConfig
 
 
-@pytest.mark.parametrize(
-    'host,ret',
-    [
-        ('foo-1.example.com', False),
-        ('foo-2.example.com', True),
-        ('bar.example.com', False),
-    ],
-)
-def test_find_https_enabled(host, ret):
+def test_find_subdomain_domain():
     ing_cfg = cattr.structure(
         {
-            'app_root_domains': [{"name": 'foo-1.example.com', 'https_enabled': False}],
-            'sub_path_domains': [{"name": 'foo-2.example.com', 'https_enabled': True}],
+            'app_root_domains': [{"name": 'foo-1.example.com', 'https_enabled': True}],
         },
         IngressConfig,
     )
-    assert ing_cfg.find_https_enabled(host) is ret
+    d = ing_cfg.find_subdomain_domain('foo-1.example.com')
+    assert d is not None
+    assert d.https_enabled is True
+    assert ing_cfg.find_subdomain_domain('foo-2.example.com') is None
+
+
+def test_find_subpath_domain():
+    ing_cfg = cattr.structure(
+        {
+            'sub_path_domains': [{"name": 'foo-1.example.com', 'https_enabled': True}],
+        },
+        IngressConfig,
+    )
+    d = ing_cfg.find_subpath_domain('foo-1.example.com')
+    assert d is not None
+    assert d.https_enabled is True
+    assert ing_cfg.find_subpath_domain('bar.example.com') is None

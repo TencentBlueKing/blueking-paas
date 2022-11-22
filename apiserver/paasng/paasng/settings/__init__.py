@@ -244,6 +244,8 @@ LANGUAGE_COOKIE_DOMAIN = settings.get('BK_COOKIE_DOMAIN')
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
 
+CHANGELOG_PATH = os.path.join(BASE_DIR, 'changelog')
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 SITE_URL = '/'

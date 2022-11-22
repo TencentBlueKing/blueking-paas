@@ -17,8 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 import time
 
+from iam.exceptions import AuthAPIError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
@@ -26,6 +28,8 @@ from paasng.accessories.iam.permissions.resources.application import AppAction, 
 from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 from paasng.platform.applications.models import Application
 from paasng.utils.basic import get_username_by_bkpaas_user_id
+
+logger = logging.getLogger(__name__)
 
 
 def application_perm_class(action: AppAction):
@@ -68,4 +72,9 @@ def user_has_app_action_perm(user, application: Application, action: AppAction) 
         code=application.code,
         username=get_username_by_bkpaas_user_id(user.pk),
     )
-    return ApplicationPermission().get_method_by_action(action)(perm_ctx, raise_exception=False)
+    try:
+        return ApplicationPermission().get_method_by_action(action)(perm_ctx, raise_exception=False)
+    except AuthAPIError as e:
+        logger.exception(f"check user has application perm error: {e}")
+
+    return False

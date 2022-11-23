@@ -38,7 +38,10 @@
                   <div class="preview">
                     <img :src="localeAppInfo.logo || '/static/images/default_logo.png'">
                   </div>
-                  <div class="preview-btn pl20" v-if="canEditAppBasicInfo">
+                  <div
+                    v-if="canEditAppBasicInfo"
+                    class="preview-btn pl20"
+                  >
                     <template>
                       <div>
                         <bk-button

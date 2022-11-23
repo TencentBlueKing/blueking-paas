@@ -17,3 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+
+
+class BKMonitorGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bkmonitor's
+    API Gateway resource
+    """

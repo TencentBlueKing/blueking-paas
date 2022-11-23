@@ -17,8 +17,12 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf import settings
 from rest_framework import serializers
 
+from paasng.utils.datetime import convert_timestamp_to_str
+
+from .alert import QueryAlertsParams
 from .alert_rules.manager import AlertRuleManager
 from .models import AppAlertRule
 
@@ -61,9 +65,47 @@ class SupportedAlertSLZ(serializers.Serializer):
     display_name = serializers.CharField()
 
 
-class ListAlertEvents(serializers.Serializer):
+class ListAlertsSLZ(serializers.Serializer):
     alert_code = serializers.CharField(required=False)
     environment = serializers.ChoiceField(choices=('stag', 'prod'), required=False)
+    # ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复
     status = serializers.ChoiceField(choices=('ABNORMAL', 'CLOSED', 'RECOVERED'), required=False)
+    keyword = serializers.CharField(required=False)
+    start_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
+    end_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
 
-    # MINE, ABNORMAL, CLOSED, RECOVERED
+    def to_internal_value(self, data) -> QueryAlertsParams:
+        data = super().to_internal_value(data)
+        return QueryAlertsParams(app_code=self.context['app_code'], **data)
+
+    def validate(self, data: QueryAlertsParams):
+        if data.start_time > data.end_time:
+            raise serializers.ValidationError("end_time must occur after start_time")
+
+        return data
+
+
+class AlertSLZ(serializers.Serializer):
+    id = serializers.CharField()
+    alert_name = serializers.CharField()
+    status = serializers.CharField()
+    description = serializers.CharField()
+    start_time = serializers.IntegerField(help_text='告警开始时间', source='begin_time')
+    end_time = serializers.IntegerField(allow_null=True, help_text='告警结束时间')
+    stage_display = serializers.CharField(help_text='处理阶段')
+    receivers = serializers.ListField(
+        child=serializers.CharField(), min_length=1, help_text='告警接收者', source='assignee'
+    )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        data['start_time'] = convert_timestamp_to_str(data['start_time'])
+        if data['end_time']:
+            data['end_time'] = convert_timestamp_to_str(data['end_time'])
+
+        data['detail_link'] = (
+            f"{settings.BK_MONITORV3_URL}/?"
+            f"bizId={settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')}/#/event-center/detail/{data['id']}"
+        )
+        return data

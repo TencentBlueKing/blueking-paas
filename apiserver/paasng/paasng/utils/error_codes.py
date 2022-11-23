@@ -93,6 +93,8 @@ class ErrorCodes:
     RELEASED_MARKET_CONDITION_NOT_MET = ErrorCode(_('未满足应用市场服务开启条件'))
     # 资源 Metrics
     CANNOT_FETCH_RESOURCE_METRICS = ErrorCode(_('无法获取应用资源 metrics'))
+    # Monitor
+    QUERY_ALERTS_FAILED = ErrorCode(_('查询告警失败'))
     # 独立域名
     CANNOT_UPDATE_DOMAIN = ErrorCode(_('无法更新独立域名'))
     CANNOT_CREATE_DOMAIN = ErrorCode(_('无法添加独立域名'))

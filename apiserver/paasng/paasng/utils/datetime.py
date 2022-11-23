@@ -153,6 +153,11 @@ def strftime_ms(ms, fmt="%Y-%m-%d %H:%M:%S") -> str:
     return local_dt.strftime(fmt)
 
 
+def convert_timestamp_to_str(timestamp: int, fmt: str = '%Y-%m-%d %H:%M:%S') -> str:
+    """将整型的时间戳转化成要求的格式字符串"""
+    return datetime.datetime.fromtimestamp(timestamp).strftime(fmt)
+
+
 def valid_date_type(arg_date_str) -> datetime.date:
     """custom argparse type for user datetime values given from the command line"""
     try:

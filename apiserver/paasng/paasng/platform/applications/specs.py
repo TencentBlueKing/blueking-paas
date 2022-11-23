@@ -86,9 +86,13 @@ class AppSpecs:
         if self.type_specs.engine_enabled:
             # 非精简版应用，依赖模板配置是否允许发布到市场
             try:
-                return Template.objects.get(name=module.source_init_template, type=TemplateType.NORMAL).market_ready
+                # 允许发布到市场的模板则不需要发布前确认
+                return not Template.objects.get(
+                    name=module.source_init_template, type=TemplateType.NORMAL
+                ).market_ready
             except ObjectDoesNotExist:
                 logger.warning(f'Unable to get metadata, invalid template name: "{module.source_init_template}"')
+        # 老的不再使用的模板已经被删除，默认发布到市场前不需要确认
         return False
 
     @property

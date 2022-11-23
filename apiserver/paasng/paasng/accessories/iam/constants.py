@@ -38,6 +38,19 @@ DEFAULT_PAGE = 1
 # 查询用户组成员，全量查询
 FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 
+# 查询开发者中心分级管理员列表，全量查询
+LIST_GRADE_MANAGERS_LIMIT = 15000
+
 
 class ResourceType(str, StructuredEnum):
     Application = 'application'
+
+
+class IAMErrorCodes(int, StructuredEnum):
+    """
+    iam api 返回错误码
+    https://bk.tencent.com/docs/document/7.0/236/39801
+    """
+
+    # 资源冲突
+    CONFLICT = 1902409

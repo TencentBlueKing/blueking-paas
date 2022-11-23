@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paasng.dev_resources.templates.constants import TemplateType
+from paasng.dev_resources.templates.models import Template
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.specs import AppSpecs
 from tests.utils.helpers import override_region_configs
@@ -68,3 +70,24 @@ class TestAppSpecs:
         bk_app.type = 'bk_plugin'
         bk_app.save()
         assert AppSpecs(bk_app).preset_services == {'mysql': {}}
+
+    def test_confirm_required_when_publish_with_no_template(self, bk_app):
+        confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish
+        assert confirm_required_when_publish is False
+
+    @pytest.mark.parametrize(
+        'market_ready,expect',
+        [
+            (True, False),
+            (False, True),
+        ],
+    )
+    def test_confirm_required_when_publish_with_template(self, bk_app, market_ready, expect):
+        module = bk_app.get_default_module()
+        Template.objects.update_or_create(
+            name=module.source_init_template,
+            type=TemplateType.NORMAL,
+            defaults={"market_ready": market_ready, "blob_url": "[]"},
+        )
+        confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish
+        assert confirm_required_when_publish == expect

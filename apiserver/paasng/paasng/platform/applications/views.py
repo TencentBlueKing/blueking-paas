@@ -40,6 +40,7 @@ from rest_framework.views import APIView
 
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
     fetch_application_members,
@@ -645,8 +646,11 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
             for role in info['roles']:
                 role_members_map[role['id']].append(info['user']['username'])
 
-        for role, members in role_members_map.items():
-            add_role_members(application.code, role, members)
+        try:
+            for role, members in role_members_map.items():
+                add_role_members(application.code, role, members)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
@@ -661,8 +665,11 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         username = get_username_by_bkpaas_user_id(kwargs['user_id'])
         self.check_admin_count(application.code, username)
-        remove_user_all_roles(application.code, username)
-        add_role_members(application.code, ApplicationRole(serializer.data['role']['id']), username)
+        try:
+            remove_user_all_roles(application.code, username)
+            add_role_members(application.code, ApplicationRole(serializer.data['role']['id']), username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
@@ -676,7 +683,10 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
             raise error_codes.MEMBERSHIP_OWNER_FAILED
 
         self.check_admin_count(application.code, request.user.username)
-        remove_user_all_roles(application.code, request.user.username)
+        try:
+            remove_user_all_roles(application.code, request.user.username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
@@ -688,7 +698,10 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         username = get_username_by_bkpaas_user_id(kwargs['user_id'])
         self.check_admin_count(application.code, username)
-        remove_user_all_roles(application.code, username)
+        try:
+            remove_user_all_roles(application.code, username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)

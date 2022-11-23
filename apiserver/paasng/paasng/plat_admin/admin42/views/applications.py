@@ -20,6 +20,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
     fetch_application_members,
@@ -37,6 +38,7 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.utils.error_codes import error_codes
 
 
 class ApplicationListView(GenericTemplateView):
@@ -132,7 +134,11 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
 
     def destroy(self, request, code):
         application = self.get_application()
-        remove_user_all_roles(application.code, request.query_params["username"])
+        try:
+            remove_user_all_roles(application.code, request.query_params["username"])
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
+
         self.sync_membership(application)
         return Response(status=204)
 
@@ -140,8 +146,12 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
         application = self.get_application()
         username, role = request.data['username'], request.data['role']
 
-        remove_user_all_roles(application.code, username)
-        add_role_members(application.code, ApplicationRole(role), username)
+        try:
+            remove_user_all_roles(application.code, username)
+            add_role_members(application.code, ApplicationRole(role), username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
         self.sync_membership(application)
         return Response(status=204)
 

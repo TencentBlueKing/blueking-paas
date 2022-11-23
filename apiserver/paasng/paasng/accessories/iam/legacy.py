@@ -16,16 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
+# PaaS 2.0 相关权限
 import logging
 
+from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.conf import settings
 from iam import IAM, Action, Request, Subject
 from iam.contrib.converter.sql import SQLConverter
 from iam.exceptions import AuthAPIError
 
-from paasng.accessories.bk_iam.constants import ActionEnum
-
 logger = logging.getLogger(__name__)
+
+
+class LegacyAction(str, StructuredEnum):
+    DEVELOP_APP = EnumField('develop_app', label='开发 SaaS 应用及外链应用')
+    MANAGE_SMART = EnumField('manage_smart', label='管理 S-mart 应用')
 
 
 class Permission:
@@ -35,40 +41,26 @@ class Permission:
         )
 
     def _make_request_without_resources(self, username: str, action_id: str) -> 'Request':
-        request = Request(
-            settings.IAM_SYSTEM_ID,
-            Subject("user", username),
-            Action(action_id),
-            None,
-            None,
-        )
-        return request
+        return Request(settings.IAM_SYSTEM_ID, Subject("user", username), Action(action_id), None, None)
 
     def allowed_manage_smart(self, username):
-        """
-        smart管理权限
-        """
+        """smart管理权限"""
         try:
-            request = self._make_request_without_resources(username, ActionEnum.MANAGE_SMART)
+            request = self._make_request_without_resources(username, LegacyAction.MANAGE_SMART)
             return self._iam.is_allowed_with_cache(request)
         except AuthAPIError as e:
             logger.exception(f"check is allowed to manage smart app error: {e}")
             return False
 
     def app_filters(self, username):
-        """
-        用户有权限的应用列表
+        """用户有权限的应用列表，拉回策略, 自己算!"""
+        request = self._make_request_without_resources(username, LegacyAction.DEVELOP_APP)
 
-        拉回策略, 自己算!
-        """
-        request = self._make_request_without_resources(username, ActionEnum.DEVELOP_APP)
-
-        # 两种策略 1) 实例级别 2) 用户级别
-        # 只有条件 code in []
+        # 两种策略 1) 实例级别 2) 用户级别，只有条件 code in []
         key_mapping = {"app.id": "paas_app.code"}
 
         try:
             filters = self._iam.make_filter(request, converter_class=SQLConverter, key_mapping=key_mapping)
-        except AuthAPIError as e:
+        except AuthAPIError:
             return None
         return filters

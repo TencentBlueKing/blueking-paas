@@ -105,11 +105,11 @@ def pd():
     pd.config_definition = G(
         PluginConfigInfoDefinition,
         pd=pd,
-        title="配置管理",
+        title_zh_cn="配置管理",
         sync_api=make_api_resource("sync-configuration-{ plugin_id }"),
         columns=[
-            {"type": "string", "title": "FOO", "unique": True},
-            {"type": "string", "title": "BAR", "unique": False},
+            {"type": "string", "title": "FOO", "unique": True, "name": "FOO"},
+            {"type": "string", "title": "BAR", "unique": False, "name": "BAR"},
         ],
     )
     pd.save()

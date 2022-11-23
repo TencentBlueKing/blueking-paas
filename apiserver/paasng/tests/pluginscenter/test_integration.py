@@ -168,7 +168,7 @@ class TestReleaseStages:
             'status': 'pending',
             'fail_message': '',
             'detail': {
-                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'pending'}],
+                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'successful'}],
                 'finished': True,
                 'logs': ['1', '2', '3'],
             },

@@ -29,10 +29,12 @@ from django.db import IntegrityError as DjangoIntegrityError
 from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
-from paasng.accessories.iam.helpers import add_role_members, delete_builtin_user_groups
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
+from paasng.accessories.iam.helpers import delete_builtin_user_groups
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.handlers import application_logo_updated
+from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import before_finishing_application_creation
 from paasng.platform.applications.specs import AppSpecs
@@ -49,7 +51,6 @@ from paasng.publish.sync_market.handlers import (
     sync_external_url_to_market,
 )
 from paasng.publish.sync_market.managers import AppManger
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -150,13 +151,13 @@ class Command(BaseCommand):
             logger.info("app(name:%s) exists, skip create", app_desc.name)
             return
 
-        add_role_members(
-            app_code=application.code,
-            role=ApplicationRole.ADMINISTRATOR,
-            usernames=get_username_by_bkpaas_user_id(application.creator),
-        )
-
         if created:
+            try:
+                register_builtin_user_groups_and_grade_manager(application)
+            except BKIAMGatewayServiceError as e:
+                logger.exception("app initialize members failed, skip create: %s", e.message)
+                return
+
             try:
                 before_finishing_application_creation.send("FakeSender", application=application)
             except IntegrityError as e:

@@ -74,6 +74,7 @@ def check_deploy_result(pd: PluginDefinition, plugin: PluginInstance, version: P
     data = response_slz.validated_data
 
     current_stage.api_detail = data
+    current_stage.save(update_fields=["api_detail", "updated"])
     status = PluginReleaseStatus(data["status"])
     if status in PluginReleaseStatus.abnormal_status():
         current_stage.update_status(status, fail_message=data["detail"])

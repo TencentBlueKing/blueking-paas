@@ -6,7 +6,17 @@
 
 [简体中文](readme.md) | English
 
-The BlueKing PaaS is an open development platform that allows developers to easily and quickly create, develop, deploy and manage SaaS applications. It provides a complete front-end and back-end development framework, service bus (ESB), API Gateway, scheduling engine, public components and other services. It aims to help users quickly and cost-effectively build an operation and maintenance-free operation system and support tools.
+>**Blueking main version V7, active open source projects**
+
+The BlueKing PaaS is an open development platform that allows developers to easily and quickly create, develop, deploy and manage SaaS applications. It provides the following core services: PaaS Platform-[Developer Center](https://github.com/tencentblueking/blueking-paas), PaaS Platform-API Gateway, PaaS Platform-[Unified Login](https://github.com/) TencentBlueKing/bk-user), PaaS Platform-[Console](https://github.com/TencentBlueKing/blueking-console), PaaS Platform Low Code Development Service-[LessCode](https://github. com/TencentBlueKing/bk-lesscode), etc. It aims to help users quickly and cost-effectively build an operation and maintenance-free operation system and support tools.
+
+This project is "PaaS Platform - Developer Center".
+
+>**PaaS core services open source project**
+- PaaS Platform-[Developer Center](https://github.com/tencentblueking/blueking-paas)
+- PaaS Platform-[Unified Login](https://github.com/TencentBlueKing/bk-user)
+- PaaS Platform-[Console](https://github.com/TencentBlueKing/blueking-console)
+- PaaS Platform Low Code Development Services-[LessCode](https://github.com/TencentBlueKing/bk-lesscode)
 
 
 ## Overview

@@ -285,4 +285,8 @@ ensure-service(){
     python manage.py update_remote_services_config
 }
 
-call_steps ensure-apigw ensure-runtimes-fixtures ensure-init-data ensure-service ensure-smart-image
+migrate-perm(){
+    python manage.py migrate_bkpaas3_perm
+}
+
+call_steps ensure-apigw ensure-runtimes-fixtures ensure-init-data ensure-service ensure-smart-image migrate-perm

@@ -151,3 +151,9 @@ apiserver/paasng/.gitignore
 
 # apiserver: iam migration files
 apiserver/paasng/support-files/iam
+
+# migrate/sync records
+**/migrate_success_records.json
+**/migrate_failed_records.json
+**/sync_success_records.json
+**/sync_failed_records.json

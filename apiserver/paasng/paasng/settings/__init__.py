@@ -244,6 +244,8 @@ LANGUAGE_COOKIE_DOMAIN = settings.get('BK_COOKIE_DOMAIN')
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
 
+CHANGELOG_PATH = os.path.join(BASE_DIR, 'changelog')
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 SITE_URL = '/'
@@ -628,7 +630,7 @@ BK_SSM_URL = settings.get('BK_SSM_URL', '')
 BK_IAM_V3_INNER_URL = settings.get('BK_IAM_V3_INNER_URL', 'http://localhost:8080')
 
 # 访问的权限中心 APIGW 版本
-BK_IAM_APIGW_SERVICE_STAGE = settings.get('BK_IAM_APIGW_SERVICE_STAGE', 'prod')
+BK_IAM_APIGW_SERVICE_STAGE = settings.get('BK_IAM_APIGW_SERVICE_STAGE', 'stage')
 
 # 参数说明 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#22-config
 # 如果通过网关访问, BK_IAM_APIGATEWAY_URL 将替代 BK_IAM_V3_INNER_URL

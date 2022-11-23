@@ -23,6 +23,7 @@ from typing import Dict, List, Optional
 
 from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.accounts.models import User
+from paasng.accounts.permissions.application import can_exempt_application_perm
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import global_site_resource
 from paasng.engine.models import EngineApp
@@ -140,6 +141,9 @@ class ApplicationInPathExtractor:
 
 def list_application_permissions(user: User, obj: Application) -> Dict[str, bool]:
     """List user's all permissions on an application"""
+    if can_exempt_application_perm(user, obj):
+        return {action: True for action in AppAction}
+
     perm = ApplicationPermission()
     perm_ctx = AppPermCtx(code=obj.code, username=get_username_by_bkpaas_user_id(user.pk))
 

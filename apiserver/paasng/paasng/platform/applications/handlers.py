@@ -27,18 +27,17 @@ from django.core.files.storage import Storage
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paasng.accessories.iam.client import BKIAMClient
-from paasng.accessories.iam.constants import NEVER_EXPIRE_DAYS
-from paasng.accessories.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.engine.constants import JobStatus
 from paasng.engine.models import Deployment
 from paasng.metrics import NEW_APP_COUNTER
 from paasng.platform.applications.models import Application
 from paasng.platform.region.app import S3BucketRegionHelper
 from paasng.platform.region.models import get_region
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.blobstore import get_storage_by_bucket
+from paasng.utils.error_codes import error_codes
 
+from .helpers import register_builtin_user_groups_and_grade_manager
 from .signals import (
     application_logo_updated,
     before_finishing_application_creation,
@@ -54,40 +53,16 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_create_application)
-def register_builtin_user_groups_and_grade_manager(sender, application: Application, **kwargs):
+def initialize_application_members(sender, application: Application, **kwargs):
     """
     默认为每个新建的蓝鲸应用创建三个用户组（管理者，开发者，运营者），以及该应用对应的分级管理员
     将 创建者 添加到 管理者用户组 以获取应用的管理权限，并添加为 分级管理员成员 以获取审批其他用户加入各个用户组的权限
     """
-    logger.debug(
-        'register default user groups and grade manager after app creation: user=%s application=%s',
-        application.creator,
-        application.code,
-    )
-    cli = BKIAMClient()
-    creator = get_username_by_bkpaas_user_id(application.creator)
-
-    # 1. 创建分级管理员，并记录分级管理员 ID
-    grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
-    ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=grade_manager_id)
-
-    # 2. 将创建者，添加为分级管理员的成员
-    cli.add_grade_manager_members(grade_manager_id, [creator])
-
-    # 3. 创建默认的 管理者，开发者，运营者用户组
-    user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
-    ApplicationUserGroup.objects.bulk_create(
-        [
-            ApplicationUserGroup(app_code=application.code, role=group['role'], user_group_id=group['id'])
-            for group in user_groups
-        ]
-    )
-
-    # 4. 为默认的三个用户组授权
-    cli.grant_user_group_policies(application.code, application.name, user_groups)
-
-    # 5. 将创建者添加到管理者用户组，返回数据中第一个即为管理者用户组信息
-    cli.add_user_group_members(user_groups[0]['id'], [creator], NEVER_EXPIRE_DAYS)
+    logger.debug('initialize members after create app: creator=%s app_code=%s', application.creator, application.code)
+    try:
+        register_builtin_user_groups_and_grade_manager(application)
+    except BKIAMGatewayServiceError as e:
+        raise error_codes.INITIALIZE_APP_MEMBERS_ERROR.f(e.message)
 
 
 @receiver(post_create_application)

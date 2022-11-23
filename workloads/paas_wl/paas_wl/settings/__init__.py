@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-# type: ignore
 """PaaS Workload service settings
 
 默认情况下，本项目会读取根目录（manage.py 所在目录）下的 `settings_files` 子目录内的所有
@@ -237,7 +236,11 @@ LOGGING = {
 }
 
 if settings.get('LOGGING_ENABLE_SQL_QUERIES', False):
-    LOGGING['loggers']['django.db.backends'] = {'handlers': _default_handlers, 'level': LOG_LEVEL, 'propagate': True}
+    LOGGING['loggers']['django.db.backends'] = {  # type: ignore
+        'handlers': _default_handlers,
+        'level': LOG_LEVEL,
+        'propagate': True,
+    }
 
 
 # ---------------

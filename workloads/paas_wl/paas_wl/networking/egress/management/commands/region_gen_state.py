@@ -22,8 +22,6 @@ Examples:
 
     python manage.py region_gen_state --region your-region --cluster-name=your-cluster-name
 """
-from __future__ import print_function
-
 import logging
 import sys
 

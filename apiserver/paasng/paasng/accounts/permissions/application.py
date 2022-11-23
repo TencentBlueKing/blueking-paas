@@ -54,18 +54,22 @@ def check_application_perm(user, application: Application, action: AppAction):
         raise PermissionDenied('You are not allowed to do this operation.')
 
 
+def can_exempt_application_perm(user, application: Application) -> bool:
+    # 由于权限中心的用户组授权为异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
+    # 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
+    return (
+        user.pk == application.owner
+        and time.time() - application.created.timestamp() < PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
+    )
+
+
 def user_has_app_action_perm(user, application: Application, action: AppAction) -> bool:
     """
     检查指定用户是否对应用的某个操作具有权限
 
     # TODO 如果后续需要支持 无权限跳转权限中心申请，可以设置 raise_exception = True，PermissionDeniedError 会包含 apply_url 信息
     """
-    # 由于权限中心的用户组授权为异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
-    # 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
-    if (
-        user.pk == application.owner
-        and time.time() - application.created.timestamp() < PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
-    ):
+    if can_exempt_application_perm(user, application):
         return True
 
     perm_ctx = AppPermCtx(

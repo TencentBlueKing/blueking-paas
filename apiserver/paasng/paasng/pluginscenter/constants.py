@@ -63,6 +63,13 @@ class PluginStatus(str, StructuredEnum):
     DEVELOPING = EnumField("developing", label="开发中")
     RELEASING = EnumField("releasing", label="发布中")
     RELEASED = EnumField("released", label="已发布")
+    # 后台轮询下架进度, 进入「下架」相关的状态后, 插件不可进行任何操作
+    ARCHIVED = EnumField("archived", label="已下架")
+
+    @classmethod
+    def archive_status(cls):
+        """下架相关的状态"""
+        return [cls.ARCHIVED]
 
 
 class PluginRole(int, StructuredEnum):
@@ -117,9 +124,11 @@ class ActionTypes(str, StructuredEnum):
 
     CREATE = EnumField("create", label=_("创建"))
     ADD = EnumField('add', label=_("新建"))
+    RE_RELEASE = EnumField('re-release', label=_("重新发布"))
     TERMINATE = EnumField('terminate', label=_("终止发布"))
     MODIFY = EnumField("modify", label=_("修改"))
     DELETE = EnumField("delete", label=_("删除"))
+    ARCHIVE = EnumField("archive", label=_("下架"))
 
 
 class SubjectTypes(str, StructuredEnum):

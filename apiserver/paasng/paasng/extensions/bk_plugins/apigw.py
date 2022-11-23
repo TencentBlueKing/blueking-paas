@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """API Gateway related functionalities"""
-import json
 import logging
 from typing import Collection, Dict, List, Optional, Tuple
 
@@ -142,7 +141,6 @@ class PluginDefaultAPIGateway:
         try:
             ret = self.client.sync_api(
                 path_params={'api_name': self.gw_name},
-                headers={"X-Bkapi-Authorization": self._get_bkapi_auth_header()},
                 data={
                     "name": self.gw_name,
                     'description': description,
@@ -166,7 +164,6 @@ class PluginDefaultAPIGateway:
             self.client.grant_permissions(
                 path_params={'api_name': self.gw_name},
                 data={"target_app_code": distributor.bk_app_code, 'grant_dimension': self.grant_dimension},
-                headers={"X-Bkapi-Authorization": self._get_bkapi_auth_header()},
             )
         except (RequestException, BKAPIError) as e:
             raise PluginApiGatewayServiceError(f'grant permissions error, detail: {e}')
@@ -182,7 +179,6 @@ class PluginDefaultAPIGateway:
                 # INFO: "revoke" supports plural form: "target_app_codes" while "grant" only allows a single
                 # "target_app_code"
                 data={"target_app_codes": [distributor.bk_app_code], 'grant_dimension': self.grant_dimension},
-                headers={"X-Bkapi-Authorization": self._get_bkapi_auth_header()},
             )
         except (RequestException, BKAPIError) as e:
             raise PluginApiGatewayServiceError(f'revoke permissions error, detail: {e}')
@@ -191,15 +187,12 @@ class PluginDefaultAPIGateway:
         """Get plugin's maintainer list"""
         return self.plugin_app.get_developers()
 
-    def _get_bkapi_auth_header(self) -> str:
-        """Get the authorization header which is required for using bk-api client"""
-        code, secret = self._get_credentials()
-        d = {"bk_app_code": code, "bk_app_secret": secret}
-        return json.dumps(d)
-
     def _make_api_client(self) -> PluginApiGWClient:
         """Make a client object for requesting"""
-        return Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_PLUGIN_APIGW_SERVICE_STAGE).api
+        client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_PLUGIN_APIGW_SERVICE_STAGE)
+        bk_app_code, bk_app_secret = self._get_credentials()
+        client.update_bkapi_authorization(bk_app_code=bk_app_code, bk_app_secret=bk_app_secret)
+        return client.api
 
     def _get_credentials(self) -> Tuple[str, str]:
         """Get the application's (code, secret) pair"""

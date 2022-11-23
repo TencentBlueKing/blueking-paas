@@ -78,14 +78,15 @@ class PluginReleaseExecutor:
         """回滚当前发布阶段至上一阶段: 重置 release.current_stage, 并将 release.current_stage 设置成 previous_stage
         ITSM 单据审批中不能返回上一步
         """
-        current_stage = self.release.current_stage
         if self.release.status == constants.PluginReleaseStatus.SUCCESSFUL:
             raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前发布流程已结束"))
+
+        current_stage = self.release.current_stage
         if (
             current_stage.invoke_method == constants.ReleaseStageInvokeMethod.ITSM
             and current_stage.status in constants.PluginReleaseStatus.running_status()
         ):
-            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回评审单据, 再返回上一步"))
+            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回审批单据, 再返回上一步"))
         if (
             current_stage.invoke_method == constants.ReleaseStageInvokeMethod.DEPLOY_API
             and current_stage.status in constants.PluginReleaseStatus.running_status()
@@ -113,3 +114,16 @@ class PluginReleaseExecutor:
 
         self.release.initial_stage_set(force_refresh=True)
         self.execute_current_stage(operator=operator)
+
+    def cancel_release(self, operator: str):
+        """取消发布"""
+        if self.release.status not in constants.PluginReleaseStatus.running_status():
+            raise error_codes.CANNOT_CANCEL_RELEASE.f(_("当前状态({})不支持取消发布").format(self.release.status))
+
+        current_stage = self.release.current_stage
+        if (
+            current_stage.invoke_method == constants.ReleaseStageInvokeMethod.ITSM
+            and current_stage.status in constants.PluginReleaseStatus.running_status()
+        ):
+            raise error_codes.CANNOT_CANCEL_RELEASE.f(_("请到 ITSM 撤回审批单据"))
+        current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))

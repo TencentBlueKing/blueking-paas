@@ -19,15 +19,19 @@ to the current version of the project delivered to anyone in the future.
 """Testcases entrance.exposer module
 """
 import json
+from unittest import mock
 
 import pytest
 
 from paasng.engine.constants import JobStatus
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import (
+    ModuleLiveAddrs,
     SubDomainURLProvider,
     SubPathURLProvider,
     _default_preallocated_urls,
+    get_exposed_url_live,
+    get_module_exposed_links_live,
     get_preallocated_address,
 )
 from tests.engine.setup_utils import create_fake_deployment
@@ -228,3 +232,46 @@ class TestSubDomainURLProvider:
             url = SubDomainURLProvider(bk_prod_env).provide()
             assert url
             assert url.address == "http://{bk_app.code}.fool.com".format(bk_app=bk_app)
+
+
+@pytest.fixture
+def module_addrs_data():
+    return [
+        {"env": "prod", "is_running": False, "addresses": []},
+        {
+            "env": "stag",
+            "is_running": True,
+            "addresses": [
+                {"type": "subdomain", "url": "http://foo.example.com/"},
+                {"type": "subpath", "url": "https://bar.example.com/bar/"},
+            ],
+        },
+    ]
+
+
+class TestModuleLiveAddrs:
+    def test_get_is_running(self, module_addrs_data):
+        addrs = ModuleLiveAddrs(module_addrs_data)
+        assert addrs.get_is_running('stag') is True
+        assert addrs.get_is_running('prod') is False
+        assert addrs.get_is_running('invalid-env') is False
+
+    def test_get_addresses(self, module_addrs_data):
+        addrs = ModuleLiveAddrs(module_addrs_data)
+        assert len(addrs.get_addresses('stag')) == 2
+        assert addrs.get_addresses('prod') == []
+        assert addrs.get_addresses('invalid-env') == []
+
+
+@mock.patch('paasng.publish.entrance.exposer.get_live_addresses')
+def test_get_module_exposed_links_live(mocker, module_addrs_data, bk_module):
+    mocker.return_value = ModuleLiveAddrs(module_addrs_data)
+    ret = get_module_exposed_links_live(bk_module)
+    assert ret['stag'] == {'deployed': True, 'url': 'http://foo.example.com/'}
+
+
+@mock.patch('paasng.publish.entrance.exposer.get_live_addresses')
+def test_get_exposed_url_live(mocker, module_addrs_data, bk_stag_env, bk_prod_env):
+    mocker.return_value = ModuleLiveAddrs(module_addrs_data)
+    assert get_exposed_url_live(bk_stag_env) is not None
+    assert get_exposed_url_live(bk_prod_env) is None

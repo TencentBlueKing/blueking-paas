@@ -245,7 +245,7 @@ def create_default_cluster():
 def patch_ingress_config():
     """Patch ingress_config of the default cluster, usage:
 
-    def test_foo(replace_ingress_config):
+    def test_foo(patch_ingress_config):
         patch_ingress_config(
             port_map: ...,
             app_root_domain: ...,

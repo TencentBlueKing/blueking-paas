@@ -453,9 +453,6 @@ def get_bk_doc_url_prefix() -> str:
 class ModuleLiveAddrs:
     """Stored a module's addresses and running status"""
 
-    # An empty item for handling default cases
-    _empty_item = {'is_running': False, 'addresses': []}
-
     def __init__(self, data: List[Dict]):
         self._data = data
         self._map_by_env = {}
@@ -471,6 +468,11 @@ class ModuleLiveAddrs:
         """Given addresses of environment"""
         d = self._map_by_env.get(env_name, self._empty_item)
         return d['addresses']
+
+    @property
+    def _empty_item(self) -> Dict:
+        """An empty item for handling default cases"""
+        return {'is_running': False, 'addresses': []}
 
 
 def get_live_addresses(module: Module) -> ModuleLiveAddrs:

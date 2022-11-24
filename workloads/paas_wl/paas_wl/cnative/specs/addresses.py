@@ -56,7 +56,7 @@ def save_addresses(env: ModuleEnv) -> Set[EngineApp]:
     subdomains and subpaths.
 
     :return: Affected engine apps, "affected" means the app's domains or
-    paths were updated during this save operation.
+        paths were updated during this save operation.
     """
     engine_app = EngineApp.objects.get_by_env(env)
     addresses = get_plat_client().get_addresses(env.application.code, env.environment)

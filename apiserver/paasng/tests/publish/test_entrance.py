@@ -28,7 +28,6 @@ from paasng.engine.constants import JobStatus
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.domains import ModuleEnvDomains
 from paasng.publish.entrance.exposer import (
     LegacyEngineURLProvider,
     MarketURLProvider,
@@ -66,61 +65,6 @@ def bk_app(bk_app):
     bk_app.name = "some-app-o"
     bk_app.save()
     return bk_app
-
-
-class TestModuleEnvDomains:
-    def test_prod_default(self, bk_app, bk_module):
-        env = bk_module.envs.get(environment='prod')
-        domains = ModuleEnvDomains(env).all()
-        assert [d.host for d in domains] == [
-            'prod-dot-default-dot-some-app-o.bkapps.example.com',
-            'prod-dot-some-app-o.bkapps.example.com',
-            'some-app-o.bkapps.example.com',
-        ]
-
-    def test_stag_default(self, bk_module):
-        env = bk_module.envs.get(environment='stag')
-        domains = ModuleEnvDomains(env).all()
-        assert [d.host for d in domains] == [
-            'stag-dot-default-dot-some-app-o.bkapps.example.com',
-            'stag-dot-some-app-o.bkapps.example.com',
-        ]
-
-    def test_stag_non_default(self, bk_module, bk_stag_env):
-        bk_module.is_default = False
-        bk_module.save()
-
-        env = bk_stag_env
-        domains = ModuleEnvDomains(env).all()
-        assert [d.host for d in domains] == [
-            'stag-dot-default-dot-some-app-o.bkapps.example.com',
-        ]
-
-    @pytest.mark.parametrize("https_enabled, expected_scheme", ((True, "https"), (False, "http")))
-    def test_enable_https_by_default(self, https_enabled, expected_scheme, bk_stag_env):
-        with replace_cluster_service(
-            ingress_config={'app_root_domains': [{'name': 'example.com', 'https_enabled': https_enabled}]}
-        ):
-            domains = ModuleEnvDomains(bk_stag_env).all()
-            assert domains[0].https_enabled == https_enabled
-            assert domains[0].as_url().protocol == expected_scheme
-
-
-class TestModuleEnvDomainsCodeWithUnderscore:
-    @pytest.fixture()
-    def bk_app(self, bk_app):
-        bk_app.code = 'some_app'
-        bk_app.save()
-        return bk_app
-
-    def test_prod_default(self, bk_app, bk_module):
-        env = bk_module.envs.get(environment='prod')
-        domains = ModuleEnvDomains(env).all()
-        assert [d.host for d in domains] == [
-            'prod-dot-default-dot-some--app.bkapps.example.com',
-            'prod-dot-some--app.bkapps.example.com',
-            'some--app.bkapps.example.com',
-        ]
 
 
 class TestMarketURLProvider:

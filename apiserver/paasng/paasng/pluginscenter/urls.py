@@ -122,6 +122,10 @@ urlpatterns = [
         views.PluginMembersViewSet.as_view({"delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/operations/",
+        views.OperationRecordViewSet.as_view({"get": "list"}),
+    ),
+    path(
         "api/bkplugins/plugin_definitions/schemas/",
         views.SchemaViewSet.as_view({"get": "get_plugins_schema"}),
     ),

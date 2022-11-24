@@ -29,6 +29,7 @@ from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionR
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.models import (
+    OperationRecord,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfo,
@@ -487,3 +488,11 @@ class StubConfigSLZ(serializers.Serializer):
     """
 
     __id__ = serializers.CharField(help_text="配置项id", source="unique_key")
+
+
+class OperationRecordSLZ(serializers.ModelSerializer):
+    display_text = serializers.CharField(source='get_display_text', read_only=True)
+
+    class Meta:
+        model = OperationRecord
+        fields = '__all__'

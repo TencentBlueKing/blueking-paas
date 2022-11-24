@@ -28,6 +28,7 @@ from django.db.models import Count
 
 from paasng.engine.constants import JobStatus
 from paasng.engine.controller.cluster import Cluster, get_engine_app_cluster, get_region_cluster_helper
+from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.engine.models.deployment import Deployment
@@ -447,3 +448,76 @@ def get_bk_doc_url_prefix() -> str:
     # Address for bk_docs_center saas
     # Remove the "/" at the end to ensure that the subdomain and subpath mode are handled in the same way
     return get_preallocated_address(settings.BK_DOC_APP_ID).prod.rstrip("/")
+
+
+class ModuleLiveAddrs:
+    """Stored a module's addresses and running status"""
+
+    def __init__(self, data: List[Dict]):
+        self._data = data
+        self._map_by_env = {}
+        for item in data:
+            self._map_by_env[item['env']] = item
+
+    def get_is_running(self, env_name: str) -> bool:
+        """Given running status of environment"""
+        d = self._map_by_env.get(env_name, self._empty_item)
+        return d['is_running']
+
+    def get_addresses(self, env_name: str) -> List[Dict]:
+        """Given addresses of environment"""
+        d = self._map_by_env.get(env_name, self._empty_item)
+        return d['addresses']
+
+    @property
+    def _empty_item(self) -> Dict:
+        """An empty item for handling default cases"""
+        return {'is_running': False, 'addresses': []}
+
+
+def get_live_addresses(module: Module) -> ModuleLiveAddrs:
+    """Get addresses and is_running status for module's environments."""
+    data = make_internal_client().list_env_addresses(module.application.code, module.name)
+    return ModuleLiveAddrs(data)
+
+
+def get_module_exposed_links_live(module: Module) -> Dict[str, Dict]:
+    """Get exposed links of module's all environments.
+
+    This is the "live" version of the original `get_module_exposed_links` function,
+    key differences:
+
+    - Support both cloud-native and default applications
+    - market URL and user-preferred addresses not considered
+
+    The goal is to replace `get_module_exposed_links`(and other related *Providers)
+    with this function in the future.
+    """
+    links = {}
+    addrs = get_live_addresses(module)
+    for env in module.get_envs():
+        if items := addrs.get_addresses(env.environment):
+            # TODO: Pick url by priority order in the future
+            url = items[0]['url']
+        else:
+            url = None
+        links[env.environment] = {"deployed": addrs.get_is_running(env.environment), "url": url}
+    return links
+
+
+def get_exposed_url_live(env: ModuleEnvironment) -> Optional[EnvExposedURL]:
+    """Get exposed url of given module environment.
+
+    This is the "live" version of the original `get_exposed_url` function, key
+    differences:
+
+    - Support both cloud-native and default applications
+    - market URL and user-preferred addresses not included
+
+    :returns: None if no url can be found
+    """
+    addrs = get_live_addresses(env.module)
+    if items := addrs.get_addresses(env.environment):
+        # TODO: Pick url by priority order in the future
+        return EnvExposedURL(url=URL.from_address(items[0]['url']), provider_type='live')
+    return None

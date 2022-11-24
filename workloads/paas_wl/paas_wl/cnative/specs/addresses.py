@@ -19,10 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Optional, Set
 
-from attrs import define
-from cattr import structure
-
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.networking.ingress.certs.utils import (
     AppDomainCertController,
     pick_shared_cert,
@@ -166,22 +164,8 @@ def to_shared_tls_domain(d: Domain, app: EngineApp) -> Domain:
     return d
 
 
-@define
-class ExposedUrl:
-    host: str
-    subpath: str = ''
-    https_enabled: bool = False
-
-    def as_url(self) -> str:
-        protocol = "https" if self.https_enabled else "http"
-        return f"{protocol}://{self.host}{self.subpath}"
-
-
 def get_exposed_url(env: ModuleEnv) -> Optional[str]:
     """Get exposed URL for given env"""
-    addresses = get_plat_client().get_addresses(env.application.code, env.environment)
-    if addresses["subdomains"]:
-        return structure(addresses["subdomains"][0], ExposedUrl).as_url()
-    elif addresses["subpaths"]:
-        return structure(addresses["subpaths"][0], ExposedUrl).as_url()
+    if addrs := EnvAddresses(env).get():
+        return addrs[0].url
     return None

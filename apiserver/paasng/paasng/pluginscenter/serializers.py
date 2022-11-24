@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional, Type
 
-import arrow
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
@@ -491,14 +490,8 @@ class StubConfigSLZ(serializers.Serializer):
     __id__ = serializers.CharField(help_text="配置项id", source="unique_key")
 
 
-class HumanizeDateTimeField(serializers.DateTimeField):
-    def to_representation(self, value):
-        return arrow.get(value).humanize(locale="zh")
-
-
 class OperationRecordSLZ(serializers.ModelSerializer):
     display_text = serializers.CharField(source='get_display_text', read_only=True)
-    created_humanized = HumanizeDateTimeField(source="created")
 
     class Meta:
         model = OperationRecord

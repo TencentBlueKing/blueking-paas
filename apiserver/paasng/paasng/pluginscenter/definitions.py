@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from functools import partial
@@ -116,6 +116,7 @@ class PluginBasicInfoDefinition(BaseModel):
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
+    syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
 
 
 @registry
@@ -182,11 +183,36 @@ class ReleaseStageDefinition(BaseModel):
 
 
 @registry
+class PluginConfigColumnDefinition(BaseModel):
+    """插件配置-列信息定义"""
+
+    type: Literal["string"] = Field(default="string", description="字段类型")
+    name: str = Field(description="该字段对应的变量名")
+    title: str = Field(default="", description="字段标题")
+    description: str = Field(default="", description="该字段的说明提示")
+    pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
+    options: Optional[Dict[str, str]] = Field(description="该字段的选项")
+    unique: bool = Field(False, description="该列是否唯一(多列同时标记唯一时仅支持 unique_together)")
+
+
+@registry
+class PluginConfigDefinition(BaseModel):
+    """插件配置定义"""
+
+    title: str = Field(default="配置管理", description="「配置管理」标题")
+    description: str = Field(default="", description="插件类型描述")
+    docs: str = Field(default="", description="插件类型说明文档")
+    syncAPI: PluginBackendAPIResource = Field(description="「配置管理」同步接口")
+    columns: List[PluginConfigColumnDefinition] = Field(default_factory=list, min_items=1)
+
+
+@registry
 class PluginInstanceSpec(BaseModel):
     """插件实例相关属性"""
 
     basicInfo: PluginBasicInfoDefinition
     marketInfo: PluginMarketInfoDefinition
+    configInfo: Optional[PluginConfigDefinition] = Field(description="「配置管理」功能相关配置")
 
 
 @registry

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional
@@ -26,14 +25,14 @@ from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueTogetherValidator, UniqueValidator, qs_exists
+from rest_framework.validators import UniqueValidator, qs_exists
 
 from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.platform.applications.constants import AppLanguage, ApplicationRole, ApplicationType
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
-from paasng.platform.applications.models import Application, ApplicationMembership, UserMarkedApplication
+from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.signals import (
     application_logo_updated,
     prepare_change_application_name,
@@ -374,42 +373,16 @@ class RoleField(serializers.Field):
         return role_id
 
 
-class ApplicationMembershipListSerializer(serializers.ListSerializer):
-    def create(self, validated_data):
-        memberships = [ApplicationMembership(**item) for item in validated_data]
-        return ApplicationMembership.objects.bulk_create(memberships)
+class ApplicationMemberSLZ(serializers.Serializer):
 
-
-class ApplicationMembershipSLZ(serializers.ModelSerializer):
-    """Serializer for create and list"""
-
-    application = ApplicationRelationSLZ()
     user = UserField()
-    role = RoleField()
-
-    class Meta(object):
-        model = ApplicationMembership
-        list_serializer_class = ApplicationMembershipListSerializer
-        fields = ['application', 'user', 'role', 'created', 'updated']
-        validators = [
-            UniqueTogetherValidator(
-                queryset=ApplicationMembership.objects.all(),
-                fields=('application', 'user'),
-                message=u'用户已经是应用成员，不能重复添加',
-            )
-        ]
+    roles = serializers.ListField(child=RoleField(), help_text='用户角色列表')
 
 
-class ApplicationMembershipRoleOnlySLZ(serializers.ModelSerializer):
+class ApplicationMemberRoleOnlySLZ(serializers.Serializer):
     """Serializer for update, only role"""
 
-    application = ApplicationRelationSLZ(read_only=True)
     role = RoleField()
-
-    class Meta(object):
-        model = ApplicationMembership
-        read_only_fields = ['application', 'user', 'created', 'updated']
-        fields = read_only_fields + ['role']
 
 
 class ApplicationListDetailedSLZ(serializers.Serializer):

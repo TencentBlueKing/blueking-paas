@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -9,7 +26,7 @@ from rest_framework.response import Response
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr, validate_domain_payload
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ
-from paas_wl.platform.applications.permissions import site_perm_class
+from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
 from paas_wl.platform.applications.struct_models import Application, set_many_model_structured, to_structured
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.views import BaseEndUserViewSet
@@ -19,7 +36,7 @@ from paas_wl.utils.api_docs import openapi_empty_response
 class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """管理应用独立域名的 ViewSet"""
 
-    permission_classes = [IsAuthenticated, site_perm_class('admin:manage:workloads')]
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_queryset(self, application: Application) -> QuerySet:
         """Get Domain QuerySet of current application"""

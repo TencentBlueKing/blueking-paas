@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import contextlib
 import logging
 from typing import Any, Dict, List, Optional
@@ -87,6 +104,7 @@ class ClusterManager(models.Manager):
         token_value: Optional[str] = None,
         default_node_selector: Optional[Dict] = None,
         default_tolerations: Optional[List] = None,
+        pk: Optional[str] = None,
         **kwargs,
     ) -> 'Cluster':
         """Register a cluster to db, work Like update_or_create, but will validate some-attr
@@ -134,7 +152,10 @@ class ClusterManager(models.Manager):
         # We use `None` to mark this fields is unset, so we should pop it from defaults.
         defaults = {k: v for k, v in defaults.items() if v is not None}
 
-        cluster, _ = self.update_or_create(name=name, region=region, defaults=defaults)
+        if pk:
+            cluster, _ = self.update_or_create(pk=pk, name=name, region=region, defaults=defaults)
+        else:
+            cluster, _ = self.update_or_create(name=name, region=region, defaults=defaults)
         return cluster
 
     @transaction.atomic

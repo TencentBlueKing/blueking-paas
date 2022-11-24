@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -31,17 +30,19 @@ from django.db.models import Q, QuerySet
 from django.shortcuts import get_object_or_404
 from pilkit.processors import ResizeToFill
 
+from paasng.accessories.iam.helpers import fetch_role_members
+from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
 from paasng.engine.models import Deployment, EngineApp
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.core.storages.s3 import app_logo_storage
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.region.models import get_region
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import (
     BkUserField,
     OrderByField,
     OwnerTimestampedModel,
     ProcessedImageField,
-    SimpleUserIDWrapper,
     TimestampedModel,
     WithOwnerManager,
 )
@@ -65,23 +66,29 @@ class ApplicationQuerySet(models.QuerySet):
             return user.pk
         return user
 
+    @staticmethod
+    def get_username(user):
+        """
+        获取用户名称
+
+        :param user:  User Object or user_id
+        """
+        if hasattr(user, 'username'):
+            return user.username
+
+        return get_username_by_bkpaas_user_id(user)
+
     def _filter_by_user(self, user):
         """Filter applications, take application only if user play a role in it.
 
         :param user: User object or user_id
         """
-        user = self.get_user_id(user)
-        roles = {ApplicationRole.ADMINISTRATOR.value, ApplicationRole.DEVELOPER.value, ApplicationRole.OPERATOR.value}
-        collaborated_apps = []
-        for membership in ApplicationMembership.objects.filter(user=user, role__in=roles):
-            collaborated_apps.append(
-                {
-                    'id': membership.application_id,
-                    'role': membership.role,
-                }
-            )
-        ids = [app['id'] for app in collaborated_apps]
-        return self.filter(id__in=ids)
+        username = self.get_username(user)
+        filters = ApplicationPermission().gen_user_app_filters(username)
+        if not filters:
+            return self.none()
+
+        return self.filter(filters)
 
     def search_by_code_or_name(self, search_term):
         return self.filter(
@@ -342,26 +349,21 @@ class Application(OwnerTimestampedModel):
 
     def get_administrators(self):
         """获取具有管理权限的人员名单"""
-        return self.get_members(ApplicationRole.ADMINISTRATOR.value)
+        return fetch_role_members(self.code, ApplicationRole.ADMINISTRATOR)
 
-    def get_devopses(self):
+    def get_devopses(self) -> List[str]:
         """获取具有运营权限的人员名单"""
-        devops = self.get_members(ApplicationRole.OPERATOR.value) + self.get_administrators()
-        return devops
+        devopses = fetch_role_members(self.code, ApplicationRole.OPERATOR) + fetch_role_members(
+            self.code, ApplicationRole.ADMINISTRATOR
+        )
+        return list(set(devopses))
 
-    def get_developers(self):
+    def get_developers(self) -> List[str]:
         """获取具有开发权限的人员名单"""
-        developers = self.get_members(ApplicationRole.DEVELOPER.value) + self.get_administrators()
-        return developers
-
-    def get_developer_names(self):
-        """获取具有开发者权限的人员名列表"""
-        return [user.username for user in self.get_developers()]
-
-    def get_members(self, role) -> List[SimpleUserIDWrapper]:
-        queryset = self.applicationmembership_set.filter(role=role)
-        users = queryset.values_list("user", flat=True)
-        return list(users)
+        developers = fetch_role_members(self.code, ApplicationRole.DEVELOPER) + fetch_role_members(
+            self.code, ApplicationRole.ADMINISTRATOR
+        )
+        return list(set(developers))
 
     def has_customized_logo(self) -> bool:
         """Check if application has uploaded a customized logo"""

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -22,6 +21,7 @@ import logging
 import pytest
 from django_dynamic_fixture import G
 
+from paasng.engine.models import ConfigVar
 from paasng.extensions.bk_plugins.apigw import safe_sync_apigw
 from paasng.extensions.bk_plugins.models import BkPluginDistributor
 
@@ -69,3 +69,31 @@ class TestDistributorRels:
         api_client.put(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/', {'distributors': ['sample-dis-1']})
         resp = api_client.get(f'/api/bk_plugins/{bk_plugin_app.code}/distributors/')
         assert len(resp.json()) == 1
+
+
+class TestPluginConfigurationViewSet:
+    """Test APIS of syncing configurations"""
+
+    def test_sync(self, bk_plugin_app, sys_api_client):
+        module = bk_plugin_app.get_default_module()
+        assert ConfigVar.objects.filter(module=module).count() == 0
+        response = sys_api_client.post(
+            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/configuration/",
+            data=[{"key": "FOO", "value": "foo"}, {"key": "BAR", "value": "bar"}, {"key": "BAZ", "value": "baz"}],
+        )
+        assert response.status_code == 200
+        assert ConfigVar.objects.filter(module=module).count() == 3
+        assert ConfigVar.objects.get(module=module, key="FOO").value == "foo"
+        assert ConfigVar.objects.get(module=module, key="BAR").value == "bar"
+        assert ConfigVar.objects.get(module=module, key="BAZ").value == "baz"
+        response = sys_api_client.post(
+            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/configuration/",
+            data=[
+                {"key": "FOO", "value": "foo"},
+                {"key": "BAR", "value": "BAR"},
+            ],
+        )
+        assert response.status_code == 200
+        assert ConfigVar.objects.filter(module=module).count() == 2
+        assert ConfigVar.objects.get(module=module, key="FOO").value == "foo"
+        assert ConfigVar.objects.get(module=module, key="BAR").value == "BAR"

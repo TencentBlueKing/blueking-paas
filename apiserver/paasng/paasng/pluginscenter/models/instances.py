@@ -1,29 +1,30 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import List, Optional
 
 import cattr
 from attrs import define
+from bkpaas_auth import get_user_by_user_id
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.pluginscenter.constants import PluginReleaseStatus, PluginRole, PluginStatus
+from paasng.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.utils.models import AuditedModel, BkUserField, UuidAuditedModel, make_json_field
 
@@ -61,7 +62,7 @@ class PluginInstance(UuidAuditedModel):
     status = models.CharField(
         verbose_name="插件状态", max_length=16, choices=PluginStatus.get_choices(), default=PluginStatus.WAITING_APPROVAL
     )
-    itsm_detail: ItsmDetail = ItsmDetailField(default=None, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")
 
@@ -79,15 +80,6 @@ class PluginMarketInfo(AuditedModel):
     description = TranslatedFieldWithFallback(models.TextField(verbose_name="详细描述", null=True))
     contact = models.TextField(verbose_name="联系人", help_text="以分号(;)分割")
     extra_fields = models.JSONField(verbose_name="额外字段")
-
-
-class PluginMembership(AuditedModel):
-    """插件成员"""
-
-    plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
-
-    user = BkUserField()
-    role = models.IntegerField(default=PluginRole.DEVELOPER.value)
 
 
 class PluginReleaseVersionManager(models.Manager):
@@ -115,9 +107,7 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(
-                plugin=plugin, status__in=[PluginReleaseStatus.PENDING, PluginReleaseStatus.INITIAL]
-            ).latest('created')
+            return self.filter(plugin=plugin, status__in=PluginReleaseStatus.running_status()).latest('created')
         except self.model.DoesNotExist:
             return None
 
@@ -164,16 +154,20 @@ class PluginRelease(AuditedModel):
         next_stage = None
         for stage in pd.release_stages[::-1]:
             stages_shortcut.append(cattr.structure({"id": stage.id, "name": stage.name}, PlainStageInfo))
-            next_stage, _ = PluginReleaseStage.objects.get_or_create(
+            next_stage, _ = PluginReleaseStage.objects.update_or_create(
                 release=self,
                 stage_id=stage.id,
                 stage_name=stage.name,
                 invoke_method=stage.invokeMethod,
-                next_stage=next_stage,
+                defaults={
+                    "next_stage": next_stage,
+                    "status": PluginReleaseStatus.INITIAL,
+                },
             )
         self.current_stage = next_stage
         self.stages_shortcut = stages_shortcut[::-1]
-        self.save(update_fields=["current_stage", "stages_shortcut", "updated"])
+        self.status = PluginReleaseStatus.PENDING
+        self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
 
 
 class PluginReleaseStage(AuditedModel):
@@ -189,7 +183,7 @@ class PluginReleaseStage(AuditedModel):
 
     status = models.CharField(verbose_name="发布状态", default=PluginReleaseStatus.INITIAL, max_length=16)
     fail_message = models.TextField(verbose_name="错误原因")
-    itsm_detail: ItsmDetail = ItsmDetailField(default=None, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     api_detail = models.JSONField(verbose_name="API 详情", null=True, help_text="该字段仅 invoke_method = api 时可用")
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
@@ -197,9 +191,60 @@ class PluginReleaseStage(AuditedModel):
     class Meta:
         unique_together = ("release", "stage_id")
 
+    def reset(self):
+        """reset release-stage to not executed state"""
+        self.status = PluginReleaseStatus.INITIAL
+        self.fail_message = ""
+        self.itsm_detail = None
+        self.api_detail = None
+        self.save(update_fields=["status", "fail_message", "itsm_detail", "api_detail", "updated"])
+
+    def update_status(self, status: PluginReleaseStatus, fail_message: str = ""):
+        self.status = status
+        if fail_message:
+            self.fail_message = fail_message
+        self.save(update_fields=["status", "fail_message", "updated"])
+
 
 class ApprovalService(UuidAuditedModel):
     """审批服务信息"""
 
     service_name = models.CharField(verbose_name="审批服务名称", max_length=64, unique=True)
     service_id = models.IntegerField(verbose_name="审批服务ID", help_text="用于在 ITSM 上提申请单据")
+
+
+class PluginConfig(AuditedModel):
+    """插件配置"""
+
+    plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="configs")
+    unique_key = models.CharField(verbose_name="唯一标识", max_length=64)
+    row = models.JSONField(verbose_name="配置内容(1行), 格式 {'column_key': 'value'}", default=dict)
+
+    class Meta:
+        unique_together = ("plugin", "unique_key")
+
+
+class OperationRecord(AuditedModel):
+    """插件操作记录
+    动作 (具体的) 主体
+    -----------------
+    新建  0.0.1  版本
+    启动  web    进程
+    修改         配置信息
+    修改         应用市场新
+    """
+
+    plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
+    operator = BkUserField()
+    action = models.CharField(max_length=32, choices=ActionTypes.get_choices())
+    specific = models.CharField(max_length=255, null=True)
+    subject = models.CharField(max_length=32, choices=SubjectTypes.get_choices())
+
+    def get_display_text(self):
+        action_text = ActionTypes.get_choice_label(self.action)
+        subject_text = SubjectTypes.get_choice_label(self.subject)
+        username = get_user_by_user_id(self.operator).username
+
+        if self.specific:
+            return f"{username} {action_text} {self.specific} {subject_text}"
+        return f"{username} {action_text}{subject_text}"

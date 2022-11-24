@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from pathlib import Path
@@ -94,7 +93,7 @@ def bk_app_init_rule_configs(bk_app):
             notice_group_name=notice_group_name,
         ),
         'notice/default_notice.yaml': j2_env.get_template('notice.yaml.j2').render(
-            notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developer_names()
+            notice_group_name=f"[{app_code}] {_('通知组')}", receivers=bk_app.get_developers()
         ),
     }
 
@@ -106,7 +105,7 @@ def cpu_usage_alert_rule_obj(bk_app):
         display_name='high_cpu_usage',
         enabled=True,
         threshold_expr='>= 0.8',
-        receivers=bk_app.get_developer_names(),
+        receivers=bk_app.get_developers(),
         application=bk_app,
         environment='stag',
         module=bk_app.get_default_module(),

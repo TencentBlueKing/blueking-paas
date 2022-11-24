@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import base64
@@ -30,10 +29,13 @@ from django.db import IntegrityError as DjangoIntegrityError
 from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
+from paasng.accessories.iam.helpers import delete_builtin_user_groups
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.handlers import application_logo_updated
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import before_finishing_application_creation
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import create_default_module
@@ -149,17 +151,19 @@ class Command(BaseCommand):
             logger.info("app(name:%s) exists, skip create", app_desc.name)
             return
 
-        ApplicationMembership.objects.update_or_create(
-            user=application.creator, application=application, role=ApplicationRole.ADMINISTRATOR.value
-        )
-
         if created:
+            try:
+                register_builtin_user_groups_and_grade_manager(application)
+            except BKIAMGatewayServiceError as e:
+                logger.exception("app initialize members failed, skip create: %s", e.message)
+                return
+
             try:
                 before_finishing_application_creation.send("FakeSender", application=application)
             except IntegrityError as e:
                 logger.error(f"app with the same {e.field} field already exists in paas2.0, skip create")
                 # 同步 PaaS2.0 失败，则同步删除 PaaS3.0 中已经创建的内容
-                ApplicationMembership.objects.filter(application=application).delete()
+                delete_builtin_user_groups(application.code)
                 Application.objects.filter(code=app_desc.code).delete()
                 return
 

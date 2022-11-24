@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import logging
 
 from django.db.utils import IntegrityError
@@ -10,7 +27,7 @@ from rest_framework.response import Response
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.networking.egress.serializers import RCStateAppBindingSLZ
-from paas_wl.platform.applications.permissions import application_perm_class
+from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.views import BaseEndUserViewSet
 from paas_wl.utils.error_codes import error_codes
@@ -21,7 +38,7 @@ logger = logging.getLogger(__name__)
 class EgressGatewayInfosViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     """应用出口 IP 管理相关 API"""
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_deploy')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def retrieve(self, request, code, module_name, environment):
         """返回已获取的出口网关信息"""

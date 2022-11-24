@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
@@ -99,6 +100,9 @@ class ApplicationPermission(Permission):
     resource_type: str = ResourceType.Application
     resource_request_cls: Type[ResourceRequest] = AppRequest
 
+    def get_method_by_action(self, action: AppAction):
+        return getattr(self, f'can_{action.value}')
+
     def can_view_basic_info(self, perm_ctx: AppPermCtx, raise_exception: bool = True) -> bool:
         perm_ctx.validate_resource_id()
         return self.can_action(perm_ctx, AppAction.VIEW_BASIC_INFO, raise_exception)
@@ -135,7 +139,7 @@ class ApplicationPermission(Permission):
         perm_ctx.validate_resource_id()
         return self.can_multi_actions(
             perm_ctx,
-            [AppAction.MANAGE_APP_MARKET, AppAction.EDIT_BASIC_INFO, AppAction.VIEW_BASIC_INFO],
+            [AppAction.MANAGE_APP_MARKET, AppAction.VIEW_BASIC_INFO],
             raise_exception,
         )
 

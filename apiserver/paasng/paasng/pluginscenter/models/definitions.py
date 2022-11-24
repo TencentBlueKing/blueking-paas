@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List
@@ -26,6 +26,7 @@ from paasng.pluginscenter.definitions import (
     PluginBackendAPI,
     PluginBackendAPIResource,
     PluginCodeTemplate,
+    PluginConfigColumnDefinition,
     PluginCreateApproval,
     PluginLogConfig,
     ReleaseRevisionDefinition,
@@ -42,6 +43,9 @@ PluginLogConfigField = make_json_field("PluginLogConfigField", PluginLogConfig)
 PluginCreateApprovalField = make_json_field("PluginCreateApprovalField", PluginCreateApproval)
 PluginCodeTemplateListField = make_json_field("PluginCodeTemplateListField", List[PluginCodeTemplate])
 PluginExtraFieldField = make_json_field("PluginExtraFieldField", Dict[str, FieldSchema])
+PluginConfigColumnDefinitionField = make_json_field(
+    "PluginConfigColumnDefinitionField", List[PluginConfigColumnDefinition]
+)
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -93,3 +97,15 @@ class PluginMarketInfoDefinition(AuditedModel):
     category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
+
+
+class PluginConfigInfoDefinition(AuditedModel):
+    pd = models.OneToOneField(
+        PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="config_definition"
+    )
+
+    title = TranslatedFieldWithFallback(models.CharField(verbose_name="「配置管理标题」", max_length=16))
+    description = TranslatedFieldWithFallback(models.TextField(default=""))
+    docs = models.CharField(max_length=255, default="")
+    sync_api: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
+    columns: List[PluginConfigColumnDefinition] = PluginConfigColumnDefinitionField(default=list)

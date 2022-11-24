@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
@@ -21,9 +21,9 @@ from unittest import mock
 import pytest
 from django.utils.translation import gettext_lazy as _
 
-from paasng.pluginscenter.constants import PluginReleaseStatus
+from paasng.pluginscenter.constants import ActionTypes, PluginReleaseStatus, SubjectTypes
 from paasng.pluginscenter.exceptions import error_codes
-from paasng.pluginscenter.models import PluginRelease
+from paasng.pluginscenter.models import OperationRecord, PluginRelease
 from tests.pluginscenter.conftest import make_api_resource
 
 pytestmark = pytest.mark.django_db
@@ -168,7 +168,7 @@ class TestReleaseStages:
             'status': 'pending',
             'fail_message': '',
             'detail': {
-                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'pending'}],
+                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'successful'}],
                 'finished': True,
                 'logs': ['1', '2', '3'],
             },
@@ -178,9 +178,27 @@ class TestReleaseStages:
         # - 渲染 stage 时隐含了更新 status 的操作(后面需要重构成后台任务轮训更新状态)
         release.refresh_from_db()
         assert release.current_stage.status == PluginReleaseStatus.SUCCESSFUL
-        assert release.status == PluginReleaseStatus.PENDING
-        resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
-        assert resp.status_code == 200
-
-        release.refresh_from_db()
+        # 最后一个步骤成功, 自动部署成功
         assert release.status == PluginReleaseStatus.SUCCESSFUL
+
+
+class TestOperationRecord:
+    """测试操作记录"""
+
+    def test_record(self, plugin, bk_user):
+        record = OperationRecord.objects.create(
+            plugin=plugin,
+            operator=bk_user.pk,
+            action=ActionTypes.DELETE.value,
+            subject=SubjectTypes.PLUGIN.value,
+        )
+        assert record.get_display_text() == f"{bk_user.username} 删除插件"
+
+        record1 = OperationRecord.objects.create(
+            plugin=plugin,
+            operator=bk_user.pk,
+            action=ActionTypes.ADD.value,
+            specific="0.0.1",
+            subject=SubjectTypes.VERSION.value,
+        )
+        assert record1.get_display_text() == f"{bk_user.username} 新建 0.0.1 版本"

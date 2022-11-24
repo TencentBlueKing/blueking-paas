@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
-"""Preconditions for deploy Module"""
 from typing import TYPE_CHECKING
 
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accounts.permissions.application import get_user_app_role
+from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.dev_resources.sourcectl.exceptions import (
     AccessTokenForbidden,
     BasicAuthError,
@@ -39,6 +37,7 @@ from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.publish.market.models import Product
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 if TYPE_CHECKING:
     from bkpaas_auth.models import User
@@ -103,9 +102,9 @@ class EnvProtectionCondition(DeployCondition):
     action_name = DeployConditions.CHECK_ENV_PROTECTION.value
 
     def validate(self):
-        role = get_user_app_role(user=self.user, obj=self.env.module)
+        roles = fetch_user_roles(self.env.application.code, get_username_by_bkpaas_user_id(self.user.pk))
         try:
-            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=self.env, role=role)
+            env_role_protection_check(operation=EnvRoleOperation.DEPLOY.value, env=self.env, roles=roles)
         except RoleNotAllowError as e:
             message = _("当前用户无部署该环境的权限, 请联系应用管理员")
             raise ConditionNotMatched(message, self.action_name) from e

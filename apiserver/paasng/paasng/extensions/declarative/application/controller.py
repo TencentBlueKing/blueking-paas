@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 """Controller for declarative applications
@@ -27,8 +26,9 @@ from typing import Dict, List, Optional
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.models import User, UserProfile
-from paasng.accounts.permissions.tools import user_has_perm
+from paasng.accounts.permissions.application import user_has_app_action_perm
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import ServiceSharingManager
@@ -137,7 +137,7 @@ class AppDeclarativeController:
         if not desc.region:
             desc.region = application.region
 
-        if not user_has_perm(self.user, 'manage_deploy', application):
+        if not user_has_app_action_perm(self.user, application, AppAction.BASIC_DEVELOP):
             raise DescriptionValidationError({APP_CODE_FIELD: _('你没有权限操作当前应用')})
 
         # Handle field modifications

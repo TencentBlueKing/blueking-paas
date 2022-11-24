@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -28,14 +27,13 @@ from django.db.models import Model
 from django.utils.translation import gettext as _
 from pydantic import BaseModel
 
-from paasng.engine.constants import JobStatus, OperationTypes, RuntimeType
+from paasng.engine.constants import JobStatus, RuntimeType
 from paasng.engine.controller.state import controller_client
 from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, OfflineOperationExistError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
-from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
 from paasng.engine.models.steps import DeployStepPicker
 from paasng.platform.applications.signals import module_environment_offline_event
@@ -98,24 +96,15 @@ class OfflineManager:
             source_comment=deployment.source_comment,
         )
 
-        # send offline event
+        # send offline event to create operation record
         module_environment_offline_event.send(
             sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
-        )
-
-        ModuleEnvironmentOperations.objects.create(
-            operator=offline_operation.operator,
-            app_environment=offline_operation.app_environment,
-            application=offline_operation.app_environment.application,
-            operation_type=OperationTypes.OFFLINE.value,
-            object_uid=offline_operation.pk,
         )
 
         engine_app = self.env.engine_app
         controller_client.archive_app(
             region=engine_app.region, app_name=engine_app.name, operation_id=str(offline_operation.pk)
         )
-
         return offline_operation
 
 

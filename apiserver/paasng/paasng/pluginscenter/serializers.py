@@ -1,31 +1,32 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional, Type
 
 import semver
+from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
-from paasng.pluginscenter.definitions import FieldSchema
+from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.models import (
     PluginDefinition,
@@ -55,6 +56,15 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
         exclude = ("uuid", "identifier", "created", "updated", "release_revision", "release_stages", "log_config")
 
 
+class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
+    id = serializers.CharField(source="identifier")
+    name = TranslatedCharField()
+
+    class Meta:
+        model = PluginDefinition
+        fields = ("id", "name")
+
+
 class PlainReleaseStageSLZ(serializers.Serializer):
     id = serializers.CharField(help_text="阶段id")
     name = serializers.CharField(help_text="阶段名称")
@@ -78,6 +88,13 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data['creator']:
+            user = get_user_by_user_id(data['creator'])
+            data['creator'] = user.username
+        return data
 
     class Meta:
         model = PluginRelease
@@ -314,10 +331,16 @@ class PluginLogQueryParamsSLZ(serializers.Serializer):
         return attrs
 
 
+class PluginLogQueryDSLSLZ(serializers.Serializer):
+    """查询插件日志的 DSL 参数"""
+
+    query_string = serializers.CharField(help_text="查询语句", default="", allow_blank=True)
+
+
 class PluginLogQueryBodySLZ(serializers.Serializer):
     """查询插件标准输出的 body 参数"""
 
-    query_string = serializers.CharField(help_text="查询语句", default="")
+    query = PluginLogQueryDSLSLZ()
 
 
 class StandardOutputLogLineSLZ(serializers.Serializer):
@@ -413,3 +436,54 @@ class ItsmApprovalSLZ(serializers.Serializer):
     current_status = serializers.ChoiceField(label="单据当前状态", choices=ItsmTicketStatus.get_choices())
     approve_result = serializers.BooleanField(label="审批结果")
     token = serializers.CharField(label="回调token", help_text="可用于验证请求是否来自于 ITSM")
+
+
+class PluginConfigColumnSLZ(serializers.Serializer):
+    """插件「配置管理」表单-列定义"""
+
+    name = serializers.CharField(help_text="该字段对应的变量名")
+    title = serializers.CharField(help_text="字段的标题")
+    description = serializers.CharField(help_text="字段描述(placeholder)")
+    pattern = serializers.CharField(required=False, help_text="校验字段的正则表达式")
+    options = serializers.DictField(required=False, help_text="字段的选项, 格式是 {'选项展示名称': '选项值'}")
+
+
+class PluginConfigSchemaSLZ(serializers.Serializer):
+    """插件「配置管理」表单范式"""
+
+    title = TranslatedCharField(help_text="「配置管理」的标题")
+    description = TranslatedCharField(help_text="「配置管理」的描述")
+    docs = serializers.CharField(default=None)
+    columns = PluginConfigColumnSLZ(many=True)
+
+
+def make_config_column_field(column_definition: PluginConfigColumnDefinition) -> serializers.Field:
+    """Generate a Field for verifying a string according to the given column_definition"""
+    init_kwargs = {
+        "label": column_definition.title,
+        "help_text": column_definition.description,
+    }
+    if column_definition.pattern:
+        return serializers.RegexField(regex=column_definition.pattern, **init_kwargs)
+    return serializers.CharField(**init_kwargs)
+
+
+def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
+    """generate a SLZ for verifying the creation/update of "Plugin Config"
+    according to the PluginConfigDefinition definition"""
+    config_definition = pd.config_definition
+    fields = {
+        column_definition.name: make_config_column_field(column_definition)
+        for column_definition in config_definition.columns
+    }
+    fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
+    return type("DynamicPluginConfigSerializer", (serializers.Serializer,), fields)
+
+
+class StubConfigSLZ(serializers.Serializer):
+    """A stub Serializer for creation/update  `Configuration`, just be used to generate docs
+
+    Please see the specific implementation at `make_config_slz_class`
+    """
+
+    __id__ = serializers.CharField(help_text="配置项id", source="unique_key")

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import arrow
@@ -23,8 +22,10 @@ from django.db.models import Count, F
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.models.deployment import Deployment
 from paasng.plat_admin.admin42.serializers.statistics import (
     AppDeploymentFilterSlz,
@@ -35,6 +36,9 @@ from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 
 class DeployStatisticsView(TemplateView, viewsets.GenericViewSet):
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.OPERATE_PLATFORM)]
+
     def get_context_data(self, **kwargs):
         kwargs.update(self.request.query_params)
         if 'view' not in kwargs:
@@ -61,14 +65,12 @@ class DeployStatisticsView(TemplateView, viewsets.GenericViewSet):
 
         return queryset
 
-    @site_perm_required("admin:read:application")
     def get(self, request, *args, **kwargs):
         query_slz = AppDeploymentFilterSlz(data=request.query_params)
         query_slz.is_valid(raise_exception=True)
         self.query_params = query_slz.validated_data
         return super().get(request, *args, **kwargs)
 
-    @site_perm_required("admin:read:application")
     def export(self, request, *args, **kwargs):
         query_slz = AppDeploymentFilterSlz(data=request.query_params)
         query_slz.is_valid(raise_exception=True)

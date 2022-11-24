@@ -1,22 +1,23 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
 class PluginReleaseMethod(str, StructuredEnum):
@@ -88,6 +89,14 @@ class PluginReleaseStatus(str, StructuredEnum):
     INITIAL = EnumField("initial", label="初始化")
     INTERRUPTED = EnumField('interrupted', label='已中断')
 
+    @classmethod
+    def abnormal_status(cls):
+        return [cls.FAILED, cls.INTERRUPTED]
+
+    @classmethod
+    def running_status(cls):
+        return [cls.INITIAL, cls.PENDING]
+
 
 class LogTimeChoices(str, StructuredEnum):
     """日志搜索-日期范围可选值"""
@@ -101,3 +110,24 @@ class LogTimeChoices(str, StructuredEnum):
     THREE_DAYS = EnumField("3d", label="3天")
     SEVEN_DAYS = EnumField("7d", label="7天")
     CUSTOMIZED = EnumField("customized", label="自定义")
+
+
+class ActionTypes(str, StructuredEnum):
+    """操作记录-动作类型"""
+
+    CREATE = EnumField("create", label=_("创建"))
+    ADD = EnumField('add', label=_("新建"))
+    TERMINATE = EnumField('terminate', label=_("终止发布"))
+    MODIFY = EnumField("modify", label=_("修改"))
+    DELETE = EnumField("delete", label=_("删除"))
+
+
+class SubjectTypes(str, StructuredEnum):
+    """操作记录-主体"""
+
+    PLUGIN = EnumField("plugin", label=_("插件"))
+    VERSION = EnumField("version", label=_("版本"))
+    BASIC_INFO = EnumField("basic_info", label=_("基本信息"))
+    MARKET_INFO = EnumField("market_info", label=_("市场信息"))
+    CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
+    VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))

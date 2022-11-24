@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
@@ -24,10 +24,12 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
+from paasng.pluginscenter.constants import MarketInfoStorageType
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
     ApprovalService,
     PluginBasicInfoDefinition,
+    PluginConfigInfoDefinition,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfoDefinition,
@@ -70,6 +72,7 @@ def pd():
             "update": make_api_resource("update-market-{ plugin_id }"),
         },
         category=make_api_resource("list-category"),
+        storage=MarketInfoStorageType.PLATFORM,
     )
     pd.basic_info_definition = G(
         PluginBasicInfoDefinition,
@@ -97,6 +100,17 @@ def pd():
             "update": make_api_resource("update-instance-{ plugin_id }"),
             "delete": make_api_resource("delete-instance-{ plugin_id }"),
         },
+    )
+
+    pd.config_definition = G(
+        PluginConfigInfoDefinition,
+        pd=pd,
+        title_zh_cn="配置管理",
+        sync_api=make_api_resource("sync-configuration-{ plugin_id }"),
+        columns=[
+            {"type": "string", "title": "FOO", "unique": True, "name": "FOO"},
+            {"type": "string", "title": "BAR", "unique": False, "name": "BAR"},
+        ],
     )
     pd.save()
     pd.refresh_from_db()

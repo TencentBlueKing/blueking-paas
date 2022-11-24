@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from __future__ import print_function
@@ -51,7 +50,6 @@ from paasng.publish.market.signals import product_create_or_update_by_operator
 from paasng.publish.sync_market.engine import RemoteAppManager
 from paasng.publish.sync_market.managers import AppDeveloperManger, AppManger, AppOpsManger, AppReleaseRecordManger
 from paasng.publish.sync_market.utils import run_required_db_console_config
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 try:
     from paasng.publish.sync_market.constant_ext import I18N_FIELDS_IN_CONSOLE
@@ -188,7 +186,6 @@ def sync_console_app_developers(application: Application, session: Session):
     # sync developers(开发者) to console
     try:
         developers = application.get_developers()
-        developers = [get_username_by_bkpaas_user_id(developer) for developer in developers]
         AppDeveloperManger(session).update_developers(application.code, developers)
     except Exception:
         logger.exception(u"同步开发者信息到桌面失败！")
@@ -198,7 +195,6 @@ def sync_console_app_devopses(application: Application, session: Session):
     # sync devops(运营人员) to console
     try:
         devopses = application.get_devopses()
-        devopses = [get_username_by_bkpaas_user_id(devops) for devops in devopses]
         AppOpsManger(session).update_ops(application.code, devopses)
     except NotImplementedError:
         logger.info('op role is not defined, skip synchronization')

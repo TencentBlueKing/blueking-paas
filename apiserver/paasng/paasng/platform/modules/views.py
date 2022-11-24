@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -34,9 +33,10 @@ from rest_framework.response import Response
 
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.constants import AccountFeatureFlag as AFF
 from paasng.accounts.models import AccountFeatureFlag
-from paasng.accounts.permissions.application import application_perm_class, check_application_perms
+from paasng.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
@@ -69,6 +69,7 @@ from paasng.publish.market.models import MarketConfig
 from paasng.publish.market.protections import ModulePublishPreparer
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
+from paasng.utils.views import permission_classes as perm_classes
 
 if TYPE_CHECKING:
     from .models import AppBuildPack
@@ -78,10 +79,9 @@ logger = logging.getLogger(__name__)
 
 
 class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
-
     @transaction.atomic
     @swagger_auto_schema(request_body=CreateModuleSLZ, tags=["创建模块"])
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
     def create(self, request, *args, **kwargs):
         """创建一个新模块, 创建 lesscode 模块时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供"""
         application = self.get_application()
@@ -147,6 +147,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             status=status.HTTP_201_CREATED,
         )
 
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def list(self, request, code):
         """查看所有应用模块"""
         slz = ListModulesSLZ(data=request.query_params)
@@ -161,6 +162,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data=MinimalModuleSLZ(modules, many=True).data)
 
     @swagger_auto_schema(tags=['应用模块'], response_serializer=ModuleSLZ)
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def retrieve(self, request, code, module_name):
         """查看应用模块信息
 
@@ -172,6 +174,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
         return Response(data=ModuleSLZ(module).data, status=status.HTTP_200_OK)
 
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
     def destroy(self, request, code, module_name):
         """
         删除蓝鲸应用模块
@@ -180,7 +183,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         # TODO can create get_application func and refactor all the permissions logic in ApplicationViewset
         application = get_object_or_404(Application, code=code)
-        check_application_perms(self.request.user, ['delete_app'], application)
+        check_application_perm(self.request.user, application, AppAction.DELETE_APPLICATION)
 
         if application.get_default_module().name == module_name:
             raise error_codes.CANNOT_DELETE_MODULE.f(_("主模块不允许被删除"))
@@ -203,6 +206,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
+    @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
     def set_as_default(self, request, code, module_name):
         """设置某个模块为主模块"""
         application = self.get_application()
@@ -242,7 +246,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def list_available(self, request, code, module_name):
         """获取一个模块可用的运行环境"""
@@ -334,7 +338,7 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModuleRuntimeOverviewView(views.APIView, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('view_application')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(response_serializer=ModuleRuntimeOverviewSLZ)
     def get(self, request, code, module_name):
@@ -353,7 +357,7 @@ class ModuleRuntimeOverviewView(views.APIView, ApplicationCodeInPathMixin):
 
 
 class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(response_serializer=ModuleDeployConfigSLZ)
     def retrieve(self, request, *args, **kwargs):

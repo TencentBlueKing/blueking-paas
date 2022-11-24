@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -27,15 +26,17 @@ from django.core.files.storage import Storage
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.engine.constants import JobStatus
 from paasng.engine.models import Deployment
 from paasng.metrics import NEW_APP_COUNTER
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.models import Application
 from paasng.platform.region.app import S3BucketRegionHelper
 from paasng.platform.region.models import get_region
 from paasng.utils.blobstore import get_storage_by_bucket
+from paasng.utils.error_codes import error_codes
 
+from .helpers import register_builtin_user_groups_and_grade_manager
 from .signals import (
     application_logo_updated,
     before_finishing_application_creation,
@@ -47,18 +48,20 @@ logger = logging.getLogger(__name__)
 
 
 # Post creation application handlers start
-# The order of handlers is important because them will be called in the order of them were registed
+# The order of handlers is important because them will be called in the order of them were registered
 
 
 @receiver(post_create_application)
-def add_default_admin(sender, application: Application, **kwargs):
-    """Add a default administrator for application after creation"""
-    logger.debug(
-        'Adding default admin after app creation: user=%s application=%s', application.creator, application.code
-    )
-    ApplicationMembership.objects.create(
-        user=application.creator, application=application, role=ApplicationRole.ADMINISTRATOR.value
-    )
+def initialize_application_members(sender, application: Application, **kwargs):
+    """
+    默认为每个新建的蓝鲸应用创建三个用户组（管理者，开发者，运营者），以及该应用对应的分级管理员
+    将 创建者 添加到 管理者用户组 以获取应用的管理权限，并添加为 分级管理员成员 以获取审批其他用户加入各个用户组的权限
+    """
+    logger.debug('initialize members after create app: creator=%s app_code=%s', application.creator, application.code)
+    try:
+        register_builtin_user_groups_and_grade_manager(application)
+    except BKIAMGatewayServiceError as e:
+        raise error_codes.INITIALIZE_APP_MEMBERS_ERROR.f(e.message)
 
 
 @receiver(post_create_application)

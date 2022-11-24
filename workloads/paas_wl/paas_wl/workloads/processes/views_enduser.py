@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import datetime
 import json
 import logging
@@ -12,7 +29,7 @@ from rest_framework.response import Response
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.constants import AppOperationType, EngineAppType
 from paas_wl.platform.applications.models import EngineApp
-from paas_wl.platform.applications.permissions import application_perm_class
+from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
 from paas_wl.platform.auth.views import BaseEndUserViewSet
 from paas_wl.platform.external.client import get_plat_client
@@ -40,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     _operation_interval: datetime.timedelta = datetime.timedelta(seconds=3)
     _skip_judge_frequent: bool = False
@@ -105,7 +122,7 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
 class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
-    permission_classes = [IsAuthenticated, application_perm_class('manage_processes')]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     # Use special negotiation class to accept "text/event-stream" content type
     content_negotiation_class = IgnoreClientContentNegotiation

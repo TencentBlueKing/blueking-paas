@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, cast
@@ -34,6 +33,10 @@ class SiteRole(ChoicesEnum):
     SUPER_USER = 4
     BANNED_USER = 5
 
+    PLATFORM_MANAGER = 20
+    APP_TEMPLATES_MANAGER = 21
+    PLATFORM_OPERATOR = 22
+
     SYSTEM_API_BASIC_READER = 50
     SYSTEM_API_BASIC_MAINTAINER = 60
     SYSTEM_API_LIGHT_APP_MAINTAINER = 70
@@ -45,6 +48,9 @@ class SiteRole(ChoicesEnum):
         (ADMIN, _('管理员')),
         (SUPER_USER, _('超级用户')),
         (BANNED_USER, _('不允许访问服务的用户')),
+        (PLATFORM_MANAGER, _('平台管理员')),
+        (APP_TEMPLATES_MANAGER, _('应用模板管理员')),
+        (PLATFORM_OPERATOR, _('平台运营人员')),
         (SYSTEM_API_BASIC_READER, _('系统 API 用户：基础可读')),
         (SYSTEM_API_BASIC_MAINTAINER, _('系统 API 用户：具有基本管理权限')),
         (SYSTEM_API_LIGHT_APP_MAINTAINER, _('系统 API 用户：具有轻应用管理权限')),

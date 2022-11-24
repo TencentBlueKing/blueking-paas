@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -25,12 +24,14 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db.transaction import atomic
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accounts.constants import AccountFeatureFlag as AFF
 from paasng.accounts.constants import SiteRole
 from paasng.accounts.models import AccountFeatureFlag, User, UserPrivateToken, UserProfile
-from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.accounts.permissions.constants import SiteAction
+from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.accounts.serializers import AccountFeatureFlagSLZ
 from paasng.plat_admin.admin42.serializers import accountmgr
 from paasng.plat_admin.admin42.utils.filters import UserProfileFilterBackend
@@ -44,6 +45,7 @@ class UserProfilesManageView(GenericTemplateView):
     name = "用户列表"
     queryset = UserProfile.objects.exclude(role=SiteRole.USER.value).order_by('role', '-created')
     serializer_class = accountmgr.UserProfileSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/accountmgr/user_profile_list.html"
     filter_backends = [UserProfileFilterBackend]
 
@@ -56,16 +58,15 @@ class UserProfilesManageView(GenericTemplateView):
         kwargs["ALL_REGIONS"] = list(get_all_regions())
         return kwargs
 
-    @site_perm_required("admin:manage:user")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
 
 class UserProfilesManageViewSet(viewsets.GenericViewSet):
     serializer_class = accountmgr.UserProfileSLZ
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     @atomic
-    @site_perm_required("admin:manage:user")
     def bulk_create(self, request):
         serializer = accountmgr.UserProfileBulkCreateFormSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -92,13 +93,11 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             results.append(obj)
         return Response(self.get_serializer(results, many=True).data)
 
-    @site_perm_required("admin:manage:user")
     def list(self, request):
         queryset = UserProfile.objects.order_by('role', '-created')
         queryset = UserProfileFilterBackend().filter_queryset(request, queryset, self)
         return Response(self.get_serializer(self.paginate_queryset(queryset), many=True).data)
 
-    @site_perm_required("admin:manage:user")
     def update(self, request):
         slz = accountmgr.UserProfileUpdateFormSLZ(
             data=dict(
@@ -116,7 +115,6 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         profile.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @site_perm_required("admin:manage:user")
     def destroy(self, request):
         provider_type = int(request.query_params["provider_type"])
         user_id = user_id_encoder.encode(ProviderType(provider_type).value, request.query_params["username"])
@@ -129,9 +127,9 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
 class AccountFeatureFlagManageView(GenericTemplateView):
     template_name = "admin42/accountmgr/account_feature_flags.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "用户特性管理"
 
-    @site_perm_required("admin:manage:user")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -144,12 +142,11 @@ class AccountFeatureFlagManageView(GenericTemplateView):
 
 class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     schema = None
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
-    @site_perm_required("admin:manage:user")
     def list(self, request):
         return Response(AccountFeatureFlagSLZ(AccountFeatureFlag.objects.all(), many=True).data)
 
-    @site_perm_required("admin:manage:user")
     def update_or_create(self, request):
         slz = AccountFeatureFlagSLZ(data=dict(user=dict(username=request.data["username"]), **request.data))
         slz.is_valid(True)

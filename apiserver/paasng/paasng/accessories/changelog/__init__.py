@@ -17,23 +17,3 @@ We undertake not to change the open source license (MIT license) applicable
 
 to the current version of the project delivered to anyone in the future.
 """
-from .state import mapper
-
-
-def user_has_perm(user, perm_name, obj):
-    """Universal function to determine if user has permission to do something"""
-    protected_resource = mapper.get_resource(obj)
-    if not protected_resource:
-        raise ValueError('%s has not been mapped to a protected resource yet' % type(obj))
-
-    role = protected_resource.get_role_of_user(user, obj)
-    return role.has_perm(perm_name)
-
-
-def user_has_perms(user, perm_names, obj):
-    protected_resource = mapper.get_resource(obj)
-    if not protected_resource:
-        raise ValueError('%s has not been mapped to a protected resource yet' % type(obj))
-
-    role = protected_resource.get_role_of_user(user, obj)
-    return all([role.has_perm(perm_name) for perm_name in perm_names])

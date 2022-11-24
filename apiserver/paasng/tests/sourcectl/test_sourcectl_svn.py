@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -27,6 +26,7 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from svn.common import SvnException
 
+from paasng.accessories.iam.helpers import add_role_members
 from paasng.dev_resources.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.dev_resources.sourcectl.models import SvnRepository, VersionInfo
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
@@ -37,9 +37,7 @@ from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.templater import Templater
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.models import ApplicationMembership
 from tests.utils import mock
-from tests.utils.auth import create_user
 
 pytestmark = pytest.mark.django_db
 
@@ -158,7 +156,6 @@ class TestSvnAuth:
     @pytest.mark.parametrize(
         "username, role, added",
         [
-            ("foo", ApplicationRole.COLLABORATOR, False),
             ("bar", ApplicationRole.DEVELOPER, True),
             ("baz", ApplicationRole.ADMINISTRATOR, True),
         ],
@@ -172,8 +169,7 @@ class TestSvnAuth:
         mock_add_group = Mock(return_value={})
         authorization_manager = get_svn_authorization_manager(bk_app)
         with patch.object(authorization_manager.svn_client, 'add_group', mock_add_group):
-            new_user = create_user(username=username)
-            ApplicationMembership.objects.create(user=new_user, application=bk_app, role=role.value)
+            add_role_members(bk_app.code, role, username)
             authorization_manager.update_developers()
 
             assert mock_add_group.called

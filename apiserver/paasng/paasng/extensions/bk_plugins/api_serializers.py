@@ -1,6 +1,25 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 """Serializer for third-party api"""
 from rest_framework import serializers
 
+from paasng.engine.serializers import field_env_var_key
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
@@ -102,3 +121,13 @@ class PluginRoleSLZ(serializers.Serializer):
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
+
+
+class PluginConfigSLZ(serializers.Serializer):
+    """插件配置-环境变量的结构"""
+
+    key = field_env_var_key()
+    value = serializers.CharField(help_text="环境变量值", required=True, allow_blank=True)
+    description = serializers.CharField(
+        allow_blank=True, max_length=200, required=False, default='', help_text='变量描述，不超过 200 个字符'
+    )

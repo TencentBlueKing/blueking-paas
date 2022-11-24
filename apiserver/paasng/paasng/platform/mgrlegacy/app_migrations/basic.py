@@ -1,33 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
+from collections import defaultdict
 from typing import List
 
-from bkpaas_auth.core.constants import ProviderType
-from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
+from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
 from paasng.engine.models import EngineApp
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.mgrlegacy.constants import AppMember
 from paasng.platform.mgrlegacy.models import MigrationProcess
@@ -36,6 +37,7 @@ from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.oauth2.models import OAuth2Client
 from paasng.publish.sync_market.handlers import application_oauth_handler
+from paasng.utils.error_codes import error_codes
 
 from .base import BaseMigration
 
@@ -103,15 +105,20 @@ class MainInfoMigration(BaseMigration):
     def get_description(self):
         return _("同步应用基本信息")
 
-    def add_application_role(self, memebers: List[AppMember]) -> bool:
+    def add_application_role(self, app_members: List[AppMember]) -> bool:
         """sync application roles"""
-        for m in memebers:
-            # 允许重入
-            ApplicationMembership.objects.get_or_create(
-                user=user_id_encoder.encode(username=m.username, provider_type=settings.USER_TYPE),
-                application=self.context.app,
-                defaults=dict(role=m.role, region=self.context.app.region),
-            )
+        try:
+            register_builtin_user_groups_and_grade_manager(self.context.app)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.INITIALIZE_APP_MEMBERS_ERROR.f(e.message)
+
+        role_members = defaultdict(list)
+        for m in app_members:
+            role_members[m.role].append(m.username)
+
+        for role, members in role_members.items():
+            add_role_members(app_code=self.context.app.code, role=ApplicationRole(role), usernames=members)
+
         return True
 
     def add_engine_app(self):
@@ -165,8 +172,8 @@ class MainInfoMigration(BaseMigration):
             post_save.connect(receiver=application_oauth_handler, sender=OAuth2Client)
 
         # 添加应用成员
-        app_memebers = self.context.legacy_app_proxy.get_app_members(self.context.owner)
-        self.add_application_role(app_memebers)
+        app_members = self.context.legacy_app_proxy.get_app_members(self.context.owner)
+        self.add_application_role(app_members)
 
     def rollback(self):
         # rollback oauth2
@@ -183,4 +190,5 @@ class MainInfoMigration(BaseMigration):
             EngineApp.objects.filter(id__in=engine_app_ids).delete()
 
         # rollback developers and administrators
-        self.context.app.applicationmembership_set.all().delete()
+        usernames = [m['username'] for m in fetch_application_members(self.context.app.code)]
+        remove_user_all_roles(self.context.app.code, usernames)

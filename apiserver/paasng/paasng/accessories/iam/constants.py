@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
@@ -37,6 +38,19 @@ DEFAULT_PAGE = 1
 # 查询用户组成员，全量查询
 FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 
+# 查询开发者中心分级管理员列表，全量查询
+LIST_GRADE_MANAGERS_LIMIT = 15000
+
 
 class ResourceType(str, StructuredEnum):
     Application = 'application'
+
+
+class IAMErrorCodes(int, StructuredEnum):
+    """
+    iam api 返回错误码
+    https://bk.tencent.com/docs/document/7.0/236/39801
+    """
+
+    # 资源冲突
+    CONFLICT = 1902409

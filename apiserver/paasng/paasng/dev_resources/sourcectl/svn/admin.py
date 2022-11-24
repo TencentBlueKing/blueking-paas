@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 """A simple SVN client by wrapping svn command line tool
@@ -31,7 +30,6 @@ from django.utils.translation import gettext as _
 
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
 from paasng.dev_resources.sourcectl.svn.server_config import get_bksvn_config
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 from .exceptions import SVNServiceError
 
@@ -288,9 +286,7 @@ class SvnApplicationAuthorization:
     def update_developers(self):
         """更新开发者"""
         developers = self.application.get_developers()
-        developers = [get_username_by_bkpaas_user_id(developer) for developer in developers]
-        developers = ";".join(developers)
-        self.svn_client.add_group(self.group_name, developers=developers)
+        self.svn_client.add_group(self.group_name, developers=";".join(developers))
 
     def set_paas_user_root_privilege(self, path, read=True, write=False):
         """针对根路径的平台账户权限设置

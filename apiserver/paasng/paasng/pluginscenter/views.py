@@ -256,6 +256,17 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         )
 
 
+class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
+    queryset = OperationRecord.objects.all()
+    serializer_class = serializers.OperationRecordSLZ
+    pagination_class = LimitOffsetPagination
+    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+
+    def get_queryset(self):
+        plugin = self.get_plugin_instance()
+        return self.queryset.filter(plugin=plugin)
+
+
 @method_decorator(
     _permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]),
     name="list",

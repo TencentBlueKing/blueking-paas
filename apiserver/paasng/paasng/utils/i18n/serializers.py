@@ -151,8 +151,9 @@ class TranslatedCharField(serializers.CharField):
         for language_code in self.languages:
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
             try:
-                values[language_code] = str(get_attribute(instance, [i18n_field_name]))
-                if values[language_code] == "" and not self.allow_blank:
+                _value = get_attribute(instance, [i18n_field_name])
+                values[language_code] = str(_value) if _value is not None else ""
+                if values[language_code] == "" and not self.allow_blank and _value is not None:
                     values[language_code] = str(super().get_attribute(instance))
             except (KeyError, AttributeError):
                 values[language_code] = str(super().get_attribute(instance))
@@ -162,6 +163,7 @@ class TranslatedCharField(serializers.CharField):
         """Return a Dict, which take the language code as the key and the translation result as the value"""
         values = {}
         for language_code in self.languages:
+
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
             values[i18n_field_name] = dictionary.get(
                 i18n_field_name, dictionary.get(self.field_name, serializers.empty)

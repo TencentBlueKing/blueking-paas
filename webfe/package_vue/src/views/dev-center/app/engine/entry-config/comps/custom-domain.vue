@@ -182,7 +182,7 @@
                 >
                   <bk-input
                     v-model="curUrlParams.domain_name"
-                    :placeholder="$t('请输入有效域名，并以这些后缀结尾：') + domainInputPlaceholderText"
+                    :placeholder="domainInputPlaceholderText"
                   />
                 </bk-form-item>
                 <bk-form-item
@@ -321,9 +321,9 @@
             domainInputPlaceholderText () {
                 if (this.domainConfig.valid_domain_suffixes.length) {
                     domainInputPlaceholderText = this.domainConfig.valid_domain_suffixes.join(',');
-                    return domainInputPlaceholderText;
+                    return this.$t('请输入有效域名，并以这些后缀结尾：') + domainInputPlaceholderText;
                 }
-                return '';
+                return this.$t('请输入有效域名');
             }
         },
         watch: {

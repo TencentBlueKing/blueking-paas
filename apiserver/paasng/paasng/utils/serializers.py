@@ -37,6 +37,7 @@ from rest_framework.fields import flatten_choices_dict, to_choices_dict
 
 from paasng.accounts.utils import get_user_avatar
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
+from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.sanitizer import clean_html
 
 
@@ -157,6 +158,11 @@ def patch_datetime_field():
 class HumanizeDateTimeField(serializers.DateTimeField):
     def to_representation(self, value):
         return arrow.get(value).humanize(locale="zh")
+
+
+class HumanizeTimestampField(serializers.Field):
+    def to_representation(self, instance):
+        return convert_timestamp_to_str(instance)
 
 
 class Base64FileField(serializers.Field):

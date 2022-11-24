@@ -653,6 +653,19 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "pluginDeployEnv",
+                "label": staticI18n.$t("配置管理"),
+                "matchRouters": [
+                    "pluginDeployEnv"
+                ],
+                "iconfontName": "list-fill",
+                "supportModule": true,
+                "destRoute": {
+                    "name": "pluginDeployEnv"
+                },
+                "children": []
+            },
+            {
                 "name": "pluginLog",
                 "label": staticI18n.$t("日志查询"),
                 "matchRouters": ["pluginLog"],

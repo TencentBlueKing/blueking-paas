@@ -63,7 +63,21 @@
                   <span class="time-text">{{ failedMessage }}</span>
                 </span>
               </div>
-              <div class="info-right-warp">
+              <div
+                v-else-if="status === 'successful'"
+                class="info-left-warp flex-row"
+              >
+                <span class="success-check-wrapper">
+                  <i class="paasng-icon paasng-correct" />
+                </span>
+                <span class="info-time pl10">
+                  <span class="info-pending-text"> {{ $t('部署成功') }} </span>
+                </span>
+              </div>
+              <div
+                v-if="!isNext"
+                class="info-right-warp"
+              >
                 <bk-button
                   v-if="status !== 'pending'"
                   size="small"
@@ -231,7 +245,7 @@
                 cateLoading: true,
                 isLoading: true,
                 editorOption: {
-                    placeholder: '@通知他人，ctrl+enter快速提交'
+                    placeholder: '开始编辑...'
                 },
                 isNext: false,
                 status: '',
@@ -403,6 +417,7 @@
                                 this.stepsStatus = 'error';
                                 this.failedMessage = res.fail_message;
                             } else {
+                                this.stepsStatus = '';
                                 if (this.timer) {
                                     clearTimeout(this.timer);
                                 }
@@ -800,5 +815,28 @@
 }
 .release-log-warp {
     margin-left: 6px;
+}
+.success-check-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #2dcb56;
+    border-radius: 50%;
+    line-height: 24px;
+    color: #2dcb56;
+    text-align: center;
+    z-index: 1;
+    i {
+        font-size: 24px;
+        line-height: 24px;
+        font-weight: 500;
+        margin-top: 2px;
+    }
+}
+.info-left-warp .info-time {
+    line-height: 24px;
 }
 </style>

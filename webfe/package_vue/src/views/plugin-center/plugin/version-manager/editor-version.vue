@@ -347,6 +347,7 @@
                     this.sourceVersions = res.source_versions;
                     // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
                     this.curVersion.semver_choices = res.semver_choices;
+                    this.curVersion.source_versions = res.source_versions[0].name;
                     if (res.version_no === 'revision') {
                         // 与代码版本一致(revision)
                         this.curVersion.version = res.source_versions[0].name;
@@ -355,7 +356,7 @@
                         this.curVersion.version = res.source_versions[0].revision;
                     } else if (res.version_no === 'automatic') {
                         // 自动生成(automatic)
-                        this.curVersion.version = this.curVersion.semver_choices.major;
+                        this.curVersion.version = this.curVersion.semver_choices.patch;
                     } else if (res.version_no === 'self-fill') {
                         // 用户自助填写(self-fill)
                         this.curVersion.version = '';

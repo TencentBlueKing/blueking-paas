@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from collections import defaultdict
@@ -24,12 +23,11 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accessories.iam.client import BKIAMClient
-from paasng.accessories.iam.constants import NEVER_EXPIRE_DAYS
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
-from paasng.accessories.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.helpers import register_builtin_user_groups_and_grade_manager
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.mgrlegacy.constants import AppMember
@@ -39,7 +37,7 @@ from paasng.platform.modules.helpers import get_image_labels_by_module
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.oauth2.models import OAuth2Client
 from paasng.publish.sync_market.handlers import application_oauth_handler
-from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.error_codes import error_codes
 
 from .base import BaseMigration
 
@@ -109,7 +107,10 @@ class MainInfoMigration(BaseMigration):
 
     def add_application_role(self, app_members: List[AppMember]) -> bool:
         """sync application roles"""
-        self._register_builtin_user_groups_and_grade_manager(self.context.app)
+        try:
+            register_builtin_user_groups_and_grade_manager(self.context.app)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.INITIALIZE_APP_MEMBERS_ERROR.f(e.message)
 
         role_members = defaultdict(list)
         for m in app_members:
@@ -191,32 +192,3 @@ class MainInfoMigration(BaseMigration):
         # rollback developers and administrators
         usernames = [m['username'] for m in fetch_application_members(self.context.app.code)]
         remove_user_all_roles(self.context.app.code, usernames)
-
-    @staticmethod
-    def _register_builtin_user_groups_and_grade_manager(application: Application):
-        """旧版本应用迁移时，需要注册用户组及分级管理员信息"""
-
-        cli = BKIAMClient()
-        creator = get_username_by_bkpaas_user_id(application.creator)
-
-        # 1. 创建分级管理员，并记录分级管理员 ID
-        grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
-        ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=grade_manager_id)
-
-        # 2. 将创建者，添加为分级管理员的成员
-        cli.add_grade_manager_members(grade_manager_id, [creator])
-
-        # 3. 创建默认的 管理者，开发者，运营者用户组
-        user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
-        ApplicationUserGroup.objects.bulk_create(
-            [
-                ApplicationUserGroup(app_code=application.code, role=group['role'], user_group_id=group['id'])
-                for group in user_groups
-            ]
-        )
-
-        # 4. 为默认的三个用户组授权
-        cli.grant_user_group_policies(application.code, application.name, user_groups)
-
-        # 5. 将创建者添加到管理者用户组，返回数据中第一个即为管理者用户组信息
-        cli.add_user_group_members(user_groups[0]['id'], [creator], NEVER_EXPIRE_DAYS)

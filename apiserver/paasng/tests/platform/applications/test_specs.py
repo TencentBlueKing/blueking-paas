@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paasng.dev_resources.templates.constants import TemplateType
+from paasng.dev_resources.templates.models import Template
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.specs import AppSpecs
 from tests.utils.helpers import override_region_configs
@@ -69,3 +70,24 @@ class TestAppSpecs:
         bk_app.type = 'bk_plugin'
         bk_app.save()
         assert AppSpecs(bk_app).preset_services == {'mysql': {}}
+
+    def test_confirm_required_when_publish_with_no_template(self, bk_app):
+        confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish
+        assert confirm_required_when_publish is False
+
+    @pytest.mark.parametrize(
+        'market_ready,expect',
+        [
+            (True, False),
+            (False, True),
+        ],
+    )
+    def test_confirm_required_when_publish_with_template(self, bk_app, market_ready, expect):
+        module = bk_app.get_default_module()
+        Template.objects.update_or_create(
+            name=module.source_init_template,
+            type=TemplateType.NORMAL,
+            defaults={"market_ready": market_ready, "blob_url": "[]"},
+        )
+        confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish
+        assert confirm_required_when_publish == expect

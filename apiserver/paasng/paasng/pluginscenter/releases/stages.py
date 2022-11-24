@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Type, Union
@@ -75,6 +75,7 @@ class DeployAPIStage(BaseStageController):
         basic_info = super().render_to_view()
         # TODO: 在异步任务轮询查询部署结果
         check_deploy_result(self.pd, self.plugin, self.release)
+        self.stage.refresh_from_db()
         return {
             **basic_info,
             "detail": {"steps": self.stage.api_detail["steps"], **get_deploy_logs(self.pd, self.plugin, self.release)},
@@ -131,7 +132,7 @@ class BuiltinStage(BaseStageController):
             self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
 
     def render_to_view(self) -> Dict:
-        basic_info = self.render_to_view()
+        basic_info = super().render_to_view()
         if self.stage.stage_id == "market":
             market_info = self.plugin.pluginmarketinfo
             if self.pd.market_info_definition.storage == constants.MarketInfoStorageType.THIRD_PARTY:

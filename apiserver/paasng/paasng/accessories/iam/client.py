@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
@@ -28,7 +29,14 @@ from paasng.accessories.iam.exceptions import BKIAMApiError, BKIAMGatewayService
 from paasng.platform.applications.constants import ApplicationRole
 
 from . import utils
-from .constants import APP_DEFAULT_ROLES, DEFAULT_PAGE, FETCH_USER_GROUP_MEMBERS_LIMIT, ResourceType
+from .constants import (
+    APP_DEFAULT_ROLES,
+    DEFAULT_PAGE,
+    FETCH_USER_GROUP_MEMBERS_LIMIT,
+    LIST_GRADE_MANAGERS_LIMIT,
+    IAMErrorCodes,
+    ResourceType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +62,7 @@ class BKIAMClient:
 
     def create_grade_managers(self, app_code: str, app_name: str, creator: str) -> int:
         """
-        在权限中心上为应用注册分级管理员
+        在权限中心上为应用注册分级管理员，若已存在，则返回
 
         :param app_code: 蓝鲸应用 ID
         :param app_name: 蓝鲸应用名称
@@ -63,8 +71,8 @@ class BKIAMClient:
         """
         data = {
             'system': settings.IAM_PAAS_V3_SYSTEM_ID,
-            'name': utils.gen_grade_member_name(app_code),
-            'description': utils.gen_grade_member_desc(app_code),
+            'name': utils.gen_grade_manager_name(app_code),
+            'description': utils.gen_grade_manager_desc(app_code),
             'members': [creator],
             # 仅可对指定的单个应用授权
             'authorization_scopes': [
@@ -109,10 +117,44 @@ class BKIAMClient:
             raise BKIAMGatewayServiceError(f'create grade managers error, detail: {e}')
 
         if resp.get('code') != 0:
+            if resp['code'] == IAMErrorCodes.CONFLICT:
+                return self.fetch_grade_manager(app_code)
+
             logger.exception(f"create iam grade managers error, message:{resp['message']} \n data: {data}")
             raise BKIAMApiError(resp['message'], resp['code'])
 
         return resp['data']['id']
+
+    def fetch_grade_manager(self, app_code: str) -> int:
+        """
+        根据名称查询分级管理员 ID
+        # TODO 权限中心 API 支持按名称过滤后，添加名称参数而不是拉回全量数据过滤
+
+        :param app_code: 蓝鲸应用 ID
+        :returns: 分级管理员 ID
+        """
+        try:
+            resp = self.client.management_grade_managers_list(
+                headers=self._prepare_headers(),
+                params={
+                    'system': settings.IAM_PAAS_V3_SYSTEM_ID,
+                    'page': DEFAULT_PAGE,
+                    'page_size': LIST_GRADE_MANAGERS_LIMIT,
+                },
+            )
+        except APIGatewayResponseError as e:
+            raise BKIAMGatewayServiceError(f'fetch grade managers error, detail: {e}')
+
+        if resp.get('code') != 0:
+            logger.exception(f"fetch iam grade managers error, message:{resp['message']}")
+            raise BKIAMApiError(resp['message'], resp['code'])
+
+        manager_name = utils.gen_grade_manager_name(app_code)
+        for manager in resp['data']['results']:
+            if manager['name'] == manager_name:
+                return manager['id']
+
+        raise BKIAMApiError(f'failed to find application [{app_code}] grade manager')
 
     def fetch_grade_manager_members(self, grade_manager_id: int) -> List[str]:
         """

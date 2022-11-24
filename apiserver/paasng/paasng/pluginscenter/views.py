@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List, Literal
@@ -247,9 +247,10 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     def get_filter_params(self, request):
         """Get plug-in list filtering parameters, such as plug-in type, development language, etc."""
+        pds = PluginDefinition.objects.all()
         return Response(
             data={
-                "plugin_types": PluginDefinition.objects.values_list('identifier', flat=True),
+                "plugin_types": serializers.PluginDefinitionBasicSLZ(pds, many=True).data,
                 "languages": PluginBasicInfoDefinition.get_languages(),
             }
         )
@@ -333,6 +334,13 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     @atomic
     def back_to_previous_stage(self, request, pd_id, plugin_id, release_id):
         """返回上一发布步骤, 重置当前步骤和上一步骤的执行状态, 并重新执行上一步。"""
+        plugin = self.get_plugin_instance()
+        if (
+            plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status())
+            .exclude(pk=release_id)
+            .exists()
+        ):
+            raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
         release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).back_to_previous_stage(operator=request.user.username)
         release.refresh_from_db()
@@ -341,6 +349,10 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def re_release(self, request, pd_id, plugin_id, release_id):
         """重新发布版本"""
+        plugin = self.get_plugin_instance()
+        if plugin.all_versions.filter(status__in=constants.PluginReleaseStatus.running_status()).exists():
+            raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
+
         release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).reset_release(operator=request.user.username)
         release.refresh_from_db()
@@ -427,12 +439,13 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def rerun(self, request, pd_id, plugin_id, release_id, stage_id):
         """重新执行发布步骤"""
-        release = self.get_queryset().get(pk=release_id)
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
         if release.current_stage.stage_id != stage_id:
             raise error_codes.CANNOT_RERUN_ONGOING_STEPS.f(_("仅支持重试当前阶段"))
         PluginReleaseExecutor(release).rerun_current_stage(operator=request.user.username)
-        release.refresh_from_db()
-        return Response(data=self.get_serializer(release).data)
+        stage = release.all_stages.get(stage_id=stage_id)
+        return Response(data=init_stage_controller(stage).render_to_view())
 
 
 class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
@@ -579,7 +592,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             instance=plugin,
             operator=request.user.username,
             time_range=query_params["smart_time_range"],
-            query_string=data["query_string"],
+            query_string=data["query"]["query_string"],
             limit=query_params["limit"],
             offset=query_params["offset"],
         )
@@ -607,7 +620,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             instance=plugin,
             operator=request.user.username,
             time_range=query_params["smart_time_range"],
-            query_string=data["query_string"],
+            query_string=data["query"]["query_string"],
             limit=query_params["limit"],
             offset=query_params["offset"],
         )
@@ -635,7 +648,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             instance=plugin,
             operator=request.user.username,
             time_range=query_params["smart_time_range"],
-            query_string=data["query_string"],
+            query_string=data["query"]["query_string"],
             limit=query_params["limit"],
             offset=query_params["offset"],
         )
@@ -666,7 +679,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             log_type=log_type,
             operator=request.user.username,
             time_range=query_params["smart_time_range"],
-            query_string=data["query_string"],
+            query_string=data["query"]["query_string"],
         )
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
@@ -676,12 +689,14 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         IsAuthenticated,
         plugin_action_permission_class([Actions.MANAGE_CONFIGURATION]),
     ]
+    pagination_class = None
 
     @swagger_auto_schema(responses={200: serializers.StubConfigSLZ(many=True)})
     def list(self, request, pd_id, plugin_id):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
-        return Response(data=serializers.make_config_slz_class(pd)(plugin.configs, many=True).data)
+        data = [{"__id__": config.unique_key, **config.row} for config in plugin.configs.all()]
+        return Response(data=serializers.make_config_slz_class(pd)(data, many=True).data)
 
     @swagger_auto_schema(request_body=serializers.StubConfigSLZ)
     def upsert(self, request, pd_id, plugin_id):
@@ -690,8 +705,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
 
         slz = serializers.make_config_slz_class(pd)(data=request.data)
         slz.is_valid(raise_exception=True)
-        # must use .data, because .validated_data will set "__id__" to "unique_key"
-        data = slz.data
+        data = slz.validated_data
 
         mgr = PluginConfigManager(pd=pd, plugin=plugin)
         mgr.save(data)

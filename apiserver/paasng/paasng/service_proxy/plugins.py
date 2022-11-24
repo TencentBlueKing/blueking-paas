@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import re
@@ -23,6 +22,7 @@ from typing import Dict, List, Optional
 
 from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.accounts.models import User
+from paasng.accounts.permissions.application import can_exempt_application_perm
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import global_site_resource
 from paasng.engine.models import EngineApp
@@ -140,6 +140,9 @@ class ApplicationInPathExtractor:
 
 def list_application_permissions(user: User, obj: Application) -> Dict[str, bool]:
     """List user's all permissions on an application"""
+    if can_exempt_application_perm(user, obj):
+        return {action: True for action in AppAction}
+
     perm = ApplicationPermission()
     perm_ctx = AppPermCtx(code=obj.code, username=get_username_by_bkpaas_user_id(user.pk))
 

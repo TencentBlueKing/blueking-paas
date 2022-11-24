@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 # type: ignore
@@ -243,6 +242,8 @@ LANGUAGE_COOKIE_PATH = "/"
 LANGUAGE_COOKIE_DOMAIN = settings.get('BK_COOKIE_DOMAIN')
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
+
+CHANGELOG_PATH = os.path.join(BASE_DIR, 'changelog')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
@@ -631,7 +632,7 @@ BK_SSM_URL = settings.get('BK_SSM_URL', '')
 BK_IAM_V3_INNER_URL = settings.get('BK_IAM_V3_INNER_URL', 'http://localhost:8080')
 
 # 访问的权限中心 APIGW 版本
-BK_IAM_APIGW_SERVICE_STAGE = settings.get('BK_IAM_APIGW_SERVICE_STAGE', 'prod')
+BK_IAM_APIGW_SERVICE_STAGE = settings.get('BK_IAM_APIGW_SERVICE_STAGE', 'stage')
 
 # 参数说明 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#22-config
 # 如果通过网关访问, BK_IAM_APIGATEWAY_URL 将替代 BK_IAM_V3_INNER_URL

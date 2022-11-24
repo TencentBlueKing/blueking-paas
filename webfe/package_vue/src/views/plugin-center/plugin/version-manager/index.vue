@@ -194,7 +194,7 @@
               {{ $t('版本号类型') }}
             </div>
             <div class="content">
-              {{ versionDetail.semver_type }}
+              {{ versionTypeMap[versionDetail.semver_type] }}
             </div>
           </li>
           <li class="item-info h-auto">

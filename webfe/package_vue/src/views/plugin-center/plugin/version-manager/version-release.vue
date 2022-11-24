@@ -7,7 +7,7 @@
       :offset-left="20"
       class="deploy-action-box"
     >
-      <div class="app-container middle">
+      <div class="app-container">
         <div class="title-warp flex-row align-items-center justify-content-between">
           <paas-plugin-title :version="curVersion" />
           <bk-button
@@ -22,6 +22,7 @@
           <bk-steps
             ext-cls="custom-icon"
             theme="success"
+            :status="stepsStatus"
             :steps="allStages"
             :cur-step.sync="curStep"
           />
@@ -62,8 +63,23 @@
                   <span class="time-text">{{ failedMessage }}</span>
                 </span>
               </div>
-              <div class="info-right-warp">
+              <div
+                v-else-if="status === 'successful'"
+                class="info-left-warp flex-row"
+              >
+                <span class="success-check-wrapper">
+                  <i class="paasng-icon paasng-correct" />
+                </span>
+                <span class="info-time pl10">
+                  <span class="info-pending-text"> {{ $t('部署成功') }} </span>
+                </span>
+              </div>
+              <div
+                v-if="!isNext"
+                class="info-right-warp"
+              >
                 <bk-button
+                  v-if="status !== 'pending'"
                   size="small"
                   theme="primary"
                   :outline="true"
@@ -171,6 +187,26 @@
           </div>
         </div>
       </div>
+      <div
+        v-if="stageId === 'deploy'"
+        class="footer-btn-warp"
+      >
+        <bk-button
+          theme="default"
+          @click="handlerPrev"
+        >
+          上一步
+        </bk-button>
+        <!-- 构建完成可以进入下一步 -->
+        <bk-button
+          theme="primary"
+          class="ml5"
+          style="width: 120px"
+          :disabled="!isNext"
+        >
+          下一步
+        </bk-button>
+      </div>
     </paas-content-loader>
   </div>
 </template>
@@ -209,7 +245,7 @@
                 cateLoading: true,
                 isLoading: true,
                 editorOption: {
-                    placeholder: '@通知他人，ctrl+enter快速提交'
+                    placeholder: '开始编辑...'
                 },
                 isNext: false,
                 status: '',
@@ -219,6 +255,7 @@
                 failedMessage: '',
                 titleVersion: '',
                 isStopDeploy: false,
+                stepsStatus: 'loading',
                 rules: {
                     category: [
                         {
@@ -316,7 +353,7 @@
                     };
                     const res = await this.$store.dispatch('plugin/getMarketInfo', params);
                     this.form = res;
-                    this.form.contact = res.contact && res.contact.split(',');
+                    this.form.contact = res.contact && res.contact.split(',') || [];
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -324,7 +361,6 @@
                     });
                 } finally {
                     setTimeout(() => {
-                        this.isTableLoading = false;
                         this.isLoading = false;
                     }, 200);
                 }
@@ -345,7 +381,6 @@
                 } finally {
                     this.cateLoading = false;
                     setTimeout(() => {
-                        this.isTableLoading = false;
                         this.isLoading = false;
                     }, 200);
                 }
@@ -378,8 +413,11 @@
                             if (this.status === 'pending') {
                                 this.setTimeFetchPluginRelease();
                             } else if (this.status === 'failed') {
+                                // 改变状态
+                                this.stepsStatus = 'error';
                                 this.failedMessage = res.fail_message;
                             } else {
+                                this.stepsStatus = '';
                                 if (this.timer) {
                                     clearTimeout(this.timer);
                                 }
@@ -389,7 +427,6 @@
                             this.curStep = 1;
                             break;
                     }
-                    console.log('this.stepsData', this.stepsData);
                     // if (res.status === 'successful') {
                     //     this.stagesIndex = this.stagesIndex + 1;
                     //     this.curStep = this.stagesIndex + 1;
@@ -402,7 +439,6 @@
                     });
                 } finally {
                     setTimeout(() => {
-                        this.isTableLoading = false;
                         this.isLoading = false;
                     }, 200);
                 }
@@ -417,11 +453,7 @@
                 };
                 try {
                     const res = await this.$store.dispatch('plugin/getVersionDetail', data);
-                    const stagesData = res.all_stages.map((e, i) => {
-                        e.icon = i + 1;
-                        e.title = e.name;
-                        return e;
-                    });
+                    const stagesData = this.allStagesMap(res.all_stages);
                     this.titleVersion = `${res.version} (${res.source_version_name})`;
                     this.allStages = stagesData;
                 } catch (e) {
@@ -459,7 +491,6 @@
                     });
                 } finally {
                     setTimeout(() => {
-                        this.isTableLoading = false;
                         this.isLoading = false;
                     }, 200);
                 }
@@ -597,6 +628,7 @@
 
             // 下一步
             async handlerNext () {
+                this.isLoading = true;
                 try {
                     const params = {
                         pdId: this.pdId,
@@ -616,7 +648,6 @@
                     });
                 } finally {
                     setTimeout(() => {
-                        this.isTableLoading = false;
                         this.isLoading = false;
                     }, 200);
                 }
@@ -648,10 +679,60 @@
                     });
                 } finally {
                     setTimeout(() => {
-                        this.isTableLoading = false;
                         this.isLoading = false;
                     }, 200);
                 }
+            },
+
+            // 上一步
+            async handlerPrev () {
+                this.isLoading = true;
+                try {
+                    const params = {
+                        pdId: this.pdId,
+                        pluginId: this.pluginId,
+                        releaseId: this.$route.query.release_id
+                    };
+                    const res = await this.$store.dispatch('plugin/backRelease', params);
+                    const stagesData = this.allStagesMap(res.all_stages);
+                    this.allStages = stagesData;
+                    this.stageId = res.current_stage.stage_id;
+                    this.changeStep(res.current_stage.stage_id);
+                    this.$store.commit('plugin/updateStagesData', stagesData);
+                    const query = JSON.parse(JSON.stringify(this.$route.query));
+                    query.stage_id = res.current_stage.stage_id;
+                    this.$router.push({ name: 'pluginVersionRelease', query });
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                } finally {
+                    setTimeout(() => {
+                        this.isLoading = false;
+                        this.stepsStatus = 'loading';
+                    }, 200);
+                }
+            },
+
+            changeStep (curStageId) {
+                switch (curStageId) {
+                    case 'market':
+                        this.curStep = 1;
+                        this.fetchCategoryList();
+                        this.fetchMarketInfo();
+                        break;
+                    default:
+                        break;
+                }
+            },
+
+            allStagesMap (allStages) {
+                return allStages.map((e, i) => {
+                    e.icon = i + 1;
+                    e.title = e.name;
+                    return e;
+                });
             },
 
             goVersionManager () {
@@ -706,6 +787,14 @@
 .btn-warp{
     margin-left: 150px;
 }
+.footer-btn-warp {
+    padding-left: 24px;
+    margin-top: -30px;
+    height: 48px;
+    line-height: 48px;
+    background: #FFFFFF;
+    box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
+}
 .edit-form-item{
     height: 300px;
     .editor{
@@ -726,5 +815,28 @@
 }
 .release-log-warp {
     margin-left: 6px;
+}
+.success-check-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #2dcb56;
+    border-radius: 50%;
+    line-height: 24px;
+    color: #2dcb56;
+    text-align: center;
+    z-index: 1;
+    i {
+        font-size: 24px;
+        line-height: 24px;
+        font-weight: 500;
+        margin-top: 2px;
+    }
+}
+.info-left-warp .info-time {
+    line-height: 24px;
 }
 </style>

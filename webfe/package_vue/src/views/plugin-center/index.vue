@@ -93,6 +93,27 @@
             <span v-bk-tooltips="pluginStatus[row.status]">{{ pluginStatus[row.status] || '--' }}</span>
           </template>
         </bk-table-column>
+        <bk-table-column
+          :label="$t('版本')"
+        >
+          <template slot-scope="{ row }">
+            <template
+              v-if="row.ongoing_release"
+            >
+              <round-loading v-if="releaseStatusMap[row.ongoing_release.status]" />
+              <div
+                v-else
+                :class="['dot', row.ongoing_release.status]"
+              />
+              {{ row.ongoing_release.version }}
+            </template>
+            <template
+              v-else
+            >
+              --
+            </template>
+          </template>
+        </bk-table-column>
         <bk-table-column :label="$t('操作')">
           <template slot-scope="{ row }">
             <div class="table-operate-buttons">
@@ -181,7 +202,11 @@
                     visiable: false,
                     isLoading: false
                 },
-                curPluginData: {}
+                curPluginData: {},
+                releaseStatusMap: {
+                    'pending': 'pending',
+                    'initial': 'initial'
+                }
             };
         },
         computed: {
@@ -267,8 +292,8 @@
                             }
                             if (key === 'plugin_types') {
                                 this.pluginTypeFilters.push({
-                                    value: value,
-                                    text: value
+                                    value: value.id,
+                                    text: value.name
                                 });
                             }
                         });
@@ -364,10 +389,29 @@
             },
 
             toNewVersion (data) {
-                this.$router.push({
-                    name: 'pluginVersionEditor',
-                    params: { pluginTypeId: data.pd_id, id: data.id }
-                });
+                if (this.releaseStatusMap[data.ongoing_release.status]) {
+                    const stagesData = data.ongoing_release.all_stages.map((e, i) => {
+                        e.icon = i + 1;
+                        e.title = e.name;
+                        return e;
+                    });
+                    const curVersion = `${data.ongoing_release.version} (${data.ongoing_release.source_version_name})`;
+                    this.$store.commit('plugin/updateStagesData', stagesData);
+                    this.$router.push({
+                        name: 'pluginVersionRelease',
+                        params: { pluginTypeId: data.pd_id, id: data.id },
+                        query: {
+                            stage_id: data.ongoing_release.current_stage.stage_id,
+                            release_id: data.id,
+                            version: curVersion
+                        }
+                    });
+                } else {
+                    this.$router.push({
+                        name: 'pluginVersionEditor',
+                        params: { pluginTypeId: data.pd_id, id: data.id }
+                    });
+                }
             },
 
             toDetail (data) {
@@ -433,6 +477,23 @@
             .failed{
                 background:#ffeded;
                 border-color:#ffdddd;
+            }
+
+            .dot {
+                height: 8px;
+                width: 8px;
+                display: inline-block;
+                border-radius: 50%;
+                margin-right: 3px;
+            }
+            .dot.successful{
+                background: #3FC06D;
+            }
+            .dot.failed{
+                background: #EA3636;
+            }
+            .dot.interrupted{
+                background: #EA3636;
             }
         }
 

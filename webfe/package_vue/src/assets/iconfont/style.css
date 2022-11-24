@@ -41,6 +41,12 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-github-logo:before {
 	content: "\e21e";
 }
+.paasng-template-fill:before {
+	content: "\e23b";
+}
+.paasng-list-fill:before {
+	content: "\e23c";
+}
 .paasng-debug-fill:before {
 	content: "\e221";
 }

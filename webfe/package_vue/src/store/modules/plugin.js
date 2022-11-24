@@ -131,7 +131,6 @@ export default {
          * 重新部署
          */
     pluginDeploy ({ commit, state }, { pdId, pluginId, releaseId, stageId, data }, config = {}) {
-      // /api/bkplugins/{pd_id}/plugins/{plugin_id}/releases/{release_id}/stages/{stage_id}/rerun/
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/stages/${stageId}/rerun/`;
       return http.post(url, data, config);
     },

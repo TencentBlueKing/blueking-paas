@@ -91,8 +91,8 @@
                   {{ $t('退出插件') }}
                 </bk-button>
               </template>
-              <!-- v-if="canChangeMembers()" -->
               <bk-button
+                v-if="isChangingRoles(props.row.role)"
                 text
                 class="mr5"
                 @click="updateMember(props.row.role.id, props.row.username, props.row.role.roleName)"
@@ -653,6 +653,13 @@
                 // if (roleInfo.user.id === this.curAppInfo.applicatio && this.curAppInfo.application.owner) {
                 //     return false;
                 // }
+                return true;
+            },
+
+            isChangingRoles (roleInfo) {
+                if (roleInfo.roleName === 'developer') {
+                    return false;
+                }
                 return true;
             },
 

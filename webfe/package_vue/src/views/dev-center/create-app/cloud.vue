@@ -378,10 +378,6 @@
                 if (formData.target_port) {
                     params.cloud_native_params.target_port = formData.target_port;
                 }
-
-                console.log('params', params);
-                debugger;
-
                 this.$http.post(BACKEND_URL + '/api/bkapps/cloud-native/', params).then((resp) => {
                     const objectKey = `SourceInitResult${Math.random().toString(36)}`;
                     if (resp.source_init_result) {

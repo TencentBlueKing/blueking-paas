@@ -122,7 +122,7 @@ urlpatterns = [
 
 urlpatterns += [
     re_path(
-        make_app_path(r'/env_is_running/$', include_envs=False),
-        views.EnvIsRunningViewSet.as_view({'get': 'list'}),
+        make_app_path(r'/addresses/$', include_envs=False),
+        views.EnvDeployedStatusViewSet.as_view({'get': 'list_addrs'}),
     ),
 ]

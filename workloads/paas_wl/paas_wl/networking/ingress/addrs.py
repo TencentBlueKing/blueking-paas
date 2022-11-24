@@ -7,7 +7,6 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.platform.applications.models.app import EngineApp
 from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.utils.basic import HumanizeURL
-from paas_wl.workloads.processes.controllers import env_is_running
 
 from .constants import AddressType, AppDomainSource
 from .models import AppDomain, AppSubpath, Domain
@@ -28,6 +27,9 @@ class Address:
 class EnvAddresses:
     """Get addresses for deployed environment, includes data which come from
     different sources, such as builtin subdomain/subpath and custom domains.
+
+    TODO: Add legacy engine URLS, see `ingress_config.default_ingress_domain_tmpl`
+    for details.
     """
 
     def __init__(self, env: ModuleEnv):
@@ -38,6 +40,8 @@ class EnvAddresses:
 
     def get(self) -> List[Address]:
         """Get available addresses, sorted by: (subdomain, subpath, custom)"""
+        from paas_wl.workloads.processes.controllers import env_is_running
+
         if not env_is_running(self.env):
             return []
         return self._get_subdomain() + self._get_subpath() + self._get_custom()

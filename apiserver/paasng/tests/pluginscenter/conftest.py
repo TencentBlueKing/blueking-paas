@@ -25,6 +25,7 @@ from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
 from paasng.pluginscenter.constants import MarketInfoStorageType
+from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
     ApprovalService,
@@ -118,12 +119,6 @@ def pd():
 
 
 @pytest.fixture
-def mock_client():
-    with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
-        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
-
-
-@pytest.fixture
 def plugin(pd, bk_user):
     identifier = generate_random_string()
     plugin: PluginInstance = G(
@@ -179,3 +174,19 @@ def online_approval_service():
         ApprovalService, **{"service_name": ApprovalServiceName.ONLINE_APPROVAL.value, "service_id": 1}
     )
     return svc
+
+
+@pytest.fixture
+def thirdparty_client():
+    with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
+        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
+
+
+@pytest.fixture
+def iam_policy_client():
+    with mock.patch(
+        "paasng.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client", new=mock.MagicMock(), spec=BKIAMClient
+    ) as iam_policy_client:
+        iam_policy_client.is_action_allowed.return_value = True
+        iam_policy_client.is_actions_allowed.return_value = {"": True}
+        yield iam_policy_client

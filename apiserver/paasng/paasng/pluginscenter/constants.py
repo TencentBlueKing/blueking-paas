@@ -71,6 +71,10 @@ class PluginStatus(str, StructuredEnum):
         """下架相关的状态"""
         return [cls.ARCHIVED]
 
+    @classmethod
+    def approval_status(cls):
+        return [cls.APPROVAL_FAILED, cls.WAITING_APPROVAL]
+
 
 class PluginRole(int, StructuredEnum):
     """插件角色"""

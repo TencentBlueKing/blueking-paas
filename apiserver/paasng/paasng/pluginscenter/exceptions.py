@@ -28,13 +28,16 @@ class ErrorCodes:
     CANNOT_RELEASE_ONGOING_EXISTS = ErrorCode(_("已有发布任务进行中，请刷新查看"))
     CANNOT_RERUN_ONGOING_STEPS = ErrorCode(_("重试步骤失败, 当前步骤不支持重试。"))
     CANNOT_ROLLBACK_CURRENT_STEP = ErrorCode(_("无法退回至上一步"))
+    CANNOT_CANCEL_RELEASE = ErrorCode(_("无法停止发布"))
     CANNOT_RESET_RELEASE = ErrorCode(_("无法重新发布该版本"))
     EXECUTE_STAGE_ERROR = ErrorCode(_("发布步骤执行失败"))
     STAGE_DEF_NOT_FOUND = ErrorCode(_("当前步骤在新的发布流程中被移除, 请重新发起部署流程或联系插件管理员"))
     CONFIGURATION_CONFLICT = ErrorCode(_("该插件 {conflict_fields} 的配置项已存在, 不能重复添加"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_('插件应该至少拥有一个管理员'))
+    # 下架或删除插件相关
     CANNOT_BE_DELETED = ErrorCode(_('不允许删除'))
+    PLUGIN_ARCHIVED = ErrorCode(_("插件已下架, 无法进行该操作"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

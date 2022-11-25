@@ -164,7 +164,7 @@ class TestPluginReleaseExecutor:
         with pytest.raises(APIError) as exc:
             executor.back_to_previous_stage("")
         assert exc.value.code == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.code
-        assert exc.value.message == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回评审单据, 再返回上一步")).message
+        assert exc.value.message == error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("请先撤回审批单据, 再返回上一步")).message
 
     def test_rollback_current_stage(self, release):
         executor = PluginReleaseExecutor(release)
@@ -205,3 +205,20 @@ class TestPluginReleaseExecutor:
         assert release.all_stages.get(stage_id="stage2").status == PluginReleaseStatus.INITIAL
         assert release.all_stages.get(stage_id="stage3").status == PluginReleaseStatus.INITIAL
         assert release.all_stages.get(stage_id="stage4").status == PluginReleaseStatus.INITIAL
+
+    def test_cancel(self, release):
+        executor = PluginReleaseExecutor(release)
+        # 测试取消成功
+        executor.cancel_release("")
+        release.refresh_from_db()
+        assert release.status == PluginReleaseStatus.INTERRUPTED
+        assert release.current_stage.status == PluginReleaseStatus.INTERRUPTED
+        assert release.current_stage.fail_message == _("用户主动终止发布")
+
+        # 测试发布流程完成后不能返回取消
+        release.status = PluginReleaseStatus.SUCCESSFUL
+        release.save()
+
+        with pytest.raises(APIError) as exc:
+            executor.cancel_release("")
+        assert exc.value.code == error_codes.CANNOT_CANCEL_RELEASE.code

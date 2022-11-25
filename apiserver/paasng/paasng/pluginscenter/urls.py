@@ -33,6 +33,10 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/archive/",
+        views.PluginInstanceViewSet.as_view({"post": "archive"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/repo/commit-diff-external/"
         + "<str:from_revision>/<str:to_revision>/",
         views.PluginReleaseViewSet.as_view({"get": "get_compare_url"}),

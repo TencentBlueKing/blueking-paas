@@ -35,7 +35,7 @@ class PluginTemplateSLZ(serializers.Serializer):
 
 
 @i18n
-class PluginRequestSLZ(serializers.Serializer):
+class PluginSyncRequestSLZ(serializers.Serializer):
     """同步插件信息至第三方系统的请求体格式"""
 
     id = serializers.CharField()
@@ -43,6 +43,12 @@ class PluginRequestSLZ(serializers.Serializer):
     template = PluginTemplateSLZ()
     extra_fields = serializers.DictField(allow_null=True, help_text="第三方系统声明的额外字段")
     repository = serializers.CharField(help_text="源码仓库")
+    operator = serializers.CharField()
+
+
+class PluginArchiveRequestSLZ(serializers.Serializer):
+    """下架插件的请求体格式"""
+
     operator = serializers.CharField()
 
 

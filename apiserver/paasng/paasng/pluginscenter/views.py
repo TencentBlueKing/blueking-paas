@@ -239,13 +239,6 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             raise error_codes.CANNOT_BE_DELETED
 
         plugin.delete()
-        # 操作记录: 删除插件
-        OperationRecord.objects.create(
-            plugin=plugin,
-            operator=request.user.pk,
-            action=constants.ActionTypes.DELETE,
-            subject=constants.SubjectTypes.PLUGIN,
-        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.DELETE_PLUGIN])])

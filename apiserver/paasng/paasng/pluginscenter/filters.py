@@ -23,6 +23,7 @@ from django_filters import CharFilter
 from django_filters.rest_framework import FilterSet
 from rest_framework.filters import BaseFilterBackend
 
+from paasng.pluginscenter.constants import PluginStatus
 from paasng.pluginscenter.iam_adaptor.policy.client import lazy_iam_client
 from paasng.pluginscenter.models import PluginInstance, PluginRelease
 
@@ -34,11 +35,15 @@ class PluginInstancePermissionFilter(BaseFilterBackend):
         # skip filter if queryset is not for PluginInstance
         if queryset.model is not PluginInstance:
             return queryset
+
+        # 创建未审批中插件的未接入权限中心，仅创建者可在列表页面查看
+        approval_qs = queryset.model.objects.filter(creator=request.user.pk, status__in=PluginStatus.approval_status())
+
         filters = lazy_iam_client.build_plugin_filters(username=request.user.username)
         if filters:
-            return queryset.filter(filters)
+            return queryset.filter(filters) | approval_qs
         else:
-            return queryset.none()
+            return approval_qs
 
 
 class PluginReleaseFilter(FilterSet):

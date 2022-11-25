@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import Dict, List, Literal
 
 import cattr
@@ -64,6 +65,8 @@ from paasng.pluginscenter.thirdparty.members import sync_members
 from paasng.utils.api_docs import openapi_empty_schema
 from paasng.utils.i18n import to_translated_field
 from paasng.utils.views import permission_classes as _permission_classes
+
+logger = logging.getLogger(__name__)
 
 
 class SchemaViewSet(ViewSet):
@@ -239,6 +242,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             raise error_codes.CANNOT_BE_DELETED
 
         plugin.delete()
+        logger.error(f"plugin(id: {plugin_id}) is deleted by {request.user.username}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.DELETE_PLUGIN])])

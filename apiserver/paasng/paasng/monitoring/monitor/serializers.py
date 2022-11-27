@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 from django.conf import settings
 from rest_framework import serializers
 
+from paasng.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
 from .alert import QueryAlertsParams
@@ -27,7 +28,7 @@ from .models import AppAlertRule
 
 class ListAlertRulesSLZ(serializers.Serializer):
     alert_code = serializers.CharField(required=False)
-    environment = serializers.ChoiceField(choices=('stag', 'prod'), required=False)
+    environment = serializers.ChoiceField(choices=AppEnvName.get_choices(), required=False)
     keyword = serializers.CharField(required=False)
 
 
@@ -65,7 +66,7 @@ class SupportedAlertSLZ(serializers.Serializer):
 
 class ListAlertsSLZ(serializers.Serializer):
     alert_code = serializers.CharField(required=False)
-    environment = serializers.ChoiceField(choices=('stag', 'prod'), required=False)
+    environment = serializers.ChoiceField(choices=AppEnvName.get_choices(), required=False)
     # ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复
     status = serializers.ChoiceField(choices=('ABNORMAL', 'CLOSED', 'RECOVERED'), required=False)
     keyword = serializers.CharField(required=False)

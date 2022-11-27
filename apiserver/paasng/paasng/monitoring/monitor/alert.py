@@ -23,7 +23,7 @@ from attr import define
 from bkapi_client_core.exceptions import BKAPIError
 from django.conf import settings
 
-from .client import BKMonitorClient
+from .client import make_bkmonitor_client
 from .exceptions import BKMonitorGatewayServiceError
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,8 @@ class QueryAlertsParams:
     查询告警的参数
 
     :param app_code: 应用 code
-    :param start_time: 发生时间. 字符串格式 '%Y-%m-%d %H:%M:%S'
-    :param end_time: 结束时间. 字符串格式 '%Y-%m-%d %H:%M:%S'
+    :param start_time: 发生时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
+    :param end_time: 结束时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
     :param environment: 应用部署环境. 可选
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
@@ -88,7 +88,7 @@ class QueryAlerts:
 
     def query(self):
         try:
-            resp = BKMonitorClient().api.search_alert(json=self.params.to_dict())
+            resp = make_bkmonitor_client().api.search_alert(json=self.params.to_dict())
         except BKAPIError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BKMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')

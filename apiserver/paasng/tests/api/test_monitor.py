@@ -27,7 +27,7 @@ pytestmark = pytest.mark.django_db
 
 
 class TestListAlertsView:
-    @mock.patch("paasng.monitoring.monitor.alert.BKMonitorClient", new=StubBKMonitorClient)
+    @mock.patch("paasng.monitoring.monitor.client.BKMonitorClient", new=StubBKMonitorClient)
     def test_list_alerts(self, api_client, bk_app):
         resp = api_client.post(
             f'/api/monitor/applications/{bk_app.code}/alerts/',

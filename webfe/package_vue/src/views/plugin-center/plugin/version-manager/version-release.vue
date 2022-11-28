@@ -437,7 +437,7 @@
                                 setTimeout(() => {
                                     this.curStep = 3;
                                     this.stepsStatus = '';
-                                }, 200);
+                                }, 1000);
                             } else {
                                 this.stepsStatus = '';
                                 if (this.timer) {

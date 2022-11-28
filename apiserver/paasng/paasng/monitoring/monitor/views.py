@@ -232,9 +232,8 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         serializer = ListAlertsSLZ(data=request.data, context={'app_code': code})
         serializer.is_valid(raise_exception=True)
 
-        query_params = serializer.validated_data
         try:
-            alerts = QueryAlerts(query_params).query()
+            alerts = QueryAlerts(params=serializer.validated_data).query()
         except BKMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 

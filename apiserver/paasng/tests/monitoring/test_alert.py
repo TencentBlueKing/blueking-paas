@@ -37,7 +37,7 @@ class TestQueryAlertsParams:
         [
             (
                 AppQueryAlertsParams(),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_**_*)',
+                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_*)',
             ),
             (
                 AppQueryAlertsParams(environment='stag'),
@@ -49,11 +49,11 @@ class TestQueryAlertsParams:
             ),
             (
                 AppQueryAlertsParams(alert_code='high_cpu_usage'),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_**_high_cpu_usage)',
+                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_high_cpu_usage)',
             ),
             (
                 AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
-                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_**_*) AND alert_name:*{SEARCH_KEYWORD}*',
+                f'labels:(BKPAAS AND {FAKE_APP_CODE} AND {FAKE_APP_CODE}_*_*) AND alert_name:*{SEARCH_KEYWORD}*',
             ),
         ],
     )

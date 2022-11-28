@@ -75,8 +75,15 @@ class QueryAlertsParams:
         """构建 query_string 参数. 查询语法参考
         https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
         """
-        alert_rule_name = f"{self.app_code}_*{self.environment or '*'}_{self.alert_code or '*'}"
-        query_string = f"labels:(BKPAAS AND {self.app_code} AND {alert_rule_name})"
+        query_alert_code = self.alert_code or '*'
+
+        if self.environment:
+            query_rule_name = f'{self.app_code}_*{self.environment}_{query_alert_code}'
+        else:
+            query_rule_name = f'{self.app_code}_*_{query_alert_code}'
+
+        # labels 设置在具体的 alert_rules/ascode/rules_tpl 模板中
+        query_string = f"labels:(BKPAAS AND {self.app_code} AND {query_rule_name})"
         if self.keyword:
             query_string = f'{query_string} AND alert_name:*{self.keyword}*'
         return query_string

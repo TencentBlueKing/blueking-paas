@@ -43,17 +43,6 @@
                 <span class="text">质量红线拦截率</span>
               </div>
             </div>
-            <div
-              class="nav-list-item"
-            >
-              <span class="item-icon">
-                <i class="paasng-icon paasng-member" />
-              </span>
-              <div class="item-info">
-                <h3>--</h3>
-                <span class="text">成员</span>
-              </div>
-            </div>
           </div>
           <div class="chart-container">
             <h2>插件运营数据开发中，敬请期待！</h2>

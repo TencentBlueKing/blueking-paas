@@ -104,6 +104,8 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
 class ItsmDetailSLZ(serializers.Serializer):
     ticket_url = serializers.CharField(default=None)
+    sn = serializers.CharField()
+    fields = serializers.ListField(child=serializers.DictField())
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):

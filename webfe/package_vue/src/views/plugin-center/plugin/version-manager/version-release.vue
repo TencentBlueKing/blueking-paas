@@ -437,7 +437,7 @@
                                 setTimeout(() => {
                                     this.curStep = 3;
                                     this.stepsStatus = '';
-                                }, 1000);
+                                }, 300);
                             } else {
                                 this.stepsStatus = '';
                                 if (this.timer) {
@@ -462,7 +462,7 @@
                 } finally {
                     setTimeout(() => {
                         this.isLoading = false;
-                    }, 200);
+                    }, 500);
                 }
             },
 
@@ -865,8 +865,8 @@
     margin-top: 140px;
     text-align: center;
     .success-cls {
-        font-size: 36px;
-        line-height: 36px;
+        font-size: 50px;
+        line-height: 50px;
         border-radius: 50%;
         color: #fff;
         background-color: #2dcb56;

@@ -105,7 +105,7 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
 class ItsmDetailSLZ(serializers.Serializer):
     ticket_url = serializers.CharField(default=None)
-    sn = serializers.CharField()
+    sn = serializers.CharField(help_text="ITSM 单据单号")
     fields = serializers.ListField(child=serializers.DictField())
 
 

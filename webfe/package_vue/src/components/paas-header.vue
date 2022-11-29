@@ -1,199 +1,352 @@
 <template>
-    <div :class="[&quot;ps-header&quot;,&quot;clearfix&quot;,{ &quot;bk-header-static&quot;: is_static }]">
-        <div class="ps-header-visible clearfix">
-            <router-link :to="{ name: 'index' }" class="ps-logo">
-                <h1>
-                    <img v-if="localLanguage === 'zh-cn'" src="/static/images/logo.png" alt="" />
-                    <img v-else style="height: 28px" src="/static/images/logo_env3.png" alt="" />
-                </h1>
-            </router-link>
-            <ul class="ps-nav">
-                <li
-                    :class="{ 'active': curpage === index }"
-                    v-for="(item,index) in headerStaticInfo.list.nav"
-                    :key="index"
-                    @mouseover.stop.prevent="showSubNav(index)"
-                    @mouseout.stop.prevent="hideSubNav">
-                    <router-link :to="{ name: 'index' }" v-if="index === 0">
-                        {{item.text}}
-                    </router-link>
-                    <router-link :class="{ 'has-angle': index !== 1 }" :to="{ name: 'myApplications' }" v-else-if="index === 1">
-                        {{item.text}}<i class="paasng-icon paasng-angle-down" v-show="index !== 1"></i>
-                    </router-link>
-                    <a :class="{ 'has-angle': index !== 0 }" v-else href="javascript:;">
-                        {{item.text}}<i class="paasng-icon paasng-angle-down" v-show="index !== 0"></i>
-                    </a>
-                    <span class="line" v-if="isShowInput"></span>
+  <div :class="[&quot;ps-header&quot;,&quot;clearfix&quot;,{ &quot;bk-header-static&quot;: is_static }]">
+    <div class="ps-header-visible clearfix">
+      <router-link
+        :to="{ name: 'index' }"
+        class="ps-logo"
+      >
+        <h1>
+          <img
+            v-if="localLanguage === 'zh-cn'"
+            src="/static/images/logo.png"
+            alt=""
+          >
+          <img
+            v-else
+            style="height: 28px"
+            src="/static/images/logo_env3.png"
+            alt=""
+          >
+        </h1>
+      </router-link>
+      <ul class="ps-nav">
+        <li
+          v-for="(item,index) in headerStaticInfo.list.nav"
+          :key="index"
+          :class="{ 'active': curpage === index }"
+          @mouseover.stop.prevent="showSubNav(index)"
+          @mouseout.stop.prevent="hideSubNav"
+        >
+          <router-link
+            v-if="index === 0"
+            :to="{ name: 'index' }"
+          >
+            {{ item.text }}
+          </router-link>
+          <router-link
+            v-else-if="index === 1"
+            :class="{ 'has-angle': index !== 1 }"
+            :to="{ name: 'myApplications' }"
+          >
+            {{ item.text }}<i
+              v-show="index !== 1"
+              class="paasng-icon paasng-angle-down"
+            />
+          </router-link>
+          <a
+            v-else
+            :class="{ 'has-angle': index !== 0 }"
+            href="javascript:;"
+          >
+            {{ item.text }}<i
+              v-show="index !== 0"
+              class="paasng-icon paasng-angle-down"
+            />
+          </a>
+          <!-- <span
+            v-if="isShowInput"
+            class="line"
+          /> -->
+        </li>
+      </ul>
+      <!-- 右侧 -->
+      <ul
+        v-if="userInitialized && !user.isAuthenticated"
+        class="ps-head-right"
+      >
+        <li>
+          <div class="ps-search clearfix">
+            <input
+              type="text"
+              placeholder=""
+            >
+            <input type="button">
+          </div>
+        </li>
+        <li>
+          <a
+            class="notice-button"
+            href="javascript:"
+          />
+        </li>
+        <li>
+          <a
+            class="login-button"
+            href="javascript:"
+            @click="open_login_dialog()"
+          > {{ $t('登录') }} </a>
+        </li>
+      </ul>
+      <ul
+        v-if="userInitialized && user.isAuthenticated"
+        class="ps-head-right"
+      >
+        <template v-if="GLOBAL.APP_VERSION === 'te'">
+          <li
+            v-if="false"
+            class="switch-language"
+            @click="switchLanguage"
+          >
+            <!-- <i class="paasng-icon paasng-plus"></i> -->
+            <img
+              class="translate-icon"
+              src="/static/images/translate-icon.svg"
+              alt=""
+            >
+            <span class="translate-icon-font">{{ $t('切换语言') }}</span>
+          </li>
+          <li class="mr20">
+            <dropdown
+              ref="dropdown"
+              :options="{
+                position: 'bottom right',
+                classes: 'ps-header-dropdown',
+                tetherOptions: {
+                  targetOffset: '0px 40px'
+                }, beforeClose
+              }"
+            >
+              <div
+                slot="trigger"
+                class="ps-search clearfix"
+              >
+                <input
+                  v-if="isShowInput"
+                  v-model="filterKey"
+                  type="text"
+                  :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
+                  @keydown.down.prevent="emitChildKeyDown"
+                  @keydown.up.prevent="emitChildKeyUp"
+                  @keypress.enter="enterCallBack($event)"
+                  @compositionstart="handleCompositionstart"
+                  @compositionend="handleCompositionend"
+                >
+                <div class="ps-search-icon">
+                  <span
+                    v-if="filterKey === ''"
+                    class="paasng-icon paasng-search"
+                  />
+                  <span
+                    v-else
+                    class="paasng-icon paasng-close close-cursor"
+                    @click="clearInputValue"
+                  />
+                </div>
+              </div>
+              <!-- 先不显示搜索蓝鲸应用的功能，需要前端：1）添加dropdwon插件，即鼠标点击其它位置时关闭下来框内容；2）下来框样式调整 -->
+              <div
+                slot="content"
+                class="header-search-result"
+              >
+                <div
+                  v-if="filterKey !== ''"
+                  class="paas-search-trigger"
+                  @click.stop="handleToSearchPage"
+                >
+                  <span> {{ $t('查看更多结果') }} </span>
+                </div>
+                <div
+                  v-for="(searchComponent, index) of searchComponentList"
+                  v-show="filterKey"
+                  :key="index"
+                >
+                  <h3>{{ searchComponent.title }}</h3>
+                  <component
+                    :is="searchComponent.component"
+                    ref="searchPanelList"
+                    :theme="'ps-header-search'"
+                    :max="searchComponent.max"
+                    :filter-key="filterKey"
+                    :params="searchComponent.params"
+                    @selectAppCallback="selectAppCallback"
+                    @key-up-overflow="onKeyUp(), emitChildKeyUp()"
+                    @key-down-overflow="onKeyDown(), emitChildKeyDown()"
+                  />
+                </div>
+              </div>
+            </dropdown>
+          </li>
+          <li class="ps-head-last">
+            <a
+              v-bk-tooltips.bottom="$t('我的告警')"
+              class="link-text"
+              href="javascript:"
+              @click="handleToMonitor"
+            >
+              <i class="paasng-icon paasng-monitor-fill monitor-icon" />
+            </a>
+          </li>
+          <li class="ps-head-last">
+            <a
+              class="link-text"
+              href="javascript:"
+            >
+              <i class="paasng-icon paasng-help" />
+            </a>
+            <div class="contact">
+              <ul>
+                <li v-if="GLOBAL.HELPER.name && GLOBAL.HELPER.href">
+                  <a :href="GLOBAL.HELPER.href">{{ GLOBAL.HELPER.name }}</a>
                 </li>
-            </ul>
-            <!-- 右侧 -->
-            <ul class="ps-head-right" v-if="userInitialized && !user.isAuthenticated">
                 <li>
-                    <div class="ps-search clearfix">
-                        <input type="text" placeholder="" />
-                        <input type="button" />
-                    </div>
+                  <a
+                    :href="GLOBAL.LINK.PA_ISSUE"
+                    target="_blank"
+                  > {{ $t('问题反馈') }} </a>
                 </li>
                 <li>
-                    <a class="notice-button" href="javascript:">
-                    </a>
+                  <a
+                    :href="GLOBAL.LINK.PA_MARKER"
+                    target="_blank"
+                  > {{ $t('加入圈子') }} </a>
                 </li>
-                <li>
-                    <a class="login-button" href="javascript:" @click="open_login_dialog()"> {{ $t('登录') }} </a>
-                </li>
-            </ul>
-            <ul class="ps-head-right" v-if="userInitialized && user.isAuthenticated">
-                <template v-if="GLOBAL.APP_VERSION === 'te'">
-                    <li class="switch-language" v-if="false" @click="switchLanguage">
-                        <!-- <i class="paasng-icon paasng-plus"></i> -->
-                        <img class="translate-icon" src="/static/images/translate-icon.svg" alt="">
-                        <span class="translate-icon-font">{{ $t('切换语言') }}</span>
-                    </li>
-                    <li class="mr20">
-                        <dropdown ref="dropdown" :options="{
-                            position: 'bottom right',
-                            classes: 'ps-header-dropdown',
-                            tetherOptions: {
-                                targetOffset: '0px 40px'
-                            }, beforeClose
-                        }">
-                            <div class="ps-search clearfix" slot="trigger">
-                                <input
-                                    type="text"
-                                    :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
-                                    v-model="filterKey"
-                                    v-if="isShowInput"
-                                    @keydown.down.prevent="emitChildKeyDown"
-                                    @keydown.up.prevent="emitChildKeyUp"
-                                    @keypress.enter="enterCallBack($event)"
-                                    @compositionstart="handleCompositionstart"
-                                    @compositionend="handleCompositionend" />
-                                <div class="ps-search-icon">
-                                    <span class="paasng-icon paasng-search" v-if="filterKey === ''"></span>
-                                    <span v-else class="paasng-icon paasng-close close-cursor" @click="clearInputValue"></span>
-                                </div>
-                            </div>
-                            <!-- 先不显示搜索蓝鲸应用的功能，需要前端：1）添加dropdwon插件，即鼠标点击其它位置时关闭下来框内容；2）下来框样式调整 -->
-                            <div class="header-search-result" slot="content">
-                                <div class="paas-search-trigger" @click.stop="handleToSearchPage" v-if="filterKey !== ''">
-                                    <span> {{ $t('查看更多结果') }} </span>
-                                </div>
-                                <div
-                                    v-for="(searchComponent, index) of searchComponentList"
-                                    v-show="filterKey"
-                                    :key="index">
-                                    <h3>{{ searchComponent.title }}</h3>
-                                    <component
-                                        ref="searchPanelList"
-                                        :is="searchComponent.component"
-                                        :theme="'ps-header-search'"
-                                        :max="searchComponent.max"
-                                        :filterKey="filterKey"
-                                        :params="searchComponent.params"
-                                        @selectAppCallback="selectAppCallback"
-                                        @key-up-overflow="onKeyUp(), emitChildKeyUp()"
-                                        @key-down-overflow="onKeyDown(), emitChildKeyDown()" />
-                                </div>
-                            </div>
-                        </dropdown>
-                    </li>
-                    <li class="ps-head-last">
-                        <a class="link-text" href="javascript:" v-bk-tooltips.bottom="$t('我的告警')" @click="handleToMonitor">
-                            <i class="paasng-icon paasng-monitor-fill monitor-icon"></i>
-                        </a>
-                    </li>
-                    <li class="ps-head-last">
-                        <a class="link-text" href="javascript:">
-                            <i class="paasng-icon paasng-help"></i>
-                        </a>
-                        <div class="contact">
-                            <ul>
-                                <li v-if="GLOBAL.HELPER.name && GLOBAL.HELPER.href">
-                                    <a :href="GLOBAL.HELPER.href">{{GLOBAL.HELPER.name}}</a>
-                                </li>
-                                <li>
-                                    <a :href="GLOBAL.LINK.PA_ISSUE" target="_blank"> {{ $t('问题反馈') }} </a>
-                                </li>
-                                <li>
-                                    <a :href="GLOBAL.LINK.PA_MARKER" target="_blank"> {{ $t('加入圈子') }} </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                </template>
-                <li class="ps-head-last">
-                    <a class="link-text pr20" href="javascript:">
-                        {{user.username}}<i class="paasng-icon paasng-down-shape"></i>
-                    </a>
-                    <div :class="['user',{ 'info-show': userInfoShow }]">
-                        <div class="user-yourname">
-                            <img :src="avatars" width="36px">
-                            <span class="fright">{{ user.chineseName || user.username }}</span>
-                        </div>
-                        <div class="user-opation">
-                            <p><a href="javascript:" target="_blank" @click="logout" id="logOut"> {{ $t('退出') }} </a></p>
-                        </div>
-                    </div>
-                </li>
-            </ul>
-        </div>
-        <div :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus&quot;: navIndex === 2, &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]" @mouseover.stop.prevent="showSubNav(navIndex)" @mouseout.stop.prevent="hideSubNav">
-            <dl v-for="colitem in curSubNav">
-                <template v-if="colitem.hasOwnProperty('title')">
-                    <dt>{{colitem.title}}</dt>
-                    <!-- 给有三级导航的dd添加sub-native类 -->
-                    <dd class="sub-native" v-for="sitem in colitem.items">
-                        <a href="javascript:;" v-if="sitem.navs">
-                            {{sitem.text}}
-                            <i class="paasng-icon paasng-angle-right" v-if="sitem.navs"></i>
-                        </a>
-                        <template v-else>
-                            <a :href="sitem.url" target="_blank" v-if="sitem.url.startsWith('http')">
-                                {{sitem.text}}
-                            </a>
-                            <a href="javascript:;" v-else @click="goRouter(sitem)">{{sitem.text}}
-                            </a>
-                        </template>
-                        <dl v-if="sitem.navs">
-                            <dd v-for="minItem in sitem.navs">
-                                <a :href="minItem.url" target="_blank">
-                                    {{minItem.text}}
-                                    <span class="white">{{minItem.eName}}</span>
-                                </a>
-                            </dd>
-                        </dl>
-                    </dd>
-                </template>
-
-                <template v-else v-for="subColitem in colitem.items">
-                    <dt>{{subColitem.title}}</dt>
-                    <!-- 给有三级导航的dd添加sub-native类 -->
-                    <dd class="sub-native" v-for="sitem in subColitem.items">
-                        <a href="javascript:;" v-if="sitem.navs">
-                            {{sitem.text}}
-                            <i class="paasng-icon paasng-angle-right" v-if="sitem.navs"></i>
-                        </a>
-                        <template v-else>
-                            <a :href="sitem.url" target="_blank" v-if="sitem.url.startsWith('http')">
-                                {{sitem.text}}
-                            </a>
-                            <a href="javascript:;" v-else @click="goRouter(sitem)">{{sitem.text}}
-                            </a>
-                        </template>
-                        <dl v-if="sitem.navs">
-                            <dd v-for="minItem in sitem.navs">
-                                <a :href="minItem.url" target="_blank">
-                                    {{minItem.text}}
-                                    <span class="white">{{minItem.eName}}</span>
-                                </a>
-                            </dd>
-                        </dl>
-                    </dd>
-                </template>
-                <dd class="last"></dd>
-            </dl>
-        </div>
+              </ul>
+            </div>
+          </li>
+        </template>
+        <li class="ps-head-last">
+          <a
+            class="link-text pr20"
+            href="javascript:"
+          >
+            {{ user.username }}<i class="paasng-icon paasng-down-shape" />
+          </a>
+          <div :class="['user',{ 'info-show': userInfoShow }]">
+            <!-- <div class="user-yourname">
+              <img
+                :src="avatars"
+                width="36px"
+              >
+              <span class="fright">{{ user.chineseName || user.username }}</span>
+            </div> -->
+            <div class="user-opation">
+              <p>
+                <a
+                  id="logOut"
+                  href="javascript:"
+                  target="_blank"
+                  @click="logout"
+                > {{ $t('退出登录') }} </a>
+              </p>
+            </div>
+          </div>
+        </li>
+      </ul>
     </div>
+    <div
+      :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus&quot;: navIndex === 2, &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]"
+      @mouseover.stop.prevent="showSubNav(navIndex)"
+      @mouseout.stop.prevent="hideSubNav"
+    >
+      <dl v-for="colitem in curSubNav">
+        <template v-if="colitem.hasOwnProperty('title')">
+          <dt>{{ colitem.title }}</dt>
+          <!-- 给有三级导航的dd添加sub-native类 -->
+          <dd
+            v-for="sitem in colitem.items"
+            class="sub-native"
+          >
+            <a
+              v-if="sitem.navs"
+              href="javascript:;"
+            >
+              {{ sitem.text }}
+              <i
+                v-if="sitem.navs"
+                class="paasng-icon paasng-angle-right"
+              />
+            </a>
+            <template v-else>
+              <a
+                v-if="sitem.url.startsWith('http')"
+                :href="sitem.url"
+                target="_blank"
+              >
+                {{ sitem.text }}
+              </a>
+              <a
+                v-else
+                href="javascript:;"
+                @click="goRouter(sitem)"
+              >{{ sitem.text }}
+              </a>
+            </template>
+            <dl v-if="sitem.navs">
+              <dd v-for="minItem in sitem.navs">
+                <a
+                  :href="minItem.url"
+                  target="_blank"
+                >
+                  {{ minItem.text }}
+                  <span class="white">{{ minItem.eName }}</span>
+                </a>
+              </dd>
+            </dl>
+          </dd>
+        </template>
+
+        <template
+          v-for="subColitem in colitem.items"
+          v-else
+        >
+          <dt>{{ subColitem.title }}</dt>
+          <!-- 给有三级导航的dd添加sub-native类 -->
+          <dd
+            v-for="sitem in subColitem.items"
+            class="sub-native"
+          >
+            <a
+              v-if="sitem.navs"
+              href="javascript:;"
+            >
+              {{ sitem.text }}
+              <i
+                v-if="sitem.navs"
+                class="paasng-icon paasng-angle-right"
+              />
+            </a>
+            <template v-else>
+              <a
+                v-if="sitem.url.startsWith('http')"
+                :href="sitem.url"
+                target="_blank"
+              >
+                {{ sitem.text }}
+              </a>
+              <a
+                v-else
+                href="javascript:;"
+                @click="goRouter(sitem)"
+              >{{ sitem.text }}
+              </a>
+            </template>
+            <dl v-if="sitem.navs">
+              <dd v-for="minItem in sitem.navs">
+                <a
+                  :href="minItem.url"
+                  target="_blank"
+                >
+                  {{ minItem.text }}
+                  <span class="white">{{ minItem.eName }}</span>
+                </a>
+              </dd>
+            </dl>
+          </dd>
+        </template>
+        <dd class="last" />
+      </dl>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -572,6 +725,10 @@
     }
 
     .ps-header a {
+        color: #96A2B9;
+    }
+
+    .ps-header .active a {
         color: #ffffff;
     }
 
@@ -877,7 +1034,7 @@
     }
 
     .ps-head-right li a.link-text {
-        color: #9b9ca8;
+        color: #96A2B9;
         font-size: 14px;
         line-height: 34px;
         position: relative;
@@ -982,10 +1139,14 @@
     }
 
     .user-opation {
-        padding: 10px 24px;
+        width: 80px;
+        height: 40px;
+        text-align: center;
+        line-height: 40px;
     }
 
     .user-opation a {
+        font-size: 12px;
         line-height: 36px;
         color: #666666;
     }

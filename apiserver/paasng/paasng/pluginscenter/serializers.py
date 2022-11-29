@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import datetime
 from typing import Dict, Optional, Type
 
 import semver
@@ -498,3 +499,18 @@ class OperationRecordSLZ(serializers.ModelSerializer):
     class Meta:
         model = OperationRecord
         fields = '__all__'
+
+
+class CodeCommitSearchSLZ(serializers.Serializer):
+    """代码提交统计搜索条件"""
+
+    begin_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+
+    def to_internal_value(self, instance):
+        data = super().to_internal_value(instance)
+
+        # 将时间转换为代码仓库指定的格式
+        data['begin_time'] = datetime.datetime.strftime(data['begin_time'], "%Y-%m-%dT%H:%M:%S+0000")
+        data['end_time'] = datetime.datetime.strftime(data['end_time'], "%Y-%m-%dT%H:%M:%S+0000")
+        return data

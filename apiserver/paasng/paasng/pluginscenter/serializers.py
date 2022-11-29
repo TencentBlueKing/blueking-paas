@@ -16,9 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import datetime
 from typing import Dict, Optional, Type
 
+import arrow
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
@@ -510,7 +510,7 @@ class CodeCommitSearchSLZ(serializers.Serializer):
     def to_internal_value(self, instance):
         data = super().to_internal_value(instance)
 
-        # 将时间转换为代码仓库指定的格式
-        data['begin_time'] = datetime.datetime.strftime(data['begin_time'], "%Y-%m-%dT%H:%M:%S+0000")
-        data['end_time'] = datetime.datetime.strftime(data['end_time'], "%Y-%m-%dT%H:%M:%S+0000")
+        # 将时间转换为代码仓库指定的格式  YYYY-MM-DDTHH:mm:ssZ
+        data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
         return data

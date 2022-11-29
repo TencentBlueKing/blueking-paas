@@ -269,6 +269,17 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             }
         )
 
+    @swagger_auto_schema(query_serializer=serializers.CodeCommitSearchSLZ)
+    def get_code_submit_info(self, request, pd_id, plugin_id):
+        """插件代码库的提交信息"""
+        slz = serializers.CodeCommitSearchSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        _data = slz.validated_data
+
+        plugin = self.get_plugin_instance()
+        repo_accessor = get_plugin_repo_accessor(plugin)
+        return Response(data=repo_accessor.get_submit_info(_data['begin_time'], _data['end_time']))
+
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     queryset = OperationRecord.objects.all()

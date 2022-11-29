@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional, Type
 
+import arrow
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
@@ -104,6 +105,8 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
 class ItsmDetailSLZ(serializers.Serializer):
     ticket_url = serializers.CharField(default=None)
+    sn = serializers.CharField(help_text="ITSM 单据单号")
+    fields = serializers.ListField(child=serializers.DictField())
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):
@@ -496,3 +499,18 @@ class OperationRecordSLZ(serializers.ModelSerializer):
     class Meta:
         model = OperationRecord
         fields = '__all__'
+
+
+class CodeCommitSearchSLZ(serializers.Serializer):
+    """代码提交统计搜索条件"""
+
+    begin_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+
+    def to_internal_value(self, instance):
+        data = super().to_internal_value(instance)
+
+        # 将时间转换为代码仓库指定的格式  YYYY-MM-DDTHH:mm:ssZ
+        data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        return data

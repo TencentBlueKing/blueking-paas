@@ -30,6 +30,12 @@
         </bk-table-column>
         <bk-table-column label="集群名称" prop="name"></bk-table-column>
         <bk-table-column label="所属区域" prop="region"></bk-table-column>
+        <bk-table-column label="集群类型" prop="type">
+            <template slot-scope="props">
+                <span v-if="props.row.type == 'normal'">普通</span>
+                <span v-if="props.row.type == 'virtual'">虚拟</span>
+            </template>
+        </bk-table-column>
         <bk-table-column label="默认集群" prop="is_default">
             <template slot-scope="props">
                 <span v-if="props.row.is_default">是</span>

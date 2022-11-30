@@ -43,6 +43,23 @@
               class="paasng-icon paasng-angle-down"
             />
           </router-link>
+          <!-- <router-link
+            v-else-if="(index === 2)"
+            :class="{ 'has-angle': index !== 2 }"
+            :to="{ name: 'myApplications' }"
+          >
+            {{ item.text }}<i
+              v-show="(index !== 2)"
+              class="paasng-icon paasng-angle-down"
+            />
+          </router-link> -->
+          <a
+            v-else-if="(index === 2)"
+            :href="link"
+            target="_blank"
+          >
+            {{ item.text }}
+          </a>
           <a
             v-else
             :class="{ 'has-angle': index !== 0 }"
@@ -244,7 +261,7 @@
       </ul>
     </div>
     <div
-      :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus&quot;: navIndex === 2, &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]"
+      :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]"
       @mouseover.stop.prevent="showSubNav(navIndex)"
       @mouseout.stop.prevent="hideSubNav"
     >
@@ -394,7 +411,9 @@
                         }
                     }
                 ],
-                isShowInput: true
+                isShowInput: true,
+                // eslint-disable-next-line comma-dangle
+                link: this.GLOBAL.LINK.APIGW_INDEX,
             };
         },
         computed: {
@@ -542,15 +561,12 @@
             // 二级导航mouseover
             showSubNav (index) {
                 clearTimeout(this.navHideController);
-                if (index === 0 || index === 1) {
+                if (index === 0 || index === 1 || index === 2) {
                     this.navIndex = index;
                 } else {
                     this.navShowController = setTimeout(() => {
                         this.navIndex = index;
                         switch (index) {
-                            case 2:
-                                this.curSubNav = this.headerStaticInfo.list.api_subnav_service;
-                                break;
                             case 3:
                                 this.curSubNav = this.headerStaticInfo.list.subnav_service;
                                 break;

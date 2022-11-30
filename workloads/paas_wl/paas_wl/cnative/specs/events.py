@@ -23,10 +23,10 @@ import arrow
 from attrs import define
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.cnative.specs.models import EnvResourcePlanner
+from paas_wl.platform.applications.models.app import get_ns
 from paas_wl.platform.applications.struct_models import ModuleEnv
-from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KEvent
+from paas_wl.resources.utils.basic import get_client_by_env
 
 
 @define
@@ -78,10 +78,9 @@ def list_failed_events(env: ModuleEnv, dt: Optional[datetime.datetime]) -> List[
     :param dt: datetime, Optional, filter events first seen after dt
 
     """
-    planer = EnvResourcePlanner(env)
     all_events = []
-    with get_client_by_cluster_name(planer.cluster.name) as client:
-        ret = KEvent(client).ops_label.list(namespace=planer.namespace, labels={})
+    with get_client_by_env(env) as client:
+        ret = KEvent(client).ops_label.list(namespace=get_ns(env), labels={})
         for kube_data in ret.items:
             all_events.append(deserialize(kube_data))
     failed_events = [e for e in all_events if e.reason == "Failed"]

@@ -2556,11 +2556,8 @@
     }
 
     .tool-confirm-wrapper {
-        width: 24px;
-        height: 24px;
         display: inline-block;
         float: left;
-        margin-right: 5px;
 
         .ps-icon-btn {
             clear: both;

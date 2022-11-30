@@ -373,7 +373,7 @@
           <div class="content no-border">
             <bk-button
               theme="danger"
-              @click="removePlugin"
+              @click="showRemovePlugin"
             >
               {{ $t('下架插件') }}
             </bk-button>
@@ -400,31 +400,47 @@
       </div>
     </bk-dialog>
 
-    <!-- <bk-dialog
-            width="540"
-            v-model="delAppDialog.visiable"
-            :title="`确认删除应用【${curAppInfo.application.name}】？`"
-            :theme="'primary'"
-            :header-position="'left'"
-            :mask-close="false"
-            :loading="delAppDialog.isLoading"
-            @after-leave="hookAfterClose">
-            <div class="ps-form">
-                <div class="spacing-x1">
-                    {{ $t('请完整输入') }} <code>{{ curAppInfo.application.code }}</code> {{ $t('来确认删除应用！') }}
-                </div>
-                <div class="ps-form-group">
-                    <input v-model="formRemoveConfirmCode" type="text" class="ps-form-control">
-                    <div class="mt10 f13">
-                        {{ $t('注意：因为安全等原因，应用 ID 和名称在删除后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名应用') }}
-                    </div>
-                </div>
-            </div>
-            <template slot="footer">
-                <bk-button theme="primary" @click="submitRemoveApp" :disabled="!formRemoveValidated"> {{ $t('确定') }} </bk-button>
-                <bk-button theme="default" @click="delAppDialog.visiable = false"> {{ $t('取消') }} </bk-button>
-            </template>
-        </bk-dialog> -->
+    <bk-dialog
+      v-model="delAppDialog.visiable"
+      width="540"
+      :title="`确认下架插件【${pluginInfo.id}】？`"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :loading="delAppDialog.isLoading"
+      @after-leave="hookAfterClose"
+    >
+      <div class="ps-form">
+        <div class="spacing-x1">
+          {{ $t('请完整输入') }} <code>{{ pluginInfo.id }}</code> {{ $t('来确认下架插件！') }}
+        </div>
+        <div class="ps-form-group">
+          <input
+            v-model="formRemovePluginId"
+            type="text"
+            class="ps-form-control"
+          >
+          <div class="mt10 f13">
+            {{ $t('注意：插件标识和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件') }}
+          </div>
+        </div>
+      </div>
+      <template slot="footer">
+        <bk-button
+          theme="primary"
+          :disabled="!formRemoveValidated"
+          @click="lowerShelfPlugin"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="delAppDialog.visiable = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </template>
+    </bk-dialog>
   </div>
 </template>
 
@@ -486,7 +502,7 @@
                 resMarketInfo: {},
                 // 市场信息只读
                 isMarketInfo: true,
-                formRemoveConfirmCode: '',
+                formRemovePluginId: '',
                 localeAppInfo: {
                     name: '',
                     logo: '',
@@ -536,7 +552,7 @@
         },
         computed: {
             formRemoveValidated () {
-                return this.curAppInfo.application.code === this.formRemoveConfirmCode;
+                return this.pluginInfo.id === this.formRemovePluginId;
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
@@ -597,7 +613,7 @@
                     res.contactArr = contactformat;
                     this.resMarketInfo = JSON.stringify(res);
                     this.$nextTick(() => {
-                        this.editorLabelHeight = this.$refs.editorRef.offsetHeight > 42 ? 'two' : '';
+                        this.editorLabelHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight > 42 ? 'two' : '';
                     });
                 } catch (e) {
                     this.$bkMessage({
@@ -722,7 +738,6 @@
             },
 
             showTextEditor (key) {
-                console.log('key', key);
                 this.editorConfig.visible = true;
                 this.editorValue = this.marketInfo.description;
                 // 展示dialog
@@ -772,8 +787,36 @@
                 }
             },
 
-            removePlugin () {
-                console.log('下架');
+            showRemovePlugin () {
+                this.delAppDialog.visiable = true;
+            },
+
+            hookAfterClose () {
+                this.delAppDialog.visiable = false;
+                this.formRemovePluginId = '';
+            },
+
+            async lowerShelfPlugin () {
+                try {
+                    await this.$store.dispatch('plugin/lowerShelfPlugin', {
+                        pdId: this.pdId,
+                        pluginId: this.pluginId,
+                        data: {}
+                    });
+                    this.$paasMessage({
+                        theme: 'success',
+                        message: this.$t('插件下架成功！')
+                    });
+                    this.hookAfterClose();
+                    this.$router.push({
+                        name: 'plugin'
+                    });
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                }
             },
 
             // 富文本编辑

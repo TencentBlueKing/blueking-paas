@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import copy
 import logging
 import tempfile
 import uuid
@@ -238,6 +239,33 @@ def create_default_cluster():
         ),
     )
     return cluster
+
+
+@pytest.fixture
+def patch_ingress_config():
+    """Patch ingress_config of the default cluster, usage:
+
+    def test_foo(patch_ingress_config):
+        patch_ingress_config(
+            port_map: ...,
+            app_root_domain: ...,
+        )
+        # Other test codes
+
+    """
+    cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+    orig_cfg = copy.deepcopy(cluster.ingress_config)
+
+    def _patch_func(**kwargs):
+        for k, v in kwargs.items():
+            setattr(cluster.ingress_config, k, v)
+        cluster.save(update_fields=['ingress_config'])
+
+    yield _patch_func
+
+    # Restore to original
+    cluster.ingress_config = orig_cfg
+    cluster.save(update_fields=['ingress_config'])
 
 
 def setup_default_client(cluster: Cluster):

@@ -67,6 +67,11 @@
                   :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
                 />
               </div>
+              <div class="tips tips-plugin">
+                <code># {{ $t('添加远程仓库地址并完成推送') }}
+                  {{ initTips }}
+                </code>
+              </div>
               <div class="tips">
                 <code># {{ $t('添加远程仓库地址并完成推送') }}
                   {{ pushTips }}
@@ -158,6 +163,15 @@
                 return [
                     'pip install cookiecutter',
                     `cookiecutter ${this.GLOBAL.LINK.BK_PLUGIN_TEMPLATE}`
+                ].join('\n');
+            },
+            initTips: function () {
+                return [
+                  `project_name：插件项目名`,
+                  `app_code：插件 APP CODE`,
+                  `plugin_desc：插件描述`,
+                  `init_admin：插件应用初始化管理员`,
+                  `init_apigw_maintainer：插件应用网关管理员`
                 ].join('\n');
             },
             pushTips: function () {

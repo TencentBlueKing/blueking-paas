@@ -100,7 +100,12 @@ from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.helpers import get_module_cluster
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import get_default_access_entrance, get_exposed_url
+from paasng.publish.entrance.exposer import (
+    get_default_access_entrance,
+    get_exposed_url,
+    get_exposed_url_live,
+    get_live_addresses,
+)
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
@@ -145,9 +150,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_env = self.get_env_via_path()
         serializer = self.serializer_class(request.query_params)
 
-        deployment_data = None
         offline_data = None
-        exposed_link = None
         default_access_entrance = get_default_access_entrance(module_env, include_no_running=True)
 
         if module_env.is_offlined:
@@ -157,17 +160,20 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.APP_NOT_RELEASED
             offline_data = OfflineOperationSLZ(offline_operation).data
 
-        else:
-            try:
-                deployment = Deployment.objects.filter(app_environment=module_env).latest_succeeded()
-            except Deployment.DoesNotExist:
-                raise error_codes.APP_NOT_RELEASED
-            deployment_data = DeploymentSLZ(deployment).data
-            exposed_link = get_exposed_url(module_env)
+        # Check if current env is running
+        addrs = get_live_addresses(module_env.module)
+        if not addrs.get_is_running(module_env.environment):
+            raise error_codes.APP_NOT_RELEASED
+
+        # TODO: Use get_exposed_url_live universally after some refactor
+        exposed_link = get_exposed_url(module_env)
+        if not exposed_link:
+            # Get link for cloud-native applications
+            exposed_link = get_exposed_url_live(module_env)
 
         data = {
             "is_offlined": module_env.is_offlined,
-            'deployment': deployment_data,
+            'deployment': self.get_deployment_data(module_env),
             "offline": offline_data,
             'exposed_link': {"url": exposed_link.address if exposed_link else None},
             "default_access_entrance": {"url": default_access_entrance.address if default_access_entrance else None},
@@ -185,6 +191,16 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data['processes'] = specs
 
         return Response(data)
+
+    @staticmethod
+    def get_deployment_data(env) -> Optional[Dict]:
+        """Try to get the latest deployment data by querying Deployment model"""
+        try:
+            deployment = Deployment.objects.filter(app_environment=env).latest_succeeded()
+        except Deployment.DoesNotExist:
+            # Cloud-native app does not has any deployment objects
+            return None
+        return DeploymentSLZ(deployment).data
 
 
 class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):

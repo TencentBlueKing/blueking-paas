@@ -22,7 +22,9 @@ from typing import Dict, List, NamedTuple, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
+from paasng.engine.controller.models import Domain as DomainCfg
 from paasng.engine.controller.models import IngressConfig, PortMap
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.publish.entrance.utils import URL, to_dns_safe
@@ -88,137 +90,134 @@ def get_preallocated_domain(
     if not ingress_config.app_root_domains:
         return None
 
-    safe_app_code = to_dns_safe(app_code)
+    allocator = SubDomainAllocator(app_code, ingress_config.port_map)
+    domain_cfg = ingress_config.default_root_domain
     if not module_name:
         return PreDomains(
-            stag=Domain(
-                host=ModuleEnvDomains.make_host(ingress_config.default_root_domain.name, 'stag', safe_app_code),
-                https_enabled=ingress_config.default_root_domain.https_enabled,
-                type=DomainPriorityType.WITHOUT_MODULE,
-                port_map=ingress_config.port_map,
-            ),
-            prod=Domain(
-                host=ModuleEnvDomains.make_host(ingress_config.default_root_domain.name, safe_app_code),
-                https_enabled=ingress_config.default_root_domain.https_enabled,
-                type=DomainPriorityType.ONLY_CODE,
-                port_map=ingress_config.port_map,
-            ),
+            stag=allocator.for_default_module(domain_cfg, 'stag'),
+            prod=allocator.for_default_module_prod_env(domain_cfg),
         )
     else:
-        safe_module_name = to_dns_safe(module_name)
         return PreDomains(
-            stag=Domain(
-                host=ModuleEnvDomains.make_host(
-                    ingress_config.default_root_domain.name, 'stag', safe_module_name, safe_app_code
-                ),
-                https_enabled=ingress_config.default_root_domain.https_enabled,
-                type=DomainPriorityType.STABLE,
-                port_map=ingress_config.port_map,
-            ),
-            prod=Domain(
-                host=ModuleEnvDomains.make_host(
-                    ingress_config.default_root_domain.name, 'prod', safe_module_name, safe_app_code
-                ),
-                https_enabled=ingress_config.default_root_domain.https_enabled,
-                type=DomainPriorityType.STABLE,
-                port_map=ingress_config.port_map,
-            ),
+            stag=allocator.for_universal(domain_cfg, module_name, 'stag'),
+            prod=allocator.for_universal(domain_cfg, module_name, 'prod'),
         )
 
 
 class ModuleEnvDomains:
     """managing domains for module environment"""
 
-    DOT_SEP = '-dot-'
-
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.application = env.module.application
-        self.engine_app = env.engine_app
-
-        self.part_env = to_dns_safe(env.environment)
-        self.part_module = to_dns_safe(env.module.name)
-        self.part_code = to_dns_safe(self.application.code)
-
-        ingress_config = self.get_ingress_config()
-        self.root_domains = ingress_config.app_root_domains
-        self.port_map = ingress_config.port_map
+        self.ingress_config = self.get_ingress_config()
+        self.allocator = SubDomainAllocator(self.application.code, self.ingress_config.port_map)
 
     def get_ingress_config(self) -> IngressConfig:
         """Get ingress config from cluster info"""
-        cluster = get_engine_app_cluster(self.application.region, self.engine_app.name)
+        cluster = get_engine_app_cluster(self.application.region, self.env.engine_app.name)
         return cluster.ingress_config
 
     def all(self) -> List[Domain]:
         """Get all assigned domains for current env"""
-        if not self.root_domains:
+        root_domains = self.ingress_config.app_root_domains
+        if not root_domains:
             return []
 
-        domains = [*self.make_stable()]
-        if self.env.module.is_default:
-            domains.extend(self.make_without_module())
-
-            # Assign a shortest domain for "prod" environment of "default" module
-            if self.env.environment == 'prod':
-                domains.extend(self.make_only_code())
-
-        return domains
-
-    def make_stable(self) -> List[Domain]:
-        """Make all stable domain."""
-        return [
-            Domain(
-                host=self.make_host(domain.name, self.part_env, self.part_module, self.part_code),
-                type=DomainPriorityType.STABLE,
-                https_enabled=domain.https_enabled,
-                port_map=self.port_map,
-            )
-            for domain in self.root_domains
-        ]
-
-    def make_without_module(self) -> List[Domain]:
-        """Make all domain for default module."""
-        return [
-            Domain(
-                host=self.make_host(domain.name, self.part_env, self.part_code),
-                type=DomainPriorityType.WITHOUT_MODULE,
-                https_enabled=domain.https_enabled,
-                port_map=self.port_map,
-            )
-            for domain in self.root_domains
-        ]
-
-    def make_only_code(self) -> List[Domain]:
-        """Make all domain for default module prod env."""
-        return [
-            Domain(
-                host=self.make_host(domain.name, self.part_code),
-                type=DomainPriorityType.ONLY_CODE,
-                https_enabled=domain.https_enabled,
-                port_map=self.port_map,
-            )
-            for domain in self.root_domains
-        ]
+        return self.allocator.list_available(
+            root_domains, self.env.module.name, self.env.environment, self.env.module.is_default
+        )
 
     def make_user_preferred_one(self) -> Optional[Domain]:
-        """Make the domain with user prefer root domain"""
-        preferred = self.env.module.user_preferred_root_domain
-        if not preferred:
+        """Make a domain object with user prefer root domain, return None if no preferred
+        value was set.
+        """
+        host = self.env.module.user_preferred_root_domain
+        if not host:
             return None
 
-        parts = [self.part_env, self.part_module, self.part_code]
-        if self.env.module.is_default:
-            parts = [self.part_env, self.part_code]
-            if self.env.environment == "prod":
-                parts = [self.part_code]
+        # Make a virtual domain config and use it to get the domain object
+        d = self.ingress_config.find_subdomain_domain(host)
+        cfg = DomainCfg(name=host, https_enabled=d.https_enabled if d else False)
+        domain = self.allocator.get_highest_priority(
+            cfg, self.env.module.name, self.env.environment, self.env.module.is_default
+        )
+        # Modify the domain type manually
+        domain.type = DomainPriorityType.USER_PREFERRED
+        return domain
+
+
+class SubDomainAllocator:
+    """Allocate domain objects
+
+    :param port_map: The PortMap config
+    """
+
+    DOT_SEP = '-dot-'
+
+    def __init__(self, app_code: str, port_map: PortMap):
+        self.app_code = app_code
+        self.port_map = port_map
+
+    def list_available(
+        self, domain_cfgs: List[DomainCfg], module_name: str, env_name: str, is_default: bool
+    ) -> List[Domain]:
+        """Get all available domain objects, the result was sorted by `DomainPriorityType`
+
+        :param domain_cfgs: A list of domain configs, usually defined in ingress config
+        :param module: Name of module
+        :param env_name: Name of environment, "stag" or "prod"
+        :param is_default: Whether current module is "default" module
+        """
+        domains = [self.for_universal(c, module_name, env_name) for c in domain_cfgs]
+        if is_default:
+            domains.extend([self.for_default_module(c, env_name) for c in domain_cfgs])
+            if env_name == AppEnvName.PROD.value:
+                domains.extend([self.for_default_module_prod_env(c) for c in domain_cfgs])
+        return domains
+
+    def get_highest_priority(self, domain_cfg: DomainCfg, module_name: str, env_name: str, is_default: bool) -> Domain:
+        """Get the Domain object for given environment, it will return the object
+        with the highest priority, see `DomainPriorityType` for more details.
+        """
+        domains = self.list_available([domain_cfg], module_name, env_name, is_default)
+        return domains[-1]
+
+    def for_universal(self, domain_cfg: DomainCfg, module_name: str, env_name: str) -> Domain:
+        """Return a Domain object whose host depends on app_code, module and
+        environment name, suitable for all environments.
+        """
         return Domain(
-            host=self.make_host(preferred, *parts),
-            type=DomainPriorityType.USER_PREFERRED,
-            https_enabled=any(domain.name == preferred and domain.https_enabled for domain in self.root_domains),
+            host=self._make_host(domain_cfg.name, env_name, module_name, self.app_code),
+            type=DomainPriorityType.STABLE,
+            https_enabled=domain_cfg.https_enabled,
+            port_map=self.port_map,
+        )
+
+    def for_default_module(self, domain_cfg: DomainCfg, env_name: str) -> Domain:
+        """Return a Domain object whose host depends on app_code and environment name,
+        always bound to default module.
+        """
+        return Domain(
+            host=self._make_host(domain_cfg.name, env_name, self.app_code),
+            type=DomainPriorityType.WITHOUT_MODULE,
+            https_enabled=domain_cfg.https_enabled,
+            port_map=self.port_map,
+        )
+
+    def for_default_module_prod_env(self, domain_cfg: DomainCfg) -> Domain:
+        """Return a Domain object whose host depends on app_code only, always bound
+        to the default module's prod environment.
+        """
+        return Domain(
+            host=self._make_host(domain_cfg.name, self.app_code),
+            type=DomainPriorityType.ONLY_CODE,
+            https_enabled=domain_cfg.https_enabled,
             port_map=self.port_map,
         )
 
     @classmethod
-    def make_host(cls, root_domain: str, *parts):
+    def _make_host(cls, root_domain: str, *parts: str):
         """Make a host name"""
-        return (cls.DOT_SEP.join(parts) + '.' + root_domain).lower()
+        safe_parts = [to_dns_safe(s) for s in parts]
+        return (cls.DOT_SEP.join(safe_parts) + '.' + root_domain).lower()

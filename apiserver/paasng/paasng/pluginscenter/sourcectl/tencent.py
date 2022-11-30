@@ -25,6 +25,7 @@ from urllib.parse import quote, urljoin, urlparse
 import arrow
 import requests
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from requests import models
 from requests.auth import AuthBase
@@ -116,6 +117,20 @@ class PluginRepoAccessor:
             for tag in self.list_tags(self.project):
                 result.append(self._branch_data_to_version("tag", tag))
         return sorted(result, key=lambda item: item.last_update, reverse=True)  # type: ignore
+
+    def get_submit_info(self, begin_time: str, end_time: str) -> List[dict]:
+        """查询项目的提交次数、提交用户数，默认统计全部分支的统计情况
+        : param begin_time: 开始时间；例如 2019-03-25T00:10:19+0000
+        : param end_time: 结束时间：例如 2019-03-26T00:10:19+0000
+        """
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}/tloc/daily/count"
+        # 指定你的当前时区，默认是 0 时区，范围 (-11,11)
+        time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
+
+        params = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
+        resp = self._session.get(urljoin(self._api_url, _url), params=params)
+        return validate_response(resp).json()
 
     def list_branches(self, project: GitProject, **kwargs) -> List[dict]:
         """获取仓库的所有 branches

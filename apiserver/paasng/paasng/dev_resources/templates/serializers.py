@@ -21,8 +21,8 @@ from rest_framework import serializers
 from paasng.utils.i18n.serializers import TranslatedCharField
 
 
-class ListSceneTmplsSLZ(serializers.Serializer):
-    """获取可用场景模板列表"""
+class SearchTemplateSLZ(serializers.Serializer):
+    """获取可用模板列表"""
 
     region = serializers.CharField(required=True, max_length=16, help_text='应用版本')
     tags = serializers.CharField(required=False, max_length=128, default='', help_text='标签，多个则以英文逗号拼接')
@@ -33,8 +33,8 @@ class ListSceneTmplsSLZ(serializers.Serializer):
         return {t for t in tags.split(',') if t}
 
 
-class SceneTmplSLZ(serializers.Serializer):
-    """场景模板"""
+class TemplateSLZ(serializers.Serializer):
+    """模板数据"""
 
     name = serializers.CharField()
     display_name = TranslatedCharField()
@@ -44,4 +44,4 @@ class SceneTmplSLZ(serializers.Serializer):
     repo_url = serializers.CharField()
 
     def get_region(self, tmpl):
-        return tmpl.enabled_regions[0]
+        return tmpl.enabled_regions

@@ -317,9 +317,9 @@ class ControllerClient:
 
     # Bk-App(module) related start
 
-    def list_env_is_running(self, app_code: str, module_name: str):
-        """List all env's "is_running" status under given module"""
-        return self.request('GET', f'/applications/{app_code}/modules/{module_name}/env_is_running/')
+    def list_env_addresses(self, app_code: str, module_name: str):
+        """List all env's addresses under given module, result include "is_running" status"""
+        return self.request('GET', f'/applications/{app_code}/modules/{module_name}/addresses/')
 
     # Bk-App(module) related end
 

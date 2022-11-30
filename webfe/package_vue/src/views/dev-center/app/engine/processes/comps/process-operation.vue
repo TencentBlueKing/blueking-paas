@@ -1937,7 +1937,8 @@
             .process-basic-info {
                 display: inline-block;
                 padding: 16px 24px;
-                width: 185px;
+                min-width: 185px;
+                max-width: 230px;
                 vertical-align: middle;
                 cursor: pointer;
                 .expanded-icon {

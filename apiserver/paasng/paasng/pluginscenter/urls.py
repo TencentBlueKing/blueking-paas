@@ -33,9 +33,17 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/archive/",
+        views.PluginInstanceViewSet.as_view({"post": "archive"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/repo/commit-diff-external/"
         + "<str:from_revision>/<str:to_revision>/",
         views.PluginReleaseViewSet.as_view({"get": "get_compare_url"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/code_statistics/",
+        views.PluginInstanceViewSet.as_view({"get": "get_code_submit_info"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
@@ -120,6 +128,10 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/<str:username>/",
         views.PluginMembersViewSet.as_view({"delete": "destroy"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/operations/",
+        views.OperationRecordViewSet.as_view({"get": "list"}),
     ),
     path(
         "api/bkplugins/plugin_definitions/schemas/",

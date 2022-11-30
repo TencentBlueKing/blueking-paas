@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from attrs import asdict
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
@@ -30,6 +31,7 @@ from rest_framework.viewsets import ModelViewSet, ViewSet
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
 from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
+from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.platform.applications import models
 from paas_wl.platform.applications.models import Release
 from paas_wl.platform.applications.models.app import create_initial_config
@@ -511,21 +513,26 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         return Response(data=serializers.InstanceMetricsResultSerializer(instance=metric_results, many=True).data)
 
 
-class EnvIsRunningViewSet(SysViewSet):
-    """获取模块下各环境是否处于“运行中”状态"""
+class EnvDeployedStatusViewSet(SysViewSet):
+    """获取模块下各环境与“部署”有关的状信息"""
 
-    @swagger_auto_schema(responses={"200": serializers.EnvIsRunningSLZ(many=True)})
-    def list(self, request, code, module_name):
-        """返回当前模块下所有环境的运行状态（is_running），该值为 true 时，代表至少存在
-        一次成功的部署，意味着：
+    @swagger_auto_schema(responses={"200": serializers.EnvAddressesSLZ(many=True)})
+    def list_addrs(self, request, code, module_name):
+        """返回当前模块下所有环境的可访问地址，包含：运行状态（is_running）、可访问地址
+        列表（addresses）等。
 
-        - 允许在该环境下创建独立域名
-        - 客户端可将环境入口地址展示为“可访问”状态
-        - ...
+        - “云原生”应用和普通应用都会返回有效的访问地址列表
         """
         app = get_structured_app(code=code)
         results = []
         module = app.get_module_by_name(module_name)
         for env in app.get_envs_by_module(module):
-            results.append({'env': env.environment, 'is_running': env_is_running(env)})
-        return Response(serializers.EnvIsRunningSLZ(results, many=True).data)
+            addrs = [asdict(obj) for obj in EnvAddresses(env).get()]
+            results.append(
+                {
+                    'env': env.environment,
+                    'is_running': env_is_running(env),
+                    'addresses': addrs,
+                }
+            )
+        return Response(serializers.EnvAddressesSLZ(results, many=True).data)

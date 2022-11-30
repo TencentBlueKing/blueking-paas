@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
@@ -38,7 +38,7 @@ class PlainStageInfo:
 @define
 class ItsmDetail:
     sn: str
-    fields: List[dict]
+    fields: List[Dict]
     ticket_url: str
 
 

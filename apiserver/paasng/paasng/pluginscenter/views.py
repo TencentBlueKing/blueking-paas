@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import Dict, List, Literal
 
 import cattr
@@ -55,6 +56,7 @@ from paasng.pluginscenter.models import (
 from paasng.pluginscenter.permissions import IsPluginCreator
 from paasng.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
 from paasng.pluginscenter.sourcectl import build_master_placeholder, get_plugin_repo_accessor
+from paasng.pluginscenter.thirdparty import instance as instance_api
 from paasng.pluginscenter.thirdparty import log as log_api
 from paasng.pluginscenter.thirdparty import market as market_api
 from paasng.pluginscenter.thirdparty.configuration import sync_config
@@ -63,6 +65,8 @@ from paasng.pluginscenter.thirdparty.members import sync_members
 from paasng.utils.api_docs import openapi_empty_schema
 from paasng.utils.i18n import to_translated_field
 from paasng.utils.views import permission_classes as _permission_classes
+
+logger = logging.getLogger(__name__)
 
 
 class SchemaViewSet(ViewSet):
@@ -132,13 +136,15 @@ class PluginInstanceMixin:
     IF request.user DOES NOT have object permissions, will raise PermissionDeny exception
     """
 
-    def get_plugin_instance(self) -> PluginInstance:
+    def get_plugin_instance(self, allow_archive: bool = False) -> PluginInstance:
         queryset = PluginInstance.objects.all()
         filter_kwargs = {"pd__identifier": self.kwargs["pd_id"], "id": self.kwargs["plugin_id"]}  # type: ignore
         obj = get_object_or_404(queryset, **filter_kwargs)
 
         # May raise a permission denied
         self.check_object_permissions(self.request, obj)  # type: ignore
+        if not allow_archive and obj.status in constants.PluginStatus.archive_status():
+            raise error_codes.PLUGIN_ARCHIVED
         return obj
 
 
@@ -161,9 +167,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         validated_data = slz.validated_data
 
         plugin_status = (
-            constants.PluginStatus.WAITING_APPROVAL.value
+            constants.PluginStatus.WAITING_APPROVAL
             if pd.approval_config.enabled
-            else constants.PluginStatus.DEVELOPING.value
+            else constants.PluginStatus.DEVELOPING
         )
         plugin = PluginInstance(
             pd=pd,
@@ -186,8 +192,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.CREATE.value,
-            subject=constants.SubjectTypes.PLUGIN.value,
+            action=constants.ActionTypes.CREATE,
+            subject=constants.SubjectTypes.PLUGIN,
         )
         return Response(
             data=self.get_serializer(plugin).data,
@@ -195,7 +201,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         )
 
     def retrieve(self, request, pd_id, plugin_id):
-        plugin = self.get_plugin_instance()
+        plugin = self.get_plugin_instance(allow_archive=True)
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
@@ -221,8 +227,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.MODIFY.value,
-            subject=constants.SubjectTypes.BASIC_INFO.value,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.BASIC_INFO,
         )
         return Response(data=self.get_serializer(plugin).data)
 
@@ -232,16 +238,24 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         """仅创建审批失败的插件可删除"""
         plugin = self.get_plugin_instance()
         # 仅创建失败的状态的插件可删除
-        if plugin.status != constants.PluginStatus.APPROVAL_FAILED.value:
+        if plugin.status != constants.PluginStatus.APPROVAL_FAILED:
             raise error_codes.CANNOT_BE_DELETED
 
         plugin.delete()
-        # 操作记录: 删除插件
+        logger.error(f"plugin(id: {plugin_id}) is deleted by {request.user.username}")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.DELETE_PLUGIN])])
+    def archive(self, request, pd_id, plugin_id):
+        """插件下架"""
+        plugin = self.get_plugin_instance()
+        instance_api.archive_instance(plugin.pd, plugin, operator=request.user.username)
+        # 操作记录: 插件下架
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.DELETE.value,
-            subject=constants.SubjectTypes.PLUGIN.value,
+            action=constants.ActionTypes.ARCHIVE,
+            subject=constants.SubjectTypes.PLUGIN,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -254,6 +268,28 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
                 "languages": PluginBasicInfoDefinition.get_languages(),
             }
         )
+
+    @swagger_auto_schema(query_serializer=serializers.CodeCommitSearchSLZ)
+    def get_code_submit_info(self, request, pd_id, plugin_id):
+        """插件代码库的提交信息"""
+        slz = serializers.CodeCommitSearchSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        _data = slz.validated_data
+
+        plugin = self.get_plugin_instance()
+        repo_accessor = get_plugin_repo_accessor(plugin)
+        return Response(data=repo_accessor.get_submit_info(_data['begin_time'], _data['end_time']))
+
+
+class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
+    queryset = OperationRecord.objects.all()
+    serializer_class = serializers.OperationRecordSLZ
+    pagination_class = LimitOffsetPagination
+    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+
+    def get_queryset(self):
+        plugin = self.get_plugin_instance()
+        return self.queryset.filter(plugin=plugin)
 
 
 @method_decorator(
@@ -311,15 +347,16 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         )
         release.initial_stage_set()
         PluginReleaseExecutor(release).execute_current_stage(operator=request.user.username)
-        release.refresh_from_db()
+
         # 操作记录: 新建 xx 版本
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.ADD.value,
+            action=constants.ActionTypes.ADD,
             specific=release.version,
-            subject=constants.SubjectTypes.VERSION.value,
+            subject=constants.SubjectTypes.VERSION,
         )
+        release.refresh_from_db()
         return Response(data=self.get_serializer(release).data, status=status.HTTP_201_CREATED)
 
     @atomic
@@ -355,6 +392,15 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).reset_release(operator=request.user.username)
+
+        # 操作记录: 重新发布 xx 版本
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.RE_RELEASE,
+            specific=release.version,
+            subject=constants.SubjectTypes.VERSION,
+        )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
 
@@ -363,17 +409,18 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def cancel_release(self, request, pd_id, plugin_id, release_id):
         """取消发布"""
         release = self.get_queryset().get(pk=release_id)
-        current_stage = release.current_stage
-        current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
+        PluginReleaseExecutor(release).cancel_release(operator=request.user.username)
+
         # 操作记录: 终止发布 xx 版本
         plugin = self.get_plugin_instance()
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.TERMINATE.value,
+            action=constants.ActionTypes.TERMINATE,
             specific=release.version,
-            subject=constants.SubjectTypes.VERSION.value,
+            subject=constants.SubjectTypes.VERSION,
         )
+        release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})
@@ -419,7 +466,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     def get_queryset(self):
         if not self.request.user.is_authenticated:
             return PluginRelease.objects.none()
-        plugin = self.get_plugin_instance()
+        plugin = self.get_plugin_instance(allow_archive=True)
         qs = PluginRelease.objects.filter(plugin=plugin).order_by("-created")
         return qs
 
@@ -431,7 +478,7 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
     ]
 
     def retrieve(self, request, pd_id, plugin_id, release_id, stage_id):
-        plugin = self.get_plugin_instance()
+        plugin = self.get_plugin_instance(allow_archive=True)
         release = plugin.all_versions.get(pk=release_id)
         stage = release.all_stages.get(stage_id=stage_id)
         return Response(data=init_stage_controller(stage).render_to_view())
@@ -453,7 +500,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
     serializer_class = serializers.PluginMarketInfoSLZ
 
     def retrieve(self, request, pd_id, plugin_id):
-        plugin = self.get_plugin_instance()
+        plugin = self.get_plugin_instance(allow_archive=True)
         pd = plugin.pd
         if pd.market_info_definition.storage == constants.MarketInfoStorageType.THIRD_PARTY:
             market_info = market_api.read_market_info(pd, plugin)
@@ -492,8 +539,8 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.MODIFY.value,
-            subject=constants.SubjectTypes.MARKET_INFO.value,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.MARKET_INFO,
         )
         return Response(data=self.get_serializer(market_info).data)
 
@@ -507,7 +554,7 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
 
     @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])])
     def list(self, request, pd_id, plugin_id):
-        plugin = self.get_plugin_instance()
+        plugin = self.get_plugin_instance(allow_archive=True)
         members = members_api.fetch_plugin_members(plugin)
         return Response(data=self.get_serializer(members, many=True).data)
 
@@ -694,7 +741,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
     @swagger_auto_schema(responses={200: serializers.StubConfigSLZ(many=True)})
     def list(self, request, pd_id, plugin_id):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
-        plugin = self.get_plugin_instance()
+        plugin = self.get_plugin_instance(allow_archive=True)
         data = [{"__id__": config.unique_key, **config.row} for config in plugin.configs.all()]
         return Response(data=serializers.make_config_slz_class(pd)(data, many=True).data)
 
@@ -716,8 +763,8 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.MODIFY.value,
-            subject=constants.SubjectTypes.CONFIG_INFO.value,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.CONFIG_INFO,
         )
         return Response(status=status.HTTP_200_OK)
 
@@ -734,8 +781,8 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,
-            action=constants.ActionTypes.MODIFY.value,
-            subject=constants.SubjectTypes.CONFIG_INFO.value,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.CONFIG_INFO,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -781,7 +828,7 @@ class PluginReleaseStageApiViewSet(PluginInstanceMixin, GenericViewSet):
         plugin_status = self._convert_create_status(ticket_status, approve_result)
 
         # 审批成功，则更新插件状态并完成插件创建相关操作
-        if plugin_status == constants.PluginStatus.DEVELOPING.value:
+        if plugin_status == constants.PluginStatus.DEVELOPING:
             # 完成创建插件的剩余操作
             shim.init_plugin_in_view(plugin, plugin.creator.username)
         # 更新插件的状态
@@ -803,25 +850,23 @@ class PluginReleaseStageApiViewSet(PluginInstanceMixin, GenericViewSet):
         self, ticket_status: ItsmTicketStatus, approve_result: bool
     ) -> constants.PluginReleaseStatus:
         """将ITSM单据状态和结果转换为插件版本 Stage 的状态"""
-        status = constants.PluginReleaseStatus.PENDING.value
-        if ticket_status == ItsmTicketStatus.FINISHED.value:
+        status = constants.PluginReleaseStatus.PENDING
+        if ticket_status == ItsmTicketStatus.FINISHED:
             # 单据结束，则审批阶段的状态则对应地设置为成功、失败
             status = (
-                constants.PluginReleaseStatus.SUCCESSFUL.value
-                if approve_result
-                else constants.PluginReleaseStatus.FAILED.value
+                constants.PluginReleaseStatus.SUCCESSFUL if approve_result else constants.PluginReleaseStatus.FAILED
             )
-        elif ticket_status in [ItsmTicketStatus.TERMINATED.value, ItsmTicketStatus.REVOKED.value]:
+        elif ticket_status in [ItsmTicketStatus.TERMINATED, ItsmTicketStatus.REVOKED]:
             # 单据被撤销，则审批阶段状态设置为已中断
-            status = constants.PluginReleaseStatus.INTERRUPTED.value
+            status = constants.PluginReleaseStatus.INTERRUPTED
 
         return status
 
     def _convert_create_status(self, ticket_status: ItsmTicketStatus, approve_result: bool) -> constants.PluginStatus:
         """将ITSM单据状态和结果转换为插件状态"""
-        status = constants.PluginStatus.APPROVAL_FAILED.value
-        if ticket_status == ItsmTicketStatus.FINISHED.value and approve_result:
+        status = constants.PluginStatus.APPROVAL_FAILED
+        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
             # 单据结束且结果为审批成功，则插件状态设置为开发中，否则为审批失败状态
-            status = constants.PluginStatus.DEVELOPING.value
+            status = constants.PluginStatus.DEVELOPING
 
         return status

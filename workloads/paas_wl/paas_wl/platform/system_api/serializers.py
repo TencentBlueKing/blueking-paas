@@ -382,8 +382,9 @@ class WebConsolePostSLZ(serializers.Serializer):
     operator = serializers.CharField(required=True, help_text="操作者")
 
 
-class EnvIsRunningSLZ(serializers.Serializer):
-    """Display environment's "is_running" status"""
+class EnvAddressesSLZ(serializers.Serializer):
+    """Represents environment's address related status"""
 
     env = serializers.CharField(help_text="环境名")
     is_running = serializers.BooleanField(help_text="是否运行中")
+    addresses = serializers.JSONField(help_text="可访问地址列表")

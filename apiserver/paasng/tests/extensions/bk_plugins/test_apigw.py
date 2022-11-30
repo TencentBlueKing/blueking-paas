@@ -63,7 +63,6 @@ class TestPluginDefaultAPIGateway:
         assert apigw_id == 1
         assert fake_good_client.sync_api.called
         _, kwargs = fake_good_client.sync_api.call_args_list[0]
-        assert kwargs['headers']['X-Bkapi-Authorization'] != ''
         assert len(kwargs['data']['maintainers']) > 0
 
     def test_sync_failed(self, bk_plugin_app, fake_bad_client):

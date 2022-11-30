@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Type, Union
 
+from django.utils.translation import gettext_lazy as _
+
 from paasng.pluginscenter import constants
 from paasng.pluginscenter.definitions import find_stage_by_id
 from paasng.pluginscenter.exceptions import error_codes
@@ -130,6 +132,8 @@ class BuiltinStage(BaseStageController):
         ):
             # 对于市场信息只存储在第三方平台的插件, 该步骤只用于展示信息, 无需操作即可下一步
             self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        if self.stage.stage_id == "online":
+            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
@@ -144,7 +148,13 @@ class BuiltinStage(BaseStageController):
         elif self.stage.stage_id == "grayScale":
             raise NotImplementedError
         elif self.stage.stage_id == "online":
-            raise NotImplementedError
+            return {
+                **basic_info,
+                "detail": {
+                    "status": "successful",
+                    "message": _("插件已发布成功"),
+                },
+            }
         raise NotImplementedError
 
 

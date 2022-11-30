@@ -31,9 +31,9 @@ pyyaml = ">=5.4.1"
 urllib3 = ">=1.25.3"
 
 [package.extras]
-django = ["Django (>=1.11.1)", "pyjwt (>=1.6.4)"]
-demo = ["Django (>=1.11.1)", "PyMySQL (>=1.0.2,<2.0.0)", "django-environ (>=0.8.1)", "pyjwt (>=1.6.4)"]
 cryptography = ["cryptography (>=3.1.1)", "pyjwt (>=1.6.4)"]
+demo = ["Django (>=1.11.1)", "PyMySQL (>=1.0.2,<2.0.0)", "django-environ (>=0.8.1)", "pyjwt (>=1.6.4)"]
+django = ["Django (>=1.11.1)", "pyjwt (>=1.6.4)"]
 
 [package.source]
 type = "legacy"
@@ -78,7 +78,7 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-tests = ["pytest", "pytest-asyncio", "mypy (>=0.800)"]
+tests = ["mypy (>=0.800)", "pytest", "pytest-asyncio"]
 
 [package.source]
 type = "legacy"
@@ -107,10 +107,10 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.extras]
-dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface", "furo", "sphinx", "sphinx-notfound-page", "pre-commit", "cloudpickle"]
-docs = ["furo", "sphinx", "zope.interface", "sphinx-notfound-page"]
-tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface", "cloudpickle"]
-tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "cloudpickle"]
+dev = ["cloudpickle", "coverage[toml] (>=5.0.2)", "furo", "hypothesis", "mypy", "pre-commit", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "six", "sphinx", "sphinx-notfound-page", "zope.interface"]
+docs = ["furo", "sphinx", "sphinx-notfound-page", "zope.interface"]
+tests = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "six", "zope.interface"]
+tests_no_zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "six"]
 
 [package.source]
 type = "legacy"
@@ -320,7 +320,7 @@ python-versions = "*"
 attrs = ">=17.3"
 
 [package.extras]
-dev = ["bumpversion", "wheel", "watchdog", "flake8", "tox", "coverage", "sphinx", "pytest", "hypothesis", "pendulum"]
+dev = ["bumpversion", "coverage", "flake8", "hypothesis", "pendulum", "pytest", "sphinx", "tox", "watchdog", "wheel"]
 
 [package.source]
 type = "legacy"
@@ -344,12 +344,12 @@ vine = "1.3.0"
 [package.extras]
 arangodb = ["pyArango (>=1.3.2)"]
 auth = ["cryptography"]
-azureblockblob = ["azure-storage (==0.36.0)", "azure-common (==1.1.5)", "azure-storage-common (==1.1.0)"]
+azureblockblob = ["azure-common (==1.1.5)", "azure-storage (==0.36.0)", "azure-storage-common (==1.1.0)"]
 brotli = ["brotli (>=1.0.0)", "brotlipy (>=0.7.0)"]
 cassandra = ["cassandra-driver (<3.21.0)"]
 consul = ["python-consul"]
 cosmosdbsql = ["pydocumentdb (==2.3.2)"]
-couchbase = ["couchbase-cffi (<3.0.0)", "couchbase (<3.0.0)"]
+couchbase = ["couchbase (<3.0.0)", "couchbase-cffi (<3.0.0)"]
 couchdb = ["pycouchdb"]
 django = ["Django (>=1.11)"]
 dynamodb = ["boto3 (>=1.9.178)"]
@@ -515,11 +515,11 @@ cffi = ">=1.12"
 
 [package.extras]
 docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
-docstest = ["doc8", "pyenchant (>=1.6.11)", "twine (>=1.12.0)", "sphinxcontrib-spelling (>=4.0.1)"]
+docstest = ["doc8", "pyenchant (>=1.6.11)", "sphinxcontrib-spelling (>=4.0.1)", "twine (>=1.12.0)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
 sdist = ["setuptools-rust (>=0.11.4)"]
 ssh = ["bcrypt (>=3.1.5)"]
-test = ["pytest (>=6.0)", "pytest-cov", "pytest-subtests", "pytest-xdist", "pretend", "iso8601", "pytz", "hypothesis (>=1.11.4,!=3.79.2)"]
+test = ["hypothesis (>=1.11.4,!=3.79.2)", "iso8601", "pretend", "pytest (>=6.0)", "pytest-cov", "pytest-subtests", "pytest-xdist", "pytz"]
 
 [package.source]
 type = "legacy"
@@ -567,7 +567,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 wrapt = ">=1.10,<2"
 
 [package.extras]
-dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "importlib-resources (<4)", "configparser (<5)", "sphinxcontrib-websupport (<2)", "zipp (<2)", "PyTest (<5)", "PyTest-Cov (<2.6)", "pytest", "pytest-cov"]
+dev = ["PyTest (<5)", "PyTest-Cov (<2.6)", "bump2version (<1)", "configparser (<5)", "importlib-metadata (<3)", "importlib-resources (<4)", "pytest", "pytest-cov", "sphinx (<2)", "sphinxcontrib-websupport (<2)", "tox", "zipp (<2)"]
 
 [package.source]
 type = "legacy"
@@ -621,7 +621,7 @@ optional = false
 python-versions = ">=3.4,<4"
 
 [package.extras]
-develop = ["coverage[toml] (>=5.0a4)", "pytest (>=4.6.11)", "furo (>=2021.8.17b43,<2021.9.0)", "sphinx (>=3.5.0)", "sphinx-notfound-page"]
+develop = ["coverage[toml] (>=5.0a4)", "furo (>=2021.8.17b43,<2021.9.0)", "pytest (>=4.6.11)", "sphinx (>=3.5.0)", "sphinx-notfound-page"]
 docs = ["furo (>=2021.8.17b43,<2021.9.0)", "sphinx (>=3.5.0)", "sphinx-notfound-page"]
 testing = ["coverage[toml] (>=5.0a4)", "pytest (>=4.6.11)"]
 
@@ -710,11 +710,11 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-all = ["redis", "ruamel.yaml", "configobj", "hvac"]
+all = ["configobj", "hvac", "redis", "ruamel.yaml"]
 configobj = ["configobj"]
 ini = ["configobj"]
 redis = ["redis"]
-test = ["pytest", "pytest-cov", "pytest-xdist", "pytest-mock", "flake8", "pep8-naming", "flake8-debugger", "flake8-print", "flake8-todo", "radon", "flask (>=0.12)", "django", "python-dotenv", "toml", "codecov", "redis", "hvac", "configobj"]
+test = ["codecov", "configobj", "django", "flake8", "flake8-debugger", "flake8-print", "flake8-todo", "flask (>=0.12)", "hvac", "pep8-naming", "pytest", "pytest-cov", "pytest-mock", "pytest-xdist", "python-dotenv", "radon", "redis", "toml"]
 toml = ["toml"]
 vault = ["hvac"]
 yaml = ["ruamel.yaml"]
@@ -773,8 +773,8 @@ greenlet = {version = ">=1.1.0,<2.0", markers = "platform_python_implementation 
 dnspython = ["dnspython (>=1.16.0,<2.0)", "idna"]
 docs = ["repoze.sphinx.autointerface", "sphinxcontrib-programoutput", "zope.schema"]
 monitor = ["psutil (>=5.7.0)"]
-recommended = ["cffi (>=1.12.2)", "dnspython (>=1.16.0,<2.0)", "idna", "selectors2", "backports.socketpair", "psutil (>=5.7.0)"]
-test = ["requests", "objgraph", "cffi (>=1.12.2)", "dnspython (>=1.16.0,<2.0)", "idna", "selectors2", "futures", "mock", "backports.socketpair", "contextvars (==2.4)", "coverage (>=5.0)", "coveralls (>=1.7.0)", "psutil (>=5.7.0)"]
+recommended = ["backports.socketpair", "cffi (>=1.12.2)", "dnspython (>=1.16.0,<2.0)", "idna", "psutil (>=5.7.0)", "selectors2"]
+test = ["backports.socketpair", "cffi (>=1.12.2)", "contextvars (==2.4)", "coverage (>=5.0)", "coveralls (>=1.7.0)", "dnspython (>=1.16.0,<2.0)", "futures", "idna", "mock", "objgraph", "psutil (>=5.7.0)", "requests", "selectors2"]
 
 [package.source]
 type = "legacy"
@@ -796,7 +796,7 @@ rsa = {version = ">=3.1.4,<5", markers = "python_version >= \"3.6\""}
 six = ">=1.9.0"
 
 [package.extras]
-aiohttp = ["requests (>=2.20.0,<3.0.0dev)", "aiohttp (>=3.6.2,<4.0.0dev)"]
+aiohttp = ["aiohttp (>=3.6.2,<4.0.0dev)", "requests (>=2.20.0,<3.0.0dev)"]
 enterprise_cert = ["cryptography (==36.0.2)", "pyopenssl (==22.0.0)"]
 pyopenssl = ["pyopenssl (>=20.0.0)"]
 reauth = ["pyu2f (>=0.1.5)"]
@@ -926,15 +926,15 @@ pygments = "*"
 traitlets = ">=4.2"
 
 [package.extras]
-all = ["nbconvert", "ipywidgets", "pygments", "ipykernel", "notebook", "ipyparallel", "requests", "Sphinx (>=1.3)", "nbformat", "nose (>=0.10.1)", "numpy", "testpath", "qtconsole"]
+all = ["Sphinx (>=1.3)", "ipykernel", "ipyparallel", "ipywidgets", "nbconvert", "nbformat", "nose (>=0.10.1)", "notebook", "numpy", "pygments", "qtconsole", "requests", "testpath"]
 doc = ["Sphinx (>=1.3)"]
 kernel = ["ipykernel"]
 nbconvert = ["nbconvert"]
 nbformat = ["nbformat"]
-notebook = ["notebook", "ipywidgets"]
+notebook = ["ipywidgets", "notebook"]
 parallel = ["ipyparallel"]
 qtconsole = ["qtconsole"]
-test = ["nose (>=0.10.1)", "requests", "testpath", "pygments", "nbformat", "ipykernel", "numpy"]
+test = ["ipykernel", "nbformat", "nose (>=0.10.1)", "numpy", "pygments", "requests", "testpath"]
 
 [package.source]
 type = "legacy"
@@ -1056,17 +1056,17 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "kubernetes"
-version = "17.17.0"
+version = "25.3.0"
 description = "Kubernetes python client"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.6"
 
 [package.dependencies]
 certifi = ">=14.05.14"
 google-auth = ">=1.0.1"
 python-dateutil = ">=2.5.3"
-pyyaml = ">=3.12"
+pyyaml = ">=5.4.1"
 requests = "*"
 requests-oauthlib = "*"
 six = ">=1.9.0"
@@ -1120,7 +1120,7 @@ pbr = ">=0.11"
 six = ">=1.9"
 
 [package.extras]
-docs = ["sphinx", "Pygments (<2)", "jinja2 (<2.7)", "sphinx (<1.3)"]
+docs = ["Pygments (<2)", "jinja2 (<2.7)", "sphinx", "sphinx (<1.3)"]
 test = ["unittest2 (>=1.1.0)"]
 
 [package.source]
@@ -1371,7 +1371,7 @@ opentelemetry-semantic-conventions = "0.26b1"
 
 [package.extras]
 instruments = ["celery (>=4.0,<6.0)"]
-test = ["pytest", "opentelemetry-test-utils (==0.26b1)", "celery (>=4.0,<6.0)"]
+test = ["celery (>=4.0,<6.0)", "opentelemetry-test-utils (==0.26b1)", "pytest"]
 
 [package.source]
 type = "legacy"
@@ -1418,7 +1418,7 @@ opentelemetry-util-http = "0.26b1"
 [package.extras]
 asgi = ["opentelemetry-instrumentation-asgi (==0.26b1)"]
 instruments = ["django (>=1.10)"]
-test = ["opentelemetry-test-utils (==0.26b1)", "django (>=1.10)"]
+test = ["django (>=1.10)", "opentelemetry-test-utils (==0.26b1)"]
 
 [package.source]
 type = "legacy"
@@ -1461,7 +1461,7 @@ wrapt = ">=1.12.1"
 
 [package.extras]
 instruments = ["redis (>=2.6)"]
-test = ["opentelemetry-test-utils (==0.26b1)", "opentelemetry-sdk (>=1.3,<2.0)", "redis (>=2.6)"]
+test = ["opentelemetry-sdk (>=1.3,<2.0)", "opentelemetry-test-utils (==0.26b1)", "redis (>=2.6)"]
 
 [package.source]
 type = "legacy"
@@ -1484,7 +1484,7 @@ opentelemetry-util-http = "0.26b1"
 
 [package.extras]
 instruments = ["requests (>=2.0,<3.0)"]
-test = ["opentelemetry-test-utils (==0.26b1)", "httpretty (>=1.0,<2.0)", "requests (>=2.0,<3.0)"]
+test = ["httpretty (>=1.0,<2.0)", "opentelemetry-test-utils (==0.26b1)", "requests (>=2.0,<3.0)"]
 
 [package.source]
 type = "legacy"
@@ -1876,7 +1876,7 @@ optional = false
 python-versions = ">=3.6.8"
 
 [package.extras]
-diagrams = ["railroad-diagrams", "jinja2"]
+diagrams = ["jinja2", "railroad-diagrams"]
 
 [package.source]
 type = "legacy"
@@ -1903,7 +1903,7 @@ six = ">=1.10.0"
 wcwidth = "*"
 
 [package.extras]
-testing = ["argcomplete", "hypothesis (>=3.56)", "nose", "requests", "mock"]
+testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests"]
 
 [package.source]
 type = "legacy"
@@ -2162,8 +2162,8 @@ celery = ["celery (>=3)"]
 chalice = ["chalice (>=1.16.0)"]
 django = ["django (>=1.8)"]
 falcon = ["falcon (>=1.4)"]
-flask = ["flask (>=0.11)", "blinker (>=1.1)"]
-pure_eval = ["pure-eval", "executing", "asttokens"]
+flask = ["blinker (>=1.1)", "flask (>=0.11)"]
+pure_eval = ["asttokens", "executing", "pure-eval"]
 pyspark = ["pyspark (>=2.4.4)"]
 rq = ["rq (>=0.6)"]
 sanic = ["sanic (>=0.8)"]
@@ -2393,8 +2393,8 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <4"
 
 [package.extras]
-brotli = ["brotlicffi (>=0.8.0)", "brotli (>=1.0.9)", "brotlipy (>=0.6.0)"]
-secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "ipaddress"]
+brotli = ["brotli (>=1.0.9)", "brotlicffi (>=0.8.0)", "brotlipy (>=0.6.0)"]
+secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "ipaddress", "pyOpenSSL (>=0.14)"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [package.source]
@@ -2516,7 +2516,7 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.extras]
-docs = ["sphinx", "repoze.sphinx.autointerface"]
+docs = ["repoze.sphinx.autointerface", "sphinx"]
 test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
@@ -2531,7 +2531,7 @@ bcs = []
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "68957e9a637b9a3c1f5c043a19b581f138eddccb496fc1e5bc0158fa9c38f7de"
+content-hash = "e0011663954aacc6e62a6bf7c76faeefd3ca2c77f863d824a2c337dd047a3338"
 
 [metadata.files]
 amqp = [
@@ -2583,7 +2583,7 @@ bkoauth = [
     {file = "bkoauth-0.0.22.tar.gz", hash = "md5:ed4c135873d077784b0ba77e349d42a6"},
 ]
 bkpaas-auth = [
-    {file = "bkpaas-auth-2.0.2.tar.gz", hash = "md5:89de6ec08ef91c65a5e58c7d2ed78e82"},
+    {file = "bkpaas-auth-2.0.2.tar.gz", hash = "md5:d9c23bd9870bb5aa112b5dd330b6864e"},
     {file = "bkpaas_auth-2.0.2-py3-none-any.whl", hash = "md5:1e12c3c69c282ac309860d02fc92f376"},
 ]
 blue-krill = [
@@ -2983,8 +2983,8 @@ kombu = [
     {file = "kombu-4.6.11.tar.gz", hash = "sha256:ca1b45faac8c0b18493d02a8571792f3c40291cf2bcf1f55afed3d8f3aa7ba74"},
 ]
 kubernetes = [
-    {file = "kubernetes-17.17.0-py3-none-any.whl", hash = "sha256:225a95a0aadbd5b645ab389d941a7980db8cdad2a776fde64d1b43fc3299bde9"},
-    {file = "kubernetes-17.17.0.tar.gz", hash = "sha256:c69b318696ba797dcf63eb928a8d4370c52319f4140023c502d7dfdf2080eb79"},
+    {file = "kubernetes-25.3.0-py2.py3-none-any.whl", hash = "sha256:eb42333dad0bb5caf4e66460c6a4a1a36f0f057a040f35018f6c05a699baed86"},
+    {file = "kubernetes-25.3.0.tar.gz", hash = "sha256:213befbb4e5aed95f94950c7eed0c2322fc5a2f8f40932e58d28fdd42d90836c"},
 ]
 markupsafe = [
     {file = "MarkupSafe-2.0.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d8446c54dc28c01e5a2dbac5a25f071f6653e6e40f3a8818e8b45d790fe6ef53"},

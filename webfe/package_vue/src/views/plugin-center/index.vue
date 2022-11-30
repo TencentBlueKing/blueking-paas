@@ -389,7 +389,7 @@
             },
 
             toNewVersion (data) {
-                if (this.releaseStatusMap[data.ongoing_release.status]) {
+                if (data.ongoing_release && this.releaseStatusMap[data.ongoing_release.status]) {
                     const stagesData = data.ongoing_release.all_stages.map((e, i) => {
                         e.icon = i + 1;
                         e.title = e.name;

@@ -192,14 +192,14 @@
               theme="primary"
               @click="handlerSave"
             >
-              保存
+              {{ $t('保存') }}
             </bk-button>
             <bk-button
               theme="primary"
               :disabled="!isNext"
-              @click="handlerNext"
+              @click="handlerNext('market')"
             >
-              下一步
+              {{ $t('下一步') }}
             </bk-button>
           </div>
         </div>
@@ -212,17 +212,18 @@
           theme="default"
           @click="handlerPrev"
         >
-          上一步
+          {{ $t('上一步') }}
         </bk-button>
         <!-- 构建完成可以进入下一步 -->
-        <!-- <bk-button
+        <bk-button
           theme="primary"
           class="ml5"
           style="width: 120px"
           :disabled="!isNext"
+          @click="handlerNext"
         >
-          下一步
-        </bk-button> -->
+          {{ $t('下一步') }}
+        </bk-button>
       </div>
     </paas-content-loader>
   </div>
@@ -433,11 +434,6 @@
                                 // 改变状态
                                 this.stepsStatus = 'error';
                                 this.failedMessage = res.fail_message;
-                            } else if (this.status === 'successful') {
-                                setTimeout(() => {
-                                    this.curStep = 3;
-                                    this.stepsStatus = '';
-                                }, 300);
                             } else {
                                 this.stepsStatus = '';
                                 if (this.timer) {
@@ -649,7 +645,7 @@
             },
 
             // 下一步
-            async handlerNext () {
+            async handlerNext (status) {
                 this.isLoading = true;
                 try {
                     const params = {
@@ -658,11 +654,16 @@
                         releaseId: this.$route.query.release_id
                     };
                     const res = await this.$store.dispatch('plugin/nextRelease', params);
-                    this.stageId = res.current_stage.stage_id;
-                    const query = JSON.parse(JSON.stringify(this.$route.query));
-                    query.stage_id = this.stageId;
-                    this.$router.push({ name: 'pluginVersionRelease', query });
-                    this.fetchPluginRelease();
+                    if (status === 'market') {
+                        this.stageId = res.current_stage.stage_id;
+                        const query = JSON.parse(JSON.stringify(this.$route.query));
+                        query.stage_id = this.stageId;
+                        this.$router.push({ name: 'pluginVersionRelease', query });
+                        this.fetchPluginRelease();
+                    } else {
+                        this.curStep = 3;
+                        this.stepsStatus = '';
+                    }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

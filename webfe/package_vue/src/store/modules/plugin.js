@@ -290,6 +290,24 @@ export default {
     getPluginOperations ({ commit, state }, { pdId, pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/operations/`;
       return http.get(url, {}, config);
+    },
+
+    /**
+         * 下架插件
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    lowerShelfPlugin ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/archive/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 概览图表
+         * @param {Object} params 请求参数：pdId, pluginId, params
+         */
+    getChartData ({ commit, state }, { pdId, pluginId, params }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/code_statistics/?${json2Query(params)}`;
+      return http.get(url, {}, config);
     }
   }
 };

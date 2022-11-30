@@ -56,12 +56,7 @@ urlpatterns = [
     ),
     url(
         'sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/$',
-        pluginscenter_views.PluginInstanceViewSet.as_view({"put": "update_plugin"}),
-        name="sys.api.plugins_center.bk_plugins.update",
-    ),
-    url(
-        'sys/api/plugins_center/bk_plugins/(?P<code>[^/]+)/$',
-        pluginscenter_views.PluginInstanceViewSet.as_view({"delete": "archive_plugin"}),
+        pluginscenter_views.PluginInstanceViewSet.as_view({"put": "update_plugin", "delete": "archive_plugin"}),
         name="sys.api.plugins_center.bk_plugins.update",
     ),
     url(

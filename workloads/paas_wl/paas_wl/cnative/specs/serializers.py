@@ -121,9 +121,20 @@ class MresConditionSLZ(serializers.Serializer):
     message = serializers.CharField(allow_blank=True)
 
 
+class KubeEventSLZ(serializers.Serializer):
+    """Serializer for k8s event"""
+
+    name = serializers.CharField()
+    type = serializers.CharField()
+    reason = serializers.CharField()
+    count = serializers.CharField()
+    message = serializers.CharField()
+
+
 class MresStatusSLZ(serializers.Serializer):
     """Serializer for ModelResource status"""
 
     deployment = MresDeploymentStatusSLZ()
     ingress = MresIngressInfoSLZ()
     conditions = MresConditionSLZ(many=True)
+    events = KubeEventSLZ(many=True)

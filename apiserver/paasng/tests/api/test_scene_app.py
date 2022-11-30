@@ -22,6 +22,7 @@ import pytest
 from django.conf import settings
 from django.urls import reverse
 
+from paasng.dev_resources.templates.constants import TemplateType
 from paasng.platform.modules.constants import SourceOrigin
 from tests.utils import mock
 from tests.utils.helpers import generate_random_string
@@ -44,7 +45,7 @@ class TestSceneApp:
         ],
     )
     def test_list(self, api_client, query_params, result_count):
-        url = reverse('api.scene_app.list_tmpls')
+        url = reverse('api.templates.list_tmpls', kwargs=dict(tpl_type=TemplateType.SCENE.value))
         response = api_client.get(url, data=query_params)
         assert len(response.data) == result_count
 

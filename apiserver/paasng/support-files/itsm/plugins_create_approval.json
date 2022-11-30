@@ -992,7 +992,7 @@
         "key": "repository",
         "name": "\u4ee3\u7801\u4ed3\u5e93",
         "layout": "COL_12",
-        "validate_type": "REQUIRE",
+        "validate_type": "OPTION",
         "show_type": 1,
         "show_conditions": {},
         "regex": "EMPTY",

@@ -73,6 +73,9 @@ class PluginRepoAccessor(Protocol):
     def build_compare_url(self, from_revision: str, to_revision: str) -> str:
         """对比版本代码差异"""
 
+    def get_submit_info(self, begin_time: str, end_time: str) -> List[dict]:
+        """查询项目的提交次数"""
+
 
 class TemplateRender:
     """插件模板渲染器"""

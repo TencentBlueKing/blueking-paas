@@ -38,8 +38,8 @@ def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     # 查询上线审批服务ID
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.CREATE_APPROVAL.value).service_id
 
-    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为注册在 APIGW 上的地址
-    paas_url = f'{settings.BKPAAS_URL}/backend'
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
     callback_url = f"{paas_url}/sys/api/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/itsm/"
 
     # 组装提单数据,包含插件的基本信息
@@ -77,8 +77,8 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     # 查询上线审批服务ID
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.ONLINE_APPROVAL.value).service_id
 
-    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为注册在 APIGW 上的地址
-    paas_url = f'{settings.BKPAAS_URL}/backend'
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
     callback_url = (
         f"{paas_url}/sys/api/bkplugins/"
         + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/stages/{current_stage.id}/itsm/"

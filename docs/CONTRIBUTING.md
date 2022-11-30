@@ -4,7 +4,7 @@
 
 ## 问题管理
 
-我们用 Github Issues 去跟踪 public bugs 和 feature requests。
+我们用 GitHub Issues 去跟踪 public bugs 和 feature requests。
 
 ### 查找已知的issue 优先
 

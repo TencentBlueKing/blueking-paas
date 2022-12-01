@@ -283,7 +283,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
-    queryset = OperationRecord.objects.all()
+    queryset = OperationRecord.objects.all().order_by('-created')
     serializer_class = serializers.OperationRecordSLZ
     pagination_class = LimitOffsetPagination
     permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]

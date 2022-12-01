@@ -481,12 +481,15 @@
                         pd_id: this.form.pd_id,
                         extra_fields: this.extraFields
                     };
-                    await this.$store.dispatch('plugin/savePlugins', params);
+                    const res = await this.$store.dispatch('plugin/savePlugins', params);
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('插件创建成功！')
                     });
-                    this.back();
+                    this.$router.push({
+                        name: 'pluginSummary',
+                        params: { pluginTypeId: res.pd_id, id: res.id }
+                    });
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,

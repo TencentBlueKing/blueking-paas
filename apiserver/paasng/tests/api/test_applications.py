@@ -157,7 +157,8 @@ class TestMembershipViewset:
     @pytest.mark.parametrize(
         "another_user_role, request_user_idx, status, code",
         [
-            (ApplicationRole.ADMINISTRATOR, 0, 400, "MEMBERSHIP_OWNER_FAILED"),
+            # 创建者也可以离开应用
+            (ApplicationRole.ADMINISTRATOR, 0, 204, ...),
             (ApplicationRole.ADMINISTRATOR, 1, 204, ...),
             (ApplicationRole.DEVELOPER, 1, 204, ...),
             (ApplicationRole.ADMINISTRATOR, 2, 403, "ERROR"),

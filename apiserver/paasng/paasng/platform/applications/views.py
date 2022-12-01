@@ -680,9 +680,6 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
-        user = request.user
-        if application.owner == user.pk:  # owner can not leave application
-            raise error_codes.MEMBERSHIP_OWNER_FAILED
 
         self.check_admin_count(application.code, request.user.username)
         try:

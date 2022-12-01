@@ -133,6 +133,7 @@ export default {
   '问题反馈': 'Feedback',
   '加入圈子': 'Join a circle',
   '退出': 'Logout',
+  '退出登录': 'Logout',
   '蓝鲸应用': 'BlueKing App',
   '立即体验': 'Try it now',
   '查看文档': 'View documentation',

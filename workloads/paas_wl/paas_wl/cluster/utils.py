@@ -31,15 +31,14 @@ def get_default_cluster_by_region(region: str) -> Cluster:
 def get_cluster_by_app(app: App) -> Cluster:
     """Get kubernetes cluster by given app
 
+    :param app: EngineApp object
     :raise RuntimeError: App has an invalid cluster_name defined
     """
     cluster_name = app.config_set.latest().cluster
-
     if not cluster_name:
-        cluster = get_default_cluster_by_region(app.region)
-    else:
-        try:
-            cluster = Cluster.objects.get(name=cluster_name)
-        except Cluster.DoesNotExist:
-            raise RuntimeError(f'Can not find a cluster called {cluster_name}')
-    return cluster
+        return get_default_cluster_by_region(app.region)
+
+    try:
+        return Cluster.objects.get(name=cluster_name)
+    except Cluster.DoesNotExist:
+        raise RuntimeError(f'Can not find a cluster called {cluster_name}')

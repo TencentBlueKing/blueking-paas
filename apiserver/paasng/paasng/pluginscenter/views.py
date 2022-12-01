@@ -789,7 +789,9 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
 
 
 # System API
-class PluginReleaseStageApiViewSet(PluginInstanceMixin, GenericViewSet):
+class PluginCallBackApiViewSet(PluginInstanceMixin, GenericViewSet):
+    """注册到 APIGW 上的 API 有统一的中间件 AutoDisableCSRFMiddleware 豁免 csrf。这个是 ITSM 直接回调开发者中心 API，不走 APIGW，需要单独处理 csrf 豁免"""
+
     @csrf_exempt
     def itsm_stage_callback(self, request, pd_id, plugin_id, release_id, stage_id):
         """发布流程中上线审批阶段回调, 更新审批阶段的状态"""

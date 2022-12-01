@@ -554,7 +554,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # `source_init_template` is optional
         source_init_template = engine_params.get('source_init_template', '')
         if source_init_template:
-            language = Template.objects.get(name=source_init_template, type=TemplateType.NORMAL).language
+            language = Template.objects.get(
+                name=source_init_template, type__in=TemplateType.normal_app_types()
+            ).language
 
         module = create_default_module(
             application,

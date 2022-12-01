@@ -16,15 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf.urls import url
+from rest_framework import viewsets
+from rest_framework.response import Response
 
-from . import views
+from paasng.dev_resources.templates.models import Template
 
-urlpatterns = [
-    # 获取指定 Region 可用场景 SaaS 模板列表
-    url(
-        r'^api/bkapps/scene/tmpls/$',
-        views.SceneAppViewSet.as_view({'get': 'list_tmpls'}),
-        name='api.scene_app.list_tmpls',
-    ),
-]
+from .serializers import SearchTemplateSLZ, TemplateSLZ
+
+
+class TemplateViewSet(viewsets.ViewSet):
+    def list_tmpls(self, request, tpl_type):
+        """获取指定 region、类型的模板列表"""
+        slz = SearchTemplateSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
+        params = slz.validated_data
+        tmpls = Template.objects.filter_by_region(region=params['region'], type=tpl_type)
+        return Response(TemplateSLZ(tmpls, many=True).data)

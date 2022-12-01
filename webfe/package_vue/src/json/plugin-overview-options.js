@@ -103,10 +103,10 @@ export default {
     yAxis: [{
       boundaryGap: [0, '2%'],
       type: 'value',
-      min: 0,
-      max: 300,
-      // 设置步长
-      interval: 50,
+      // min: 0,
+      // max: 300,
+      // // 设置步长
+      // interval: 50,
       // 设置纵轴线条
       axisLine: {
         show: true,

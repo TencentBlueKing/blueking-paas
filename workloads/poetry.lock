@@ -1056,7 +1056,7 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "kubernetes"
-version = "25.3.0"
+version = "24.2.0"
 description = "Kubernetes python client"
 category = "main"
 optional = false
@@ -2531,7 +2531,7 @@ bcs = []
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "e0011663954aacc6e62a6bf7c76faeefd3ca2c77f863d824a2c337dd047a3338"
+content-hash = "d64ca238010833a06ec49a8ccb1f40a0b13f203660900d2a7ffa72f738acc92b"
 
 [metadata.files]
 amqp = [
@@ -2983,8 +2983,8 @@ kombu = [
     {file = "kombu-4.6.11.tar.gz", hash = "sha256:ca1b45faac8c0b18493d02a8571792f3c40291cf2bcf1f55afed3d8f3aa7ba74"},
 ]
 kubernetes = [
-    {file = "kubernetes-25.3.0-py2.py3-none-any.whl", hash = "sha256:eb42333dad0bb5caf4e66460c6a4a1a36f0f057a040f35018f6c05a699baed86"},
-    {file = "kubernetes-25.3.0.tar.gz", hash = "sha256:213befbb4e5aed95f94950c7eed0c2322fc5a2f8f40932e58d28fdd42d90836c"},
+    {file = "kubernetes-24.2.0-py2.py3-none-any.whl", hash = "sha256:da19d58865cf903a8c7b9c3691a2e6315d583a98f0659964656dfdf645bf7e49"},
+    {file = "kubernetes-24.2.0.tar.gz", hash = "sha256:9900f12ae92007533247167d14cdee949cd8c7721f88b4a7da5f5351da3834cd"},
 ]
 markupsafe = [
     {file = "MarkupSafe-2.0.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d8446c54dc28c01e5a2dbac5a25f071f6653e6e40f3a8818e8b45d790fe6ef53"},

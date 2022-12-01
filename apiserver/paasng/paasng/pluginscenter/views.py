@@ -26,6 +26,7 @@ from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, status
@@ -149,7 +150,7 @@ class PluginInstanceMixin:
 
 
 class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
-    queryset = PluginInstance.objects.all()
+    queryset = PluginInstance.objects.exclude(status__in=constants.PluginStatus.archive_status())
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
     filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter, DjangoFilterBackend]
@@ -789,6 +790,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
 
 # System API
 class PluginReleaseStageApiViewSet(PluginInstanceMixin, GenericViewSet):
+    @csrf_exempt
     def itsm_stage_callback(self, request, pd_id, plugin_id, release_id, stage_id):
         """发布流程中上线审批阶段回调, 更新审批阶段的状态"""
         serializer = serializers.ItsmApprovalSLZ(data=request.data)
@@ -811,6 +813,7 @@ class PluginReleaseStageApiViewSet(PluginInstanceMixin, GenericViewSet):
         stage.save(update_fields=["status", "updated"])
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 
+    @csrf_exempt
     def itsm_create_callback(self, request, pd_id, plugin_id):
         """创建插件审批回调，更新插件状态并完成插件创建相关操作"""
         serializer = serializers.ItsmApprovalSLZ(data=request.data)

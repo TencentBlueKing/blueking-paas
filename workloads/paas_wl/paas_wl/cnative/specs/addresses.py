@@ -36,7 +36,7 @@ from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.platform.external.client import get_plat_client
 
 from .constants import DomainGroupSource
-from .models import EnvResourcePlanner
+from .models import default_bkapp_name
 from .v1alpha1.domain_group_mapping import (
     Domain,
     DomainGroup,
@@ -85,7 +85,7 @@ class AddrResourceManager:
         subpath_group = DomainGroup(sourceType=DomainGroupSource.SUBPATH, domains=self._get_subpath_domains())
         custom_group = DomainGroup(sourceType=DomainGroupSource.CUSTOM, domains=self._get_custom_domains())
 
-        app_name = EnvResourcePlanner(self.env).default_app_name
+        app_name = default_bkapp_name(self.env)
         # Omit empty groups
         data = [subdomain_group, subpath_group, custom_group]
         data = [d for d in data if d.domains]

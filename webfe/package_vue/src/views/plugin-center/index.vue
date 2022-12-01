@@ -48,7 +48,7 @@
             <bk-button
               v-bk-tooltips="row.id"
               text
-              @click="toDetail(row)"
+              @click="toPluginSummary(row)"
             >
               {{ row.id || '--' }}
             </bk-button>

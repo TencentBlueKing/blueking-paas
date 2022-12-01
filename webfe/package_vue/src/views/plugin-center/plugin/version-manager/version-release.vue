@@ -491,6 +491,7 @@
                     stageId: this.stageId
                 };
                 const data = {};
+                this.stepsStatus = 'loading';
                 try {
                     const res = await this.$store.dispatch('plugin/pluginDeploy', {
                         ...params,

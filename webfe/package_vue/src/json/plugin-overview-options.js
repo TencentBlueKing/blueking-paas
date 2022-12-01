@@ -107,6 +107,7 @@ export default {
       // max: 300,
       // // 设置步长
       // interval: 50,
+      minInterval: 1,
       // 设置纵轴线条
       axisLine: {
         show: true,

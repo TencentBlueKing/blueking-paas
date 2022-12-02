@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from django.core.exceptions import ObjectDoesNotExist
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.monitoring.app_monitor.managers import make_bk_monitor_controller
 from paas_wl.resources.actions.exceptions import BuildMissingError, ReleaseMissingError
@@ -94,7 +95,7 @@ class AppDeploy:
         try:
             # 下发 ServiceMonitor 配置
             make_bk_monitor_controller(self.app).create_or_patch()
-        except KubeException:
+        except (KubeException, ResourceNotFoundError):
             logger.exception("An error occur when creating ServiceMonitor")
 
 

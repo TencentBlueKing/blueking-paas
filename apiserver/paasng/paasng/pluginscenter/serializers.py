@@ -152,6 +152,7 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
+        "max_length": field_schema.maxlength,
     }
     if field_schema.default:
         init_kwargs["default"] = field_schema.default

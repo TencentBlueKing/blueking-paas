@@ -2,7 +2,7 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-clusters-list" style="width: 100%;" class="p20">
-    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效"></bk-alert>
+    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效" style="margin-bottom: 15px;"></bk-alert>
     <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
         创建集群
     </bk-button>
@@ -77,6 +77,15 @@
             </bk-form-item>
             <bk-form-item label="集群名称" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="集群类型" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
+                <bk-select v-model="dialog.form.type" :disabled="dialog.type !== 'create'">
+                    <bk-option v-for="type in clusterTypeList"
+                               :key="type.value"
+                               :id="type.value"
+                               :name="type.text">
+                    </bk-option>
+                </bk-select>
             </bk-form-item>
             <bk-form-item label="默认集群" required :desc="dialog.type !== 'create'?'不支持通过编辑切换默认集群':''">
                 <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type !== 'create'"></bk-switcher>
@@ -198,6 +207,7 @@
 <script>
     /* beautify preserve:start */
     const regionList = {{ region_list | to_json }}
+    const clusterTypeList = {{ cluster_type_list | to_json }}
     /* beautify preserve:end */
     const DomainSchema = {
         type: "array",
@@ -232,12 +242,14 @@
                 return {
                     data: [],
                     regionList: regionList,
+                    clusterTypeList: clusterTypeList,
                     dialog: {
                         fullscreen: false,
                         form: {
                             uuid: '',
                             region: '',
                             name: '',
+                            type: '',
                             is_default: false,
                             description: '',
                             ingress_config: {
@@ -312,6 +324,7 @@
                     this.dialog.form.uuid = undefined
                     this.dialog.form.region = this.regionList[0].value
                     this.dialog.form.name = undefined
+                    this.dialog.form.type = this.clusterTypeList[0].value
                     this.dialog.form.is_default = false
                     this.dialog.form.description = undefined
                     this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}

@@ -74,6 +74,19 @@
                     <bk-collapse v-bind:value="module.envs.map(env=>env.environment)">
                         <bk-collapse-item v-for="(env, index) in module.envs" :name="env.environment" accordion>
                             $[ env.environment ] 环境
+                            <div slot="content" style="margin-bottom: 20px">
+                                <div style="margin-bottom: 5px" >部署集群：</div>
+                                <bk-select
+                                    v-model="env.cluster_name"
+                                    style="width: 250px;"
+                                    @change="bindAppEnvCluster(module.name, env.environment, env.cluster_name)">
+                                   <bk-option v-for="choice in cluster_choices"
+                                        :key="choice.id"
+                                        :id="choice.id"
+                                        :name="choice.name">
+                                    </bk-option>
+                                </bk-select>
+                            </div>
                             <div slot="content">
                                 <bk-container :col="2" v-if="env.latest_operation">
                                     <bk-row>
@@ -136,7 +149,13 @@
 {% block main_script %}
 <script>
     const data = {{ application | to_json }}
+    const cluster_choices = {{ cluster_choices | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
+
+    const URLRouter = {
+        memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+        bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}")
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
@@ -155,7 +174,8 @@
             },
             methods: {
                 beAppAdmin: function () {
-                    this.$http.post(decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+                    this.$http.post(
+                        URLRouter.memberManage,
                         {
                             // 管理员
                             username: '{{ request.user.username }}',
@@ -166,7 +186,8 @@
                     })
                 },
                 exitApp: function () {
-                    this.$http.delete(decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+                    this.$http.delete(
+                        URLRouter.memberManage,
                         {
                             params: {
                                 username: '{{ request.user.username }}'
@@ -176,6 +197,14 @@
                         this.USER_IS_ADMIN_IN_APP = false
                     })
                 },
+                bindAppEnvCluster: function (module, env, cluster_name) {
+                    let url = URLRouter.bindCluster.replace("${module}", module).replace("${env}", env)
+                    this.$http.post(
+                        url, {cluster_name: cluster_name}
+                    ).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境集群为 ${cluster_name} 成功，配置将在下次部署时生效`})
+                    })
+                }
             }
         })
     })

@@ -29,7 +29,10 @@ from paasng.accessories.iam.helpers import (
 )
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ
+from paasng.engine.constants import ClusterType
+from paasng.engine.controller.shortcuts import make_internal_client
+from paasng.engine.controller.state import controller_client
+from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
@@ -38,6 +41,7 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.platform.modules.manager import ModuleInitializer
 from paasng.utils.error_codes import error_codes
 
 
@@ -78,6 +82,10 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
             kwargs['view'] = self
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs['application'] = application
+        kwargs['cluster_choices'] = [
+            {'id': cluster['name'], 'name': f"{cluster['name']} -- {ClusterType.get_choice_label(cluster['type'])}"}
+            for cluster in make_internal_client().list_region_clusters(application['region'])
+        ]
         return kwargs
 
     def get(self, request, *args, **kwargs):
@@ -98,6 +106,25 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
             self.get_application().code, ApplicationRole.ADMINISTRATOR
         )
         return kwargs
+
+
+class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+    """应用部署环境配置管理"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def bind_cluster(self, request, code, module_name, environment):
+        slz = BindEnvClusterSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        module = self.get_module_via_path()
+        engine_app_name = ModuleInitializer(module).make_engine_app_name(environment)
+        controller_client.update_app_config(
+            module.region,
+            engine_app_name,
+            {'cluster': slz.validated_data['cluster_name']},
+        )
+        return Response(status=204)
 
 
 class ApplicationMembersManageView(ApplicationDetailBaseView):

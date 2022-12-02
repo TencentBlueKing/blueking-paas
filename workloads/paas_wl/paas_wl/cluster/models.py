@@ -29,7 +29,7 @@ from django.db import models, transaction
 from jsonfield import JSONField
 from kubernetes.client import Configuration
 
-from paas_wl.cluster.constants import ClusterTokenType
+from paas_wl.cluster.constants import ClusterTokenType, ClusterType
 from paas_wl.cluster.exceptions import DuplicatedDefaultClusterError, NoDefaultClusterError, SwitchDefaultClusterError
 from paas_wl.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
@@ -191,6 +191,7 @@ class Cluster(UuidAuditedModel):
 
     region = models.CharField(max_length=32, db_index=True)
     name = models.CharField(max_length=32, help_text="name of the cluster", unique=True)
+    type = models.CharField(max_length=32, help_text='cluster type', default=ClusterType.NORMAL)
     description = models.TextField(help_text="描述信息", blank=True)
     is_default = models.NullBooleanField(default=False)
 

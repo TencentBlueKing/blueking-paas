@@ -23,7 +23,7 @@ import pytest
 from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.views import PluginReleaseStageApiViewSet
+from paasng.pluginscenter.views import PluginCallBackApiViewSet
 
 pytestmark = pytest.mark.django_db
 
@@ -82,7 +82,7 @@ class TestSysApis:
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginReleaseStageApiViewSet, "_verify_itsm_token") as mocked_verify:
+        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify:
             mocked_verify.return_value = True
             resp_data = api_client.post(callback_url, callback_data).json()
 
@@ -107,7 +107,7 @@ class TestSysApis:
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginReleaseStageApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
+        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
             "paasng.pluginscenter.shim.init_plugin_in_view"
         ):
             mocked_verify.return_value = True

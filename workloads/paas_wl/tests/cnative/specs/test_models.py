@@ -22,8 +22,8 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
-    EnvResourcePlanner,
     create_app_resource,
+    default_bkapp_name,
     update_app_resource,
 )
 
@@ -148,10 +148,5 @@ class TestAppModelDeploy:
         assert AppModelDeploy.objects.any_successful(bk_stag_env) is True
 
 
-class TestEnvResourcePlanner:
-    def test_namespace(self, bk_stag_env, bk_stag_engine_app):
-        assert EnvResourcePlanner(bk_stag_env).namespace == bk_stag_engine_app.namespace
-
-    def test_default_app_name(self, bk_app, bk_stag_env, bk_prod_env):
-        assert EnvResourcePlanner(bk_stag_env).default_app_name == bk_app.code
-        assert EnvResourcePlanner(bk_prod_env).default_app_name == bk_app.code
+def test_default_bkapp_name(bk_app, bk_stag_env):
+    assert default_bkapp_name(bk_stag_env) == bk_app.code

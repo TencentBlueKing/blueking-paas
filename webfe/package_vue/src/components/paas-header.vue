@@ -193,6 +193,33 @@
               </div>
             </dropdown>
           </li>
+          <!-- 语言切换 -->
+          <li class="ps-head-last" v-if="false">
+            <a
+              class="link-text"
+              href="javascript:"
+            >
+              <i :class="`bk-icon icon-chinese lang-icon`" style="font-size: 16px;"></i>
+            </a>
+            <div class="contact language">
+              <ul>
+                <li>
+                  <i :class="`bk-icon icon-chinese lang-icon`"></i>
+                  <a
+                    href="javascript:"
+                    @click="switchLanguage('zh-cn')"
+                  > {{ $t('中文') }} </a>
+                </li>
+                <li>
+                  <i :class="`bk-icon icon-english lang-icon`"></i>
+                  <a
+                    href="javascript:"
+                    @click="switchLanguage('en')"
+                  > {{ $t('English') }} </a>
+                </li>
+              </ul>
+            </div>
+          </li>
           <li class="ps-head-last">
             <a
               v-bk-tooltips.bottom="$t('我的告警')"
@@ -214,6 +241,12 @@
               <ul>
                 <li v-if="GLOBAL.HELPER.name && GLOBAL.HELPER.href">
                   <a :href="GLOBAL.HELPER.href">{{ GLOBAL.HELPER.name }}</a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:"
+                    @click="handlerLogVersion"
+                  > {{ $t('版本日志') }} </a>
                 </li>
                 <li>
                   <a
@@ -363,6 +396,7 @@
         <dd class="last" />
       </dl>
     </div>
+    <log-version :dialog-show.sync="showLogVersion" />
   </div>
 </template>
 
@@ -375,11 +409,13 @@
     import Dropdown from '@/components/ui/Dropdown';
     import { psHeaderInfo } from '@/mixins/ps-static-mixin';
     import defaultUserLogo from '../../static/images/default-user.png';
+    import logVersion from './log-version.vue';
 
     export default {
         components: {
             'dropdown': Dropdown,
-            'searchAppList': searchAppList
+            'searchAppList': searchAppList,
+            logVersion
         },
         mixins: [psHeaderInfo, selectEventMixin],
         props: [],
@@ -401,6 +437,7 @@
                 filterKey: '',
                 enableSearchApp: true, // 是否开启搜索APP功能
                 currenSearchPanelIndex: -1,
+                showLogVersion: false,
                 searchComponentList: [
                     {
                         title: this.$t('蓝鲸应用'),
@@ -622,15 +659,13 @@
                 bkLogout.logout();
                 window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + window.location.href;
             },
-            switchLanguage () {
+            switchLanguage (language) {
                 // 切换语言
-                if (this.localLanguage === 'zh-cn') {
-                    this.$i18n.locale = 'en';
-                    this.$store.commit('updateLocalLanguage', 'en');
-                } else {
-                    this.$i18n.locale = 'zh-en';
-                    this.$store.commit('updateLocalLanguage', 'zh-cn');
-                }
+                this.$i18n.locale = language;
+                this.$store.commit('updateLocalLanguage', language);
+            },
+            handlerLogVersion () {
+                this.showLogVersion = true;
             }
         }
     };
@@ -1178,6 +1213,21 @@
     .ps-head-last:hover .contact {
         opacity: 1;
         visibility: visible;
+    }
+    .ps-head-last .language {
+        li {
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            &:hover i {
+                color: #3a84ff;
+            }
+        }
+        li i {
+          font-size: 16px;
+          margin-right: 5px;
+        }
     }
     .switch-language {
         line-height: 34px;

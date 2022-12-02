@@ -183,15 +183,13 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
-        encoded_operator = user_id_encoder.encode(
-            getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
-        )
+        operator = user_id_encoder.encode(ProviderType.DATABASE, settings.PLUGIN_REPO_CONF["username"])
         deployment = None
         try:
             with coordinator.release_on_error():
                 deployment = initialize_deployment(
                     env=env,
-                    operator=encoded_operator,
+                    operator=operator,
                     version_info=VersionInfo(
                         revision=data["version"]["source_hash"],
                         version_name=data["version"]["source_version_name"],

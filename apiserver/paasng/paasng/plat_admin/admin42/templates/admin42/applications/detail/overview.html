@@ -153,8 +153,7 @@
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
 
     const URLRouter = {
-        beAppAdmin: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
-        exitApp: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+        memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
         bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}")
     }
 
@@ -176,7 +175,7 @@
             methods: {
                 beAppAdmin: function () {
                     this.$http.post(
-                        URLRouter.beAppAdmin,
+                        URLRouter.memberManage,
                         {
                             // 管理员
                             username: '{{ request.user.username }}',
@@ -188,7 +187,7 @@
                 },
                 exitApp: function () {
                     this.$http.delete(
-                        URLRouter.exitApp,
+                        URLRouter.memberManage,
                         {
                             params: {
                                 username: '{{ request.user.username }}'

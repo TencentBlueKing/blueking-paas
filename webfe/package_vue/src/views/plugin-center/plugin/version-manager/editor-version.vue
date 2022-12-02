@@ -1,27 +1,18 @@
 <template lang="html">
   <div class="container biz-create-success">
-    <div class="ps-top-bar">
-      <div class="header-title">
-        <i
-          class="paasng-icon paasng-arrows-left icon-cls-return mr5"
-          @click="goBack"
-        />
-        {{ $t('新建版本') }}
-      </div>
-    </div>
-
     <paas-content-loader
       :is-loading="isLoading"
-      placeholder="entry-loading"
+      placeholder="plugin-new-version-loading"
       class="app-container middle"
     >
       <div class="app-container middle">
+        <paas-plugin-title />
         <!-- <bk-alert type="info" :show-icon="true">
-                    <div slot="title">
-                        {{ $t('测试版本仅用于测试，不能发布到线上') }}，
-                        <a href="" target="_blank" class="detail-doc">{{ $t('详见文档') }}</a>
-                    </div>
-                </bk-alert> -->
+            <div slot="title">
+                {{ $t('测试版本仅用于测试，不能发布到线上') }}，
+                <a href="" target="_blank" class="detail-doc">{{ $t('详见文档') }}</a>
+            </div>
+        </bk-alert> -->
         <div
           v-if="curVersion.current_release"
           class="summary-box status"
@@ -121,13 +112,22 @@
               :property="'version'"
             >
               <bk-radio-group v-model="curVersion.version">
-                <bk-radio :value="curVersion.semver_choices.major">
+                <bk-radio
+                  v-bk-tooltips.top="'非兼容式升级时使用'"
+                  :value="curVersion.semver_choices.major"
+                >
                   {{ $t('重大版本') }}
                 </bk-radio>
-                <bk-radio :value="curVersion.semver_choices.minor">
+                <bk-radio
+                  v-bk-tooltips.top="'兼容式功能更新时使用'"
+                  :value="curVersion.semver_choices.minor"
+                >
                   {{ $t('次版本') }}
                 </bk-radio>
-                <bk-radio :value="curVersion.semver_choices.patch">
+                <bk-radio
+                  v-bk-tooltips.top="'兼容式问题修正时使用'"
+                  :value="curVersion.semver_choices.patch"
+                >
                   {{ $t('修正版本') }}
                 </bk-radio>
               </bk-radio-group>
@@ -178,13 +178,19 @@
                             </div>
                         </bk-form-item> -->
             <bk-form-item label="">
-              <bk-button
-                theme="primary"
-                :loading="isSubmitLoading"
-                @click="submitVersionForm"
+              <div
+                v-bk-tooltips.top="'已有发布任务进行中'"
+                style="display: inline-block;"
               >
-                {{ $t('提交并发布') }}
-              </bk-button>
+                <bk-button
+                  theme="primary"
+                  :loading="isSubmitLoading"
+                  :disabled="isPending ? true : false"
+                  @click="submitVersionForm"
+                >
+                  {{ $t('提交并发布') }}
+                </bk-button>
+              </div>
             </bk-form-item>
           </bk-form>
         </div>
@@ -249,8 +255,12 @@
 
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import paasPluginTitle from '@/components/pass-plugin-title';
 
     export default {
+        components: {
+            paasPluginTitle
+        },
         mixins: [appBaseMixin],
         data () {
             return {
@@ -305,6 +315,9 @@
             },
             pluginId () {
                 return this.$route.params.id;
+            },
+            isPending () {
+                return this.$route.query.isPending;
             }
         },
         watch: {
@@ -500,9 +513,9 @@
 </script>
 
 <style lang="scss" scoped>
-
-    .ps-main {
-        margin-top: 15px;
+    .app-container {
+      padding: 0;
+      margin-top: 8px;
     }
     .header-title {
         display: flex;
@@ -566,7 +579,6 @@
     }
 
     .form-box {
-        margin-top: 22px;
         width: 650px;
 
         & /deep/ .bk-form-control .group-box {
@@ -622,7 +634,6 @@
 
     .summary-box {
         padding: 10px 0 20px;
-        padding-bottom: 0;
         background: #FFF;
         font-size: 12px;
 
@@ -712,6 +723,10 @@
         max-width: 1080px;
         min-width: 1080px;
         border-top: 1px solid #F0F1F5;
+    }
+
+    .plugin-top-title {
+        margin: 16px 0;
     }
 
 </style>

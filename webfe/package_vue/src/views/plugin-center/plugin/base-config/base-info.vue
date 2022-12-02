@@ -1,15 +1,13 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar">
-      <h2> {{ $t('基本信息') }} </h2>
-    </div>
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
       placeholder="base-info-loading"
     >
+      <paas-plugin-title />
       <section>
-        <div class="basic-info-item mt15">
+        <div class="basic-info-item">
           <div class="title">
             {{ $t('基本信息') }}
           </div>
@@ -50,9 +48,10 @@
 
                 <div class="action-box">
                   <template v-if="!isFormEdited.nameInput">
+                    <!-- paasng-icon paasng-edit-2 -->
                     <a
                       v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
+                      class="paasng-icon paasng-edit-2"
                       @click="showEdit('nameInput')"
                     />
                   </template>
@@ -184,7 +183,7 @@
                   <template v-if="!isFormEdited.classifyInput">
                     <a
                       v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
+                      class="paasng-icon paasng-edit-2"
                       @click="showEdit('classifyInput')"
                     />
                   </template>
@@ -235,7 +234,7 @@
                   <template v-if="!isFormEdited.profileInput">
                     <a
                       v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
+                      class="paasng-icon paasng-edit-2"
                       @click="showEdit('profileInput')"
                     />
                   </template>
@@ -285,7 +284,7 @@
                   <template v-if="!isFormEdited.descriptionInput">
                     <a
                       v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
+                      class="paasng-icon paasng-edit-2"
                       @click="showTextEditor('descriptionInput')"
                     />
                   </template>
@@ -336,7 +335,7 @@
                   <template v-if="!isFormEdited.contactsInput">
                     <a
                       v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit2"
+                      class="paasng-icon paasng-edit-2"
                       @click="showEdit('contactsInput')"
                     />
                   </template>
@@ -447,6 +446,7 @@
 <script>
     // import moment from 'moment';
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import paasPluginTitle from '@/components/pass-plugin-title';
     import user from '@/components/user';
     import { quillEditor } from 'vue-quill-editor';
     import xss from 'xss';
@@ -475,7 +475,8 @@
         // },
         components: {
             quillEditor,
-            user
+            user,
+            paasPluginTitle
         },
         mixins: [appBaseMixin],
         data () {
@@ -1134,6 +1135,9 @@
             width: calc(100% - 85px);
         }
     }
+    .plugin-top-title {
+        margin-top: 6px;
+    }
 </style>
 <style lang="scss">
     .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
@@ -1171,6 +1175,10 @@
         }
     }
     .right-main {
+        section {
+            margin-top: 20px;
+            padding-left: 16px;
+        }
         .cls-bk-input {
             input {
                 padding-right: 85px !important;

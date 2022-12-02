@@ -30,7 +30,7 @@
         v-bkloading="{ isLoading: isDataLoading }"
         :data="pluginList"
         size="small"
-        ext-cls="plugin-list-table mt20"
+        ext-cls="plugin-list-table"
         :pagination="pagination"
         :outer-border="false"
         :header-border="false"
@@ -77,12 +77,13 @@
           :filters="languageFilters"
           :filter-multiple="false"
         />
+        <!-- 状态 -->
         <bk-table-column
           :label="$t('状态')"
           prop="status"
           column-key="status"
           :filters="statusFilters"
-          :filter-multiple="false"
+          :filter-multiple="true"
         >
           <template slot-scope="{ row }">
             <round-loading v-if="row.status === 'releasing'" />
@@ -193,7 +194,7 @@
                     count: 0
                 },
                 isFilter: false,
-                filterStatus: '',
+                filterStatus: [],
                 filterLanguage: '',
                 filterPdName: '',
                 languageFilters: [],
@@ -253,8 +254,14 @@
                         offset: this.pagination.limit * (curPage - 1),
                         search_term: this.filterKey
                     };
-                    if (this.filterStatus) {
-                        pageParams.status = this.filterStatus;
+                    let statusParams = '';
+                    if (this.filterStatus.length) {
+                        // pageParams.status = this.filterStatus;
+                        let paramsText = '';
+                        this.filterStatus.forEach(item => {
+                            paramsText += `status=${item}&`;
+                        });
+                        statusParams = paramsText.substring(0, paramsText.length - 1);
                     }
                     if (this.filterLanguage) {
                         pageParams.language = this.filterLanguage;
@@ -264,10 +271,9 @@
                     }
                     this.isDataLoading = true;
                     const res = await this.$store.dispatch('plugin/getPlugins', {
-                        pageParams
+                        pageParams,
+                        statusParams
                     });
-                    this.isDataLoading = false;
-                    this.loading = false;
                     this.pluginList = res.results;
                     this.pagination.count = res.results.length;
                 } catch (e) {
@@ -276,6 +282,9 @@
                         theme: 'error',
                         message: e.message
                     });
+                } finally {
+                    this.isDataLoading = false;
+                    this.loading = false;
                 }
             },
 
@@ -347,7 +356,7 @@
 
             handleFilterChange (filters) {
                 if (filters.status) {
-                    this.filterStatus = filters.status[0] ? filters.status[0] : '';
+                    this.filterStatus = filters.status.length ? filters.status : [];
                 }
 
                 if (filters.language) {
@@ -429,9 +438,9 @@
         width: 100%;
         padding: 28px 0 44px;
         .paas-plugin-tit {
-            padding: 20px 0;
+            padding: 12px 0 16px;
             color: #666;
-            line-height: 36px;
+            line-height: 18px;
             position: relative;
         }
 
@@ -447,6 +456,7 @@
         }
 
         .plugin-list-table{
+            margin-top: 16px;
             min-height: 600px;
             .point{
                 height: 8px;

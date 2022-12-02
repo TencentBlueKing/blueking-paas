@@ -3,14 +3,13 @@
     :key="appCode"
     class="right-main"
   >
-    <h2>{{ $t('日志查询') }}</h2>
-
     <paas-content-loader
       class="app-container log-middle"
       :is-loading="isLoading"
       placeholder="log-loading"
       :offset-top="60"
     >
+      <paas-plugin-title />
       <section>
         <bk-tab
           :active.sync="tabActive"
@@ -42,11 +41,13 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import standartLog from './standart-log.vue';
     import accessLog from './access-log.vue';
+    import paasPluginTitle from '@/components/pass-plugin-title';
 
     export default {
         components: {
             standartLog,
-            accessLog
+            accessLog,
+            paasPluginTitle
         },
         mixins: [appBaseMixin],
         data () {
@@ -95,3 +96,12 @@
         }
     };
 </script>
+
+<style scoped>
+  .plugin-top-title {
+      margin-top: 6px;
+  }
+  .right-main section {
+      margin-top: 14px;
+  }
+</style>

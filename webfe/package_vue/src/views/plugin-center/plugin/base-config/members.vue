@@ -1,19 +1,11 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar">
-      <h2>
-        {{ $t('成员管理') }}
-        <template v-if="pagination.count">
-          ({{ pagination.count }}{{ $t('人') }})
-        </template>
-      </h2>
-    </div>
-
     <paas-content-loader
       class="app-container middle"
       :is-loading="loading"
       placeholder="roles-loading"
     >
+      <paas-plugin-title />
       <div class="header mt10 header-flex">
         <!-- v-if="enableToAddRole" -->
         <bk-button
@@ -152,7 +144,10 @@
               />
             </template>
           </bk-form-item>
-          <bk-form-item :label="$t('角色')">
+          <bk-form-item
+            :label="$t('角色')"
+            :required="true"
+          >
             <bk-radio-group v-model="roleName">
               <bk-radio
                 v-for="(chineseName, name) in roleNames"
@@ -163,9 +158,10 @@
               </bk-radio>
             </bk-radio-group>
           </bk-form-item>
-          <bk-form-item :label="$t('权限列表')">
+          <bk-form-item label="">
             <div class="ps-rights-list">
               <!-- roleName 当前权限 -->
+              <span class="ps-rights-title">{{ $t('权限列表') }}</span>
               <span
                 v-for="(perm, permIndex) in roleSpec[roleName]"
                 :key="permIndex"
@@ -174,13 +170,13 @@
                   v-if="perm[Object.keys(perm)[0]]"
                   class="available-right"
                 >
-                  <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-check-1" />
+                  <span>{{ $t(Object.keys(perm)[0]) }}</span>
                 </a>
                 <a
                   v-else
                   class="not-available-right"
                 >
-                  <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-close" />
+                  <span>{{ $t(Object.keys(perm)[0]) }}</span>
                 </a>
               </span>
             </div>
@@ -201,21 +197,6 @@
     >
       <div class="tc">
         {{ $t('用户') }} {{ selectedMember.name }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
-      </div>
-    </bk-dialog>
-
-    <bk-dialog
-      v-model="leaveAppDialog.visiable"
-      width="540"
-      :title="$t('退出插件')"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="leaveAppDialog.isLoading"
-      @confirm="leaveSave"
-      @cancel="closeLeaveApp"
-    >
-      <div class="tc">
-        {{ $t('退出并放弃此应用的对应权限，是否确定？') }}
       </div>
     </bk-dialog>
 
@@ -247,6 +228,7 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import user from '@/components/user';
     import i18n from '@/language/i18n.js';
+    import paasPluginTitle from '@/components/pass-plugin-title';
 
     const ROLE_BACKEND_IDS = {
         'administrator': 2,
@@ -300,7 +282,8 @@
 
     export default {
         components: {
-            user
+            user,
+            paasPluginTitle
         },
         mixins: [appBaseMixin],
         data () {
@@ -523,20 +506,25 @@
             leaveApp (delMemberID, delMemberName) {
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
-                this.leaveAppDialog.visiable = true;
+                this.$bkInfo({
+                    title: `退出并放弃此插件的对应权限，是否确定？`,
+                    width: 480,
+                    maskClose: true,
+                    confirmFn: () => {
+                        this.leaveSave();
+                    }
+                });
             },
 
             // 退出插件
             async leaveSave () {
                 try {
                     await this.$store.dispatch('cloudMembers/quitApplication', { pdId: this.pdId, pluginId: this.pluginId });
-                    this.closeLeaveApp();
                     // 退出插件跳转
                     this.$router.push({
                         path: '/'
                     });
                 } catch (e) {
-                    this.closeLeaveApp();
                     this.$paasMessage({
                         theme: 'error',
                         message: `${this.$t('退出插件失败：')} ${e.detail}`
@@ -544,10 +532,6 @@
                 } finally {
                     this.leaveAppDialog.isLoading = false;
                 }
-            },
-
-            closeLeaveApp () {
-                this.leaveAppDialog.visiable = false;
             },
 
             updateMember (updateMemberID, updateMemberName, updateMemberRole) {
@@ -725,13 +709,16 @@
         display: inline-block;
         padding-left: 10px;
         font-size: 14px;
-        color: #333;
+        color: #63656E;
         vertical-align: middle;
+    }
+    .role-name {
+        color: #63656E;
     }
 
     .ps-pr {
         padding-right: 15px;
-        color: #999;
+        color: #63656E;
     }
 
     .middle {
@@ -739,19 +726,30 @@
     }
 
     .ps-rights-list {
-        line-height: 36px;
+        height: 54px;
+        line-height: 54px;
+        background: #F5F7FA;
+        padding-left: 24px;
+        border-radius: 2px;
+
+        .ps-rights-title {
+            font-size: 14px;
+            margin-right: 16px;
+            color: #63656E;
+        }
 
         a {
             margin-right: 7px;
-            padding: 6px 15px;
-            font-size: 13px;
+            padding: 4px 8px;
+            font-size: 12px;
             line-height: 1;
-            border-radius: 14px;
             color: #666;
             cursor: default;
 
             &.available-right {
-                border: 1px solid #3A84FF;
+                border: 1px solid rgba(58,132,255,0.30);
+                background: #EDF4FF;
+                color: #3A84FF;
 
                 i {
                     color: #3A84FF;
@@ -761,6 +759,7 @@
 
             &.not-available-right {
                 border: 1px solid #ddd;
+                background: #FAFBFD;
                 color: #ddd;
 
                 i {

@@ -64,6 +64,7 @@
     import DeployProcessLoading from './loading/deploy-process'
     import DeployHookLoading from './loading/deploy-hook.vue'
     import SummaryPluginLoading from './loading/summary-plugin.vue'
+    import PluginNewVersionLoading from './loading/plugin-new-version.vue'
     export default {
         components: {
             ByUserLoading,
@@ -114,7 +115,8 @@
             DeployEnvLoading,
             DeployProcessLoading,
             DeployHookLoading,
-            SummaryPluginLoading
+            SummaryPluginLoading,
+            PluginNewVersionLoading
         },
         props: {
             isLoading: {

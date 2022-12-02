@@ -63,7 +63,8 @@
     .release-log-warp{
         padding: 17px 30px;
         width: calc(100% - 230px);
-        height: 720px;
+        height: calc(100vh - 350px);
+        // height: 720px;
         background: #313238;
         overflow-y: auto;
         .log{

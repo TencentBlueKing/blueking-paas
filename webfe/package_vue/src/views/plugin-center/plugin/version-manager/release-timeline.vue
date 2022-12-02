@@ -85,6 +85,11 @@
                     border-left: 1px dashed #30d878;
                 }
             }
+            .bk-timeline-item-danger {
+                .bk-timeline-title {
+                    color: #63656E;
+                }
+            }
         }
     }
 </style>

@@ -12,7 +12,7 @@
           <paas-plugin-title :version="curVersion" />
           <bk-button
             class="discontinued"
-            @click="handlerCancelRelease"
+            @click="showInfoCancelRelease"
           >
             <i class="paasng-icon paasng-stop-2" />
             {{ $t('终止发布') }}
@@ -682,6 +682,17 @@
                 this.$set(this.form, 'description', e.html);
             },
 
+            showInfoCancelRelease () {
+                this.$bkInfo({
+                    title: `确认要终止发布该版本 ${this.curVersion}？`,
+                    width: 480,
+                    maskClose: true,
+                    confirmFn: () => {
+                        this.handlerCancelRelease();
+                    }
+                });
+            },
+
             // 终止发布
             async handlerCancelRelease () {
                 try {
@@ -812,8 +823,11 @@
     margin-left: 150px;
 }
 .footer-btn-warp {
+    position: fixed;
+    bottom: 0;
+    max-width: 1140px;
+    width: 100%;
     padding-left: 24px;
-    margin-top: -30px;
     height: 48px;
     line-height: 48px;
     background: #FFFFFF;
@@ -884,4 +898,9 @@
         color: #3A84FF;
     }
 }
+</style>
+<style>
+    .visible-range .editor .ql-snow .ql-formats {
+        line-height: 24px;
+    }
 </style>

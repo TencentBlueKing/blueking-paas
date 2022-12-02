@@ -1,8 +1,5 @@
 <template lang="html">
   <div class="container biz-create-success">
-    <!-- <div class="header-title">
-            {{ $t('版本管理') }}
-        </div> -->
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
@@ -277,7 +274,8 @@
                 versionDetailLoading: true,
                 versionStatus: PLUGIN_VERSION_STATUS,
                 filterCreator: '',
-                filterStatus: ''
+                filterStatus: '',
+                curIsPending: ''
             };
         },
         computed: {
@@ -363,6 +361,8 @@
                     const res = await this.$store.dispatch('plugin/getVersionsManagerList', { data, pageParams });
                     this.versionList = res.results;
                     this.pagination.count = res.count;
+                    // 当前是否已有任务进行中
+                    this.curIsPending = this.versionList.find(item => item.status === 'pending');
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -420,6 +420,9 @@
                     params: {
                         pluginTypeId: this.pdId,
                         id: this.pluginId
+                    },
+                    query: {
+                        isPending: this.curIsPending
                     }
                 });
             },
@@ -463,6 +466,9 @@
 
     .ps-main {
         margin-top: 15px;
+    }
+    .plugin-top-title {
+      margin-top: 12px;
     }
     .app-container {
         padding-top: 2px;
@@ -512,8 +518,8 @@
     // }
 
     .successful {
-        background: rgba(165,218,84,0.20);
-        border: 1px solid #A5DA54;
+        background: #E5F6EA;
+        border: 1px solid #3FC06D;
     }
 
     .failed,

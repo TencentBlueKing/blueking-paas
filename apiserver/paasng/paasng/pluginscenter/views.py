@@ -27,7 +27,6 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
-from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, status
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -39,7 +38,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.pluginscenter import constants, openapi_docs, serializers, shim
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
-from paasng.pluginscenter.filters import PluginInstancePermissionFilter, PluginReleaseFilter
+from paasng.pluginscenter.filters import PluginInstancePermissionFilter
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
@@ -153,10 +152,24 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     queryset = PluginInstance.objects.exclude(status__in=constants.PluginStatus.archive_status())
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter, DjangoFilterBackend]
+    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
     search_fields = ["id", "name_zh_cn", "name_en"]
-    filterset_fields = ['status', 'language', 'pd__identifier']
     permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+
+    def filter_queryset(self, queryset):
+        slz = serializers.PluginListFilterSlZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        if status_list := query_params.get('status', []):
+            queryset = queryset.filter(status__in=status_list)
+
+        if language_list := query_params.get('language', []):
+            queryset = queryset.filter(language__in=language_list)
+
+        if pd__identifier_list := query_params.get('pd__identifier', []):
+            queryset = queryset.filter(pd__identifier__in=pd__identifier_list)
+        return queryset
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubCreatePluginSLZ)
@@ -300,11 +313,19 @@ class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, Generic
 class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     serializer_class = serializers.PluginReleaseVersionSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [OrderingFilter, SearchFilter, DjangoFilterBackend]
-    filterset_class = PluginReleaseFilter
+    filter_backends = [OrderingFilter, SearchFilter]
     permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
-    search_fields = ["version", "source_version_name", "source_hash"]
+    search_fields = ["version", "source_version_name"]
     ordering = ('-created',)
+
+    def filter_queryset(self, queryset):
+        slz = serializers.PluginReleaseFilterSLZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        if status_list := query_params.get('status', []):
+            queryset = queryset.filter(status__in=status_list)
+        return queryset
 
     def retrieve(self, request, pd_id, plugin_id, release_id):
         release = self.get_queryset().get(pk=release_id)

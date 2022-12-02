@@ -93,7 +93,7 @@ class ClusterManager(models.Manager):
         self,
         region: str,
         name: str,
-        type: str,
+        type: str = ClusterType.NORMAL,
         is_default: bool = False,
         description: Optional[str] = None,
         ingress_config: Optional[Dict] = None,

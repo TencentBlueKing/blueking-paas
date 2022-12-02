@@ -825,6 +825,7 @@
 .footer-btn-warp {
     position: fixed;
     bottom: 0;
+    max-width: 1140px;
     width: 100%;
     padding-left: 24px;
     height: 48px;

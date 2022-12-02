@@ -1,16 +1,11 @@
 <template lang="html">
   <div class="right-main">
-    <div class="ps-top-bar">
-      <h2>
-        {{ $t('配置管理') }}
-      </h2>
-    </div>
-
     <paas-content-loader
       class="app-container middle"
       :is-loading="loading"
       placeholder="roles-loading"
     >
+      <paas-plugin-title />
       <div class="plugin-deploy-wrapper">
         <div class="ps-top-card mb15">
           <p class="main-title">
@@ -195,10 +190,12 @@
     import _ from 'lodash';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import tooltipConfirm from '@/components/ui/TooltipConfirm';
+    import paasPluginTitle from '@/components/pass-plugin-title';
 
     export default {
         components: {
-            tooltipConfirm
+            tooltipConfirm,
+            paasPluginTitle
         },
         mixins: [appBaseMixin],
         data () {
@@ -516,6 +513,9 @@
         input {
             height: 36px;
         }
+    }
+    .plugin-deploy-wrapper {
+        margin-top: 16px;
     }
 </style>
 

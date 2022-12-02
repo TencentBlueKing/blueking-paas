@@ -812,8 +812,10 @@
     margin-left: 150px;
 }
 .footer-btn-warp {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
     padding-left: 24px;
-    margin-top: -30px;
     height: 48px;
     line-height: 48px;
     background: #FFFFFF;
@@ -884,4 +886,9 @@
         color: #3A84FF;
     }
 }
+</style>
+<style>
+    .visible-range .editor .ql-snow .ql-formats {
+        line-height: 24px;
+    }
 </style>

@@ -380,15 +380,6 @@
             width: 100%;
             position: relative;
 
-            &.on {
-                .overview-text {
-                    color: #313238 !important;
-                }
-                .app-nav-icon {
-                    color: #313238 !important;
-                }
-            }
-
             &.no-child-actived,
             &.has-child-selected {
                 .overview-text {

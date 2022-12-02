@@ -4,7 +4,7 @@
     <div style="min-height: calc(100% - 70px); overflow: auto;">
       <router-view />
     </div>
-    <paas-footer />
+    <paas-footer v-if="!$route.meta.hidePaasFooter" />
     <div
       v-if="showLoginModal"
       class="login-dialog"

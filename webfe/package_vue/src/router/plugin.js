@@ -119,7 +119,7 @@ export const pluginRouter = [
         component: pluginDeployEnv,
         name: 'pluginDeployEnv',
         meta: {
-          pathName: '环境变量',
+          pathName: '配置管理',
           capture403Error: false
         }
       },
@@ -129,7 +129,8 @@ export const pluginRouter = [
         name: 'pluginVersionRelease',
         meta: {
           pathName: '发布',
-          supportBack: true
+          supportBack: true,
+          hidePaasFooter: true
         }
       },
       {
@@ -138,7 +139,8 @@ export const pluginRouter = [
         name: 'pluginVersionEditor',
         meta: {
           pathName: '新建版本',
-          capture403Error: false
+          capture403Error: false,
+          supportBack: true
         }
       },
       {
@@ -146,6 +148,7 @@ export const pluginRouter = [
         component: pluginLog,
         name: 'pluginLog',
         meta: {
+          pathName: '日志查询',
           capture403Error: false
         }
       },
@@ -154,6 +157,7 @@ export const pluginRouter = [
         component: pluginBaseInfo,
         name: 'pluginBaseInfo',
         meta: {
+          pathName: '基本信息',
           capture403Error: false
         }
       },
@@ -171,6 +175,7 @@ export const pluginRouter = [
         component: pluginRoles,
         name: 'pluginRoles',
         meta: {
+          pathName: '成员管理',
           capture403Error: false,
           isPlugin: true
         }

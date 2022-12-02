@@ -1,5 +1,9 @@
 <template>
-  <div class="quick-nav">
+  <div
+    :class="['quick-nav', { 'quick-hover-bg': isHover }]"
+    @mouseenter="isHover = true"
+    @mouseleave="isHover = false"
+  >
     <div class="plugin-info">
       <div
         class="cur-plugin flex-row align-items-center justify-content-between"
@@ -20,7 +24,7 @@
           </div>
         </div>
         <i
-          class="paasng-icon right-icon paasng-angle-down"
+          class="paasng-icon right-icon paasng-angle-line-down"
           :class="{ 'right-icon-up': showSelectData }"
         />
       </div>
@@ -59,14 +63,14 @@
             @click="goPage('list')"
           >
             <i class="paasng-icon paasng-arrows-left" />
-            插件列表
+            {{ $t('插件列表') }}
           </div>
           <div
             class="item"
             @click="goPage('creat')"
           >
             <i class="bk-icon icon-plus-circle" />
-            创建插件
+            {{ $t('创建插件') }}
           </div>
         </div>
       </div>
@@ -82,7 +86,8 @@
                 showSelectData: false,
                 searchValue: '',
                 pluginList: [],
-                curPluginData: {}
+                curPluginData: {},
+                isHover: false
             };
         },
         watch: {
@@ -218,5 +223,8 @@
             }
         }
     }
+}
+.quick-hover-bg {
+    background: #F5F7FA;
 }
 </style>

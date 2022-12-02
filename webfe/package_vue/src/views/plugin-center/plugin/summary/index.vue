@@ -105,11 +105,16 @@
                 <p class="repos">
                   <span>{{ $t('代码仓库：') }}</span>
                   <span>{{ curPluginData.repository }}</span>
+                  <!-- 复制 -->
                   <span
                     v-copy="curPluginData.repository"
                     class="copy-text"
                   >
-                    {{ $t('复制') }}
+                    <a
+                      :href="curPluginData.repository"
+                      target="_blank"
+                      style="color: #979BA5;"
+                    ><i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" /></a>
                   </span>
                 </p>
               </div>
@@ -614,12 +619,14 @@
                   overflow: hidden;
                   .copy-text {
                       position: absolute;
-                      right: 20px;
+                      top: 5px;
+                      right: 6px;
                       color: #3A84FF;
                       cursor: pointer;
                   }
               }
               .repos {
+                  position: relative;
                   padding-right: 30px;
               }
           }

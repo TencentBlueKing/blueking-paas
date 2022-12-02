@@ -1,5 +1,15 @@
 <template>
   <div class="bk-create-plugin-warp mt30">
+    <div class="ps-top-bar">
+      <div class="header-title">
+        <i
+          class="paasng-icon paasng-arrows-left icon-cls-return mr5"
+          @click="back"
+        />
+        {{ $t('创建插件') }}
+      </div>
+    </div>
+    <!-- 返回 -->
     <div class="base-info-tit">
       {{ $t('基本信息') }}
     </div>
@@ -100,6 +110,7 @@
         :required="true"
         :icon-offset="557"
         :property="'name'"
+        :rules="rules.name"
       >
         <bk-input
           v-model="form.name"
@@ -344,22 +355,12 @@
                             required: true,
                             message: this.$t('该字段是必填项'),
                             trigger: 'blur'
-                        },
-                        {
-                            regex: /^[a-z][a-z0-9-]*$/,
-                            message: this.$t('由小写字母、数字、连接符(-)组成，须以字母开头'),
-                            trigger: 'blur'
                         }
                     ],
                     name: [
                         {
                             required: true,
                             message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        },
-                        {
-                            regex: /[a-zA-Z\d\u4e00-\u9fa5]+/,
-                            message: this.$t('由汉字、英文字母、数字组成'),
                             trigger: 'blur'
                         }
                     ],
@@ -408,6 +409,11 @@
                 curPluginItem: {}
             };
         },
+        computed: {
+            curPluginInfo () {
+                return this.form.pd_id ? this.curPluginItem : this.pluginTypeList[0];
+            }
+        },
         watch: {
             'form.plugin_id' (value) {
                 if (this.pluginTypeData.schema.repository_group && value) {
@@ -428,10 +434,12 @@
             async fetchPluginTypeList () {
                 try {
                     const res = await this.$store.dispatch('plugin/getPluginsTypeList');
+                    console.log('res', res);
                     this.pluginTypeList = res && res.map(e => {
                         e.name = e.plugin_type.name;
                         return e;
                     });
+                    this.addRules();
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -439,6 +447,19 @@
                         message: e.message
                     });
                 }
+            },
+            // 添加校验规则
+            addRules () {
+                this.rules.plugin_id.push({
+                    regex: new RegExp(this.curPluginInfo.schema.id.pattern) || new RegExp('^[a-z0-9-]{1,16}$'),
+                    message: this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连接符(-)组成，长度小于16个字符'),
+                    trigger: 'blur'
+                });
+                this.rules.name.push({
+                    regex: new RegExp(this.curPluginInfo.schema.name.pattern) || new RegExp('^[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}$'),
+                    message: this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
+                    trigger: 'blur'
+                });
             },
             // 选中具体插件类型
             changePluginType (value) {
@@ -516,7 +537,7 @@
     width: 1180px;
     margin: 0 auto;
     .base-info-tit{
-        margin: 20px 0;
+        margin: 5px 0 20px;
         font-weight: Bold;
         color: #63656E;
         padding: 5px 16px;
@@ -574,6 +595,17 @@
     font-size: 12px;
     cursor: pointer;
     margin-left: 10px;
+}
+.ps-top-bar .header-title {
+    border: none;
+    font-size: 16px;
+    color: #313238;
+    i {
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #3A84FF;
+    }
 }
 </style>
 <style>

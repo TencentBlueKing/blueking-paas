@@ -1,8 +1,5 @@
 <template lang="html">
   <div class="container biz-create-success">
-    <!-- <div class="header-title">
-            {{ $t('版本管理') }}
-        </div> -->
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
@@ -464,6 +461,9 @@
     .ps-main {
         margin-top: 15px;
     }
+    .plugin-top-title {
+      margin-top: 12px;
+    }
     .app-container {
         padding-top: 2px;
     }
@@ -512,8 +512,8 @@
     // }
 
     .successful {
-        background: rgba(165,218,84,0.20);
-        border: 1px solid #A5DA54;
+        background: #E5F6EA;
+        border: 1px solid #3FC06D;
     }
 
     .failed,

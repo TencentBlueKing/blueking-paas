@@ -35,6 +35,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-return-small:before {
 	content: "\e222";
 }
+.paasng-edit-2:before {
+	content: "\e23f";
+}
 .paasng-bukeyulan:before {
 	content: "\e21c";
 }
@@ -838,6 +841,12 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-close:before {
 	content: "\e21b";
+}
+.paasng-angle-line-down:before {
+	content: "\e23d";
+}
+.paasng-angle-line-up:before {
+	content: "\e23e";
 }
 .paasng-overview:before {
 	content: "\e224";

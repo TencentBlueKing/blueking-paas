@@ -57,6 +57,11 @@ def make_translate_fields(field, value) -> Dict:
             },
         ),
         (
+            {"id": "123456780123456789", "name": "2", "template": "foo"},
+            False,
+            {"id": [ErrorDetail(string=_("This value does not match the required pattern."), code="invalid")]},
+        ),
+        (
             {"id": 1, "name": "2", "template": "foo", "extra_fields": {"email": "foo@example.com"}},
             True,
             {

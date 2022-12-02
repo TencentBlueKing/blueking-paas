@@ -152,6 +152,7 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
+        "max_length": field_schema.maxlength,
     }
     if field_schema.default:
         init_kwargs["default"] = field_schema.default
@@ -514,3 +515,13 @@ class CodeCommitSearchSLZ(serializers.Serializer):
         data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
         data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
         return data
+
+
+class PluginReleaseFilterSLZ(serializers.Serializer):
+    status = serializers.ListField(required=False)
+
+
+class PluginListFilterSlZ(serializers.Serializer):
+    status = serializers.ListField(required=False)
+    language = serializers.ListField(required=False)
+    pd__identifier = serializers.ListField(required=False)

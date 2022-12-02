@@ -21,9 +21,10 @@ import logging
 from os import PathLike
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
+from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from typing_extensions import Protocol
 
-from paasng.accounts.models import Oauth2TokenHolder, UserProfile
+from paasng.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
 from paasng.dev_resources.sourcectl import exceptions
 from paasng.dev_resources.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_type
@@ -121,17 +122,35 @@ class BaseGitRepoController:
         if not repo_url:
             raise ValueError("Require repo_url to init GitRepoController")
         project = GitProject.parse_from_repo_url(repo_url, sourcectl_type=module.source_type)
-        user_credentials: Dict[str, Any] = {}
-        try:
-            profile = UserProfile.objects.get(user=operator or module.owner)
-            token_holder: Oauth2TokenHolder = profile.token_holder.get_by_project(project)
-            user_credentials["oauth_token"] = token_holder.access_token
-            user_credentials["scope_list"] = [token_holder.get_scope()]
-            # 用于 refresh token, 通过 oauth_token 无法反查 token_holder
-            user_credentials["__token_holder"] = token_holder
-        except (Oauth2TokenHolder.DoesNotExist, UserProfile.DoesNotExist):
-            raise exceptions.UserNotBindedToSourceProviderError(project=project)
+        user_credentials = cls.get_user_credentials(project, operator or module.owner)
         return cls(repo_url=repo_url, user_credentials=user_credentials, api_url=repo_info["api_url"])
+
+    @classmethod
+    def get_user_credentials(cls, project: GitProject, operator: str) -> Dict[str, Any]:
+        """get user_credentials used to init git client by encoded username"""
+        user_credentials: Dict[str, Any] = {}
+        provider_type, _ = user_id_encoder.decode(operator)
+        try:
+            profile = UserProfile.objects.get(user=operator)
+        except UserProfile.DoesNotExist:
+            raise exceptions.UserNotBindedToSourceProviderError(project=project)
+        token_holder: Union[PrivateTokenHolder, Oauth2TokenHolder]
+        if provider_type == ProviderType.DATABASE:
+            try:
+                token_holder = profile.private_token_holder.get_by_project(project)
+                user_credentials["private_token"] = token_holder.private_token
+            except PrivateTokenHolder.DoesNotExist:
+                raise exceptions.UserNotBindedToSourceProviderError(project=project)
+        else:
+            try:
+                token_holder = profile.token_holder.get_by_project(project)
+                user_credentials["oauth_token"] = token_holder.access_token
+            except Oauth2TokenHolder.DoesNotExist:
+                raise exceptions.UserNotBindedToSourceProviderError(project=project)
+        user_credentials["scope_list"] = [token_holder.get_scope()]
+        # 用于 refresh token, 通过 oauth_token 无法反查 token_holder
+        user_credentials["__token_holder"] = token_holder
+        return user_credentials
 
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:

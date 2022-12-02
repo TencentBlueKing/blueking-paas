@@ -12,7 +12,7 @@
           <paas-plugin-title :version="curVersion" />
           <bk-button
             class="discontinued"
-            @click="handlerCancelRelease"
+            @click="showInfoCancelRelease"
           >
             <i class="paasng-icon paasng-stop-2" />
             {{ $t('终止发布') }}
@@ -680,6 +680,17 @@
             // 富文本编辑
             onEditorChange (e) {
                 this.$set(this.form, 'description', e.html);
+            },
+
+            showInfoCancelRelease () {
+                this.$bkInfo({
+                    title: `确认要终止发布该版本 ${this.curVersion}？`,
+                    width: 480,
+                    maskClose: true,
+                    confirmFn: () => {
+                        this.handlerCancelRelease();
+                    }
+                });
             },
 
             // 终止发布

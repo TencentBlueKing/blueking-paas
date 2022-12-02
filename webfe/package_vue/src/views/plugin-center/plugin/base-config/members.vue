@@ -201,21 +201,6 @@
     </bk-dialog>
 
     <bk-dialog
-      v-model="leaveAppDialog.visiable"
-      width="540"
-      :title="$t('退出插件')"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="leaveAppDialog.isLoading"
-      @confirm="leaveSave"
-      @cancel="closeLeaveApp"
-    >
-      <div class="tc">
-        {{ $t('退出并放弃此应用的对应权限，是否确定？') }}
-      </div>
-    </bk-dialog>
-
-    <bk-dialog
       v-model="permissionNoticeDialog.visiable"
       width="540"
       :title="$t('权限须知')"
@@ -521,20 +506,25 @@
             leaveApp (delMemberID, delMemberName) {
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
-                this.leaveAppDialog.visiable = true;
+                this.$bkInfo({
+                    title: `退出并放弃此插件的对应权限，是否确定？`,
+                    width: 480,
+                    maskClose: true,
+                    confirmFn: () => {
+                        this.leaveSave();
+                    }
+                });
             },
 
             // 退出插件
             async leaveSave () {
                 try {
                     await this.$store.dispatch('cloudMembers/quitApplication', { pdId: this.pdId, pluginId: this.pluginId });
-                    this.closeLeaveApp();
                     // 退出插件跳转
                     this.$router.push({
                         path: '/'
                     });
                 } catch (e) {
-                    this.closeLeaveApp();
                     this.$paasMessage({
                         theme: 'error',
                         message: `${this.$t('退出插件失败：')} ${e.detail}`
@@ -542,10 +532,6 @@
                 } finally {
                     this.leaveAppDialog.isLoading = false;
                 }
-            },
-
-            closeLeaveApp () {
-                this.leaveAppDialog.visiable = false;
             },
 
             updateMember (updateMemberID, updateMemberName, updateMemberRole) {

@@ -274,7 +274,8 @@
                 versionDetailLoading: true,
                 versionStatus: PLUGIN_VERSION_STATUS,
                 filterCreator: '',
-                filterStatus: ''
+                filterStatus: '',
+                curIsPending: ''
             };
         },
         computed: {
@@ -360,6 +361,8 @@
                     const res = await this.$store.dispatch('plugin/getVersionsManagerList', { data, pageParams });
                     this.versionList = res.results;
                     this.pagination.count = res.count;
+                    // 当前是否已有任务进行中
+                    this.curIsPending = this.versionList.find(item => item.status === 'pending');
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -417,6 +420,9 @@
                     params: {
                         pluginTypeId: this.pdId,
                         id: this.pluginId
+                    },
+                    query: {
+                        isPending: this.curIsPending
                     }
                 });
             },

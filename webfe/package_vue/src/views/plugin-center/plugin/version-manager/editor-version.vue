@@ -112,13 +112,22 @@
               :property="'version'"
             >
               <bk-radio-group v-model="curVersion.version">
-                <bk-radio :value="curVersion.semver_choices.major">
+                <bk-radio
+                  v-bk-tooltips.top="'非兼容式升级时使用'"
+                  :value="curVersion.semver_choices.major"
+                >
                   {{ $t('重大版本') }}
                 </bk-radio>
-                <bk-radio :value="curVersion.semver_choices.minor">
+                <bk-radio
+                  v-bk-tooltips.top="'兼容式功能更新时使用'"
+                  :value="curVersion.semver_choices.minor"
+                >
                   {{ $t('次版本') }}
                 </bk-radio>
-                <bk-radio :value="curVersion.semver_choices.patch">
+                <bk-radio
+                  v-bk-tooltips.top="'兼容式问题修正时使用'"
+                  :value="curVersion.semver_choices.patch"
+                >
                   {{ $t('修正版本') }}
                 </bk-radio>
               </bk-radio-group>
@@ -169,13 +178,19 @@
                             </div>
                         </bk-form-item> -->
             <bk-form-item label="">
-              <bk-button
-                theme="primary"
-                :loading="isSubmitLoading"
-                @click="submitVersionForm"
+              <div
+                v-bk-tooltips.top="'已有发布任务进行中'"
+                style="display: inline-block;"
               >
-                {{ $t('提交并发布') }}
-              </bk-button>
+                <bk-button
+                  theme="primary"
+                  :loading="isSubmitLoading"
+                  :disabled="isPending ? true : false"
+                  @click="submitVersionForm"
+                >
+                  {{ $t('提交并发布') }}
+                </bk-button>
+              </div>
             </bk-form-item>
           </bk-form>
         </div>
@@ -300,6 +315,9 @@
             },
             pluginId () {
                 return this.$route.params.id;
+            },
+            isPending () {
+                return this.$route.query.isPending;
             }
         },
         watch: {
@@ -616,7 +634,6 @@
 
     .summary-box {
         padding: 10px 0 20px;
-        padding-bottom: 0;
         background: #FFF;
         font-size: 12px;
 

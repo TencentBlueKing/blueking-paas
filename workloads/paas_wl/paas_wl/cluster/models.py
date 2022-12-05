@@ -93,6 +93,7 @@ class ClusterManager(models.Manager):
         self,
         region: str,
         name: str,
+        type: str = ClusterType.NORMAL,
         is_default: bool = False,
         description: Optional[str] = None,
         ingress_config: Optional[Dict] = None,
@@ -135,6 +136,7 @@ class ClusterManager(models.Manager):
         validate_ingress_config(ingress_config)
 
         defaults: Dict[str, Any] = {
+            "type": type,
             "is_default": is_default,
             "description": description,
             "ingress_config": ingress_config,

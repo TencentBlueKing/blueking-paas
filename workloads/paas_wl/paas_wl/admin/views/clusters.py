@@ -78,34 +78,19 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        cluster_regions = set(Cluster.objects.values_list('region', flat=True))
-        req_region = data['region']
-
-        # 若指定 region，则必须有对应 region 的集群
-        if req_region and req_region not in cluster_regions:
-            raise ValueError(f'region: [{req_region}] is not a valid region name')
-
-        # 若不指定具体 region，则为所有集群的 region
-        regions = [req_region] if req_region else list(cluster_regions)
-
-        ignore_labels = [value.split('=') for value in data['ignore_labels']]
-        if any(len(label) != 2 for label in ignore_labels):
-            raise ValueError('invalid label given!')
-
-        if not data['include_masters']:
-            ignore_labels.append(('node-role.kubernetes.io/master', 'true'))
-
         cluster_name = data['cluster_name']
-        for region in regions:
-            for cluster in Cluster.objects.filter(region=region):
-                if cluster_name and cluster.name != cluster_name:
-                    continue
+        for region in data['regions']:
+            clusters = Cluster.objects.filter(region=region)
+            # 若已指定集群名称，则只更新对应的集群
+            if cluster_name:
+                clusters = clusters.filter(name=cluster_name)
 
+            for cluster in clusters:
                 logger.info(f'will generate state for [{region}/{cluster.name}]...')
                 sched_client = get_scheduler_client(cluster_name=cluster.name)
 
                 logger.info(f'generating state for [{region}/{cluster.name}]...')
-                state = generate_state(region, cluster.name, sched_client, ignore_labels=ignore_labels)
+                state = generate_state(region, cluster.name, sched_client, data['ignore_labels'])
 
                 logger.info('syncing the state to nodes...')
                 sched_client.sync_state_to_nodes(state)

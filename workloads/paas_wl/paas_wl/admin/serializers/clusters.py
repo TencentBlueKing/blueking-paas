@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import base64
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paas_wl.cluster.constants import ClusterTokenType
 from paas_wl.cluster.models import Cluster
@@ -118,3 +119,24 @@ class GenRegionClusterStateSLZ(serializers.Serializer):
     include_masters = serializers.BooleanField(
         required=False, default=False, help_text="include master nodes or not, default is false"
     )
+
+    def validate(self, attrs):
+        cluster_regions = set(Cluster.objects.values_list('region', flat=True))
+        region = attrs.pop('region')
+
+        # 若指定 region，则必须有对应 region 的集群
+        if region and region not in cluster_regions:
+            raise ValidationError(f'region: [{region}] is not a valid region name')
+
+        # 若不指定具体 region，则为所有集群的 region
+        attrs['regions'] = [region] if region else list(cluster_regions)
+
+        ignore_labels = [value.split('=') for value in attrs['ignore_labels']]
+        if any(len(label) != 2 for label in ignore_labels):
+            raise ValidationError('invalid label given!')
+
+        if not attrs['include_masters']:
+            ignore_labels.append(('node-role.kubernetes.io/master', 'true'))
+
+        attrs['ignore_labels'] = ignore_labels
+        return attrs

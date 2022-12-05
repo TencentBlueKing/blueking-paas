@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -124,7 +124,7 @@ class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
             engine_app_name,
             {'cluster': slz.validated_data['cluster_name']},
         )
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationMembersManageView(ApplicationDetailBaseView):
@@ -167,7 +167,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, code):
         application = self.get_application()
@@ -180,7 +180,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def sync_membership(self, application):
         sync_developers_to_sentry.delay(application.id)
@@ -218,4 +218,4 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
     def update(self, request, code):
         application = self.get_application()
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)

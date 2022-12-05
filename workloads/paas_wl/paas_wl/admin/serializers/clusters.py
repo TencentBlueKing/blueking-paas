@@ -93,3 +93,28 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
     token_value = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     default_node_selector = serializers.JSONField(default={}, required=False)
     default_tolerations = serializers.JSONField(default=[], required=False)
+
+
+class GenRegionClusterStateSLZ(serializers.Serializer):
+    """生成 RegionClusterState 用序列化器"""
+
+    region = serializers.CharField(
+        required=False,
+        default="",
+        help_text="specify a region name, by default this command will process all regions defined in settings",
+    )
+    cluster_name = serializers.CharField(
+        required=False,
+        default="",
+        help_text="specify a cluster name, by default this command will process all clusters",
+    )
+    ignore_labels = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=list,
+        help_text="ignore nodes if it matches any of these labels, "
+        "will always include 'node-role.kubernetes.io/master=true'",
+    )
+    include_masters = serializers.BooleanField(
+        required=False, default=False, help_text="include master nodes or not, default is false"
+    )

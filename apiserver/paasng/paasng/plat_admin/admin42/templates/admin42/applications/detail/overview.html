@@ -197,12 +197,12 @@
                         this.USER_IS_ADMIN_IN_APP = false
                     })
                 },
-                bindAppEnvCluster: function (module, env, cluster_name) {
+                bindAppEnvCluster: function (module, env, clusterName) {
                     let url = URLRouter.bindCluster.replace("${module}", module).replace("${env}", env)
                     this.$http.post(
-                        url, {cluster_name: cluster_name}
+                        url, {cluster_name: clusterName}
                     ).then(resp => {
-                        this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境集群为 ${cluster_name} 成功，配置将在下次部署时生效`})
+                        this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境集群为 ${clusterName} 成功，配置将在下次部署时生效`})
                     })
                 }
             }

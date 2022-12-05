@@ -173,14 +173,6 @@ class ProcessViewSet(SysModelViewSet):
         ProcessSpecManager(self.get_object()).sync(processes)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_abnormal_processes(self, request, **kwargs):
-        """Get abnormal processes name"""
-        region = self.kwargs['region']
-        scheduler = self.get_scheduler_client(region=region)
-        processes = scheduler.get_abnormal_processes(region=region)
-        abnormal_processes = self.serializer_class(processes, many=True).data
-        return Response({'results': abnormal_processes, 'count': len(abnormal_processes)})
-
 
 class SysAppRelatedViewSet(SysModelViewSet):
     """Base ViewSet for a app_name in url path"""

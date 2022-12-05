@@ -86,7 +86,7 @@ class PluginBasicInfoDefinition(AuditedModel):
             languages = [t.language for t in templates]
             language_list.extend(languages)
 
-        return language_list
+        return list(set(language_list))
 
 
 class PluginMarketInfoDefinition(AuditedModel):

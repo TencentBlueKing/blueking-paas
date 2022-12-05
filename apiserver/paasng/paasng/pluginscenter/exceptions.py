@@ -38,6 +38,8 @@ class ErrorCodes:
     # 下架或删除插件相关
     CANNOT_BE_DELETED = ErrorCode(_('不允许删除'))
     PLUGIN_ARCHIVED = ErrorCode(_("插件已下架, 无法进行该操作"))
+    # 插件仓库成员管理异常
+    MAINTAIN_REPO_MEMBERS_ERROR = ErrorCode(_("添加/删除仓库成员异常, 请稍后重试"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

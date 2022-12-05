@@ -57,6 +57,9 @@ class PluginReleaseExecutor:
         if current_stage.status not in constants.PluginReleaseStatus.abnormal_status():
             raise error_codes.CANNOT_RERUN_ONGOING_STEPS
 
+        if not self.release.retryable:
+            raise error_codes.CANNOT_RERUN_ONGOING_STEPS.f(_("如需发布请创建新的版本"))
+
         current_stage.reset()
         self.release.status = constants.PluginReleaseStatus.PENDING
         self.release.save()
@@ -80,6 +83,9 @@ class PluginReleaseExecutor:
         """
         if self.release.status == constants.PluginReleaseStatus.SUCCESSFUL:
             raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前发布流程已结束"))
+
+        if not self.release.retryable:
+            raise error_codes.CANNOT_ROLLBACK_CURRENT_STEP.f(_("当前插件类型不支持重置历史版本, 如需发布请创建新的版本"))
 
         current_stage = self.release.current_stage
         if (
@@ -111,6 +117,9 @@ class PluginReleaseExecutor:
         """重置当前发布版本"""
         if self.release.status not in constants.PluginReleaseStatus.abnormal_status():
             raise error_codes.CANNOT_RESET_RELEASE.f(_("状态异常: {}").format(self.release.status))
+
+        if not self.release.retryable:
+            raise error_codes.CANNOT_RESET_RELEASE.f(_("当前插件类型不支持重置历史版本, 如需发布请创建新的版本"))
 
         self.release.initial_stage_set(force_refresh=True)
         self.execute_current_stage(operator=operator)

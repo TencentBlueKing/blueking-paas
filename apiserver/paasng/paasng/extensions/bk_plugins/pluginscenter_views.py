@@ -129,7 +129,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def update_plugin(self, request, code):
         application = self.get_application()
 
-        slz = api_serializers.PluginSyncRequestSLZ(data=request.data)
+        slz = api_serializers.PluginSyncRequestSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 

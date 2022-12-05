@@ -46,6 +46,10 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "get_code_submit_info"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/feature_flags/",
+        views.PluginInstanceViewSet.as_view({"get": "get_feature_flags"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
         views.PluginReleaseViewSet.as_view({"get": "list", "post": "create"}),
     ),

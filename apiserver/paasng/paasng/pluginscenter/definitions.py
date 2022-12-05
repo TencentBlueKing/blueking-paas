@@ -107,6 +107,12 @@ class PluginCodeTemplate(BaseModel):
 
 
 @registry
+class PluginFeature(BaseModel):
+    name: str = Field(description="功能特性名称")
+    value: bool = Field(default=False, description="功能特性开关")
+
+
+@registry
 class PluginBasicInfoDefinition(BaseModel):
     """插件基础信息定义"""
 
@@ -300,6 +306,7 @@ class PluginDefinition(BaseModel):
     releaseRevision: ReleaseRevisionDefinition = Field(description="插件发布版本规则")
     releaseStages: List[ReleaseStageDefinition] = Field(description="插件发布步骤")
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
+    features: List[PluginFeature] = Field(default_factory=list)
 
 
 def find_stage_by_id(

@@ -38,6 +38,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.pluginscenter import constants, openapi_docs, serializers, shim
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
+from paasng.pluginscenter.features import PluginFeatureFlagsManager
 from paasng.pluginscenter.filters import PluginInstancePermissionFilter
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.pluginscenter.iam_adaptor.management import shim as members_api
@@ -55,7 +56,12 @@ from paasng.pluginscenter.models import (
 )
 from paasng.pluginscenter.permissions import IsPluginCreator
 from paasng.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
-from paasng.pluginscenter.sourcectl import build_master_placeholder, get_plugin_repo_accessor
+from paasng.pluginscenter.sourcectl import (
+    build_master_placeholder,
+    get_plugin_repo_accessor,
+    get_plugin_repo_member_maintainer,
+    remove_repo_member,
+)
 from paasng.pluginscenter.thirdparty import instance as instance_api
 from paasng.pluginscenter.thirdparty import log as log_api
 from paasng.pluginscenter.thirdparty import market as market_api
@@ -157,6 +163,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
 
     def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
         slz = serializers.PluginListFilterSlZ(data=self.request.query_params)
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
@@ -293,6 +300,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         plugin = self.get_plugin_instance()
         repo_accessor = get_plugin_repo_accessor(plugin)
         return Response(data=repo_accessor.get_submit_info(_data['begin_time'], _data['end_time']))
+
+    def get_feature_flags(self, request, pd_id, plugin_id):
+        """获取插件支持的功能特性"""
+        plugin = self.get_plugin_instance()
+        return Response(data=PluginFeatureFlagsManager(plugin).list_all_features())
 
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
@@ -512,6 +524,7 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
         release = plugin.all_versions.get(pk=release_id)
         if release.current_stage.stage_id != stage_id:
             raise error_codes.CANNOT_RERUN_ONGOING_STEPS.f(_("仅支持重试当前阶段"))
+
         PluginReleaseExecutor(release).rerun_current_stage(operator=request.user.username)
         stage = release.all_stages.get(stage_id=stage_id)
         return Response(data=init_stage_controller(stage).render_to_view())
@@ -586,6 +599,7 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
         """用户主动退出插件成员的API"""
         plugin = self.get_plugin_instance()
         self._check_admin_count(plugin, [request.user.username])
+        remove_repo_member(plugin, request.user.username)
         members_api.remove_user_all_roles(plugin=plugin, usernames=[request.user.username])
         sync_members(pd=plugin.pd, instance=plugin)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -604,11 +618,16 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
         for item in data:
             grouped[item["role"]["id"]].append(item["username"])
 
+        repo_member_maintainer = get_plugin_repo_member_maintainer(plugin)
         if usernames := grouped[constants.PluginRole.DEVELOPER]:
             self._check_admin_count(plugin, usernames)
+            for username in usernames:
+                repo_member_maintainer.add_member(username, constants.PluginRole.DEVELOPER)
             members_api.add_role_members(plugin, role=constants.PluginRole.DEVELOPER, usernames=usernames)
             members_api.delete_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=usernames)
         elif usernames := grouped[constants.PluginRole.ADMINISTRATOR]:
+            for username in usernames:
+                repo_member_maintainer.add_member(username, constants.PluginRole.ADMINISTRATOR)
             members_api.add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=usernames)
             members_api.delete_role_members(plugin, role=constants.PluginRole.DEVELOPER, usernames=usernames)
         sync_members(pd=plugin.pd, instance=plugin)
@@ -618,6 +637,7 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
     def destroy(self, request, pd_id, plugin_id, username: str):
         plugin = self.get_plugin_instance()
         self._check_admin_count(plugin, [username])
+        remove_repo_member(plugin, username)
         members_api.remove_user_all_roles(plugin=plugin, usernames=[username])
         sync_members(pd=plugin.pd, instance=plugin)
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -18,7 +18,10 @@
             {{ $t('终止发布') }}
           </bk-button>
         </div>
-        <div class="steps-warp mt20">
+        <div
+          v-if="isNotStep"
+          class="steps-warp mt20"
+        >
           <bk-steps
             ext-cls="custom-icon"
             theme="success"
@@ -31,9 +34,9 @@
           id="release-box"
           class="release-warp mt20"
         >
-          <template v-if="stageId === 'deploy'">
+          <template>
             <div
-              v-if="isNext && curStep === 3"
+              v-if="stageId === 'online'"
               class="successful-container"
             >
               <i class="bk-icon icon-check-1 icon-finish success-cls" />
@@ -47,7 +50,7 @@
                 {{ $t('返回插件版本列表') }}
               </span>
             </div>
-            <template v-else>
+            <template v-if="stageId === 'deploy'">
               <div
                 class="wrapper primary
                             release-info-box
@@ -161,6 +164,13 @@
                 <bk-input v-model="form.introduction" />
               </bk-form-item>
               <bk-form-item
+                :label="$t('应用联系人')"
+                :required="true"
+                property="contact"
+              >
+                <user v-model="form.contact" />
+              </bk-form-item>
+              <bk-form-item
                 class="edit-form-item"
                 :label="$t('详细描述')"
                 :required="true"
@@ -172,13 +182,6 @@
                   :options="editorOption"
                   @change="onEditorChange($event)"
                 />
-              </bk-form-item>
-              <bk-form-item
-                :label="$t('应用联系人')"
-                :required="true"
-                property="contact"
-              >
-                <user v-model="form.contact" />
               </bk-form-item>
             </bk-form>
           </div>
@@ -194,21 +197,23 @@
             >
               {{ $t('保存') }}
             </bk-button>
-            <bk-button
+            <!-- 根据步骤来， 当前步骤的下一步 -->
+            <!-- <bk-button
               theme="primary"
               :disabled="!isNext"
-              @click="handlerNext('market')"
+              @click="handlerNext"
             >
               {{ $t('下一步') }}
-            </bk-button>
+            </bk-button> -->
           </div>
         </div>
       </div>
       <div
-        v-if="stageId === 'deploy' && curStep === 2"
+        v-if="stageId === 'deploy' && isNotStep"
         class="footer-btn-warp"
       >
         <bk-button
+          v-if="curFirstStep.id !== 'deploy'"
           theme="default"
           @click="handlerPrev"
         >
@@ -220,7 +225,7 @@
           class="ml5"
           style="width: 120px"
           :disabled="!isNext"
-          @click="handlerNext"
+          @click="handlerNext(stageId)"
         >
           {{ $t('下一步') }}
         </bk-button>
@@ -273,7 +278,10 @@
                 failedMessage: '',
                 titleVersion: '',
                 isStopDeploy: false,
-                stepsStatus: 'loading',
+                stepsStatus: '',
+                curFirstStep: {},
+                stpeMap: {},
+                isNotStep: true,
                 rules: {
                     category: [
                         {
@@ -320,7 +328,15 @@
                 return this.$store.state.plugin.stagesData;
             }
         },
-        watch: {},
+        watch: {
+            allStages (newStages) {
+                this.curFirstStep = newStages[0];
+                // 创建step map映射
+                newStages.forEach(item => {
+                    this.$set(this.stpeMap, item.id, item.icon);
+                });
+            }
+        },
         created () {
             bus.$on('stop-deploy', () => {
                 this.isStopDeploy = true;
@@ -419,15 +435,20 @@
                     const res = await this.$store.dispatch('plugin/getPluginRelease', params);
                     this.stageId = res.stage_id;
                     this.isNext = res.status === 'successful';
+                    if (!this.isNotStep && res.status === 'successful') {
+                        // 当步骤只有一步一时，部署成功后直接展示成功提示界面
+                        this.stageId = 'online';
+                    }
                     this.status = res.status;
                     switch (this.stageId) {
                         case 'market':
-                            this.curStep = 1;
+                            // 根据接口数据而定
+                            // this.curStep = 1;
                             break;
                         case 'deploy':
                             this.stepsData = this.modifyStepsData(res.detail.steps);
                             this.logs = res.detail.logs;
-                            this.curStep = 2;
+                            // this.curStep = 2;
                             if (this.status === 'pending') {
                                 this.setTimeFetchPluginRelease();
                             } else if (this.status === 'failed') {
@@ -474,6 +495,12 @@
                     const stagesData = this.allStagesMap(res.all_stages);
                     this.titleVersion = `${res.version} (${res.source_version_name})`;
                     this.allStages = stagesData;
+                    // 获取对应step
+                    this.curStep = this.stpeMap[res.current_stage.stage_id];
+                    if (this.allStages.length === 1) {
+                        // 当步骤只存在一步时，不展示step与下一步
+                        this.isNotStep = false;
+                    }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -491,7 +518,7 @@
                     stageId: this.stageId
                 };
                 const data = {};
-                this.stepsStatus = 'loading';
+                this.stepsStatus = '';
                 try {
                     const res = await this.$store.dispatch('plugin/pluginDeploy', {
                         ...params,
@@ -631,9 +658,9 @@
                         await this.$store.dispatch('plugin/saveMarketInfo', params);
                         this.$bkMessage({
                             theme: 'success',
-                            message: this.$t('保存成功，请点击下一步部署!')
+                            message: this.$t('保存成功!')
                         });
-                        this.fetchPluginRelease();
+                        await this.handlerNext();
                     } catch (e) {
                         this.$bkMessage({
                             theme: 'error',
@@ -647,6 +674,7 @@
 
             // 下一步
             async handlerNext (status) {
+                // 根据当前状态更改
                 this.isLoading = true;
                 try {
                     const params = {
@@ -655,16 +683,25 @@
                         releaseId: this.$route.query.release_id
                     };
                     const res = await this.$store.dispatch('plugin/nextRelease', params);
-                    if (status === 'market') {
-                        this.stageId = res.current_stage.stage_id;
+                    this.stageId = res.current_stage.stage_id;
+                    this.getVersionDetail();
+                    if (this.stageId === 'market') {
                         const query = JSON.parse(JSON.stringify(this.$route.query));
                         query.stage_id = this.stageId;
                         this.$router.push({ name: 'pluginVersionRelease', query });
+                        this.fetchCategoryList();
+                        this.fetchMarketInfo();
+                    } else if (this.stageId === 'deploy') {
+                        const query = JSON.parse(JSON.stringify(this.$route.query));
+                        query.stage_id = this.stageId;
+                        query.isRepublish = 'republish';
                         this.fetchPluginRelease();
+                        this.$router.push({ name: 'pluginVersionRelease', query });
                     } else {
-                        this.curStep = 3;
                         this.stepsStatus = '';
                     }
+                    // 更新对应 step
+                    this.curStep = this.stpeMap[res.current_stage.stage_id];
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -745,7 +782,7 @@
                 } finally {
                     setTimeout(() => {
                         this.isLoading = false;
-                        this.stepsStatus = 'loading';
+                        this.stepsStatus = '';
                     }, 200);
                 }
             },
@@ -753,7 +790,7 @@
             changeStep (curStageId) {
                 switch (curStageId) {
                     case 'market':
-                        this.curStep = 1;
+                        // this.curStep = 1;
                         this.fetchCategoryList();
                         this.fetchMarketInfo();
                         break;

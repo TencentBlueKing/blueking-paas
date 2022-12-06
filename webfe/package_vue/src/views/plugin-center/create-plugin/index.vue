@@ -1,14 +1,6 @@
 <template>
   <div class="bk-create-plugin-warp mt30">
-    <div class="ps-top-bar">
-      <div class="header-title">
-        <i
-          class="paasng-icon paasng-arrows-left icon-cls-return mr5"
-          @click="back"
-        />
-        {{ $t('创建插件') }}
-      </div>
-    </div>
+    <paas-plugin-title />
     <!-- 返回 -->
     <div class="base-info-tit">
       {{ $t('基本信息') }}
@@ -102,7 +94,7 @@
         <bk-input
           v-model="form.plugin_id"
           class="w480"
-          :placeholder="$t('唯一标识，创建后不可修改；由小写字母、数字、连接符(-)组成，须以字母开头')"
+          :placeholder="pdIdPlaceholder"
         />
       </bk-form-item>
       <bk-form-item
@@ -115,7 +107,7 @@
         <bk-input
           v-model="form.name"
           class="w480"
-          :placeholder="$t('由汉字、英文字母、数字组成')"
+          :placeholder="namePlaceholder"
         />
       </bk-form-item>
       <bk-form-item
@@ -327,9 +319,11 @@
     import 'quill/dist/quill.core.css';
     import 'quill/dist/quill.snow.css';
     import 'quill/dist/quill.bubble.css';
+    import paasPluginTitle from '@/components/pass-plugin-title';
     export default {
         components: {
-            quillEditor
+            quillEditor,
+            paasPluginTitle
         },
         data () {
             return {
@@ -406,7 +400,9 @@
                 editorOption: {
                     placeholder: '@通知他人，ctrl+enter快速提交'
                 },
-                curPluginItem: {}
+                curPluginItem: {},
+                pdIdPlaceholder: '',
+                namePlaceholder: ''
             };
         },
         computed: {
@@ -440,6 +436,8 @@
                         return e;
                     });
                     this.addRules();
+                    this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || '由小写字母、数字、连字符(-)组成，长度小于 16 个字符';
+                    this.namePlaceholder = this.curPluginInfo.schema.name.description || '由汉字、英文字母、数字组成，长度小于 20 个字符';
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -455,9 +453,19 @@
                     message: this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连接符(-)组成，长度小于16个字符'),
                     trigger: 'blur'
                 });
+                this.rules.plugin_id.push({
+                    max: this.curPluginInfo.schema.id.maxlength || 16,
+                    message: `不能多于${this.curPluginInfo.schema.id.maxlength || 16}个字符`,
+                    trigger: 'blur'
+                });
                 this.rules.name.push({
                     regex: new RegExp(this.curPluginInfo.schema.name.pattern) || new RegExp('^[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}$'),
                     message: this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
+                    trigger: 'blur'
+                });
+                this.rules.name.push({
+                    max: this.curPluginInfo.schema.name.maxlength || 20,
+                    message: `不能多于${this.curPluginInfo.schema.id.maxlength || 20}个字符`,
                     trigger: 'blur'
                 });
             },
@@ -536,6 +544,7 @@
     padding: 28px 0 44px;
     width: 1180px;
     margin: 0 auto;
+    min-height: calc(100vh - 120px);
     .base-info-tit{
         margin: 5px 0 20px;
         font-weight: Bold;
@@ -596,16 +605,8 @@
     cursor: pointer;
     margin-left: 10px;
 }
-.ps-top-bar .header-title {
-    border: none;
-    font-size: 16px;
-    color: #313238;
-    i {
-        font-size: 20px;
-        font-weight: bold;
-        cursor: pointer;
-        color: #3A84FF;
-    }
+.plugin-top-title {
+    margin: 12px 0 14px;
 }
 </style>
 <style>

@@ -32,12 +32,15 @@
         v-if="showSelectData"
         class="plugin-dropdown"
       >
-        <bk-input
-          v-model="searchValue"
-          behavior="simplicity"
-          :left-icon="'bk-icon icon-search'"
-          :clearable="true"
-        />
+        <div class="serch-box">
+          <bk-input
+            v-model="searchValue"
+            behavior="simplicity"
+            placeholder="请输入关键字"
+            :left-icon="'bk-icon icon-search'"
+            :clearable="true"
+          />
+        </div>
         <div class="plugin-list">
           <div
             v-for="item in pluginList"
@@ -62,7 +65,7 @@
             class="footer-left item"
             @click="goPage('list')"
           >
-            <i class="paasng-icon paasng-arrows-left" />
+            <i class="paasng-icon paasng-back" />
             {{ $t('插件列表') }}
           </div>
           <div
@@ -178,8 +181,10 @@
             border-radius: 2px;
             z-index: 1000;
             .plugin-list{
+                padding-top: 5px;
                 max-height: 200px;
                 overflow-y: auto;
+                color: #63656E;
                 .item {
                     padding: 10px 20px;
                     img{
@@ -195,6 +200,11 @@
                     color: #3A84FF;
                 }
             }
+            .serch-box {
+                padding: 0 7px;
+                height: 36px;
+                line-height: 36px;
+            }
             .dropdown-footer{
                 color: #63656E;
                 font-size: 12px;
@@ -207,6 +217,10 @@
                     text-align: center;
                     height: 40px;
                     line-height: 40px;
+                    i {
+                        font-size: 16px;
+                        color: #979BA5;
+                    }
                 }
                 .footer-left::after {
                     position: absolute;
@@ -227,4 +241,12 @@
 .quick-hover-bg {
     background: #F5F7FA;
 }
+</style>
+<style>
+  .quick-nav .plugin-info .plugin-dropdown .left-icon {
+      color: #979BA5;
+  }
+  .quick-nav .plugin-info .plugin-dropdown .bk-input-text input {
+      border-color: transparent transparent #EAEBF0 !important;
+  }
 </style>

@@ -8,14 +8,21 @@
       <div class="app-container middle">
         <paas-plugin-title />
         <div class="ag-top-header">
-          <bk-button
-            theme="primary"
-            class="mr10"
-            @click="handleCreateVersion('formal')"
+          <!-- 有发布任务，禁用 -->
+          <div
+            v-bk-tooltips.top="{ content: '已有发布任务进行中', disabled: !curIsPending }"
+            style="display: inline-block;"
           >
-            <!-- <i class="paasng-icon paasng-plus"></i> -->
-            {{ $t('新建版本') }}
-          </bk-button>
+            <bk-button
+              theme="primary"
+              class="mr10"
+              :disabled="curIsPending ? true : false"
+              @click="handleCreateVersion('formal')"
+            >
+              <!-- <i class="paasng-icon paasng-plus"></i> -->
+              {{ $t('新建版本') }}
+            </bk-button>
+          </div>
           <!-- <bk-button theme="default" @click="handleCreateVersion('test')">
                         <i class="paasng-icon paasng-plus"></i>
                         {{ $t('测试版本') }}

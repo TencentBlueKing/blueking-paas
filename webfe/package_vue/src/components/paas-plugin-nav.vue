@@ -69,7 +69,8 @@
                 navTree: [],
                 allowedRouterName: [
                     'pluginVersionRelease',
-                    'pluginVersionEditor'
+                    'pluginVersionEditor',
+                    'marketInfoEdit'
                 ],
                 allNavItems: [],
                 region: 'ieod',
@@ -158,7 +159,9 @@
             initRouterPermission () {
                 this.allowedRouterName = [
                     'pluginVersionRelease',
-                    'pluginVersionEditor'
+                    'pluginVersionEditor',
+                    'marketInfoEdit'
+
                 ];
 
                 this.navTree.forEach(nav => {

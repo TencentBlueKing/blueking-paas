@@ -179,7 +179,7 @@
                         </bk-form-item> -->
             <bk-form-item label="">
               <div
-                v-bk-tooltips.top="'已有发布任务进行中'"
+                v-bk-tooltips.top="{ content: '已有发布任务进行中', disabled: !isPending }"
                 style="display: inline-block;"
               >
                 <bk-button
@@ -250,12 +250,34 @@
         </bk-table>
       </div>
     </bk-sideslider>
+
+    <bk-dialog
+      v-model="newVersionConfig.visible"
+      theme="primary"
+      :mask-close="false"
+      :title="`确认新建版本：${curVersion.version}`"
+      @confirm="handlerConfirm"
+      @cancel="handlerCancel"
+    >
+      <template v-if="curVersionData.source_versions">
+        <div class="version-tips-item">
+          <span>代码分支：{{ curVersionData.source_versions[0].name }}</span>
+        </div>
+        <div class="version-tips-item">
+          <span>代码更新时间：{{ formatTime(curVersionData.source_versions[0].last_update) }}</span>
+        </div>
+        <div class="version-tips-item">
+          <span>代码提交日志：{{ curVersionData.source_versions[0].message }}</span>
+        </div>
+      </template>
+    </bk-dialog>
   </div>
 </template>
 
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import { formatTime } from '@/common/tools';
 
     export default {
         components: {
@@ -291,6 +313,11 @@
                 sourceVersions: [],
                 isLogLoading: false,
                 isSubmitLoading: false,
+                newVersionConfig: {
+                    visible: false
+                },
+                curVersionData: {},
+                formatTime: formatTime,
                 rules: {
                     source_versions: [
                         {
@@ -353,6 +380,7 @@
                 };
                 try {
                     const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
+                    this.curVersionData = res;
                     this.curVersion.doc = res.doc;
                     this.curVersion.current_release = res.current_release;
                     // 代码仓库
@@ -375,8 +403,6 @@
                         this.curVersion.version = '';
                     }
                     this.curVersion.version_no = res.version_no;
-
-                    console.log('this.curVersion', this.curVersion);
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -392,7 +418,8 @@
             submitVersionForm () {
                 this.$refs.versionForm.validate().then(validator => {
                     this.isSubmitLoading = true;
-                    this.createVersion();
+                    this.newVersionConfig.visible = true;
+                    // this.createVersion();
                 }).catch(() => {
                     this.isSubmitLoading = false;
                 });
@@ -507,6 +534,14 @@
                     toRevision
                 });
                 win.location.href = res.result;
+            },
+
+            handlerConfirm () {
+                this.createVersion();
+            },
+
+            handlerCancel () {
+                this.isSubmitLoading = false;
             }
         }
     };
@@ -727,6 +762,13 @@
 
     .plugin-top-title {
         margin: 16px 0;
+    }
+
+    .version-tips-item {
+        color: #63656e;
+        font-size: 12px;
+        line-height: 20px;
+        padding: 3px 0;
     }
 
 </style>

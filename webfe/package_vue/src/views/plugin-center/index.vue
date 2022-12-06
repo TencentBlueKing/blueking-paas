@@ -64,7 +64,7 @@
           prop="pd_name"
           column-key="pd_name"
           :filters="pluginTypeFilters"
-          :filter-multiple="false"
+          :filter-multiple="true"
         >
           <template slot-scope="{ row }">
             <span v-bk-tooltips="row.pd_name">{{ row.pd_name || '--' }}</span>
@@ -75,7 +75,7 @@
           prop="language"
           column-key="language"
           :filters="languageFilters"
-          :filter-multiple="false"
+          :filter-multiple="true"
         />
         <!-- 状态 -->
         <bk-table-column
@@ -195,8 +195,8 @@
                 },
                 isFilter: false,
                 filterStatus: [],
-                filterLanguage: '',
-                filterPdName: '',
+                filterLanguage: [],
+                filterPdName: [],
                 languageFilters: [],
                 pluginTypeFilters: [],
                 removePluginDialog: {
@@ -255,6 +255,8 @@
                         search_term: this.filterKey
                     };
                     let statusParams = '';
+                    let languageParams = '';
+                    let pdIdParams = '';
                     if (this.filterStatus.length) {
                         // pageParams.status = this.filterStatus;
                         let paramsText = '';
@@ -263,19 +265,31 @@
                         });
                         statusParams = paramsText.substring(0, paramsText.length - 1);
                     }
-                    if (this.filterLanguage) {
-                        pageParams.language = this.filterLanguage;
+                    if (this.filterLanguage.length) {
+                        // pageParams.language = this.filterLanguage;
+                        let paramsText = '';
+                        this.filterLanguage.forEach(item => {
+                            paramsText += `language=${item}&`;
+                        });
+                        languageParams = paramsText.substring(0, paramsText.length - 1);
                     }
-                    if (this.filterPdName) {
-                        pageParams.pd__identifier = this.filterPdName;
+                    if (this.filterPdName.length) {
+                        // pageParams.pd__identifier = this.filterPdName;
+                        let paramsText = '';
+                        this.filterPdName.forEach(item => {
+                            paramsText += `pd__identifier=${item}&`;
+                        });
+                        pdIdParams = paramsText.substring(0, paramsText.length - 1);
                     }
                     this.isDataLoading = true;
                     const res = await this.$store.dispatch('plugin/getPlugins', {
                         pageParams,
-                        statusParams
+                        statusParams,
+                        languageParams,
+                        pdIdParams
                     });
                     this.pluginList = res.results;
-                    this.pagination.count = res.results.length;
+                    this.pagination.count = res.count;
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -360,11 +374,11 @@
                 }
 
                 if (filters.language) {
-                    this.filterLanguage = filters.language[0] ? filters.language[0] : '';
+                    this.filterLanguage = filters.language.length ? filters.language : [];
                 }
 
                 if (filters.pd_name) {
-                    this.filterPdName = filters.pd_name[0] ? filters.pd_name[0] : '';
+                    this.filterPdName = filters.pd_name.length ? filters.pd_name : [];
                 }
                 console.log('filters', filters);
             },

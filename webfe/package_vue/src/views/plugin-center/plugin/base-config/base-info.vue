@@ -146,6 +146,13 @@
         <div class="basic-info-item mt15">
           <div class="title">
             {{ $t('市场信息') }}
+            <span
+              class="market-edit"
+              @click="toMarketInfo"
+            >
+              <i class="paasng-icon paasng-edit-2" />
+              {{ $t('编辑') }}
+            </span>
           </div>
           <div class="info">
             {{ $t('用于插件市场展示的信息') }}
@@ -172,39 +179,9 @@
                   ref="classifyInput"
                   v-model="marketInfo.category"
                   :readonly="!isFormEdited.classifyInput"
-                  ext-cls="paas-info-app-name-cls cls-bk-input"
+                  ext-cls="paas-info-app-name-cls"
                   :clearable="false"
                 />
-
-                <div
-                  v-if="isMarketInfo"
-                  class="action-box"
-                >
-                  <template v-if="!isFormEdited.classifyInput">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit-2"
-                      @click="showEdit('classifyInput')"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      text
-                      @click.stop.prevent="saveMarketInfo('classifyInput')"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelBasicInfo('classifyInput', 'reset')"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
               </bk-form-item>
             </bk-form>
             <bk-form
@@ -223,89 +200,9 @@
                   v-model="marketInfo.introduction"
                   v-bk-tooltips.top="marketInfo.introduction"
                   :readonly="!isFormEdited.profileInput"
-                  ext-cls="paas-info-app-name-cls cls-bk-input"
+                  ext-cls="paas-info-app-name-cls"
                   :clearable="false"
                 />
-
-                <div
-                  v-if="isMarketInfo"
-                  class="action-box"
-                >
-                  <template v-if="!isFormEdited.profileInput">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit-2"
-                      @click="showEdit('profileInput')"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      text
-                      @click.stop.prevent="saveMarketInfo('profileInput')"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelBasicInfo('profileInput', 'reset')"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
-              </bk-form-item>
-            </bk-form>
-            <!-- 富文本 -->
-            <bk-form
-              class="info-special-form info-textarea"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label :class="['title-label', { 'editor-label': editorLabelHeight }]"> {{ $t('详细描述') }} </label>
-              </bk-form-item>
-              <bk-form-item
-                style="width: calc(100% - 180px);"
-                :class="{ 'input-show-index': isFormEdited.descriptionInput }"
-              >
-                <div
-                  ref="editorRef"
-                  :class="['display-description', { 'descriptionActive': isFormEdited.descriptionInput }, { 'description-ellipsis': editorLabelHeight }]"
-                  style="-webkit-box-orient: vertical;"
-                  v-html="marketInfo.description"
-                />
-
-                <div
-                  v-if="isMarketInfo"
-                  class="action-box description-edit"
-                >
-                  <template v-if="!isFormEdited.descriptionInput">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit-2"
-                      @click="showTextEditor('descriptionInput')"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      text
-                      @click.stop.prevent="saveMarketInfo('descriptionInput')"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelBasicInfo('descriptionInput', 'reset')"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
-                </div>
               </bk-form-item>
             </bk-form>
             <bk-form
@@ -327,35 +224,34 @@
                   v-if="!isFormEdited.contactsInput"
                   class="user-mask-layer"
                 />
-
-                <div
-                  v-if="isMarketInfo"
-                  class="action-box"
-                >
-                  <template v-if="!isFormEdited.contactsInput">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit-2"
-                      @click="showEdit('contactsInput')"
-                    />
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      style="margin-right: 6px;"
-                      theme="primary"
-                      text
-                      @click.stop.prevent="saveMarketInfo('contactsInput')"
-                    >
-                      {{ $t('保存') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      @click.stop.prevent="cancelBasicInfo('contactsInput', 'reset')"
-                    >
-                      {{ $t('取消') }}
-                    </bk-button>
-                  </template>
+              </bk-form-item>
+            </bk-form>
+            <!-- 富文本 -->
+            <bk-form
+              class="info-special-form info-textarea"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label editor-label"> {{ $t('详细描述') }} </label>
+              </bk-form-item>
+              <bk-form-item
+                style="width: calc(100% - 180px);"
+                :class="{ 'input-show-index': isFormEdited.descriptionInput }"
+              >
+                <div class="content-box">
+                  <div
+                    ref="editorRef"
+                    :class="['display-description', { 'description-ellipsis': editorLabelHeight }, isUnfold ? 'unfold' : 'up']"
+                    style="-webkit-box-orient: vertical;"
+                    v-html="marketInfo.description"
+                  />
+                  <span
+                    class="unfold-btn"
+                    @click="changeInfoUnfold"
+                  >
+                    {{ isUnfold ? '收起' : '展开' }}
+                    <i :class="['paasng-icon', 'paasng-angle-down', { 'is-down': !isUnfold }]" />
+                  </span>
                 </div>
               </bk-form-item>
             </bk-form>
@@ -380,24 +276,6 @@
         </div>
       </section>
     </paas-content-loader>
-
-    <bk-dialog
-      v-model="editorConfig.visible"
-      width="760"
-      :position="editorConfig.position"
-      title="编辑详细描述"
-      @confirm="editorConfirm"
-      @after-leave="dialogAfterLeave"
-    >
-      <div class="edit-wrapper">
-        <quill-editor
-          v-model="editorValue"
-          class="editor"
-          :options="editorOption"
-          @change="onEditorChange($event)"
-        />
-      </div>
-    </bk-dialog>
 
     <bk-dialog
       v-model="delAppDialog.visiable"
@@ -448,11 +326,7 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import user from '@/components/user';
-    import { quillEditor } from 'vue-quill-editor';
     import xss from 'xss';
-    import 'quill/dist/quill.core.css';
-    import 'quill/dist/quill.snow.css';
-    import 'quill/dist/quill.bubble.css';
     import 'BKSelectMinCss';
 
     const xssOptions = {
@@ -461,12 +335,6 @@
         }
     };
     const logXss = new xss.FilterXSS(xssOptions);
-
-    const toolbarOptions = [
-        ['bold', 'italic', 'underline', 'strike'],
-        ['blockquote', 'code-block']
-    ];
-
     export default {
         // components: {
         //     'bk-member-selector': () => {
@@ -474,7 +342,6 @@
         //     }
         // },
         components: {
-            quillEditor,
             user,
             paasPluginTitle
         },
@@ -510,6 +377,7 @@
                     introduction: '',
                     contact: []
                 },
+                isUnfold: false,
                 rules: {
                     appName: [
                         {
@@ -542,12 +410,6 @@
                     }
                 },
                 editorValue: '',
-                editorOption: {
-                    modules: {
-                        toolbar: toolbarOptions
-                    },
-                    placeholder: '请输入正文'
-                },
                 editorLabelHeight: ''
             };
         },
@@ -614,7 +476,7 @@
                     res.contactArr = contactformat;
                     this.resMarketInfo = JSON.stringify(res);
                     this.$nextTick(() => {
-                        this.editorLabelHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight > 42 ? 'two' : '';
+                        this.editorLabelHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight > 200 ? 'down' : '';
                     });
                 } catch (e) {
                     this.$bkMessage({
@@ -643,33 +505,6 @@
                     this.$bkMessage({
                         theme: 'success',
                         message: this.$t('基本信息修改成功！')
-                    });
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                    this.cancelBasicInfo(ref, 'reset');
-                }
-            },
-
-            // 保存市场信息
-            async saveMarketInfo (ref) {
-                const params = this.formattParams();
-                this.marketInfo.description = logXss.process(this.marketInfo.description);
-                this.marketInfo.contact = this.marketInfo.contactArr.join(',');
-                const { ...filterMarket } = this.marketInfo;
-                const data = {
-                    ...filterMarket,
-                    extra_fields: {}
-                };
-                try {
-                    await this.$store.dispatch('plugin/saveMarketInfo', { ...params, data });
-                    this.getMarketInfo();
-                    this.cancelBasicInfo(ref);
-                    this.$bkMessage({
-                        theme: 'success',
-                        message: this.$t('市场信息修改成功！')
                     });
                 } catch (e) {
                     this.$bkMessage({
@@ -736,21 +571,6 @@
                     return;
                 }
                 this.$refs[key].focus();
-            },
-
-            showTextEditor (key) {
-                this.editorConfig.visible = true;
-                this.editorValue = this.marketInfo.description;
-                // 展示dialog
-                this.isFormEdited[key] = true;
-                // this.localeAppInfoNameTemp = this.localeAppInfo.name;
-                // this.$refs[key].focus();
-            },
-
-            editorConfirm () {
-                // 去除富文本自带的标签
-                this.marketInfo.description = this.editorValue.replace(/<[^<>]+>/g, '').replace(/&nbsp;/gi, '');
-                this.saveMarketInfo('descriptionInput');
             },
 
             dialogAfterLeave () {
@@ -820,9 +640,15 @@
                 }
             },
 
-            // 富文本编辑
-            onEditorChange (e) {
-                this.editorValue = e.html;
+            toMarketInfo () {
+                this.$router.push({
+                    name: 'marketInfoEdit'
+                });
+            },
+
+            changeInfoUnfold () {
+                console.log('展开');
+                this.isUnfold = !this.isUnfold;
             }
         }
     };
@@ -1108,22 +934,36 @@
         }
     }
     .display-description {
-        min-height: 42px;
-        padding: 0 85px 0 25px;
-        border: 1px solid #dcdee5;
         position: relative;
-        display: flex;
-        align-items: center;
+        // overflow: hidden;
+        // text-overflow: ellipsis;
+        // -webkit-line-clamp: 2;
+    }
+    .content-box {
+        border: 1px solid #dcdee5;
+        padding: 0 5px 30px 25px;
         border-radius: 0 2px 2px 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        -webkit-line-clamp: 2;
+        .unfold {
+            overflow: auto;
+            min-height: 200px;
+        }
+        .up {
+            height: 200px;
+            overflow: hidden;
+        }
+        .is-down {
+            transform: rotate(-180deg);
+        }
+    }
+    .unfold-btn {
+        position: absolute;
+        bottom: 0;
+        right: 10px;
+        cursor: pointer;
+        color: #3a84ff;
     }
     .description-ellipsis {
         display: -webkit-box;
-    }
-    .descriptionActive {
-        border-color: #3a84ff;
     }
     .user-select-wrapper {
         .user-mask-layer {
@@ -1132,11 +972,18 @@
             z-index: 99;
             background: transparent;
             height: 42px;
-            width: calc(100% - 85px);
+            width: calc(100% - 10px);
         }
     }
     .plugin-top-title {
         margin-top: 6px;
+    }
+    .market-edit {
+        cursor: pointer;
+        color: #3a84ff;
+        font-size: 12px;
+        font-weight: 400;
+        margin-left: 5px;
     }
 </style>
 <style lang="scss">
@@ -1188,8 +1035,8 @@
             }
         }
         .basic-info-item .content .editor-label {
-            height: 62px;
-            line-height: 62px;
+            height: 232px;
+            line-height: 232px;
         }
         .user-select-wrapper .bk-form-content .bk-tag-input {
             position: relative;

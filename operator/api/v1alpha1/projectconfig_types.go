@@ -65,7 +65,6 @@ type ProjectConfig struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// ControllerManagerConfigurationSpec returns the configurations for controllers
-	// TODO: 确认 LeaderElection.LeaderElect & ResourceName 属性配置项真的被使用了，若没有能否去除
 	cfg.ControllerManagerConfigurationSpec `json:",inline"`
 
 	PlatformConfig      PlatformConfig      `json:"platformConfig"`

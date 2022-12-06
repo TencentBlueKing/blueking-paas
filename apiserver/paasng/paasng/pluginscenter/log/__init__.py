@@ -23,10 +23,9 @@ from typing import Dict, List, Literal, Optional
 import cattr
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
-from paasng.pluginscenter.models import PluginDefinition, PluginInstance
-from paasng.pluginscenter.thirdparty.log.client import instantiate_log_client
-from paasng.pluginscenter.thirdparty.log.filters import ElasticSearchFilter
-from paasng.pluginscenter.thirdparty.log.models import (
+from paasng.pluginscenter.log.client import instantiate_log_client
+from paasng.pluginscenter.log.filters import ElasticSearchFilter
+from paasng.pluginscenter.log.models import (
     DateHistogram,
     FieldFilter,
     IngressLogLine,
@@ -36,8 +35,9 @@ from paasng.pluginscenter.thirdparty.log.models import (
     clean_histogram_buckets,
     clean_logs,
 )
-from paasng.pluginscenter.thirdparty.log.search import SmartSearch
-from paasng.pluginscenter.thirdparty.log.utils import SmartTimeRange
+from paasng.pluginscenter.log.search import SmartSearch
+from paasng.pluginscenter.log.utils import SmartTimeRange
+from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 
 logger = logging.getLogger(__name__)
 

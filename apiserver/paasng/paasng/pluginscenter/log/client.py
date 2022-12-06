@@ -27,8 +27,8 @@ from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.pluginscenter.definitions import BKLogConfig, ElasticSearchHost, PluginBackendAPIResource, PluginLogConfig
-from paasng.pluginscenter.thirdparty.log.models import FieldFilter, count_filters_options
-from paasng.pluginscenter.thirdparty.log.search import SmartSearch
+from paasng.pluginscenter.log.models import FieldFilter, count_filters_options
+from paasng.pluginscenter.log.search import SmartSearch
 from paasng.pluginscenter.thirdparty.utils import make_client
 
 
@@ -164,13 +164,32 @@ class ESLogClient:
         return {f.name: f for f in self._clean_property([], docs_mappings)}
 
     def _clean_property(self, nested_name: List[str], mapping: Dict) -> List[FieldFilter]:
-        """transform ES mapping to Dict[str, FieldFilter], will handle nested property by recursion"""
+        """transform ES mapping to List[FieldFilter], will handle nested property by recursion
+
+        Example Mapping:
+        {
+            "properties": {
+                "age": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "keyword"
+                },
+                "name": {
+                    "type": "text"
+                },
+                "nested": {
+                    "properties": {...}
+                }
+            }
+        }
+        """
         if "type" in mapping:
             field_name = ".".join(nested_name)
             return [
                 FieldFilter(name=field_name, key=field_name if mapping["type"] != "text" else f"{field_name}.keyword")
             ]
-        elif "properties" in mapping:
+        if "properties" in mapping:
             nested_fields = [
                 self._clean_property(nested_name + [name], value) for name, value in mapping["properties"].items()
             ]

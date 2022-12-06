@@ -28,6 +28,7 @@ from elasticsearch_dsl.response import Hit
 from rest_framework.fields import get_attribute
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
+from paasng.utils.text import calculate_percentage
 
 logger = logging.getLogger(__name__)
 
@@ -173,18 +174,16 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
                 logger.warning("Field<%s> got an unhashable value: %s", log_field, value)
 
     result = []
-    for title, values in list(field_counter.items()):
+    for title, values in field_counter.items():
         options = []
         total = sum(values.values())
-        if total == 0 or len(values) == len(logs):
-            # 该 field 无值可选或所有日志该字段都不一致时, 不允许使用该字段作为过滤条件
+        if total == 0:
+            # 该 field 无值可选时, 不允许使用该字段作为过滤条件
             continue
 
         for value, count in values.items():
-            percent = "{0:.2%}".format(count / total)
-            if percent == "0.00%":
-                percent = "<0.01%"
-            options.append((value, percent))
+            percentage = calculate_percentage(count, total)
+            options.append((value, percentage))
         result.append(FieldFilter(name=title, key=properties[title].key, options=options, total=total))
     # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
     return sorted(result, key=attrgetter("total", "key"), reverse=True)

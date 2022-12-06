@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from elasticsearch_dsl import Search
 
-from paasng.pluginscenter.thirdparty.log.utils import SmartTimeRange
+from paasng.pluginscenter.log.utils import SmartTimeRange
 
 
 class SmartSearch:

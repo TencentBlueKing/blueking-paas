@@ -35,7 +35,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paasng.pluginscenter import constants, openapi_docs, serializers, shim
+from paasng.pluginscenter import constants
+from paasng.pluginscenter import log as log_api
+from paasng.pluginscenter import openapi_docs, serializers, shim
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.features import PluginFeatureFlagsManager
@@ -63,7 +65,6 @@ from paasng.pluginscenter.sourcectl import (
     remove_repo_member,
 )
 from paasng.pluginscenter.thirdparty import instance as instance_api
-from paasng.pluginscenter.thirdparty import log as log_api
 from paasng.pluginscenter.thirdparty import market as market_api
 from paasng.pluginscenter.thirdparty.configuration import sync_config
 from paasng.pluginscenter.thirdparty.instance import update_instance

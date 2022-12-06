@@ -29,6 +29,7 @@ from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
     OperationRecord,
     PluginDefinition,
@@ -37,7 +38,6 @@ from paasng.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
-from paasng.pluginscenter.thirdparty.log import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
@@ -418,7 +418,7 @@ class LogFieldFilterSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="展示名称")
     key = serializers.CharField(help_text="传递给参数中的key")
     options = serializers.ListField(help_text="该字段的选项和分布频率")
-    total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频率")
+    total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频次")
 
 
 class PluginRoleSLZ(serializers.Serializer):

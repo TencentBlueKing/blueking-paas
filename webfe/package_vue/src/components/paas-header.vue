@@ -1,5 +1,5 @@
 <template>
-  <div :class="['ps-header','clearfix',{ 'bk-header-static': is_static }]">
+  <div :class="[&quot;ps-header&quot;,&quot;clearfix&quot;,{ &quot;bk-header-static&quot;: is_static }]">
     <div class="ps-header-visible clearfix">
       <router-link
         :to="{ name: 'index' }"
@@ -38,14 +38,28 @@
             :class="{ 'has-angle': index !== 1 }"
             :to="{ name: 'myApplications' }"
           >
-            {{ item.text }}
+            {{ item.text }}<i
+              v-show="index !== 1"
+              class="paasng-icon paasng-angle-down"
+            />
           </router-link>
-          <router-link
-            v-else-if="index === 2"
-            :to="{ name: 'plugin' }"
+          <!-- <router-link
+            v-else-if="(index === 2)"
+            :class="{ 'has-angle': index !== 2 }"
+            :to="{ name: 'myApplications' }"
+          >
+            {{ item.text }}<i
+              v-show="(index !== 2)"
+              class="paasng-icon paasng-angle-down"
+            />
+          </router-link> -->
+          <a
+            v-else-if="(index === 2)"
+            :href="link"
+            target="_blank"
           >
             {{ item.text }}
-          </router-link>
+          </a>
           <a
             v-else
             :class="{ 'has-angle': index !== 0 }"
@@ -56,10 +70,10 @@
               class="paasng-icon paasng-angle-down"
             />
           </a>
-          <span
+          <!-- <span
             v-if="isShowInput"
             class="line"
-          />
+          /> -->
         </li>
       </ul>
       <!-- 右侧 -->
@@ -127,7 +141,7 @@
                   v-if="isShowInput"
                   v-model="filterKey"
                   type="text"
-                  :placeholder="`${$t('输入')} 'FAQ' ${$t('看看')}`"
+                  :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
                   @keydown.down.prevent="emitChildKeyDown"
                   @keydown.up.prevent="emitChildKeyUp"
                   @keypress.enter="enterCallBack($event)"
@@ -225,13 +239,13 @@
             {{ user.username }}<i class="paasng-icon paasng-down-shape" />
           </a>
           <div :class="['user',{ 'info-show': userInfoShow }]">
-            <div class="user-yourname">
+            <!-- <div class="user-yourname">
               <img
                 :src="avatars"
                 width="36px"
               >
               <span class="fright">{{ user.chineseName || user.username }}</span>
-            </div>
+            </div> -->
             <div class="user-opation">
               <p>
                 <a
@@ -239,7 +253,7 @@
                   href="javascript:"
                   target="_blank"
                   @click="logout"
-                > {{ $t('退出') }} </a>
+                > {{ $t('退出登录') }} </a>
               </p>
             </div>
           </div>
@@ -247,20 +261,16 @@
       </ul>
     </div>
     <div
-      :class="['ps-header-invisible','invisible1','clearfix',{ 'hoverStatus': navIndex === 3, 'hoverStatus2': navIndex === 4, 'hoverStatus3': navIndex === 5 }]"
+      :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]"
       @mouseover.stop.prevent="showSubNav(navIndex)"
       @mouseout.stop.prevent="hideSubNav"
     >
-      <dl
-        v-for="(colitem, i) in curSubNav"
-        :key="i"
-      >
+      <dl v-for="colitem in curSubNav">
         <template v-if="colitem.hasOwnProperty('title')">
           <dt>{{ colitem.title }}</dt>
           <!-- 给有三级导航的dd添加sub-native类 -->
           <dd
-            v-for="(sitem, index) in colitem.items"
-            :key="index"
+            v-for="sitem in colitem.items"
             class="sub-native"
           >
             <a
@@ -289,10 +299,7 @@
               </a>
             </template>
             <dl v-if="sitem.navs">
-              <dd
-                v-for="(minItem, is) in sitem.navs"
-                :key="is"
-              >
+              <dd v-for="minItem in sitem.navs">
                 <a
                   :href="minItem.url"
                   target="_blank"
@@ -312,8 +319,7 @@
           <dt>{{ subColitem.title }}</dt>
           <!-- 给有三级导航的dd添加sub-native类 -->
           <dd
-            v-for="(sitem, index) in subColitem.items"
-            :key="index"
+            v-for="sitem in subColitem.items"
             class="sub-native"
           >
             <a
@@ -342,10 +348,7 @@
               </a>
             </template>
             <dl v-if="sitem.navs">
-              <dd
-                v-for="(minItem, minIndex) in sitem.navs"
-                :key="minIndex"
-              >
+              <dd v-for="minItem in sitem.navs">
                 <a
                   :href="minItem.url"
                   target="_blank"
@@ -408,7 +411,9 @@
                         }
                     }
                 ],
-                isShowInput: true
+                isShowInput: true,
+                // eslint-disable-next-line comma-dangle
+                link: this.GLOBAL.LINK.APIGW_INDEX,
             };
         },
         computed: {
@@ -565,9 +570,6 @@
                         this.navIndex = index;
                         switch (index) {
                             case 3:
-                                this.curSubNav = this.headerStaticInfo.list.api_subnav_service;
-                                break;
-                            case 4:
                                 this.curSubNav = this.headerStaticInfo.list.subnav_service;
                                 break;
                             case 5:
@@ -748,6 +750,10 @@
     }
 
     .ps-header a {
+        color: #96A2B9;
+    }
+
+    .ps-header .active a {
         color: #ffffff;
     }
 
@@ -1053,7 +1059,7 @@
     }
 
     .ps-head-right li a.link-text {
-        color: #9b9ca8;
+        color: #96A2B9;
         font-size: 14px;
         line-height: 34px;
         position: relative;
@@ -1158,10 +1164,14 @@
     }
 
     .user-opation {
-        padding: 10px 24px;
+        width: 80px;
+        height: 40px;
+        text-align: center;
+        line-height: 40px;
     }
 
     .user-opation a {
+        font-size: 12px;
         line-height: 36px;
         color: #666666;
     }

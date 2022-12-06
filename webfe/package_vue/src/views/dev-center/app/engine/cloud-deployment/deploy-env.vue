@@ -963,7 +963,7 @@
             },
 
             setLocalCloudAppData () {
-                const allEnvList = this.envVarList.filter(item => item.envName === '_global_');
+                const allEnvList = this.allEnvVarList.filter(item => item.envName === '_global_');
                 const otherEnvList = this.allEnvVarList.filter(item => item.envName !== '_global_');
                 this.$set(this.localCloudAppData.spec.configuration, 'env', allEnvList);
                 this.$set(this.localCloudAppData.spec.envOverlay, 'envVariables', otherEnvList);

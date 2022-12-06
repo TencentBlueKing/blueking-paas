@@ -42,8 +42,17 @@ export default {
          * --
          * @param {Object} params 请求参数：无
          */
-    getPlugins ({ commit, state }, { pageParams, statusParams }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkplugins/lists/?${statusParams}&${json2Query(pageParams)}`;
+    getPlugins ({ commit, state }, { pageParams, statusParams, languageParams, pdIdParams }, config = {}) {
+      let url = `${BACKEND_URL}/api/bkplugins/lists/?${json2Query(pageParams)}`;
+      if (pdIdParams && pdIdParams.length) {
+        url += `&${pdIdParams}`;
+      }
+      if (statusParams && statusParams.length) {
+        url += `&${statusParams}`;
+      }
+      if (languageParams && languageParams.length) {
+        url += `&${languageParams}`;
+      }
       return http.get(url, config);
     },
     /**

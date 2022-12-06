@@ -71,6 +71,12 @@ const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/
   window.showDeployTip(error);
 });
 
+const marketInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/market-info-edit.vue').then(module => {
+  return module;
+}).catch(error => {
+  window.showDeployTip(error);
+});
+
 export const pluginRouter = [
   {
     path: '/plugin-center/',
@@ -80,7 +86,11 @@ export const pluginRouter = [
   {
     path: '/plugin-center/create',
     name: 'createPlugin',
-    component: createPlugin
+    component: createPlugin,
+    meta: {
+      pathName: '创建插件',
+      supportBack: true
+    }
   },
   {
     path: '/plugin-center/plugin/',
@@ -158,6 +168,16 @@ export const pluginRouter = [
         name: 'pluginBaseInfo',
         meta: {
           pathName: '基本信息',
+          capture403Error: false
+        }
+      },
+      {
+        path: ':pluginTypeId/:id/market-info-edit',
+        component: marketInfoEdit,
+        name: 'marketInfoEdit',
+        meta: {
+          pathName: '编辑市场信息',
+          supportBack: true,
           capture403Error: false
         }
       },

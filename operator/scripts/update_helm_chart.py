@@ -160,6 +160,8 @@ content_patch_conf = {
       {{ if .Values.accessControl.enabled -}}
       accessControlConfig:
         redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
+      {{- else -}}
+      {}
       {{- end -}}
             """,
             ),

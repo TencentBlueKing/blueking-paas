@@ -711,6 +711,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.username,
             time_range=query_params["smart_time_range"],
             query_string=data["query"]["query_string"],
+            terms=data["query"]["terms"],
+            exclude=data["query"]["exclude"],
             limit=query_params["limit"],
             offset=query_params["offset"],
         )
@@ -772,6 +774,37 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             query_string=data["query"]["query_string"],
         )
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
+
+    @swagger_auto_schema(
+        query_serializer=serializers.PluginLogQueryParamsSLZ,
+        request_body=serializers.PluginLogQueryBodySLZ,
+        responses={200: serializers.LogFieldFilterSLZ},
+    )
+    def aggregate_fields_filters(
+        self, request, pd_id, plugin_id, log_type: Literal["standard_output", "structure", "ingress"]
+    ):
+        """查询日志基于时间分布的直方图"""
+        plugin = self.get_plugin_instance()
+
+        slz = serializers.PluginLogQueryBodySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        slz = serializers.PluginLogQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        fields_filters = log_api.aggregate_fields_filters(
+            pd=plugin.pd,
+            instance=plugin,
+            log_type=log_type,
+            operator=request.user.username,
+            time_range=query_params["smart_time_range"],
+            query_string=data["query"]["query_string"],
+            terms=data["query"]["terms"],
+            exclude=data["query"]["exclude"],
+        )
+        return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 
 class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):

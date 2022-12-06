@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 import cattr
 
@@ -28,6 +28,7 @@ from paasng.pluginscenter.thirdparty.log.client import instantiate_log_client
 from paasng.pluginscenter.thirdparty.log.filters import ElasticSearchFilter
 from paasng.pluginscenter.thirdparty.log.models import (
     DateHistogram,
+    FieldFilter,
     IngressLogLine,
     Logs,
     StandardOutputLogLine,
@@ -82,6 +83,8 @@ def query_structure_logs(
     query_string: str,
     limit: int,
     offset: int,
+    terms: Optional[Dict[str, List[str]]] = None,
+    exclude: Optional[Dict[str, List[str]]] = None,
 ) -> Logs[StructureLogLine]:
     """查询结构化日志"""
     log_client = instantiate_log_client(pd.log_config, operator)
@@ -93,6 +96,10 @@ def query_structure_logs(
     )
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
+    if terms:
+        search = search.filter("terms", **terms)
+    if exclude:
+        search = search.exclude("terms", **exclude)
     response, total = log_client.execute_search(
         index=json_config.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
     )
@@ -145,6 +152,8 @@ def aggregate_date_histogram(
     operator: str,
     time_range: SmartTimeRange,
     query_string: str,
+    terms: Optional[Dict[str, List[str]]] = None,
+    exclude: Optional[Dict[str, List[str]]] = None,
 ) -> DateHistogram:
     """查询日志的直方图"""
     log_client = instantiate_log_client(pd.log_config, operator)
@@ -160,6 +169,11 @@ def aggregate_date_histogram(
     search = make_base_search(plugin=instance, search_params=search_params, time_range=time_range, limit=0, offset=0)
     if query_string:
         search = search.filter("query_string", query=query_string, analyze_wildcard=True)
+    if terms:
+        search = search.filter("terms", **terms)
+    if exclude:
+        search = search.exclude("terms", **exclude)
+
     response = log_client.aggregate_date_histogram(
         index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
     )
@@ -169,6 +183,39 @@ def aggregate_date_histogram(
             "dsl": json.dumps(search.to_dict()),
         },
         DateHistogram,
+    )
+
+
+def aggregate_fields_filters(
+    pd: PluginDefinition,
+    instance: PluginInstance,
+    log_type: Literal["standard_output", "structure", "ingress"],
+    operator: str,
+    time_range: SmartTimeRange,
+    query_string: str,
+    terms: Optional[Dict[str, List[str]]] = None,
+    exclude: Optional[Dict[str, List[str]]] = None,
+) -> List[FieldFilter]:
+    """查询日志的可选字段和对应的值分布(只取前200条数据做统计)"""
+    log_client = instantiate_log_client(pd.log_config, operator)
+    search_params: Optional[ElasticSearchParams] = None
+    if log_type == "standard_output":
+        search_params = pd.log_config.stdout
+    elif log_type == "structure":
+        search_params = pd.log_config.json_
+    elif log_type == "ingress":
+        search_params = pd.log_config.ingress
+    if not search_params:
+        raise ValueError(f"this plugin does not support query {log_type} logs")
+    search = make_base_search(plugin=instance, search_params=search_params, time_range=time_range, limit=200, offset=0)
+    if query_string:
+        search = search.filter("query_string", query=query_string, analyze_wildcard=True)
+    if terms:
+        search = search.filter("terms", **terms)
+    if exclude:
+        search = search.exclude("terms", **exclude)
+    return log_client.aggregate_fields_filters(
+        index=search_params.indexPattern, search=search, timeout=DEFAULT_ES_SEARCH_TIMEOUT
     )
 
 

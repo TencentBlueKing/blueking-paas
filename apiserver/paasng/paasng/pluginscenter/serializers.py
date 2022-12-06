@@ -340,6 +340,8 @@ class PluginLogQueryDSLSLZ(serializers.Serializer):
     """查询插件日志的 DSL 参数"""
 
     query_string = serializers.CharField(help_text="查询语句", default="", allow_blank=True)
+    terms = serializers.DictField(help_text="多值精准匹配", default=dict)
+    exclude = serializers.DictField(help_text="terms 取反", default=dict)
 
 
 class PluginLogQueryBodySLZ(serializers.Serializer):
@@ -408,6 +410,15 @@ class DateHistogramSLZ(serializers.Serializer):
     series = serializers.ListField(child=serializers.IntegerField(), help_text="按时间排序的值(文档数)")
     timestamps = serializers.ListField(child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳")
     dsl = serializers.CharField(help_text="日志查询语句")
+
+
+class LogFieldFilterSLZ(serializers.Serializer):
+    """日志可选字段"""
+
+    name = serializers.CharField(help_text="展示名称")
+    key = serializers.CharField(help_text="传递给参数中的key")
+    options = serializers.ListField(help_text="该字段的选项和分布频率")
+    total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频率")
 
 
 class PluginRoleSLZ(serializers.Serializer):

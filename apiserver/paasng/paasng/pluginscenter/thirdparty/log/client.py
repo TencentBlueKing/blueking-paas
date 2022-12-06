@@ -16,7 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Protocol, Tuple
+from functools import reduce
+from operator import add
+from typing import Dict, List, Protocol, Tuple
 
 from django.conf import settings
 from elasticsearch import Elasticsearch
@@ -25,6 +27,7 @@ from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.pluginscenter.definitions import BKLogConfig, ElasticSearchHost, PluginBackendAPIResource, PluginLogConfig
+from paasng.pluginscenter.thirdparty.log.models import FieldFilter, count_filters_options
 from paasng.pluginscenter.thirdparty.log.search import SmartSearch
 from paasng.pluginscenter.thirdparty.utils import make_client
 
@@ -37,6 +40,9 @@ class LogClientProtocol(Protocol):
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """aggregate time-based histogram"""
+
+    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+        """aggregate fields filters"""
 
 
 class BKLogClient:
@@ -74,8 +80,20 @@ class BKLogClient:
             "body": search.to_dict(),
         }
         resp = self._call_api(data, timeout)
-
         return AggResponse(search.search.aggs, search.search, resp["data"]["aggregations"]).histogram
+
+    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+        """aggregate fields filter"""
+        # 拉取最近 200 条日志, 用于统计字段分布
+        search = search.limit_offset(limit=200, offset=0)
+        data = {
+            "indices": index,
+            "scenario_id": self.config.scenarioID,
+            "body": search.to_dict(),
+        }
+        resp = self._call_api(data, timeout)
+        filters = {field: FieldFilter(name=field, key=field) for field in resp["data"]["select_fields_order"]}
+        return count_filters_options(list(Response(search.search, resp["data"])), filters)
 
     def _call_api(self, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
@@ -118,6 +136,16 @@ class ESLogClient:
             ],
         ).histogram
 
+    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+        """aggregate fields filter"""
+        # 拉取最近 200 条日志, 用于统计字段分布
+        search = search.limit_offset(limit=200, offset=0)
+        response = Response(
+            search.search,
+            self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),
+        )
+        return count_filters_options(list(response), self._get_properties_filters(index=index, timeout=timeout))
+
     def _get_response_count(self, index: str, search: SmartSearch, timeout: int, response: Response) -> int:
         """get total field from es response if it had, or send a count response to es"""
         if response.hits.total.relation == "eq":
@@ -125,6 +153,29 @@ class ESLogClient:
         return self._client.count(body=search.to_dict(count=True), index=index, params={"request_timeout": timeout})[
             "count"
         ]
+
+    def _get_properties_filters(self, index: str, timeout: int) -> Dict[str, FieldFilter]:
+        """获取属性映射"""
+        # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
+        # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
+        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
+        docs_mappings: Dict = first_mapping["mappings"]
+        return {f.name: f for f in self._clean_property([], docs_mappings)}
+
+    def _clean_property(self, nested_name: List[str], mapping: Dict) -> List[FieldFilter]:
+        """transform ES mapping to Dict[str, FieldFilter], will handle nested property by recursion"""
+        if "type" in mapping:
+            field_name = ".".join(nested_name)
+            return [
+                FieldFilter(name=field_name, key=field_name if mapping["type"] != "text" else f"{field_name}.keyword")
+            ]
+        elif "properties" in mapping:
+            nested_fields = [
+                self._clean_property(nested_name + [name], value) for name, value in mapping["properties"].items()
+            ]
+            return reduce(add, nested_fields)
+        return []
 
 
 def instantiate_log_client(log_config: PluginLogConfig, bk_username: str) -> LogClientProtocol:

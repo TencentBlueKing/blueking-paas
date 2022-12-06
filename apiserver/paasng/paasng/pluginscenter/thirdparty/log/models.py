@@ -16,7 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Generic, List, Literal, Optional, TypeVar, Union
+import logging
+from collections import Counter, defaultdict
+from operator import attrgetter
+from typing import Dict, Generic, List, Literal, Optional, Tuple, TypeVar, Union
 
 import arrow
 from attrs import converters, define, field, fields
@@ -25,6 +28,8 @@ from elasticsearch_dsl.response import Hit
 from rest_framework.fields import get_attribute
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
+
+logger = logging.getLogger(__name__)
 
 
 @define
@@ -137,3 +142,49 @@ def format_timestamp(
         return int(value) // 1000
     else:
         return int(arrow.get(value).timestamp)
+
+
+@define
+class FieldFilter:
+    # 查询字段的title
+    name: str
+    # query_term: get参数中的key
+    key: str
+    # 该field的可选项
+    options: List[Tuple[str, str]] = field(factory=list)
+    # 该 field 出现的总次数
+    total: int = 0
+
+
+def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:
+    """统计 ES 日志的可选字段, 并填充到 filters 的 options"""
+    # 在内存中统计 filters 的可选值
+    field_counter: Dict[str, Counter] = defaultdict(Counter)
+    log_fields = [(f, f.split(".")) for f in properties.keys()]
+    for log in logs:
+        for log_field, split_log_field in log_fields:
+            try:
+                value = get_attribute(log, split_log_field)
+            except (AttributeError, KeyError):
+                continue
+            try:
+                field_counter[log_field][value] += 1
+            except TypeError:
+                logger.warning("Field<%s> got an unhashable value: %s", log_field, value)
+
+    result = []
+    for title, values in list(field_counter.items()):
+        options = []
+        total = sum(values.values())
+        if total == 0 or len(values) == len(logs):
+            # 该 field 无值可选或所有日志该字段都不一致时, 不允许使用该字段作为过滤条件
+            continue
+
+        for value, count in values.items():
+            percent = "{0:.2%}".format(count / total)
+            if percent == "0.00%":
+                percent = "<0.01%"
+            options.append((value, percent))
+        result.append(FieldFilter(name=title, key=properties[title].key, options=options, total=total))
+    # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
+    return sorted(result, key=attrgetter("total", "key"), reverse=True)

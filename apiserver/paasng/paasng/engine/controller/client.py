@@ -275,10 +275,6 @@ class ControllerClient:
             json=credentials,
         )
 
-    def get_abnormal_processes(self, region):
-        """Get abnormal processes"""
-        return self.request('GET', '/regions/{region}/processes/abnormal/'.format(region=region))
-
     def create_webconsole(
         self, region, app_name, process_type, process_instance, operator, container_name=None, command="bash"
     ):

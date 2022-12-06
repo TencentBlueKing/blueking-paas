@@ -30,7 +30,6 @@ import yaml
 from django.conf import settings
 from django.db import transaction
 from django.utils.crypto import get_random_string
-from kubernetes.client import ApiextensionsV1Api
 from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 from rest_framework.test import APIClient
@@ -41,7 +40,7 @@ from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import Build, EngineApp
 from paas_wl.platform.applications.struct_models import Application, Module, ModuleEnv
 from paas_wl.resources.base.base import get_client_by_cluster_name
-from paas_wl.resources.base.kres import KNamespace
+from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
@@ -81,13 +80,14 @@ def crds_is_configured(django_db_setup, django_db_blocker):
             ("bkapps.paas.bk.tencent.com", "cnative/specs/crd/bkapp_v1.yaml"),
             ("domaingroupmappings.paas.bk.tencent.com", "cnative/specs/crd/domaingroupmappings_v1.yaml"),
         ]
-        crd_client = ApiextensionsV1Api(client)
+        crd_client = KCustomResourceDefinition(client)
 
         for name, path in crd_infos:
             logger.info('Configure CRD %s...', name)
             body = yaml.load((Path(__file__).parent / path).read_text())
             try:
-                crd_client.create_custom_resource_definition(body)
+                name = body['metadata']['name']
+                crd_client.create_or_update(name=name, body=body)
             except ValueError as e:
                 logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
             except ApiException as e:
@@ -99,7 +99,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
 
         # Clean up CRDs
         for name, _ in crd_infos:
-            crd_client.delete_custom_resource_definition(name)
+            crd_client.delete(name)
 
 
 @pytest.fixture(autouse=True)

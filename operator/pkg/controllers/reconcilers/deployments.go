@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -45,6 +46,7 @@ type DeploymentReconciler struct {
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
+		sentry.CaptureException(err)
 		return r.Result.withError(err)
 	}
 	expected := resources.GetWantedDeploys(bkapp)
@@ -52,18 +54,21 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.Bk
 
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
-			if err := r.Client.Delete(ctx, deploy); err != nil {
+			if err = r.Client.Delete(ctx, deploy); err != nil {
+				sentry.CaptureException(err)
 				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
-		if err := r.deploy(ctx, deploy); err != nil {
+		if err = r.deploy(ctx, deploy); err != nil {
+			sentry.CaptureException(err)
 			return r.Result.withError(err)
 		}
 	}
 
-	if err := r.updateCondition(ctx, bkapp); err != nil {
+	if err = r.updateCondition(ctx, bkapp); err != nil {
+		sentry.CaptureException(err)
 		return r.Result.withError(err)
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
@@ -179,10 +184,12 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 			} else {
 				bkapp.Status.Phase = v1alpha1.AppPending
 				apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-					Type:               v1alpha1.AppAvailable,
-					Status:             metav1.ConditionFalse,
-					Reason:             "Progressing",
-					Message:            fmt.Sprintf("Waiting for deployment finish: %d/%d Process are available...", availableCount, len(current)),
+					Type:   v1alpha1.AppAvailable,
+					Status: metav1.ConditionFalse,
+					Reason: "Progressing",
+					Message: fmt.Sprintf(
+						"Waiting for deployment finish: %d/%d Process are available...", availableCount, len(current),
+					),
 					ObservedGeneration: bkapp.Status.ObservedGeneration,
 				})
 			}

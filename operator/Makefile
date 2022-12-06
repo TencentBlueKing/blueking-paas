@@ -74,6 +74,10 @@ fmt: ## 执行 golines，gofumpt ...
 vet: ## 执行 go vet ./...
 	go vet ./...
 
+.PHONY: tidy
+tidy: ## 执行 go mod tidy
+	go mod tidy
+
 .PHONY: test
 test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输出覆盖率报告
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \

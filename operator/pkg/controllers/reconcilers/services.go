@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -51,13 +52,13 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 
 	if len(outdated) != 0 {
 		for _, svc := range outdated {
-			if err := r.Client.Delete(ctx, svc); err != nil {
+			if err = r.Client.Delete(ctx, svc); err != nil {
 				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, svc := range expected {
-		if err := r.applyService(ctx, svc); err != nil {
+		if err = r.applyService(ctx, svc); err != nil {
 			return r.Result.withError(err)
 		}
 	}
@@ -102,6 +103,7 @@ func (r *ServiceReconciler) handleUpdate(
 		!equality.Semantic.DeepEqual(current.Spec.Selector, want.Spec.Selector) {
 		patch, err := json.Marshal(want)
 		if err != nil {
+			sentry.CaptureException(err)
 			return fmt.Errorf(
 				"failed to patch update Service(%s/%s) while marshal patching data: %w",
 				want.GetNamespace(),
@@ -109,7 +111,7 @@ func (r *ServiceReconciler) handleUpdate(
 				err,
 			)
 		}
-		if err := cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		if err = cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
 			return fmt.Errorf(
 				"failed to patch update Service(%s/%s): %w",
 				want.GetNamespace(),

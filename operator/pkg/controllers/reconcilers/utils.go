@@ -47,6 +47,7 @@ func FindExtraByName[T nameAccessor](input []T, base []T) []T {
 }
 
 // updateHandler should implement the object update policy
+// TODO 考虑改成 go interface 实现？
 type updateHandler[T client.Object] func(ctx context.Context, cli client.Client, current T, want T) error
 
 // alwaysUpdate will always update the current object

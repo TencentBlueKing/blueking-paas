@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/getsentry/sentry-go"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +51,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	// our finalizer is present, so lets handle any external dependency
 	finished, err := r.hooksFinished(ctx, bkapp)
 	if err != nil {
+		sentry.CaptureException(err)
 		return r.Result.withError(fmt.Errorf("failed to check hook status: %w", err))
 	}
 	if !finished {
@@ -61,6 +63,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
 		if err = r.Status().Update(ctx, bkapp); err != nil {
+			sentry.CaptureException(err)
 			return r.Result.withError(fmt.Errorf("failed to update condition status: %w", err))
 		}
 		return r.Result.requeue(v1alpha1.DefaultRequeueAfter)
@@ -68,12 +71,14 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	if err = r.deleteResources(ctx, bkapp); err != nil {
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
+		sentry.CaptureException(err)
 		return r.Result.withError(fmt.Errorf("failed to delete external resources: %w", err))
 	}
 
 	// remove our finalizer from the finalizers list and update it.
 	controllerutil.RemoveFinalizer(bkapp, v1alpha1.BkAppFinalizerName)
 	if err = r.Update(ctx, bkapp); err != nil {
+		sentry.CaptureException(err)
 		return r.Result.withError(fmt.Errorf("failed to remove finilizer for app: %w", err))
 	}
 	return r.Result.End()

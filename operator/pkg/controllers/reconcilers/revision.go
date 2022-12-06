@@ -21,6 +21,7 @@ package reconcilers
 import (
 	"context"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -67,6 +68,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
 	)
 	if err != nil {
+		sentry.CaptureException(err)
 		return r.Result.withError(err)
 	}
 
@@ -78,6 +80,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 		preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
 		if preReleaseHook != nil && preReleaseHook.Status.Status == v1alpha1.HealthProgressing {
 			if _, err = CheckAndUpdatePreReleaseHookStatus(ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold); err != nil {
+				sentry.CaptureException(err)
 				return r.Result.withError(err)
 			}
 			return r.Result.withError(resources.ErrLastHookStillRunning)
@@ -92,6 +95,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	SetDefaultConditions(&bkapp.Status)
 	err = r.Status().Update(ctx, bkapp)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Error(err, "unable to update app revision")
 		return r.Result.withError(err)
 	}

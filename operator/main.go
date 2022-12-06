@@ -29,6 +29,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/getsentry/sentry-go"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -86,6 +87,16 @@ func main() {
 	config.SetConfig(projConf)
 	// not use global because import cycle
 	paasv1alpha1.SetConfig(projConf)
+
+	// ref: how to usage sentry in go -> https://docs.sentry.io/platforms/go/usage/
+	sentryDSN := config.Global.PlatformConfig.SentryDSN
+	if sentryDSN == "" {
+		setupLog.Info("[Sentry] SentryDSN unset, all events waiting for report will be dropped.")
+	}
+	if err = sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
+		setupLog.Error(err, "unable to set sentry dsn")
+		os.Exit(1)
+	}
 
 	if err = initExtensionClient(); err != nil {
 		setupLog.Error(err, "unable to init extension client")

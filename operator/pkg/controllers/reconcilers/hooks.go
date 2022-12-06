@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,6 +53,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	log.V(4).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
 		if err := r.UpdateStatus(ctx, bkapp, current, resources.HookExecuteTimeoutThreshold); err != nil {
+			sentry.CaptureException(err)
 			return r.Result.withError(err)
 		}
 
@@ -61,6 +63,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
 			if err := r.Delete(ctx, current.Pod); err != nil {
+				sentry.CaptureException(err)
 				return r.Result.withError(resources.ErrExecuteTimeout)
 			}
 			return r.Result.withError(resources.ErrExecuteTimeout)
@@ -73,23 +76,27 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 				fmt.Errorf("%w: hook failed with: %s", resources.ErrPodEndsUnsuccessfully, current.Status.Message),
 			)
 		}
-	} else if preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)); preReleaseHook != nil {
-		if err := r.ExecuteHook(ctx, bkapp, preReleaseHook); err != nil {
+	}
+
+	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)); hook != nil {
+		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
+			sentry.CaptureException(err)
 			return r.Result.withError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环
 		return r.Result.End()
-	} else {
-		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.HooksFinished,
-			Status:             metav1.ConditionUnknown,
-			Reason:             "Disabled",
-			Message:            "Pre-Release-Hook feature not turned on",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
-		})
-		if err := r.Status().Update(ctx, bkapp); err != nil {
-			return r.Result.withError(err)
-		}
+	}
+
+	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.HooksFinished,
+		Status:             metav1.ConditionUnknown,
+		Reason:             "Disabled",
+		Message:            "Pre-Release-Hook feature not turned on",
+		ObservedGeneration: bkapp.Status.ObservedGeneration,
+	})
+	if err := r.Status().Update(ctx, bkapp); err != nil {
+		sentry.CaptureException(err)
+		return r.Result.withError(err)
 	}
 	return r.Result
 }
@@ -221,14 +228,14 @@ func CheckAndUpdatePreReleaseHookStatus(
 		return false, fmt.Errorf("pre-release-hook not found")
 	}
 
-	if err := r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
+	if err = r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
 		return false, err
 	}
 
 	switch {
 	// 删除超时的 pod
 	case instance.Timeout(timeout):
-		if err := cli.Delete(ctx, instance.Pod); err != nil {
+		if err = cli.Delete(ctx, instance.Pod); err != nil {
 			return false, err
 		}
 		return false, resources.ErrExecuteTimeout

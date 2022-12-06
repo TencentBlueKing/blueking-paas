@@ -51,7 +51,7 @@ def safe_update_gateway_status(plugin_app: Application, enabled: bool):
         gw_service = PluginDefaultAPIGateway(plugin_app)
         gw_service.update_gateway_status(enabled)
     except PluginApiGatewayServiceError:
-        logger.exception("Unable to update gateway status to %s fir '%s'", enabled, plugin_app)
+        logger.exception("Unable to update gateway status to %s for '%s'", enabled, plugin_app)
 
 
 def set_distributors(plugin_app: Application, distributors: Collection[BkPluginDistributor]):

@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 def safe_sync_apigw(plugin_app: Application):
-    """Sync an plugin's API Gateway resource, ignore errors"""
+    """Sync a plugin's API Gateway resource, ignore errors"""
     try:
         gw_service = PluginDefaultAPIGateway(plugin_app)
         id_ = gw_service.sync()
@@ -43,6 +43,15 @@ def safe_sync_apigw(plugin_app: Application):
         logger.exception('Unable to sync API Gateway resource for "%s"', plugin_app)
     else:
         plugin_app.bk_plugin_profile.mark_synced(id_, gw_service.gw_name)
+
+
+def safe_update_gateway_status(plugin_app: Application, enabled: bool):
+    """update a plugin's API Gateway status, ignore errors"""
+    try:
+        gw_service = PluginDefaultAPIGateway(plugin_app)
+        gw_service.update_gateway_status(enabled)
+    except PluginApiGatewayServiceError:
+        logger.exception("Unable to update gateway status to %s fir '%s'", enabled, plugin_app)
 
 
 def set_distributors(plugin_app: Application, distributors: Collection[BkPluginDistributor]):
@@ -99,6 +108,9 @@ class PluginApiGWClient(Protocol):
         ...
 
     def revoke_permissions(self, *args, **kwargs) -> Dict:
+        ...
+
+    def update_gateway_status(self, *args, **kwargs) -> Dict:
         ...
 
 
@@ -182,6 +194,18 @@ class PluginDefaultAPIGateway:
             )
         except (RequestException, BKAPIError) as e:
             raise PluginApiGatewayServiceError(f'revoke permissions error, detail: {e}')
+
+    def update_gateway_status(self, enabled: bool):
+        """Update gateway status to enabled or not
+
+        :raise: PluginApiGatewayServiceError when unable to update gateway status
+        """
+        try:
+            self.client.update_gateway_status(
+                path_params={'api_name': self.gw_name}, data={"status": 1 if enabled else 0}
+            )
+        except (RequestException, BKAPIError) as e:
+            raise PluginApiGatewayServiceError(f"update gateway status error, detail: {e}")
 
     def _get_maintainers(self) -> List[str]:
         """Get plugin's maintainer list"""

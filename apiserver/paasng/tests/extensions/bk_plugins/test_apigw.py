@@ -42,6 +42,7 @@ def fake_good_client():
     empty_payload = {'data': None, 'code': 0, 'result': True, 'message': ''}
     fake_client.grant_permissions.return_value = empty_payload
     fake_client.revoke_permissions.return_value = empty_payload
+    fake_client.update_gateway_status.return_value = empty_payload
     return fake_client
 
 
@@ -52,6 +53,7 @@ def fake_bad_client():
     fake_client.sync_api.side_effect = BKAPIError('foo error')
     fake_client.grant_permissions.side_effect = BKAPIError('foo error')
     fake_client.revoke_permissions.side_effect = BKAPIError('foo error')
+    fake_client.update_gateway_status.side_effect = BKAPIError('foo error')
     return fake_client
 
 
@@ -91,6 +93,11 @@ class TestPluginDefaultAPIGateway:
         apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
         apigw_service.revoke(distributor)
         assert fake_good_client.revoke_permissions.called
+
+    def test_update_status_succeeded(self, bk_plugin_app, fake_good_client):
+        apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
+        apigw_service.update_gateway_status(True)
+        assert fake_good_client.update_gateway_status.called
 
 
 def test_safe_sync_apigw_succeeded(bk_plugin_app, fake_good_client):

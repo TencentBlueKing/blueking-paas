@@ -43,6 +43,12 @@
               class="paasng-icon paasng-angle-down"
             />
           </router-link>
+          <router-link
+            v-else-if="index === 2"
+            :to="{ name: 'plugin' }"
+          >
+            {{ item.text }}
+          </router-link>
           <!-- <router-link
             v-else-if="(index === 2)"
             :class="{ 'has-angle': index !== 2 }"
@@ -54,7 +60,7 @@
             />
           </router-link> -->
           <a
-            v-else-if="(index === 2)"
+            v-else-if="(index === 3)"
             :href="link"
             target="_blank"
           >

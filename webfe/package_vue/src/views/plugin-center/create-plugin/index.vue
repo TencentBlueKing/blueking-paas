@@ -460,22 +460,22 @@
                 this.rules.plugin_id.push({
                     regex: new RegExp(this.curPluginInfo.schema.id.pattern) || new RegExp('^[a-z0-9-]{1,16}$'),
                     message: this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连接符(-)组成，长度小于16个字符'),
-                    trigger: 'blur'
+                    trigger: 'blur change'
                 });
                 this.rules.plugin_id.push({
                     max: this.curPluginInfo.schema.id.maxlength || 16,
                     message: `不能多于${this.curPluginInfo.schema.id.maxlength || 16}个字符`,
-                    trigger: 'blur'
+                    trigger: 'blur change'
                 });
                 this.rules.name.push({
                     regex: new RegExp(this.curPluginInfo.schema.name.pattern) || new RegExp('^[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}$'),
                     message: this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
-                    trigger: 'blur'
+                    trigger: 'blur change'
                 });
                 this.rules.name.push({
                     max: this.curPluginInfo.schema.name.maxlength || 20,
                     message: `不能多于${this.curPluginInfo.schema.id.maxlength || 20}个字符`,
-                    trigger: 'blur'
+                    trigger: 'blur change'
                 });
             },
             // 选中具体插件类型

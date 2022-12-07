@@ -34,6 +34,7 @@ from requests.models import Response
 from paasng.dev_resources.sourcectl.git.client import GitClient, MutableURL
 from paasng.dev_resources.sourcectl.models import GitProject
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
+from paasng.pluginscenter.constants import PluginRole
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
@@ -322,3 +323,32 @@ class PluginRepoInitializer:
         _url = f"api/v3/projects/{project_id}/ci/enable"
         resp = self._session.put(urljoin(self._api_url, _url), params={"enable_ci": True})
         validate_response(resp)
+
+
+class PluginRepoMemberMaintainer:
+    """PluginRepoMemberMaintainer implement with TencentGit"""
+
+    def __init__(self, plugin: PluginInstance, api_url: str, user_credentials: Dict):
+        self.project = GitProject.parse_from_repo_url(plugin.repository, "tc_git")
+        self._api_url = api_url
+        self._session = requests.session()
+        self._session.auth = TencentGitAuth(**user_credentials)
+
+    def add_member(self, username: str, role: PluginRole = PluginRole.DEVELOPER):
+        """添加仓库成员"""
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}/members"
+        data = {"user_id": self._get_user_id(username), "access_level": 40 if role == PluginRole.ADMINISTRATOR else 30}
+        self._session.post(urljoin(self._api_url, _url), data=data)
+
+    def remove_member(self, username: str):
+        """移除仓库成员"""
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}/members/{self._get_user_id(username)}"
+        self._session.delete(urljoin(self._api_url, _url))
+
+    def _get_user_id(self, username: str) -> int:
+        """根据用户名获取 user_id"""
+        _url = f"api/v3/users/{username}"
+        resp = self._session.get(urljoin(self._api_url, _url))
+        return validate_response(resp).json()["id"]

@@ -16,12 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import arrow
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from kubernetes import client as client_mod
 
-from paas_wl.resources.base.base import get_all_cluster_names
-from paas_wl.resources.utils.app import get_scheduler_client
+from paas_wl.resources.base.base import get_all_cluster_names, get_client_by_cluster_name
+from paas_wl.resources.base.kres import KPod
 
 
 class Command(BaseCommand):
@@ -35,15 +35,12 @@ class Command(BaseCommand):
         now = timezone.now()
 
         for cluster_name in get_all_cluster_names():
-            scheduler_client = get_scheduler_client(cluster_name=cluster_name)
-            pods = client_mod.CoreV1Api(scheduler_client.client).list_pod_for_all_namespaces(
-                label_selector='category=slug-builder'
-            )
-
+            client = get_client_by_cluster_name(cluster_name)
+            pods = KPod(client).ops_label.list(labels={'category': 'slug-builder'})
             timeout_count = 0
             # normally, there is only one slug instance
             for pod in pods.items:
-                timedelta = now - pod.status.start_time
+                timedelta = now - arrow.get(pod.status.startTime).datetime
                 if timedelta.total_seconds() > timeout:
                     # do delete operation
                     print(f"{pod.metadata.name} had started more than one hour, going to delete it")
@@ -54,9 +51,7 @@ class Command(BaseCommand):
                         continue
                     # there is no delete method available in scheduler client
                     # use k8s API directly
-                    client_mod.CoreV1Api(scheduler_client.client).delete_namespaced_pod(
-                        name=pod.metadata.name, namespace=pod.metadata.namespace, body=client_mod.V1DeleteOptions()
-                    )
+                    KPod(client).delete(name=pod.metadata.name, namespace=pod.metadata.namespace)
                     print("cleaned !")
 
             print(f"{cluster_name} has {timeout_count} timeout pods, cleaned\n")

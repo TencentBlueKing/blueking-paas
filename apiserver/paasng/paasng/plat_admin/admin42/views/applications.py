@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -41,7 +41,6 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import sync_developers_to_sentry
-from paasng.platform.modules.manager import ModuleInitializer
 from paasng.utils.error_codes import error_codes
 
 
@@ -117,14 +116,11 @@ class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
         slz = BindEnvClusterSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        module = self.get_module_via_path()
-        engine_app_name = ModuleInitializer(module).make_engine_app_name(environment)
-        controller_client.update_app_config(
-            module.region,
-            engine_app_name,
-            {'cluster': slz.validated_data['cluster_name']},
+        engine_app = self.get_engine_app_via_path()
+        controller_client.bind_app_cluster(
+            engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
         )
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationMembersManageView(ApplicationDetailBaseView):
@@ -167,7 +163,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, code):
         application = self.get_application()
@@ -180,7 +176,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def sync_membership(self, application):
         sync_developers_to_sentry.delay(application.id)
@@ -218,4 +214,4 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
     def update(self, request, code):
         application = self.get_application()
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)

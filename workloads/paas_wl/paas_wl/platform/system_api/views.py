@@ -28,6 +28,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
+from paas_wl.cluster.constants import ClusterType
+from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
 from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
@@ -173,14 +175,6 @@ class ProcessViewSet(SysModelViewSet):
         ProcessSpecManager(self.get_object()).sync(processes)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_abnormal_processes(self, request, **kwargs):
-        """Get abnormal processes name"""
-        region = self.kwargs['region']
-        scheduler = self.get_scheduler_client(region=region)
-        processes = scheduler.get_abnormal_processes(region=region)
-        abnormal_processes = self.serializer_class(processes, many=True).data
-        return Response({'results': abnormal_processes, 'count': len(abnormal_processes)})
-
 
 class SysAppRelatedViewSet(SysModelViewSet):
     """Base ViewSet for a app_name in url path"""
@@ -296,6 +290,25 @@ class ConfigViewSet(SysAppRelatedViewSet):
             raise error_codes.UPDATE_CONFIG_FAILED
 
         return Response(data=self.serializer_class(instance=latest_config).data, status=status.HTTP_201_CREATED)
+
+    def bind_cluster(self, request, region, name, cluster_name):
+        """Bind app to given cluster"""
+        app = self.get_app()
+        cluster = get_object_or_404(Cluster, name=cluster_name)
+        try:
+            latest_config: models.Config = self.model.objects.filter(app=app).latest()
+            latest_config.cluster = cluster.name
+            # TODO: 集群特性不应该依赖集群类型做间接描述, 应该有更完备的方案, 例如给集群加 annotations
+            if cluster.type == ClusterType.VIRTUAL:
+                # 虚拟集群(共享集群)不支持挂载 HostPath 类型的 Volume
+                latest_config.mount_log_to_host = False
+            else:
+                latest_config.mount_log_to_host = True
+            latest_config.save()
+        except Exception:
+            logger.exception("bind app to cluster %s failed", cluster_name)
+            raise error_codes.UPDATE_CONFIG_FAILED.f("绑定应用集群失败")
+        return Response(data={}, status=status.HTTP_200_OK)
 
 
 class BuildViewSet(SysAppRelatedViewSet):

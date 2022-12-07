@@ -258,6 +258,16 @@ class ControllerClient:
             json=payload,
         )
 
+    def bind_app_cluster(self, region, app_name, cluster_name):
+        """Bind App to given cluster"""
+        return self.request(
+            'POST',
+            '/regions/{region}/apps/{name}/bind_cluster/{cluster_name}/'.format(
+                region=region, name=app_name, cluster_name=cluster_name
+            ),
+            desired_code=codes.ok,
+        )
+
     def update_app_metadata(self, region, app_name, payload):
         """Patch app config"""
         return self.request(

@@ -70,8 +70,8 @@ def initialize_simple(module: Module, data: Dict, cluster_name: Optional[str] = 
 def create_engine_apps(
     application: Application,
     module: Module,
+    cluster_name: str,
     environments: Optional[List[str]] = None,
-    cluster_name: Optional[str] = None,
 ):
     """Create engine app instances for application"""
     environments = environments or default_environments

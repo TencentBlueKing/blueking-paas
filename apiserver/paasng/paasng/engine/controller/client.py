@@ -258,7 +258,7 @@ class ControllerClient:
             json=payload,
         )
 
-    def bind_app_cluster(self, region, app_name, cluster_name):
+    def bind_app_cluster(self, region: str, app_name: str, cluster_name: str):
         """Bind App to given cluster"""
         return self.request(
             'POST',

@@ -185,7 +185,6 @@
         async beforeRouteUpdate (to, from, next) {
             const pluginId = to.params.id; // 插件id
             const pluginTypeId = to.params.pluginTypeId; // 插件类型id
-            console.log('pluginId', pluginId, pluginTypeId);
             try {
                 if (!store.state.pluginInfo[pluginId]) {
                     await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });

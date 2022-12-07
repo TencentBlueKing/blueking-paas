@@ -26,7 +26,8 @@ export default {
   namespaced: true,
   state: {
     pluginData: {},
-    stagesData: []
+    stagesData: [],
+    pluginFeatureFlags: {}
   },
   getters: {},
   mutations: {
@@ -35,6 +36,9 @@ export default {
     },
     updateStagesData (state, data) {
       state.stagesData = data;
+    },
+    updatePluginFeatureFlags (state, data) {
+      state.pluginFeatureFlags = data;
     }
   },
   actions: {
@@ -316,6 +320,15 @@ export default {
          */
     getChartData ({ commit, state }, { pdId, pluginId, params }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/code_statistics/?${json2Query(params)}`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 插件功能开关
+         * @param {Object} params 请求参数：pdId, pluginId, params
+         */
+    getPluginFeatureFlags ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/feature_flags/`;
       return http.get(url, {}, config);
     }
   }

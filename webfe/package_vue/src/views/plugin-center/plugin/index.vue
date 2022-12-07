@@ -162,6 +162,12 @@
             try {
                 if (!store.state.pluginInfo[pluginId]) {
                     await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });
+                    // 组件公共部分需要使用
+                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId: pluginTypeId });
+                }
+                if (pluginId && pluginTypeId) {
+                    const res = await store.dispatch('plugin/getPluginFeatureFlags', { pluginId: pluginId, pdId: pluginTypeId });
+                    store.commit('plugin/updatePluginFeatureFlags', res);
                 }
                 next(true);
             } catch (e) {
@@ -237,7 +243,7 @@
         },
         methods: {
             initNavInfo () {
-                // this.retrieveAppInfo();
+                this.retrieveAppInfo();
             },
             // Retrieve app informations
             retrieveAppInfo () {

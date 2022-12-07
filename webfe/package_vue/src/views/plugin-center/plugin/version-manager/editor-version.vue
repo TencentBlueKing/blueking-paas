@@ -498,18 +498,11 @@
             },
 
             goRelease (data) {
-                // 重新获取列表，赛选出当
-                const stagesData = data.all_stages.map((e, i) => {
-                    e.icon = i + 1;
-                    e.title = e.name;
-                    return e;
-                });
                 this.$router.push({
                     name: 'pluginVersionRelease',
                     query: {
                         stage_id: data.current_stage.stage_id,
-                        release_id: data.id,
-                        stagesData: JSON.stringify(stagesData)
+                        release_id: data.id
                     }
                 });
             },

@@ -97,6 +97,9 @@
             },
             curPluginInfo () {
                 return this.$store.state.curPluginInfo;
+            },
+            pluginFeatureFlags () {
+                return this.$store.state.plugin.pluginFeatureFlags;
             }
         },
         watch: {
@@ -117,6 +120,10 @@
 
                 if (isReload) {
                     this.navTree = await this.initNavByRegion(appNav.pluginList);
+                    // 功能开关控制云 API 权限
+                    if (!this.pluginFeatureFlags.API_GATEWAY) {
+                        this.navTree = this.navTree.filter(nav => nav.name !== 'appCloudAPI');
+                    }
                     await this.initRouterPermission();
                 }
 
@@ -318,7 +325,6 @@
              * @param {Object} nav 导航对象
              */
             async goPage (navItem) {
-                console.log('this.$router.params', this.curPluginInfo, this.$router.params);
                 try {
                     await this.checkPermission(navItem.destRoute.name);
 

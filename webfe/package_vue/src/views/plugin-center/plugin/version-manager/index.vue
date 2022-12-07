@@ -136,7 +136,7 @@
                 {{ $t('发布进度') }}
               </bk-button>
               <bk-button
-                v-if="row.status === 'interrupted'"
+                v-if="row.retryable && row.status === 'interrupted' || row.status === 'failed'"
                 theme="primary"
                 text
                 @click="handleRelease(row, 'republish')"

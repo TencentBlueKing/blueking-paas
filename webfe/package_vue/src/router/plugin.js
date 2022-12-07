@@ -77,6 +77,12 @@ const marketInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/vi
   window.showDeployTip(error);
 });
 
+const appCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/cloud-api').then(module => {
+  return module;
+}).catch(error => {
+  window.showDeployTip(error);
+});
+
 export const pluginRouter = [
   {
     path: '/plugin-center/',
@@ -139,8 +145,7 @@ export const pluginRouter = [
         name: 'pluginVersionRelease',
         meta: {
           pathName: '发布',
-          supportBack: true,
-          hidePaasFooter: true
+          supportBack: true
         }
       },
       {
@@ -159,6 +164,15 @@ export const pluginRouter = [
         name: 'pluginLog',
         meta: {
           pathName: '日志查询',
+          capture403Error: false
+        }
+      },
+      {
+        path: ':pluginTypeId/:id/cloudapi',
+        component: appCloudAPI,
+        name: 'appCloudAPI',
+        meta: {
+          pathName: '云 API 权限',
           capture403Error: false
         }
       },

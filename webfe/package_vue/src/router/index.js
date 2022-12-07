@@ -464,7 +464,11 @@ const router = new Router({
     {
       path: '/developer-center/',
       name: 'index',
-      component: frontPage
+      component: frontPage,
+      meta: {
+        // 只有首页需要footer版本信息
+        showPaasFooter: true
+      }
     },
     {
       path: '/developer-center/apps/',

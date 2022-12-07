@@ -363,6 +363,9 @@
                 }
             }
         },
+        beforeDestroy () {
+            bus.$emit('stop-deploy', true);
+        },
         methods: {
             setTimeFetchPluginRelease () {
                 this.timer = setTimeout(() => {
@@ -432,6 +435,9 @@
                         releaseId: this.$route.query.release_id,
                         stageId: this.stageId
                     };
+                    if (Object.values(params).some(value => value === undefined)) {
+                        return;
+                    }
                     const res = await this.$store.dispatch('plugin/getPluginRelease', params);
                     this.stageId = res.stage_id;
                     this.isNext = res.status === 'successful';

@@ -258,6 +258,9 @@
           </div>
         </div>
 
+        <!-- 鉴权信息 -->
+        <authentication-info v-if="pluginFeatureFlags.APP_SECRETS" />
+
         <div class="basic-info-item">
           <div class="title">
             {{ $t('下架插件') }}
@@ -326,6 +329,7 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import user from '@/components/user';
+    import authenticationInfo from '@/components/authentication-info.vue';
     import xss from 'xss';
     import 'BKSelectMinCss';
 
@@ -342,6 +346,7 @@
         //     }
         // },
         components: {
+            authenticationInfo,
             user,
             paasPluginTitle
         },
@@ -426,6 +431,9 @@
             },
             pluginId () {
                 return this.$route.params.id;
+            },
+            pluginFeatureFlags () {
+                return this.$store.state.plugin.pluginFeatureFlags;
             }
         },
         created () {

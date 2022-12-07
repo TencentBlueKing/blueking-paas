@@ -95,6 +95,8 @@
           v-model="form.plugin_id"
           class="w480"
           :placeholder="pdIdPlaceholder"
+          :maxlength="pdIdMaxLength"
+          :show-word-limit="true"
         />
       </bk-form-item>
       <bk-form-item
@@ -108,6 +110,8 @@
           v-model="form.name"
           class="w480"
           :placeholder="namePlaceholder"
+          :maxlength="nameMaxLength"
+          :show-word-limit="true"
         />
       </bk-form-item>
       <bk-form-item
@@ -402,7 +406,9 @@
                 },
                 curPluginItem: {},
                 pdIdPlaceholder: '',
-                namePlaceholder: ''
+                namePlaceholder: '',
+                pdIdMaxLength: 16,
+                nameMaxLength: 20
             };
         },
         computed: {
@@ -413,7 +419,6 @@
         watch: {
             'form.plugin_id' (value) {
                 if (this.pluginTypeData.schema.repository_group && value) {
-                    console.log('this.pluginTypeData.schema.repository_group', this.pluginTypeData.schema.repository_group);
                     this.form.repositoryTemplateUrl = `${this.pluginTypeData.schema.repository_group}${value}.git`;
                 }
             },
@@ -448,6 +453,10 @@
             },
             // 添加校验规则
             addRules () {
+                if (this.curPluginInfo.schema) {
+                    this.pdIdMaxLength = this.curPluginInfo.schema.id.maxlength || 16;
+                    this.nameMaxLength = this.curPluginInfo.schema.name.maxlength || 20;
+                }
                 this.rules.plugin_id.push({
                     regex: new RegExp(this.curPluginInfo.schema.id.pattern) || new RegExp('^[a-z0-9-]{1,16}$'),
                     message: this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连接符(-)组成，长度小于16个字符'),

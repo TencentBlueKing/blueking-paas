@@ -453,14 +453,12 @@
                     e.title = e.name;
                     return e;
                 });
-                const curVersion = `${data.version} (${data.source_version_name})`;
                 this.$store.commit('plugin/updateStagesData', stagesData);
                 this.$router.push({
                     name: 'pluginVersionRelease',
                     query: {
                         stage_id: data.current_stage.stage_id,
                         release_id: data.id,
-                        version: curVersion,
                         isRepublish
                     }
                 });

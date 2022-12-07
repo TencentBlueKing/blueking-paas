@@ -331,6 +331,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     ordering = ('-created',)
 
     def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
         slz = serializers.PluginReleaseFilterSLZ(data=self.request.query_params)
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data

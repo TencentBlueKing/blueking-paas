@@ -79,7 +79,7 @@ class ListAlertsSLZ(serializers.Serializer):
 
     def validate(self, data: QueryAlertsParams):
         if data.start_time > data.end_time:
-            raise serializers.ValidationError("end_time must occur after start_time")
+            raise serializers.ValidationError("end_time must be greater than start_time")
 
         return data
 
@@ -98,7 +98,5 @@ class AlertSLZ(serializers.Serializer):
     detail_link = serializers.SerializerMethodField(help_text='详情链接')
 
     def get_detail_link(self, instance) -> str:
-        return (
-            f"{settings.BK_MONITORV3_URL}/?"
-            f"bizId={settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')}/#/event-center/detail/{instance['id']}"
-        )
+        bk_biz_id = settings.MONITOR_AS_CODE_CONF.get('bk_biz_id')
+        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}/#/event-center/detail/{instance['id']}"

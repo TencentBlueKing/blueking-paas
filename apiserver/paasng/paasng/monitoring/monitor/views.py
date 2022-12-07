@@ -35,7 +35,7 @@ from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
-from .alert import QueryAlerts
+from .alert import query_alerts
 from .exceptions import BKMonitorGatewayServiceError
 from .models import AppAlertRule
 from .phalanx import Client
@@ -233,7 +233,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         try:
-            alerts = QueryAlerts(params=serializer.validated_data).query()
+            alerts = query_alerts(serializer.validated_data)
         except BKMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 

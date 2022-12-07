@@ -17,9 +17,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Dict, List, Optional
 
-from attr import define
+from attrs import define
 from bkapi_client_core.exceptions import BKAPIError
 from django.conf import settings
 
@@ -51,7 +51,7 @@ class QueryAlertsParams:
     status: Optional[str] = None
     keyword: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         """组装成 search_alerts 接口需要的参数"""
         d = {
             'start_time': int(self.start_time.timestamp()),
@@ -89,18 +89,18 @@ class QueryAlertsParams:
         return query_string
 
 
-class QueryAlerts:
-    def __init__(self, params: QueryAlertsParams):
-        self.params = params
+def query_alerts(query_params: QueryAlertsParams) -> List:
+    """查询告警
 
-    def query(self):
-        try:
-            resp = make_bkmonitor_client().api.search_alert(json=self.params.to_dict())
-        except BKAPIError:
-            # 详细错误信息 bkapi_client_core 会自动记录
-            raise BKMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+    :param query_params: 查询告警的条件参数
+    """
+    try:
+        resp = make_bkmonitor_client().api.search_alert(json=query_params.to_dict())
+    except BKAPIError:
+        # 详细错误信息 bkapi_client_core 会自动记录
+        raise BKMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
 
-        if not resp.get('result'):
-            raise BKMonitorGatewayServiceError(resp['message'])
+    if not resp.get('result'):
+        raise BKMonitorGatewayServiceError(resp['message'])
 
-        return resp.get('data', {}).get('alerts', [])
+    return resp.get('data', {}).get('alerts', [])

@@ -24,7 +24,6 @@
         >
           <bk-steps
             ext-cls="custom-icon"
-            theme="success"
             :status="stepsStatus"
             :steps="allStages"
             :cur-step.sync="curStep"
@@ -343,11 +342,7 @@
             });
         },
         mounted () {
-            if (this.stagesData.length) {
-                this.allStages = this.stagesData;
-            } else {
-                this.getVersionDetail();
-            }
+            this.getVersionDetail();
             this.stageId = this.$route.query.stage_id;
             // 重新发布
             if (this.$route.query.isRepublish === 'republish') {

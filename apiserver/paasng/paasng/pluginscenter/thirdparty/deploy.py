@@ -45,13 +45,11 @@ def deploy_version(pd: PluginDefinition, plugin: PluginInstance, version: Plugin
     resp = utils.make_client(deploy_stage_definition.api.release).call(
         data=request_slz.data, path_params={"plugin_id": plugin.id}
     )
+
     response_slz = PluginDeployResponseSLZ(data=resp)
     response_slz.is_valid(raise_exception=True)
     data = response_slz.validated_data
-
-    current_stage.status = PluginReleaseStatus.PENDING
-    current_stage.api_detail = data
-    current_stage.save()
+    return data
 
 
 def check_deploy_result(pd: PluginDefinition, plugin: PluginInstance, version: PluginRelease) -> PluginReleaseStatus:

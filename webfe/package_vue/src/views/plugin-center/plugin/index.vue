@@ -162,8 +162,8 @@
             try {
                 if (!store.state.pluginInfo[pluginId]) {
                     await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });
-                    // 组件公共部分需要使用
-                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId: pluginTypeId });
+                    // 组件公共部分需要使用, plugin 默认为 default
+                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId: 'default' });
                 }
                 if (pluginId && pluginTypeId) {
                     const res = await store.dispatch('plugin/getPluginFeatureFlags', { pluginId: pluginId, pdId: pluginTypeId });

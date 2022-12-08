@@ -63,6 +63,13 @@
 <script>
     import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 
+    // 需要控制的菜单项
+    const PLUGIN_NAV_MAP = {
+        'API_GATEWAY': 'appCloudAPI',
+        'PROCESS_MANAGE': 'pluginProcess',
+        'STRUCTURE_LOG': 'pluginLog'
+    };
+
     export default {
         data () {
             return {
@@ -119,10 +126,17 @@
                 const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
 
                 if (isReload) {
+                    const hideNavMap = [];
+                    Object.keys(this.pluginFeatureFlags).forEach(item => {
+                        if (!this.pluginFeatureFlags[item] && PLUGIN_NAV_MAP[item]) {
+                            // 不显示nav项
+                            hideNavMap.push(PLUGIN_NAV_MAP[item]);
+                        }
+                    });
                     this.navTree = await this.initNavByRegion(appNav.pluginList);
-                    // 功能开关控制云 API 权限
-                    if (!this.pluginFeatureFlags.API_GATEWAY) {
-                        this.navTree = this.navTree.filter(nav => nav.name !== 'appCloudAPI');
+                    // 根据接口返回开关控制是否显示当前菜单项
+                    if (hideNavMap.length) {
+                        this.navTree = this.navTree.filter(nav => !hideNavMap.includes(nav.name));
                     }
                     await this.initRouterPermission();
                 }

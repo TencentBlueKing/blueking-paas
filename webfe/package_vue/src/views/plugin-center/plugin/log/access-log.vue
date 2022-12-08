@@ -81,11 +81,10 @@
         ref="logContent"
         class="log-content"
       >
-        <!-- <div
+        <div
           v-bkloading="{ isLoading: isChartLoading }"
           class="chart-box mb20"
           style="width: 100%;"
-          @click="hideAllFilterPopover"
         >
           <div
             v-charts="chartData"
@@ -96,7 +95,7 @@
             class="chart-placeholder"
             src="/static/images/chart-default.svg"
           >
-        </div> -->
+        </div>
 
         <!-- 查询结果 start -->
         <div
@@ -247,7 +246,7 @@
         },
         computed: {
             chartData () {
-                const data = this.$store.state.log.chartData;
+                const data = this.$store.state.plugin.chartData;
                 return data;
             },
             tableFormatFilters () {
@@ -469,6 +468,7 @@
                 this.$refs.accessLogFilter.setAutoLoad();
                 this.pagination.current = 1;
                 this.getLogList();
+                this.getChartData();
             },
 
             /**
@@ -530,23 +530,22 @@
              * 获取图表数据
              */
             async getChartData () {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
                 const params = this.getParams();
                 const filter = this.getFilterParams();
-
+                this.isLogListLoading = true;
                 this.isChartLoading = true;
                 try {
-                    await this.$store.dispatch('log/getChartData', {
-                        appCode,
-                        moduleId,
-                        params,
-                        filter
+                    const res = await this.$store.dispatch('plugin/getLogChartData', {
+                        pdId: this.pdId,
+                        pluginId: this.pluginId,
+                        pageParams: params,
+                        data: filter
                     });
+                    this.$store.commit('plugin/updateChartData', res);
                 } catch (res) {
-                    this.$store.commit('log/updateChartData', {
+                    this.$store.commit('plugin/updateChartData', {
                         series: [],
-                        timeline: []
+                        timestamps: []
                     });
                     this.$paasMessage({
                         theme: 'error',

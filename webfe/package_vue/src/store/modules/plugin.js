@@ -21,15 +21,20 @@
 */
 import http from '@/api';
 import { json2Query } from '@/common/tools';
+import bartOptions from '@/json/bar_chart_default';
+import moment from 'moment';
 
 export default {
   namespaced: true,
   state: {
     pluginData: {},
     stagesData: [],
-    pluginFeatureFlags: {}
+    pluginFeatureFlags: {},
+    chartData: bartOptions
   },
-  getters: {},
+  getters: {
+    chartData: state => state.chartData
+  },
   mutations: {
     updatePluginData (state, data) {
       state.pluginData = data;
@@ -39,6 +44,32 @@ export default {
     },
     updatePluginFeatureFlags (state, data) {
       state.pluginFeatureFlags = data;
+    },
+    updateChartData (state, data) {
+      const chartOptions = JSON.parse(JSON.stringify(bartOptions));
+      chartOptions.series = [{
+        type: 'bar',
+        data: data.series
+      }];
+      const timestamps = data.timestamps.map(item => {
+        // 时间处理
+        item = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
+        return item.substring(5);
+      });
+      chartOptions.xAxis.data = timestamps;
+      chartOptions.tooltip = {
+        trigger: 'item',
+        showDelay: 0,
+        hideDelay: 50,
+        transitionDuration: 0,
+        borderRadius: 2,
+        borderWidth: 1,
+        padding: 5,
+        formatter: function (params, ticket, callback) {
+          return `${params.value}次<br/>${params.name}`;
+        }
+      };
+      state.chartData = chartOptions;
     }
   },
   actions: {
@@ -244,6 +275,33 @@ export default {
          */
     getAccessLogList ({ commit, state }, { pdId, pluginId, pageParams, data }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/ingress_logs/?${json2Query(pageParams)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取访问日志图表数据
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getLogChartData ({ commit, state }, { pdId, pluginId, pageParams, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_date_histogram/ingress/?${json2Query(pageParams)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取结构化日志字段设置
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getFilterData ({ commit, state }, { pdId, pluginId, params }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_fields_filters/structure/?${json2Query(params)}`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 获取结构化图表数据
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getCustomChartData ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_date_histogram/structure/?${json2Query(params)}`;
       return http.post(url, data, config);
     },
 

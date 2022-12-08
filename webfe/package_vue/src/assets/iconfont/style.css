@@ -917,3 +917,6 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-file:before {
 	content: "\e232";
 }
+.paasng-process:before {
+	content: "\e240";
+}

@@ -21,7 +21,7 @@ import datetime
 import pytest
 import pytz
 
-from paasng.pluginscenter.log.models import FieldFilter, count_filters_options, format_timestamp
+from paasng.pluginscenter.log.models import FieldFilter, count_filters_options, flatten_structure, format_timestamp
 
 
 @pytest.mark.parametrize(
@@ -68,3 +68,36 @@ def test_format_timestamp(value, input_format, expected):
 )
 def test_count_filters_options(logs, filters, expected):
     assert count_filters_options(logs, filters) == expected
+
+
+@pytest.mark.parametrize(
+    "structured_fields,parent,expected_output",
+    [
+        # 结构体为空，父级字段为空（即默认值）
+        ({}, None, {}),
+        # 结构体只包含一个字段，父级字段为空（即默认值）
+        ({"foo": "bar"}, None, {"foo": "bar"}),
+        # 结构体包含嵌套结构体，父级字段为空（即默认值）
+        ({"foo": {"bar": "baz"}}, None, {"foo.bar": "baz"}),
+        # 结构体包含嵌套结构体，父级字段不为空。
+        ({"foo": {"bar": "baz"}}, "parent", {"parent.foo.bar": "baz"}),
+        # 结构体为空，父级字段不为空
+        ({}, "parent", {}),
+        # 结构体包含嵌套结构体和普通字段，父级字段为空
+        ({"foo": {"bar": "baz"}, "qux": "quux"}, None, {"foo.bar": "baz", "qux": "quux"}),
+        # 结构体包含嵌套结构体和普通字段，父级字段不为空
+        ({"foo": {"bar": "baz"}, "qux": "quux"}, "parent", {"parent.foo.bar": "baz", "parent.qux": "quux"}),
+        # 结构体包含多层嵌套结构体，父级字段为空
+        ({"foo": {"bar": {"baz": "qux"}}}, None, {"foo.bar.baz": "qux"}),
+        # 结构体包含多层嵌套结构体，父级字段不为空
+        ({"foo": {"bar": {"baz": "qux"}}}, "parent", {"parent.foo.bar.baz": "qux"}),
+        # 结构体包含多层嵌套结构体，嵌套结构体中包含普通字段
+        (
+            {"foo": {"bar": {"baz": "qux", "quux": "corge"}}},
+            "parent",
+            {"parent.foo.bar.baz": "qux", "parent.foo.bar.quux": "corge"},
+        ),
+    ],
+)
+def test_flatten_structure(structured_fields, parent, expected_output):
+    assert flatten_structure(structured_fields, parent) == expected_output

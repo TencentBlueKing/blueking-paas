@@ -97,6 +97,28 @@ class DateHistogram:
     dsl: str
 
 
+def flatten_structure(structured_fields: Dict, parent: Optional[str] = None) -> Dict:
+    """接收一个包含层级关系的结构体，并将其扁平化，返回转换后的结构体
+
+    :param structured_fields: 包含层级关系的结构体
+    :param parent: 父级字段的名称, 为空时即无父级字段
+
+    :return: 转换后的扁平化结构体
+    """
+    ret = dict()
+    for sub_key, value in structured_fields.items():
+        if parent is None:
+            key = sub_key
+        else:
+            key = f"{parent}.{sub_key}"
+        if isinstance(value, dict):
+            sub = flatten_structure(value, key)
+            ret.update(sub)
+            continue
+        ret[key] = value
+    return ret
+
+
 def clean_logs(
     logs: List[Hit],
     search_params: ElasticSearchParams,
@@ -110,7 +132,7 @@ def clean_logs(
                     get_attribute(log, search_params.timeField.split(".")), search_params.timeFormat
                 ),
                 "message": get_attribute(log, search_params.messageField.split(".")),
-                "raw": log.to_dict(),
+                "raw": flatten_structure(log.to_dict(), None),
             }
         )
     return cleaned

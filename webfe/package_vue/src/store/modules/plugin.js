@@ -291,9 +291,9 @@ export default {
          * 获取结构化日志字段设置
          * @param {Object} params 请求参数：pdId, pluginId
          */
-    getFilterData ({ commit, state }, { pdId, pluginId, params }, config = {}) {
+    getFilterData ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_fields_filters/structure/?${json2Query(params)}`;
-      return http.post(url, {}, config);
+      return http.post(url, data, config);
     },
 
     /**
@@ -302,6 +302,15 @@ export default {
          */
     getCustomChartData ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_date_histogram/structure/?${json2Query(params)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取结构化日志数据
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getCustomLogList ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/structure_logs/?${json2Query(params)}`;
       return http.post(url, data, config);
     },
 

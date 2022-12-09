@@ -325,6 +325,9 @@
             },
             stagesData () {
                 return this.$store.state.plugin.stagesData;
+            },
+            curStatus () {
+                return this.$route.params.status;
             }
         },
         watch: {
@@ -341,14 +344,12 @@
                 this.isStopDeploy = true;
             });
         },
-        mounted () {
-            this.getVersionDetail();
+        async mounted () {
             this.stageId = this.$route.query.stage_id;
-            // 重新发布
-            if (this.$route.query.isRepublish === 'republish') {
+            await this.getVersionDetail();
+            if (this.status === 'interrupted' || this.status === 'failed') {
+                // 重新发布
                 this.republish();
-                this.fetchCategoryList();
-                this.fetchMarketInfo();
             } else {
                 if (this.stageId === 'market') {
                     this.fetchCategoryList();
@@ -496,6 +497,7 @@
                     const stagesData = this.allStagesMap(res.all_stages);
                     this.titleVersion = `${res.version} (${res.source_version_name})`;
                     this.allStages = stagesData;
+                    this.status = res.status;
                     // 获取对应step
                     this.curStep = this.stpeMap[res.current_stage.stage_id];
                     if (this.allStages.length === 1) {
@@ -556,11 +558,16 @@
                     });
                     this.stageId = res.current_stage && res.current_stage.stage_id;
                     this.status = res.status;
+                    this.fetchPluginRelease();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
                         message: e.detail || e.message || this.$t('接口异常')
                     });
+                } finally {
+                    setTimeout(() => {
+                        this.isLoading = false;
+                    }, 200);
                 }
             },
 
@@ -695,7 +702,6 @@
                     } else if (this.stageId === 'deploy') {
                         const query = JSON.parse(JSON.stringify(this.$route.query));
                         query.stage_id = this.stageId;
-                        query.isRepublish = 'republish';
                         this.fetchPluginRelease();
                         this.$router.push({ name: 'pluginVersionRelease', query });
                     } else {

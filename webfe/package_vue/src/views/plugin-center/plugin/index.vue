@@ -159,11 +159,18 @@
         async beforeRouteEnter (to, from, next) {
             const pluginId = to.params.id; // 插件id
             const pluginTypeId = to.params.pluginTypeId; // 插件类型id
+            // plugin 默认为 default
+            const moduleId = 'default';
+
             try {
                 if (!store.state.pluginInfo[pluginId]) {
                     await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });
-                    // 组件公共部分需要使用, plugin 默认为 default
-                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId: 'default' });
+                    // 获取当前插件应用信息
+                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId });
+                    // // 获取对应控制开关
+                    await store.dispatch('getAppFeature', { appCode: pluginId });
+                } else {
+                    store.commit('updateCurAppByCode', { appCode: pluginId, moduleId });
                 }
                 if (pluginId && pluginTypeId) {
                     const res = await store.dispatch('plugin/getPluginFeatureFlags', { pluginId: pluginId, pdId: pluginTypeId });
@@ -185,9 +192,18 @@
         async beforeRouteUpdate (to, from, next) {
             const pluginId = to.params.id; // 插件id
             const pluginTypeId = to.params.pluginTypeId; // 插件类型id
+            const moduleId = 'default';
+
             try {
+                // 是否获取应用信息
+                if (to.meta.isGetAppInfo) {
+                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId });
+                    await store.dispatch('getAppFeature', { appCode: pluginId });
+                }
                 if (!store.state.pluginInfo[pluginId]) {
                     await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });
+                } else {
+                    store.commit('updateCurAppByCode', { appCode: pluginId, moduleId });
                 }
                 next(true);
             } catch (e) {

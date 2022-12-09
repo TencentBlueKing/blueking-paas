@@ -20,6 +20,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from paasng.pluginscenter.constants import PluginReleaseStatus
+from paasng.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.pluginscenter.models import PluginReleaseStage
 
 
@@ -36,3 +37,7 @@ def update_release_status_when_stage_status_change(sender, instance: PluginRelea
     elif instance.status == PluginReleaseStatus.SUCCESSFUL and instance.next_stage is None:
         release.status = instance.status
         release.save()
+        plugin = release.plugin
+        if not PluginFeatureFlagsManager(plugin).has_feature(PluginFeatureFlag.RE_RELEASE_HISTORY_VERSION):
+            # 对于不支持重新发布历史版本的插件类型, 只要有一个版本发布成功, 已创建的所有版本都不能重新发布
+            plugin.all_versions.update(retryable=False)

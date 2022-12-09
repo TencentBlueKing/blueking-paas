@@ -76,6 +76,7 @@ class Config(UuidAuditedModel):
     # Essential config data, include variables such as "PaaS AppCode" etc.
     metadata = JSONField(null=True, blank=True)
     runtime: RuntimeConfig = RuntimeConfigField(default=RuntimeConfig)
+    mount_log_to_host = models.BooleanField(default=True, help_text="Whether mount app logs to host")
 
     class Meta:
         get_latest_by = 'created'

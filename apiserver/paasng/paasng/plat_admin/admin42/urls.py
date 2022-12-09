@@ -214,6 +214,12 @@ urlpatterns = [
         applications.ApplicationOverviewView.as_view(),
         name="admin.applications.detail.overview",
     ),
+    # 应用详情-环境配置管理
+    url(
+        f'^applications/(?P<code>[^/]+)/{PART_MODULE_WITH_ENV}/engine/bind_cluster/$',
+        applications.AppEnvConfManageView.as_view({'post': 'bind_cluster'}),
+        name="admin.applications.engine.env_conf.bind_cluster",
+    ),
     # 应用详情-进程管理
     url(
         r'^applications/(?P<code>[^/]+)/engine/process_specs/$',

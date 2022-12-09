@@ -27,7 +27,7 @@ from paasng.pluginscenter.iam_adaptor.management.shim import (
     setup_builtin_user_groups,
 )
 from paasng.pluginscenter.models import PluginInstance, PluginMarketInfo
-from paasng.pluginscenter.sourcectl import get_plugin_repo_initializer
+from paasng.pluginscenter.sourcectl import add_repo_member, get_plugin_repo_initializer
 from paasng.pluginscenter.sourcectl.exceptions import APIError
 from paasng.pluginscenter.thirdparty.instance import create_instance
 
@@ -42,7 +42,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     """
     # 初始化插件仓库后, plugin.repository 才真正赋值
     if plugin.pd.basic_info_definition.release_method == constants.PluginReleaseMethod.CODE:
-        init_plugin_repository(plugin)
+        init_plugin_repository(plugin, operator)
 
     # 调用第三方系统API时, 必须保证 plugin.repository 不为空
     if plugin.pd.basic_info_definition.api.create:
@@ -62,7 +62,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
 
 
-def init_plugin_repository(plugin: PluginInstance):
+def init_plugin_repository(plugin: PluginInstance, operator: str):
     """初始化插件仓库"""
     initializer = get_plugin_repo_initializer(plugin.pd)
     try:
@@ -78,6 +78,8 @@ def init_plugin_repository(plugin: PluginInstance):
     except GitCommandExecutionError:
         logger.exception("执行 git 指令异常, 请联系管理员排查")
         raise error_codes.INITIAL_REPO_ERROR
+
+    add_repo_member(plugin, operator, role=constants.PluginRole.ADMINISTRATOR)
 
 
 def build_repository_template(repository_group: str) -> str:

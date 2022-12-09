@@ -93,3 +93,33 @@ def camel_to_snake(name: str) -> str:
     """
     name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+
+def calculate_percentage(x: float, y: float, decimal_places: int = 2) -> str:
+    """
+    计算 x 除以 y 的值，并将结果转换为百分比的字符串形式。
+
+    如果 y 等于0，则抛出ValueError。
+    如果结果小于最小精度（默认为0.01%），则返回 "<最小精度%"。
+    否则，返回指定位数小数的百分比。
+
+    :param x: 要除的被除数 (float)
+    :param y: 要除的除数 (float)
+    :param decimal_places: 要保留的小数位数 (int, optional)，默认值为2
+    :return: x 除以 y 的值，转换为百分比的字符串形式 (str)
+    """
+    if y == 0:
+        raise ValueError("y cannot be 0")
+    if decimal_places > 10:
+        raise ValueError("maximum precision limit exceeded")
+    if decimal_places < 0:
+        raise ValueError("decimal cannot be negative")
+    result = x / y
+    # 最小精度
+    min_precision = 1 / 100 / 10 ** decimal_places
+    # 如果结果小于最小精度，则返回 "<最小精度%"
+    if result < min_precision:
+        return "<{:.{decimal_places}%}".format(min_precision, decimal_places=decimal_places)
+    # 否则，将结果转换为百分制，并保留指定位数的小数
+    else:
+        return "{:.{decimal_places}%}".format(result, decimal_places=decimal_places)

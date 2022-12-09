@@ -40,6 +40,7 @@ from paasng.engine.models import ConfigVar, Deployment
 from paasng.engine.models.managers import DeployPhaseManager
 from paasng.engine.streaming.constants import EventType
 from paasng.extensions.bk_plugins import api_serializers, serializers
+from paasng.extensions.bk_plugins.apigw import safe_update_gateway_status
 from paasng.extensions.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.extensions.bk_plugins.tasks import archive_prod_env
 from paasng.extensions.bk_plugins.views import logger
@@ -129,7 +130,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def update_plugin(self, request, code):
         application = self.get_application()
 
-        slz = api_serializers.PluginSyncRequestSLZ(data=request.data)
+        slz = api_serializers.PluginSyncRequestSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -153,8 +154,8 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         encoded_operator = user_id_encoder.encode(
             getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
         )
-
-        # TODO: 停用插件网关(需要网关提供相应的接口)
+        # 更新网关状态, 停用网关
+        safe_update_gateway_status(application, enabled=False)
         archive_prod_env.apply_async(args=(application.code, encoded_operator))
         return Response(data={})
 
@@ -183,15 +184,15 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
-        encoded_operator = user_id_encoder.encode(
-            getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
-        )
+        operator = user_id_encoder.encode(ProviderType.DATABASE, settings.PLUGIN_REPO_CONF["username"])
         deployment = None
         try:
+            # 更新网关状态, 启用网关
+            safe_update_gateway_status(application, enabled=True)
             with coordinator.release_on_error():
                 deployment = initialize_deployment(
                     env=env,
-                    operator=encoded_operator,
+                    operator=operator,
                     version_info=VersionInfo(
                         revision=data["version"]["source_hash"],
                         version_name=data["version"]["source_version_name"],

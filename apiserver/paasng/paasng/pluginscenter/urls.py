@@ -42,6 +42,14 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"get": "get_compare_url"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/code_statistics/",
+        views.PluginInstanceViewSet.as_view({"get": "get_code_submit_info"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/feature_flags/",
+        views.PluginInstanceViewSet.as_view({"get": "get_feature_flags"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
         views.PluginReleaseViewSet.as_view({"get": "list", "post": "create"}),
     ),
@@ -96,6 +104,10 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/aggregate_date_histogram/<str:log_type>/",
         views.PluginLogViewSet.as_view({"post": "aggregate_date_histogram"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/aggregate_fields_filters/<str:log_type>/",
+        views.PluginLogViewSet.as_view({"post": "aggregate_fields_filters"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/",
@@ -154,11 +166,11 @@ urlpatterns = [
     # 创建插件审批回调 API
     path(
         "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/itsm/",
-        views.PluginReleaseStageApiViewSet.as_view({"post": "itsm_create_callback"}),
+        views.PluginCallBackApiViewSet.as_view({"post": "itsm_create_callback"}),
     ),
     # 发布流程中上线审批阶段回调 API
     path(
         "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/itsm/",
-        views.PluginReleaseStageApiViewSet.as_view({"post": "itsm_stage_callback"}),
+        views.PluginCallBackApiViewSet.as_view({"post": "itsm_stage_callback"}),
     ),
 ]

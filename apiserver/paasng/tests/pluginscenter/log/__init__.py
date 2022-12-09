@@ -16,23 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
-from rest_framework.response import Response
-
-from paasng.dev_resources.templates.constants import TemplateType
-from paasng.dev_resources.templates.models import Template
-
-from .serializers import ListSceneTmplsSLZ, SceneTmplSLZ
-
-
-class SceneAppViewSet(viewsets.ViewSet):
-    """场景 SaaS 相关 API"""
-
-    def list_tmpls(self, request):
-        """获取指定 region 可用场景模板列表"""
-        slz = ListSceneTmplsSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-
-        params = slz.validated_data
-        tmpls = Template.objects.filter_by_region(region=params['region'], type=TemplateType.SCENE)
-        return Response(SceneTmplSLZ(tmpls, many=True).data)

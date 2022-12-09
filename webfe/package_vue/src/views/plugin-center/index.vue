@@ -424,7 +424,7 @@
                         params: { pluginTypeId: data.pd_id, id: data.id },
                         query: {
                             stage_id: data.ongoing_release.current_stage.stage_id,
-                            release_id: data.ongoing_release.data.id
+                            release_id: data.ongoing_release.id
                         }
                     });
                 } else {

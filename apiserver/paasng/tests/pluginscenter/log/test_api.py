@@ -84,8 +84,8 @@ def test_query_structure_logs(pd, plugin, log_client, time_range):
 
     logs = query_structure_logs(pd, plugin, "nobody", time_range, "", 100, 0)
     assert cattrs.unstructure(logs.logs) == [
-        {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json': {'message': 'foo'}, 'other': 'FOO'}},
-        {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json': {'message': 'bar'}, 'other': 'BAR'}},
+        {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json.message': 'foo', 'other': 'FOO'}},
+        {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json.message': 'bar', 'other': 'BAR'}},
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
@@ -101,7 +101,7 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
         make_hit(
             {
                 "@timestamp": 1,
-                "json": {"message": "foo"},
+                'json': {"message": "foo"},
                 "method": "GET",
                 "path": "/example",
                 "status_code": 200,
@@ -115,7 +115,7 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
         make_hit(
             {
                 "@timestamp": 1,
-                "json": {"message": "foo"},
+                'json': {"message": "foo"},
                 "method": "GET",
                 "path": "/example",
                 "status_code": "200",
@@ -135,7 +135,7 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
             'message': 'foo',
             'raw': {
                 '@timestamp': 1,
-                'json': {'message': 'foo'},
+                'json.message': 'foo',
                 'method': 'GET',
                 'path': '/example',
                 'status_code': 200,
@@ -159,7 +159,7 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
             'message': 'foo',
             'raw': {
                 '@timestamp': 1,
-                'json': {'message': 'foo'},
+                'json.message': 'foo',
                 'method': 'GET',
                 'path': '/example',
                 'status_code': "200",

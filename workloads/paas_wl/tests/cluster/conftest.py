@@ -21,6 +21,8 @@ from textwrap import dedent
 
 import pytest
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
+
 
 @pytest.fixture
 def example_cluster_config():
@@ -35,6 +37,10 @@ def example_cluster_config():
         'ca_data': '',
         'cert_data': '',
         'key_data': '',
+        'feature_flags': {
+            ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
+            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
+        },
     }
 
 

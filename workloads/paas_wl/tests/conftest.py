@@ -34,6 +34,7 @@ from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 from rest_framework.test import APIClient
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.platform.applications.constants import ApplicationType
@@ -230,6 +231,10 @@ def create_default_cluster():
         ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
         cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
         key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
+        feature_flags={
+            ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
+            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
+        },
     )
     APIServer.objects.get_or_create(
         host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],

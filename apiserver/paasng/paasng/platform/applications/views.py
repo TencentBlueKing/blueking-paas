@@ -25,7 +25,6 @@ from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
 
-import cattr
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import transaction
@@ -59,7 +58,7 @@ from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_engine_app_cluster, get_region_cluster_helper
+from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.extensions.bk_plugins.config import get_bk_plugin_config
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.scene_app.initializer import SceneAPPInitializer
@@ -205,12 +204,6 @@ class ApplicationViewSet(viewsets.ViewSet):
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
 
-    def get_cluster_by_app(self, application: Application):
-        for env in application.envs.all():
-            cluster = get_engine_app_cluster(application.region, env.engine_app.name)
-            if cluster:
-                return cluster
-
     def retrieve(self, request, code):
         """获取单个应用的信息"""
         application = get_object_or_404(Application, code=code)
@@ -220,7 +213,6 @@ class ApplicationViewSet(viewsets.ViewSet):
         product = application.get_product()
 
         web_config = application.config_info
-        cluster = self.get_cluster_by_app(application)
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
@@ -231,7 +223,6 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 'web_config': web_config,
-                'cluster': cattr.unstructure(cluster) if cluster else None,
             }
         )
 

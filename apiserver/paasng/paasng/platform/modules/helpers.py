@@ -262,7 +262,7 @@ class ModuleRuntimeManager:
 def get_module_cluster(module: 'Module') -> Optional[Cluster]:
     """Return the cluster info of module object"""
     # NOTE: Use the FIRST environment object because we consider all environments in a module
-    # shares same cluster info.
+    # shares same cluster info. FIXME 同模块不同环境可能部署不在同一个集群，该方法不该被使用
     env = module.envs.first()
     if not env:
         return None

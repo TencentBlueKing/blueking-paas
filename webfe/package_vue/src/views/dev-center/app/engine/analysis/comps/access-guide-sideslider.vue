@@ -65,10 +65,10 @@
             {{ $t('只有通过以下地址访问，才能保证数据被正确统计：') }}
           </p>
           <p class="tips">
-            - {{ $t('蓝鲸PaaS平台 v3 版本分配的独立域名，如：') }}http(s)://go-app-template.{{ curAppInfo.cluster.ingress_config.app_root_domain }}/
+            - {{ $t('蓝鲸PaaS平台 v3 版本分配的独立域名，如：') }}http(s)://go-app-template.apps.example.com/
           </p>
           <p class="tips">
-            - {{ $t('蓝鲸PaaS平台分配的子路径访问地址，如：') }}http(s)://{{ curAppInfo.cluster.ingress_config.sub_path_domain }}/ieod-bkapp-ds-tools-stag/
+            - {{ $t('蓝鲸PaaS平台分配的子路径访问地址，如：') }}http(s)://apps.example.com/ieod-bkapp-ds-tools-stag/
           </p>
           <p class="tips mb10">
             - {{ $t('在蓝鲸PaaS平台上注册过的独立域名') }}

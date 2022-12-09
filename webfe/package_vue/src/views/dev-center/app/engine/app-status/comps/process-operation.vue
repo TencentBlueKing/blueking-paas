@@ -406,7 +406,7 @@
               </div>
             </section>
             <p style="padding-left: 112px; margin-top: -10px; color: #c4c6cc;">
-              {{ $t('更多进程间通信的说明，请参看') }} <a
+              {{ $t('注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考') }} <a
                 target="_blank"
                 :href="GLOBAL.DOC.PROCESS_SERVICE"
               > {{ $t('进程间通信') }} </a>

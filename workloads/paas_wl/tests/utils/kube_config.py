@@ -20,6 +20,7 @@ import base64
 
 from django.conf import settings
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.loaders import LegacyKubeConfigLoader
 from paas_wl.cluster.models import APIServer, Cluster
 
@@ -52,6 +53,10 @@ def init_kube_config_from_yaml(file: str = '', clear: bool = False):
                     "default_ingress_domain_tmpl": "%s.apps.com",
                     "frontend_ingress_ip": "0.0.0.0",
                     "port_map": {"http": "80", "https": "443"},
+                },
+                feature_flags={
+                    ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
+                    ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
                 },
             )
             api_server, _ = APIServer.objects.get_or_create(

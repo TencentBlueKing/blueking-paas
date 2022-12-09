@@ -95,6 +95,25 @@
                   </div>
                 </td>
               </tr>
+              <tr>
+                <td
+                  class="has-right-border"
+                  style="width: 220px;"
+                >
+                  {{ $t('所属集群') }}
+                </td>
+                <td v-if="(curAppModule.clusters.stag.bcs_cluster_id === curAppModule.clusters.prod.bcs_cluster_id)">
+                  <p>{{ curAppModule.clusters.prod.bcs_cluster_id }}</p>
+                </td>
+                <td v-else>
+                  <p class="mb5">
+                    {{ curAppModule.clusters.stag.bcs_cluster_id }}（{{ $t('预发布环境') }}）
+                  </p>
+                  <p>
+                    {{ curAppModule.clusters.prod.bcs_cluster_id }}（{{ $t('生产环境') }}）
+                  </p>
+                </td>
+              </tr>
             </table>
           </div>
         </div>
@@ -433,6 +452,11 @@
                     {{ nodeIp.internal_ip_address }}
                   </div>
                 </template>
+                <template v-else-if="!curAppModule.clusters.stag.feature_flags.enable_egress_ip">
+                  <div class="no-ip">
+                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
+                  </div>
+                </template>
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
@@ -478,6 +502,11 @@
                     class="ip-item"
                   >
                     {{ nodeIp.internal_ip_address }}
+                  </div>
+                </template>
+                <template v-else-if="!curAppModule.clusters.prod.feature_flags.enable_egress_ip">
+                  <div class="no-ip">
+                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
                   </div>
                 </template>
                 <template v-else>
@@ -569,13 +598,13 @@
       <div>
         <p> {{ $t('切换后应用的短域名会指向到') }} {{ curAppModule.name }} {{ $t('模块：') }} </p>
         <p class="info-p">
-          1、stag-dot- {{ $route.params.id }}.{{ curAppInfo.cluster.ingress_config.app_root_domain }} : {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的预发布环境') }}
+          1、stag-dot-{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.stag) }} : {{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的预发布环境') }}
         </p>
         <p class="info-p">
-          2、prod-dot- {{ $route.params.id }}.{{ curAppInfo.cluster.ingress_config.app_root_domain }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境') }}
+          2、prod-dot-{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.prod) }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境') }}
         </p>
         <p class="info-p">
-          3、{{ $route.params.id }}.{{ curAppInfo.cluster.ingress_config.app_root_domain }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境（应用市场和移动端默认使用该地址访问）') }}
+          3、{{ $route.params.id }}.{{ getAppRootDomain(curAppModule.clusters.prod) }} ：{{ $t('指向到应用') }} <span>{{ curAppModule.name }}</span> {{ $t('模块的生产环境（应用市场和移动端默认使用该地址访问）') }}
         </p>
         <p class="info-p">
           {{ $t('请完全评估切换影响后，再进行主模块切换。') }}( <a
@@ -918,10 +947,10 @@
                 return !this.displaySwitchDisabled;
             },
             curStagDisabled () {
-                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing;
+                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.stag.feature_flags.enable_egress_ip;
             },
             curProdDisabled () {
-                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing;
+                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.prod.feature_flags.enable_egress_ip;
             },
             entranceConfig () {
                 return this.$store.state.region.entrance_config;
@@ -1478,7 +1507,7 @@
             gatewayInfosHandler (payload, env) {
                 this.curEnv = env;
                 if (!payload) {
-                    const title = this.curEnv === 'stag' ? this.$t('确认清除预发布环境出口IP信息？') : this.$t('确认清除生产环境出口IP信息？');
+                    const title = this.curEnv === 'stag' ? this.$t('确认清除预发布环境出口 IP 信息？') : this.$t('确认清除生产环境出口 IP 信息？');
 
                     const _self = this;
                     _self.$bkInfo({
@@ -1672,12 +1701,25 @@
                     console.error(errRes);
                 }
             },
-
             handleLessCode () {
                 if (this.lessCodeData.address_in_lesscode) {
                     return;
                 }
                 this.$bkMessage({ theme: 'warning', message: this.$t(this.lessCodeData.tips), delay: 2000, dismissable: false });
+            },
+            // 获取展示用的应用根域名，优先使用非保留的，如果没有，则选择第一个
+            getAppRootDomain (clusterConf) {
+              let domains = clusterConf.ingress_config.app_root_domains;
+              if (domains.length === 0) {
+                return '';
+              }
+
+              for (let domain of domains) {
+                if (!domain.reversed) {
+                  return domain.name;
+                }
+              }
+              return domains[0].name;
             }
         }
     };

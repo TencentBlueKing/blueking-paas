@@ -102,6 +102,7 @@ class Command(BaseCommand):
                 "token_value": env.str("PAAS_WL_CLUSTER_TOKEN_VALUE", ""),
                 "default_node_selector": env.json("PAAS_WL_CLUSTER_NODE_SELECTOR", {}),
                 "default_tolerations": env.json("PAAS_WL_CLUSTER_TOLERATIONS", []),
+                "feature_flags": env.json("PAAS_WL_CLUSTER_FEATURE_FLAGS", {}),
             }
         except Exception as e:
             raise ValueError("default cluster data is not valid") from e

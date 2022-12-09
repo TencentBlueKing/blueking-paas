@@ -43,6 +43,7 @@ from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, JobStatus, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.controller.state import controller_client
 from paasng.engine.deploy.infras import DeploymentCoordinator
@@ -98,7 +99,6 @@ from paasng.platform.applications.signals import module_environment_offline_succ
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
-from paasng.platform.modules.helpers import get_module_cluster
 from paasng.platform.modules.models import Module
 from paasng.publish.entrance.exposer import (
     get_default_access_entrance,
@@ -741,16 +741,26 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ()})
-    def retrieve(self, request, code, module_name):
+    @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ(many=True)})
+    def retrieve(self, request, code):
         """查看独立域名相关配置信息，比如前端负载均衡 IP 地址等"""
-        module = self.get_module_via_path()
-        cluster_info = get_module_cluster(module)
+        application = self.get_application()
 
-        # `cluster_info` could be None when application's engine was disabled
-        frontend_ingress_ip = cluster_info.ingress_config.frontend_ingress_ip if cluster_info else ''
-        serializer = CustomDomainsConfigSLZ({'frontend_ingress_ip': frontend_ingress_ip})
-        return Response(dict(serializer.data))
+        custom_domain_configs = []
+        for module in application.modules.all():
+            for env in module.envs.all():
+                cluster = get_engine_app_cluster(module.region, env.engine_app.name)
+                # `cluster` could be None when application's engine was disabled
+                frontend_ingress_ip = cluster.ingress_config.frontend_ingress_ip if cluster else ''
+                custom_domain_configs.append(
+                    {
+                        'module': module.name,
+                        'environment': env.environment,
+                        'frontend_ingress_ip': frontend_ingress_ip,
+                    }
+                )
+
+        return Response(CustomDomainsConfigSLZ(custom_domain_configs, many=True).data)
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

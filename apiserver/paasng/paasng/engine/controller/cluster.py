@@ -116,7 +116,7 @@ def get_region_cluster_helper(region: str) -> AbstractRegionClusterService:
     return RegionClusterService(region)
 
 
-@cache_region.cache_on_arguments(namespace='v3', expiration_time=60 * 5)
+@cache_region.cache_on_arguments(namespace='v3', expiration_time=60)
 def get_engine_app_cluster(region: str, engine_app_name: str) -> Cluster:
     """Shortcut function for `RegionClusterService.get_engine_app_cluster`"""
     return get_region_cluster_helper(region).get_engine_app_cluster(engine_app_name)

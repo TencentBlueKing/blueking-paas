@@ -19,10 +19,11 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import hashlib
 from collections import MutableMapping
-from typing import Collection, Dict, Tuple
+from typing import ClassVar, Collection, Dict, Tuple
 from uuid import UUID
 
 import cattr
+from attrs import define
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_bytes
 
@@ -160,3 +161,29 @@ def re_path(route, view, kwargs=None, name=None):
         return URLPattern(pattern, view, kwargs, name)
     else:
         raise TypeError('view must be a callable or a list/tuple in the case of include().')
+
+
+@define
+class HumanizeURL:
+    """A simple type to make processing URL more convenient"""
+
+    protocol: str
+    hostname: str
+    port: int
+    path: str
+    query: str = ''
+
+    _default_port_map: ClassVar = {
+        'http': 80,
+        'https': 443,
+    }
+
+    def to_str(self) -> str:
+        """Return the string representation of current value, query string and port
+        number are omitted if possible.
+        """
+        query_s = f"?{self.query}" if self.query else ''
+        port_s = f':{self.port}'
+        if self._default_port_map[self.protocol] == self.port:
+            port_s = ''
+        return f"{self.protocol}://{self.hostname}{port_s}{self.path}{query_s}"

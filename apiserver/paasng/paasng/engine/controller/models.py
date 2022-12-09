@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from operator import attrgetter
-from typing import List
+from typing import List, Optional
 
 from attrs import Factory, asdict, define
 
@@ -56,6 +56,26 @@ class IngressConfig:
     def __attrs_post_init__(self):
         self.app_root_domains = sorted(self.app_root_domains, key=attrgetter("reserved"))
         self.sub_path_domains = sorted(self.sub_path_domains, key=attrgetter("reserved"))
+
+    def find_subdomain_domain(self, host: str) -> Optional[Domain]:
+        """Find domain object in configured sub-domains by given host.
+
+        :param host: Any valid host name
+        """
+        for d in self.app_root_domains:
+            if d.name == host:
+                return d
+        return None
+
+    def find_subpath_domain(self, host: str) -> Optional[Domain]:
+        """Find domain object in configured sub-path domains by given host.
+
+        :param host: Any valid host name
+        """
+        for d in self.sub_path_domains:
+            if d.name == host:
+                return d
+        return None
 
     @property
     def default_root_domain(self) -> Domain:

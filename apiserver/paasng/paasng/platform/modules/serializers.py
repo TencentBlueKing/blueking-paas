@@ -77,7 +77,9 @@ class ModuleSLZ(serializers.ModelSerializer):
             return ""
 
         try:
-            return Template.objects.get(name=obj.source_init_template, type=TemplateType.NORMAL).display_name
+            return Template.objects.get(
+                name=obj.source_init_template, type__in=TemplateType.normal_app_types()
+            ).display_name
         except ObjectDoesNotExist:
             # 可能存在远古模版，并不在当前模版配置中
             return ""

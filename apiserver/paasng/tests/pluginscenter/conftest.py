@@ -25,6 +25,7 @@ from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
 from paasng.pluginscenter.constants import MarketInfoStorageType
+from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
     ApprovalService,
@@ -80,6 +81,7 @@ def pd():
         id_schema={
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
+            "maxlength": 10,
         },
         name_schema={
             "pattern": r"[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}",
@@ -115,12 +117,6 @@ def pd():
     pd.save()
     pd.refresh_from_db()
     return pd
-
-
-@pytest.fixture
-def mock_client():
-    with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
-        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
 
 
 @pytest.fixture
@@ -179,3 +175,19 @@ def online_approval_service():
         ApprovalService, **{"service_name": ApprovalServiceName.ONLINE_APPROVAL.value, "service_id": 1}
     )
     return svc
+
+
+@pytest.fixture
+def thirdparty_client():
+    with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
+        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
+
+
+@pytest.fixture
+def iam_policy_client():
+    with mock.patch(
+        "paasng.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client", new=mock.MagicMock(), spec=BKIAMClient
+    ) as iam_policy_client:
+        iam_policy_client.is_action_allowed.return_value = True
+        iam_policy_client.is_actions_allowed.return_value = {"": True}
+        yield iam_policy_client

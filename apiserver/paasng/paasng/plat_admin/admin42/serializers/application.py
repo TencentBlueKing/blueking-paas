@@ -63,6 +63,12 @@ class ApplicationDetailSLZ(ApplicationSLZ):
             return None
 
 
+class BindEnvClusterSLZ(serializers.Serializer):
+    """绑定应用部署环境集群配置"""
+
+    cluster_name = serializers.CharField(max_length=32)
+
+
 class ApplicationFilterSLZ(serializers.Serializer):
     """Serializer for application query filter"""
 

@@ -153,4 +153,4 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         AccountFeatureFlag.objects.set_feature(get_user_by_user_id(data["user"]), data["name"], data["effect"])
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)

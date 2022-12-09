@@ -55,7 +55,7 @@ class Command(BaseCommand):
 
     def get_timeout_pending_operations(self, model_class) -> QuerySet:
         end_time = self.now - get_time_delta(self.timeout)
-        return model_class.objects.filter(status=JobStatus.PENDING.value, updated__lt=end_time)
+        return model_class.objects.filter(status=JobStatus.PENDING, updated__lt=end_time)
 
     def update_pending_status(self, operations: QuerySet, err_detail: bool = True):
         if not operations:
@@ -69,7 +69,7 @@ class Command(BaseCommand):
         logger.info("going to update type<%s> count<%s>", model_class, pending_count)
 
         try:
-            update_param = {"status": str(JobStatus.FAILED.value)}
+            update_param = {"status": JobStatus.FAILED, "updated": self.now}
             # ModuleEnvironmentOperations 是没有 err_detail 的
             if err_detail:
                 update_param.update({"err_detail": f"executing more than {self.timeout}, regarding as failed by PaaS"})

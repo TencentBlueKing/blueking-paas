@@ -25,3 +25,8 @@ class TemplateType(str, StructuredEnum):
 
     NORMAL = EnumField('normal', _('普通应用'))
     SCENE = EnumField('scene', _('场景模板'))
+    PLUGIN = EnumField('plugin', _('插件模板'))
+
+    @classmethod
+    def normal_app_types(cls):
+        return [cls.NORMAL, cls.PLUGIN]

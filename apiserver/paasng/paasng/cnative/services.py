@@ -70,8 +70,8 @@ def initialize_simple(module: Module, data: Dict, cluster_name: Optional[str] = 
 def create_engine_apps(
     application: Application,
     module: Module,
+    cluster_name: str,
     environments: Optional[List[str]] = None,
-    cluster_name: Optional[str] = None,
 ):
     """Create engine app instances for application"""
     environments = environments or default_environments
@@ -79,7 +79,7 @@ def create_engine_apps(
         engine_app_name = f'{default_engine_app_prefix}-{application.code}-{environment}'
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
         engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
-        controller_client.update_app_config(application.region, engine_app_name, {'cluster': cluster_name})
+        controller_client.bind_app_cluster(application.region, engine_app_name, cluster_name=cluster_name)
         ModuleEnvironment.objects.create(
             application=application, module=module, engine_app_id=engine_app["uuid"], environment=environment
         )

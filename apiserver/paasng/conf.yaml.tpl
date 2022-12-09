@@ -589,6 +589,21 @@
 # SMART_DOCKER_AUTH_BY_TOKEN: true
 
 
+## ------------------------------------ 插件开发中心配置 ------------------------------------
+
+## 插件中心「源码仓库」相关配置
+# PLUGIN_REPO_CONF:
+#  api_url: 'http://api.example.com/'
+#  private_token: ''
+#  email: 'blueking@tencent.com'
+#  username: 'blueking'
+
+## 插件开发中心在权限中心注册的系统 ID
+# IAM_PLUGINS_CENTER_SYSTEM_ID: bk_plugins
+
+## 是否在开发者中心应用列表中展示插件应用
+# DISPLAY_BK_PLUGIN_APPS: true
+
 # ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 
 ## 运维开发相关的 BK-DATA 数据上报相关配置

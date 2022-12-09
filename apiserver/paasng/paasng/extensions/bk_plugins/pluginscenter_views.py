@@ -40,7 +40,9 @@ from paasng.engine.models import ConfigVar, Deployment
 from paasng.engine.models.managers import DeployPhaseManager
 from paasng.engine.streaming.constants import EventType
 from paasng.extensions.bk_plugins import api_serializers, serializers
+from paasng.extensions.bk_plugins.apigw import safe_update_gateway_status
 from paasng.extensions.bk_plugins.models import BkPluginTag, make_bk_plugin
+from paasng.extensions.bk_plugins.tasks import archive_prod_env
 from paasng.extensions.bk_plugins.views import logger
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
@@ -65,11 +67,13 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = API_PERMISSION_CLASSES
 
     @swagger_auto_schema(
-        tags=["plugin-center"], request_body=api_serializers.PluginRequestSLZ, responses={201: serializers.BkPluginSLZ}
+        tags=["plugin-center"],
+        request_body=api_serializers.PluginSyncRequestSLZ,
+        responses={201: serializers.BkPluginSLZ},
     )
     @atomic
     def create_plugin(self, request):
-        slz = api_serializers.PluginRequestSLZ(data=request.data)
+        slz = api_serializers.PluginSyncRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -119,14 +123,14 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         tags=["plugin-center"],
-        request_body=api_serializers.PluginRequestSLZ,
+        request_body=api_serializers.PluginSyncRequestSLZ,
         responses={200: serializers.BkPluginSLZ},
     )
     @atomic
     def update_plugin(self, request, code):
         application = self.get_application()
 
-        slz = api_serializers.PluginRequestSLZ(data=request.data)
+        slz = api_serializers.PluginSyncRequestSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -134,6 +138,26 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application.name_en = data["name_en"]
         application.save()
         return Response(data=serializers.BkPluginSLZ(make_bk_plugin(application)).data)
+
+    @swagger_auto_schema(
+        tags=["plugin-center"],
+        request_body=api_serializers.PluginArchiveRequestSLZ,
+    )
+    def archive_plugin(self, request, code):
+        """下架插件 = 停用网关(切断流量入口) + 回收进程资源(异步)"""
+        application = self.get_application()
+
+        slz = api_serializers.PluginArchiveRequestSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        encoded_operator = user_id_encoder.encode(
+            getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
+        )
+        # 更新网关状态, 停用网关
+        safe_update_gateway_status(application, enabled=False)
+        archive_prod_env.apply_async(args=(application.code, encoded_operator))
+        return Response(data={})
 
 
 class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -160,15 +184,15 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
 
-        encoded_operator = user_id_encoder.encode(
-            getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
-        )
+        operator = user_id_encoder.encode(ProviderType.DATABASE, settings.PLUGIN_REPO_CONF["username"])
         deployment = None
         try:
+            # 更新网关状态, 启用网关
+            safe_update_gateway_status(application, enabled=True)
             with coordinator.release_on_error():
                 deployment = initialize_deployment(
                     env=env,
-                    operator=encoded_operator,
+                    operator=operator,
                     version_info=VersionInfo(
                         revision=data["version"]["source_hash"],
                         version_name=data["version"]["source_version_name"],

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import copy
 import logging
 import tempfile
 import uuid
@@ -29,7 +30,6 @@ import yaml
 from django.conf import settings
 from django.db import transaction
 from django.utils.crypto import get_random_string
-from kubernetes.client import ApiextensionsV1Api
 from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 from rest_framework.test import APIClient
@@ -40,7 +40,7 @@ from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import Build, EngineApp
 from paas_wl.platform.applications.struct_models import Application, Module, ModuleEnv
 from paas_wl.resources.base.base import get_client_by_cluster_name
-from paas_wl.resources.base.kres import KNamespace
+from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
@@ -80,13 +80,14 @@ def crds_is_configured(django_db_setup, django_db_blocker):
             ("bkapps.paas.bk.tencent.com", "cnative/specs/crd/bkapp_v1.yaml"),
             ("domaingroupmappings.paas.bk.tencent.com", "cnative/specs/crd/domaingroupmappings_v1.yaml"),
         ]
-        crd_client = ApiextensionsV1Api(client)
+        crd_client = KCustomResourceDefinition(client)
 
         for name, path in crd_infos:
             logger.info('Configure CRD %s...', name)
             body = yaml.load((Path(__file__).parent / path).read_text())
             try:
-                crd_client.create_custom_resource_definition(body)
+                name = body['metadata']['name']
+                crd_client.create_or_update(name=name, body=body)
             except ValueError as e:
                 logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
             except ApiException as e:
@@ -98,7 +99,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
 
         # Clean up CRDs
         for name, _ in crd_infos:
-            crd_client.delete_custom_resource_definition(name)
+            crd_client.delete(name)
 
 
 @pytest.fixture(autouse=True)
@@ -238,6 +239,33 @@ def create_default_cluster():
         ),
     )
     return cluster
+
+
+@pytest.fixture
+def patch_ingress_config():
+    """Patch ingress_config of the default cluster, usage:
+
+    def test_foo(patch_ingress_config):
+        patch_ingress_config(
+            port_map: ...,
+            app_root_domain: ...,
+        )
+        # Other test codes
+
+    """
+    cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+    orig_cfg = copy.deepcopy(cluster.ingress_config)
+
+    def _patch_func(**kwargs):
+        for k, v in kwargs.items():
+            setattr(cluster.ingress_config, k, v)
+        cluster.save(update_fields=['ingress_config'])
+
+    yield _patch_func
+
+    # Restore to original
+    cluster.ingress_config = orig_cfg
+    cluster.save(update_fields=['ingress_config'])
 
 
 def setup_default_client(cluster: Cluster):

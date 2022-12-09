@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import jinja2
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
+from paasng.pluginscenter.log.search import SmartSearch
 from paasng.pluginscenter.models import PluginInstance
-from paasng.pluginscenter.thirdparty.log.search import SmartSearch
 
 
 class ElasticSearchFilter:

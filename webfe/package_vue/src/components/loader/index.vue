@@ -246,9 +246,24 @@
     }
   }
 
-  .right-main-plugin .paas-loading-content .loading-placeholder {
-    left: calc(50% - 700px);
-  }
+@media (min-width: 1280px) {
+    .right-main-plugin .paas-loading-content .loading-placeholder {
+        left: 80px;
+        width: auto;
+    }
+}
+@media screen and(min-width: 1680px) {
+
+}
+@media screen and(min-width: 1920px) {
+
+}
+@media screen and(min-width: 2450px) {
+    .right-main-plugin .paas-loading-content .loading-placeholder {
+        left: 20%;
+        width: auto;
+    }
+}
   .hide {
     display: none;
   }

@@ -236,6 +236,12 @@ DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/a
 # 在监控获取的grpc push url
 BK_OTEL_GRPC_URL = env("BK_OTEL_GRPC_URL", default='')
 # 调用 API 需要的信息
-BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default='')
 BK_APP_CODE = env("BK_APP_CODE", default='bk_paas3')
 BK_APP_SECRET = env("BK_APP_SECRET", default='')
+# 对外版蓝鲸监控的 API 注册在 ESB
+BK_COMPONENT_API_URL = env("BK_COMPONENT_API_URL", default='')
+# 上云版蓝鲸监控的 API 注册在 APIGW
+BK_API_URL_TMPL = env("BK_API_URL_TMPL", default='')
+APIGW_ENVIRONMENT = env("APIGW_ENVIRONMENT", default='prod')
+# 蓝鲸监控的API是否已经注册在 APIGW
+ENABLE_BK_MONITOR_APIGW = env("ENABLE_BK_MONITOR_APIGW", default=True)

@@ -321,6 +321,11 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         result = {}
         cluster_info = EngineAppClusterInfo(self.db_engine_app)
 
+        bk_monitor_space_id = ""
+        # 增强服务参数中声明了需要蓝鲸监控命名空间，则需要创建应用对应的蓝鲸监控命名空间
+        if 'bk_monitor_space_id' in params_tmpl:
+            pass
+
         for key, tmpl_str in params_tmpl.items():
             result[key] = tmpl_str.format(
                 engine_app=self.db_engine_app,
@@ -329,6 +334,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
                 env=self.db_env,
                 cluster_info=cluster_info,
                 app_developers=json.dumps(self.db_application.get_developers()),
+                bk_monitor_space_id=bk_monitor_space_id,
             )
         return result
 

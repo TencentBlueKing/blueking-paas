@@ -180,6 +180,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                     'endpoint_url': otel_ep_url,
                     'provision_params_tmpl': {
                         'app_code': '{application.code}',
+                        'bk_monitor_space_id': '{bk_monitor_space_id}',
                         'env': '{env.environment}',
                     },
                     'is_ready': settings.get('RSVC_BUNDLE_OTEL_ENABLED', False),

@@ -551,7 +551,7 @@
 <style lang="scss" scoped>
 .bk-create-plugin-warp {
     padding: 28px 0 44px;
-    width: 1180px;
+    width: calc(100% - 120px);
     margin: 0 auto;
     min-height: calc(100vh - 120px);
     .base-info-tit{

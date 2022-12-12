@@ -139,7 +139,7 @@
                 v-if="row.retryable && row.status === 'interrupted' || row.status === 'failed'"
                 theme="primary"
                 text
-                @click="handleRelease(row, 'republish')"
+                @click="handleRelease(row, 'reset')"
               >
                 {{ $t('重新发布') }}
               </bk-button>
@@ -447,7 +447,7 @@
             },
 
             // 发布
-            handleRelease (data, isRepublish) {
+            handleRelease (data, isReset) {
                 const stagesData = data.all_stages.map((e, i) => {
                     e.icon = i + 1;
                     e.title = e.name;
@@ -456,10 +456,12 @@
                 this.$store.commit('plugin/updateStagesData', stagesData);
                 this.$router.push({
                     name: 'pluginVersionRelease',
+                    params: {
+                        isReset
+                    },
                     query: {
                         stage_id: data.current_stage.stage_id,
-                        release_id: data.id,
-                        isRepublish
+                        release_id: data.id
                     }
                 });
             }

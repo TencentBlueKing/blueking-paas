@@ -17,6 +17,16 @@
           @tab-change="handleTabChange"
         >
           <bk-tab-panel
+            v-if="pluginFeatureFlags.STRUCTURE_LOG"
+            name="structured"
+            :label="$t('结构化日志')"
+          >
+            <custom-log
+              v-if="tabActive === 'structured'"
+              ref="customLog"
+            />
+          </bk-tab-panel>
+          <bk-tab-panel
             name="stream"
             :label="$t('标准输出日志')"
           >
@@ -41,22 +51,29 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import standartLog from './standart-log.vue';
     import accessLog from './access-log.vue';
+    import customLog from './custom-log.vue';
     import paasPluginTitle from '@/components/pass-plugin-title';
 
     export default {
         components: {
             standartLog,
             accessLog,
+            customLog,
             paasPluginTitle
         },
         mixins: [appBaseMixin],
         data () {
             return {
                 name: 'log-component',
-                tabActive: 'stream',
+                tabActive: 'structured',
                 tabChangeIndex: 0,
                 isLoading: false
             };
+        },
+        computed: {
+            pluginFeatureFlags () {
+                return this.$store.state.plugin.pluginFeatureFlags;
+            }
         },
         watch: {
             tabActive () {

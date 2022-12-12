@@ -179,7 +179,8 @@ export const pluginRouter = [
         name: 'pluginProcess',
         meta: {
           pathName: '进程管理',
-          capture403Error: false
+          capture403Error: false,
+          isGetAppInfo: true
         }
       },
       {
@@ -188,7 +189,8 @@ export const pluginRouter = [
         name: 'appCloudAPI',
         meta: {
           pathName: '云 API 权限',
-          capture403Error: false
+          capture403Error: false,
+          isGetAppInfo: true
         }
       },
       {
@@ -197,7 +199,8 @@ export const pluginRouter = [
         name: 'pluginBaseInfo',
         meta: {
           pathName: '基本信息',
-          capture403Error: false
+          capture403Error: false,
+          isGetAppInfo: true
         }
       },
       {

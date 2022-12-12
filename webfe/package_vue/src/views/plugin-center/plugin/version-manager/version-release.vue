@@ -1,5 +1,5 @@
 <template>
-  <div class="container visible-range">
+  <div class="container visible-range-release">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-inner-loading"
@@ -869,9 +869,10 @@
 .footer-btn-warp {
     position: fixed;
     bottom: 0;
-    max-width: 1140px;
+    left: 241px;
+    // max-width: 1140px;
     width: 100%;
-    padding-left: 24px;
+    padding-left: 48px;
     height: 48px;
     line-height: 48px;
     background: #FFFFFF;
@@ -944,7 +945,7 @@
 }
 </style>
 <style>
-    .visible-range .editor .ql-snow .ql-formats {
+    .visible-range-release .editor .ql-snow .ql-formats {
         line-height: 24px;
     }
 </style>

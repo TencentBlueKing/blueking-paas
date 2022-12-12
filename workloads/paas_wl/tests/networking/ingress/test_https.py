@@ -54,7 +54,7 @@ class TestCustomDomainIngressWithHTTPS:
             https_enabled=True,
             cert=cert,
         )
-        mgr = CustomDomainIngressMgr(app_domain)
+        mgr = CustomDomainIngressMgr(app, app_domain)
         mgr.sync(default_service_name="foo-service")
         ingress = ingress_kmodel.get(app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is True
@@ -77,7 +77,7 @@ class TestCustomDomainIngressWithHTTPS:
             # Enable HTTPS
             https_enabled=True,
         )
-        mgr = CustomDomainIngressMgr(app_domain)
+        mgr = CustomDomainIngressMgr(app, app_domain)
         mgr.sync(default_service_name="foo-service")
         ingress = ingress_kmodel.get(app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is True
@@ -92,7 +92,7 @@ class TestCustomDomainIngressWithHTTPS:
             # Enable HTTPS
             https_enabled=True,
         )
-        mgr = CustomDomainIngressMgr(app_domain)
+        mgr = CustomDomainIngressMgr(app, app_domain)
         mgr.sync(default_service_name="foo-service")
         ingress = ingress_kmodel.get(app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is False, "HTTPS domain with no certs should be turned off"
@@ -105,7 +105,7 @@ class TestCustomDomainIngressWithHTTPS:
             host='anything.foo.com',
             https_enabled=False,
         )
-        mgr = CustomDomainIngressMgr(app_domain)
+        mgr = CustomDomainIngressMgr(app, app_domain)
         mgr.sync(default_service_name="foo-service")
         ingress = ingress_kmodel.get(app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is False

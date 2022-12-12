@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paas_wl.cluster.utils import get_cluster_by_app
@@ -40,6 +42,11 @@ class TestLegacyAppIngressMgr:
 
 @pytest.mark.auto_create_ns
 class TestAppDefaultIngresses:
+    @pytest.fixture(autouse=True)
+    def mock_get_env_by_engine_app_id(self, bk_stag_env):
+        with mock.patch("paas_wl.networking.ingress.managers.misc.get_env_by_engine_app_id", return_value=bk_stag_env):
+            yield
+
     def test_integrated(self, app):
         app_default_ingresses = AppDefaultIngresses(app)
         app_default_ingresses.sync_ignore_empty(default_service_name='foo')

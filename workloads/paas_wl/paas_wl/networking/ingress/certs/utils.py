@@ -23,8 +23,8 @@ from typing import Optional, Tuple
 
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert
-from paas_wl.platform.applications.models import App
+from paas_wl.networking.ingress.models import AppDomainSharedCert, BasicCert, DomainLike
+from paas_wl.platform.applications.models import EngineApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.utils.basic import get_client_by_app
 
@@ -34,23 +34,22 @@ logger = logging.getLogger(__name__)
 class AppDomainCertController:
     """Controller for app_domains's certs"""
 
-    def __init__(self, app_domain: AppDomain):
-        self.app_domain = app_domain
-        self.app = self.app_domain.app
+    def __init__(self, app: EngineApp, domain: DomainLike):
+        self.app = app
+        self.domain = domain
 
     def get_cert(self) -> Optional[BasicCert]:
         """Get cert object"""
-        if self.app_domain.cert:
-            return self.app_domain.cert
-        if self.app_domain.shared_cert:
-            return self.app_domain.shared_cert
+        if cert := self.domain.get_cert():
+            return cert
+        if wildcard_cert := self.domain.get_wildcard_cert():
+            return wildcard_cert
 
         # Try to pick a matched shared cert by CN
-        shared_cert = pick_shared_cert(self.app.region, self.app_domain.host)
+        shared_cert = pick_shared_cert(self.app.region, self.domain.host)
         if shared_cert:
-            logger.debug('Shared cert found for %s', self.app_domain)
-            self.app_domain.shared_cert = shared_cert
-            self.app_domain.save(update_fields=['shared_cert'])
+            logger.debug('Shared cert found for %s', self.domain.host)
+            self.domain.set_wildcard_cert(shared_cert)
             return shared_cert
         return None
 
@@ -59,7 +58,7 @@ class AppDomainCertController:
         return update_or_create_secret_by_cert(self.app, cert)
 
 
-def update_or_create_secret_by_cert(app: App, cert: BasicCert) -> Tuple[str, bool]:
+def update_or_create_secret_by_cert(app: EngineApp, cert: BasicCert) -> Tuple[str, bool]:
     """Update or create the secret resource by cert object
 
     :param app: `App` object, the Secret resource which holds HTTPS cert will be created

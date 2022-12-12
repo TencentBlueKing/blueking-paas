@@ -133,7 +133,7 @@ def to_domain(d: AppDomain) -> Domain:
     if not d.https_enabled:
         return Domain(host=d.host, pathPrefixList=['/'])
 
-    cert_ctrl = AppDomainCertController(d)
+    cert_ctrl = AppDomainCertController(d.app, d)
     cert = cert_ctrl.get_cert()
     if not cert:
         # Disable HTTPS and write a warning message

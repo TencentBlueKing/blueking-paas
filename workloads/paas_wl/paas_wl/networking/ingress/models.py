@@ -17,18 +17,33 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
+from typing import Optional, Protocol
 
 from django.core.validators import RegexValidator
 from django.db import models
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.platform.applications.models import App, AuditedModel
 from paas_wl.platform.applications.struct_models import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
 
-from .constants import AppDomainSource, AppSubpathSource
+
+class DomainLike(Protocol):
+    host: str  # 域名
+    path_prefix: str  # 当前域名的可访问路径
+    https_enabled: bool  # 该域名是否开启 https.
+
+    def get_cert(self) -> Optional["AppDomainCert"]:
+        """获取当前域名的证书"""
+
+    def get_wildcard_cert(self) -> Optional["AppDomainSharedCert"]:
+        """获取泛域名证书"""
+
+    def set_wildcard_cert(self, cert: 'AppDomainSharedCert'):
+        """设置泛域名证书"""
 
 
 @dataclass
@@ -69,6 +84,19 @@ class AppDomain(AuditedModel):
 
     class Meta:
         unique_together = ("region", "host", "path_prefix")
+
+    # implement interface - DomainLike begin
+    def get_cert(self) -> Optional['AppDomainCert']:
+        return self.cert
+
+    def get_wildcard_cert(self) -> Optional['AppDomainSharedCert']:
+        return self.shared_cert
+
+    def set_wildcard_cert(self, cert: 'AppDomainSharedCert'):
+        self.shared_cert = cert
+        self.save(update_fields=["shared_cert", "updated"])
+
+    # implement interface - DomainLike end
 
 
 class BasicCert(AuditedModel):
@@ -149,8 +177,6 @@ class Domain(TimestampedModel):
     path_prefix = models.CharField(max_length=64, default='/', help_text="the accessable path for current domain")
     module_id = models.UUIDField(help_text='关联的模块 ID', null=False)
     environment_id = models.BigIntegerField(help_text='关联的环境 ID', null=False)
-    # TODO: lb_plan 应该已经废弃了，在迁移数据时删除该字段
-    lb_plan = models.CharField("load balancer plan", max_length=64, default='LBDefaultPlan')
     https_enabled = models.NullBooleanField(default=False, help_text="该域名是否开启 https.")
 
     module = ModuleAttrFromID()
@@ -162,6 +188,35 @@ class Domain(TimestampedModel):
     @property
     def protocol(self) -> str:
         return "https" if self.https_enabled else "http"
+
+    def has_customized_path_prefix(self) -> bool:
+        """Check if current domain has configured a custom path prefix"""
+        return self.path_prefix != '/'
+
+    # implement interface - DomainLike begin
+    @property
+    def host(self) -> str:
+        """alias to name"""
+        return self.name
+
+    @host.setter
+    def host(self, v):
+        """alias to name"""
+        self.name = v
+
+    def get_cert(self) -> Optional['AppDomainCert']:
+        """目前平台不支持为独立域名配置证书"""
+        return None
+
+    def get_wildcard_cert(self) -> Optional['AppDomainSharedCert']:
+        """目前平台不支持为独立域名配置泛域名证书"""
+        return None
+
+    def set_wildcard_cert(self, cert: 'AppDomainSharedCert'):
+        """独立域名不支持配置泛域名证书"""
+        return NotImplemented
+
+    # implement interface - DomainLike end
 
     def __str__(self):
         return f'module={self.module_id}-{self.name}'

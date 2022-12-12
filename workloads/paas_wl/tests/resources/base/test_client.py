@@ -84,10 +84,12 @@ class TestClientProcess:
     def worker_process(self, app, release):
         return AppProcessManager(app=app).assemble_process("worker", release=release)
 
-    def test_deploy_processes(self, scheduler_client, web_process):
+    def test_deploy_processes(self, bk_stag_env, scheduler_client, web_process):
         with patch('paas_wl.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
             'paas_wl.networking.ingress.managers.service.service_kmodel'
-        ) as ks, patch('paas_wl.networking.ingress.managers.base.ingress_kmodel') as ki:
+        ) as ks, patch('paas_wl.networking.ingress.managers.base.ingress_kmodel') as ki, patch(
+            "paas_wl.networking.ingress.managers.misc.get_env_by_engine_app_id", return_value=bk_stag_env
+        ):
             ks.get.side_effect = AppEntityNotFound()
             ki.get.side_effect = AppEntityNotFound()
 

@@ -126,7 +126,7 @@ def webconsole_url(engine_app):
 
 
 @pytest.fixture
-def create_release(engine_app, build, api_client, release_url):
+def create_release(bk_stag_env, engine_app, build, api_client, release_url):
     def handler():
         data = {
             'build': build.uuid,
@@ -140,8 +140,9 @@ def create_release(engine_app, build, api_client, release_url):
             },
             'procfile': {},
         }
-        response = api_client.post(release_url, data=data)
-        return response
+        with mock.patch("paas_wl.networking.ingress.managers.misc.get_env_by_engine_app_id", return_value=bk_stag_env):
+            response = api_client.post(release_url, data=data)
+            return response
 
     return handler
 

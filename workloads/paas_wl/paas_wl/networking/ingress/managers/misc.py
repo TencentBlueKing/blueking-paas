@@ -20,16 +20,15 @@ import logging
 from typing import Iterable, List, NamedTuple
 
 from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import EmptyAppIngressError
-from paas_wl.networking.ingress.models import AppDomain
+from paas_wl.networking.ingress.managers.base import AppIngressMgr
+from paas_wl.networking.ingress.managers.domain import CustomDomainIngressMgr, SubdomainAppIngressMgr
+from paas_wl.networking.ingress.managers.subpath import SubPathAppIngressMgr
+from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.struct_models import get_env_by_engine_app_id
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-
-from .base import AppIngressMgr
-from .domain import CustomDomainIngressMgr, SubdomainAppIngressMgr
-from .subpath import SubPathAppIngressMgr
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +54,11 @@ class AppDefaultIngresses:
         yield SubPathAppIngressMgr(self.app)
 
         # Independent domain managers
-        for domain in AppDomain.objects.filter(app=self.app, source=AppDomainSource.INDEPENDENT):
-            yield CustomDomainIngressMgr(domain)
+        # NOTE: get_env_by_engine_app_id 会产生 1 次网络请求(依赖 apiserver 服务)
+        # TODO: 添加查询缓存，或尽早合并项目减少模块之间的网络调用
+        env = get_env_by_engine_app_id(self.app.pk)
+        for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
+            yield CustomDomainIngressMgr(self.app, domain)
 
     def sync_ignore_empty(self, default_service_name: str = None):
         """Sync current ingress resources to apiserver,

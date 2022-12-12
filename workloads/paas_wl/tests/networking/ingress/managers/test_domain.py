@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from unittest.mock import Mock, patch
 
 import pytest
+from django_dynamic_fixture import G
 
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
@@ -29,7 +30,7 @@ from paas_wl.networking.ingress.managers.domain import (
     SubdomainAppIngressMgr,
     assign_custom_hosts,
 )
-from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AutoGenDomain
+from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AutoGenDomain, Domain, DomainLike
 from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.basic import get_client_by_app
@@ -226,8 +227,8 @@ class TestSubdomainAppIngressMgr:
         assert len(ingress_mgr.list_desired_domains()) == 0
 
 
+@pytest.mark.auto_create_ns
 class TestCustomDomainIngressMgr:
-    @pytest.mark.auto_create_ns
     @pytest.mark.parametrize(
         'path_prefix,expected_path_prefixes,customized_ingress_name',
         [
@@ -236,14 +237,12 @@ class TestCustomDomainIngressMgr:
         ],
     )
     def test_create(self, path_prefix, expected_path_prefixes, customized_ingress_name, app):
-        domain = AppDomain.objects.create(
-            app=app,
-            region=app.region,
-            host='foo.example.com',
+        domain = G(
+            Domain,
+            name='foo.example.com',
             path_prefix=path_prefix,
-            source=AppDomainSource.INDEPENDENT,
         )
-        mgr = CustomDomainIngressMgr(domain)
+        mgr = CustomDomainIngressMgr(app, domain)
 
         mgr.sync(default_service_name=app.name)
         obj = ingress_kmodel.get(app, mgr.make_ingress_name())
@@ -254,14 +253,14 @@ class TestCustomDomainIngressMgr:
             assert obj.name == "custom-foo.example.com"
         assert obj.domains[0].path_prefix_list == expected_path_prefixes
         assert obj.service_name == app.name
-
-    def test_normal_delete(self, app):
-        domain = AppDomain.objects.create(
-            app=app, region=app.region, host='foo.example.com', source=AppDomainSource.INDEPENDENT
-        )
-        mgr = CustomDomainIngressMgr(domain)
         mgr.delete()
 
+    def test_normal_delete(self, app):
+        domain = G(Domain, name='foo.example.com')
+        mgr = CustomDomainIngressMgr(app, domain)
+        mgr.sync(default_service_name=app.name)
+        _ = ingress_kmodel.get(app, mgr.make_ingress_name())
+        mgr.delete()
         with pytest.raises(AppEntityNotFound):
             ingress_kmodel.get(app, mgr.make_ingress_name())
 
@@ -282,37 +281,63 @@ class TestIntegratedDomains:
 
 
 class TestIngressDomainFactory:
-    def test_make_ingress_domain_with_http(self):
-        factory = IngressDomainFactory()
-        host = "example.com"
-        domain = factory.create(AppDomain(https_enabled=False, host=host))
-        assert domain.host == host
-        assert domain.tls_enabled is False
+    @pytest.mark.parametrize(
+        "domain_like",
+        [
+            AppDomain(https_enabled=False, host="example.com"),
+            Domain(https_enabled=False, name="example.com"),
+        ],
+    )
+    def test_make_ingress_domain_with_http(self, app, domain_like: DomainLike):
+        factory = IngressDomainFactory(app)
+        domain = factory.create(domain_like)
+        assert domain.host == domain_like.host
+        assert domain.tls_enabled == domain_like.https_enabled
         assert domain.tls_secret_name == ''
 
-    def test_https_cert_not_found(self):
+    @pytest.mark.parametrize(
+        "domain_like",
+        [
+            AppDomain(https_enabled=True, host="example.com"),
+            Domain(https_enabled=True, name="example.com"),
+        ],
+    )
+    def test_https_cert_not_found(self, app, domain_like: DomainLike):
         cert_controller_mocker = Mock(return_value=Mock(get_cert=Mock(return_value=None)))
-        factory = IngressDomainFactory(cert_controller_mocker)
+        factory = IngressDomainFactory(app, cert_controller_mocker)
         with pytest.raises(ValidCertNotFound):
-            factory.create(AppDomain(https_enabled=True, host='example.com'))
+            factory.create(domain_like)
 
-    def test_https_cert_not_found_no_exception(self):
+    @pytest.mark.parametrize(
+        "domain_like",
+        [
+            AppDomain(https_enabled=True, host="example.com"),
+            Domain(https_enabled=True, name="example.com"),
+        ],
+    )
+    def test_https_cert_not_found_no_exception(self, app, domain_like: DomainLike):
         cert_controller_mocker = Mock(return_value=Mock(get_cert=Mock(return_value=None)))
-        factory = IngressDomainFactory(cert_controller_mocker)
-        domain = factory.create(AppDomain(https_enabled=True, host='example.com'), raise_on_no_cert=False)
+        factory = IngressDomainFactory(app, cert_controller_mocker)
+        domain = factory.create(domain_like, raise_on_no_cert=False)
         assert domain.tls_enabled is False
 
-    def test_https_cert_created(self):
+    @pytest.mark.parametrize(
+        "domain_like",
+        [
+            AppDomain(https_enabled=True, host="example.com"),
+            Domain(https_enabled=True, name="example.com"),
+        ],
+    )
+    def test_https_cert_created(self, app, domain_like: DomainLike):
         cert_controller_mocker = Mock(
             return_value=Mock(
                 get_cert=Mock(return_value=object()),
                 update_or_create_secret_by_cert=Mock(return_value=("test", True)),
             )
         )
-        factory = IngressDomainFactory(cert_controller_mocker)
-        host = "example.com"
+        factory = IngressDomainFactory(app, cert_controller_mocker)
 
-        domain = factory.create(AppDomain(https_enabled=True, host=host))
-        assert domain.host == host
-        assert domain.tls_enabled is True
+        domain = factory.create(domain_like)
+        assert domain.host == domain_like.host
+        assert domain.tls_enabled == domain_like.https_enabled
         assert domain.tls_secret_name == 'test'

@@ -25,11 +25,10 @@ from paas_wl.networking.ingress.certs.utils import AppDomainCertController
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
-from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain
+from paas_wl.networking.ingress.managers.base import AppIngressMgr
+from paas_wl.networking.ingress.managers.common import SubpathCompatPlugin
+from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain, DomainLike
 from paas_wl.platform.applications.models import App
-
-from .base import AppIngressMgr
-from .common import SubpathCompatPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +87,7 @@ class SubdomainAppIngressMgr(AppIngressMgr):
         if config.domain:
             domains.append(PIngressDomain(host=config.domain))
 
-        factory = IngressDomainFactory()
+        factory = IngressDomainFactory(self.app)
         for d in AppDomain.objects.filter(app=self.app, source=AppDomainSource.AUTO_GEN):
             domains.append(factory.create(d, raise_on_no_cert=False))
         return domains
@@ -100,38 +99,39 @@ class CustomDomainIngressMgr(AppIngressMgr):
     plugins = [SubpathCompatPlugin]
     CUSTOM_DOMAIN_PREFIX = "custom-"
 
-    def __init__(self, app_domain: AppDomain):
-        self.app_domain = app_domain
-        super().__init__(self.app_domain.app)
+    def __init__(self, app: App, domain: Domain):
+        self.domain = domain
+        super().__init__(app)
 
     def make_ingress_name(self) -> str:
         """Make the name of Ingress resource
 
         :raise: PersistentAppDomainRequired when unable to generate ingress_name
         """
-        if self.app_domain.has_customized_path_prefix():
-            if not self.app_domain.id:
+        if self.domain.has_customized_path_prefix():
+            if not self.domain.id:
                 raise PersistentAppDomainRequired(
-                    '"id" field is required when generating name for AppDomain object with customized path_prefix'
+                    '"id" field is required when generating name for Domain object with customized path_prefix'
                 )
 
             # When path prefix is non-default, a different name is required to avoid conflict
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.app_domain.host}-{self.app_domain.id}'
+            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.host}-{self.domain.id}'
         else:
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.app_domain.host}'
+            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.host}'
 
     def list_desired_domains(self) -> List[PIngressDomain]:
-        factory = IngressDomainFactory()
-        return [factory.create(self.app_domain, raise_on_no_cert=False)]
+        factory = IngressDomainFactory(self.app)
+        return [factory.create(self.domain, raise_on_no_cert=False)]
 
 
 class IngressDomainFactory:
     """A factory class creates `PIngressDomain` objects"""
 
-    def __init__(self, cert_controller_cls: Optional[Type[AppDomainCertController]] = None):
+    def __init__(self, app: App, cert_controller_cls: Optional[Type[AppDomainCertController]] = None):
+        self.app = app
         self.cert_controller_cls = cert_controller_cls or AppDomainCertController
 
-    def create(self, app_domain: AppDomain, raise_on_no_cert: bool = True) -> PIngressDomain:
+    def create(self, app_domain: DomainLike, raise_on_no_cert: bool = True) -> PIngressDomain:
         """Detect domain scheme, return a ingress domain config
 
         :param app_domain: domain object stores in database
@@ -143,7 +143,7 @@ class IngressDomainFactory:
         if not app_domain.https_enabled:
             return PIngressDomain(host=app_domain.host, path_prefix_list=[path_prefix], tls_enabled=False)
 
-        cert_controller = self.cert_controller_cls(app_domain)
+        cert_controller = self.cert_controller_cls(self.app, app_domain)
         cert = cert_controller.get_cert()
         if cert:
             secret_name, created = cert_controller.update_or_create_secret_by_cert(cert)

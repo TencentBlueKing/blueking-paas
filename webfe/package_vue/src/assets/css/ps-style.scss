@@ -261,10 +261,6 @@ span.ellipsis {
 
 .right-main-plugin{
     width: calc(100% - 50px) !important;
-    .ps-top-bar .header-title {
-        max-width: auto;
-        margin: 0 60px;
-    }
 }
 
 .paas-loading-panel .text,
@@ -1049,6 +1045,11 @@ span.ellipsis {
             max-width: 1180px;
         }
     }
+    .overview-fright-plugin .ps-top-bar
+        .header-title, h2{
+            max-width: none;
+            margin: 0 60px;
+        }
     .ps-container,
     .app-container {
         max-width: 1180px;

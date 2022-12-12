@@ -261,6 +261,10 @@ span.ellipsis {
 
 .right-main-plugin{
     width: calc(100% - 50px) !important;
+    .ps-top-bar .header-title {
+        max-width: auto;
+        margin: 0 60px;
+    }
 }
 
 .paas-loading-panel .text,

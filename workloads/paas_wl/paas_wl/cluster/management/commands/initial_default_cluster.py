@@ -48,6 +48,7 @@ class ClusterData:
     token_value: Optional[str] = None
     default_node_selector: Optional[Dict] = None
     default_tolerations: Optional[List] = None
+    feature_flags: Optional[Dict] = None
 
 
 @dataclass

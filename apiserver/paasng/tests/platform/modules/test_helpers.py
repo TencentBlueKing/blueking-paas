@@ -20,7 +20,7 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.platform.modules.exceptions import BindError
-from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager, get_module_cluster
+from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager, get_module_clusters
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -105,12 +105,10 @@ def test_bind_buildpack(bk_module, slugbuilder, buildpack, slugbuilder_attrs, bu
             binder.bind_buildpack(buildpack)
 
 
-def test_get_module_cluster(bk_module, mock_current_engine_client):
-    cluster = get_module_cluster(bk_module)
-    assert cluster is not None
+def test_get_module_clusters(bk_module, mock_current_engine_client):
+    assert len(get_module_clusters(bk_module)) != 0
 
 
-def test_get_module_cluster_engineless(bk_module):
+def test_get_module_clusters_engineless(bk_module):
     bk_module.envs.all().delete()
-    cluster = get_module_cluster(bk_module)
-    assert cluster is None
+    assert len(get_module_clusters(bk_module)) == 0

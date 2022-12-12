@@ -26,7 +26,6 @@ from cattr import structure
 from paasng.engine.controller.client import ControllerClient
 from paasng.engine.controller.models import Cluster
 from paasng.engine.controller.shortcuts import make_internal_client
-from paasng.platform.core.storages.cache import region as cache_region
 
 
 class AbstractRegionClusterService(ABC):
@@ -116,7 +115,6 @@ def get_region_cluster_helper(region: str) -> AbstractRegionClusterService:
     return RegionClusterService(region)
 
 
-@cache_region.cache_on_arguments(namespace='v3', expiration_time=60)
 def get_engine_app_cluster(region: str, engine_app_name: str) -> Cluster:
     """Shortcut function for `RegionClusterService.get_engine_app_cluster`"""
     return get_region_cluster_helper(region).get_engine_app_cluster(engine_app_name)

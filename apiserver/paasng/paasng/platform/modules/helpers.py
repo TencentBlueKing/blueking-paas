@@ -18,12 +18,13 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from operator import attrgetter
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Dict, Iterable, List
 
 from django.db import transaction
 
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.models import Cluster, Domain
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -259,16 +260,12 @@ class ModuleRuntimeManager:
         ]
 
 
-def get_module_cluster(module: 'Module') -> Optional[Cluster]:
-    """Return the cluster info of module object"""
-    # NOTE: Use the FIRST environment object because we consider all environments in a module
-    # shares same cluster info. FIXME 同模块不同环境可能部署不在同一个集群，该方法不该被使用
-    env = module.envs.first()
-    if not env:
-        return None
-
-    cluster = get_engine_app_cluster(module.region, env.engine_app.name)
-    return cluster
+def get_module_clusters(module: 'Module') -> Dict[AppEnvironment, Cluster]:
+    """return all cluster info of module envs"""
+    return {
+        AppEnvironment(env.environment): get_engine_app_cluster(module.region, env.engine_app.name)
+        for env in module.envs.all()
+    }
 
 
 def get_module_all_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
@@ -276,15 +273,21 @@ def get_module_all_root_domains(module: 'Module', include_reserved: bool = False
 
     :param module: 模块
     :param include_reserved: 是否包括保留域名
-    :raise NotImplementedError: when module.exposed_url_type is None
+    :raise ValueError: when module.exposed_url_type is None
     """
     if module.exposed_url_type is None:
         raise ValueError("legacy exposed_url_type is unsupported.")
 
-    cluster_info = get_module_cluster(module)
-    if not cluster_info:
+    clusters = get_module_clusters(module)
+    if not clusters:
         return []
 
+    # FIXME 确定模块下的不同环境部署在不同集群的处理策略，目前是直接返回空值
+    if len(set(c.name for c in clusters)) > 1:
+        logging.warning('module stag and prod env deploy in different cluster, skip...')
+        return []
+
+    cluster_info = list(clusters.values())[0]
     if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
         root_domains = cluster_info.ingress_config.app_root_domains
     else:

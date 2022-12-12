@@ -6,7 +6,7 @@
     <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
         创建集群
     </bk-button>
-    <bk-table :data="data" :cell-class-name="cellStyleCallback" style="margin-top: 20px;">
+    <bk-table :data="data" :cell-class-name="cellStyleCallback" style="margin-top: 20px;" size="large">
         <bk-table-column type="expand" width="30">
             <template slot-scope="props">
                 <bk-table :data="props.row.api_servers" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
@@ -53,10 +53,12 @@
                 <json-pretty :data="props.row.annotations" show-length highlight-mouseover-node :deep="2"></json-pretty>
             </template>
         </bk-table-column>
-        <bk-table-column label="特性标志" prop="feature_flags" width="300">
-            <!-- 考虑做成轮询展示，而不是 json 格式？ -->
+        <bk-table-column label="特性标志" prop="feature_flags" width="400">
             <template slot-scope="props">
-                <json-pretty :data="props.row.feature_flags" show-length highlight-mouseover-node :deep="2"></json-pretty>
+                <div v-for="ff in featureFlagList" style="display: flex">
+                    <bk-tag v-if="hasFeatureFlag(props.row, ff.value)" theme="success">✔ $[ ff.text ]</bk-tag>
+                    <bk-tag v-else theme="danger">✘ $[ ff.text ]</bk-tag>
+                </div>
             </template>
         </bk-table-column>
         <bk-table-column label="操作" width="130">
@@ -119,8 +121,21 @@
             <bk-form-item label="注解" required>
                 <json-editor v-model="dialog.form.annotations" :disabled="dialog.type === 'delete'"></json-editor>
             </bk-form-item>
-            <bk-form-item label="特性标志" required>
-                <json-editor v-model="dialog.form.feature_flags" :disabled="dialog.type === 'delete'"></json-editor>
+            <bk-form-item label="特性标志" desc="不同的集群可能拥有不同的特性，请根据实际需要编辑">
+                <bk-select
+                    multiple
+                    v-model="dialog.form.enabled_feature_flags"
+                    display-tag
+                    @change="updateFeatureFlags"
+                    :disabled="dialog.type === 'delete'"
+                >
+                    <bk-option
+                        v-for="type in featureFlagList"
+                        :key="type.value"
+                        :id="type.value"
+                        :name="type.text">
+                    </bk-option>
+                </bk-select>
             </bk-form-item>
             <bk-form-item label="数字证书认证机构（cert-authority）">
                 <bk-input
@@ -219,6 +234,7 @@
     /* beautify preserve:start */
     const regionList = {{ region_list | to_json }}
     const clusterTypeList = {{ cluster_type_list | to_json }}
+    const featureFlagList = {{ feature_flag_list | to_json }}
     /* beautify preserve:end */
     const DomainSchema = {
         type: "array",
@@ -273,7 +289,10 @@
                                 default_ingress_domain_tmpl: ''
                             },
                             annotations: {},
+                            // 全量 feature_flags 信息
                             feature_flags: {},
+                            // 已经启用的 feature_flags
+                            enabled_feature_flags: [],
                             ca_data: undefined,
                             cert_data: undefined,
                             key_data: undefined,
@@ -343,6 +362,7 @@
                     this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}
                     this.dialog.form.annotations = {}
                     this.dialog.form.feature_flags = {}
+                    this.dialog.form.enabled_feature_flags = {}
                     this.dialog.form.ca_data = undefined
                     this.dialog.form.cert_data = undefined
                     this.dialog.form.key_data = undefined
@@ -355,7 +375,15 @@
                     this.dialog.type = "edit"
                     this.dialog.row = row
 
-                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
+                    // 将 dict 转换成 bk-select 需要的 list
+                    var enabled_feature_flags = [];
+                    for (var ff in row.feature_flags) {
+                      if (row.feature_flags[ff] === true) {
+                        enabled_feature_flags.push(ff);
+                      }
+                    }
+
+                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config}, enabled_feature_flags: enabled_feature_flags }
                     this.dialog.visible = true
                 },
                 handleDelete: function(row) {
@@ -371,6 +399,17 @@
                     ).then(resp => {
                         this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 状态成功`})
                     })
+                },
+                // 在多选框被修改时，根据选中的项目，同步更新 feature_flags 内容
+                updateFeatureFlags: function () {
+                    for (var i = 0; i < featureFlagList.length; i++) {
+                      var val = featureFlagList[i]['value'];
+                      this.dialog.form.feature_flags[val] = this.dialog.form.enabled_feature_flags.indexOf(val) >= 0;
+                    }
+                },
+                // 判断当前集群是否支持某特性
+                hasFeatureFlag: function (row, ff) {
+                    return row.feature_flags[ff]
                 },
                 cellStyleCallback: function({ row, column, rowIndex, columnIndex }) {
                     if (column.label === "接入层配置" || column.label === '注解')

@@ -24,6 +24,8 @@ from unittest import mock
 import pytest
 
 from paasng.engine.constants import JobStatus
+from paasng.engine.controller.models import Cluster, Domain, IngressConfig
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import (
     ModuleLiveAddrs,
@@ -74,6 +76,91 @@ class TestGetPreallocatedAddress:
     def test_normal(self, ingress_config, expected_address):
         with replace_cluster_service(replaced_ingress_config=ingress_config):
             assert get_preallocated_address('test-code').prod == expected_address
+
+    @pytest.mark.parametrize(
+        'clusters, stag_address, prod_address',
+        [
+            # 同集群的情况
+            (
+                {
+                    AppEnvironment.STAGING.value: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                    AppEnvironment.PRODUCTION.value: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                },
+                'http://c1.foo.com/stag--test-code/',
+                'http://c1.foo.com/test-code/',
+            ),
+            # 不同集群, 类型相同的情况
+            (
+                {
+                    AppEnvironment.STAGING.value: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                    AppEnvironment.PRODUCTION.value: Cluster(
+                        name='c2',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c2.foo.com', reserved=False)]),
+                    ),
+                },
+                'http://c1.foo.com/stag--test-code/',
+                'http://c2.foo.com/test-code/',
+            ),
+            # 不同集群, 类型不同的情况
+            (
+                {
+                    AppEnvironment.STAGING.value: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(
+                            sub_path_domains=[Domain(name='c1.foo.com', reserved=False)],
+                        ),
+                    ),
+                    AppEnvironment.PRODUCTION.value: Cluster(
+                        name='c2',
+                        is_default=False,
+                        ingress_config=IngressConfig(
+                            app_root_domains=[Domain(name='c2.foo.com', reserved=False)],
+                        ),
+                    ),
+                },
+                'http://c1.foo.com/stag--test-code/',
+                'http://test-code.c2.foo.com',
+            ),
+            # 优先级的情况
+            (
+                {
+                    AppEnvironment.STAGING.value: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(app_root_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                    AppEnvironment.PRODUCTION.value: Cluster(
+                        name='c2',
+                        is_default=False,
+                        ingress_config=IngressConfig(
+                            sub_path_domains=[Domain(name='c2.foo.com', reserved=False)],
+                            app_root_domains=[Domain(name='c2.foo.com', reserved=False)],
+                        ),
+                    ),
+                },
+                'http://stag-dot-test-code.c1.foo.com',
+                'http://c2.foo.com/test-code/',
+            ),
+        ],
+    )
+    def test_with_clusters(self, clusters, stag_address, prod_address):
+        addr = get_preallocated_address('test-code', clusters=clusters)
+        assert addr.prod == prod_address
+        assert addr.stag == stag_address
 
 
 class TestSubPathURLProvider:

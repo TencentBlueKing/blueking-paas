@@ -35,7 +35,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
-from paasng.pluginscenter import constants, openapi_docs, serializers, shim
+from paasng.pluginscenter import constants
+from paasng.pluginscenter import log as log_api
+from paasng.pluginscenter import openapi_docs, serializers, shim
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.features import PluginFeatureFlagsManager
@@ -63,7 +65,6 @@ from paasng.pluginscenter.sourcectl import (
     remove_repo_member,
 )
 from paasng.pluginscenter.thirdparty import instance as instance_api
-from paasng.pluginscenter.thirdparty import log as log_api
 from paasng.pluginscenter.thirdparty import market as market_api
 from paasng.pluginscenter.thirdparty.configuration import sync_config
 from paasng.pluginscenter.thirdparty.instance import update_instance
@@ -331,6 +332,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     ordering = ('-created',)
 
     def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
         slz = serializers.PluginReleaseFilterSLZ(data=self.request.query_params)
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
@@ -710,6 +712,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.username,
             time_range=query_params["smart_time_range"],
             query_string=data["query"]["query_string"],
+            terms=data["query"]["terms"],
+            exclude=data["query"]["exclude"],
             limit=query_params["limit"],
             offset=query_params["offset"],
         )
@@ -771,6 +775,37 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
             query_string=data["query"]["query_string"],
         )
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
+
+    @swagger_auto_schema(
+        query_serializer=serializers.PluginLogQueryParamsSLZ,
+        request_body=serializers.PluginLogQueryBodySLZ,
+        responses={200: serializers.LogFieldFilterSLZ},
+    )
+    def aggregate_fields_filters(
+        self, request, pd_id, plugin_id, log_type: Literal["standard_output", "structure", "ingress"]
+    ):
+        """查询日志基于时间分布的直方图"""
+        plugin = self.get_plugin_instance()
+
+        slz = serializers.PluginLogQueryBodySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        slz = serializers.PluginLogQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        fields_filters = log_api.aggregate_fields_filters(
+            pd=plugin.pd,
+            instance=plugin,
+            log_type=log_type,
+            operator=request.user.username,
+            time_range=query_params["smart_time_range"],
+            query_string=data["query"]["query_string"],
+            terms=data["query"]["terms"],
+            exclude=data["query"]["exclude"],
+        )
+        return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 
 class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):

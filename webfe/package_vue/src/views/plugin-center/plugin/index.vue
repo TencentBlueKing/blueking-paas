@@ -17,12 +17,13 @@
               </div>
             </div>
             <div
-              class="overview-fright"
+              class="overview-fright-plugin"
               @click="hideQuickNav"
             >
               <router-view
                 v-if="userVisitEnable && appVisitEnable"
                 :app-info="appInfo"
+                class="right-main-plugin"
                 @current-app-info-updated="updateAppInfo"
               />
 

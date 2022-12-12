@@ -80,7 +80,8 @@
     overflow: hidden;
 }
 
-.overview-fright {
+.overview-fright, 
+.overview-fright-plugin {
     min-height: 800px;
     padding-bottom: 66px;
     position: relative;
@@ -93,7 +94,8 @@
     }
 }
 
-.overview-fright h2 {
+.overview-fright h2, 
+.overview-fright-plugin h2 {
     font-size: 14px;
     font-weight: normal;
     line-height: 50px;

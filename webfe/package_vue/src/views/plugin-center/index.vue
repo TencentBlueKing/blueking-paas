@@ -1,5 +1,5 @@
 <template>
-  <div class="bk-plugin-wrapper mt30">
+  <div class="bk-plugin-wrapper mt30 right-main-plugin">
     <paas-content-loader
       :is-loading="loading"
       :placeholder="loaderPlaceholder"
@@ -525,7 +525,7 @@
         }
     }
     .wrap {
-        width: 1180px;
+        width: calc(100% - 120px)
     }
     .plugin-logo-cls {
         width: 16px;

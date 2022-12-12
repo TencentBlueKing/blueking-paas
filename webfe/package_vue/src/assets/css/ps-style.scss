@@ -259,6 +259,10 @@ span.ellipsis {
     margin: 0 auto;
 }
 
+.right-main-plugin{
+    width: calc(100% - 50px) !important;
+}
+
 .paas-loading-panel .text,
 .ps-no-result .text {
     display: table-cell;
@@ -851,6 +855,10 @@ span.ellipsis {
     padding-top: 10px;
     max-width: $maxContentWidth;
     background: #FFF;
+}
+
+.overview-fright-plugin .app-container {
+    max-width: calc(100% - 100px);
 }
 
 .info-special-form.bk-form.bk-inline-form {

@@ -1097,6 +1097,13 @@ IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', defa
 # 是否在开发者中心应用列表中展示插件应用
 DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 
+# -----------------
+# 蓝鲸监控配置项
+# -----------------
+# 蓝鲸监控的API是否已经注册在 APIGW
+ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
+# 同步告警策略到监控的配置
+MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
@@ -1140,5 +1147,3 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
-
-MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

@@ -25,11 +25,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
 
 import arrow
+from bkpaas_auth import get_user_by_user_id
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 
+from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
 from paasng.dev_resources.servicehub import constants, exceptions
 from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.dev_resources.servicehub.remote.client import RemoteServiceClient
@@ -324,7 +326,13 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         bk_monitor_space_id = ""
         # 增强服务参数中声明了需要蓝鲸监控命名空间，则需要创建应用对应的蓝鲸监控命名空间
         if 'bk_monitor_space_id' in params_tmpl:
-            pass
+            # 蓝鲸监控命名空间的成员只能初始化一个成员，默认初始化应用的创建者
+            # 已测试用离职用户也能创建成功
+            owner_username = get_user_by_user_id(self.db_application.owner).username
+
+            bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
+                self.db_application.code, self.db_application.name, owner_username
+            )
 
         for key, tmpl_str in params_tmpl.items():
             result[key] = tmpl_str.format(

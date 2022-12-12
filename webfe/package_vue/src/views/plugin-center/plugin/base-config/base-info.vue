@@ -48,7 +48,6 @@
 
                 <div class="action-box">
                   <template v-if="!isFormEdited.nameInput">
-                    <!-- paasng-icon paasng-edit-2 -->
                     <a
                       v-bk-tooltips="$t('编辑')"
                       class="paasng-icon paasng-edit-2"
@@ -250,7 +249,7 @@
                     @click="changeInfoUnfold"
                   >
                     {{ isUnfold ? '收起' : '展开' }}
-                    <i :class="['paasng-icon', 'paasng-angle-down', { 'is-down': !isUnfold }]" />
+                    <i :class="['paasng-icon', isUnfold ? 'paasng-angle-line-up' : 'paasng-angle-line-down']" />
                   </span>
                 </div>
               </bk-form-item>
@@ -655,7 +654,6 @@
             },
 
             changeInfoUnfold () {
-                console.log('展开');
                 this.isUnfold = !this.isUnfold;
             }
         }
@@ -698,15 +696,16 @@
             }
             .info-special-form:nth-child(2) {
                 position: relative;
-                top: -4px;
+                top: -5px;
             }
             .info-special-form:nth-child(3) {
                 position: relative;
-                top: -8px;
+                top: -11px;
             }
             .info-special-form:nth-child(4) {
                 position: relative;
-                top: -12px;
+                top: -16px;
+                z-index: 99;
             }
             .info-special-form:nth-child(5) {
                 position: relative;
@@ -720,6 +719,7 @@
                 z-index: 10;
             }
             .item-content {
+                font-size: 12px;
                 padding: 0 10px 0 25px;
                 height: 42px;
                 line-height: 42px;
@@ -742,6 +742,7 @@
                 }
             }
             .title-label {
+                font-size: 12px;
                 display: inline-block;
                 width: 180px;
                 height: 42px;
@@ -948,6 +949,7 @@
         // -webkit-line-clamp: 2;
     }
     .content-box {
+        font-size: 12px;
         border: 1px solid #dcdee5;
         padding: 0 5px 30px 25px;
         border-radius: 0 2px 2px 0;
@@ -960,7 +962,8 @@
             overflow: hidden;
         }
         .is-down {
-            transform: rotate(-180deg);
+            transform-origin: 50% 50%;
+            // transform: rotate(-180deg);
         }
     }
     .unfold-btn {
@@ -969,6 +972,10 @@
         right: 10px;
         cursor: pointer;
         color: #3a84ff;
+        i {
+            transform-origin: 50% 50%;
+            transform: translateX(-2px);
+        }
     }
     .description-ellipsis {
         display: -webkit-box;
@@ -979,22 +986,58 @@
             top: 0;
             z-index: 99;
             background: transparent;
-            height: 42px;
-            width: calc(100% - 10px);
+            height: 41px;
+            line-height: 41px;
+            width: 100%;
+            border: 1px solid #dcdee5;
         }
     }
     .plugin-top-title {
         margin-top: 6px;
     }
-    .market-edit {
+    .market-edit,
+    .plugin-name-icon-cls {
         cursor: pointer;
-        color: #3a84ff;
+        color: #979ba5;
         font-size: 12px;
         font-weight: 400;
         margin-left: 5px;
+        &:hover {
+            color: #3a84ff;
+        }
+        i {
+            font-size: 16px;
+            transform: translateX(2px);
+        }
+    }
+    .plugin-name-icon-cls {
+        i {
+            transform: translateX(9px);
+        }
+    }
+    // .edit-cls {
+    //     display: inline-block;
+    //     width: 100%;
+    //     height: 100%;
+    // }
+    .edit-box-cls {
+        cursor: pointer;
+        color: #979ba5;
+        i {
+            transform: translateX(8px);
+        }
+        .text {
+            font-size: 12px;
+        }
+        &:hover {
+            color: #3a84ff;
+        }
     }
 </style>
 <style lang="scss">
+    .content .paas-info-app-name-cls .bk-form-input {
+        font-size: 12px !important;
+    }
     .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
         height: 32px;
         line-height: 32px;
@@ -1045,15 +1088,17 @@
         .basic-info-item .content .editor-label {
             height: 232px;
             line-height: 232px;
+            border-right-color: transparent;
         }
         .user-select-wrapper .bk-form-content .bk-tag-input {
             position: relative;
             z-index: 9;
-            height: 42px;
+            height: 41px;
             padding-right: 85px;
             padding-left: 20px;
+            border-radius: 0 2px 2px 0;
             .placeholder {
-                line-height: 42px;
+                line-height: 41px;
                 padding-left: 16px;
             }
         }

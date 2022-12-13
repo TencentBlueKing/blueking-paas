@@ -346,18 +346,19 @@
         },
         async mounted () {
             this.stageId = this.$route.query.stage_id;
+            this.status = this.$route.query.status;
             await this.getVersionDetail();
-            if (this.status === 'interrupted' || this.status === 'failed') {
-                // 重新发布
-                this.republish();
-            } else {
+            // if (this.status === 'interrupted' || this.status === 'failed') {
+            //     // 重新发布
+            //     this.republish();
+            // } else {
                 if (this.stageId === 'market') {
                     this.fetchCategoryList();
                     this.fetchMarketInfo();
                 } else {
                     this.fetchPluginRelease();
                 }
-            }
+            // }
         },
         beforeDestroy () {
             bus.$emit('stop-deploy', true);

@@ -5,7 +5,7 @@
       :is-loading="isLoading"
       placeholder="roles-loading"
     >
-      <div class="app-container middle">
+      <div class="middle">
         <paas-plugin-title />
         <div class="ag-top-header">
           <!-- 有发布任务，禁用 -->
@@ -454,16 +454,54 @@
                     return e;
                 });
                 this.$store.commit('plugin/updateStagesData', stagesData);
-                this.$router.push({
-                    name: 'pluginVersionRelease',
-                    params: {
-                        isReset
-                    },
-                    query: {
-                        stage_id: data.current_stage.stage_id,
-                        release_id: data.id
-                    }
-                });
+                if (isReset) {
+                  this.republish(data, isReset);
+                } else {
+                  this.$router.push({
+                      name: 'pluginVersionRelease',
+                      params: {
+                          isReset
+                      },
+                      query: {
+                          stage_id: data.current_stage.stage_id,
+                          release_id: data.id
+                      }
+                  });
+                }
+            },
+
+            // 重新发布前状态
+            async republish (data, isReset) {
+                const params = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: data.id
+                };
+                try {
+                    const res = await this.$store.dispatch('plugin/republishRelease', {
+                        ...params
+                    });
+                    this.$router.push({
+                      name: 'pluginVersionRelease',
+                      params: {
+                          isReset
+                      },
+                      query: {
+                          stage_id: res.current_stage && res.current_stage.stage_id,
+                          release_id: data.id,
+                          status: res.status
+                      }
+                  });
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                } finally {
+                    setTimeout(() => {
+                        this.isLoading = false;
+                    }, 200);
+                }
             }
         }
     };

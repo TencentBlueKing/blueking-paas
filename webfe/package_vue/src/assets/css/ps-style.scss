@@ -260,7 +260,7 @@ span.ellipsis {
 }
 
 .right-main-plugin{
-    width: calc(100% - 50px) !important;
+    width: 100% !important;
 }
 
 .paas-loading-panel .text,
@@ -858,7 +858,7 @@ span.ellipsis {
 }
 
 .overview-fright-plugin .app-container {
-    max-width: calc(100% - 100px);
+    max-width: calc(100% - 100px) !important;
 }
 
 .info-special-form.bk-form.bk-inline-form {

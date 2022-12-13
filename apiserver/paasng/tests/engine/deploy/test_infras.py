@@ -23,6 +23,7 @@ import pytest
 
 from paasng.engine.controller.models import IngressConfig
 from paasng.engine.deploy.infras import AppDefaultSubpaths, get_env_variables
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 
 pytestmark = pytest.mark.django_db
@@ -41,10 +42,13 @@ class TestAppDefaultSubpaths:
         with mock.patch(
             "paasng.engine.deploy.infras.ModuleEnvSubpaths.get_ingress_config"
         ) as get_ingress_config, mock.patch(
-            "paasng.publish.entrance.exposer.get_engine_app_cluster"
-        ) as get_engine_app_cluster:
+            "paasng.publish.entrance.exposer.get_module_clusters"
+        ) as get_module_clusters:
             get_ingress_config.return_value = dummy_ingress_config
-            get_engine_app_cluster.return_value = mock.MagicMock(ingress_config=dummy_ingress_config)
+            get_module_clusters.return_value = {
+                AppEnvironment.STAGING: mock.MagicMock(ingress_config=dummy_ingress_config),
+                AppEnvironment.PRODUCTION: mock.MagicMock(ingress_config=dummy_ingress_config),
+            }
             yield
 
     @pytest.fixture
@@ -108,7 +112,16 @@ class TestAppDefaultSubpaths:
             ("legacy_sub_path_app", True, "legacy_style_sub_path"),
         ],
     )
-    def test_get_env_variables(self, request, settings, sub_path_key, app, force_legacy_style, expected):
+    def test_get_env_variables(
+        self,
+        request,
+        settings,
+        sub_path_key,
+        app,
+        force_legacy_style,
+        expected,
+        mock_current_engine_client,
+    ):
         bk_app = request.getfixturevalue(app)
         settings.FORCE_USING_LEGACY_SUB_PATH_VAR_VALUE = force_legacy_style
         envs = get_env_variables(bk_app.get_default_module().get_envs("stag"))

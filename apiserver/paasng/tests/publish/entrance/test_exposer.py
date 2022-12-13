@@ -83,12 +83,12 @@ class TestGetPreallocatedAddress:
             # 同集群的情况
             (
                 {
-                    AppEnvironment.STAGING.value: Cluster(
+                    AppEnvironment.STAGING: Cluster(
                         name='c1',
                         is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
                     ),
-                    AppEnvironment.PRODUCTION.value: Cluster(
+                    AppEnvironment.PRODUCTION: Cluster(
                         name='c1',
                         is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
@@ -100,12 +100,12 @@ class TestGetPreallocatedAddress:
             # 不同集群, 类型相同的情况
             (
                 {
-                    AppEnvironment.STAGING.value: Cluster(
+                    AppEnvironment.STAGING: Cluster(
                         name='c1',
                         is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
                     ),
-                    AppEnvironment.PRODUCTION.value: Cluster(
+                    AppEnvironment.PRODUCTION: Cluster(
                         name='c2',
                         is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name='c2.foo.com', reserved=False)]),
@@ -117,14 +117,14 @@ class TestGetPreallocatedAddress:
             # 不同集群, 类型不同的情况
             (
                 {
-                    AppEnvironment.STAGING.value: Cluster(
+                    AppEnvironment.STAGING: Cluster(
                         name='c1',
                         is_default=False,
                         ingress_config=IngressConfig(
                             sub_path_domains=[Domain(name='c1.foo.com', reserved=False)],
                         ),
                     ),
-                    AppEnvironment.PRODUCTION.value: Cluster(
+                    AppEnvironment.PRODUCTION: Cluster(
                         name='c2',
                         is_default=False,
                         ingress_config=IngressConfig(
@@ -138,12 +138,12 @@ class TestGetPreallocatedAddress:
             # 优先级的情况
             (
                 {
-                    AppEnvironment.STAGING.value: Cluster(
+                    AppEnvironment.STAGING: Cluster(
                         name='c1',
                         is_default=False,
                         ingress_config=IngressConfig(app_root_domains=[Domain(name='c1.foo.com', reserved=False)]),
                     ),
-                    AppEnvironment.PRODUCTION.value: Cluster(
+                    AppEnvironment.PRODUCTION: Cluster(
                         name='c2',
                         is_default=False,
                         ingress_config=IngressConfig(
@@ -157,7 +157,7 @@ class TestGetPreallocatedAddress:
             ),
         ],
     )
-    def test_with_clusters(self, clusters, stag_address, prod_address):
+    def test_with_clusters(self, clusters, stag_address, prod_address, mock_current_engine_client):
         addr = get_preallocated_address('test-code', clusters=clusters)
         assert addr.prod == prod_address
         assert addr.stag == stag_address

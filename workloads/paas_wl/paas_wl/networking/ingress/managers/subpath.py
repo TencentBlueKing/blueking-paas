@@ -26,10 +26,10 @@ from paas_wl.networking.ingress.certs.utils import pick_shared_cert, update_or_c
 from paas_wl.networking.ingress.constants import AppSubpathSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.models import AppSubpath
+from paas_wl.networking.ingress.plugins.common import SubpathCompatPlugin
 from paas_wl.platform.applications.models import App
 
 from .base import AppIngressMgr
-from .common import SubpathCompatPlugin
 
 logger = logging.getLogger(__name__)
 

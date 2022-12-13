@@ -42,10 +42,9 @@ from paas_wl.platform.applications.models import Build, EngineApp
 from paas_wl.platform.applications.struct_models import Application, Module, ModuleEnv, StructuredApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
-from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
-from tests.utils.app import create_app, random_fake_app
+from tests.utils.app import create_app
 from tests.utils.auth import create_user
 from tests.utils.basic import random_resource_name
 from tests.utils.build_process import random_fake_bp
@@ -85,7 +84,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
 
         for name, path in crd_infos:
             logger.info('Configure CRD %s...', name)
-            body = yaml.load((Path(__file__).parent / path).read_text())
+            body = yaml.safe_load((Path(__file__).parent / path).read_text())
             try:
                 name = body['metadata']['name']
                 crd_client.create_or_update(name=name, body=body)
@@ -144,6 +143,27 @@ def k8s_version(k8s_client):
     return VersionApi(k8s_client).get_code()
 
 
+@pytest.fixture
+def namespace_maker(k8s_client, k8s_version):
+    created_namespaces = []
+
+    def maker(ns):
+        kres = KNamespace(k8s_client)
+        obj, created = kres.get_or_create(ns)
+        if created:
+            created_namespaces.append(ns)
+        # k8s 1.8 只起了 apiserver 模拟测试, 不支持 wait_for_default_sa.
+        # 其他更高版本的集群为集成测试, 必须执行 wait_for_default_sa, 否则测试可能会出错
+        if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
+            kres.wait_for_default_sa(ns)
+        return obj, created
+
+    yield maker
+
+    for ns in created_namespaces:
+        KNamespace(k8s_client).delete(ns)
+
+
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
@@ -161,21 +181,8 @@ def _auto_create_ns(request):
         yield
         return
 
-    client = get_client_by_app(app)
-    kres = KNamespace(client)
-    kres.get_or_create(app.namespace)
-    k8s_version = VersionApi(client).get_code()
-
-    # k8s 1.8 只起了 apiserver 模拟测试, 不支持 wait_for_default_sa.
-    # 其他更高版本的集群为集成测试, 必须执行 wait_for_default_sa, 否则测试可能会出错
-    # TODO: replace with more accurate logics, such as detecting if a controller-manager
-    # is enabled.
-    if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
-        kres.wait_for_default_sa(app.namespace)
-
+    request.getfixturevalue("namespace_maker")(app.namespace)
     yield
-    # Auto clean up resource
-    kres.delete(app.namespace)
 
 
 @pytest.fixture
@@ -231,7 +238,7 @@ def create_default_cluster():
         ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
         cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
         key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
-        feature_flags={ff: True for ff in ClusterFeatureFlag},
+        feature_flags={ff: ClusterFeatureFlag.get_default_flags()[ff] for ff in ClusterFeatureFlag},
     )
     APIServer.objects.get_or_create(
         host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],
@@ -334,8 +341,11 @@ def bk_user():
 
 
 @pytest.fixture
-def fake_app(bk_user):
-    return random_fake_app(owner=bk_user)
+def fake_app(bk_user, app):
+    app.owner = str(bk_user)
+    app.structure = {"web": 1, "worker": 1}
+    app.save()
+    return app
 
 
 @pytest.fixture

@@ -29,8 +29,8 @@ class PortMapSLZ(serializers.Serializer):
 
 class DomainSLZ(serializers.Serializer):
     name = serializers.CharField()
-    reserved = serializers.NullBooleanField(default=False)
-    https_enabled = serializers.NullBooleanField(default=False)
+    reserved = serializers.BooleanField(default=False, allow_null=True)
+    https_enabled = serializers.BooleanField(default=False, allow_null=True)
 
     class Meta:
         ref_name = "ingress_config.domain"

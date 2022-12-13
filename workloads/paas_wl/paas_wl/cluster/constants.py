@@ -16,7 +16,9 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from typing import Dict
+
+from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 
@@ -31,8 +33,17 @@ class ClusterType(str, StructuredEnum):
     VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
 
 
-class ClusterFeatureFlag(str, StructuredEnum):
+class ClusterFeatureFlag(FeatureFlag):
     """集群特性标志"""
 
-    ENABLE_EGRESS_IP = EnumField('enable_egress_ip', label=_('支持提供出口 IP'))
-    ENABLE_MOUNT_LOG_TO_HOST = EnumField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
+    ENABLE_EGRESS_IP = FeatureFlagField('enable_egress_ip', label=_('支持提供出口 IP'))
+    ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
+    INGRESS_USE_PATTERN = FeatureFlagField("ingress_user_pattern", label=_("Ingress资源使用正则表达式"), default=False)
+
+    @classmethod
+    def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:
+        default_flags = cls.get_default_flags()
+        if cluster_type == ClusterType.VIRTUAL:
+            default_flags[cls.ENABLE_EGRESS_IP] = False
+            default_flags[cls.ENABLE_MOUNT_LOG_TO_HOST] = False
+        return default_flags

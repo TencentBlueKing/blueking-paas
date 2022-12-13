@@ -94,7 +94,11 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
         return unhealthy.with_message("unknown")
     elif pod_status.phase == "Pending":
         if fail_message := get_any_container_fail_message(pod):
-            return unhealthy.with_message(fail_message)
+            # ContainerCreating: 无 init containers 的 Pod 的默认状态
+            # PodInitializing: 有 init containers 的 Pod 的默认状态
+            # 处于这两个状态的 Pod 仍然在 Pending
+            if fail_message not in ["ContainerCreating", "PodInitializing"]:
+                return unhealthy.with_message(fail_message)
         # PodScheduled represents status of the scheduling process for this pod.
         scheduled_cond = find_pod_status_condition(pod_status.conditions or [], cond_type="PodScheduled")
         if scheduled_cond and scheduled_cond.status == "False":

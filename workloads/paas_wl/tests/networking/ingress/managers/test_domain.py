@@ -32,9 +32,7 @@ from paas_wl.networking.ingress.managers.domain import (
     assign_custom_hosts,
 )
 from paas_wl.networking.ingress.models import AppDomain, AppDomainCert, AppDomainSharedCert, AutoGenDomain, Domain
-from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.resources.utils.basic import get_client_by_app
 from tests.utils.app import create_app
 
 pytestmark = [pytest.mark.django_db]
@@ -81,11 +79,11 @@ class TestAssignDomains:
         assert [d.tls_enabled for d in ingress.domains] == domains_https_enabled
         assert AppDomain.objects.count() == domain_count
 
-    def test_domain_transfer_partially(self, app):
+    def test_domain_transfer_partially(self, app, namespace_maker):
         domains_app1 = [AutoGenDomain('foo.com'), AutoGenDomain('bar.com')]
         assign_custom_hosts(app, domains_app1, 'foo-service')
         app_2 = create_app()
-        KNamespace(get_client_by_app(app_2)).get_or_create(app_2.namespace)
+        namespace_maker(app_2.namespace)
 
         # Transfer "bar.com" to app_2
         domains_app1 = [
@@ -106,13 +104,13 @@ class TestAssignDomains:
         assert 'bar.com' in hosts
         assert 'app-2.com' in hosts
 
-    def test_domain_transfer_fully(self, app):
+    def test_domain_transfer_fully(self, app, namespace_maker):
         domains = [AutoGenDomain('foo.com')]
         assign_custom_hosts(app, domains, 'foo-service')
 
         # Transfer all domains to app_2
         app_2 = create_app()
-        KNamespace(get_client_by_app(app_2)).get_or_create(app_2.namespace)
+        namespace_maker(app_2.namespace)
         assign_custom_hosts(app_2, domains, 'foo-service')
 
         with pytest.raises(AppEntityNotFound):

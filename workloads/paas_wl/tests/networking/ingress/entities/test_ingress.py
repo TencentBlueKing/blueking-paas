@@ -16,85 +16,41 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict
+
 import pytest
+from blue_krill.text import remove_prefix, remove_suffix
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.networking.ingress.constants import DomainsStructureType
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.entities.ingress import (
+    IngressV1Beta1Deserializer,
+    IngressV1Beta1Serializer,
+    IngressV1Deserializer,
+    IngressV1Serializer,
     PIngressDomain,
     ProcessIngress,
-    ProcessIngressDeserializerExtV1beta1,
-    ProcessIngressDeserializerV1,
-    ProcessIngressDeserializerV1beta1,
-    ProcessIngressSerializerExtV1beta1,
-    ProcessIngressSerializerV1,
-    ProcessIngressSerializerV1beta1,
-    build_ingress_configs,
     ingress_kmodel,
 )
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
-from paas_wl.networking.ingress.models import get_default_subpath
 from paas_wl.resources.kube_res.base import GVKConfig
 from tests.utils.app import release_setup
 
 pytestmark = pytest.mark.django_db
 
 
-class TestProcessIngressStructType:
-    def test_all_direct_access(self, ingress):
-        ingress.domains = [
-            PIngressDomain(host='foo.example.com', path_prefix_list=['/']),
-            PIngressDomain(host='bar.example.com', path_prefix_list=['/']),
-        ]
-        assert ingress.domains_structure_type == DomainsStructureType.ALL_DIRECT_ACCESS
-
-    def test_customized_subpath_single(self, ingress):
-        ingress.domains = [
-            PIngressDomain(host='foo.example.com', path_prefix_list=['/foo/', '/foobar/']),
-        ]
-        assert ingress.domains_structure_type == DomainsStructureType.CUSTOMIZED_SUBPATH
-
-    def test_customized_subpath_many_valid(self, ingress):
-        ingress.domains = [
-            PIngressDomain(host='foo.example.com', path_prefix_list=['/foo/', '/foobar/']),
-            PIngressDomain(host='bar.example.com', path_prefix_list=['/foo/', '/foobar/']),
-        ]
-        assert ingress.domains_structure_type == DomainsStructureType.CUSTOMIZED_SUBPATH
-
-    def test_customized_subpath_many_invalid(self, ingress):
-        ingress.domains = [
-            PIngressDomain(host='foo.example.com', path_prefix_list=['/foo/', '/foobar/']),
-            # Another domain has different path_prefixes
-            PIngressDomain(host='bar.example.com', path_prefix_list=['/bar/', '/barbar/']),
-        ]
-        assert ingress.domains_structure_type == DomainsStructureType.NON_STANDARD
-
-    def test_non_standard_mixed_path(self, ingress):
-        ingress.domains = [
-            PIngressDomain(host='foo.example.com', path_prefix_list=['/bar/', '/foobar/']),
-            PIngressDomain(host='bar.example.com', path_prefix_list=['/', '/foobar/']),
-        ]
-        assert ingress.domains_structure_type == DomainsStructureType.NON_STANDARD
-
-    def test_non_standard_path_invalid(self, ingress):
-        ingress.domains = [
-            PIngressDomain(host='foo.example.com', path_prefix_list=['/', '/foobar/']),
-        ]
-        assert ingress.domains_structure_type == DomainsStructureType.NON_STANDARD
-
-
 class TestProcessIngress:
     @pytest.fixture(autouse=True)
     def _setup_data(self, app, settings):
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
-        ProcessIngress.Meta.deserializers, ProcessIngress.Meta.serializers = build_ingress_configs()
         release_setup(
             fake_app=app,
             build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
             release_params={"version": 5},
         )
 
-    @pytest.fixture()
+    @pytest.fixture
     def service(self, app):
         service = ProcessService(
             app=app,
@@ -115,6 +71,7 @@ class TestProcessIngress:
             domains=domains,
             service_name=service.name,
             service_port_name=service.ports[0].name,
+            rewrite_to_root=True,
             server_snippet='server',
             annotations={'foo': 'bar'},
         )
@@ -138,6 +95,7 @@ class TestProcessIngress:
             domains=domains,
             service_name=service.name,
             service_port_name=service.ports[0].name,
+            rewrite_to_root=True,
         )
         ingress_kmodel.save(ingress)
 
@@ -152,265 +110,287 @@ class TestProcessIngress:
         serializer = ingress_kmodel._make_serializer(app)
         available_apiversions = serializer.gvk_config.available_apiversions
 
-        if ProcessIngressSerializerV1.api_version in available_apiversions:
-            assert isinstance(serializer, ProcessIngressSerializerV1)
-        elif ProcessIngressSerializerV1beta1.api_version in available_apiversions:
-            assert isinstance(serializer, ProcessIngressSerializerV1beta1)
-        elif ProcessIngressSerializerExtV1beta1.api_version in available_apiversions:
-            assert isinstance(serializer, ProcessIngressSerializerExtV1beta1)
+        if "networking.k8s.io/v1beta1" in available_apiversions:
+            assert isinstance(serializer, IngressV1Beta1Serializer)
+        elif "extensions/v1beta1" in available_apiversions:
+            assert isinstance(serializer, IngressV1Beta1Serializer)
+        elif "networking.k8s.io/v1" in available_apiversions:
+            assert isinstance(serializer, IngressV1Serializer)
         else:
-            pytest.fail("unknown serializer")
+            pytest.fail("unknown api version")
 
     def test_deserializer_ordering(self, app):
         deserializer = ingress_kmodel._make_deserializer(app)
         available_apiversions = deserializer.gvk_config.available_apiversions
 
-        if ProcessIngressDeserializerV1.api_version in available_apiversions:
-            assert isinstance(deserializer, ProcessIngressDeserializerV1)
-        elif ProcessIngressDeserializerV1beta1.api_version in available_apiversions:
-            assert isinstance(deserializer, ProcessIngressDeserializerV1beta1)
-        elif ProcessIngressDeserializerExtV1beta1.api_version in available_apiversions:
-            assert isinstance(deserializer, ProcessIngressDeserializerExtV1beta1)
+        if "networking.k8s.io/v1beta1" in available_apiversions:
+            assert isinstance(deserializer, IngressV1Beta1Deserializer)
+        elif "extensions/v1beta1" in available_apiversions:
+            assert isinstance(deserializer, IngressV1Beta1Deserializer)
+        elif "networking.k8s.io/v1" in available_apiversions:
+            assert isinstance(deserializer, IngressV1Deserializer)
         else:
-            pytest.fail("unknown deserializer")
+            pytest.fail("unknown api versions")
 
 
-def test_get_sub_path(app):
-    assert isinstance(get_default_subpath(app), str)
+INGRESS_DATA: Dict = {
+    "name": "testing",
+    "service_name": "test-service",
+    "service_port_name": "test-port",
+    "configuration_snippet": "configuration_snippet",
+    "server_snippet": "server_snippet",
+    "annotations": {"FOO": "BAR"},
+}
 
 
-@pytest.fixture()
-def ingress_domain():
-    return PIngressDomain(host="foo.com", tls_enabled=True, tls_secret_name="cert", path_prefix_list=["/app/"])
+@pytest.fixture
+def root_path():
+    return "/"
 
 
-@pytest.fixture()
-def ingress(app, ingress_domain):
+@pytest.fixture
+def foo_path():
+    return "/foo"
+
+
+@pytest.fixture
+def foo_path_endswith_slash(foo_path):
+    return foo_path + "/"
+
+
+@pytest.fixture
+def https_ingress_domain(root_path, foo_path, foo_path_endswith_slash):
+    return PIngressDomain(
+        host="https.com",
+        tls_enabled=True,
+        tls_secret_name="cert",
+        path_prefix_list=[root_path, foo_path, foo_path_endswith_slash],
+    )
+
+
+@pytest.fixture
+def http_ingress_domain(root_path, foo_path, foo_path_endswith_slash):
+    return PIngressDomain(
+        host="http.com", tls_enabled=False, path_prefix_list=[root_path, foo_path, foo_path_endswith_slash]
+    )
+
+
+@pytest.fixture
+def ingress(app, https_ingress_domain, http_ingress_domain):
     return ProcessIngress(
         app=app,
-        name="testing",
-        domains=[ingress_domain],
-        service_name="test-service",
-        service_port_name="test-port",
-        server_snippet="server",
-        configuration_snippet="location",
-        annotations={"foo": "bar"},
+        domains=[https_ingress_domain, http_ingress_domain],
         rewrite_to_root=False,
+        **INGRESS_DATA,
     )
 
 
-@pytest.fixture()
-def subpath_ingress(app, ingress_domain):
+@pytest.fixture
+def subpath_ingress(app, https_ingress_domain, http_ingress_domain):
     return ProcessIngress(
         app=app,
-        name="testing",
-        domains=[ingress_domain],
-        service_name="test-service",
-        service_port_name="test-port",
-        server_snippet="server",
-        configuration_snippet="location",
-        annotations={"foo": "bar"},
+        domains=[https_ingress_domain, http_ingress_domain],
         rewrite_to_root=True,
+        **INGRESS_DATA,
     )
 
 
-class TestProcessIngressX1:
-    @pytest.fixture()
-    def spec(self, app, ingress_domain, ingress):
+def build_v1beta1_ingress_path(path) -> Dict:
+    return {
+        "backend": {
+            "serviceName": INGRESS_DATA["service_name"],
+            "servicePort": INGRESS_DATA["service_port_name"],
+        },
+        "path": path,
+    }
+
+
+@pytest.mark.parametrize("api_version", ["extensions/v1beta1", "networking.k8s.io/v1beta1"])
+class TestIngressV1Beta1:
+    @pytest.fixture
+    def spec(self, api_version, app, https_ingress_domain, http_ingress_domain):
         return {
-            "apiVersion": "extensions/v1beta1",
+            "apiVersion": api_version,
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": ingress.configuration_snippet,
-                    "nginx.ingress.kubernetes.io/server-snippet": ingress.server_snippet,
+                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
-                    **ingress.annotations,
+                    **INGRESS_DATA["annotations"],
                 },
-                "name": ingress.name,
+                "name": INGRESS_DATA["name"],
                 "namespace": app.namespace,
             },
             "spec": {
                 "rules": [
                     {
-                        "host": ingress_domain.host,
+                        "host": https_ingress_domain.host,
                         "http": {
                             "paths": [
-                                {
-                                    "backend": {
-                                        "serviceName": ingress.service_name,
-                                        "servicePort": ingress.service_port_name,
-                                    },
-                                    "path": ingress_domain.path_prefix_list[0],
-                                }
+                                build_v1beta1_ingress_path(path) for path in https_ingress_domain.path_prefix_list
                             ]
                         },
-                    }
+                    },
+                    {
+                        "host": http_ingress_domain.host,
+                        "http": {
+                            "paths": [
+                                build_v1beta1_ingress_path(path) for path in http_ingress_domain.path_prefix_list
+                            ]
+                        },
+                    },
                 ],
-                "tls": [{"hosts": [ingress_domain.host], "secretName": ingress_domain.tls_secret_name}],
+                "tls": [{"hosts": [https_ingress_domain.host], "secretName": https_ingress_domain.tls_secret_name}],
             },
         }
 
-    @pytest.fixture()
-    def subpath_spec(self, app, ingress_domain, subpath_ingress):
+    @pytest.fixture
+    def subpath_spec(self, api_version, app, https_ingress_domain, http_ingress_domain):
         return {
-            "apiVersion": "extensions/v1beta1",
+            "apiVersion": api_version,
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": subpath_ingress.configuration_snippet,
-                    "nginx.ingress.kubernetes.io/server-snippet": subpath_ingress.server_snippet,
+                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
+                    "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/",
-                    "nginx.ingress.kubernetes.io/ssl-redirect": "false",
-                    **subpath_ingress.annotations,
+                    **INGRESS_DATA["annotations"],
                 },
-                "name": subpath_ingress.name,
+                "name": INGRESS_DATA["name"],
                 "namespace": app.namespace,
             },
             "spec": {
                 "rules": [
                     {
-                        "host": ingress_domain.host,
+                        "host": https_ingress_domain.host,
                         "http": {
                             "paths": [
-                                {
-                                    "backend": {
-                                        "serviceName": subpath_ingress.service_name,
-                                        "servicePort": subpath_ingress.service_port_name,
-                                    },
-                                    "path": ingress_domain.path_prefix_list[0],
-                                }
+                                build_v1beta1_ingress_path(path) for path in https_ingress_domain.path_prefix_list
                             ]
                         },
-                    }
+                    },
+                    {
+                        "host": http_ingress_domain.host,
+                        "http": {
+                            "paths": [
+                                build_v1beta1_ingress_path(path) for path in http_ingress_domain.path_prefix_list
+                            ]
+                        },
+                    },
                 ],
-                "tls": [{"hosts": [ingress_domain.host], "secretName": ingress_domain.tls_secret_name}],
+                "tls": [{"hosts": [https_ingress_domain.host], "secretName": https_ingress_domain.tls_secret_name}],
             },
         }
 
-    @pytest.fixture()
-    def gvk_config(self):
+    @pytest.fixture
+    def gvk_config(self, api_version):
         return GVKConfig(
             server_version="0.0.0",
             kind='Ingress',
-            preferred_apiversion="extensions/v1beta1",
-            available_apiversions=["extensions/v1beta1"],
+            preferred_apiversion=api_version,
+            available_apiversions=[api_version],
         )
 
     def test_serialize(self, gvk_config, spec, ingress):
-        serializer = ProcessIngressSerializerExtV1beta1(ProcessIngress, gvk_config)
+        serializer = IngressV1Beta1Serializer(ProcessIngress, gvk_config)
         result = serializer.serialize(ingress)
         assert result == spec
 
     def test_serialize_subpath(self, gvk_config, subpath_spec, subpath_ingress):
-        serializer = ProcessIngressSerializerExtV1beta1(ProcessIngress, gvk_config)
+        serializer = IngressV1Beta1Serializer(ProcessIngress, gvk_config)
         result = serializer.serialize(subpath_ingress)
         assert result == subpath_spec
 
-    @pytest.fixture()
+    @pytest.fixture
     def kube_data(self, spec):
         return ResourceInstance(None, spec)
 
-    @pytest.fixture()
+    @pytest.fixture
     def subpath_kube_data(self, subpath_spec):
         return ResourceInstance(None, subpath_spec)
 
     def test_deserialize(self, gvk_config, app, kube_data, ingress):
-        deserializer = ProcessIngressDeserializerExtV1beta1(ProcessIngress, gvk_config)
+        deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, kube_data)
         assert result == ingress
 
     def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
-        deserializer = ProcessIngressDeserializerExtV1beta1(ProcessIngress, gvk_config)
+        deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, subpath_kube_data)
         assert result == subpath_ingress
 
 
+def build_v1_ingress_path(path_str) -> Dict:
+    trim_path = remove_prefix(path_str, "/")
+    if path_str == "/":
+        path = "/()(.*)"
+    elif trim_path.endswith("/"):
+        path = "/{}/(.*)()".format(remove_suffix(trim_path, "/"))
+    else:
+        path = "/{}/(.*)|/({}$)".format(trim_path, trim_path)
+
+    return {
+        "backend": {
+            "service": {
+                "name": INGRESS_DATA["service_name"],
+                "port": {
+                    "name": INGRESS_DATA["service_port_name"],
+                },
+            }
+        },
+        "path": path,
+        "pathType": "ImplementationSpecific",
+    }
+
+
 class TestProcessIngressV1:
-    @pytest.fixture()
-    def spec(self, app, ingress_domain, ingress):
-        return {
-            "apiVersion": "networking.k8s.io/v1",
-            "kind": "Ingress",
-            "metadata": {
-                "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": ingress.configuration_snippet,
-                    "nginx.ingress.kubernetes.io/server-snippet": ingress.server_snippet,
-                    "nginx.ingress.kubernetes.io/ssl-redirect": "false",
-                    **ingress.annotations,
-                },
-                "name": ingress.name,
-                "namespace": app.namespace,
-            },
-            "spec": {
-                "rules": [
-                    {
-                        "host": ingress_domain.host,
-                        "http": {
-                            "paths": [
-                                {
-                                    "backend": {
-                                        "service": {
-                                            "name": ingress.service_name,
-                                            "port": {
-                                                "name": ingress.service_port_name,
-                                            },
-                                        }
-                                    },
-                                    "path": ingress_domain.path_prefix_list[0],
-                                    "pathType": "ImplementationSpecific",
-                                }
-                            ]
-                        },
-                    }
-                ],
-                "tls": [{"hosts": [ingress_domain.host], "secretName": ingress_domain.tls_secret_name}],
-            },
-        }
+    @pytest.fixture(autouse=True)
+    def _setup(self, app, settings):
+        # 目前 networking.k8s.io/v1 仅支持正则模式
+        cluster = get_cluster_by_app(app)
+        cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_PATTERN] = True
+        cluster.save()
+        settings.ENABLE_MODERN_INGRESS_SUPPORT = True
 
-    @pytest.fixture()
-    def subpath_spec(self, app, ingress_domain, subpath_ingress):
+    @pytest.fixture
+    def subpath_spec(self, app, https_ingress_domain, http_ingress_domain):
+        """spec rewrite to root"""
         return {
             "apiVersion": "networking.k8s.io/v1",
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": subpath_ingress.configuration_snippet,
-                    "nginx.ingress.kubernetes.io/server-snippet": subpath_ingress.server_snippet,
+                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
+                    "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
-                    "nginx.ingress.kubernetes.io/ssl-redirect": "false",
-                    **subpath_ingress.annotations,
+                    **INGRESS_DATA["annotations"],
                 },
-                "name": subpath_ingress.name,
+                "name": INGRESS_DATA["name"],
                 "namespace": app.namespace,
             },
             "spec": {
                 "rules": [
                     {
-                        "host": ingress_domain.host,
+                        "host": https_ingress_domain.host,
                         "http": {
-                            "paths": [
-                                {
-                                    "backend": {
-                                        "service": {
-                                            "name": subpath_ingress.service_name,
-                                            "port": {
-                                                "name": subpath_ingress.service_port_name,
-                                            },
-                                        }
-                                    },
-                                    "path": f"{ingress_domain.path_prefix_list[0].rstrip('/')}(/|$)(.*)",
-                                    "pathType": "ImplementationSpecific",
-                                }
-                            ]
+                            "paths": [build_v1_ingress_path(path) for path in https_ingress_domain.path_prefix_list]
                         },
-                    }
+                    },
+                    {
+                        "host": http_ingress_domain.host,
+                        "http": {
+                            "paths": [build_v1_ingress_path(path) for path in http_ingress_domain.path_prefix_list]
+                        },
+                    },
                 ],
-                "tls": [{"hosts": [ingress_domain.host], "secretName": ingress_domain.tls_secret_name}],
+                "tls": [{"hosts": [https_ingress_domain.host], "secretName": https_ingress_domain.tls_secret_name}],
             },
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def gvk_config(self):
         return GVKConfig(
             server_version="0.0.0",
@@ -419,142 +399,166 @@ class TestProcessIngressV1:
             available_apiversions=["networking.k8s.io/v1"],
         )
 
-    def test_serialize(self, gvk_config, spec, ingress):
-        serializer = ProcessIngressSerializerV1(ProcessIngress, gvk_config)
-        result = serializer.serialize(ingress)
-        assert result == spec
-
     def test_serialize_subpath(self, gvk_config, subpath_spec, subpath_ingress):
-        serializer = ProcessIngressSerializerV1(ProcessIngress, gvk_config)
+        serializer = IngressV1Serializer(ProcessIngress, gvk_config)
         result = serializer.serialize(subpath_ingress)
         assert result == subpath_spec
 
-    @pytest.fixture()
-    def kube_data(self, spec):
-        return ResourceInstance(None, spec)
-
-    @pytest.fixture()
+    @pytest.fixture
     def subpath_kube_data(self, subpath_spec):
         return ResourceInstance(None, subpath_spec)
 
-    def test_deserialize(self, gvk_config, app, kube_data, ingress):
-        deserializer = ProcessIngressDeserializerV1(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, kube_data)
-        assert result == ingress
-
     def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
-        deserializer = ProcessIngressDeserializerV1(ProcessIngress, gvk_config)
+        deserializer = IngressV1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, subpath_kube_data)
         assert result == subpath_ingress
 
 
-class TestProcessIngressV1beta1:
-    @pytest.fixture()
-    def spec(self, app, ingress_domain, ingress):
+def build_legacy_pattern(path_str):
+    if path_str == "/" or not path_str.endswith("/"):
+        path = f"{path_str}()(.*)"
+    else:
+        path = f"{path_str.rstrip('/')}(/|$)(.*)"
+    return path
+
+
+class TestPatternCompatible:
+    """测试兼容旧版的正则表达式规则"""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, app, settings):
+        # 目前 networking.k8s.io/v1 仅支持正则模式
+        cluster = get_cluster_by_app(app)
+        cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_PATTERN] = True
+        cluster.save()
+        settings.ENABLE_MODERN_INGRESS_SUPPORT = True
+
+    @pytest.fixture
+    def v1beta1_spec(self, app, https_ingress_domain, http_ingress_domain):
         return {
             "apiVersion": "networking.k8s.io/v1beta1",
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": ingress.configuration_snippet,
-                    "nginx.ingress.kubernetes.io/server-snippet": ingress.server_snippet,
+                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
-                    **ingress.annotations,
+                    "nginx.ingress.kubernetes.io/rewrite-target": "/",
+                    **INGRESS_DATA["annotations"],
                 },
-                "name": ingress.name,
+                "name": INGRESS_DATA["name"],
                 "namespace": app.namespace,
             },
             "spec": {
                 "rules": [
                     {
-                        "host": ingress_domain.host,
+                        "host": https_ingress_domain.host,
                         "http": {
                             "paths": [
                                 {
                                     "backend": {
-                                        "serviceName": ingress.service_name,
-                                        "servicePort": ingress.service_port_name,
+                                        "serviceName": INGRESS_DATA["service_name"],
+                                        "servicePort": INGRESS_DATA["service_port_name"],
                                     },
-                                    "path": ingress_domain.path_prefix_list[0],
+                                    "path": build_legacy_pattern(path),
                                 }
+                                for path in https_ingress_domain.path_prefix_list
                             ]
                         },
-                    }
+                    },
+                    {
+                        "host": http_ingress_domain.host,
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "serviceName": INGRESS_DATA["service_name"],
+                                        "servicePort": INGRESS_DATA["service_port_name"],
+                                    },
+                                    "path": build_legacy_pattern(path),
+                                }
+                                for path in https_ingress_domain.path_prefix_list
+                            ]
+                        },
+                    },
                 ],
-                "tls": [{"hosts": [ingress_domain.host], "secretName": ingress_domain.tls_secret_name}],
+                "tls": [{"hosts": [https_ingress_domain.host], "secretName": https_ingress_domain.tls_secret_name}],
             },
         }
 
-    @pytest.fixture()
-    def subpath_spec(self, app, ingress_domain, subpath_ingress):
+    @pytest.fixture
+    def v1_spec(self, app, https_ingress_domain, http_ingress_domain):
         return {
             "apiVersion": "networking.k8s.io/v1beta1",
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": subpath_ingress.configuration_snippet,
-                    "nginx.ingress.kubernetes.io/server-snippet": subpath_ingress.server_snippet,
-                    "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
+                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
-                    **subpath_ingress.annotations,
+                    "nginx.ingress.kubernetes.io/rewrite-target": "/",
+                    **INGRESS_DATA["annotations"],
                 },
-                "name": subpath_ingress.name,
+                "name": INGRESS_DATA["name"],
                 "namespace": app.namespace,
             },
             "spec": {
                 "rules": [
                     {
-                        "host": ingress_domain.host,
+                        "host": https_ingress_domain.host,
                         "http": {
                             "paths": [
                                 {
                                     "backend": {
-                                        "serviceName": subpath_ingress.service_name,
-                                        "servicePort": subpath_ingress.service_port_name,
+                                        "service": {
+                                            "name": INGRESS_DATA["service_name"],
+                                            "port": {"name": INGRESS_DATA["service_port_name"]},
+                                        }
                                     },
-                                    "path": f"{ingress_domain.path_prefix_list[0].rstrip('/')}(/|$)(.*)",
+                                    "pathType": "ImplementationSpecific",
+                                    "path": build_legacy_pattern(path),
                                 }
+                                for path in https_ingress_domain.path_prefix_list
                             ]
                         },
-                    }
+                    },
+                    {
+                        "host": http_ingress_domain.host,
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": INGRESS_DATA["service_name"],
+                                            "port": {"name": INGRESS_DATA["service_port_name"]},
+                                        }
+                                    },
+                                    "pathType": "ImplementationSpecific",
+                                    "path": build_legacy_pattern(path),
+                                }
+                                for path in https_ingress_domain.path_prefix_list
+                            ]
+                        },
+                    },
                 ],
-                "tls": [{"hosts": [ingress_domain.host], "secretName": ingress_domain.tls_secret_name}],
+                "tls": [{"hosts": [https_ingress_domain.host], "secretName": https_ingress_domain.tls_secret_name}],
             },
         }
 
-    @pytest.fixture()
-    def gvk_config(self):
-        return GVKConfig(
+    @pytest.mark.parametrize(
+        "deserializer_cls, api_version, spec_fixture",
+        [
+            (IngressV1Beta1Deserializer, "networking.k8s.io/v1beta1", "v1beta1_spec"),
+            (IngressV1Deserializer, "networking.k8s.io/v1", "v1_spec"),
+        ],
+    )
+    def test_deserialize(self, request, app, deserializer_cls, api_version, spec_fixture, subpath_ingress):
+        gvk_config = GVKConfig(
             server_version="0.0.0",
             kind='Ingress',
-            preferred_apiversion="networking.k8s.io/v1beta1",
-            available_apiversions=["networking.k8s.io/v1beta1"],
+            preferred_apiversion=api_version,
+            available_apiversions=[api_version],
         )
-
-    def test_serialize(self, gvk_config, spec, ingress):
-        serializer = ProcessIngressSerializerV1beta1(ProcessIngress, gvk_config)
-        result = serializer.serialize(ingress)
-        assert result == spec
-
-    def test_serialize_subpath(self, gvk_config, subpath_spec, subpath_ingress):
-        serializer = ProcessIngressSerializerV1beta1(ProcessIngress, gvk_config)
-        result = serializer.serialize(subpath_ingress)
-        assert result == subpath_spec
-
-    @pytest.fixture()
-    def kube_data(self, spec):
-        return ResourceInstance(None, spec)
-
-    @pytest.fixture()
-    def subpath_kube_data(self, subpath_spec):
-        return ResourceInstance(None, subpath_spec)
-
-    def test_deserialize(self, gvk_config, app, kube_data, ingress):
-        deserializer = ProcessIngressDeserializerV1beta1(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, kube_data)
-        assert result == ingress
-
-    def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
-        deserializer = ProcessIngressDeserializerV1beta1(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, subpath_kube_data)
+        deserializer = deserializer_cls(ProcessIngress, gvk_config)
+        result = deserializer.deserialize(app, ResourceInstance(None, request.getfixturevalue(spec_fixture)))
         assert result == subpath_ingress

@@ -26,8 +26,8 @@ from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.networking.ingress.managers.base import AppIngressMgr
-from paas_wl.networking.ingress.managers.common import SubpathCompatPlugin
 from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain
+from paas_wl.networking.ingress.plugins.common import SubpathCompatPlugin
 from paas_wl.platform.applications.models import App
 
 logger = logging.getLogger(__name__)

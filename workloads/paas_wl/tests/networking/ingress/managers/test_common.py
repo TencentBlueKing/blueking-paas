@@ -19,31 +19,31 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
-from paas_wl.networking.ingress.managers.common import SubpathCompatPlugin
+from paas_wl.networking.ingress.plugins.common import SubpathCompatPlugin
 
 pytestmark = [pytest.mark.django_db]
 
 
 class TestSubpathCompatPlugin:
     @pytest.mark.parametrize(
-        'paths,snippet_excerpts',
+        'paths, expected',
         [
-            (['/'], ['X-Script-Name /']),
-            (['/foo/'], [' or "/foo/"', 'proxy_set_header X-Script-Name $lua_x_script_name;']),
-            (['/stag--foo/', '/bar/'], [' or "/bar/"', 'proxy_set_header X-Script-Name $lua_x_script_name;']),
+            (['/'], 'proxy_set_header X-Script-Name /$1$3;'),
+            (['/foo/'], 'proxy_set_header X-Script-Name /$1$3;'),
+            (['/stag--foo/', '/bar/'], 'proxy_set_header X-Script-Name /$1$3;'),
+            (['/stag--foo', '/bar/', '/foo/bar/'], 'proxy_set_header X-Script-Name /$1$3;'),
         ],
     )
-    def test_different_paths(self, paths, snippet_excerpts, app):
+    def test_different_paths(self, app, paths, expected):
         domain = PIngressDomain(host='example.com', path_prefix_list=paths)
         plugin = SubpathCompatPlugin(app, domains=[domain])
         snippet = plugin.make_configuration_snippet()
-        for excerpt in snippet_excerpts:
-            assert excerpt in snippet
+        assert snippet == expected
 
     def test_multiple_domains(self, app):
         domain = PIngressDomain(host='example.com', path_prefix_list=['/'])
         plugin = SubpathCompatPlugin(app, domains=[domain, domain])
-        assert 'X-Script-Name /' in plugin.make_configuration_snippet()
+        assert plugin.make_configuration_snippet() == "proxy_set_header X-Script-Name /$1$3;"
 
     def test_empty_domains(self, app):
         plugin = SubpathCompatPlugin(app)

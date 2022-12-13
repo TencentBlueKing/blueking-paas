@@ -90,6 +90,7 @@
         :required="true"
         :icon-offset="557"
         :property="'plugin_id'"
+        error-display-type="normal"
       >
         <bk-input
           v-model="form.plugin_id"
@@ -105,6 +106,7 @@
         :icon-offset="557"
         :property="'name'"
         :rules="rules.name"
+        error-display-type="normal"
       >
         <bk-input
           v-model="form.name"

@@ -56,7 +56,7 @@
                             flex-row
                             justify-content-between
                             align-items-center"
-                :class="[{ 'failed': status === 'failed' }]"
+                :class="[{ 'failed': status === 'failed' }, { 'success': status === 'successful' }]"
               >
                 <div
                   v-if="status === 'pending'"
@@ -728,7 +728,7 @@
 
             showInfoCancelRelease () {
                 this.$bkInfo({
-                    title: `确认要终止发布该版本 ${this.curVersion}？`,
+                    title: `确认终止发布版本 ${this.curVersion}？`,
                     width: 480,
                     maskClose: true,
                     confirmFn: () => {
@@ -860,6 +860,9 @@
         }
     }
 }
+.success {
+    background: rgba(45, 203, 86, 0.16) !important;
+}
 .w600{
     width: 600px;
 }
@@ -906,10 +909,10 @@
     width: 24px;
     height: 24px;
     padding: 0;
-    border: 1px solid #2dcb56;
+    background: #2dcb56;
     border-radius: 50%;
     line-height: 24px;
-    color: #2dcb56;
+    color: #fff;
     text-align: center;
     z-index: 1;
     i {

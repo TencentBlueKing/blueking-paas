@@ -40,7 +40,7 @@ from paasng.pluginscenter import log as log_api
 from paasng.pluginscenter import openapi_docs, serializers, shim
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
-from paasng.pluginscenter.features import PluginFeatureFlagsManager
+from paasng.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.pluginscenter.filters import PluginInstancePermissionFilter
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.pluginscenter.iam_adaptor.management import shim as members_api
@@ -444,11 +444,15 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def cancel_release(self, request, pd_id, plugin_id, release_id):
         """取消发布"""
+        plugin = self.get_plugin_instance()
+        # 插件可设置不能取消发布的特性
+        if not PluginFeatureFlagsManager(plugin).has_feature(PluginFeatureFlag.CANCEL_RELEASE):
+            raise error_codes.NOT_SUPPORT_CANCEL_RELEASE.f(_("插件不支持终止发布操作"))
+
         release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).cancel_release(operator=request.user.username)
 
         # 操作记录: 终止发布 xx 版本
-        plugin = self.get_plugin_instance()
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,

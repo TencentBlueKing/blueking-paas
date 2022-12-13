@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -60,20 +60,20 @@ class BKIAMClient:
         }
         return headers
 
-    def create_grade_managers(self, app_code: str, app_name: str, creator: str) -> int:
+    def create_grade_managers(self, app_code: str, app_name: str, init_member: Optional[str] = None) -> int:
         """
         在权限中心上为应用注册分级管理员，若已存在，则返回
 
         :param app_code: 蓝鲸应用 ID
         :param app_name: 蓝鲸应用名称
-        :param creator: 创建人用户名，如 admin
+        :param init_member: 初始分级管理员用户名，如 admin，若为空值，则该用户组没有分级管理员
         :returns: 分级管理员 ID
         """
         data = {
             'system': settings.IAM_PAAS_V3_SYSTEM_ID,
             'name': utils.gen_grade_manager_name(app_code),
             'description': utils.gen_grade_manager_desc(app_code),
-            'members': [creator],
+            'members': [init_member] if init_member else [],
             # 仅可对指定的单个应用授权
             'authorization_scopes': [
                 {

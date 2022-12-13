@@ -78,7 +78,7 @@ def filter_nodes_with_labels(nodes, ignore_labels):
             yield node
 
 
-def generate_state(region: str, cluster_name: str, sched_client, ignore_labels: Dict = {}) -> RegionClusterState:
+def generate_state(region: str, cluster_name: str, sched_client, ignore_labels: List) -> RegionClusterState:
     """Generate region state for a single region"""
     nodes = sched_client.get_nodes()
     nodes = list(filter_nodes_with_labels(nodes, ignore_labels))

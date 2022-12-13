@@ -24,7 +24,6 @@ import pytest
 import yaml
 from django_dynamic_fixture import G
 from dynaconf.utils.parse_conf import parse_conf_data
-from kubernetes.client.apis import ApiextensionsV1Api, ApiextensionsV1beta1Api
 from kubernetes.client.exceptions import ApiException
 
 from paas_wl.monitoring.app_monitor import constants
@@ -35,6 +34,7 @@ from paas_wl.monitoring.app_monitor.managers import (
 )
 from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
+from paas_wl.resources.base.kres import KCustomResourceDefinition
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
 pytestmark = pytest.mark.django_db
@@ -97,15 +97,12 @@ class TestAppMonitorController:
         name = "servicemonitors.monitoring.coreos.com"
 
         if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 16):
-            client = ApiextensionsV1beta1Api(k8s_client)
             body = yaml.load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
-
         else:
-            client = ApiextensionsV1Api(k8s_client)
             body = yaml.load((Path(__file__).parent / "crd/v1.yaml").read_text())
 
         try:
-            client.create_custom_resource_definition(body)
+            KCustomResourceDefinition(k8s_client).create_or_update(name, body=body)
         except ValueError as e:
             logger.warning("Unknown Exception raise from k8s client, but should be ignored. Detail: %s", e)
         except ApiException as e:
@@ -114,7 +111,7 @@ class TestAppMonitorController:
                 pass
 
         yield
-        client.delete_custom_resource_definition(name)
+        KCustomResourceDefinition(k8s_client).delete(name)
 
     @pytest.fixture()
     def monitor(self, app):

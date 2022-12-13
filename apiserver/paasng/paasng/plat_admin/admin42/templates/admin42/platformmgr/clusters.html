@@ -2,7 +2,7 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-clusters-list" style="width: 100%;" class="p20">
-    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效" style="margin-bottom: 15px;"></bk-alert>
+    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群状态" style="margin-bottom: 15px;"></bk-alert>
     <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
         创建集群
     </bk-button>
@@ -42,7 +42,7 @@
                 <span v-else>否</span>
             </template>
         </bk-table-column>
-        <bk-table-column label="集群信息" prop="description"></bk-table-column>
+        <bk-table-column label="集群描述" prop="description"></bk-table-column>
         <bk-table-column label="接入层配置" prop="ingress_config" width="300">
             <template slot-scope="props">
                 <json-pretty :data="props.row.ingress_config" show-length highlight-mouseover-node :deep="2"></json-pretty>
@@ -54,9 +54,10 @@
             </template>
         </bk-table-column>
 
-        <bk-table-column label="操作">
+        <bk-table-column label="操作" width="130">
             <template slot-scope="props">
-                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+                <bk-button theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button theme="primary" text @click="handleGenState(props.row.region, props.row.name)">更新状态</bk-button>
             </template>
         </bk-table-column>
     </bk-table>
@@ -68,10 +69,11 @@
         <bk-form :label-width="120" :model="dialog.form">
             <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
-                    <bk-option v-for="region in regionList"
-                               :key="region.value"
-                               :id="region.value"
-                               :name="region.text">
+                    <bk-option
+                        v-for="region in regionList"
+                        :key="region.value"
+                        :id="region.value"
+                        :name="region.text">
                     </bk-option>
                 </bk-select>
             </bk-form-item>
@@ -80,10 +82,11 @@
             </bk-form-item>
             <bk-form-item label="集群类型" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-select v-model="dialog.form.type" :disabled="dialog.type !== 'create'">
-                    <bk-option v-for="type in clusterTypeList"
-                               :key="type.value"
-                               :id="type.value"
-                               :name="type.text">
+                    <bk-option
+                        v-for="type in clusterTypeList"
+                        :key="type.value"
+                        :id="type.value"
+                        :name="type.text">
                     </bk-option>
                 </bk-select>
             </bk-form-item>
@@ -227,6 +230,7 @@
         create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
         list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
         detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/' %}"),
+        genState: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/gen_state/' %}"),
         apiServer: {
             upsert: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers' %}"),
             delete: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers/${api_server_id}' %}"),
@@ -350,6 +354,13 @@
 
                     this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
                     this.dialog.visible = true
+                },
+                handleGenState: function (region, clusterName) {
+                    this.$http.post(
+                        URLRouter.genState, {region: region, cluster_name: clusterName}
+                    ).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 状态成功`})
+                    })
                 },
                 cellStyleCallback: function({ row, column, rowIndex, columnIndex }) {
                     if (column.label === "接入层配置" || column.label === '注解')

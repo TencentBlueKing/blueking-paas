@@ -96,15 +96,12 @@ urlpatterns = [
         views.ConfigViewSet.as_view({'get': 'retrieve', 'post': 'update_config'}),
     ),
     re_path(
+        r"^regions/%s/apps/%s/bind_cluster/(?P<cluster_name>[^/]+)/$" % (PVAR_REGION, PVAR_NAME),
+        views.ConfigViewSet.as_view({'post': 'bind_cluster'}),
+    ),
+    re_path(
         r"^regions/%s/apps/%s/config/metadata$" % (PVAR_REGION, PVAR_NAME),
         views.ConfigViewSet.as_view({'post': 'update_metadata'}),
-    ),
-    ###########
-    # process #
-    ###########
-    re_path(
-        r"^regions/%s/processes/abnormal/$" % PVAR_REGION,
-        views.ProcessViewSet.as_view({'get': 'get_abnormal_processes'}),
     ),
     ####################
     # Resource Metrics #

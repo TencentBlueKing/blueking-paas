@@ -69,6 +69,7 @@ class AccountFeatureFlag(ChoicesEnum):
     ALLOW_CREATE_SMART_APP = "ALLOW_CREATE_SMART_APP"
     ALLOW_CREATE_CLOUD_NATIVE_APP = "ALLOW_CREATE_CLOUD_NATIVE_APP"
     ENABLE_TC_DOCKER = "ENABLE_TC_DOCKER"
+    ALLOW_PLUGIN_CENTER = "ALLOW_PLUGIN_CENTER"
 
     _choices_labels = [
         (ALLOW_ADVANCED_CREATION_OPTIONS, _("允许创建模块时使用高级选项")),
@@ -77,6 +78,7 @@ class AccountFeatureFlag(ChoicesEnum):
         (ALLOW_CREATE_SMART_APP, _("允许创建 SMart 应用")),
         (ALLOW_CREATE_CLOUD_NATIVE_APP, _("允许创建云原生应用")),
         (ENABLE_TC_DOCKER, _("允许使用「提供镜像」的部署方式")),
+        (ALLOW_PLUGIN_CENTER, _("允许使用插件开发者中心")),
     ]
 
     _defaults = skip(
@@ -87,6 +89,7 @@ class AccountFeatureFlag(ChoicesEnum):
             ALLOW_CREATE_SMART_APP: settings.IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT,
             ALLOW_CREATE_CLOUD_NATIVE_APP: settings.IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT,
             ENABLE_TC_DOCKER: False,
+            ALLOW_PLUGIN_CENTER: False,
         }
     )
 

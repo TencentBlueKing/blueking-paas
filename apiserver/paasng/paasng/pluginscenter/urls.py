@@ -46,6 +46,10 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "get_code_submit_info"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/feature_flags/",
+        views.PluginInstanceViewSet.as_view({"get": "get_feature_flags"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
         views.PluginReleaseViewSet.as_view({"get": "list", "post": "create"}),
     ),
@@ -100,6 +104,10 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/aggregate_date_histogram/<str:log_type>/",
         views.PluginLogViewSet.as_view({"post": "aggregate_date_histogram"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/aggregate_fields_filters/<str:log_type>/",
+        views.PluginLogViewSet.as_view({"post": "aggregate_fields_filters"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/",

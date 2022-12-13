@@ -21,11 +21,7 @@ from typing import List, Optional, Set
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.addrs import EnvAddresses
-from paas_wl.networking.ingress.certs.utils import (
-    AppDomainCertController,
-    pick_shared_cert,
-    update_or_create_secret_by_cert,
-)
+from paas_wl.networking.ingress.certs.utils import DomainWithCert, pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.managers.domain import save_subdomains
 from paas_wl.networking.ingress.managers.subpath import save_subpaths
@@ -133,14 +129,13 @@ def to_domain(d: AppDomain) -> Domain:
     if not d.https_enabled:
         return Domain(host=d.host, pathPrefixList=['/'])
 
-    cert_ctrl = AppDomainCertController(d.app, d)
-    cert = cert_ctrl.get_cert()
-    if not cert:
+    domain = DomainWithCert.from_app_domain(d)
+    if not domain.cert:
         # Disable HTTPS and write a warning message
         logger.warning('no valid cert can be found for domain: %s, disable HTTPS.', d)
         return Domain(host=d.host, pathPrefixList=['/'])
 
-    secret_name, created = cert_ctrl.update_or_create_secret_by_cert(cert)
+    secret_name, created = update_or_create_secret_by_cert(d.app, domain.cert)
     if created:
         logger.info("created a secret %s for host %s", secret_name, d.host)
     return Domain(host=d.host, pathPrefixList=['/'], tlsSecretName=secret_name)

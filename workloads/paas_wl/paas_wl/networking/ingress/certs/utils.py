@@ -23,7 +23,7 @@ from typing import Optional, Tuple
 
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.networking.ingress.models import AppDomainSharedCert, BasicCert, DomainLike
+from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert, Domain
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.utils.basic import get_client_by_app
@@ -31,31 +31,35 @@ from paas_wl.resources.utils.basic import get_client_by_app
 logger = logging.getLogger(__name__)
 
 
-class AppDomainCertController:
-    """Controller for app_domains's certs"""
+class DomainWithCert:
+    def __init__(self, host: str, path_prefix: str, https_enabled: bool, cert: Optional[BasicCert] = None):
+        """
+        :param host: 域名
+        :param path_prefix: 该域名的可访问路径前缀
+        :param https_enabled: 该域名是否开启 https
+        :param cert: 该域名关联的证书
+        """
+        self.host = host
+        self.path_prefix = path_prefix
+        self.https_enabled = https_enabled
+        self.cert = cert
 
-    def __init__(self, app: EngineApp, domain: DomainLike):
-        self.app = app
-        self.domain = domain
+    @classmethod
+    def from_app_domain(cls, domain: AppDomain):
+        cert = domain.cert
+        if not cert:
+            cert = domain.shared_cert
+        if not cert:
+            cert = pick_shared_cert(domain.app.region, domain.host)
+            if cert:
+                domain.shared_cert = cert
+                domain.save(update_fields=["shared_cert", "updated"])
+        return cls(host=domain.host, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
-    def get_cert(self) -> Optional[BasicCert]:
-        """Get cert object"""
-        if cert := self.domain.get_cert():
-            return cert
-        if wildcard_cert := self.domain.get_wildcard_cert():
-            return wildcard_cert
-
-        # Try to pick a matched shared cert by CN
-        shared_cert = pick_shared_cert(self.app.region, self.domain.host)
-        if shared_cert:
-            logger.debug('Shared cert found for %s', self.domain.host)
-            self.domain.set_wildcard_cert(shared_cert)
-            return shared_cert
-        return None
-
-    def update_or_create_secret_by_cert(self, cert: BasicCert) -> Tuple[str, bool]:
-        # Forward function call directly
-        return update_or_create_secret_by_cert(self.app, cert)
+    @classmethod
+    def from_custom_domain(cls, region: str, domain: Domain):
+        cert = pick_shared_cert(region, domain.name)
+        return cls(host=domain.name, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
 
 def update_or_create_secret_by_cert(app: EngineApp, cert: BasicCert) -> Tuple[str, bool]:

@@ -43,8 +43,7 @@ class TestReplaceAppDomainService:
             ('foo.example.com', '/foo/', 'bar.example.com', '/bar/'),
         ],
     )
-    def test_integrated(self, app, bk_stag_env, old_host, old_path_prefix, new_host, new_path_prefix):
-        bk_stag_env.engine_app_id = app.pk
+    def test_integrated(self, bk_stag_env, bk_stag_engine_app, old_host, old_path_prefix, new_host, new_path_prefix):
         domain = G(
             Domain,
             name=old_host,
@@ -52,17 +51,17 @@ class TestReplaceAppDomainService:
             module_id=bk_stag_env.module_id,
             environment_id=bk_stag_env.id,
         )
-        mgr = CustomDomainIngressMgr(app, domain)
-        mgr.sync(default_service_name=app.name)
+        mgr = CustomDomainIngressMgr(domain)
+        mgr.sync(default_service_name=bk_stag_engine_app.name)
 
         # Check ingress resource beforehand
-        ings = ingress_kmodel.list_by_app(app)
+        ings = ingress_kmodel.list_by_app(bk_stag_engine_app)
         assert ings[0].domains[0].host == old_host
 
         ReplaceAppDomainService(bk_stag_env, old_host, old_path_prefix).replace_with(new_host, new_path_prefix, False)
 
         # Validate replacement
-        ings = ingress_kmodel.list_by_app(app)
+        ings = ingress_kmodel.list_by_app(bk_stag_engine_app)
         assert len(ings) == 1
         assert len(ings[0].domains) == 1
         assert ings[0].domains[0].host == new_host

@@ -65,12 +65,12 @@ class TestBuildProcessViewSet:
 
 
 class TestReleaseViewSet:
-    def testcase(self, build, engine_app, api_client, release_url, create_release):
+    def testcase(self, build, bk_stag_engine_app, api_client, release_url, create_release):
         response = create_release()
         assert response.status_code == 201
         assert response.json()["failed"] is False
 
-        data = {"release_id": str(Release.objects.get_latest(engine_app).uuid)}
+        data = {"release_id": str(Release.objects.get_latest(bk_stag_engine_app).uuid)}
         with mock.patch('rest_framework.request.Request.data', data):
             response = api_client.get(release_url)
         assert response.status_code == 200

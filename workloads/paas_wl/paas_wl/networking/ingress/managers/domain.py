@@ -17,17 +17,17 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List, Optional, Set, Type
+from typing import List, Set
 
 from django.db import transaction
 
-from paas_wl.networking.ingress.certs.utils import AppDomainCertController
+from paas_wl.networking.ingress.certs.utils import DomainWithCert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.networking.ingress.managers.base import AppIngressMgr
 from paas_wl.networking.ingress.managers.common import SubpathCompatPlugin
-from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain, DomainLike
+from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain
 from paas_wl.platform.applications.models import App
 
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ class SubdomainAppIngressMgr(AppIngressMgr):
 
         factory = IngressDomainFactory(self.app)
         for d in AppDomain.objects.filter(app=self.app, source=AppDomainSource.AUTO_GEN):
-            domains.append(factory.create(d, raise_on_no_cert=False))
+            domains.append(factory.create(DomainWithCert.from_app_domain(d), raise_on_no_cert=False))
         return domains
 
 
@@ -99,9 +99,9 @@ class CustomDomainIngressMgr(AppIngressMgr):
     plugins = [SubpathCompatPlugin]
     CUSTOM_DOMAIN_PREFIX = "custom-"
 
-    def __init__(self, app: App, domain: Domain):
+    def __init__(self, domain: Domain):
         self.domain = domain
-        super().__init__(app)
+        super().__init__(App.objects.get_by_env(domain.environment))
 
     def make_ingress_name(self) -> str:
         """Make the name of Ingress resource
@@ -115,24 +115,27 @@ class CustomDomainIngressMgr(AppIngressMgr):
                 )
 
             # When path prefix is non-default, a different name is required to avoid conflict
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.host}-{self.domain.id}'
+            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}-{self.domain.id}'
         else:
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.host}'
+            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}'
 
     def list_desired_domains(self) -> List[PIngressDomain]:
         factory = IngressDomainFactory(self.app)
-        return [factory.create(self.domain, raise_on_no_cert=False)]
+        return [
+            factory.create(
+                DomainWithCert.from_custom_domain(region=self.app.region, domain=self.domain), raise_on_no_cert=False
+            )
+        ]
 
 
 class IngressDomainFactory:
     """A factory class creates `PIngressDomain` objects"""
 
-    def __init__(self, app: App, cert_controller_cls: Optional[Type[AppDomainCertController]] = None):
+    def __init__(self, app: App):
         self.app = app
-        self.cert_controller_cls = cert_controller_cls or AppDomainCertController
 
-    def create(self, app_domain: DomainLike, raise_on_no_cert: bool = True) -> PIngressDomain:
-        """Detect domain scheme, return a ingress domain config
+    def create(self, app_domain: DomainWithCert, raise_on_no_cert: bool = True) -> PIngressDomain:
+        """Detect domain scheme, return an ingress domain config
 
         :param app_domain: domain object stores in database
         :param raise_on_no_cert: when domain requires HTTPS and no valid cert can be found, raise
@@ -143,10 +146,8 @@ class IngressDomainFactory:
         if not app_domain.https_enabled:
             return PIngressDomain(host=app_domain.host, path_prefix_list=[path_prefix], tls_enabled=False)
 
-        cert_controller = self.cert_controller_cls(self.app, app_domain)
-        cert = cert_controller.get_cert()
-        if cert:
-            secret_name, created = cert_controller.update_or_create_secret_by_cert(cert)
+        if app_domain.cert:
+            secret_name, created = update_or_create_secret_by_cert(self.app, app_domain.cert)
             if created:
                 logger.info("created a secret %s for host %s", secret_name, app_domain.host)
 

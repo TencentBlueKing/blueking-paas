@@ -58,7 +58,7 @@ class AppDefaultIngresses:
         # TODO: 添加查询缓存，或尽早合并项目减少模块之间的网络调用
         env = get_env_by_engine_app_id(self.app.pk)
         for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
-            yield CustomDomainIngressMgr(self.app, domain)
+            yield CustomDomainIngressMgr(domain)
 
     def sync_ignore_empty(self, default_service_name: str = None):
         """Sync current ingress resources to apiserver,

@@ -126,13 +126,15 @@ def webconsole_url(engine_app):
 
 
 @pytest.fixture
-def create_release(bk_stag_env, engine_app, build, api_client, release_url):
+def create_release(bk_stag_env, bk_stag_engine_app, build, api_client, release_url):
     def handler():
         data = {
             'build': build.uuid,
             'extra_envs': {
                 'BKPAAS_WEIXIN_REMOTE_STATIC_URL': 'https://blueking-fake.com',
-                'BKPAAS_SUB_PATH': '/{region}-{name}/'.format(region=engine_app.region, name=engine_app.name),
+                'BKPAAS_SUB_PATH': '/{region}-{name}/'.format(
+                    region=bk_stag_engine_app.region, name=bk_stag_engine_app.name
+                ),
                 'BKPAAS_ENVIRONMENT': 'stag',
                 'BKPAAS_REMOTE_STATIC_URL': 'http://blueking-fake.com',
                 'BKPAAS_WEIXIN_URL': 'https://blueking-fake.com',
@@ -140,9 +142,8 @@ def create_release(bk_stag_env, engine_app, build, api_client, release_url):
             },
             'procfile': {},
         }
-        with mock.patch("paas_wl.networking.ingress.managers.misc.get_env_by_engine_app_id", return_value=bk_stag_env):
-            response = api_client.post(release_url, data=data)
-            return response
+        response = api_client.post(release_url, data=data)
+        return response
 
     return handler
 

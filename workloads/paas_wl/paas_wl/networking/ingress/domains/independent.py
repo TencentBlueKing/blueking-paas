@@ -37,13 +37,13 @@ logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
-def restore_ingress_on_error(app: EngineApp, domain: Domain, service_name: str):
+def restore_ingress_on_error(domain: Domain, service_name: str):
     """A context manager which syncs a domain's ingress resource when exception happenes"""
     try:
         yield
     except Exception:
         logger.warning('Exception happened in `restore_ingress_on_error` block, will sync ingress resource.')
-        CustomDomainIngressMgr(app, domain).sync(default_service_name=service_name)
+        CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
         raise
 
 
@@ -79,7 +79,7 @@ class ReplaceAppDomainService:
         old_copy_obj = copy.deepcopy(self.domain_obj)
         # Try modify the database object first
 
-        self.domain_obj.host = host
+        self.domain_obj.name = host
         self.domain_obj.path_prefix = path_prefix
         self.domain_obj.https_enabled = https_enabled
         try:
@@ -89,15 +89,15 @@ class ReplaceAppDomainService:
 
         service_name = get_service_name(self.engine_app)
         try:
-            with restore_ingress_on_error(self.engine_app, old_copy_obj, service_name):
+            with restore_ingress_on_error(old_copy_obj, service_name):
                 # Delete the old ingress resource first, then create a new one.
                 #
                 # WARNING: although `restore_ingress_on_error` will try restore the old ingress resource
                 # when exception was raised, but this is not really "transactional". If there is something
                 # wrong with the "restoring" procedure, we will be left at a dangerous situation where
                 # the ingress was absent--deletion finished, creation and restoring failed.
-                CustomDomainIngressMgr(self.engine_app, old_copy_obj).delete()
-                CustomDomainIngressMgr(self.engine_app, self.domain_obj).sync(default_service_name=service_name)
+                CustomDomainIngressMgr(old_copy_obj).delete()
+                CustomDomainIngressMgr(self.domain_obj).sync(default_service_name=service_name)
         except ValidCertNotFound:
             raise ReplaceAppDomainFailed("找不到有效的 TLS 证书")
         except Exception:
@@ -124,7 +124,7 @@ class DomainResourceCreateService:
             environment_id=self.env.id,
             defaults={"https_enabled": https_enabled},
         )
-        CustomDomainIngressMgr(self.engine_app, domain_ins).sync(default_service_name=service_name)
+        CustomDomainIngressMgr(domain_ins).sync(default_service_name=service_name)
 
 
 class DomainResourceDeleteService:
@@ -141,7 +141,7 @@ class DomainResourceDeleteService:
         """
         db_or_mem_domain = self._get_app_domain_for_deletion(host, path_prefix)
         try:
-            CustomDomainIngressMgr(self.engine_app, db_or_mem_domain).delete()
+            CustomDomainIngressMgr(db_or_mem_domain).delete()
         except PersistentAppDomainRequired:
             # When deleting a domain with customized path prefix, a persistent object is alway required
             # because it's "id" used in ingress resource name, consider as a success when it happens.

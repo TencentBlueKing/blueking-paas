@@ -44,7 +44,7 @@ from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.processes.managers import AppProcessManager
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
-from tests.utils.app import random_fake_app, release_setup
+from tests.utils.app import release_setup
 
 from .test_kres import construct_foo_pod
 
@@ -58,10 +58,12 @@ RG = settings.FOR_TESTS_DEFAULT_REGION
 
 class TestClientProcess:
     @pytest.fixture
-    def app(self, set_structure):
-        app = random_fake_app(force_app_info={"region": RG, "name": "bk-fake-stag"})
-        set_structure(app, {"web": 2, "worker": 1})
-        return app
+    def app(self, set_structure, bk_stag_engine_app):
+        bk_stag_engine_app.region = RG
+        bk_stag_engine_app.name = "bk-fake-stag"
+        bk_stag_engine_app.save()
+        set_structure(bk_stag_engine_app, {"web": 2, "worker": 1})
+        return bk_stag_engine_app
 
     @pytest.fixture
     def release(self, app):
@@ -84,12 +86,10 @@ class TestClientProcess:
     def worker_process(self, app, release):
         return AppProcessManager(app=app).assemble_process("worker", release=release)
 
-    def test_deploy_processes(self, bk_stag_env, scheduler_client, web_process):
+    def test_deploy_processes(self, scheduler_client, web_process):
         with patch('paas_wl.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
             'paas_wl.networking.ingress.managers.service.service_kmodel'
-        ) as ks, patch('paas_wl.networking.ingress.managers.base.ingress_kmodel') as ki, patch(
-            "paas_wl.networking.ingress.managers.misc.get_env_by_engine_app_id", return_value=bk_stag_env
-        ):
+        ) as ks, patch('paas_wl.networking.ingress.managers.base.ingress_kmodel') as ki:
             ks.get.side_effect = AppEntityNotFound()
             ki.get.side_effect = AppEntityNotFound()
 

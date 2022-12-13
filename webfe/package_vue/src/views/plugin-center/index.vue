@@ -8,7 +8,7 @@
       :height="575"
     >
       <div class="paas-plugin-tit">
-        <h2> {{ $t('我的插件') }}</h2>
+        <h3> {{ $t('我的插件') }}</h3>
       </div>
       <div class="flex-row justify-content-between">
         <bk-button
@@ -474,7 +474,7 @@
             position: relative;
         }
 
-        .paas-plugin-tit h2 {
+        .paas-plugin-tit h3 {
             font-size: 18px;
             font-weight: normal;
             display: inline-block;

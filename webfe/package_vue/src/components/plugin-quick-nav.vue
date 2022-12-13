@@ -39,11 +39,15 @@
             placeholder="请输入关键字"
             :left-icon="'bk-icon icon-search'"
             :clearable="true"
+            @enter="searchPlugin"
           />
         </div>
-        <div class="plugin-list">
+        <div
+          v-bkloading="{isLoading: isLoading, size: 'mini', zIndex: 10}"
+          class="plugin-list"
+        >
           <div
-            v-for="item in pluginList"
+            v-for="item in viewPluinList"
             :key="item.id"
             class="item flex-row align-items-center"
             @click="changePlugin(item)"
@@ -89,14 +93,26 @@
                 showSelectData: false,
                 searchValue: '',
                 pluginList: [],
+                viewPluinList: [],
                 curPluginData: {},
-                isHover: false
+                isHover: false,
+                isLoading: false
             };
         },
         watch: {
             pluginList: {
                 handler (val) {
                     this.curPluginData = val.find(e => e.id === this.$route.params.id);
+                }
+            },
+            searchValue (newVal, oldVal) {
+                if (oldVal && !newVal) {
+                    this.searchPlugin();
+                }
+            },
+            showSelectData (val) {
+                if (!val) {
+                  this.searchValue = '';
                 }
             }
         },
@@ -114,6 +130,7 @@
                         pageParams
                     });
                     this.pluginList = res.results;
+                    this.viewPluinList = res.results;
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -140,6 +157,16 @@
                     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
                 });
                 this.hideSelectData();
+            },
+            searchPlugin () {
+                if (this.searchValue === '') {
+                    this.viewPluinList = this.pluginList;
+                }
+                this.isLoading = true;
+                this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
+                setTimeout(() => {
+                    this.isLoading = false;
+                }, 200);
             }
         }
     };

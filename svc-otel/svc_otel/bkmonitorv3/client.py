@@ -23,59 +23,14 @@ from django.conf import settings
 from svc_otel.bkmonitorv3.apigw.client import Client
 from svc_otel.bkmonitorv3.apigw.client import Group as BkMonitorGroup
 from svc_otel.bkmonitorv3.esb.client import get_client_by_username
-from svc_otel.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
+from svc_otel.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 
 logger = logging.getLogger(__name__)
 
 
 class BkMonitorClient:
     def __init__(self):
-        # 空间类型ID，默认default,允许：bkcc, bcs, bkci, paas，由蓝鲸监控侧内置分配
-        self.space_type_id = "paas"
-
-    def get_or_create_space(self, app_code: str, app_name: str, operator: str):
-        try:
-            space_uid = self._get_space_detail(app_code)
-        except BkMonitorSpaceDoesNotExist:
-            space_uid = self._create_space(app_code, app_name, operator)
-
-        return space_uid
-
-    def _get_space_detail(self, app_code: str) -> str:
-        """获取空间详情"""
-        try:
-            resp = self.client.metadata_get_space_detail({"space_type_id": self.space_type_id, "space_id": app_code})
-        except APIGatewayResponseError as e:
-            raise BkMonitorGatewayServiceError(f'Failed to get app space detail on BK Monitor, {e}')
-
-        # TODO 目前监控的API返回值只有 true 和 false，没有更详细的错误码来确定是否空间已经存在
-        # 等监控侧优化后，可以改为根据错误码来判断空间是否不存在
-        if not resp.get('result'):
-            logger.exception(f'Failed to get app({app_code}) space detail on BK Monitor, resp:{resp}')
-            raise BkMonitorSpaceDoesNotExist(resp['message'])
-
-        return resp.get('data', {}).get('space_uid')
-
-    def _create_space(self, app_code: str, app_name: str, operator: str) -> str:
-        """在蓝鲸监控上创建应用对应的空间"""
-        data = {
-            "space_name": app_name,
-            "space_id": app_code,
-            "space_type_id": self.space_type_id,
-            "creator": operator,
-        }
-        try:
-            resp = self.client.metadata_create_space(
-                data=data,
-            )
-        except APIGatewayResponseError as e:
-            raise BkMonitorGatewayServiceError(f'Failed to create app space on BK Monitor, {e}')
-
-        if not resp.get('result'):
-            logger.exception(f'Failed to create app space on BK Monitor, resp:{resp} \ndata: {data}')
-            raise BkMonitorApiError(resp['message'])
-
-        return resp.get('data', {}).get('space_uid')
+        self.client: BkMonitorGroup = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.APIGW_ENVIRONMENT).api
 
     def create_apm_application(self, apm_name: str, bk_monitor_space_id: str) -> str:
         """创建 APM 应用，返回 data_token
@@ -96,6 +51,7 @@ class BkMonitorClient:
             "code": 500,
             "request_id": "a06f6c1a66c34d0a880186759fec0d06"
         }
+        TODO: APIGW 上还未注册 APM 的 API
         """
         # 在指定的命名空间下创建 APM 应用
         try:

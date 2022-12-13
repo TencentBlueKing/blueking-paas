@@ -1045,6 +1045,11 @@ span.ellipsis {
             max-width: 1180px;
         }
     }
+    .overview-fright-plugin .ps-top-bar
+        .header-title, h2{
+            max-width: none;
+            margin: 0 60px;
+        }
     .ps-container,
     .app-container {
         max-width: 1180px;

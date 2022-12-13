@@ -29,6 +29,7 @@ class PluginFeatureFlag(FeatureFlag):
     PROCESS_MANAGE = FeatureFlagField(label="进程管理", default=False)
     STRUCTURE_LOG = FeatureFlagField(label="结构化日志", default=False)
     APP_SECRETS = FeatureFlagField(label="应用密钥管理", default=False)
+    PLUGIN_DISTRIBUTER = FeatureFlagField(label="插件使用方", default=False)
 
 
 class PluginFeatureFlagsManager:

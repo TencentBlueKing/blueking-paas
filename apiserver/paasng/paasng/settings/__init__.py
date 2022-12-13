@@ -188,6 +188,9 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+ADMIN_USERNAME = settings.get('ADMIN_USERNAME', 'admin')
+
 AUTH_USER_MODEL = 'bkpaas_auth.User'
 
 AUTHENTICATION_BACKENDS = ['bkpaas_auth.backends.UniversalAuthBackend', 'bkpaas_auth.backends.APIGatewayAuthBackend']

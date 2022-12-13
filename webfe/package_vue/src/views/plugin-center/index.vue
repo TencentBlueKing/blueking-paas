@@ -38,6 +38,20 @@
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
+        <div slot="empty">
+          <bk-exception
+            class="exception-wrap-item exception-part"
+            type="search-empty"
+            scene="part"
+          />
+          <div class="empty-tips">
+            可以尝试调整关键词 或
+            <span
+              class="clear-search"
+              @click="clearFilterKey"
+            >清空搜索条件</span>
+          </div>
+        </div>
         <bk-table-column :label="$t('插件标识')">
           <template slot-scope="{ row }">
             <img
@@ -440,6 +454,10 @@
                     name: 'pluginVersionManager',
                     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
                 });
+            },
+
+            clearFilterKey () {
+                this.filterKey = '';
             }
         }
     };
@@ -530,5 +548,22 @@
     .plugin-logo-cls {
         width: 16px;
         vertical-align: middle;
+    }
+    .empty-tips {
+        margin-top: 5px;
+        color: #96aeac;
+        .clear-search {
+            cursor: pointer;
+            color: #3a84ff;
+        }
+    }
+</style>
+
+<style>
+    .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
+        height: 130px;
+    }
+    .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
+        color: #3a84ff !important;
     }
 </style>

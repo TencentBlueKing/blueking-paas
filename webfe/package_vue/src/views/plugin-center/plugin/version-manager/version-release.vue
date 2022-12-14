@@ -11,6 +11,7 @@
         <div class="title-warp flex-row align-items-center justify-content-between">
           <paas-plugin-title :version="curVersion" />
           <bk-button
+            v-if="pluginFeatureFlags.CANCEL_RELEASE"
             class="discontinued"
             @click="showInfoCancelRelease"
           >
@@ -328,6 +329,9 @@
             },
             curStatus () {
                 return this.$route.params.status;
+            },
+            pluginFeatureFlags () {
+                return this.$store.state.plugin.pluginFeatureFlags;
             }
         },
         watch: {

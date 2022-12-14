@@ -1,5 +1,5 @@
 <template lang="html">
-  <div class="right-main">
+  <div class="right-main plugin-base-info">
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
@@ -267,6 +267,93 @@
           </div>
         </div>
 
+        <!-- 插件使用方 -->
+        <div
+          v-if="pluginFeatureFlags.PLUGIN_DISTRIBUTER"
+          class="basic-info-item"
+        >
+          <div class="title">
+            {{ $t('插件使用方') }}
+          </div>
+          <div class="info">
+            {{ tipsInfo }}
+          </div>
+          <div class="content no-border">
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('蓝鲸网关') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);border-top: 1px solid #dcdee5;">
+                <div class="item-content border-bottm-none">
+                  <span
+                    v-if="apiGwName"
+                    style="color: #3A84FF;"
+                  >{{ $t('已绑定到') + apiGwName }}</span>
+                  <span
+                    v-else
+                    style="color: #979ba5;"
+                  > {{ $t('暂未找到已同步网关') }} </span>
+                  <i
+                    v-bk-tooltips="$t('网关维护者默认为应用管理员')"
+                    class="paasng-icon paasng-info-circle tooltip-icon"
+                  />
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;height: 480px;">
+                <label class="title-label plugin-info">
+                  <p style="height: 26px"> {{ $t('插件使用方') }} </p>
+                </label>
+              </bk-form-item>
+              <bk-form-item
+                class="pluginEmploy"
+                style="width: calc(100% - 180px);"
+              >
+                <bk-transfer
+                  :target-list="targetPluginList"
+                  :source-list="pluginList"
+                  :display-key="'name'"
+                  :setting-key="'code_name'"
+                  :show-overflow-tips="true"
+                  :empty-content="promptContent"
+                  :title="titleArr"
+                  @change="transferChange"
+                />
+                <div class="mt20">
+                  <bk-button
+                    :theme="'primary'"
+                    type="submit"
+                    :title="$t('保存')"
+                    class="mr10"
+                    @click="updateAuthorizationUse"
+                  >
+                    {{ $t('保存') }}
+                  </bk-button>
+                  <bk-button
+                    :theme="'default'"
+                    :title="$t('还原')"
+                    class="mr10"
+                    @click="revivification"
+                  >
+                    {{ $t('还原') }}
+                  </bk-button>
+                </div>
+                <div class="explain">
+                  <p> {{ $t('说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。') }} </p>
+                  <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}</p>
+                </div>
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </div>
+
         <!-- 鉴权信息 -->
         <authentication-info v-if="pluginFeatureFlags.APP_SECRETS" />
 
@@ -425,7 +512,16 @@
                 },
                 editorValue: '',
                 editorLabelHeight: '',
-                editorHeight: ''
+                editorHeight: '',
+                apiGwName: '',
+                TargetDataFirst: true,
+                PluginDataAllFirst: true,
+                targetPluginList: [],
+                AuthorizedUseList: [],
+                restoringPluginList: [],
+                restoringTargetData: [],
+                pluginList: [],
+                tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。')
             };
         },
         computed: {
@@ -456,6 +552,11 @@
             init () {
                 this.getPluginBaseInfo();
                 this.getMarketInfo();
+                if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
+                    this.getPluginAll();
+                    this.getAuthorizedUse();
+                    this.getProfile();
+                }
             },
 
             formattParams () {
@@ -672,6 +773,100 @@
 
             changeInfoUnfold () {
                 this.isUnfold = !this.isUnfold;
+            },
+
+            // 获取可选插件适用方
+            async getPluginAll () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getPluginDistributors');
+                    this.pluginList = res;
+                    if (this.PluginDataAllFirst) {
+                        this.restoringPluginList = this.pluginList;
+                        this.PluginDataAllFirst = false;
+                    }
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                }
+            },
+
+            arrayEqual (arr1, arr2) {
+                if (arr1 === arr2) return true;
+                if (arr1.length !== arr2.length) return false;
+                for (let i = 0; i < arr1.length; ++i) {
+                    if (arr1[i] !== arr2[i]) return false;
+                }
+                return true;
+            },
+
+            async getProfile () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getProfileData', { pluginId: this.pluginId });
+                    this.localeAppInfo.introduction = res.introduction;
+                    this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
+                    this.apiGwName = res.api_gw_name;
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                }
+            },
+
+            async updateAuthorizationUse () {
+                const data = this.AuthorizedUseList;
+                const flag = this.arrayEqual(this.targetPluginList, data);
+                if (!flag) {
+                    try {
+                        await this.$store.dispatch('plugin/updatePluginUser', {
+                            pluginId: this.pluginId,
+                            data: { distributors: data }
+                        });
+                        this.getPluginAll();
+                        this.getAuthorizedUse();
+                        this.$paasMessage({
+                            theme: 'success',
+                            message: this.$t('授权成功！')
+                        });
+                    } catch (e) {
+                        this.$paasMessage({
+                            theme: 'error',
+                            message: e.detail
+                        });
+                    }
+                } else {
+                    this.$paasMessage({
+                        theme: 'warning',
+                        message: this.$t('未选择授权使用方')
+                    });
+                }
+            },
+
+            async getAuthorizedUse () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getAuthorizedUse', { pluginId: this.pluginId });
+                    this.targetPluginList = res.map(item => item.code_name);
+                    if (this.TargetDataFirst) {
+                        this.restoringTargetData = this.targetPluginList;
+                        this.TargetDataFirst = false;
+                    }
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                }
+            },
+
+            transferChange (sourceList, targetList, targetValueList) {
+                this.AuthorizedUseList = targetValueList;
+            },
+
+            revivification () {
+                this.pluginList.splice(0, this.pluginList.length, ...this.restoringPluginList);
+                this.targetPluginList.splice(0, this.targetPluginList.length, ...this.restoringTargetData);
             }
         }
     };
@@ -1065,8 +1260,28 @@
             font-size: 16px;
         }
     }
+    .border-bottm-none {
+        border-bottom: none !important;
+    }
+    .pluginEmploy {
+        height: 460px;padding: 20px 24px 0;
+        border: 1px solid #dcdee5;
+    }
+    .explain {
+        margin-top: 20px;
+        p {
+            line-height: 1.5em;
+            color: #979ba5;
+        }
+    }
 </style>
 <style lang="scss">
+    .plugin-base-info section .content .content-item label {
+        background: #FAFBFD;
+    }
+    .plugin-base-info section .content .content-item label.first-label {
+        border-bottom: 1px solid #dcdee5;
+    }
     .content .paas-info-app-name-cls .bk-form-input {
         font-size: 12px !important;
     }

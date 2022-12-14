@@ -14,11 +14,17 @@
     </div>
     <div class="content">
       <div class="content-item">
-        <label v-if="platformFeature.APP_ID_ALIAS">
+        <label
+          v-if="platformFeature.APP_ID_ALIAS"
+          class="first-label"
+        >
           <p class="title-p top">app id</p>
           <p class="title-p bottom tip"> {{ $t('别名') }}：bk_app_code </p>
         </label>
-        <label v-else>
+        <label
+          v-else
+          class="first-label"
+        >
           <p class="title-p mt15">bk_app_code</p>
         </label>
         <div class="item-practical-content">

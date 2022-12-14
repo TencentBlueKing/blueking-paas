@@ -728,7 +728,7 @@
 
             showInfoCancelRelease () {
                 this.$bkInfo({
-                    title: `确认终止发布版本 ${this.curVersion}？`,
+                    title: `确认终止发布版本${this.curVersion} ？`,
                     width: 480,
                     maskClose: true,
                     confirmFn: () => {

@@ -29,7 +29,7 @@
               </bk-form-item>
             </bk-form>
             <bk-form
-              class="info-special-form"
+              class="info-special-form plugin-name-form"
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
@@ -37,24 +37,28 @@
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
                 <bk-input
+                  v-if="isFormEdited.nameInput"
                   ref="nameInput"
                   v-model="pluginInfo.name_zh_cn"
                   :placeholder="$t('请输入插件名称')"
-                  :readonly="!isFormEdited.nameInput"
                   ext-cls="paas-info-app-name-cls"
                   :clearable="false"
                   :maxlength="20"
                 />
+                <div
+                  v-else
+                  class="plugin-name-box"
+                >
+                  <span>{{ pluginInfo.name_zh_cn }}</span>
+                  <i
+                    v-bk-tooltips="$t('编辑')"
+                    class="paasng-icon paasng-edit-2 plugin-name-icon"
+                    @click="showEdit('nameInput')"
+                  />
+                </div>
 
                 <div class="action-box">
-                  <template v-if="!isFormEdited.nameInput">
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit-2"
-                      @click="showEdit('nameInput')"
-                    />
-                  </template>
-                  <template v-else>
+                  <template v-if="isFormEdited.nameInput">
                     <bk-button
                       style="margin-right: 6px;"
                       theme="primary"
@@ -231,20 +235,26 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label editor-label"> {{ $t('详细描述') }} </label>
+                <label
+                  class="title-label editor-label"
+                  :style="`height: ${infoHeight}px;`"
+                >
+                  {{ $t('详细描述') }}
+                </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
                 :class="{ 'input-show-index': isFormEdited.descriptionInput }"
               >
                 <div class="content-box">
-                  <div
-                    ref="editorRef"
-                    :class="['display-description', { 'description-ellipsis': editorLabelHeight }, isUnfold ? 'unfold' : 'up']"
-                    style="-webkit-box-orient: vertical;"
-                    v-html="marketInfo.description"
-                  />
+                  <div :class="['display-description', { 'description-ellipsis': editorLabelHeight }, isUnfold ? 'unfold' : 'up']">
+                    <div
+                      ref="editorRef"
+                      v-html="marketInfo.description"
+                    />
+                  </div>
                   <span
+                    v-if="editorLabelHeight === 'down'"
                     class="unfold-btn"
                     @click="changeInfoUnfold"
                   >
@@ -414,7 +424,8 @@
                     }
                 },
                 editorValue: '',
-                editorLabelHeight: ''
+                editorLabelHeight: '',
+                editorHeight: ''
             };
         },
         computed: {
@@ -433,6 +444,9 @@
             },
             pluginFeatureFlags () {
                 return this.$store.state.plugin.pluginFeatureFlags;
+            },
+            infoHeight () {
+                return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
             }
         },
         created () {
@@ -484,6 +498,7 @@
                     this.resMarketInfo = JSON.stringify(res);
                     this.$nextTick(() => {
                         this.editorLabelHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight > 200 ? 'down' : '';
+                        this.editorHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight || 232;
                     });
                 } catch (e) {
                     this.$bkMessage({
@@ -577,7 +592,9 @@
                     });
                     return;
                 }
-                this.$refs[key].focus();
+                this.$nextTick(() => {
+                    this.$refs[key].focus();
+                });
             },
 
             dialogAfterLeave () {
@@ -998,13 +1015,11 @@
     .market-edit,
     .plugin-name-icon-cls {
         cursor: pointer;
-        color: #979ba5;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 400;
         margin-left: 5px;
-        &:hover {
-            color: #3a84ff;
-        }
+        color: #3a84ff;
+
         i {
             font-size: 16px;
             transform: translateX(2px);
@@ -1031,6 +1046,23 @@
         }
         &:hover {
             color: #3a84ff;
+        }
+    }
+    .plugin-name-form {
+        top: -4px !important;
+    }
+    .plugin-name-box {
+        font-size: 12px;
+        padding: 0 10px 0 25px;
+        height: 42px;
+        line-height: 42px;
+        border-right: 1px solid #dcdee5;
+        border-bottom: 1px solid #dcdee5;
+        .plugin-name-icon {
+            margin-left: 5px;
+            cursor: pointer;
+            color: #3a84ff;
+            font-size: 16px;
         }
     }
 </style>

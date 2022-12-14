@@ -588,6 +588,14 @@ class Group(OperationGroup):
         path="/metadata_create_space/",
     )
 
+    # 更新空间
+    metadata_update_space = bind_property(
+        Operation,
+        name="metadata_update_space",
+        method="POST",
+        path="/metadata_update_space/",
+    )
+
     # 查询空间实例详情
     metadata_get_space_detail = bind_property(
         Operation,

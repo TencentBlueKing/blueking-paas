@@ -17,13 +17,12 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List
+from typing import Dict, List
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
 from paasng.accessories.bkmonitorv3.apigw.client import Client
-from paasng.accessories.bkmonitorv3.apigw.client import Group as BkMonitorGroup
 from paasng.accessories.bkmonitorv3.constants import QueryAlertsParams
 from paasng.accessories.bkmonitorv3.esb.client import get_client_by_username
 from paasng.accessories.bkmonitorv3.exceptions import (
@@ -35,10 +34,26 @@ from paasng.accessories.bkmonitorv3.exceptions import (
 logger = logging.getLogger(__name__)
 
 
+class DummyBkMonitorClient:
+    """Describes protocols of calling API service"""
+
+    def metadata_get_space_detail(self, *args, **kwargs) -> Dict:
+        ...
+
+    def metadata_create_space(self, *args, **kwargs) -> Dict:
+        ...
+
+    def metadata_update_space(self, *args, **kwargs) -> Dict:
+        ...
+
+    def search_alert(self, *args, **kwargs) -> Dict:
+        ...
+
+
 class BkMonitorClient:
     def __init__(self):
-        self.client: BkMonitorGroup = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.APIGW_ENVIRONMENT).api
-        # 空间类型ID，默认default,允许：bkcc, bcs, bkci, paas，由蓝鲸监控侧内置分配
+        self.client = DummyBkMonitorClient()
+        # 空间类型ID，TODO 等监控修改改为 bksaas
         self.space_type_id = "paas"
 
     def get_or_create_space(self, app_code: str, app_name: str, creator: str) -> str:
@@ -85,6 +100,27 @@ class BkMonitorClient:
 
         return resp.get('data', {}).get('space_uid')
 
+    def update_space(self, app_code: str, app_name: str, updater: str) -> str:
+        """更新空间"""
+        data = {
+            "space_name": app_name,
+            "space_id": app_code,
+            "space_type_id": self.space_type_id,
+            "updater": updater,
+        }
+        try:
+            resp = self.client.metadata_update_space(
+                data=data,
+            )
+        except APIGatewayResponseError as e:
+            raise BkMonitorGatewayServiceError(f'Failed to update app space on BK Monitor, {e}')
+
+        if not resp.get('result'):
+            logger.exception(f'Failed to update app space on BK Monitor, resp:{resp} \ndata: {data}')
+            raise BkMonitorApiError(resp['message'])
+
+        return resp.get('data', {}).get('space_uid')
+
     def query_alerts(self, query_params: QueryAlertsParams) -> List:
         """查询告警
 
@@ -108,7 +144,7 @@ class BkMonitorClientByApiGw(BkMonitorClient):
     def __init__(self):
         super().__init__()
 
-        client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.APIGW_ENVIRONMENT)
+        client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
         client.update_bkapi_authorization(
             **{
                 'bk_app_code': settings.BK_APP_CODE,

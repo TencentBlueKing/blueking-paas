@@ -28,9 +28,9 @@ class MonitorV3Group(OperationGroup):
     """
 
     # 快速创建APM应用
-    apm_create_application = bind_property(
+    create_apm_application = bind_property(
         Operation,
-        name="apm_create_application",
+        name="create_apm_application",
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/apm/create_application/",
     )
@@ -40,6 +40,13 @@ class MonitorV3Group(OperationGroup):
         name="metadata_create_space",
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/metadata_create_space/",
+    )
+    # 更新空间
+    metadata_update_space = bind_property(
+        Operation,
+        name="metadata_update_space",
+        method="POST",
+        path="/api/c/compapi/v2/monitor_v3/metadata_update_space/",
     )
     # 查询空间实例详情
     metadata_get_space_detail = bind_property(

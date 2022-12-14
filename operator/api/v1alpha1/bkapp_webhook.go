@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -48,7 +47,7 @@ var (
 
 // SetupWebhookWithManager ...
 func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return errors.WithStack(ctrl.NewWebhookManagedBy(mgr).For(r).Complete())
+	return ctrl.NewWebhookManagedBy(mgr).For(r).Complete()
 }
 
 //+kubebuilder:webhook:path=/mutate-paas-bk-tencent-com-v1alpha1-bkapp,mutating=true,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update,versions=v1alpha1,name=mbkapp.kb.io,admissionReviewVersions=v1;v1beta1

@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"

@@ -48,7 +48,7 @@ from paasng.platform.core.storages.utils import SADBManager
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
-from paasng.publish.market.models import Product
+from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
@@ -128,8 +128,10 @@ def legacy_app_code():
 
 
 @pytest.fixture(autouse=True)
-def init_legacy_app(legacy_app_code):
-    # hook 所有调用 legacy db 的单元测试, 创建供单元测试使用的 legacy app
+def auto_init_legacy_app(request):
+    if "legacy_app_code" not in request.fixturenames:
+        return
+    legacy_app_code = request.getfixturevalue("legacy_app_code")
     call_command("make_legacy_app_for_test", f"--code={legacy_app_code}", "--username=nobody", "--silence")
 
 
@@ -329,7 +331,11 @@ def bk_app(request, bk_user):
     This result object is not fully functional in order to speed up fixture, if you want a full featured application.
     use `bk_app_full` instead.
     """
-    return create_app(owner_username=bk_user.username)
+    # skip registry app core data to console
+    before_finishing_application_creation.disconnect(register_app_core_data)
+    app = create_app(owner_username=bk_user.username)
+    before_finishing_application_creation.connect(register_app_core_data)
+    return app
 
 
 @pytest.fixture
@@ -393,13 +399,6 @@ def bk_deployment(bk_module):
 def bk_deployment_full(bk_module_full):
     """Generate a simple deployment object for bk_module_full(which have source_obj)"""
     return create_fake_deployment(bk_module_full)
-
-
-@pytest.fixture
-def bk_product(request, bk_app):
-    """Generate a random product related with current app"""
-    product = G(Product, application=bk_app, type=1)
-    return product
 
 
 @pytest.fixture

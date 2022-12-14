@@ -27,6 +27,7 @@ import pytest
 import sqlalchemy as sa
 from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
+from django.core.management import call_command
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from rest_framework.test import APIClient
@@ -124,6 +125,14 @@ def pytest_sessionstart(session):
 def legacy_app_code():
     """The legacy App code using for Unit test"""
     return getattr(settings, "FOR_TESTS_LEGACY_APP_CODE", "document")
+
+
+@pytest.fixture
+def auto_init_legacy_app(request):
+    if "legacy_app_code" not in request.fixturenames:
+        return
+    legacy_app_code = request.getfixturevalue("legacy_app_code")
+    call_command("make_legacy_app_for_test", f"--code={legacy_app_code}", "--username=nobody", "--silence")
 
 
 @pytest.fixture(autouse=True, scope="session")

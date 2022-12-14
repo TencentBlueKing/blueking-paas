@@ -233,12 +233,12 @@ class TestDeploymentCoordinator(BaseTestCaseWithApp):
         env_mgr.release_lock()
 
     def test_lock_timeout(self):
-        env_mgr = DeploymentCoordinator(self.env, timeout=0.5)
+        env_mgr = DeploymentCoordinator(self.env, timeout=0.1)
         assert env_mgr.acquire_lock() is True
         assert env_mgr.acquire_lock() is False
 
         # wait for lock timeout
-        time.sleep(0.6)
+        time.sleep(0.2)
         assert env_mgr.acquire_lock() is True
         env_mgr.release_lock()
 

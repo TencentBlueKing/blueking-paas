@@ -32,8 +32,11 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.monitoring.monitor.alert_rules.constants import DEFAULT_RULE_CONFIGS
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
+from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
+from .alert import query_alerts
+from .exceptions import BKMonitorGatewayServiceError
 from .models import AppAlertRule
 from .phalanx import Client
 from .serializer import (
@@ -47,7 +50,7 @@ from .serializer import (
     EventRecordMetricsQuerySLZ,
     EventRecordMetricsResultSLZ,
 )
-from .serializers import AlertRuleSLZ, ListAlertRulesSLZ, SupportedAlertSLZ
+from .serializers import AlertRuleSLZ, AlertSLZ, ListAlertRulesSLZ, ListAlertsSLZ, SupportedAlertSLZ
 
 
 class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
@@ -219,4 +222,20 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
                 )
 
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
+        return Response(serializer.data)
+
+
+class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
+    @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
+    def list(self, request, code):
+        """查询告警"""
+        serializer = ListAlertsSLZ(data=request.data, context={'app_code': code})
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            alerts = query_alerts(serializer.validated_data)
+        except BKMonitorGatewayServiceError as e:
+            raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
+
+        serializer = AlertSLZ(alerts, many=True)
         return Response(serializer.data)

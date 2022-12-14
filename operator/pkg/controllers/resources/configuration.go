@@ -76,7 +76,7 @@ func retrieveAddonEnvVar(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
 			continue
 		}
 		for key, value := range instance.Credentials {
-			envs = append(envs, corev1.EnvVar{Name: key, Value: value})
+			envs = append(envs, corev1.EnvVar{Name: key, Value: value.String()})
 		}
 	}
 	return envs

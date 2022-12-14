@@ -6,7 +6,7 @@
       :offset-top="20"
       class="app-container overview-middle"
     >
-      <div class="app-container middle">
+      <div class="middle">
         <paas-plugin-title />
         <div class="overview-main">
           <div class="visual-display">

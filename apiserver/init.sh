@@ -303,7 +303,8 @@ ensure-service(){
 }
 
 migrate-perm(){
-    python manage.py migrate_bkpaas3_perm
+    # admin 用户拥有全量权限，不应占用配额且不需要授权
+    python manage.py migrate_bkpaas3_perm --exclude-users admin
 }
 
 call_steps ensure-apigw ensure-runtimes-fixtures ensure-init-data ensure-service ensure-smart-image migrate-perm

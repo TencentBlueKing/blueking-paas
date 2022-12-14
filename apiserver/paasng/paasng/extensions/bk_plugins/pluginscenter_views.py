@@ -17,6 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
+from collections import defaultdict
+from typing import List, Dict
 
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.core.encoder import user_id_encoder
@@ -29,6 +31,12 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.helpers import (
+    add_role_members,
+    delete_role_members,
+    fetch_application_members,
+    remove_user_all_roles,
+)
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import VersionInfo
@@ -47,7 +55,6 @@ from paasng.extensions.bk_plugins.views import logger
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import ApplicationMembership
 from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
@@ -347,19 +354,29 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        members = []
+        current_members = set()
+        existed_members = {m["username"]: m for m in fetch_application_members(app_code=application.code)}
+        need_to_add: Dict[ApplicationRole, List[str]] = defaultdict(list)  # Dict[role, usernames]
+        need_to_clean: Dict[str, List[ApplicationRole]] = defaultdict(list)  # Dict[username, roles]
         for member in data:
-            user_id = user_id_encoder.encode(
-                getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), username=member["username"]
-            )
-            ApplicationMembership.objects.update_or_create(
-                defaults={"role": ApplicationRole(member["role"]["id"])},
-                application=application,
-                user=user_id,
-            )
-            members.append(user_id)
+            role = ApplicationRole(member["role"]["id"])
+            username = member["username"]
+            if username in existed_members:
+                if redundant_roles := set(existed_members[username]["roles"]) - {role}:
+                    need_to_clean[username].extend(redundant_roles)
+            need_to_add[role].append(username)
+            current_members.add(username)
+
         # 删除用户
-        ApplicationMembership.objects.filter(application=application).exclude(user__in=members).delete()
+        if redundant_users := existed_members.keys() - current_members:
+            remove_user_all_roles(app_code=application.code, usernames=list(redundant_users))
+        # 添加用户权限
+        for role, usernames in need_to_add.items():
+            add_role_members(app_code=application.code, role=role, usernames=usernames)
+        # 回收用户多余的权限
+        for username, roles in need_to_clean.items():
+            for role in roles:
+                delete_role_members(app_code=application.code, role=role, usernames=[username])
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
         return Response(data={})

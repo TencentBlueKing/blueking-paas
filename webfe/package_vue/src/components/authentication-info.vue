@@ -15,8 +15,8 @@
     <div class="content">
       <div class="content-item">
         <label v-if="platformFeature.APP_ID_ALIAS">
-          <p class="title-p">app id</p>
-          <p class="title-p tip"> {{ $t('别名') }}：bk_app_code </p>
+          <p class="title-p top">app id</p>
+          <p class="title-p bottom tip"> {{ $t('别名') }}：bk_app_code </p>
         </label>
         <label v-else>
           <p class="title-p mt15">bk_app_code</p>
@@ -27,8 +27,8 @@
       </div>
       <div class="content-item">
         <label v-if="platformFeature.APP_ID_ALIAS">
-          <p class="title-p">app secret</p>
-          <p class="title-p tip"> {{ $t('别名') }}：bk_app_secret </p>
+          <p class="title-p top">app secret</p>
+          <p class="title-p bottom tip"> {{ $t('别名') }}：bk_app_secret </p>
         </label>
         <label v-else>
           <p class="title-p mt15">bk_app_secret</p>
@@ -334,6 +334,12 @@
                           font-size: 12px;
                           color: #979ba5;
                       }
+                  }
+                  .top {
+                      transform: translateY(5px);
+                  }
+                  .bottom {
+                      transform: translateY(-5px);
                   }
               }
               .item-practical-content {

@@ -74,6 +74,7 @@
           </bk-button>
           <bk-button
             theme="default"
+            class="ml5"
             @click="goBack"
           >
             {{ $t('取消') }}
@@ -241,12 +242,15 @@
         }
     }
     .btn-warp{
+        position: fixed;
+        bottom: 0;
+        margin-bottom: 20px;
         margin-left: 150px;
     }
     .edit-form-item{
         height: 300px;
         .editor{
-            height: 200px;
+            height: calc(100vh - 460px);
         }
     }
 </style>

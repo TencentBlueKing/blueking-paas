@@ -21,6 +21,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,7 @@ func (bkapp *BkApp) ExtractAddons() ([]string, error) {
 
 	var addons []string
 	if err := json.Unmarshal([]byte(val), &addons); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return addons, nil
 }

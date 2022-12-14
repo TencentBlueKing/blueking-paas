@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/pkg/errors"
 )
 
 var _ = Describe("TestClient", func() {
@@ -39,7 +40,7 @@ var _ = Describe("TestClient", func() {
 			if expectedError == nil {
 				Expect(err).To(BeNil())
 			} else {
-				Expect(err).To(Equal(expectedError))
+				Expect(errors.Unwrap(err)).To(Equal(expectedError))
 			}
 			Expect(instance).To(Equal(expectedInstance))
 		},

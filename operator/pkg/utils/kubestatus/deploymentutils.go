@@ -20,9 +20,9 @@ package kubestatus
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,10 +34,11 @@ import (
 var ErrDeploymentStillProgressing = errors.New("deployment is progressing")
 
 // CheckDeploymentHealthStatus check if the deployment is healthy
-// For a deployment, healthy means the deployment is available, see also: DeploymentAvailable.
-//                   unhealthy means the deployment is failed to reconcile.
-//                   progressing is meaningless for deployment, if you want to know if those pods that associated with this deployment
-//                   is progressing, you should call GetDeploymentDirectFailMessage.
+// For a deployment:
+//   healthy means the deployment is available, see also: DeploymentAvailable.
+//   unhealthy means the deployment is failed to reconcile.
+//   progressing is meaningless for deployment, if you want to know if those pods that
+//   associated with this deployment is progressing, you should call GetDeploymentDirectFailMessage.
 func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		return &HealthStatus{
@@ -93,8 +94,13 @@ func GetDeploymentDirectFailMessage(
 	deployment *appsv1.Deployment,
 ) (string, error) {
 	var pods corev1.PodList
-	if err := cli.List(ctx, &pods, client.InNamespace(deployment.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
-		return "", err
+	if err := cli.List(
+		ctx,
+		&pods,
+		client.InNamespace(deployment.Namespace),
+		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
+	); err != nil {
+		return "", errors.WithStack(err)
 	}
 	for _, pod := range pods.Items {
 		// 忽略已被标记删除的 Pod
@@ -105,7 +111,7 @@ func GetDeploymentDirectFailMessage(
 			return healthStatus.Message, nil
 		}
 	}
-	return "", ErrDeploymentStillProgressing
+	return "", errors.WithStack(ErrDeploymentStillProgressing)
 }
 
 // FindDeploymentStatusCondition finds the conditionType in conditions.

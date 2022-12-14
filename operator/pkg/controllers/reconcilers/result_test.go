@@ -19,12 +19,12 @@
 package reconcilers
 
 import (
-	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"

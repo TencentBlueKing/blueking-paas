@@ -20,10 +20,11 @@ package reconcilers
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/samber/lo"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,17 +48,13 @@ func FindExtraByName[T nameAccessor](input []T, base []T) []T {
 }
 
 // updateHandler should implement the object update policy
-// TODO 考虑改成 go interface 实现？
 type updateHandler[T client.Object] func(ctx context.Context, cli client.Client, current T, want T) error
 
 // alwaysUpdate will always update the current object
 func alwaysUpdate[T client.Object](ctx context.Context, cli client.Client, current T, want T) error {
 	if err := cli.Update(ctx, want); err != nil {
-		return fmt.Errorf(
-			"failed to update %s(%s): %w",
-			want.GetObjectKind().GroupVersionKind().String(),
-			want.GetName(),
-			err,
+		return errors.Wrapf(
+			err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
 		)
 	}
 	return nil
@@ -80,16 +77,13 @@ func UpsertObject[T any, PT interface {
 	exists := PT(new(T))
 	if err := cli.Get(ctx, client.ObjectKeyFromObject(obj), exists); err != nil {
 		// 获取失败，且不是不存在，直接退出
-		if !errors.IsNotFound(err) {
-			return err
+		if !apierrors.IsNotFound(err) {
+			return errors.WithStack(err)
 		}
 		// 资源在集群中不存在，创建资源
 		if err = cli.Create(ctx, obj); err != nil {
-			return fmt.Errorf(
-				"failed to create %s(%s): %w",
-				obj.GetObjectKind().GroupVersionKind().String(),
-				obj.GetName(),
-				err,
+			return errors.Wrapf(
+				err, "failed to create %s(%s)", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(),
 			)
 		}
 	} else {

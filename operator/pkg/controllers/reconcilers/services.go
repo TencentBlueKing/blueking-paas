@@ -21,9 +21,9 @@ package reconcilers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
-	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
+
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -44,7 +44,6 @@ type ServiceReconciler struct {
 func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
 	current, err := r.listCurrentServices(ctx, bkapp)
 	if err != nil {
-		sentry.CaptureException(err)
 		return r.Result.withError(err)
 	}
 
@@ -54,15 +53,13 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 	if len(outdated) != 0 {
 		for _, svc := range outdated {
 			if err = r.Client.Delete(ctx, svc); err != nil {
-				sentry.CaptureException(err)
-				return r.Result.withError(err)
+				return r.Result.withError(errors.WithStack(err))
 			}
 		}
 	}
 	for _, svc := range expected {
 		if err = r.applyService(ctx, svc); err != nil {
-			sentry.CaptureException(err)
-			return r.Result.withError(err)
+			return r.Result.withError(errors.WithStack(err))
 		}
 	}
 	return r.Result
@@ -80,7 +77,7 @@ func (r *ServiceReconciler) listCurrentServices(
 		client.InNamespace(bkapp.GetNamespace()),
 		client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()},
 	); err != nil {
-		return nil, fmt.Errorf("failed to list app's Service: %w", err)
+		return nil, errors.Wrap(err, "failed to list app's Service")
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }
@@ -110,19 +107,19 @@ func (r *ServiceReconciler) handleUpdate(
 		!equality.Semantic.DeepEqual(current.Spec.Selector, want.Spec.Selector) {
 		patch, err := json.Marshal(want)
 		if err != nil {
-			return fmt.Errorf(
-				"failed to patch update Service(%s/%s) while marshal patching data: %w",
+			return errors.Wrapf(
+				err,
+				"failed to patch update Service(%s/%s) while marshal patching data",
 				want.GetNamespace(),
 				want.GetName(),
-				err,
 			)
 		}
 		if err = cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
-			return fmt.Errorf(
-				"failed to patch update Service(%s/%s): %w",
+			return errors.Wrapf(
+				err,
+				"failed to patch update Service(%s/%s)",
 				want.GetNamespace(),
 				want.GetName(),
-				err,
 			)
 		}
 	}

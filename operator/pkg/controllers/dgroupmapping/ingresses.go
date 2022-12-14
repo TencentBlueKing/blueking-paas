@@ -20,7 +20,8 @@ package dgroupmapping
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -73,14 +74,14 @@ func (r *DGroupMappingSyncer) Sync(
 	outdated := reconcilers.FindExtraByName(current, expected)
 	if len(outdated) != 0 {
 		for _, ingress := range outdated {
-			if err := r.Client.Delete(ctx, ingress); err != nil {
-				return nil, err
+			if err = r.Client.Delete(ctx, ingress); err != nil {
+				return nil, errors.WithStack(err)
 			}
 		}
 	}
 	// Update or create ingress resources
 	for _, ingress := range expected {
-		if err := r.applyIngress(ctx, ingress); err != nil {
+		if err = r.applyIngress(ctx, ingress); err != nil {
 			return nil, err
 		}
 	}
@@ -100,7 +101,7 @@ func (r *DGroupMappingSyncer) ListCurrentIngresses(
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list ingresses: %w", err)
+		return nil, errors.Wrap(err, "failed to list ingresses")
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }
@@ -114,11 +115,11 @@ func (r *DGroupMappingSyncer) getWantedIngresses(
 	for _, group := range domains {
 		builder, err := res.NewIngressBuilder(group.SourceType, r.BkApp)
 		if err != nil {
-			return nil, fmt.Errorf("fail to create builder: %w", err)
+			return nil, errors.Wrap(err, "fail to create builder")
 		}
 		ings, err := builder.Build(group.Domains)
 		if err != nil {
-			return nil, fmt.Errorf("fail to generate ingresses: %w", err)
+			return nil, errors.Wrap(err, "fail to generate ingresses")
 		}
 		results = append(results, ings...)
 	}
@@ -151,5 +152,5 @@ func DeleteIngresses(ctx context.Context, c client.Client, dgmapping *v1alpha1.D
 		client.InNamespace(dgmapping.GetNamespace()),
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),
 	}
-	return c.DeleteAllOf(ctx, &networkingv1.Ingress{}, opts...)
+	return errors.WithStack(c.DeleteAllOf(ctx, &networkingv1.Ingress{}, opts...))
 }

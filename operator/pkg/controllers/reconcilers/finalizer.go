@@ -20,9 +20,8 @@ package reconcilers
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,8 +50,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	// our finalizer is present, so lets handle any external dependency
 	finished, err := r.hooksFinished(ctx, bkapp)
 	if err != nil {
-		sentry.CaptureException(err)
-		return r.Result.withError(fmt.Errorf("failed to check hook status: %w", err))
+		return r.Result.withError(errors.Wrap(err, "failed to check hook status"))
 	}
 	if !finished {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
@@ -63,23 +61,20 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
 		if err = r.Status().Update(ctx, bkapp); err != nil {
-			sentry.CaptureException(err)
-			return r.Result.withError(fmt.Errorf("failed to update condition status: %w", err))
+			return r.Result.withError(errors.Wrap(err, "failed to update condition status"))
 		}
 		return r.Result.requeue(v1alpha1.DefaultRequeueAfter)
 	}
 	if err = r.deleteResources(ctx, bkapp); err != nil {
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
-		sentry.CaptureException(err)
-		return r.Result.withError(fmt.Errorf("failed to delete external resources: %w", err))
+		return r.Result.withError(errors.Wrap(err, "failed to delete external resources"))
 	}
 
 	// remove our finalizer from the finalizers list and update it.
 	controllerutil.RemoveFinalizer(bkapp, v1alpha1.BkAppFinalizerName)
 	if err = r.Update(ctx, bkapp); err != nil {
-		sentry.CaptureException(err)
-		return r.Result.withError(fmt.Errorf("failed to remove finilizer for app: %w", err))
+		return r.Result.withError(errors.Wrap(err, "failed to remove finalizer for app"))
 	}
 	return r.Result.End()
 }
@@ -95,7 +90,7 @@ func (r *BkappFinalizer) hooksFinished(ctx context.Context, bkapp *v1alpha1.BkAp
 		},
 	)
 	if err != nil {
-		return false, err
+		return false, errors.WithStack(err)
 	}
 
 	for _, pod := range pods.Items {
@@ -110,10 +105,10 @@ func (r *BkappFinalizer) hooksFinished(ctx context.Context, bkapp *v1alpha1.BkAp
 func (r *BkappFinalizer) deleteResources(ctx context.Context, bkapp *v1alpha1.BkApp) error {
 	var err error
 	if err = r.deleteHookPods(ctx, bkapp); err != nil {
-		return fmt.Errorf("failed to delete hook pods: %w", err)
+		return errors.Wrap(err, "failed to delete hook pods")
 	}
 	if err = r.deleteServices(ctx, bkapp); err != nil {
-		return fmt.Errorf("failed to delete services: %w", err)
+		return errors.Wrap(err, "failed to delete services")
 	}
 	return nil
 }
@@ -128,7 +123,7 @@ func (r *BkappFinalizer) deleteHookPods(ctx context.Context, bkapp *v1alpha1.BkA
 		},
 		client.GracePeriodSeconds(5),
 	}
-	return r.DeleteAllOf(ctx, &corev1.Pod{}, opts...)
+	return errors.WithStack(r.DeleteAllOf(ctx, &corev1.Pod{}, opts...))
 }
 
 func (r *BkappFinalizer) deleteServices(ctx context.Context, bkapp *v1alpha1.BkApp) error {
@@ -142,15 +137,12 @@ func (r *BkappFinalizer) deleteServices(ctx context.Context, bkapp *v1alpha1.BkA
 		client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to query ServiceList: %w", err)
+		return errors.Wrap(err, "failed to query ServiceList")
 	}
 	for _, svc := range svcList.Items {
 		if err = r.Delete(ctx, &svc); err != nil {
-			return fmt.Errorf(
-				"failed to delete Service(%s/%s) when finalizing the BkApp: %w",
-				svc.GetNamespace(),
-				svc.GetName(),
-				err,
+			return errors.Wrapf(
+				err, "failed to delete Service(%s/%s) when finalizing the BkApp", svc.GetNamespace(), svc.GetName(),
 			)
 		}
 	}

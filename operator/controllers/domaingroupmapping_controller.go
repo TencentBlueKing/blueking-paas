@@ -20,9 +20,9 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,9 +48,9 @@ type DomainGroupMappingReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// ErrReferenceUndefined means that the DomainGroupMapping object didn't not define
+// ErrReferenceUndefined means that the DomainGroupMapping object didn't define
 // any referenced resource.
-var ErrReferenceUndefined error = fmt.Errorf("reference is not defined")
+var ErrReferenceUndefined = errors.New("reference is not defined")
 
 //+kubebuilder:rbac:groups=paas.bk.tencent.com,resources=domaingroupmappings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=paas.bk.tencent.com,resources=domaingroupmappings/status,verbs=get;update;patch
@@ -73,7 +73,7 @@ func (r *DomainGroupMappingReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if !controllerutil.ContainsFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName) {
 			controllerutil.AddFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName)
 			if err = r.Update(ctx, dgmapping); err != nil {
-				return reconcile.Result{}, err
+				return reconcile.Result{}, errors.WithStack(err)
 			}
 		}
 	} else {
@@ -81,11 +81,11 @@ func (r *DomainGroupMappingReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if controllerutil.ContainsFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName) {
 			// Our finalizer is present, handle any external dependency
 			if err = r.SyncDeletion(ctx, dgmapping); err != nil {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, errors.WithStack(err)
 			}
 			controllerutil.RemoveFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName)
 			if err = r.Update(ctx, dgmapping); err != nil {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, errors.WithStack(err)
 			}
 			// Stop reconciliation as the item is being deleted
 			return ctrl.Result{}, nil
@@ -94,7 +94,7 @@ func (r *DomainGroupMappingReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// Start the main sync procedure
 	if err = r.Sync(ctx, dgmapping); err != nil {
-		return ctrl.Result{RequeueAfter: paasv1alpha1.DefaultRequeueAfter}, err
+		return ctrl.Result{RequeueAfter: paasv1alpha1.DefaultRequeueAfter}, errors.WithStack(err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -132,7 +132,7 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paas
 	}
 
 	// Sync status field in the end
-	if err := r.syncProcessedStatus(ctx, &bkapp, dgmapping, domainGroups); err != nil {
+	if err = r.syncProcessedStatus(ctx, &bkapp, dgmapping, domainGroups); err != nil {
 		log.Error(err, "Error updating status for processed item", "DGroupMappingName", dgmapping.Name)
 		return err
 	}
@@ -171,20 +171,19 @@ func (r *DomainGroupMappingReconciler) GetRef(
 ) (paasv1alpha1.BkApp, error) {
 	refObj := paasv1alpha1.BkApp{}
 	if dgmapping.Spec.Ref.Name == "" {
-		return refObj, ErrReferenceUndefined
+		return refObj, errors.WithStack(ErrReferenceUndefined)
 	}
 
 	// Only the same namespace is supported
 	// TODO: Handler different apiVersions
 	key := client.ObjectKey{Namespace: dgmapping.Namespace, Name: dgmapping.Spec.Ref.Name}
 	if err := r.Client.Get(ctx, key, &refObj); err != nil {
-		return refObj, fmt.Errorf("fail to get referenced obj: %w", err)
+		return refObj, errors.Wrap(err, "fail to get referenced obj")
 	}
 	return refObj, nil
 }
 
-// Sync domain group mapping's status field by err which was produced during finding
-// referenced object.
+// Sync domain group mapping's status field by err which was produced during finding referenced object.
 func (r *DomainGroupMappingReconciler) syncRefErrStatus(
 	ctx context.Context,
 	dgmapping *paasv1alpha1.DomainGroupMapping,
@@ -209,7 +208,7 @@ func (r *DomainGroupMappingReconciler) syncRefErrStatus(
 		Reason:  reason,
 		Message: message,
 	})
-	return r.Client.Status().Update(ctx, dgmapping)
+	return errors.WithStack(r.Client.Status().Update(ctx, dgmapping))
 }
 
 // Sync both mapping and bkapp's status field when the reconciler
@@ -231,12 +230,12 @@ func (r *DomainGroupMappingReconciler) syncProcessedStatus(
 		Reason: "Processed",
 	})
 	if err := r.Client.Status().Update(ctx, dgmapping); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// Update BkApp's status
 	bkapp.Status.Addresses = ToAddressableStatus(domainGroups)
-	return r.Client.Status().Update(ctx, bkapp)
+	return errors.WithStack(r.Client.Status().Update(ctx, bkapp))
 }
 
 // BkAppIndexField is the name for indexing DomainGroupMapping
@@ -266,7 +265,7 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			FieldSelector: fields.OneTermEqualSelector(BkAppIndexField, bkapp.GetName()),
 			Namespace:     bkapp.GetNamespace(),
 		}
-		if err := r.List(context.TODO(), dgmappings, listOps); err != nil {
+		if err = r.List(context.TODO(), dgmappings, listOps); err != nil {
 			return []reconcile.Request{}
 		}
 

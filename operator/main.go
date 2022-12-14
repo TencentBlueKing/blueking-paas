@@ -20,10 +20,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/pkg/errors"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -93,7 +94,7 @@ func main() {
 	if sentryDSN == "" {
 		setupLog.Info("[Sentry] SentryDSN unset, all events waiting for report will be dropped.")
 	}
-	if err = sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
+	if err = sentry.Init(sentry.ClientOptions{Dsn: sentryDSN, Debug: true}); err != nil {
 		setupLog.Error(err, "unable to set sentry dsn")
 		os.Exit(1)
 	}
@@ -152,7 +153,7 @@ func initExtensionClient() error {
 	if config.Global.PlatformConfig.BkAPIGatewayURL != "" {
 		bkpaasGatewayBaseURL, err := url.Parse(config.Global.PlatformConfig.BkAPIGatewayURL)
 		if err != nil {
-			return fmt.Errorf("failed to parse bkpaas gateway url to net.Url: %w", err)
+			return errors.Wrap(err, "failed to parse bkpaas gateway url to net.Url")
 		}
 		external.SetDefaultClient(
 			external.NewClient(

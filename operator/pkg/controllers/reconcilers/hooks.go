@@ -23,7 +23,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
+
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,7 +54,6 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	log.V(4).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
 		if err := r.UpdateStatus(ctx, bkapp, current, resources.HookExecuteTimeoutThreshold); err != nil {
-			sentry.CaptureException(err)
 			return r.Result.withError(err)
 		}
 
@@ -63,24 +63,22 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
 			if err := r.Delete(ctx, current.Pod); err != nil {
-				sentry.CaptureException(err)
-				return r.Result.withError(resources.ErrExecuteTimeout)
+				return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
-			return r.Result.withError(resources.ErrExecuteTimeout)
+			return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
 		case current.Progressing():
 			return r.Result.requeue(v1alpha1.DefaultRequeueAfter)
 		case current.Succeeded():
 			return r.Result
 		default:
 			return r.Result.withError(
-				fmt.Errorf("%w: hook failed with: %s", resources.ErrPodEndsUnsuccessfully, current.Status.Message),
+				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),
 			)
 		}
 	}
 
 	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)); hook != nil {
 		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
-			sentry.CaptureException(err)
 			return r.Result.withError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环
@@ -95,8 +93,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		ObservedGeneration: bkapp.Status.ObservedGeneration,
 	})
 	if err := r.Status().Update(ctx, bkapp); err != nil {
-		sentry.CaptureException(err)
-		return r.Result.withError(err)
+		return r.Result.withError(errors.WithStack(err))
 	}
 	return r.Result
 }
@@ -150,14 +147,14 @@ func (r *HookReconciler) ExecuteHook(
 	pod := corev1.Pod{}
 	// Only proceed when Pod resource is not found
 	if err := r.Get(ctx, client.ObjectKeyFromObject(instance.Pod), &pod); err == nil {
-		return resources.ErrHookPodExists
+		return errors.WithStack(resources.ErrHookPodExists)
 	} else if !apierrors.IsNotFound(err) {
-		return err
+		return errors.WithStack(err)
 	}
 
 	err := r.Create(ctx, instance.Pod)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
@@ -173,7 +170,7 @@ func (r *HookReconciler) ExecuteHook(
 		Message:            "The pre-release hook is executing.",
 		ObservedGeneration: bkapp.Status.ObservedGeneration,
 	})
-	return r.Status().Update(ctx, bkapp)
+	return errors.WithStack(r.Status().Update(ctx, bkapp))
 }
 
 // UpdateStatus will update bkapp hook status from the given instance status
@@ -214,7 +211,7 @@ func (r *HookReconciler) UpdateStatus(
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
 	}
-	return r.Status().Update(ctx, bkapp)
+	return errors.WithStack(r.Status().Update(ctx, bkapp))
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态
@@ -225,7 +222,7 @@ func CheckAndUpdatePreReleaseHookStatus(
 	instance := r.getCurrentState(ctx, bkapp)
 
 	if instance.Pod == nil {
-		return false, fmt.Errorf("pre-release-hook not found")
+		return false, errors.New("pre-release-hook not found")
 	}
 
 	if err = r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
@@ -236,13 +233,13 @@ func CheckAndUpdatePreReleaseHookStatus(
 	// 删除超时的 pod
 	case instance.Timeout(timeout):
 		if err = cli.Delete(ctx, instance.Pod); err != nil {
-			return false, err
+			return false, errors.WithStack(err)
 		}
-		return false, resources.ErrExecuteTimeout
+		return false, errors.WithStack(resources.ErrExecuteTimeout)
 	case instance.Failed():
-		return false, fmt.Errorf(
-			"%w: hook failed with: %s",
+		return false, errors.Wrapf(
 			resources.ErrPodEndsUnsuccessfully,
+			"hook failed with: %s",
 			instance.Status.Message,
 		)
 	}

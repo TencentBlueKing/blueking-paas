@@ -20,10 +20,9 @@ package reconcilers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -46,7 +45,6 @@ type DeploymentReconciler struct {
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
-		sentry.CaptureException(err)
 		return r.Result.withError(err)
 	}
 	expected := resources.GetWantedDeploys(bkapp)
@@ -55,21 +53,18 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.Bk
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
 			if err = r.Client.Delete(ctx, deploy); err != nil {
-				sentry.CaptureException(err)
-				return r.Result.withError(err)
+				return r.Result.withError(errors.WithStack(err))
 			}
 		}
 	}
 	for _, deploy := range expected {
 		if err = r.deploy(ctx, deploy); err != nil {
-			sentry.CaptureException(err)
-			return r.Result.withError(err)
+			return r.Result.withError(errors.WithStack(err))
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
-		sentry.CaptureException(err)
-		return r.Result.withError(err)
+		return r.Result.withError(errors.WithStack(err))
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
 	if bkapp.Status.Phase == v1alpha1.AppPending {
@@ -87,7 +82,7 @@ func (r *DeploymentReconciler) getCurrentState(
 	if err = r.List(
 		ctx, &deployList, client.InNamespace(bkapp.Namespace), client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
 	); err != nil {
-		return nil, fmt.Errorf("failed to list app's deployments: %w", err)
+		return nil, errors.Wrap(err, "failed to list app's deployments")
 	}
 
 	return lo.ToSlicePtr(deployList.Items), nil
@@ -109,11 +104,8 @@ func (r *DeploymentReconciler) updateHandler(
 	wantRevision, _ := revision.GetRevision(want)
 	if currentRevision != wantRevision {
 		if err := cli.Update(ctx, want); err != nil {
-			return fmt.Errorf(
-				"failed to update %s(%s): %w",
-				want.GetObjectKind().GroupVersionKind().String(),
-				want.GetName(),
-				err,
+			return errors.Wrapf(
+				err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
 			)
 		}
 	}
@@ -195,5 +187,5 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 			}
 		}
 	}
-	return r.Status().Update(ctx, bkapp)
+	return errors.WithStack(r.Status().Update(ctx, bkapp))
 }

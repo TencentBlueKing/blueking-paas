@@ -21,6 +21,7 @@ package reconcilers
 import (
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
@@ -35,6 +36,10 @@ type Result struct {
 
 // ShouldAbort 返回是否需要中断当前调和循环
 func (r Result) ShouldAbort() bool {
+	// 当需要中断调和循环时，上报异常信息到 sentry
+	if r.err != nil {
+		sentry.CaptureException(r.err)
+	}
 	return r.endReconcile || r.err != nil || r.duration.Seconds() != 0
 }
 

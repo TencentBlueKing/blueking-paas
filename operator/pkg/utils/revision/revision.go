@@ -21,7 +21,6 @@ package revision
 import (
 	"strconv"
 
-	"github.com/getsentry/sentry-go"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -41,7 +40,7 @@ func GetRevision(obj metav1.Object) (int64, error) {
 func MaxRevision(allProcesses []*appsv1.Deployment) (max int64) {
 	for _, process := range allProcesses {
 		if v, err := GetRevision(process); err != nil {
-			sentry.CaptureException(err)
+			continue
 		} else if v > max {
 			max = v
 		}

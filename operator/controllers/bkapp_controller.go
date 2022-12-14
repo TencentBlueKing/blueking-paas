@@ -102,8 +102,7 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *BkAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	var err error
+func (r *BkAppReconciler) SetupWithManager(mgr ctrl.Manager) (err error) {
 	err = mgr.GetFieldIndexer().
 		IndexField(context.Background(), &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
 	if err != nil {

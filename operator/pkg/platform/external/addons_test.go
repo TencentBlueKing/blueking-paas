@@ -41,7 +41,7 @@ var _ = Describe("TestClient", func() {
 			if expectedError == nil {
 				Expect(err).To(BeNil())
 			} else {
-				Expect(errors.Unwrap(err)).To(Equal(expectedError))
+				Expect(errors.Is(err, expectedError)).To(BeTrue())
 			}
 			Expect(instance).To(Equal(expectedInstance))
 		},

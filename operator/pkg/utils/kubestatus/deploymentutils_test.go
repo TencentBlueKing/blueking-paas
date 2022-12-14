@@ -65,7 +65,7 @@ var _ = Describe("Test kubestatus/deploymentutils", func() {
 
 			message, err := GetDeploymentDirectFailMessage(ctx, cli, deployment)
 
-			Expect(errors.Unwrap(err)).To(Equal(ErrDeploymentStillProgressing))
+			Expect(errors.Is(err, ErrDeploymentStillProgressing)).To(BeTrue())
 			Expect(message).To(Equal(""))
 		})
 
@@ -79,7 +79,7 @@ var _ = Describe("Test kubestatus/deploymentutils", func() {
 
 			message, err := GetDeploymentDirectFailMessage(ctx, cli, deployment)
 
-			Expect(errors.Unwrap(err)).To(Equal(ErrDeploymentStillProgressing))
+			Expect(errors.Is(err, ErrDeploymentStillProgressing)).To(BeTrue())
 			Expect(message).To(Equal(""))
 		})
 

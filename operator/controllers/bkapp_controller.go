@@ -21,7 +21,9 @@ package controllers
 import (
 	"context"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,6 +62,21 @@ type BkAppReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	result, err := r.reconcile(ctx, req)
+	if err != nil {
+		sentry.CaptureException(
+			errors.WithMessagef(
+				err,
+				"error found while executing BkApp (%s/%s) reconciler loop",
+				req.Namespace,
+				req.Name,
+			),
+		)
+	}
+	return result, err
+}
+
+func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	app := &v1alpha1.BkApp{}

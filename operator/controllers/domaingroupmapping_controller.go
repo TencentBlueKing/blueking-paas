@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -48,8 +49,7 @@ type DomainGroupMappingReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// ErrReferenceUndefined means that the DomainGroupMapping object didn't define
-// any referenced resource.
+// ErrReferenceUndefined means that the DomainGroupMapping object didn't define any referenced resource.
 var ErrReferenceUndefined = errors.New("reference is not defined")
 
 //+kubebuilder:rbac:groups=paas.bk.tencent.com,resources=domaingroupmappings,verbs=get;list;watch;create;update;patch;delete
@@ -59,12 +59,27 @@ var ErrReferenceUndefined = errors.New("reference is not defined")
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *DomainGroupMappingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	result, err := r.reconcile(ctx, req)
+	if err != nil {
+		sentry.CaptureException(
+			errors.WithMessagef(
+				err,
+				"error found while executing DomainGroupMapping (%s/%s) reconciler loop",
+				req.Namespace,
+				req.Name,
+			),
+		)
+	}
+	return result, err
+}
+
+func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 	dgmapping := &paasv1alpha1.DomainGroupMapping{}
 	err := r.Get(ctx, req.NamespacedName, dgmapping)
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to fetch DomainGroupMapping %v", req.NamespacedName))
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		return reconcile.Result{}, errors.WithStack(client.IgnoreNotFound(err))
 	}
 
 	// Handle deletion and finalizer related logics:
@@ -245,13 +260,18 @@ const BkAppIndexField = ".Spec.Ref.BkAppName"
 func (r *DomainGroupMappingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Build an index to query DomainGroupMappings by BkApp later
 	err := mgr.GetFieldIndexer().
-		IndexField(context.Background(), &paasv1alpha1.DomainGroupMapping{}, BkAppIndexField, func(rawObj client.Object) []string {
-			dgmapping := rawObj.(*paasv1alpha1.DomainGroupMapping)
-			if dgmapping.Spec.Ref.Kind == paasv1alpha1.KindBkApp && dgmapping.Spec.Ref.Name != "" {
-				return []string{dgmapping.Spec.Ref.Name}
-			}
-			return nil
-		})
+		IndexField(
+			context.Background(),
+			&paasv1alpha1.DomainGroupMapping{},
+			BkAppIndexField,
+			func(rawObj client.Object) []string {
+				dgmapping := rawObj.(*paasv1alpha1.DomainGroupMapping)
+				if dgmapping.Spec.Ref.Kind == paasv1alpha1.KindBkApp && dgmapping.Spec.Ref.Name != "" {
+					return []string{dgmapping.Spec.Ref.Name}
+				}
+				return nil
+			},
+		)
 	if err != nil {
 		return err
 	}

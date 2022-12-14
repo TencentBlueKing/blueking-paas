@@ -73,7 +73,7 @@ export const PLUGIN_STATUS = {
 };
 
 export const PLUGIN_VERSION_STATUS = {
-  'successful': '成功',
+  'successful': '已上线',
   'failed': '失败',
   'pending': '发布中',
   'initial': '发布中',

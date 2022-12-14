@@ -46,22 +46,30 @@
           v-bkloading="{isLoading: isLoading, size: 'mini', zIndex: 10}"
           class="plugin-list"
         >
-          <div
-            v-for="item in viewPluinList"
-            :key="item.id"
-            class="item flex-row align-items-center"
-            @click="changePlugin(item)"
-          >
-            <img
-              :src="item.logo"
-              onerror="this.src='/static/images/plugin-default.svg'"
+          <template v-if="viewPluinList.length">
+            <div
+              v-for="item in viewPluinList"
+              :key="item.id"
+              class="item flex-row align-items-center"
+              @click="changePlugin(item)"
             >
-            <div class="plugin-name ft12 pl10">
-              {{ item.name_zh_cn }}
+              <img
+                :src="item.logo"
+                onerror="this.src='/static/images/plugin-default.svg'"
+              >
+              <div class="plugin-name ft12 pl10">
+                {{ item.name_zh_cn }}
+              </div>
+              <div class="plugin-desc ft12 pl10">
+                ( {{ item.id }} )
+              </div>
             </div>
-            <div class="plugin-desc ft12 pl10">
-              ( {{ item.id }} )
-            </div>
+          </template>
+          <div
+            v-else
+            class="not-data-tips"
+          >
+            {{ $t('无匹配数据') }}
           </div>
         </div>
         <div class="dropdown-footer flex-row align-items-center justify-content-around">
@@ -267,6 +275,13 @@
 }
 .quick-hover-bg {
     background: #F5F7FA;
+}
+.not-data-tips {
+    height: 64px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #666;
 }
 </style>
 <style>

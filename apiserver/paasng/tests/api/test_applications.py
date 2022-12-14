@@ -356,13 +356,13 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
-    def test_normal(self, api_client, bk_app, bk_user, random_name, mock_current_engine_client):
+    def test_normal(self, api_client, bk_app_full, bk_user, random_name, mock_current_engine_client):
         response = api_client.put(
-            '/api/bkapps/applications/{}/'.format(bk_app.code),
+            '/api/bkapps/applications/{}/'.format(bk_app_full.code),
             data={'name': random_name},
         )
         assert response.status_code == 200
-        assert Application.objects.get(pk=bk_app.pk).name == random_name
+        assert Application.objects.get(pk=bk_app_full.pk).name == random_name
 
     def test_duplicated(self, api_client, bk_app, bk_user, random_name, mock_current_engine_client):
         G(Application, name=random_name)

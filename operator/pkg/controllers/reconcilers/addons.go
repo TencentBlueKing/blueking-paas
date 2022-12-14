@@ -20,7 +20,6 @@ package reconcilers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -61,7 +60,7 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) 
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.AddOnsProvisioned,
 			Status:             metav1.ConditionFalse,
-			Reason:             errors.Unwrap(err).Error(),
+			Reason:             "InternalServerError",
 			Message:            err.Error(),
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})

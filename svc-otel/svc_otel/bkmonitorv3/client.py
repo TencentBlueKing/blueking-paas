@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Dict
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -28,11 +29,18 @@ from svc_otel.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayS
 logger = logging.getLogger(__name__)
 
 
+class DummyBkMonitorClient:
+    """Describes protocols of calling API service"""
+
+    def create_apm_application(self, *args, **kwargs) -> Dict:
+        ...
+
+
 class BkMonitorClient:
     def __init__(self):
-        self.client: BkMonitorGroup = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.APIGW_ENVIRONMENT).api
+        self.client = DummyBkMonitorClient()
 
-    def create_apm_application(self, apm_name: str, bk_monitor_space_id: str) -> str:
+    def create_apm(self, apm_name: str, bk_monitor_space_id: str) -> str:
         """创建 APM 应用，返回 data_token
 
         OTEL 的返回数据格式：
@@ -51,11 +59,11 @@ class BkMonitorClient:
             "code": 500,
             "request_id": "a06f6c1a66c34d0a880186759fec0d06"
         }
-        TODO: APIGW 上还未注册 APM 的 API
+        TODO: 目前还不支持 space_uid，需要验证空间的创建者是否有 APM 的权限
         """
         # 在指定的命名空间下创建 APM 应用
         try:
-            resp = self.client.apm_create_application({"app_name": apm_name, "space_uid": bk_monitor_space_id})
+            resp = self.client.create_apm_application({"app_name": apm_name, "space_uid": bk_monitor_space_id})
         except APIGatewayResponseError as e:
             raise BkMonitorGatewayServiceError(f"Failed to create APM on BK Monitor, {e}")
 

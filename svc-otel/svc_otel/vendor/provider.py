@@ -49,7 +49,7 @@ class Provider(BaseProvider):
         unique_app_name = gen_unique_id(app_name, reserve_length=64, divide_char='_')
 
         client = make_bk_monitor_client()
-        data_token = client.create_apm_application(unique_app_name, bk_monitor_space_id)
+        data_token = client.create_apm(unique_app_name, bk_monitor_space_id)
 
         # 将新申请的 data_token 存储到 DB 中
         apm_data, _c = ApmData.objects.update_or_create(

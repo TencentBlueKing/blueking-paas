@@ -23,9 +23,9 @@ from bkapi_client_core.esb.django_helper import get_client_by_username as _get_c
 
 class MonitorV3Group(OperationGroup):
     # 快速创建APM应用
-    apm_create_application = bind_property(
+    create_apm_application = bind_property(
         Operation,
-        name="apm_create_application",
+        name="create_apm_application",
         method="POST",
         path="/api/c/compapi/v2/monitor_v3/apm/create_application/",
     )

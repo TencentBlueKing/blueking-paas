@@ -127,7 +127,7 @@ def legacy_app_code():
     return getattr(settings, "FOR_TESTS_LEGACY_APP_CODE", "document")
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def auto_init_legacy_app(request):
     if "legacy_app_code" not in request.fixturenames:
         return

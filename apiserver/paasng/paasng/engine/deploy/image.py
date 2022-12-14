@@ -29,7 +29,7 @@ from paasng.engine.deploy.pre_release import ApplicationPreReleaseExecutor
 from paasng.engine.deploy.preparations import get_app_description_handler, get_processes
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_phase_start
-from paasng.extensions.declarative.exceptions import ControllerError
+from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 
 logger = logging.getLogger(__name__)
@@ -47,6 +47,9 @@ class ImageReleaseMgr(DeployStep):
             self.handle_app_description()
         except FileNotFoundError:
             logger.debug("App description file not defined, do not process.")
+        except DescriptionValidationError as e:
+            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
+            logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
             self.stream.write_message(Style.Error(e.message))
             logger.exception("Exception while processing app description file, skip.")

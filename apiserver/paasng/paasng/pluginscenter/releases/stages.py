@@ -71,7 +71,18 @@ class DeployAPIStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.DEPLOY_API
 
     def execute(self, operator: str):
-        deploy_version(self.pd, self.plugin, self.release, operator)
+        if self.release.current_stage != self.stage:
+            raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段并非部署阶段"))
+
+        current_stage = self.stage
+        try:
+            data = deploy_version(self.pd, self.plugin, self.release, operator)
+            current_stage.status = constants.PluginReleaseStatus.PENDING
+            current_stage.api_detail = data
+            current_stage.save()
+        except Exception as e:
+            current_stage.update_status(constants.PluginReleaseStatus.FAILED, fail_message=str(e))
+            raise
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()

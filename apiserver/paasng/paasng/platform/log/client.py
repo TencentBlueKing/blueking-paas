@@ -41,6 +41,7 @@ from paasng.utils.datetime import (
     strftime_ms,
     time_to_epoch_millis,
 )
+from paasng.utils.text import calculate_percentage
 
 from .constants import LOG_FILTER_FIELD_MAPS
 from .exceptions import LogQueryError
@@ -282,10 +283,8 @@ class LogClient:
 
             options = []
             for key, count in key_counts:
-                percent = "{0:.2%}".format(count / total)
-                if percent == "0.00%":
-                    percent = "<0.01%"
-                options.append((key, percent))
+                percentage = calculate_percentage(count, total)
+                options.append((key, percentage))
 
             if total == 0:
                 # 该 field 无值可选, 直接忽略掉
@@ -332,10 +331,8 @@ class LogClient:
                 continue
 
             for value, count in values.items():
-                percent = "{0:.2%}".format(count / total)
-                if percent == "0.00%":
-                    percent = "<0.01%"
-                options.append((value, percent))
+                percentage = calculate_percentage(count, total)
+                options.append((value, percentage))
 
             filters.append(
                 {

@@ -21,7 +21,7 @@ import datetime
 import arrow
 import pytest
 
-from paasng.pluginscenter.thirdparty.log.utils import SmartTimeRange
+from paasng.pluginscenter.log.utils import SmartTimeRange
 
 
 class TestSmartTimeRange:

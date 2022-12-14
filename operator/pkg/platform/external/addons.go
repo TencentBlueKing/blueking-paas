@@ -25,12 +25,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // AddonInstance define the structure return from QueryAddonInstance API
 type AddonInstance struct {
 	// Credentials contains the EnvVar offered by the AddonInstance
-	Credentials map[string]string `json:"credentials"`
+	Credentials map[string]intstr.IntOrString `json:"credentials"`
 }
 
 // QueryAddonInstance 调用 bkpaas 对应的接口, 查询应用的增强服务实例

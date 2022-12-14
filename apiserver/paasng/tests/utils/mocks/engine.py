@@ -131,6 +131,9 @@ class StubControllerClient:
     def update_app_config(self, region, app_name, payload):
         pass
 
+    def bind_app_cluster(self, region, app_name, cluster_name):
+        pass
+
     def app_proc_ingress_actions__sync(self, region, app_name):
         pass
 

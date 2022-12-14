@@ -188,6 +188,9 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+ADMIN_USERNAME = settings.get('ADMIN_USERNAME', 'admin')
+
 AUTH_USER_MODEL = 'bkpaas_auth.User'
 
 AUTHENTICATION_BACKENDS = ['bkpaas_auth.backends.UniversalAuthBackend', 'bkpaas_auth.backends.APIGatewayAuthBackend']
@@ -520,6 +523,9 @@ COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'h
 APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
+# 网关运行环境
+# TODO BK_LESSCODE_APIGW_STAGE 和 BK_IAM_APIGW_SERVICE_STAGE 考虑复用 APIGW_ENVIRONMENT?
+APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
 

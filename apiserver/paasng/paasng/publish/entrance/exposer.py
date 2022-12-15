@@ -29,7 +29,6 @@ from paasng.engine.controller.cluster import Cluster, get_engine_app_cluster, ge
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.env_vars import env_vars_providers
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
@@ -49,80 +48,6 @@ class EnvExposedURL(NamedTuple):
     @property
     def address(self) -> str:
         return self.url.as_address()
-
-
-class BaseEnvExposedURLProvider:
-    """Provides accessible URL address for environment"""
-
-    provider_type: str = ''
-
-    def __init__(self, module_env: ModuleEnvironment):
-        self.env = module_env
-        self.app = self.env.application
-
-    def provide(self, include_no_running: bool = False) -> Optional[EnvExposedURL]:
-        if not include_no_running and not self.env.is_running():
-            return None
-
-        url = self._provide_url()
-        if url:
-            return EnvExposedURL(url=url, provider_type=self.provider_type)
-        return None
-
-    def provide_all(self, include_no_running: bool = False) -> Optional[List[EnvExposedURL]]:
-        if not include_no_running and not self.env.is_running():
-            return None
-
-        urls = self._provide_urls()
-        if urls:
-            return [EnvExposedURL(url=url, provider_type=self.provider_type) for url in urls]
-        return None
-
-    def _provide_url(self) -> Optional[URL]:
-        """provide an accessible url, if current env does not match the pre-conditions,
-        return None instead
-        """
-        raise NotImplementedError
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        """provide all accessible urls, if current env does not match the pre-conditions,
-        return None instead
-        """
-        raise NotImplementedError
-
-    def format_region_url_tmpl(self, tmpl) -> str:
-        """Render an url template in region config"""
-        context = {
-            'code': self.app.code,
-            'region': self.app.region,
-            'name': self.env.engine_app.name,
-        }
-        return tmpl.format(**context)
-
-
-class MarketURLProvider(BaseEnvExposedURLProvider):
-    """URL Provider by market"""
-
-    provider_type = 'market'
-
-    def _provide_url(self) -> Optional[URL]:
-        # Only works for "production" env
-        if self.env.environment != AppEnvironment.PRODUCTION.value:
-            return None
-
-        # Only works for apps whose market config is enabled
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(self.app)
-        if not (market_config.enabled and market_config.source_module == self.env.module):
-            return None
-
-        region = get_region(self.app.region)
-        return URL.from_address(self.format_region_url_tmpl(region.basic_info.link_production_app))
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        address = self._provide_url()
-        if not address:
-            return None
-        return [address]
 
 
 def get_deployed_status(module: Module) -> Dict[str, bool]:
@@ -194,6 +119,20 @@ def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:
     return addr.to_exposed_url()
 
 
+def get_market_address(application: Application) -> Optional[str]:
+    """获取市场访问地址，兼容精简版应用。普通应用如未打开市场开关，返回 None"""
+    region = get_region(application.region)
+    addr = region.basic_info.link_production_app.format(code=application.code, region=application.region)
+    if not application.engine_enabled:
+        return addr
+
+    # Only works for apps whose market config is enabled
+    market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+    if not market_config.enabled:
+        return None
+    return addr
+
+
 def _get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
     """Deprecated: Get legacy URL address which is a hard-coded value generated
     y region configuration.
@@ -206,65 +145,93 @@ def _get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
     return None
 
 
-def get_market_address(application: Application) -> Optional[str]:
-    """获取市场访问地址，兼容精简版应用"""
-    if not application.engine_enabled:
-        region = get_region(application.region)
-        context = {
-            'code': application.code,
-            'region': application.region,
-        }
-        return region.basic_info.link_production_app.format(**context)
+def get_addresses(env: ModuleEnvironment) -> 'List[Address]':
+    """Get exposed addresses of an environment object, only built-in addresses
+    is returned. This should be the main function for getting addresses of env.
 
-    exposed_url = MarketURLProvider(application.get_default_module().get_envs("prod")).provide()
-    if exposed_url:
-        return exposed_url.address
-    return None
-
-
-def update_exposed_url_type_to_subdomain(module: Module):
-    """Update a module's exposed_url_type to subdomain"""
-    # Return directly if exposed_url_type is already subdomain
-    if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-        return
-
-    module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
-    module.save(update_fields=['exposed_url_type'])
-
-    refresh_module_domains(module)
-
-    # Also update app's address's in market if needed
-    from paasng.publish.sync_market.handlers import sync_external_url_to_market
-
-    sync_external_url_to_market(application=module.application)
-
-
-def refresh_module_domains(module: Module):
-    """Refresh a module's domains, you should call the function when module's exposed_url_type
-    has been changed or application's default module was updated.
+    :returns: address items sorted by URL length, empty list if env has not been
+        deployed yet.
     """
-    for env in module.envs.all():
-        if not env.is_running():
-            continue
+    live_addrs = get_live_addresses(env.module)
+    if not live_addrs.get_is_running(env.environment):
+        return []
 
-        logger.info(f"updating {env.engine_app.name}'s exposed_url_type to subdomain...")
-        engine_client = EngineDeployClient(env.engine_app)
-        domains = [d.as_dict() for d in ModuleEnvDomains(env).all()]
-        engine_client.update_domains(domains)
+    # Get addresses by expose type
+    module = env.module
+    addrs: List[Address] = []
+    if module.exposed_url_type == ExposedURLType.SUBPATH:
+        addrs = live_addrs.get_addresses(env.environment, addr_type='subpath')
+    elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
+        addrs = live_addrs.get_addresses(env.environment, addr_type='subdomain')
+    elif module.exposed_url_type is None:
+        url = _get_legacy_url(env)
+        addrs = [Address(type='legacy', url=url)] if url else []
+
+    addrs.sort(key=lambda a: len(a.url))
+    return addrs
 
 
-def refresh_module_subpaths(module: Module) -> None:
-    """Refresh a module's subpaths, you should call the function when module's exposed_url_type
-    has been changed or application's default module was updated.
+# TODO: Add `def get_addresses_with_custom` function which include custom domains.
+
+
+@define
+class Address:
+    """An simple struct stored application's URL address"""
+
+    type: str
+    url: str
+
+    def hostname_endswith(self, s: str) -> bool:
+        """Check if current hostname ends with given string"""
+        obj = URL.from_address(self.url)
+        return obj.hostname.endswith(s)
+
+    def to_exposed_url(self) -> EnvExposedURL:
+        """To exposed URL object"""
+        # INFO: Use self.type as "provider type" directly, this might need to be
+        # changed in the future.
+        return EnvExposedURL(url=URL.from_address(self.url), provider_type=self.type)
+
+
+class ModuleLiveAddrs:
+    """Stored a module's addresses and running status"""
+
+    def __init__(self, data: List[Dict]):
+        self._data = data
+        self._map_by_env = {}
+        for item in data:
+            self._map_by_env[item['env']] = item
+
+    def get_is_running(self, env_name: str) -> bool:
+        """Given running status of environment"""
+        d = self._map_by_env.get(env_name, self._empty_item)
+        return d['is_running']
+
+    def get_addresses(self, env_name: str, addr_type: Optional[str] = None) -> List[Address]:
+        """Given addresses of environment
+
+        :param addr_type: If given, include items whose type equal to this value
+        """
+        d = self._map_by_env.get(env_name, self._empty_item)
+        addrs = d['addresses']
+        if addr_type:
+            addrs = [a for a in d['addresses'] if a['type'] == addr_type]
+        return [Address(**a) for a in addrs]
+
+    @property
+    def _empty_item(self) -> Dict:
+        """An empty item for handling default cases"""
+        return {'is_running': False, 'addresses': []}
+
+
+def get_live_addresses(module: Module) -> ModuleLiveAddrs:
+    """Get addresses and is_running status for module's environments.
+
+    This is a low-level function, don't use it directly, use `get_addresses`
+    instead.
     """
-    for env in module.envs.all():
-        if not env.is_running():
-            continue
-
-        logger.info(f"refreshing {env.engine_app.name}'s subpaths...")
-        engine_client = EngineDeployClient(env.engine_app)
-        subpaths = [d.as_dict() for d in ModuleEnvSubpaths(env).all()]
-        engine_client.update_subpaths(subpaths)
+    data = make_internal_client().list_env_addresses(module.application.code, module.name)
+    return ModuleLiveAddrs(data)
 
 
 # pre-allocated addresses related functions start
@@ -371,90 +338,52 @@ def get_bk_doc_url_prefix() -> str:
 # pre-allocated addresses related functions end
 
 
-def get_addresses(env: ModuleEnvironment) -> 'List[Address]':
-    """Get exposed addresses of an environment object, only built-in addresses
-    is returned. This should be the main function for getting addresses of env.
+# Exposed URL type related functions start
 
-    :returns: address items sorted by URL length, empty list if env has not been
-        deployed yet.
+
+def update_exposed_url_type_to_subdomain(module: Module):
+    """Update a module's exposed_url_type to subdomain"""
+    # Return directly if exposed_url_type is already subdomain
+    if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
+        return
+
+    module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
+    module.save(update_fields=['exposed_url_type'])
+
+    refresh_module_domains(module)
+
+    # Also update app's address's in market if needed
+    from paasng.publish.sync_market.handlers import sync_external_url_to_market
+
+    sync_external_url_to_market(application=module.application)
+
+
+def refresh_module_domains(module: Module):
+    """Refresh a module's domains, you should call the function when module's exposed_url_type
+    has been changed or application's default module was updated.
     """
-    live_addrs = get_live_addresses(env.module)
-    if not live_addrs.get_is_running(env.environment):
-        return []
+    for env in module.envs.all():
+        if not env.is_running():
+            continue
 
-    # Get addresses by expose type
-    module = env.module
-    addrs: List[Address] = []
-    if module.exposed_url_type == ExposedURLType.SUBPATH:
-        addrs = live_addrs.get_addresses(env.environment, addr_type='subpath')
-    elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-        addrs = live_addrs.get_addresses(env.environment, addr_type='subdomain')
-    elif module.exposed_url_type is None:
-        url = _get_legacy_url(env)
-        addrs = [Address(type='legacy', url=url)] if url else []
-
-    addrs.sort(key=lambda a: len(a.url))
-    return addrs
+        logger.info(f"updating {env.engine_app.name}'s exposed_url_type to subdomain...")
+        engine_client = EngineDeployClient(env.engine_app)
+        domains = [d.as_dict() for d in ModuleEnvDomains(env).all()]
+        engine_client.update_domains(domains)
 
 
-# TODO: Add `def get_addresses_with_custom` function which include custom domains.
-
-
-@define
-class Address:
-    """An simple struct stored application's URL address"""
-
-    type: str
-    url: str
-
-    def hostname_endswith(self, s: str) -> bool:
-        """Check if current hostname ends with given string"""
-        obj = URL.from_address(self.url)
-        return obj.hostname.endswith(s)
-
-    def to_exposed_url(self) -> EnvExposedURL:
-        """To exposed URL object"""
-        # INFO: Use self.type as "provider type" directly, this might need to be
-        # changed in the future.
-        return EnvExposedURL(url=URL.from_address(self.url), provider_type=self.type)
-
-
-class ModuleLiveAddrs:
-    """Stored a module's addresses and running status"""
-
-    def __init__(self, data: List[Dict]):
-        self._data = data
-        self._map_by_env = {}
-        for item in data:
-            self._map_by_env[item['env']] = item
-
-    def get_is_running(self, env_name: str) -> bool:
-        """Given running status of environment"""
-        d = self._map_by_env.get(env_name, self._empty_item)
-        return d['is_running']
-
-    def get_addresses(self, env_name: str, addr_type: Optional[str] = None) -> List[Address]:
-        """Given addresses of environment
-
-        :param addr_type: If given, include items whose type equal to this value
-        """
-        d = self._map_by_env.get(env_name, self._empty_item)
-        addrs = d['addresses']
-        if addr_type:
-            addrs = [a for a in d['addresses'] if a['type'] == addr_type]
-        return [Address(**a) for a in addrs]
-
-    @property
-    def _empty_item(self) -> Dict:
-        """An empty item for handling default cases"""
-        return {'is_running': False, 'addresses': []}
-
-
-def get_live_addresses(module: Module) -> ModuleLiveAddrs:
-    """Get addresses and is_running status for module's environments.
-
-    This is a low-level function, don't use it directly, use `get_addresses`
-    instead.
+def refresh_module_subpaths(module: Module) -> None:
+    """Refresh a module's subpaths, you should call the function when module's exposed_url_type
+    has been changed or application's default module was updated.
     """
-    data = make_internal_client().list_env_addresses(module.application.code, module.name)
-    return ModuleLiveAddrs(data)
+    for env in module.envs.all():
+        if not env.is_running():
+            continue
+
+        logger.info(f"refreshing {env.engine_app.name}'s subpaths...")
+        engine_client = EngineDeployClient(env.engine_app)
+        subpaths = [d.as_dict() for d in ModuleEnvSubpaths(env).all()]
+        engine_client.update_subpaths(subpaths)
+
+
+# Exposed URL type related functions end

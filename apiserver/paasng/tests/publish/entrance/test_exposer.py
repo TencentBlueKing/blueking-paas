@@ -31,10 +31,12 @@ from paasng.publish.entrance.exposer import (
     _get_legacy_url,
     get_addresses,
     get_exposed_url,
+    get_market_address,
     get_preallocated_address,
     get_preallocated_url,
     get_preallocated_urls,
 )
+from paasng.publish.market.models import MarketConfig
 from tests.utils.helpers import override_region_configs
 from tests.utils.mocks.engine import replace_cluster_service
 
@@ -249,3 +251,10 @@ class TestDefaultEntrance:
         with override_region_configs(bk_app.region, update_region_hook):
             urls = get_preallocated_urls(bk_stag_env)
             assert [u.address for u in urls] == [f'http://example.com/{bk_app.region}-legacy-path/']
+
+
+def test_get_market_address(bk_app):
+    MarketConfig.objects.enable_app(bk_app)
+    addr = get_market_address(bk_app)
+    assert addr is not None
+    assert len(addr) > 0

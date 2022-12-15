@@ -27,21 +27,18 @@ from django.conf import settings
 from paasng.engine.constants import JobStatus
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.modules.models import Module
 from paasng.publish.entrance.exposer import (
-    MarketURLProvider,
     ModuleLiveAddrs,
     get_exposed_url,
     get_module_exposed_links,
     update_exposed_url_type_to_subdomain,
 )
 from paasng.publish.market.constant import AppType
-from paasng.publish.market.models import MarketConfig, Product
+from paasng.publish.market.models import Product
 from paasng.publish.market.utils import MarketAvailableAddressHelper
 from paasng.publish.sync_market.handlers import register_application_with_default
 from paasng.publish.sync_market.managers import AppManger
 from tests.engine.setup_utils import create_fake_deployment
-from tests.utils.helpers import initialize_module
 from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
@@ -65,53 +62,6 @@ def bk_app(bk_app):
     bk_app.name = "some-app-o"
     bk_app.save()
     return bk_app
-
-
-class TestMarketURLProvider:
-    @pytest.fixture(autouse=True)
-    def setUp(self, bk_module):
-        create_fake_deployment(bk_module, 'stag', status=JobStatus.SUCCESSFUL.value)
-        create_fake_deployment(bk_module, 'prod', status=JobStatus.SUCCESSFUL.value)
-
-    def test_env_without_market(self, bk_module, bk_prod_env):
-        env = bk_module.envs.get(environment='prod')
-        url = MarketURLProvider(env).provide()
-        assert url is None
-
-    def test_env_with_market(self, bk_app, bk_module, bk_stag_env, bk_prod_env):
-        # Enable market
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-        market_config.enabled = True
-        market_config.save()
-
-        url = MarketURLProvider(bk_prod_env).provide()
-        assert url
-        assert url.provider_type == 'market'
-
-        url = MarketURLProvider(bk_stag_env).provide()
-        assert url is None
-
-    def test_env_with_market_nondefault_module(self, bk_app):
-        # Enable market
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-        market_config.enabled = True
-        market_config.save()
-
-        # Create another non-default module
-        nondefault_module = Module.objects.create(
-            application=bk_app,
-            region=bk_app.region,
-            owner=bk_app.owner,
-            creator=bk_app.owner,
-            is_default=False,
-            name='foo-module',
-            exposed_url_type=ExposedURLType.SUBDOMAIN,
-        )
-        initialize_module(nondefault_module)
-        create_fake_deployment(nondefault_module, 'prod', status=JobStatus.SUCCESSFUL.value)
-
-        url = MarketURLProvider(nondefault_module.envs.get(environment='prod')).provide()
-        assert url is None
 
 
 class TestIntegratedNotDeployed:

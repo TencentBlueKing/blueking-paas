@@ -27,12 +27,12 @@ import cattr
 from django.conf import settings
 from django.utils.encoding import force_bytes, force_str
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.models import Cluster
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.engine.models import Deployment
 from paasng.extensions.declarative.deployment.resources import BkSaaSItem
 from paasng.extensions.declarative.models import DeploymentDescription
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
@@ -89,7 +89,7 @@ class BkSaaSEnvVariableFactory:
     @staticmethod
     def extend_with_clusters(
         items: Sequence[BkSaaSItem],
-    ) -> Iterable[Tuple[BkSaaSItem, Optional[Dict[AppEnvironment, Cluster]]]]:
+    ) -> Iterable[Tuple[BkSaaSItem, Optional[Dict[AppEnvName, Cluster]]]]:
         """Extends given `BkSaaSItem` objects with their clusters, if the SaaS has
         not been deployed yet, the cluster value will be `None`, otherwise the
         real cluster object will be returned.

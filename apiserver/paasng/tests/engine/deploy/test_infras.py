@@ -21,9 +21,9 @@ from unittest import mock
 import cattr
 import pytest
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.models import IngressConfig
 from paasng.engine.deploy.infras import AppDefaultSubpaths, get_env_variables
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 
 pytestmark = pytest.mark.django_db
@@ -46,8 +46,8 @@ class TestAppDefaultSubpaths:
         ) as get_module_clusters:
             get_ingress_config.return_value = dummy_ingress_config
             get_module_clusters.return_value = {
-                AppEnvironment.STAGING: mock.MagicMock(ingress_config=dummy_ingress_config),
-                AppEnvironment.PRODUCTION: mock.MagicMock(ingress_config=dummy_ingress_config),
+                AppEnvName.STAG: mock.MagicMock(ingress_config=dummy_ingress_config),
+                AppEnvName.PROD: mock.MagicMock(ingress_config=dummy_ingress_config),
             }
             yield
 

@@ -27,7 +27,7 @@ from typing import Dict, List, NamedTuple, Optional
 from django.conf import settings
 from django.db.models import Count
 
-from paasng.engine.constants import JobStatus
+from paasng.engine.constants import AppEnvName, JobStatus
 from paasng.engine.controller.cluster import Cluster, get_region_cluster_helper
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.deploy.engine_svc import EngineDeployClient
@@ -411,7 +411,7 @@ class PreAddresses(NamedTuple):
 def get_preallocated_address(
     app_code: str,
     region: Optional[str] = None,
-    clusters: Optional[Dict[AppEnvironment, Cluster]] = None,
+    clusters: Optional[Dict[AppEnvName, Cluster]] = None,
     module_name: Optional[str] = None,
 ) -> PreAddresses:
     """Get the preallocated address for a application which was not released yet
@@ -429,7 +429,7 @@ def get_preallocated_address(
     stag_address, prod_address = "", ""
 
     # 生产环境
-    prod_cluster = clusters.get(AppEnvironment.PRODUCTION, default_cluster)
+    prod_cluster = clusters.get(AppEnvName.PROD, default_cluster)
     prod_pre_subpaths = get_preallocated_path(app_code, prod_cluster.ingress_config, module_name=module_name)
     prod_pre_subdomains = get_preallocated_domain(app_code, prod_cluster.ingress_config, module_name=module_name)
 
@@ -441,7 +441,7 @@ def get_preallocated_address(
         prod_address = prod_pre_subpaths.prod.as_url().as_address()
 
     # 测试环境
-    stag_cluster = clusters.get(AppEnvironment.STAGING, default_cluster)
+    stag_cluster = clusters.get(AppEnvName.STAG, default_cluster)
     stag_pre_subpaths = get_preallocated_path(app_code, stag_cluster.ingress_config, module_name=module_name)
     stag_pre_subdomains = get_preallocated_domain(app_code, stag_cluster.ingress_config, module_name=module_name)
 

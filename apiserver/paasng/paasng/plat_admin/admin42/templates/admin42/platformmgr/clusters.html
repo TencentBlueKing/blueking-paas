@@ -269,8 +269,6 @@
             data: function() {
                 return {
                     data: [],
-                    regionList: regionList,
-                    clusterTypeList: clusterTypeList,
                     dialog: {
                         fullscreen: false,
                         form: {
@@ -354,15 +352,21 @@
                     this.dialog.row = undefined
 
                     this.dialog.form.uuid = undefined
-                    this.dialog.form.region = this.regionList[0].value
+                    this.dialog.form.region = regionList[0].value
                     this.dialog.form.name = undefined
-                    this.dialog.form.type = this.clusterTypeList[0].value
+                    this.dialog.form.type = clusterTypeList[0].value
                     this.dialog.form.is_default = false
                     this.dialog.form.description = undefined
                     this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}
                     this.dialog.form.annotations = {}
                     this.dialog.form.feature_flags = {}
-                    this.dialog.form.enabled_feature_flags = {}
+                    this.dialog.form.enabled_feature_flags = []
+                    // 默认集群拥有全量的 featureflag 功能
+                    for (var i = 0; i < featureFlagList.length; i++) {
+                        ff = featureFlagList[i].value
+                        this.dialog.form.feature_flags[ff] = true
+                        this.dialog.form.enabled_feature_flags.push(ff)
+                    }
                     this.dialog.form.ca_data = undefined
                     this.dialog.form.cert_data = undefined
                     this.dialog.form.key_data = undefined
@@ -403,8 +407,8 @@
                 // 在多选框被修改时，根据选中的项目，同步更新 feature_flags 内容
                 updateFeatureFlags: function () {
                     for (var i = 0; i < featureFlagList.length; i++) {
-                      var val = featureFlagList[i]['value'];
-                      this.dialog.form.feature_flags[val] = this.dialog.form.enabled_feature_flags.indexOf(val) >= 0;
+                      var ff = featureFlagList[i].value;
+                      this.dialog.form.feature_flags[ff] = this.dialog.form.enabled_feature_flags.indexOf(ff) >= 0;
                     }
                 },
                 // 判断当前集群是否支持某特性

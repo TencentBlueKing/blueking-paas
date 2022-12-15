@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Dict, Iterable, List
 
 from django.db import transaction
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.models import Cluster, Domain
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -260,10 +260,10 @@ class ModuleRuntimeManager:
         ]
 
 
-def get_module_clusters(module: 'Module') -> Dict[AppEnvironment, Cluster]:
+def get_module_clusters(module: 'Module') -> Dict[AppEnvName, Cluster]:
     """return all cluster info of module envs"""
     return {
-        AppEnvironment(env.environment): get_engine_app_cluster(module.region, env.engine_app.name)
+        AppEnvName(env.environment): get_engine_app_cluster(module.region, env.engine_app.name)
         for env in module.envs.all()
     }
 

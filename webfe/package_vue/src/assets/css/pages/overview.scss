@@ -47,9 +47,10 @@
     position: fixed;
     top: 50px;
     bottom: 0px;
-    width: 240px;
+    width: 241px;
     z-index: 999;
     background: #fafbfd;
+    border-right: solid 1px rgba(220, 222, 229, 0.6);
 }
 
 .overview-fleft .title {
@@ -95,7 +96,7 @@
     padding-bottom: 66px;
     position: relative;
     flex: 1;
-    border-left: solid 1px rgba(220, 222, 229, 0.6);
+    // border-left: solid 1px rgba(220, 222, 229, 0.6);
     
     .right-main {
         padding-bottom: 20px;

@@ -5,7 +5,7 @@
         <div class="overview">
           <div
             class="overview-main"
-            :style="{ 'min-height': `${minHeight}px` }"
+            :style="{ 'min-height': $route.name === 'pluginVersionRelease' ? '0px' : `${minHeight}px` }"
           >
             <div class="overview-fleft overview-fleft-plugin">
               <plugin-quick-nav ref="quickNav" />
@@ -17,7 +17,7 @@
               </div>
             </div>
             <div
-              class="overview-fright-plugin"
+              :class="['overview-fright-plugin', { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' }]"
               @click="hideQuickNav"
             >
               <router-view
@@ -332,5 +332,8 @@
         font-size: 20px;
         color: #979797;
         line-height: 80px;
+    }
+    .hide-pd-bottom {
+        padding-bottom: 0;
     }
 </style>

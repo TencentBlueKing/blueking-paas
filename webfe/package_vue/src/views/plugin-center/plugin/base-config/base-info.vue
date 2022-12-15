@@ -1,5 +1,5 @@
 <template lang="html">
-  <div class="right-main">
+  <div class="right-main plugin-base-info">
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
@@ -29,7 +29,7 @@
               </bk-form-item>
             </bk-form>
             <bk-form
-              class="info-special-form"
+              class="info-special-form plugin-name-form"
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
@@ -37,25 +37,28 @@
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
                 <bk-input
+                  v-if="isFormEdited.nameInput"
                   ref="nameInput"
                   v-model="pluginInfo.name_zh_cn"
                   :placeholder="$t('请输入插件名称')"
-                  :readonly="!isFormEdited.nameInput"
                   ext-cls="paas-info-app-name-cls"
                   :clearable="false"
                   :maxlength="20"
                 />
+                <div
+                  v-else
+                  class="plugin-name-box"
+                >
+                  <span>{{ pluginInfo.name_zh_cn }}</span>
+                  <i
+                    v-bk-tooltips="$t('编辑')"
+                    class="paasng-icon paasng-edit-2 plugin-name-icon"
+                    @click="showEdit('nameInput')"
+                  />
+                </div>
 
                 <div class="action-box">
-                  <template v-if="!isFormEdited.nameInput">
-                    <!-- paasng-icon paasng-edit-2 -->
-                    <a
-                      v-bk-tooltips="$t('编辑')"
-                      class="paasng-icon paasng-edit-2"
-                      @click="showEdit('nameInput')"
-                    />
-                  </template>
-                  <template v-else>
+                  <template v-if="isFormEdited.nameInput">
                     <bk-button
                       style="margin-right: 6px;"
                       theme="primary"
@@ -232,26 +235,119 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label editor-label"> {{ $t('详细描述') }} </label>
+                <label
+                  class="title-label editor-label"
+                  :style="`height: ${infoHeight}px;`"
+                >
+                  {{ $t('详细描述') }}
+                </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
                 :class="{ 'input-show-index': isFormEdited.descriptionInput }"
               >
                 <div class="content-box">
-                  <div
-                    ref="editorRef"
-                    :class="['display-description', { 'description-ellipsis': editorLabelHeight }, isUnfold ? 'unfold' : 'up']"
-                    style="-webkit-box-orient: vertical;"
-                    v-html="marketInfo.description"
-                  />
+                  <div :class="['display-description', { 'description-ellipsis': editorLabelHeight }, isUnfold ? 'unfold' : 'up']">
+                    <div
+                      ref="editorRef"
+                      v-html="marketInfo.description"
+                    />
+                  </div>
                   <span
+                    v-if="editorLabelHeight === 'down'"
                     class="unfold-btn"
                     @click="changeInfoUnfold"
                   >
                     {{ isUnfold ? '收起' : '展开' }}
-                    <i :class="['paasng-icon', 'paasng-angle-down', { 'is-down': !isUnfold }]" />
+                    <i :class="['paasng-icon', isUnfold ? 'paasng-angle-line-up' : 'paasng-angle-line-down']" />
                   </span>
+                </div>
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </div>
+
+        <!-- 插件使用方 -->
+        <div
+          v-if="pluginFeatureFlags.PLUGIN_DISTRIBUTER"
+          class="basic-info-item"
+        >
+          <div class="title">
+            {{ $t('插件使用方') }}
+          </div>
+          <div class="info">
+            {{ tipsInfo }}
+          </div>
+          <div class="content no-border">
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;">
+                <label class="title-label"> {{ $t('蓝鲸网关') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);border-top: 1px solid #dcdee5;">
+                <div class="item-content border-bottm-none">
+                  <span
+                    v-if="apiGwName"
+                    style="color: #3A84FF;"
+                  >{{ $t('已绑定到') + apiGwName }}</span>
+                  <span
+                    v-else
+                    style="color: #979ba5;"
+                  > {{ $t('暂未找到已同步网关') }} </span>
+                  <i
+                    v-bk-tooltips="$t('网关维护者默认为应用管理员')"
+                    class="paasng-icon paasng-info-circle tooltip-icon"
+                  />
+                </div>
+              </bk-form-item>
+            </bk-form>
+            <bk-form
+              class="info-special-form"
+              form-type="inline"
+            >
+              <bk-form-item style="width: 180px;height: 480px;">
+                <label class="title-label plugin-info">
+                  <p style="height: 26px"> {{ $t('插件使用方') }} </p>
+                </label>
+              </bk-form-item>
+              <bk-form-item
+                class="pluginEmploy"
+                style="width: calc(100% - 180px);"
+              >
+                <bk-transfer
+                  :target-list="targetPluginList"
+                  :source-list="pluginList"
+                  :display-key="'name'"
+                  :setting-key="'code_name'"
+                  :show-overflow-tips="true"
+                  :empty-content="promptContent"
+                  :title="titleArr"
+                  @change="transferChange"
+                />
+                <div class="mt20">
+                  <bk-button
+                    :theme="'primary'"
+                    type="submit"
+                    :title="$t('保存')"
+                    class="mr10"
+                    @click="updateAuthorizationUse"
+                  >
+                    {{ $t('保存') }}
+                  </bk-button>
+                  <bk-button
+                    :theme="'default'"
+                    :title="$t('还原')"
+                    class="mr10"
+                    @click="revivification"
+                  >
+                    {{ $t('还原') }}
+                  </bk-button>
+                </div>
+                <div class="explain">
+                  <p> {{ $t('说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。') }} </p>
+                  <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}</p>
                 </div>
               </bk-form-item>
             </bk-form>
@@ -415,7 +511,17 @@
                     }
                 },
                 editorValue: '',
-                editorLabelHeight: ''
+                editorLabelHeight: '',
+                editorHeight: '',
+                apiGwName: '',
+                TargetDataFirst: true,
+                PluginDataAllFirst: true,
+                targetPluginList: [],
+                AuthorizedUseList: [],
+                restoringPluginList: [],
+                restoringTargetData: [],
+                pluginList: [],
+                tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。')
             };
         },
         computed: {
@@ -434,6 +540,9 @@
             },
             pluginFeatureFlags () {
                 return this.$store.state.plugin.pluginFeatureFlags;
+            },
+            infoHeight () {
+                return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
             }
         },
         created () {
@@ -443,6 +552,11 @@
             init () {
                 this.getPluginBaseInfo();
                 this.getMarketInfo();
+                if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
+                    this.getPluginAll();
+                    this.getAuthorizedUse();
+                    this.getProfile();
+                }
             },
 
             formattParams () {
@@ -485,6 +599,7 @@
                     this.resMarketInfo = JSON.stringify(res);
                     this.$nextTick(() => {
                         this.editorLabelHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight > 200 ? 'down' : '';
+                        this.editorHeight = this.$refs.editorRef && this.$refs.editorRef.offsetHeight || 232;
                     });
                 } catch (e) {
                     this.$bkMessage({
@@ -578,7 +693,9 @@
                     });
                     return;
                 }
-                this.$refs[key].focus();
+                this.$nextTick(() => {
+                    this.$refs[key].focus();
+                });
             },
 
             dialogAfterLeave () {
@@ -655,8 +772,101 @@
             },
 
             changeInfoUnfold () {
-                console.log('展开');
                 this.isUnfold = !this.isUnfold;
+            },
+
+            // 获取可选插件适用方
+            async getPluginAll () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getPluginDistributors');
+                    this.pluginList = res;
+                    if (this.PluginDataAllFirst) {
+                        this.restoringPluginList = this.pluginList;
+                        this.PluginDataAllFirst = false;
+                    }
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                }
+            },
+
+            arrayEqual (arr1, arr2) {
+                if (arr1 === arr2) return true;
+                if (arr1.length !== arr2.length) return false;
+                for (let i = 0; i < arr1.length; ++i) {
+                    if (arr1[i] !== arr2[i]) return false;
+                }
+                return true;
+            },
+
+            async getProfile () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getProfileData', { pluginId: this.pluginId });
+                    this.localeAppInfo.introduction = res.introduction;
+                    this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
+                    this.apiGwName = res.api_gw_name;
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                }
+            },
+
+            async updateAuthorizationUse () {
+                const data = this.AuthorizedUseList;
+                const flag = this.arrayEqual(this.targetPluginList, data);
+                if (!flag) {
+                    try {
+                        await this.$store.dispatch('plugin/updatePluginUser', {
+                            pluginId: this.pluginId,
+                            data: { distributors: data }
+                        });
+                        this.getPluginAll();
+                        this.getAuthorizedUse();
+                        this.$paasMessage({
+                            theme: 'success',
+                            message: this.$t('授权成功！')
+                        });
+                    } catch (e) {
+                        this.$paasMessage({
+                            theme: 'error',
+                            message: e.detail
+                        });
+                    }
+                } else {
+                    this.$paasMessage({
+                        theme: 'warning',
+                        message: this.$t('未选择授权使用方')
+                    });
+                }
+            },
+
+            async getAuthorizedUse () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getAuthorizedUse', { pluginId: this.pluginId });
+                    this.targetPluginList = res.map(item => item.code_name);
+                    if (this.TargetDataFirst) {
+                        this.restoringTargetData = this.targetPluginList;
+                        this.TargetDataFirst = false;
+                    }
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                }
+            },
+
+            transferChange (sourceList, targetList, targetValueList) {
+                this.AuthorizedUseList = targetValueList;
+            },
+
+            revivification () {
+                this.pluginList.splice(0, this.pluginList.length, ...this.restoringPluginList);
+                this.targetPluginList.splice(0, this.targetPluginList.length, ...this.restoringTargetData);
             }
         }
     };
@@ -698,15 +908,16 @@
             }
             .info-special-form:nth-child(2) {
                 position: relative;
-                top: -4px;
+                top: -5px;
             }
             .info-special-form:nth-child(3) {
                 position: relative;
-                top: -8px;
+                top: -11px;
             }
             .info-special-form:nth-child(4) {
                 position: relative;
-                top: -12px;
+                top: -16px;
+                z-index: 99;
             }
             .info-special-form:nth-child(5) {
                 position: relative;
@@ -720,6 +931,7 @@
                 z-index: 10;
             }
             .item-content {
+                font-size: 12px;
                 padding: 0 10px 0 25px;
                 height: 42px;
                 line-height: 42px;
@@ -742,6 +954,7 @@
                 }
             }
             .title-label {
+                font-size: 12px;
                 display: inline-block;
                 width: 180px;
                 height: 42px;
@@ -948,6 +1161,7 @@
         // -webkit-line-clamp: 2;
     }
     .content-box {
+        font-size: 12px;
         border: 1px solid #dcdee5;
         padding: 0 5px 30px 25px;
         border-radius: 0 2px 2px 0;
@@ -960,7 +1174,8 @@
             overflow: hidden;
         }
         .is-down {
-            transform: rotate(-180deg);
+            transform-origin: 50% 50%;
+            // transform: rotate(-180deg);
         }
     }
     .unfold-btn {
@@ -969,6 +1184,10 @@
         right: 10px;
         cursor: pointer;
         color: #3a84ff;
+        i {
+            transform-origin: 50% 50%;
+            transform: translateX(-2px);
+        }
     }
     .description-ellipsis {
         display: -webkit-box;
@@ -979,22 +1198,93 @@
             top: 0;
             z-index: 99;
             background: transparent;
-            height: 42px;
-            width: calc(100% - 10px);
+            height: 41px;
+            line-height: 41px;
+            width: 100%;
+            border: 1px solid #dcdee5;
         }
     }
     .plugin-top-title {
         margin-top: 6px;
     }
-    .market-edit {
+    .market-edit,
+    .plugin-name-icon-cls {
         cursor: pointer;
-        color: #3a84ff;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 400;
         margin-left: 5px;
+        color: #3a84ff;
+
+        i {
+            font-size: 16px;
+            transform: translateX(2px);
+        }
+    }
+    .plugin-name-icon-cls {
+        i {
+            transform: translateX(9px);
+        }
+    }
+    // .edit-cls {
+    //     display: inline-block;
+    //     width: 100%;
+    //     height: 100%;
+    // }
+    .edit-box-cls {
+        cursor: pointer;
+        color: #979ba5;
+        i {
+            transform: translateX(8px);
+        }
+        .text {
+            font-size: 12px;
+        }
+        &:hover {
+            color: #3a84ff;
+        }
+    }
+    .plugin-name-form {
+        top: -4px !important;
+    }
+    .plugin-name-box {
+        font-size: 12px;
+        padding: 0 10px 0 25px;
+        height: 42px;
+        line-height: 42px;
+        border-right: 1px solid #dcdee5;
+        border-bottom: 1px solid #dcdee5;
+        .plugin-name-icon {
+            margin-left: 5px;
+            cursor: pointer;
+            color: #3a84ff;
+            font-size: 16px;
+        }
+    }
+    .border-bottm-none {
+        border-bottom: none !important;
+    }
+    .pluginEmploy {
+        height: 460px;padding: 20px 24px 0;
+        border: 1px solid #dcdee5;
+    }
+    .explain {
+        margin-top: 20px;
+        p {
+            line-height: 1.5em;
+            color: #979ba5;
+        }
     }
 </style>
 <style lang="scss">
+    .plugin-base-info section .content .content-item label {
+        background: #FAFBFD;
+    }
+    .plugin-base-info section .content .content-item label.first-label {
+        border-bottom: 1px solid #dcdee5;
+    }
+    .content .paas-info-app-name-cls .bk-form-input {
+        font-size: 12px !important;
+    }
     .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
         height: 32px;
         line-height: 32px;
@@ -1045,15 +1335,17 @@
         .basic-info-item .content .editor-label {
             height: 232px;
             line-height: 232px;
+            border-right-color: transparent;
         }
         .user-select-wrapper .bk-form-content .bk-tag-input {
             position: relative;
             z-index: 9;
-            height: 42px;
+            height: 41px;
             padding-right: 85px;
             padding-left: 20px;
+            border-radius: 0 2px 2px 0;
             .placeholder {
-                line-height: 42px;
+                line-height: 41px;
                 padding-left: 16px;
             }
         }

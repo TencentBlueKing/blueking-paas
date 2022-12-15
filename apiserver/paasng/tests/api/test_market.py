@@ -109,9 +109,10 @@ class TestGetAndUpdateProduct:
         assert response.json()['name'] == bk_app.name
         assert response.json()['open_mode'] == OpenMode.NEW_TAB.value
 
-    def test_update_market_app(self, api_client, bk_app):
+    def test_update_market_app(self, api_client, bk_app_full):
         # Get the origin product value
-        response = api_client.get(reverse('api.market.products.detail', args=(bk_app.code,)), format='json')
+        Product.objects.create_default_product(bk_app_full)
+        response = api_client.get(reverse('api.market.products.detail', args=(bk_app_full.code,)), format='json')
         data = response.json()
 
         # Change name to a new value
@@ -126,10 +127,10 @@ class TestGetAndUpdateProduct:
             {"id": 2001, "type": "user", "name": "user1"},
         ]
         put_response = api_client.put(
-            reverse('api.market.products.detail', args=(bk_app.code,)), data=data, format='json'
+            reverse('api.market.products.detail', args=(bk_app_full.code,)), data=data, format='json'
         )
         assert put_response.status_code == 200
-        product = Product.objects.get(code=bk_app.code)
+        product = Product.objects.get(code=bk_app_full.code)
         assert product.name == target_name
         assert product.displayoptions.width == 841
         assert product.displayoptions.contact == 'nobody;nobody1'
@@ -140,7 +141,7 @@ class TestGetAndUpdateProduct:
             from paasng.publish.sync_market.managers import AppManger
 
             session = console_db.get_scoped_session()
-            console_app = AppManger(session).get(bk_app.code)
+            console_app = AppManger(session).get(bk_app_full.code)
             assert console_app.width == product.displayoptions.width == 841
             assert console_app.open_mode == product.displayoptions.open_mode
             try:

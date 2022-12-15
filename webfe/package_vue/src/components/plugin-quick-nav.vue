@@ -39,25 +39,37 @@
             placeholder="请输入关键字"
             :left-icon="'bk-icon icon-search'"
             :clearable="true"
+            @enter="searchPlugin"
           />
         </div>
-        <div class="plugin-list">
-          <div
-            v-for="item in pluginList"
-            :key="item.id"
-            class="item flex-row align-items-center"
-            @click="changePlugin(item)"
-          >
-            <img
-              :src="item.logo"
-              onerror="this.src='/static/images/plugin-default.svg'"
+        <div
+          v-bkloading="{isLoading: isLoading, size: 'mini', zIndex: 10}"
+          class="plugin-list"
+        >
+          <template v-if="viewPluinList.length">
+            <div
+              v-for="item in viewPluinList"
+              :key="item.id"
+              class="item flex-row align-items-center"
+              @click="changePlugin(item)"
             >
-            <div class="plugin-name ft12 pl10">
-              {{ item.name_zh_cn }}
+              <img
+                :src="item.logo"
+                onerror="this.src='/static/images/plugin-default.svg'"
+              >
+              <div class="plugin-name ft12 pl10">
+                {{ item.name_zh_cn }}
+              </div>
+              <div class="plugin-desc ft12 pl10">
+                ( {{ item.id }} )
+              </div>
             </div>
-            <div class="plugin-desc ft12 pl10">
-              ( {{ item.id }} )
-            </div>
+          </template>
+          <div
+            v-else
+            class="not-data-tips"
+          >
+            {{ $t('无匹配数据') }}
           </div>
         </div>
         <div class="dropdown-footer flex-row align-items-center justify-content-around">
@@ -89,14 +101,26 @@
                 showSelectData: false,
                 searchValue: '',
                 pluginList: [],
+                viewPluinList: [],
                 curPluginData: {},
-                isHover: false
+                isHover: false,
+                isLoading: false
             };
         },
         watch: {
             pluginList: {
                 handler (val) {
                     this.curPluginData = val.find(e => e.id === this.$route.params.id);
+                }
+            },
+            searchValue (newVal, oldVal) {
+                if (oldVal && !newVal) {
+                    this.searchPlugin();
+                }
+            },
+            showSelectData (val) {
+                if (!val) {
+                  this.searchValue = '';
                 }
             }
         },
@@ -114,6 +138,7 @@
                         pageParams
                     });
                     this.pluginList = res.results;
+                    this.viewPluinList = res.results;
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -140,6 +165,16 @@
                     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
                 });
                 this.hideSelectData();
+            },
+            searchPlugin () {
+                if (this.searchValue === '') {
+                    this.viewPluinList = this.pluginList;
+                }
+                this.isLoading = true;
+                this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
+                setTimeout(() => {
+                    this.isLoading = false;
+                }, 200);
             }
         }
     };
@@ -240,6 +275,13 @@
 }
 .quick-hover-bg {
     background: #F5F7FA;
+}
+.not-data-tips {
+    height: 64px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #666;
 }
 </style>
 <style>

@@ -397,6 +397,41 @@ export default {
     getPluginFeatureFlags ({ commit, state }, { pdId, pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/feature_flags/`;
       return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取插件使用方可选插件
+         * @param {Object} params 请求参数：
+         */
+    getPluginDistributors ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugin_distributors/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取插件使用方信息
+         * @param {Object} params 请求参数：
+         */
+    getProfileData ({ commit, state }, { pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/profile/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 插件使用方更新
+         */
+    updatePluginUser ({ commit, state }, { pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/distributors/`;
+      return http.put(url, data, config);
+    },
+
+    /**
+         * 获取已授权插件使用方
+         * @param {Object} params 请求参数：
+         */
+    getAuthorizedUse ({ commit, state }, { pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/distributors/`;
+      return http.get(url, {}, config);
     }
   }
 };

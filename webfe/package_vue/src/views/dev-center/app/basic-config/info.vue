@@ -411,7 +411,7 @@
                   </bk-button>
                   <bk-button
                     :theme="'default'"
-                    :title="$t('主要按钮')"
+                    :title="$t('还原')"
                     class="mr10"
                     @click="revivification"
                   >

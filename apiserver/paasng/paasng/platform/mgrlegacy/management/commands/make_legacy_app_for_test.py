@@ -161,10 +161,8 @@ class Command(BaseCommand):
     ):
         with console_db.session_scope() as session:
             app = AppManger(session).get(code)
-            if app:
-                return app
-
-            app = AppManger(session).create(code, name, deploy_ver, from_paasv3=False)
+            if not app:
+                app = AppManger(session).create(code, name, deploy_ver, from_paasv3=False)
             # legacy db 通过外键绑定了 tag, 因此创建 App 时需要使用真实存在的 tag
             tagmap = Command.get_or_create_tagmap(deploy_ver)
             AppManger(session).update(

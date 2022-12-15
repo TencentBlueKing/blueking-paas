@@ -91,8 +91,8 @@
               >
                 {{ $t('更换角色') }}
               </bk-button>
-              <!-- v-if="canManageMembers(props.row)" -->
               <bk-button
+                v-if="canManageMembers(props.row)"
                 text
                 class="mr5"
                 @click="delMember(props.row.username, props.row.role.id)"
@@ -160,6 +160,7 @@
           </bk-form-item>
           <bk-form-item label="">
             <div class="ps-rights-list">
+              <span :class="['pointer-icon', { 'developer': roleName === 'developer' }]" />
               <!-- roleName 当前权限 -->
               <span class="ps-rights-title">{{ $t('权限列表') }}</span>
               <span
@@ -507,7 +508,7 @@
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
                 this.$bkInfo({
-                    title: `退出并放弃此插件的对应权限，是否确定？`,
+                    title: `确认退出并放弃此插件的权限？`,
                     width: 480,
                     maskClose: true,
                     confirmFn: () => {
@@ -787,5 +788,19 @@
 
     .dev-name {
         font-weight: 700;
+    }
+
+    .pointer-icon {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        transform: rotateZ(45deg);
+        background: #F5F7FA;
+        top: -5px;
+        left: 30px;
+    }
+
+    .developer {
+        left: 110px;
     }
 </style>

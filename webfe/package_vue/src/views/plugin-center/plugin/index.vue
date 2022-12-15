@@ -7,7 +7,7 @@
             class="overview-main"
             :style="{ 'min-height': `${minHeight}px` }"
           >
-            <div class="overview-fleft">
+            <div class="overview-fleft overview-fleft-plugin">
               <plugin-quick-nav ref="quickNav" />
               <div
                 style="height: 100%;"

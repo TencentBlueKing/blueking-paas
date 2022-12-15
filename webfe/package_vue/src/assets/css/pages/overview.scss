@@ -43,6 +43,15 @@
     background: #fafbfd;
 }
 
+.overview-fleft-plugin {
+    position: fixed;
+    top: 50px;
+    bottom: 0px;
+    width: 240px;
+    z-index: 999;
+    background: #fafbfd;
+}
+
 .overview-fleft .title {
     height: 60px;
     border-bottom: 1px solid #e6e9ea;
@@ -92,6 +101,10 @@
         padding-bottom: 20px;
         height: 100%;
     }
+}
+
+.overview-fright-plugin {
+    margin-left: 240px;
 }
 
 .overview-fright h2, 

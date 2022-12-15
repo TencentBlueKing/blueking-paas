@@ -75,6 +75,10 @@ urlpatterns = [
         clusters.ClusterViewSet.as_view({'post': 'update_or_create', 'get': 'list'}),
     ),
     path(
+        'admin42/platform/clusters/gen_state/',
+        clusters.ClusterViewSet.as_view({'post': 'gen_state'}),
+    ),
+    path(
         'admin42/platform/clusters/<str:pk>/',
         clusters.ClusterViewSet.as_view({'get': 'retrieve', 'put': 'update_or_create', 'delete': 'destroy'}),
     ),

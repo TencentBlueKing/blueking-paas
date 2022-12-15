@@ -543,7 +543,13 @@ class KPod(BaseKresource):
         raise ReadTargetStatusTimeout(pod_name=name, max_seconds=timeout, extra_value=pod)
 
     def get_log(self, name: str, namespace: Namespace, timeout: float = QUERY_LOG_DEFAULT_TIMEOUT, **kwargs):
-        # TODO: Change to using dynamic client
+        # TODO: Use dynamic client instead of `CoreV1Api`
+        #
+        # This is the only place where we are using the solid type `CoreV1Api`
+        # instead of dynamic client in the whole project. The code can be leaved
+        # as is because `CoreV1Api` is already a stable API group, but it would
+        # be better if we migrate it to code using dynamic client, which is
+        # universally across different versions.
         return client_mod.CoreV1Api(self.client).read_namespaced_pod_log(
             name=name, namespace=namespace, _preload_content=False, _request_timeout=timeout, **kwargs
         )
@@ -567,6 +573,14 @@ class KServiceAccount(BaseKresource):
 
 class KSecret(BaseKresource):
     kind = 'Secret'
+
+
+class KEvent(BaseKresource):
+    kind = "Event"
+
+
+class KCustomResourceDefinition(BaseKresource):
+    kind = "CustomResourceDefinition"
 
 
 # Individual resource types end

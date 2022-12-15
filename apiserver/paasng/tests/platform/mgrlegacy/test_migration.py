@@ -44,12 +44,14 @@ except ImportError:
 pytestmark = skip_if_legacy_not_configured()
 
 
+@pytest.mark.usefixtures("legacy_app_code")
 class BaseTestCaseForMigration(TestCase):
     MIGRATION_CLS = BaseMigration
     PRECONDITION_MIGRATION_CLS: List[Type] = []
 
     def setUp(self) -> None:
         super().setUp()
+
         self.migration = get_migration_instance(self.MIGRATION_CLS)
         self.context: MigrationContext = self.migration.context
         self.pre_migrations = [cls(self.context) for cls in self.PRECONDITION_MIGRATION_CLS]

@@ -19,10 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Optional, Set
 
-from attrs import define
-from cattr import structure
-
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.networking.ingress.certs.utils import (
     AppDomainCertController,
     pick_shared_cert,
@@ -38,7 +36,7 @@ from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.platform.external.client import get_plat_client
 
 from .constants import DomainGroupSource
-from .models import EnvResourcePlanner
+from .models import default_bkapp_name
 from .v1alpha1.domain_group_mapping import (
     Domain,
     DomainGroup,
@@ -56,7 +54,7 @@ def save_addresses(env: ModuleEnv) -> Set[EngineApp]:
     subdomains and subpaths.
 
     :return: Affected engine apps, "affected" means the app's domains or
-    paths were updated during this save operation.
+        paths were updated during this save operation.
     """
     engine_app = EngineApp.objects.get_by_env(env)
     addresses = get_plat_client().get_addresses(env.application.code, env.environment)
@@ -87,7 +85,7 @@ class AddrResourceManager:
         subpath_group = DomainGroup(sourceType=DomainGroupSource.SUBPATH, domains=self._get_subpath_domains())
         custom_group = DomainGroup(sourceType=DomainGroupSource.CUSTOM, domains=self._get_custom_domains())
 
-        app_name = EnvResourcePlanner(self.env).default_app_name
+        app_name = default_bkapp_name(self.env)
         # Omit empty groups
         data = [subdomain_group, subpath_group, custom_group]
         data = [d for d in data if d.domains]
@@ -166,22 +164,8 @@ def to_shared_tls_domain(d: Domain, app: EngineApp) -> Domain:
     return d
 
 
-@define
-class ExposedUrl:
-    host: str
-    subpath: str = ''
-    https_enabled: bool = False
-
-    def as_url(self) -> str:
-        protocol = "https" if self.https_enabled else "http"
-        return f"{protocol}://{self.host}{self.subpath}"
-
-
 def get_exposed_url(env: ModuleEnv) -> Optional[str]:
     """Get exposed URL for given env"""
-    addresses = get_plat_client().get_addresses(env.application.code, env.environment)
-    if addresses["subdomains"]:
-        return structure(addresses["subdomains"][0], ExposedUrl).as_url()
-    elif addresses["subpaths"]:
-        return structure(addresses["subpaths"][0], ExposedUrl).as_url()
+    if addrs := EnvAddresses(env).get():
+        return addrs[0].url
     return None

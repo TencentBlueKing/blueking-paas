@@ -188,6 +188,9 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+ADMIN_USERNAME = settings.get('ADMIN_USERNAME', 'admin')
+
 AUTH_USER_MODEL = 'bkpaas_auth.User'
 
 AUTHENTICATION_BACKENDS = ['bkpaas_auth.backends.UniversalAuthBackend', 'bkpaas_auth.backends.APIGatewayAuthBackend']
@@ -520,6 +523,9 @@ COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'h
 APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
+# 网关运行环境
+# TODO BK_LESSCODE_APIGW_STAGE 和 BK_IAM_APIGW_SERVICE_STAGE 考虑复用 APIGW_ENVIRONMENT?
+APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
 
@@ -1082,6 +1088,19 @@ DOCKER_REGISTRY_CONFIG = settings.get(
     'DOCKER_REGISTRY_CONFIG', {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
 
+# -----------------
+# 插件开发中心配置项
+# -----------------
+# 插件中心「源码仓库」相关配置
+PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
+
+# 插件开发中心在权限中心注册的系统 ID
+IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')
+
+# 是否在开发者中心应用列表中展示插件应用
+DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
+
+
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
@@ -1124,11 +1143,5 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
-
-# 插件中心「源码仓库」相关配置
-PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
-
-# 插件开发中心在权限中心注册的系统 ID
-IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')
 
 MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

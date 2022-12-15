@@ -81,8 +81,8 @@ class TestDeployAPIStage:
     def stage_executor(self, stage):
         return stages.DeployAPIStage(stage)
 
-    def test_execute(self, mock_client, stage, stage_executor):
-        mock_client.call.return_value = {
+    def test_execute(self, thirdparty_client, stage, stage_executor):
+        thirdparty_client.call.return_value = {
             "deploy_id": "...",
             "status": "pending",
             "detail": "",
@@ -110,7 +110,7 @@ class TestDeployAPIStage:
             ],
         }
 
-    def test_render_to_view(self, mock_client, stage, stage_executor):
+    def test_render_to_view(self, thirdparty_client, stage, stage_executor):
         stage.api_detail = {"deploy_id": "..."}
         stage.status = PluginReleaseStatus.PENDING
         stage.save()
@@ -136,7 +136,7 @@ class TestDeployAPIStage:
             else:
                 return {"logs": ["1", "2", "3"], "finished": True}
 
-        mock_client.call.side_effect = deploy_action_side_effect
+        thirdparty_client.call.side_effect = deploy_action_side_effect
         stage_info = stage_executor.render_to_view()
 
         assert stage_info["detail"]["steps"] == [

@@ -26,11 +26,14 @@ from rest_framework.status import HTTP_204_NO_CONTENT
 
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_all_root_domains
-from paasng.publish.entrance.exposer import get_default_access_entrances, update_exposed_url_type_to_subdomain
+from paasng.publish.entrance.exposer import (
+    get_default_access_entrances,
+    get_live_addresses,
+    update_exposed_url_type_to_subdomain,
+)
 from paasng.publish.entrance.serializers import (
     ApplicationAvailableEntranceSLZ,
     ApplicationCustomDomainEntranceSLZ,
@@ -82,8 +85,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
         # from ModuleEnv's attribute directly by querying for successful Deployment
         # objects. That approach is not suitable for cloud-native applications and
         # should be optimized eventually.
-        is_running_data = make_internal_client().list_env_is_running(module.application.code, module.name)
-        is_running_map = {d['env']: d['is_running'] for d in is_running_data}
+        addrs = get_live_addresses(module)
 
         def get_plain_entrance():
             # 默认 stag 在 prod 之前创建
@@ -91,7 +93,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
                 yield from [
                     dict(
                         env=env.environment,
-                        is_running=is_running_map.get(env.environment, False),
+                        is_running=addrs.get_is_running(env.environment),
                         address=entrance.address,
                     )
                     for entrance in (get_default_access_entrances(env, include_no_running=True) or [])

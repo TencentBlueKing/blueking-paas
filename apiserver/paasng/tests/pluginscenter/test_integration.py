@@ -54,16 +54,7 @@ class TestReleaseStages:
         pd.save()
         pd.refresh_from_db()
 
-    @pytest.fixture
-    def disable_permission_check(self):
-        with mock.patch("paasng.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client") as iam_policy_client:
-            iam_policy_client.is_action_allowed.return_value = True
-            iam_policy_client.is_actions_allowed.return_value = {"": True}
-            yield
-
-    def test_release_version(
-        self, mock_client, pd, plugin, setup_release_stages, api_client, disable_permission_check
-    ):
+    def test_release_version(self, thirdparty_client, pd, plugin, setup_release_stages, api_client, iam_policy_client):
         assert PluginRelease.objects.count() == 0
         with mock.patch("paasng.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
@@ -136,7 +127,7 @@ class TestReleaseStages:
             else:
                 return {"logs": ["1", "2", "3"], "finished": True}
 
-        mock_client.call.side_effect = deploy_action_side_effect
+        thirdparty_client.call.side_effect = deploy_action_side_effect
 
         # 再次测试进入下一步(成功)
         resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
@@ -189,16 +180,16 @@ class TestOperationRecord:
         record = OperationRecord.objects.create(
             plugin=plugin,
             operator=bk_user.pk,
-            action=ActionTypes.DELETE.value,
-            subject=SubjectTypes.PLUGIN.value,
+            action=ActionTypes.DELETE,
+            subject=SubjectTypes.PLUGIN,
         )
         assert record.get_display_text() == f"{bk_user.username} 删除插件"
 
         record1 = OperationRecord.objects.create(
             plugin=plugin,
             operator=bk_user.pk,
-            action=ActionTypes.ADD.value,
+            action=ActionTypes.ADD,
             specific="0.0.1",
-            subject=SubjectTypes.VERSION.value,
+            subject=SubjectTypes.VERSION,
         )
         assert record1.get_display_text() == f"{bk_user.username} 新建 0.0.1 版本"

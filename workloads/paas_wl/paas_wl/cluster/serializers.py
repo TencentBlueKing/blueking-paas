@@ -58,6 +58,7 @@ class ClusterSLZ(serializers.Serializer):
     """Serializer for Cluster object"""
 
     name = serializers.CharField()
+    type = serializers.CharField()
     is_default = serializers.BooleanField()
     bcs_cluster_id = serializers.CharField()
     support_bcs_metrics = serializers.BooleanField(default=False)

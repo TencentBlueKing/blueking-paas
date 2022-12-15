@@ -16,8 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from blue_krill.data_types.enum import StructuredEnum
+from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 
 class ClusterTokenType(int, StructuredEnum):
     SERVICE_ACCOUNT = 1
+
+
+class ClusterType(str, StructuredEnum):
+    """集群类别"""
+
+    NORMAL = EnumField('normal', label=_('普通集群'))
+    VIRTUAL = EnumField('virtual', label=_('虚拟集群'))

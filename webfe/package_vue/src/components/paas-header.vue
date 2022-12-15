@@ -1,5 +1,5 @@
 <template>
-  <div :class="[&quot;ps-header&quot;,&quot;clearfix&quot;,{ &quot;bk-header-static&quot;: is_static }]">
+  <div :class="['ps-header','clearfix',{ 'bk-header-static': is_static }]">
     <div class="ps-header-visible clearfix">
       <router-link
         :to="{ name: 'index' }"
@@ -24,7 +24,7 @@
           v-for="(item,index) in headerStaticInfo.list.nav"
           :key="index"
           :class="{ 'active': curpage === index }"
-          @mouseover.stop.prevent="showSubNav(index)"
+          @mouseover.stop.prevent="showSubNav(index, item)"
           @mouseout.stop.prevent="hideSubNav"
         >
           <router-link
@@ -38,23 +38,16 @@
             :class="{ 'has-angle': index !== 1 }"
             :to="{ name: 'myApplications' }"
           >
-            {{ item.text }}<i
-              v-show="index !== 1"
-              class="paasng-icon paasng-angle-down"
-            />
+            {{ item.text }}
           </router-link>
-          <!-- <router-link
-            v-else-if="(index === 2)"
-            :class="{ 'has-angle': index !== 2 }"
-            :to="{ name: 'myApplications' }"
+          <router-link
+            v-else-if="(index === 2 && userFeature.ALLOW_PLUGIN_CENTER)"
+            :to="{ name: 'plugin' }"
           >
-            {{ item.text }}<i
-              v-show="(index !== 2)"
-              class="paasng-icon paasng-angle-down"
-            />
-          </router-link> -->
+            {{ item.text }}
+          </router-link>
           <a
-            v-else-if="(index === 2)"
+            v-else-if="(item.text === $t('云 API'))"
             :href="link"
             target="_blank"
           >
@@ -294,7 +287,7 @@
       </ul>
     </div>
     <div
-      :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]"
+      :class="['ps-header-invisible','invisible1','clearfix',{ 'hoverStatus2': navText === $t('服务'), 'hoverStatus3': navText === $t('文档与支持') }]"
       @mouseover.stop.prevent="showSubNav(navIndex)"
       @mouseout.stop.prevent="hideSubNav"
     >
@@ -451,17 +444,30 @@
                 isShowInput: true,
                 // eslint-disable-next-line comma-dangle
                 link: this.GLOBAL.LINK.APIGW_INDEX,
+                navText: ''
             };
         },
         computed: {
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            userFeature () {
+                return this.$store.state.userFeature;
             }
         },
         watch: {
             '$route': 'checkRouter',
             filterKey: function () {
                 this.curActiveIndex = -1;
+            },
+            userFeature: {
+              handler (val) {
+                if (!val.ALLOW_PLUGIN_CENTER) {
+                  this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
+                  console.log('this.headerStaticInfo.list.nav', this.headerStaticInfo.list.nav);
+                }
+              },
+              deep: true
             }
         },
         created () {
@@ -593,21 +599,26 @@
                 clearTimeout(this.navShowController);
                 this.navHideController = setTimeout(() => {
                     this.navIndex = 0;
+                    this.navText = '';
                 }, 300);
             },
             // 二级导航mouseover
-            showSubNav (index) {
+            showSubNav (index, item) {
                 clearTimeout(this.navHideController);
                 if (index === 0 || index === 1 || index === 2) {
                     this.navIndex = index;
                 } else {
                     this.navShowController = setTimeout(() => {
                         this.navIndex = index;
+                        this.navText = item.text;
                         switch (index) {
                             case 3:
                                 this.curSubNav = this.headerStaticInfo.list.subnav_service;
                                 break;
                             case 4:
+                                this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+                                break;
+                            case 5:
                                 this.curSubNav = this.headerStaticInfo.list.subnav_doc;
                                 break;
                             default:
@@ -628,6 +639,9 @@
                 if (this.$route.path.indexOf('/developer-center/app') !== -1) {
                     noteIndex = 1;
                 }
+                if (this.$route.path.indexOf('/plugin-center') !== -1) {
+                    noteIndex = 2;
+                }
                 if (this.$route.path.indexOf('/developer-center/service') !== -1) {
                     noteIndex = 3;
                 }
@@ -639,6 +653,10 @@
                     case 1:
                         this.backgroundHidden = false;
                         this.curpage = 1;
+                        break;
+                    case 2:
+                        this.backgroundHidden = false;
+                        this.curpage = 2;
                         break;
                     case 3:
                         this.backgroundHidden = false;
@@ -711,7 +729,7 @@
         top: 0px;
         width: 100%;
         z-index: 1001;
-        min-width: 1280px;
+        min-width: 1440px;
         transition: all .5s;
         background: #191929;
         box-sizing: border-box;

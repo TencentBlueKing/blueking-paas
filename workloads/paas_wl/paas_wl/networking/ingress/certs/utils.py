@@ -80,8 +80,6 @@ def update_or_create_secret_by_cert(app: App, cert: BasicCert) -> Tuple[str, boo
             'tls.key': force_str(base64.b64encode(force_bytes(cert.key_data))),
         },
     }
-    # FIXME: For cloud-native applications, we should use EnvPlaner to get namespace
-    # instead of app.namespace, although these two are returning identical values.
     _, created = kres.KSecret(client).create_or_update(
         name=secret_name, namespace=app.namespace, body=body, update_method='patch'
     )

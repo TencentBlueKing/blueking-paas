@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -29,7 +29,10 @@ from paasng.accessories.iam.helpers import (
 )
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ
+from paasng.engine.constants import ClusterType
+from paasng.engine.controller.shortcuts import make_internal_client
+from paasng.engine.controller.state import controller_client
+from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
@@ -78,6 +81,10 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
             kwargs['view'] = self
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs['application'] = application
+        kwargs['cluster_choices'] = [
+            {'id': cluster['name'], 'name': f"{cluster['name']} -- {ClusterType.get_choice_label(cluster['type'])}"}
+            for cluster in make_internal_client().list_region_clusters(application['region'])
+        ]
         return kwargs
 
     def get(self, request, *args, **kwargs):
@@ -98,6 +105,22 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
             self.get_application().code, ApplicationRole.ADMINISTRATOR
         )
         return kwargs
+
+
+class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+    """应用部署环境配置管理"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def bind_cluster(self, request, code, module_name, environment):
+        slz = BindEnvClusterSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        engine_app = self.get_engine_app_via_path()
+        controller_client.bind_app_cluster(
+            engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationMembersManageView(ApplicationDetailBaseView):
@@ -140,7 +163,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, code):
         application = self.get_application()
@@ -153,7 +176,7 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def sync_membership(self, application):
         sync_developers_to_sentry.delay(application.id)
@@ -191,4 +214,4 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
     def update(self, request, code):
         application = self.get_application()
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)

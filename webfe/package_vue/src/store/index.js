@@ -1,20 +1,20 @@
 /*
-* Tencent is pleased to support the open source community by making
-* 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-* Copyright (C) 2017-2022THL A29 Limited, a Tencent company.  All rights reserved.
-* Licensed under the MIT License (the "License").
-* You may not use this file except in compliance with the License.
-* You may obtain a copy of the License at http://opensource.org/licenses/MIT
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on
-* an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-* either express or implied. See the License for the
-* specific language governing permissions and limitations under the License.
-*
-* We undertake not to change the open source license (MIT license) applicable
-*
-* to the current version of the project delivered to anyone in the future.
-*/
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://opensource.org/licenses/MIT
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ * to the current version of the project delivered to anyone in the future.
+ */
 
 import Vue from 'vue';
 import Vuex from 'vuex';
@@ -43,6 +43,8 @@ import alarm from './modules/alarm';
 import docuManagement from './modules/docu-management';
 import cloudApi from './modules/cloud-api';
 import voucher from './modules/voucher';
+import plugin from './modules/plugin';
+import cloudMembers from './modules/cloud-members';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -64,6 +66,8 @@ const state = {
   curAppDefaultModule: {},
   curAppModuleList: [],
   appInfo: {},
+  pluginInfo: {},
+  curPluginInfo: {},
   isAppLoading: true,
   canCreateModule: true,
   loadingConf: {
@@ -159,6 +163,12 @@ const mutations = {
     } else if (data.application.modules.length) {
       state.curAppModule = state.curAppDefaultModule;
     }
+  },
+
+  updatePluginInfo (state, { pluginId, pluginTypeId, data }) {
+    state.curPluginInfo = data;
+    state.curPluginId = pluginId;
+    state.curPluginTypeId = pluginTypeId;
   },
   addAppModule (state, data) {
     // state.curAppModuleList.push(data)
@@ -295,6 +305,22 @@ const actions = {
   },
 
   /**
+     * 获取插件信息
+     *
+     * @param {Number} appCode 应用code
+     */
+  getPluginInfo ({ commit, state }, { pluginId, pluginTypeId }) {
+    const url = `${BACKEND_URL}/api/bkplugins/${pluginTypeId}/plugins/${pluginId}/`;
+    commit('updateAppLoading', true);
+    return http.get(url).then(response => {
+      commit('updatePluginInfo', { pluginId, pluginTypeId, data: response });
+      return response;
+    }).finally(() => {
+      commit('updateAppLoading', false);
+    });
+  },
+
+  /**
      * 获取应用列表
      *
      * @param {Object} params 参数配置
@@ -387,7 +413,9 @@ export default new Vuex.Store({
     alarm,
     docuManagement,
     cloudApi,
-    voucher
+    voucher,
+    plugin,
+    cloudMembers
   },
   state,
   getters,

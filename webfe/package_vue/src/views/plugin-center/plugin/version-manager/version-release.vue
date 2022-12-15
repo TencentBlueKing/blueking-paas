@@ -7,32 +7,102 @@
       :offset-left="20"
       class="deploy-action-box"
     >
-      <div class="app-container">
-        <div class="title-warp flex-row align-items-center justify-content-between">
-          <paas-plugin-title :version="curVersion" />
-          <bk-button
-            v-if="pluginFeatureFlags.CANCEL_RELEASE"
-            class="discontinued"
-            @click="showInfoCancelRelease"
+      <div class="plugin-release-top">
+        <div class="father-wrapper">
+          <div class="bg-top">
+            <div class="bg-content">
+              <div class="title-warp flex-row align-items-center justify-content-between">
+                <paas-plugin-title :version="curVersion" />
+                <bk-button
+                  v-if="pluginFeatureFlags.CANCEL_RELEASE"
+                  class="discontinued"
+                  @click="showInfoCancelRelease"
+                >
+                  <i class="paasng-icon paasng-stop-2" />
+                  {{ $t('终止发布') }}
+                </bk-button>
+              </div>
+              <div
+                v-if="isNotStep"
+                class="steps-warp mt20"
+              >
+                <bk-steps
+                  ext-cls="custom-icon"
+                  :status="stepsStatus"
+                  :steps="allStages"
+                  :cur-step.sync="curStep"
+                />
+              </div>
+            </div>
+          </div>
+          <!-- 部署状态 -->
+          <div
+            v-if="stageId === 'deploy'"
+            class="wrapper primary
+                                release-info-box
+                                flex-row
+                                justify-content-between
+                                align-items-center"
+            :class="[{ 'failed': status === 'failed' }, { 'success': status === 'successful' }]"
           >
-            <i class="paasng-icon paasng-stop-2" />
-            {{ $t('终止发布') }}
-          </bk-button>
+            <div
+              v-if="status === 'pending'"
+              class="info-left-warp flex-row"
+            >
+              <round-loading
+                size="small"
+                ext-cls="deploy-round-loading"
+              />
+              <span class="info-time pl10">
+                <span class="info-pending-text"> {{ $t('正在部署中...') }} </span>
+                <!-- <span class="time-text"> {{ $t('耗时：') }} 13秒</span> -->
+              </span>
+            </div>
+            <div
+              v-else-if="status === 'failed'"
+              class="error-left-warp flex-row align-items-center"
+            >
+              <i class="error-icon paasng-icon paasng-close-circle-shape" />
+              <span class="info-time pl10">
+                <span class="info-pending-text"> {{ $t('构建失败') }} </span>
+                <span class="time-text">{{ failedMessage }}</span>
+              </span>
+            </div>
+            <div
+              v-else-if="status === 'successful'"
+              class="info-left-warp flex-row"
+            >
+              <span class="success-check-wrapper">
+                <i class="paasng-icon paasng-correct" />
+              </span>
+              <span class="info-time pl10">
+                <span class="info-pending-text"> {{ $t('部署成功') }} </span>
+              </span>
+            </div>
+            <div
+              v-if="!isNext"
+              class="info-right-warp"
+            >
+              <bk-button
+                v-if="status !== 'pending'"
+                size="small"
+                theme="primary"
+                :outline="true"
+                :class="[{ 'failed': status === 'failed' }]"
+                class="ext-cls-btn"
+                @click="rightClick(status)"
+              >
+                {{ status === 'pending' ? $t('停止部署') : $t('重新部署') }}
+              </bk-button>
+            </div>
+          </div>
         </div>
-        <div
-          v-if="isNotStep"
-          class="steps-warp mt20"
-        >
-          <bk-steps
-            ext-cls="custom-icon"
-            :status="stepsStatus"
-            :steps="allStages"
-            :cur-step.sync="curStep"
-          />
-        </div>
+      </div>
+      <!-- 内容 -->
+      <div class="app-container plugin-container">
         <div
           id="release-box"
-          class="release-warp mt20"
+          class="release-warp"
         >
           <template>
             <div
@@ -51,67 +121,8 @@
               </span>
             </div>
             <template v-if="stageId === 'deploy'">
-              <div
-                class="wrapper primary
-                            release-info-box
-                            flex-row
-                            justify-content-between
-                            align-items-center"
-                :class="[{ 'failed': status === 'failed' }, { 'success': status === 'successful' }]"
-              >
-                <div
-                  v-if="status === 'pending'"
-                  class="info-left-warp flex-row"
-                >
-                  <round-loading
-                    size="small"
-                    ext-cls="deploy-round-loading"
-                  />
-                  <span class="info-time pl10">
-                    <span class="info-pending-text"> {{ $t('正在部署中...') }} </span>
-                  <!-- <span class="time-text"> {{ $t('耗时：') }} 13秒</span> -->
-                  </span>
-                </div>
-                <div
-                  v-else-if="status === 'failed'"
-                  class="error-left-warp flex-row align-items-center"
-                >
-                  <i class="error-icon paasng-icon paasng-close-circle-shape" />
-                  <span class="info-time pl10">
-                    <span class="info-pending-text"> {{ $t('构建失败') }} </span>
-                    <span class="time-text">{{ failedMessage }}</span>
-                  </span>
-                </div>
-                <div
-                  v-else-if="status === 'successful'"
-                  class="info-left-warp flex-row"
-                >
-                  <span class="success-check-wrapper">
-                    <i class="paasng-icon paasng-correct" />
-                  </span>
-                  <span class="info-time pl10">
-                    <span class="info-pending-text"> {{ $t('部署成功') }} </span>
-                  </span>
-                </div>
-                <div
-                  v-if="!isNext"
-                  class="info-right-warp"
-                >
-                  <bk-button
-                    v-if="status !== 'pending'"
-                    size="small"
-                    theme="primary"
-                    :outline="true"
-                    :class="[{ 'failed': status === 'failed' }]"
-                    class="ext-cls-btn"
-                    @click="rightClick(status)"
-                  >
-                    {{ status === 'pending' ? $t('停止部署') : $t('重新部署') }}
-                  </bk-button>
-                </div>
-              </div>
               <!-- 部署模块 -->
-              <div class="release-log-warp mt30 flex-row">
+              <div class="release-log-warp flex-row">
                 <div
                   id="release-timeline-box"
                   style="width: 230px"
@@ -828,6 +839,36 @@
     };
 </script>
 <style lang="scss" scoped>
+.plugin-release-top {
+    height: 173px;
+    margin: 0 auto;
+    .father-wrapper {
+        position: fixed;
+        margin-left: 241px;
+        left: 0;
+        top: 50px;
+        right: 0;
+        padding-bottom: 16px;
+        background: #fff;
+        z-index: 99;
+        .bg-top {
+            padding: 16px 0;
+            background: #FAFBFD;
+            border-bottom: 1px solid #EAEBF0;
+            .bg-content {
+                max-width: calc(100% - 100px);
+                min-width: 1250px;
+                margin: 0 50px;
+            }
+        }
+        .release-info-box {
+            max-width: calc(100% - 100px);
+            min-width: 1250px;
+            margin: 0 50px;
+            margin-top: 16px;
+        }
+    }
+}
 .steps-warp{
     width: 80%;
     margin: 0 auto;

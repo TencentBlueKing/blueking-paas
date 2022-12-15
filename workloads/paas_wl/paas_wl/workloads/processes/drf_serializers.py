@@ -44,6 +44,7 @@ class InstanceForDisplaySLZ(serializers.Serializer):
     image = serializers.CharField(read_only=True)
     start_time = serializers.CharField(read_only=True)
     state = serializers.SerializerMethodField(read_only=True, help_text='实例状态')
+    state_message = serializers.CharField(read_only=True)
     ready = serializers.BooleanField(read_only=True)
     version = serializers.CharField(read_only=True)
 

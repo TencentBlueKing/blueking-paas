@@ -20,9 +20,9 @@ import copy
 import logging
 import tempfile
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, ContextManager, Dict, List, Optional
 from unittest import mock
 
 import pytest
@@ -385,14 +385,19 @@ def bk_module(bk_app):
 def bk_stag_env(request, bk_app, bk_module, structured_app_data):
     """A random ModuleEnv object"""
     env = create_env(request, bk_app, bk_module, 'stag')
-    with mock.patch(
-        "paas_wl.platform.applications.struct_models.get_structured_app",
-        return_value=StructuredApp.from_json_data(
-            make_structured_app_data(
-                bk_app, default_module_id=str(bk_module.id), engine_app_ids=[str(env.engine_app_id), str(uuid.uuid4())]
-            )
-        ),
-    ):
+    ctx: ContextManager = nullcontext()
+    if request.keywords.get('mock_get_structured_app'):
+        ctx = mock.patch(
+            "paas_wl.platform.applications.struct_models.get_structured_app",
+            return_value=StructuredApp.from_json_data(
+                make_structured_app_data(
+                    bk_app,
+                    default_module_id=str(bk_module.id),
+                    engine_app_ids=[str(env.engine_app_id), str(uuid.uuid4())],
+                )
+            ),
+        )
+    with ctx:
         yield env
 
 
@@ -405,14 +410,19 @@ def bk_stag_engine_app(bk_stag_env) -> EngineApp:
 def bk_prod_env(request, bk_app, bk_module):
     """A random ModuleEnv object"""
     env = create_env(request, bk_app, bk_module, 'prod')
-    with mock.patch(
-        "paas_wl.platform.applications.struct_models.get_structured_app",
-        return_value=StructuredApp.from_json_data(
-            make_structured_app_data(
-                bk_app, default_module_id=str(bk_module.id), engine_app_ids=[str(uuid.uuid4()), str(env.engine_app_id)]
-            )
-        ),
-    ):
+    ctx: ContextManager = nullcontext()
+    if request.keywords.get('mock_get_structured_app'):
+        ctx = mock.patch(
+            "paas_wl.platform.applications.struct_models.get_structured_app",
+            return_value=StructuredApp.from_json_data(
+                make_structured_app_data(
+                    bk_app,
+                    default_module_id=str(bk_module.id),
+                    engine_app_ids=[str(uuid.uuid4()), str(env.engine_app_id)],
+                )
+            ),
+        )
+    with ctx:
         yield env
 
 

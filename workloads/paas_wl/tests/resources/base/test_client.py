@@ -86,6 +86,7 @@ class TestClientProcess:
     def worker_process(self, app, release):
         return AppProcessManager(app=app).assemble_process("worker", release=release)
 
+    @pytest.mark.mock_get_structured_app
     def test_deploy_processes(self, scheduler_client, web_process):
         with patch('paas_wl.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
             'paas_wl.networking.ingress.managers.service.service_kmodel'

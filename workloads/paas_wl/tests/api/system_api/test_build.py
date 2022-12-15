@@ -65,6 +65,7 @@ class TestBuildProcessViewSet:
 
 
 class TestReleaseViewSet:
+    @pytest.mark.mock_get_structured_app
     def testcase(self, build, bk_stag_engine_app, api_client, release_url, create_release):
         response = create_release()
         assert response.status_code == 201

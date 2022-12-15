@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 
 class DomainWithCert:
     def __init__(self, host: str, path_prefix: str, https_enabled: bool, cert: Optional[BasicCert] = None):
-        """
+        """DomainWithCert is a combination with an accessible address and cert
+
         :param host: 域名
         :param path_prefix: 该域名的可访问路径前缀
         :param https_enabled: 该域名是否开启 https
@@ -45,10 +46,9 @@ class DomainWithCert:
         self.cert = cert
 
     @classmethod
-    def from_app_domain(cls, domain: AppDomain):
-        cert = domain.cert
-        if not cert:
-            cert = domain.shared_cert
+    def from_app_domain(cls, domain: AppDomain) -> 'DomainWithCert':
+        """get DomainWithCert from `AppDomain`, will set shared_cert if found some matched"""
+        cert = domain.cert or domain.shared_cert
         if not cert:
             cert = pick_shared_cert(domain.app.region, domain.host)
             if cert:
@@ -57,7 +57,8 @@ class DomainWithCert:
         return cls(host=domain.host, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
     @classmethod
-    def from_custom_domain(cls, region: str, domain: Domain):
+    def from_custom_domain(cls, region: str, domain: Domain) -> 'DomainWithCert':
+        """get DomainWithCert from `Domain`, will pick shared cert by domain.name for backward compatibility"""
         cert = pick_shared_cert(region, domain.name)
         return cls(host=domain.name, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 

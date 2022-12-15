@@ -228,6 +228,7 @@ class TestSubdomainAppIngressMgr:
         assert len(ingress_mgr.list_desired_domains()) == 0
 
 
+@pytest.mark.mock_get_structured_app
 @pytest.mark.auto_create_ns
 class TestCustomDomainIngressMgr:
     @pytest.mark.parametrize(

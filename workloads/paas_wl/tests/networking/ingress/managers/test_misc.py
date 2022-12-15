@@ -38,6 +38,7 @@ class TestLegacyAppIngressMgr:
         )
 
 
+@pytest.mark.mock_get_structured_app
 @pytest.mark.auto_create_ns
 class TestAppDefaultIngresses:
     def test_integrated(self, bk_stag_engine_app):
@@ -45,7 +46,9 @@ class TestAppDefaultIngresses:
         app_default_ingresses.sync_ignore_empty(default_service_name='foo')
         assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 1
 
-        AppDomain.objects.create(app=bk_stag_engine_app, region=bk_stag_engine_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(
+            app=bk_stag_engine_app, region=bk_stag_engine_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+        )
 
         app_default_ingresses.sync_ignore_empty(default_service_name='foo')
         assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 2

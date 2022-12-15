@@ -103,7 +103,7 @@ def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:
     if not addrs:
         return None
 
-    # Use the first address because the results have been sorted by length already
+    # Use the first address because the results is sorted already
     addr = addrs[0]
 
     # Handle user preferred root domain, only available for built-in subdomains
@@ -149,8 +149,7 @@ def get_addresses(env: ModuleEnvironment) -> 'List[Address]':
     """Get exposed addresses of an environment object, only built-in addresses
     is returned. This should be the main function for getting addresses of env.
 
-    :returns: address items sorted by URL length, empty list if env has not been
-        deployed yet.
+    :returns: address items.
     """
     live_addrs = get_live_addresses(env.module)
     if not live_addrs.get_is_running(env.environment):
@@ -166,8 +165,6 @@ def get_addresses(env: ModuleEnvironment) -> 'List[Address]':
     elif module.exposed_url_type is None:
         url = _get_legacy_url(env)
         addrs = [Address(type='legacy', url=url)] if url else []
-
-    addrs.sort(key=lambda a: len(a.url))
     return addrs
 
 
@@ -180,6 +177,7 @@ class Address:
 
     type: str
     url: str
+    is_sys_reserved: bool = False
 
     def hostname_endswith(self, s: str) -> bool:
         """Check if current hostname ends with given string"""
@@ -196,6 +194,8 @@ class Address:
 class ModuleLiveAddrs:
     """Stored a module's addresses and running status"""
 
+    default_addr_type_ordering = ['subpath', 'subdomain', 'custom']
+
     def __init__(self, data: List[Dict]):
         self._data = data
         self._map_by_env = {}
@@ -208,7 +208,8 @@ class ModuleLiveAddrs:
         return d['is_running']
 
     def get_addresses(self, env_name: str, addr_type: Optional[str] = None) -> List[Address]:
-        """Given addresses of environment
+        """Return addresses of environment, the result was sorted, shorter and
+        not reserved addresses are in front.
 
         :param addr_type: If given, include items whose type equal to this value
         """
@@ -216,7 +217,26 @@ class ModuleLiveAddrs:
         addrs = d['addresses']
         if addr_type:
             addrs = [a for a in d['addresses'] if a['type'] == addr_type]
-        return [Address(**a) for a in addrs]
+
+        items = [Address(**a) for a in addrs]
+
+        # Make a map for sorting
+        addr_type_ordering_map = {}
+        for i, val in enumerate(self.default_addr_type_ordering):
+            addr_type_ordering_map[val] = i
+
+        # Sort the addresses by below factors:
+        # - type in the order of `default_addr_type_ordering`
+        # - not reserved first
+        # - shorter URL first
+        items.sort(
+            key=lambda addr: (
+                (addr_type_ordering_map.get(addr.type, float('inf')), addr_type),
+                addr.is_sys_reserved,
+                len(addr.url),
+            )
+        )
+        return items
 
     @property
     def _empty_item(self) -> Dict:

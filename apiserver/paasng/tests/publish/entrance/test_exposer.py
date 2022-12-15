@@ -86,9 +86,12 @@ class TestModuleLiveAddrs:
             "env": "stag",
             "is_running": True,
             "addresses": [
-                {"type": "subdomain", "url": "http://foo.example.com/"},
-                {"type": "subpath", "url": "http://bar.example.com/bar/"},
+                # The addresses was given in random order in purpose
+                {"type": "subpath", "url": "http://bar.example.com/bar-2/", "is_sys_reserved": True},
                 {"type": "custom", "url": "http://custom.example.com/"},
+                {"type": "subdomain", "url": "http://foo.example.com/"},
+                {"type": "unknown", "url": "http://unknown.example.com/"},
+                {"type": "subpath", "url": "http://bar.example.com/bar/"},
             ],
         },
     ]
@@ -101,13 +104,19 @@ class TestModuleLiveAddrs:
 
     def test_get_addresses(self):
         addrs = ModuleLiveAddrs(self.module_addrs_data)
-        assert len(addrs.get_addresses('stag')) == 3
         assert addrs.get_addresses('prod') == []
         assert addrs.get_addresses('invalid-env') == []
 
+        stag_addrs = addrs.get_addresses('stag')
+        assert len(stag_addrs) == 5
+        assert [addr.type for addr in stag_addrs] == ['subpath', 'subpath', 'subdomain', 'custom', 'unknown']
+
     def test_get_addresses_with_type(self):
         addrs = ModuleLiveAddrs(self.module_addrs_data)
-        assert addrs.get_addresses('stag', addr_type='subpath') == [Address("subpath", "http://bar.example.com/bar/")]
+        assert addrs.get_addresses('stag', addr_type='subpath') == [
+            Address("subpath", "http://bar.example.com/bar/"),
+            Address("subpath", "http://bar.example.com/bar-2/", True),
+        ]
 
 
 def test__get_legacy_url(bk_stag_env):

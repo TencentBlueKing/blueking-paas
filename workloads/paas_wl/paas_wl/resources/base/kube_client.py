@@ -33,18 +33,6 @@ class LazyDiscoverer(_LazyDiscoverer):
     Note: You cannot change the name `LazyDiscoverer`, otherwise the override will not work
     """
 
-    def search(self, **kwargs):
-        # In first call, ignore ResourceNotFoundError and set default value for results
-        try:
-            results = self.__search(self.__build_search(**kwargs), self.__resources, [])
-        except ResourceNotFoundError:
-            results = []
-        if not results:
-            self.invalidate_cache()
-            results = self.__search(self.__build_search(**kwargs), self.__resources, [])
-        self.__maybe_write_cache()
-        return results
-
     def __search(self, parts, resources, reqParams):
         part = parts[0]
         if part != '*':

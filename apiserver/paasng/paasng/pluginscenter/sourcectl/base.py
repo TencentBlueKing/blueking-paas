@@ -26,6 +26,7 @@ from cookiecutter.main import cookiecutter
 from django.conf import settings
 
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
+from paasng.pluginscenter.constants import PluginRole
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.pluginscenter.models import PluginInstance
 
@@ -58,6 +59,16 @@ class PluginRepoInitializer(Protocol):
         """初始化插件代码"""
 
 
+class PluginRepoMemberMaintainer(Protocol):
+    """插件仓库成员管理器"""
+
+    def add_member(self, username: str, role: PluginRole):
+        """添加仓库成员"""
+
+    def remove_member(self, username: str):
+        """移除仓库成员"""
+
+
 class PluginRepoAccessor(Protocol):
     """插件仓库访问器"""
 
@@ -72,6 +83,9 @@ class PluginRepoAccessor(Protocol):
 
     def build_compare_url(self, from_revision: str, to_revision: str) -> str:
         """对比版本代码差异"""
+
+    def get_submit_info(self, begin_time: str, end_time: str) -> List[dict]:
+        """查询项目的提交次数"""
 
 
 class TemplateRender:

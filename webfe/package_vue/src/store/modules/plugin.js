@@ -1,0 +1,437 @@
+/*
+* Tencent is pleased to support the open source community by making
+* 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+* Copyright (C) 2017-2022THL A29 Limited, a Tencent company.  All rights reserved.
+* Licensed under the MIT License (the "License").
+* You may not use this file except in compliance with the License.
+* You may obtain a copy of the License at http://opensource.org/licenses/MIT
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on
+* an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+* either express or implied. See the License for the
+* specific language governing permissions and limitations under the License.
+*
+* We undertake not to change the open source license (MIT license) applicable
+*
+* to the current version of the project delivered to anyone in the future.
+*/
+
+/*
+    云API相关数据
+*/
+import http from '@/api';
+import { json2Query } from '@/common/tools';
+import bartOptions from '@/json/bar_chart_default';
+import moment from 'moment';
+
+export default {
+  namespaced: true,
+  state: {
+    pluginData: {},
+    stagesData: [],
+    pluginFeatureFlags: {},
+    chartData: bartOptions
+  },
+  getters: {
+    chartData: state => state.chartData
+  },
+  mutations: {
+    updatePluginData (state, data) {
+      state.pluginData = data;
+    },
+    updateStagesData (state, data) {
+      state.stagesData = data;
+    },
+    updatePluginFeatureFlags (state, data) {
+      state.pluginFeatureFlags = data;
+    },
+    updateChartData (state, data) {
+      const chartOptions = JSON.parse(JSON.stringify(bartOptions));
+      chartOptions.series = [{
+        type: 'bar',
+        data: data.series
+      }];
+      const timestamps = data.timestamps.map(item => {
+        // 时间处理
+        item = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
+        return item.substring(5);
+      });
+      chartOptions.xAxis.data = timestamps;
+      chartOptions.tooltip = {
+        trigger: 'item',
+        showDelay: 0,
+        hideDelay: 50,
+        transitionDuration: 0,
+        borderRadius: 2,
+        borderWidth: 1,
+        padding: 5,
+        formatter: function (params, ticket, callback) {
+          return `${params.value}次<br/>${params.name}`;
+        }
+      };
+      state.chartData = chartOptions;
+    }
+  },
+  actions: {
+    /**
+         * --
+         * @param {Object} params 请求参数：无
+         */
+    getPlugins ({ commit, state }, { pageParams, statusParams, languageParams, pdIdParams }, config = {}) {
+      let url = `${BACKEND_URL}/api/bkplugins/lists/?${json2Query(pageParams)}`;
+      if (pdIdParams && pdIdParams.length) {
+        url += `&${pdIdParams}`;
+      }
+      if (statusParams && statusParams.length) {
+        url += `&${statusParams}`;
+      }
+      if (languageParams && languageParams.length) {
+        url += `&${languageParams}`;
+      }
+      return http.get(url, config);
+    },
+    /**
+         * --
+         * @param {Object} params 请求参数：appCode
+         */
+    getVersionsManagerList ({ commit, state }, { data, pageParams }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${data.pdId}/plugins/${data.pluginId}/releases/?${json2Query(pageParams)}`;
+      return http.get(url, config);
+    },
+    /**
+         * --
+         * @param {Object} params 请求参数：无
+         */
+    getPluginsTypeList ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/plugin_definitions/schemas/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * --
+         * @param {Object} params 请求参数：无
+         */
+    savePlugins ({ commit, state }, data, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${data.pd_id}/plugins/`;
+      delete data.pd_id;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取插件详情
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getPluginDetail ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 获取插件过滤字段
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    getPluginFilterParams ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/filter_params/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取创建版本发布的表单格式
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getNewVersionFormat ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/schema/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 获取版本详情
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    getVersionDetail ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 新建版本
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    createVersion ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取部署详情信息
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId, stageId
+         */
+    getPluginRelease ({ commit, state }, { pdId, pluginId, releaseId, stageId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/stages/${stageId}/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 重新部署
+         */
+    pluginDeploy ({ commit, state }, { pdId, pluginId, releaseId, stageId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/stages/${stageId}/rerun/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取基本信息
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getPluginBaseInfo ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 获取完善市场信息应用分类信息
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId, stageId
+         */
+    getCategoryList ({ commit, state }, { pdId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/plugin_definitions/${pdId}/market_schema/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 保存基本信息
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    updatePluginBaseInfo ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 保存市场信息
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId, data
+         */
+    saveMarketInfo ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/market/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取标准化日志
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getPluginLogList ({ commit, state }, { pdId, pluginId, pageParams, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/standard_output/?${json2Query(pageParams)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取市场信息
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId, data
+         */
+    getMarketInfo ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/market/`;
+      return http.get(url, config);
+    },
+
+    /**
+         * 下一步
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    nextRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/next/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 终止发布
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    cancelRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/cancel/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 重新发布
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    republishRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/reset/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 部署上一步
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    backRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/back/`;
+      return http.post(url, {}, config);
+    },
+
+    /**
+         * 获取访问日志数据
+         * @param {Object} params 请求参数：pdId, pluginId, releaseId
+         */
+    getAccessLogList ({ commit, state }, { pdId, pluginId, pageParams, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/ingress_logs/?${json2Query(pageParams)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取访问日志图表数据
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getLogChartData ({ commit, state }, { pdId, pluginId, pageParams, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_date_histogram/ingress/?${json2Query(pageParams)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取结构化日志字段设置
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getFilterData ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_fields_filters/structure/?${json2Query(params)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取结构化图表数据
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getCustomChartData ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/aggregate_date_histogram/structure/?${json2Query(params)}`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 获取结构化日志数据
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getCustomLogList ({ commit, state }, { pdId, pluginId, params, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logs/structure_logs/?${json2Query(params)}`;
+      return http.post(url, data, config);
+    },
+
+    getGitCompareUrl ({ commit, state }, { pdId, pluginId, fromRevision, toRevision }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/repo/commit-diff-external/${fromRevision}/${toRevision}/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 删除插件
+         */
+    deletePlugin ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/ `;
+      return http.delete(url, config);
+    },
+
+    /**
+         * 获取配置管理
+         * @param {Object} params 请求参数：pdId
+         */
+    getConfiguration ({ commit, state }, { pdId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/plugin_definitions/${pdId}/configuration_schema/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取环境变量配置
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getEnvVarList ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/configurations/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 添加/更新环境变量
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    editEnvVar ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/configurations/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 删除环境变量
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    deleteEnvVar ({ commit, state }, { pdId, pluginId, configId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/configurations/${configId}/`;
+      return http.delete(url, config);
+    },
+
+    /**
+         * 获取最新动态
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getPluginOperations ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/operations/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 下架插件
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    lowerShelfPlugin ({ commit, state }, { pdId, pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/archive/`;
+      return http.post(url, data, config);
+    },
+
+    /**
+         * 概览图表
+         * @param {Object} params 请求参数：pdId, pluginId, params
+         */
+    getChartData ({ commit, state }, { pdId, pluginId, params }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/code_statistics/?${json2Query(params)}`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 插件功能开关
+         * @param {Object} params 请求参数：pdId, pluginId, params
+         */
+    getPluginFeatureFlags ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/feature_flags/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取插件使用方可选插件
+         * @param {Object} params 请求参数：
+         */
+    getPluginDistributors ({ commit, state }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugin_distributors/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取插件使用方信息
+         * @param {Object} params 请求参数：
+         */
+    getProfileData ({ commit, state }, { pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/profile/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+         * 插件使用方更新
+         */
+    updatePluginUser ({ commit, state }, { pluginId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/distributors/`;
+      return http.put(url, data, config);
+    },
+
+    /**
+         * 获取已授权插件使用方
+         * @param {Object} params 请求参数：
+         */
+    getAuthorizedUse ({ commit, state }, { pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/distributors/`;
+      return http.get(url, {}, config);
+    }
+  }
+};

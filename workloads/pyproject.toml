@@ -13,7 +13,12 @@ boto3 = "1.4.3"
 click = "6.7"
 celery = "==4.4.7"
 kombu = ">=4.6.10,<4.7"
-kubernetes = "17.17.0"
+# NOTE: We are not using the newest version(25.X) because there is a bug which
+# causes the library stop working under Python 3.8.
+# Bug detail: https://github.com/kubernetes-client/python/pull/1854/commits/51badbcdbb3a905b9f79a60fc231ce69ec7e4c4a
+# 
+# TODO: Upgrade when above bug was fixed.
+kubernetes = "24.2.0"
 requests = "2.27.1"
 redis = "==3.5.3"
 python-logstash = "0.4.6"

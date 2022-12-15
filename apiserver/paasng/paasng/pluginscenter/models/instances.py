@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
@@ -38,7 +38,7 @@ class PlainStageInfo:
 @define
 class ItsmDetail:
     sn: str
-    fields: List[dict]
+    fields: List[Dict]
     ticket_url: str
 
 
@@ -135,6 +135,7 @@ class PluginRelease(AuditedModel):
     stages_shortcut: List[PlainStageInfo] = StagesShortcutField(help_text="发布阶段简易索引(保证顺序可靠)", null=True, default=list)
     status = models.CharField(default=PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
+    retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
 
     creator = BkUserField()
 

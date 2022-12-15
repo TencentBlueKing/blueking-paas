@@ -36,6 +36,13 @@ class EngineAppType(str, StructuredEnum):
     CLOUD_NATIVE = EnumField('cloud_native')
 
 
+class ClusterType(str, StructuredEnum):
+    """集群类别"""
+
+    NORMAL = EnumField('normal', label=_('普通集群'))
+    VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
+
+
 class AppEnvName(str, StructuredEnum):
     """The default environment names"""
 

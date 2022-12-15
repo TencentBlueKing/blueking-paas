@@ -22,8 +22,14 @@ import cattr
 import pytest
 from django.test.utils import override_settings
 
-from paasng.engine.controller.models import IngressConfig
-from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, get_legacy_compatible_path, get_preallocated_path
+from paasng.engine.controller.models import IngressConfig, PortMap, Domain as DomainCfg
+from paasng.publish.entrance.subpaths import (
+    ModuleEnvSubpaths,
+    get_legacy_compatible_path,
+    get_preallocated_path,
+    SubPathAllocator,
+    SubpathPriorityType,
+)
 from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
@@ -50,8 +56,8 @@ class TestModuleEnvSubpaths:
         legacy_path = get_legacy_compatible_path(env)
         assert [d.as_url().as_address() for d in subpaths] == [
             'http://sub.example.com/prod--default--some-app-o/',
-            f'http://sub.example.com{legacy_path}',
             'http://sub.example.cn/prod--default--some-app-o/',
+            f'http://sub.example.com{legacy_path}',
             f'http://sub.example.cn{legacy_path}',
             'http://sub.example.com/prod--some-app-o/',
             'http://sub.example.cn/prod--some-app-o/',
@@ -67,8 +73,8 @@ class TestModuleEnvSubpaths:
         legacy_path = get_legacy_compatible_path(env)
         assert [d.as_url().as_address() for d in subpaths] == [
             'http://sub.example.com/stag--default--some-app-o/',
-            f'http://sub.example.com{legacy_path}',
             'http://sub.example.cn/stag--default--some-app-o/',
+            f'http://sub.example.com{legacy_path}',
             f'http://sub.example.cn{legacy_path}',
             'http://sub.example.com/stag--some-app-o/',
             'http://sub.example.cn/stag--some-app-o/',
@@ -83,8 +89,8 @@ class TestModuleEnvSubpaths:
         legacy_path = get_legacy_compatible_path(env)
         assert [d.as_url().as_address() for d in subpaths] == [
             'http://sub.example.com/stag--default--some-app-o/',
-            f'http://sub.example.com{legacy_path}',
             'http://sub.example.cn/stag--default--some-app-o/',
+            f'http://sub.example.com{legacy_path}',
             f'http://sub.example.cn{legacy_path}',
         ]
 
@@ -156,3 +162,73 @@ class TestGetPreallocatedPath:
 def test_get_legacy_compatible_path(bk_stag_env):
     module = bk_stag_env.module
     assert get_legacy_compatible_path(bk_stag_env) == f'/{module.region}-{bk_stag_env.engine_app.name}/'
+
+
+class TestMakeUserPreferredOne:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        with replace_cluster_service(
+            ingress_config={
+                'sub_path_domains': [
+                    {"name": 'bar-1.example.com'},
+                    {"name": 'bar-2.example.com', 'https_enabled': True},
+                ],
+            }
+        ):
+            yield
+
+    @pytest.mark.parametrize(
+        'host,https_enabled',
+        [
+            ('bar-1.example.com', False),
+            ('bar-2.example.com', True),
+        ],
+    )
+    def test_https_enabled(self, bk_app, bk_prod_env, host, https_enabled):
+        bk_prod_env.module.user_preferred_root_domain = host
+        bk_prod_env.module.save()
+
+        p = ModuleEnvSubpaths(bk_prod_env).make_user_preferred_one()
+        assert p is not None
+        assert p.host == host
+        assert p.subpath == f'/{bk_app.code}/'
+        assert p.https_enabled is https_enabled
+        assert p.type == SubpathPriorityType.USER_PREFERRED
+
+
+class TestSubPathAllocator:
+    @pytest.fixture
+    def allocator(self) -> SubPathAllocator:
+        return SubPathAllocator('some-app', PortMap())
+
+    @pytest.fixture
+    def domain_cfg(self) -> DomainCfg:
+        return DomainCfg(name='example.com', https_enabled=True)
+
+    def test_list_available_universal(self, bk_app, allocator, domain_cfg):
+        subpaths = allocator.list_available([domain_cfg], 'm1', 'stag', is_default=False)
+        assert [p.subpath for p in subpaths] == ['/stag--m1--some-app/']
+
+    def test_list_available_default(self, bk_app, allocator, domain_cfg):
+        subpaths = allocator.list_available([domain_cfg], 'm1', 'prod', is_default=True)
+        assert [p.subpath for p in subpaths] == [
+            '/prod--m1--some-app/',
+            '/prod--some-app/',
+            '/some-app/',
+        ]
+
+    def test_get_highest_priority_universal(self, bk_app, allocator, domain_cfg):
+        p = allocator.get_highest_priority(domain_cfg, 'm1', 'stag', is_default=False)
+        assert p.subpath == '/stag--m1--some-app/'
+        assert p.type == SubpathPriorityType.STABLE
+        assert p.https_enabled is True
+
+    def test_get_highest_priority_default(self, bk_app, allocator, domain_cfg):
+        p = allocator.get_highest_priority(domain_cfg, 'm1', 'stag', is_default=True)
+        assert p.subpath == '/stag--some-app/'
+        assert p.type == SubpathPriorityType.WITHOUT_MODULE
+
+    def test_get_highest_priority_default_prod(self, allocator, domain_cfg):
+        p = allocator.get_highest_priority(domain_cfg, 'm1', 'prod', is_default=True)
+        assert p.subpath == '/some-app/'
+        assert p.type == SubpathPriorityType.ONLY_CODE

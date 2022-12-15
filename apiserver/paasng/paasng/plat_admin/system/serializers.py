@@ -113,3 +113,7 @@ class ModuleEnvBasicSLZ(serializers.ModelSerializer):
     class Meta:
         model = ModuleEnvironment
         fields = ['id', 'environment', 'module_id', 'engine_app_id', 'is_offlined']
+
+
+class AddonCredentialsSLZ(serializers.Serializer):
+    credentials = serializers.DictField(child=serializers.CharField())

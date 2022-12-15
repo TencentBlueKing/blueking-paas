@@ -44,3 +44,13 @@ class DomainsStructureType(int, Enum):
 
     # A deprecated structure type, some plugins may broken when processing NON_STANDARD structure
     NON_STANDARD = -1
+
+
+class AddressType(str, StructuredEnum):
+    """Address types, different value means different source. For example, "custom"
+    means the address was provided by a custom domain created by user.
+    """
+
+    SUBDOMAIN = 'subdomain'
+    SUBPATH = 'subpath'
+    CUSTOM = 'custom'

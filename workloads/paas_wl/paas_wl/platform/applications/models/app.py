@@ -67,7 +67,7 @@ class App(UuidAuditedModel):
 
     @property
     def namespace(self):
-        # Both default and cloud-native are using the same algo for namespace
+        # Both default and cloud-native are using this method to get namespace
         # at this moment.
         return self.scheduler_safe_name
 
@@ -83,6 +83,12 @@ class App(UuidAuditedModel):
 
     def __str__(self) -> str:
         return f'<{self.name}, region: {self.region}, type: {self.type}>'
+
+
+def get_ns(env: ModuleEnv) -> str:
+    """Get namespace by env object, a shortcut function"""
+    engine_app = EngineApp.objects.get_by_env(env)
+    return engine_app.namespace
 
 
 # An alias name to distinguish from Platform's App(Application/BluekingApplication) model

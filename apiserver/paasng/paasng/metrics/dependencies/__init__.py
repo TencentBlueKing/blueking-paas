@@ -16,5 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .dependencies import *  # noqa
-from .metrics import *  # noqa
+from importlib import import_module
+from pathlib import Path
+from pkgutil import iter_modules
+
+# 导入当前模块下的所有子模块
+# iterate through the modules in the current package
+package_dir = Path(__file__).resolve().parent
+for (_, module_name, _) in iter_modules([package_dir]):  # type: ignore
+    # import the module and iterate through its attributes
+    module = import_module(f"{__name__}.{module_name}")

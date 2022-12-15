@@ -25,7 +25,7 @@ from typing import Optional
 import arrow
 
 from paasng.engine.deploy.engine_svc import EngineDeployClient
-from paasng.metrics.collector import cb_gauge_collector
+from paasng.metrics.collector import cb_metric_collector
 from paasng.platform.core.storages.cache import region as cache_region
 
 from .constants import JobStatus
@@ -80,11 +80,20 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
     return last_line_created < arrow.get(since)
 
 
+class FrozenDeployMentsMetric:
+    name = 'frozen_deployments'
+    metric_type = 'gauge'
+    description = 'count of frozen deployments'
+
+    @classmethod
+    def calc_value(cls) -> int:
+        # Cached version of `count_frozen_deployments` function
+        cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace='v1', expiration_time=60)(
+            count_frozen_deployments
+        )
+        return cached_count_frozen_deployments()
+
+
 def register_metrics():
     """Register metrics for engine app"""
-    # Cached version of `count_frozen_deployments` function
-    cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace='v1', expiration_time=60)(
-        count_frozen_deployments
-    )
-
-    cb_gauge_collector.add('frozen_deployments', "count of frozen deployments", cached_count_frozen_deployments)
+    cb_metric_collector.add(FrozenDeployMentsMetric)  # type: ignore

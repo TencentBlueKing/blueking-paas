@@ -49,6 +49,7 @@ from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
 from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
+from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
@@ -685,3 +686,43 @@ def check_console_enabled():
 def mark_skip_if_console_not_configured():
     """Return a pytest mark to skip tests when console database was not configured"""
     return pytest.mark.skipif(not check_console_enabled(), reason='Console db engine is not initialized')
+
+
+@pytest.fixture
+def with_empty_live_addrs():
+    """Always return empty addresses by patching `get_addresses` function"""
+    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
+        mocker.return_value = ModuleLiveAddrs(
+            [
+                {"env": "stag", "is_running": False, "addresses": []},
+                {"env": "prod", "is_running": False, "addresses": []},
+            ]
+        )
+        yield
+
+
+@pytest.fixture
+def with_live_addrs():
+    """Always return valid addresses by patching `get_live_addresses` function"""
+    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
+        mocker.return_value = ModuleLiveAddrs(
+            [
+                {
+                    "env": "stag",
+                    "is_running": True,
+                    "addresses": [
+                        {"type": "subpath", "url": "http://example.com/foo-stag/"},
+                        {"type": "subdomain", "url": "http://foo-stag.example.com"},
+                    ],
+                },
+                {
+                    "env": "prod",
+                    "is_running": True,
+                    "addresses": [
+                        {"type": "subpath", "url": "http://example.com/foo-prod/"},
+                        {"type": "subdomain", "url": "http://foo-prod.example.com"},
+                    ],
+                },
+            ]
+        )
+        yield

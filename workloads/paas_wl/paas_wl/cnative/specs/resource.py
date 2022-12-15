@@ -107,7 +107,7 @@ def deploy_networking(env: ModuleEnv) -> None:
         crd.DomainGroupMapping(client).create_or_update(
             mapping.metadata.name,
             namespace=engine_app.namespace,
-            body=mapping.dict(),
+            body=mapping.to_deployable(),
             update_method='patch',
             content_type='application/merge-patch+json',
         )

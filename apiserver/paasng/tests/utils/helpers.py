@@ -69,9 +69,6 @@ def initialize_application(application, *args, **kwargs):
     )
 
 
-create_mocked_engine_apps = initialize_application
-
-
 def initialize_module(module, repo_type=None, repo_url='', additional_modules=[]):
     """Mocked function for initializing new module."""
 

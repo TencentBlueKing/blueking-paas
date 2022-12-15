@@ -197,6 +197,11 @@ class ApplicationViewSet(viewsets.ViewSet):
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
+
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         results = [
             {'application': application, 'product': application.product if hasattr(application, "product") else None}
             for application in applications

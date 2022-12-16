@@ -86,6 +86,13 @@ class IngressConfig:
     frontend_ingress_ip: str = ''
     port_map: PortMap = Factory(PortMap)
 
+    def find_app_root_domain(self, hostname: str) -> Optional[Domain]:
+        """Find the possible app_root_domain by given hostname"""
+        for d in self.app_root_domains:
+            if hostname.endswith(d.name):
+                return d
+        return None
+
 
 class ClusterManager(models.Manager):
     @transaction.atomic()

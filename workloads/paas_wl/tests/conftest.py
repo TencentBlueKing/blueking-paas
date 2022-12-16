@@ -20,9 +20,9 @@ import copy
 import logging
 import tempfile
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, ContextManager, Dict, List, Optional
 from unittest import mock
 
 import pytest
@@ -39,7 +39,7 @@ from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import Build, EngineApp
-from paas_wl.platform.applications.struct_models import Application, Module, ModuleEnv
+from paas_wl.platform.applications.struct_models import Application, Module, ModuleEnv, StructuredApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.resources.utils.basic import get_client_by_app
@@ -231,10 +231,7 @@ def create_default_cluster():
         ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
         cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
         key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
-        feature_flags={
-            ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
-            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
-        },
+        feature_flags={ff: True for ff in ClusterFeatureFlag},
     )
     APIServer.objects.get_or_create(
         host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],
@@ -387,9 +384,23 @@ def bk_module(bk_app):
 
 
 @pytest.fixture
-def bk_stag_env(bk_app, bk_module):
+def bk_stag_env(request, bk_app, bk_module, structured_app_data):
     """A random ModuleEnv object"""
-    return create_env(bk_app, bk_module, 'stag')
+    env = create_env(request, bk_app, bk_module, 'stag')
+    ctx: ContextManager = nullcontext()
+    if request.keywords.get('mock_get_structured_app'):
+        ctx = mock.patch(
+            "paas_wl.platform.applications.struct_models.get_structured_app",
+            return_value=StructuredApp.from_json_data(
+                make_structured_app_data(
+                    bk_app,
+                    default_module_id=str(bk_module.id),
+                    engine_app_ids=[str(env.engine_app_id), str(uuid.uuid4())],
+                )
+            ),
+        )
+    with ctx:
+        yield env
 
 
 @pytest.fixture
@@ -398,9 +409,23 @@ def bk_stag_engine_app(bk_stag_env) -> EngineApp:
 
 
 @pytest.fixture
-def bk_prod_env(bk_app, bk_module):
+def bk_prod_env(request, bk_app, bk_module):
     """A random ModuleEnv object"""
-    return create_env(bk_app, bk_module, 'prod')
+    env = create_env(request, bk_app, bk_module, 'prod')
+    ctx: ContextManager = nullcontext()
+    if request.keywords.get('mock_get_structured_app'):
+        ctx = mock.patch(
+            "paas_wl.platform.applications.struct_models.get_structured_app",
+            return_value=StructuredApp.from_json_data(
+                make_structured_app_data(
+                    bk_app,
+                    default_module_id=str(bk_module.id),
+                    engine_app_ids=[str(uuid.uuid4()), str(env.engine_app_id)],
+                )
+            ),
+        )
+    with ctx:
+        yield env
 
 
 @pytest.fixture
@@ -408,10 +433,15 @@ def bk_prod_engine_app(bk_prod_env) -> EngineApp:
     return EngineApp.objects.get_by_env(bk_prod_env)
 
 
-def create_env(bk_app, bk_module, environment: str) -> ModuleEnv:
+def create_env(request, bk_app, bk_module, environment: str) -> ModuleEnv:
     # Use fixed ID
     id_map = {'stag': DEFAULT_STAG_ENV_ID, 'prod': DEFAULT_PROD_ENV_ID}
-    engine_app = create_app()
+    engine_app = None
+    # compatible with app fixtures
+    if "app" in request.fixturenames:
+        engine_app = request.getfixturevalue("app")
+    if not engine_app:
+        engine_app = EngineApp.objects.first() or create_app()
     return ModuleEnv(
         id=id_map[environment],
         application=bk_app,

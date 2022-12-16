@@ -530,6 +530,7 @@ class EnvDeployedStatusViewSet(SysViewSet):
         列表（addresses）等。
 
         - “云原生”应用和普通应用都会返回有效的访问地址列表
+        - 访问地址排序：基于非保留系统域名，并且更短的排在前面
         """
         app = get_structured_app(code=code)
         results = []

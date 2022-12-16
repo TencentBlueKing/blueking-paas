@@ -37,10 +37,7 @@ def example_cluster_config():
         'ca_data': '',
         'cert_data': '',
         'key_data': '',
-        'feature_flags': {
-            ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
-            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
-        },
+        'feature_flags': {ff: True for ff in ClusterFeatureFlag},
     }
 
 

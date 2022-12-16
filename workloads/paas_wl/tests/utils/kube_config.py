@@ -54,10 +54,7 @@ def init_kube_config_from_yaml(file: str = '', clear: bool = False):
                     "frontend_ingress_ip": "0.0.0.0",
                     "port_map": {"http": "80", "https": "443"},
                 },
-                feature_flags={
-                    ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
-                    ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
-                },
+                feature_flags={ff: True for ff in ClusterFeatureFlag},
             )
             api_server, _ = APIServer.objects.get_or_create(
                 host=config.host,

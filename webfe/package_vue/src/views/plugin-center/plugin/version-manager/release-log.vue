@@ -67,6 +67,16 @@
         // height: 720px;
         background: #313238;
         overflow-y: auto;
+        // 滚动条
+        &::-webkit-scrollbar {
+            width: 4px;
+            background-color: lighten(transparent, 80%);
+        }
+        &::-webkit-scrollbar-thumb {
+            height: 5px;
+            border-radius: 2px;
+            background-color: #63656e;
+        }
         .log{
             font-size: 12px;
             color: #FFFFFF;

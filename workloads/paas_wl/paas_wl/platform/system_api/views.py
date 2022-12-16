@@ -28,7 +28,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from paas_wl.cluster.constants import ClusterType
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
 from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
@@ -298,12 +298,7 @@ class ConfigViewSet(SysAppRelatedViewSet):
         try:
             latest_config: models.Config = self.model.objects.filter(app=app).latest()
             latest_config.cluster = cluster.name
-            # TODO: 集群特性不应该依赖集群类型做间接描述, 应该有更完备的方案, 例如给集群加 annotations
-            if cluster.type == ClusterType.VIRTUAL:
-                # 虚拟集群(共享集群)不支持挂载 HostPath 类型的 Volume
-                latest_config.mount_log_to_host = False
-            else:
-                latest_config.mount_log_to_host = True
+            latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
             latest_config.save()
         except Exception:
             logger.exception("bind app to cluster %s failed", cluster_name)

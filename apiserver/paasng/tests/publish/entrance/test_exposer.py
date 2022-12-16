@@ -29,6 +29,7 @@ from paasng.publish.entrance.exposer import (
     ModuleLiveAddrs,
     _default_preallocated_urls,
     _get_legacy_url,
+    env_is_deployed,
     get_addresses,
     get_exposed_url,
     get_market_address,
@@ -152,6 +153,12 @@ def setup_addrs(bk_app):
             ]
         )
         yield
+
+
+def test_env_is_deployed(bk_stag_env, bk_prod_env, setup_addrs):
+    # See setup_addrs for details
+    assert env_is_deployed(bk_stag_env) is True
+    assert env_is_deployed(bk_prod_env) is False
 
 
 class TestGetAddresses:

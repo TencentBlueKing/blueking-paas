@@ -50,6 +50,11 @@ class EnvExposedURL(NamedTuple):
         return self.url.as_address()
 
 
+def env_is_deployed(env: ModuleEnvironment) -> bool:
+    """Return the deployed status(aka "is_running") of an environment object"""
+    return get_deployed_status(env.module).get(env.environment, False)
+
+
 def get_deployed_status(module: Module) -> Dict[str, bool]:
     """Return the deployed status(aka "is_running") of module's each environments
 
@@ -108,7 +113,7 @@ def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:
 
     # Handle user preferred root domain, only available for built-in subdomains
     # and subpaths.
-    if addrs[0].type in ['subpath', 'subdomain']:
+    if addr.type in ['subpath', 'subdomain']:
         if preferred_root := module_env.module.user_preferred_root_domain:
             # Find the first address ends with preferred root domain
             preferred_addr = next((a for a in addrs if a.hostname_endswith(preferred_root)), None)

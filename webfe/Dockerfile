@@ -1,7 +1,8 @@
 ######### Npm part #########
 FROM node:12.16.1-buster AS StaticBuilding
 
-ARG APP_VERSION
+ARG APP_VERSION=ce
+ARG NODE_ENV=production
 ENV NPM_VERSION 5.6.0
 
 # install requirements & build

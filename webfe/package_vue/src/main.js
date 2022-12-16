@@ -30,8 +30,8 @@ import {
   bkNavigation, bkNavigationMenu, bkNavigationMenuItem, bkNotify, bkOption, bkOptionGroup, bkPagination,
   bkPopover, bkProcess, bkProgress, bkRadio, bkRadioGroup, bkRoundProgress, bkRow, bkSearchSelect, bkSelect, bkOverflowTips,
   bkSideslider, bkSlider, bkSteps, bkSwitcher, bkTab, bkTabPanel, bkTable, bkTableColumn, bkTagInput, bkTimePicker,
-  bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside, bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard
-} from 'bk-magic-vue';
+  bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside, bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard,
+  bkTag} from 'bk-magic-vue';
 import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
@@ -133,6 +133,7 @@ Vue.use(bkLoading);
 // Vue.use(bkOverflowTips)
 Vue.use(bkAlert);
 Vue.use(bkCard);
+Vue.use(bkTag);
 
 Vue.use(Directives);
 Vue.component('paas-content-loader', PaasContentLoader);

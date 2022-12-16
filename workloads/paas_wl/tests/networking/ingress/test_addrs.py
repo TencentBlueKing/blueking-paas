@@ -35,6 +35,8 @@ class TestEnvAddresses:
         # Create all types of domains
         # source type: subdomain
         AppDomain.objects.create(app=engine_app, host='foo.example.com', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=engine_app, host='foo-more.example.org', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=engine_app, host='foo.example.org', source=AppDomainSource.AUTO_GEN)
         # source type: subpath
         AppSubpath.objects.create(app=engine_app, subpath='/foo/', source=AppSubpathSource.DEFAULT)
         # source type: custom
@@ -49,8 +51,11 @@ class TestEnvAddresses:
     def test_integrated(self, bk_user, bk_stag_env, patch_ingress_config):
         """Integrated test with multiple subpath domains and customized ports"""
         patch_ingress_config(
+            app_root_domains=[
+                {"name": "foo.example.com", 'reserved': True},
+            ],
             sub_path_domains=[
-                {"name": "p1.example.com", 'https_enabled': True},
+                {"name": "p1.example.com", 'https_enabled': True, 'reserved': True},
                 {"name": "p2.example.com", 'https_enabled': False},
             ],
             port_map={'http': '8080', 'https': 443},
@@ -60,8 +65,10 @@ class TestEnvAddresses:
         create_release(bk_stag_env, bk_user, failed=False)
         addrs = EnvAddresses(bk_stag_env).get()
         assert addrs == [
-            Address(AddressType.SUBDOMAIN, 'http://foo.example.com:8080/'),
-            Address(AddressType.SUBPATH, 'https://p1.example.com/foo/'),
-            Address(AddressType.SUBPATH, 'http://p2.example.com:8080/foo/'),
-            Address(AddressType.CUSTOM, 'http://foo-custom.example.com:8080/'),
+            Address(AddressType.SUBDOMAIN, 'http://foo.example.org:8080/', False),
+            Address(AddressType.SUBDOMAIN, 'http://foo-more.example.org:8080/', False),
+            Address(AddressType.SUBDOMAIN, 'http://foo.example.com:8080/', True),
+            Address(AddressType.SUBPATH, 'http://p2.example.com:8080/foo/', False),
+            Address(AddressType.SUBPATH, 'https://p1.example.com/foo/', True),
+            Address(AddressType.CUSTOM, 'http://foo-custom.example.com:8080/', False),
         ]

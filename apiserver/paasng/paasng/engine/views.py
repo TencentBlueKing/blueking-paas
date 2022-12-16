@@ -100,12 +100,7 @@ from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.helpers import get_module_cluster
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import (
-    get_default_access_entrance,
-    get_exposed_url,
-    get_exposed_url_live,
-    get_live_addresses,
-)
+from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url, get_preallocated_url
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
@@ -151,7 +146,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = self.serializer_class(request.query_params)
 
         offline_data = None
-        default_access_entrance = get_default_access_entrance(module_env, include_no_running=True)
+        default_access_entrance = get_preallocated_url(module_env)
 
         if module_env.is_offlined:
             try:
@@ -161,16 +156,10 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             offline_data = OfflineOperationSLZ(offline_operation).data
 
         # Check if current env is running
-        addrs = get_live_addresses(module_env.module)
-        if not addrs.get_is_running(module_env.environment):
+        if not env_is_deployed(module_env):
             raise error_codes.APP_NOT_RELEASED
 
-        # TODO: Use get_exposed_url_live universally after some refactor
         exposed_link = get_exposed_url(module_env)
-        if not exposed_link:
-            # Get link for cloud-native applications
-            exposed_link = get_exposed_url_live(module_env)
-
         data = {
             "is_offlined": module_env.is_offlined,
             'deployment': self.get_deployment_data(module_env),

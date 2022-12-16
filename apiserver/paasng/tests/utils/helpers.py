@@ -328,7 +328,7 @@ def configure_regions(regions: List[str]):
             value['data'][region] = _tmpl_value
         region_aware_changes[name] = value
 
-    with override_settings(REGION_CONFIGS=new_region_configs, **region_aware_changes):
+    with override_settings(REGION_CONFIGS=new_region_configs, DEFAULT_REGION=regions[0], **region_aware_changes):
         load_regions_from_settings()
         yield
 

@@ -20,25 +20,21 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from itertools import groupby
 from typing import Dict, List, NamedTuple, Optional
 
+from attrs import define
 from django.conf import settings
-from django.db.models import Count
 
-from paasng.engine.constants import JobStatus
 from paasng.engine.controller.cluster import Cluster, get_engine_app_cluster, get_region_cluster_helper
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.env_vars import env_vars_providers
-from paasng.engine.models.deployment import Deployment
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
 from paasng.platform.region.models import get_region
-from paasng.publish.entrance.domains import Domain, ModuleEnvDomains, get_preallocated_domain
-from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, Subpath, get_preallocated_path
+from paasng.publish.entrance.domains import ModuleEnvDomains, get_preallocated_domain, get_preallocated_domains_by_env
+from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, get_preallocated_path, get_preallocated_paths_by_env
 from paasng.publish.entrance.utils import URL
 from paasng.publish.market.models import MarketConfig
 
@@ -54,173 +50,9 @@ class EnvExposedURL(NamedTuple):
         return self.url.as_address()
 
 
-class BaseEnvExposedURLProvider:
-    """Provides accessable URL address for environment"""
-
-    provider_type: str = ''
-
-    def __init__(self, module_env: ModuleEnvironment):
-        self.env = module_env
-        self.app = self.env.application
-
-    def provide(self, include_no_running: bool = False) -> Optional[EnvExposedURL]:
-        if not include_no_running and not self.env.is_running():
-            return None
-
-        url = self._provide_url()
-        if url:
-            return EnvExposedURL(url=url, provider_type=self.provider_type)
-        return None
-
-    def provide_all(self, include_no_running: bool = False) -> Optional[List[EnvExposedURL]]:
-        if not include_no_running and not self.env.is_running():
-            return None
-
-        urls = self._provide_urls()
-        if urls:
-            return [EnvExposedURL(url=url, provider_type=self.provider_type) for url in urls]
-        return None
-
-    def _provide_url(self) -> Optional[URL]:
-        """provide an accessable url, if current env does not match the pre-conditions,
-        return None instead
-        """
-        raise NotImplementedError
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        """provide all accessable urls, if current env does not match the pre-conditions,
-        return None instead
-        """
-        raise NotImplementedError
-
-    def format_region_url_tmpl(self, tmpl) -> str:
-        """Render an url template in region config"""
-        context = {
-            'code': self.app.code,
-            'region': self.app.region,
-            'name': self.env.engine_app.name,
-        }
-        return tmpl.format(**context)
-
-
-class MarketURLProvider(BaseEnvExposedURLProvider):
-    """URL Provider by market"""
-
-    provider_type = 'market'
-
-    def _provide_url(self) -> Optional[URL]:
-        # Only works for "production" env
-        if self.env.environment != AppEnvironment.PRODUCTION.value:
-            return None
-
-        # Only works for apps whose market config is enabled
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(self.app)
-        if not (market_config.enabled and market_config.source_module == self.env.module):
-            return None
-
-        region = get_region(self.app.region)
-        return URL.from_address(self.format_region_url_tmpl(region.basic_info.link_production_app))
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        address = self._provide_url()
-        if not address:
-            return None
-        return [address]
-
-
-class SubDomainURLProvider(BaseEnvExposedURLProvider):
-    """The default URL for application environments"""
-
-    provider_type = 'default_subdomain'
-
-    def _provide_url(self) -> Optional[URL]:
-        if self.env.module.exposed_url_type != ExposedURLType.SUBDOMAIN:
-            return None
-
-        helper = ModuleEnvDomains(self.env)
-        domains = helper.all()
-        user_preferred = helper.make_user_preferred_one()
-
-        if not domains:
-            return None
-
-        if user_preferred:
-            return user_preferred.as_url()
-
-        domains = sorted(domains, key=Domain.sort_by_type, reverse=True)
-        return domains[0].as_url()
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        if self.env.module.exposed_url_type != ExposedURLType.SUBDOMAIN:
-            return None
-
-        domains = ModuleEnvDomains(self.env).all()
-        if not domains:
-            return None
-
-        domains = sorted(domains, key=Domain.sort_by_type, reverse=True)
-        _, group = next(groupby(domains, key=Domain.sort_by_type))
-        return [domain.as_url() for domain in group]
-
-
-class SubPathURLProvider(BaseEnvExposedURLProvider):
-    """Provides sub path URL for module environments.
-
-    To make subpath address available:
-
-    - 'sub_path_domains' must be configured in region's `ingress_config` config object
-    - the module's exposed_url_type must be 'subpath' (by default, `expose_type` was set to region's default value
-      when module was created)
-    """
-
-    provider_type = 'subpath'
-
-    def _provide_url(self) -> Optional[URL]:
-        if self.env.module.exposed_url_type != ExposedURLType.SUBPATH:
-            return None
-
-        helper = ModuleEnvSubpaths(self.env)
-        subpaths = helper.all()
-        user_preferred = helper.make_user_preferred_one()
-
-        if not subpaths:
-            return None
-
-        if user_preferred:
-            return user_preferred.as_url()
-
-        subpaths = sorted(subpaths, key=Subpath.sort_by_type, reverse=True)
-        return subpaths[0].as_url()
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        if self.env.module.exposed_url_type != ExposedURLType.SUBPATH:
-            return None
-
-        subpaths = ModuleEnvSubpaths(self.env).all()
-        if not subpaths:
-            return None
-
-        # Pick addresses which have the biggest "type" by value, see
-        # `SubpathPriorityType` for more details.
-        subpaths = sorted(subpaths, key=Subpath.sort_by_type, reverse=True)
-        _, group = next(groupby(subpaths, key=Subpath.sort_by_type))
-        return [subpath.as_url() for subpath in group]
-
-
-class LegacyEngineURLProvider(BaseEnvExposedURLProvider):
-    """Deprecated: legacy URL address"""
-
-    provider_type = 'legacy'
-
-    def _provide_url(self) -> Optional[URL]:
-        region = get_region(self.app.region)
-        return URL.from_address(self.format_region_url_tmpl(region.basic_info.link_engine_app))
-
-    def _provide_urls(self) -> Optional[List[URL]]:
-        address = self._provide_url()
-        if not address:
-            return None
-        return [address]
+def env_is_deployed(env: ModuleEnvironment) -> bool:
+    """Return the deployed status(aka "is_running") of an environment object"""
+    return get_deployed_status(env.module).get(env.environment, False)
 
 
 def get_deployed_status(module: Module) -> Dict[str, bool]:
@@ -228,28 +60,26 @@ def get_deployed_status(module: Module) -> Dict[str, bool]:
 
     :return: dict like {'stag': True, 'prod': False}
     """
-    envs = module.envs.all()
-    ret = {}
-    # Exclude offlined envs
-    for env in envs:
-        if env.is_offlined:
-            ret[env.environment] = False
+    addrs = get_live_addresses(module)
+    status = {
+        'stag': addrs.get_is_running('stag'),
+        'prod': addrs.get_is_running('prod'),
+    }
 
-    # Query succeeded deployments count for all environments
-    envs = [env for env in envs if env.environment not in ret]
-    counter_by_env = dict(
-        Deployment.objects.filter(app_environment__in=envs, status=JobStatus.SUCCESSFUL.value)
-        .values_list('app_environment')
-        .annotate(total=Count('app_environment'))
-        .order_by('total')
-    )
-    for env in envs:
-        ret[env.environment] = counter_by_env.get(env.pk, 0) > 0
-    return ret
+    # Exclude archived environments
+    # TODO: Remove this logic because archived applications's "is_running" should
+    # be false naturally after workloads was updated.
+    for env in module.envs.all():
+        if env.is_offlined:
+            status[env.environment] = False
+    return status
 
 
 def get_module_exposed_links(module: Module) -> Dict[str, Dict]:
-    """Get exposed links of module's all environments"""
+    """Get exposed links of module's all environments
+
+    - Support both cloud-native and default applications
+    """
     links = {}
     deployed_statuses = get_deployed_status(module)
     for env in module.get_envs():
@@ -264,121 +94,201 @@ def get_module_exposed_links(module: Module) -> Dict[str, Dict]:
 
 
 def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:
-    """Get exposed url of given module environment
+    """Get exposed url object of given environment, if the environment is not
+    running, return None instead.
 
-    :returns: None if no url can be found
+    - Custom domain is not included
+    - Both cloud-native and default application are supported
+
+    :returns: Return the shortest url by default. If a preferred root domain was
+        set and a match can be found using that domain, the matched address will
+        be returned in priority.
     """
-    providers = [
-        # Market URL has the highest priority
-        MarketURLProvider(module_env),
-        SubPathURLProvider(module_env),
-        SubDomainURLProvider(module_env),
-        LegacyEngineURLProvider(module_env),
-    ]
-    for provider in providers:
-        url = provider.provide()
-        if url:
-            return url
-    return None
+    addrs = get_addresses(module_env)
+    if not addrs:
+        return None
 
+    # Use the first address because the results is sorted already
+    addr = addrs[0]
 
-def get_default_access_entrance(
-    module_env: ModuleEnvironment, include_no_running: bool = False
-) -> Optional[EnvExposedURL]:
-    """返回模块在对应环境下的默认访问入口(由平台提供的)
-
-    :returns: None if no url can be found
-    """
-    providers = [
-        SubPathURLProvider(module_env),
-        SubDomainURLProvider(module_env),
-        LegacyEngineURLProvider(module_env),
-    ]
-    for provider in providers:
-        url = provider.provide(include_no_running)
-        if url:
-            return url
-    return None
-
-
-def get_default_access_entrances(
-    module_env: ModuleEnvironment, include_no_running: bool = False
-) -> Optional[List[EnvExposedURL]]:
-    """返回模块在对应环境下的所有可选的默认访问入口(由平台提供的)
-
-    :returns: None if no url can be found
-    """
-    providers = [
-        SubPathURLProvider(module_env),
-        SubDomainURLProvider(module_env),
-        LegacyEngineURLProvider(module_env),
-    ]
-    for provider in providers:
-        urls = provider.provide_all(include_no_running)
-        if urls:
-            return urls
-    return None
+    # Handle user preferred root domain, only available for built-in subdomains
+    # and subpaths.
+    if addr.type in ['subpath', 'subdomain']:
+        if preferred_root := module_env.module.user_preferred_root_domain:
+            # Find the first address ends with preferred root domain
+            preferred_addr = next((a for a in addrs if a.hostname_endswith(preferred_root)), None)
+            if not preferred_addr:
+                logger.warning('No addresses found matching preferred root domain: %s', preferred_root)
+            else:
+                addr = preferred_addr
+    return addr.to_exposed_url()
 
 
 def get_market_address(application: Application) -> Optional[str]:
-    """获取市场访问地址，兼容精简版应用"""
+    """获取市场访问地址，兼容精简版应用。普通应用如未打开市场开关，返回 None"""
+    region = get_region(application.region)
+    addr = region.basic_info.link_production_app.format(code=application.code, region=application.region)
     if not application.engine_enabled:
-        region = get_region(application.region)
-        context = {
-            'code': application.code,
-            'region': application.region,
-        }
-        return region.basic_info.link_production_app.format(**context)
+        return addr
 
-    exposed_url = MarketURLProvider(application.get_default_module().get_envs("prod")).provide()
-    if exposed_url:
-        return exposed_url.address
+    # Only works for apps whose market config is enabled
+    market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+    if not market_config.enabled:
+        return None
+    return addr
+
+
+def _get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
+    """Deprecated: Get legacy URL address which is a hard-coded value generated
+    y region configuration.
+
+    :return: None if not configured.
+    """
+    app = env.application
+    if tmpl := get_region(app.region).basic_info.link_engine_app:
+        return tmpl.format(code=app.code, region=app.region, name=env.engine_app.name)
     return None
 
 
-def update_exposed_url_type_to_subdomain(module: Module):
-    """Update a module's exposed_url_type to subdomain"""
-    # Return directly if exposed_url_type is already subdomain
-    if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-        return
+def get_addresses(env: ModuleEnvironment) -> 'List[Address]':
+    """Get exposed addresses of an environment object, only built-in addresses
+    is returned. This should be the main function for getting addresses of env.
 
-    module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
-    module.save(update_fields=['exposed_url_type'])
-
-    refresh_module_domains(module)
-
-    # Also update app's address's in market if needed
-    from paasng.publish.sync_market.handlers import sync_external_url_to_market
-
-    sync_external_url_to_market(application=module.application)
-
-
-def refresh_module_domains(module: Module):
-    """Refresh a module's domains, you should call the function when module's exposed_url_type
-    has been changed or application's default module was updated.
+    :returns: address items.
     """
-    for env in module.envs.all():
-        if not env.is_running():
-            continue
+    live_addrs = get_live_addresses(env.module)
+    if not live_addrs.get_is_running(env.environment):
+        return []
 
-        logger.info(f"updating {env.engine_app.name}'s exposed_url_type to subdomain...")
-        engine_client = EngineDeployClient(env.engine_app)
-        domains = [d.as_dict() for d in ModuleEnvDomains(env).all()]
-        engine_client.update_domains(domains)
+    # Get addresses by expose type
+    module = env.module
+    addrs: List[Address] = []
+    if module.exposed_url_type == ExposedURLType.SUBPATH:
+        addrs = live_addrs.get_addresses(env.environment, addr_type='subpath')
+    elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
+        addrs = live_addrs.get_addresses(env.environment, addr_type='subdomain')
+    elif module.exposed_url_type is None:
+        url = _get_legacy_url(env)
+        addrs = [Address(type='legacy', url=url)] if url else []
+    return addrs
 
 
-def refresh_module_subpaths(module: Module) -> None:
-    """Refresh a module's subpaths, you should call the function when module's exposed_url_type
-    has been changed or application's default module was updated.
+# TODO: Add `def get_addresses_with_custom` function which include custom domains.
+
+
+@define
+class Address:
+    """An simple struct stored application's URL address"""
+
+    type: str
+    url: str
+    is_sys_reserved: bool = False
+
+    def hostname_endswith(self, s: str) -> bool:
+        """Check if current hostname ends with given string"""
+        obj = URL.from_address(self.url)
+        return obj.hostname.endswith(s)
+
+    def to_exposed_url(self) -> EnvExposedURL:
+        """To exposed URL object"""
+        # INFO: Use self.type as "provider type" directly, this might need to be
+        # changed in the future.
+        return EnvExposedURL(url=URL.from_address(self.url), provider_type=self.type)
+
+
+class ModuleLiveAddrs:
+    """Stored a module's addresses and running status"""
+
+    default_addr_type_ordering = ['subpath', 'subdomain', 'custom']
+
+    def __init__(self, data: List[Dict]):
+        self._data = data
+        self._map_by_env = {}
+        for item in data:
+            self._map_by_env[item['env']] = item
+
+    def get_is_running(self, env_name: str) -> bool:
+        """Given running status of environment"""
+        d = self._map_by_env.get(env_name, self._empty_item)
+        return d['is_running']
+
+    def get_addresses(self, env_name: str, addr_type: Optional[str] = None) -> List[Address]:
+        """Return addresses of environment, the result was sorted, shorter and
+        not reserved addresses are in front.
+
+        :param addr_type: If given, include items whose type equal to this value
+        """
+        d = self._map_by_env.get(env_name, self._empty_item)
+        addrs = d['addresses']
+        if addr_type:
+            addrs = [a for a in d['addresses'] if a['type'] == addr_type]
+
+        items = [Address(**a) for a in addrs]
+
+        # Make a map for sorting
+        addr_type_ordering_map = {}
+        for i, val in enumerate(self.default_addr_type_ordering):
+            addr_type_ordering_map[val] = i
+
+        # Sort the addresses by below factors:
+        # - type in the order of `default_addr_type_ordering`
+        # - not reserved first
+        # - shorter URL first
+        items.sort(
+            key=lambda addr: (
+                (addr_type_ordering_map.get(addr.type, float('inf')), addr_type),
+                addr.is_sys_reserved,
+                len(addr.url),
+            )
+        )
+        return items
+
+    @property
+    def _empty_item(self) -> Dict:
+        """An empty item for handling default cases"""
+        return {'is_running': False, 'addresses': []}
+
+
+def get_live_addresses(module: Module) -> ModuleLiveAddrs:
+    """Get addresses and is_running status for module's environments.
+
+    This is a low-level function, don't use it directly, use `get_addresses`
+    instead.
     """
-    for env in module.envs.all():
-        if not env.is_running():
-            continue
+    data = make_internal_client().list_env_addresses(module.application.code, module.name)
+    return ModuleLiveAddrs(data)
 
-        logger.info(f"refreshing {env.engine_app.name}'s subpaths...")
-        engine_client = EngineDeployClient(env.engine_app)
-        subpaths = [d.as_dict() for d in ModuleEnvSubpaths(env).all()]
-        engine_client.update_subpaths(subpaths)
+
+# pre-allocated addresses related functions start
+
+
+def get_preallocated_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:
+    """获取某环境的默认访问入口地址（不含独立域名)。
+
+    - 地址为预计算生成，无需真实部署，不保证能访问
+    """
+    if items := get_preallocated_urls(module_env):
+        return items[0]
+    return None
+
+
+def get_preallocated_urls(module_env: ModuleEnvironment) -> List[EnvExposedURL]:
+    """获取某环境的所有可选访问入口地址（不含独立域名)。
+
+    - 当集群配置了多个根域时，返回多个结果
+    - 地址为预计算生成，无需真实部署，不保证能访问
+    """
+    module = module_env.module
+    if module.exposed_url_type == ExposedURLType.SUBPATH:
+        subpaths = get_preallocated_paths_by_env(module_env)
+        return [EnvExposedURL(url=p.as_url(), provider_type='subpath') for p in subpaths]
+    elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
+        domains = get_preallocated_domains_by_env(module_env)
+        return [EnvExposedURL(url=d.as_url(), provider_type='subdomain') for d in domains]
+    elif module.exposed_url_type is None:
+        if url := _get_legacy_url(module_env):
+            return [EnvExposedURL(url=URL.from_address(url), provider_type='legacy')]
+    return []
 
 
 @env_vars_providers.register_env
@@ -450,74 +360,55 @@ def get_bk_doc_url_prefix() -> str:
     return get_preallocated_address(settings.BK_DOC_APP_ID).prod.rstrip("/")
 
 
-class ModuleLiveAddrs:
-    """Stored a module's addresses and running status"""
-
-    def __init__(self, data: List[Dict]):
-        self._data = data
-        self._map_by_env = {}
-        for item in data:
-            self._map_by_env[item['env']] = item
-
-    def get_is_running(self, env_name: str) -> bool:
-        """Given running status of environment"""
-        d = self._map_by_env.get(env_name, self._empty_item)
-        return d['is_running']
-
-    def get_addresses(self, env_name: str) -> List[Dict]:
-        """Given addresses of environment"""
-        d = self._map_by_env.get(env_name, self._empty_item)
-        return d['addresses']
-
-    @property
-    def _empty_item(self) -> Dict:
-        """An empty item for handling default cases"""
-        return {'is_running': False, 'addresses': []}
+# pre-allocated addresses related functions end
 
 
-def get_live_addresses(module: Module) -> ModuleLiveAddrs:
-    """Get addresses and is_running status for module's environments."""
-    data = make_internal_client().list_env_addresses(module.application.code, module.name)
-    return ModuleLiveAddrs(data)
+# Exposed URL type related functions start
 
 
-def get_module_exposed_links_live(module: Module) -> Dict[str, Dict]:
-    """Get exposed links of module's all environments.
+def update_exposed_url_type_to_subdomain(module: Module):
+    """Update a module's exposed_url_type to subdomain"""
+    # Return directly if exposed_url_type is already subdomain
+    if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
+        return
 
-    This is the "live" version of the original `get_module_exposed_links` function,
-    key differences:
+    module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
+    module.save(update_fields=['exposed_url_type'])
 
-    - Support both cloud-native and default applications
-    - market URL and user-preferred addresses not considered
+    refresh_module_domains(module)
 
-    The goal is to replace `get_module_exposed_links`(and other related *Providers)
-    with this function in the future.
+    # Also update app's address's in market if needed
+    from paasng.publish.sync_market.handlers import sync_external_url_to_market
+
+    sync_external_url_to_market(application=module.application)
+
+
+def refresh_module_domains(module: Module):
+    """Refresh a module's domains, you should call the function when module's exposed_url_type
+    has been changed or application's default module was updated.
     """
-    links = {}
-    addrs = get_live_addresses(module)
-    for env in module.get_envs():
-        if items := addrs.get_addresses(env.environment):
-            # TODO: Pick url by priority order in the future
-            url = items[0]['url']
-        else:
-            url = None
-        links[env.environment] = {"deployed": addrs.get_is_running(env.environment), "url": url}
-    return links
+    for env in module.envs.all():
+        if not env.is_running():
+            continue
+
+        logger.info(f"updating {env.engine_app.name}'s exposed_url_type to subdomain...")
+        engine_client = EngineDeployClient(env.engine_app)
+        domains = [d.as_dict() for d in ModuleEnvDomains(env).all()]
+        engine_client.update_domains(domains)
 
 
-def get_exposed_url_live(env: ModuleEnvironment) -> Optional[EnvExposedURL]:
-    """Get exposed url of given module environment.
-
-    This is the "live" version of the original `get_exposed_url` function, key
-    differences:
-
-    - Support both cloud-native and default applications
-    - market URL and user-preferred addresses not included
-
-    :returns: None if no url can be found
+def refresh_module_subpaths(module: Module) -> None:
+    """Refresh a module's subpaths, you should call the function when module's exposed_url_type
+    has been changed or application's default module was updated.
     """
-    addrs = get_live_addresses(env.module)
-    if items := addrs.get_addresses(env.environment):
-        # TODO: Pick url by priority order in the future
-        return EnvExposedURL(url=URL.from_address(items[0]['url']), provider_type='live')
-    return None
+    for env in module.envs.all():
+        if not env.is_running():
+            continue
+
+        logger.info(f"refreshing {env.engine_app.name}'s subpaths...")
+        engine_client = EngineDeployClient(env.engine_app)
+        subpaths = [d.as_dict() for d in ModuleEnvSubpaths(env).all()]
+        engine_client.update_subpaths(subpaths)
+
+
+# Exposed URL type related functions end

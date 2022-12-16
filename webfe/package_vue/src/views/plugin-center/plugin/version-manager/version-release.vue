@@ -14,7 +14,6 @@
               <div class="title-warp flex-row align-items-center justify-content-between">
                 <paas-plugin-title :version="curVersion" />
                 <bk-button
-                  v-if="pluginFeatureFlags.CANCEL_RELEASE"
                   class="discontinued"
                   @click="showInfoCancelRelease"
                 >
@@ -857,16 +856,32 @@
             border-bottom: 1px solid #EAEBF0;
             .bg-content {
                 max-width: calc(100% - 100px);
-                min-width: 1250px;
                 margin: 0 50px;
+                .title-warp {
+                    min-width: 1243px;
+                }
             }
         }
         .release-info-box {
             max-width: calc(100% - 100px);
-            min-width: 1250px;
+            min-width: 1243px;
             margin: 0 50px;
             margin-top: 16px;
         }
+    }
+}
+#release-timeline-box {
+    width: 230px;
+    height: calc(100vh - 272px);
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+        width: 4px;
+        background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+        height: 5px;
+        border-radius: 2px;
+        background-color: #C4C6CC;
     }
 }
 .steps-warp{

@@ -7,13 +7,14 @@
     </div>
     <bk-form
       ref="pluginForm"
+      style="width: 650px;"
       :model="form"
       :rules="rules"
     >
       <bk-form-item
         :label="$t('插件类型')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'pd_id'"
       >
         <div class="flex-row">
@@ -88,7 +89,7 @@
       <bk-form-item
         :label="$t('插件标识')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'plugin_id'"
         error-display-type="normal"
       >
@@ -103,7 +104,7 @@
       <bk-form-item
         :label="$t('插件名称')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'name'"
         :rules="rules.name"
         error-display-type="normal"
@@ -119,7 +120,7 @@
       <bk-form-item
         :label="$t('开发语言')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'language'"
       >
         <bk-select
@@ -141,7 +142,7 @@
         v-if="languageData.applicableLanguage"
         :label="$t('适用语言')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'applicableLanguage'"
       >
         <bk-select
@@ -161,7 +162,7 @@
       <bk-form-item
         :label="$t('初始化模板')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'templateName'"
       >
         <bk-select
@@ -181,7 +182,7 @@
       <bk-form-item
         :label="$t('代码仓库')"
         :required="true"
-        :icon-offset="557"
+        :icon-offset="24"
         :property="'repositoryTemplateUrl'"
       >
         <bk-input

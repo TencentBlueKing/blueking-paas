@@ -133,11 +133,11 @@ class TestUpdateExposedURLType:
     def test_normal(self, bk_module):
         bk_module.exposed_url_type = ExposedURLType.SUBPATH
         bk_module.save()
-        with mock.patch('paasng.publish.entrance.exposer.EngineDeployClient') as mocked_client:
+        with mock.patch('paasng.publish.entrance.exposer.refresh_module_domains') as mocker:
             update_exposed_url_type_to_subdomain(bk_module)
 
         assert bk_module.exposed_url_type == ExposedURLType.SUBDOMAIN
-        assert mocked_client().update_domains.called
+        assert mocker.called
 
     def test_with_legacy_market(self, with_live_addrs, bk_app, bk_module):
         if (
@@ -173,11 +173,11 @@ class TestUpdateExposedURLType:
 
             bk_module.exposed_url_type = ExposedURLType.SUBPATH
             bk_module.save()
-            with mock.patch('paasng.publish.entrance.exposer.EngineDeployClient') as mocked_client:
+            with mock.patch('paasng.publish.entrance.exposer.refresh_module_domains') as mocker:
                 update_exposed_url_type_to_subdomain(bk_module)
 
             assert bk_module.exposed_url_type == ExposedURLType.SUBDOMAIN
-            assert mocked_client().update_domains.called
+            assert mocker.called
             session = console_db.get_scoped_session()
             app = AppManger(session).get(bk_app.code)
 

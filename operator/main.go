@@ -39,6 +39,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	"bk.tencent.com/paas-app-operator/controllers"
+	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
@@ -93,7 +94,7 @@ func main() {
 	if sentryDSN == "" {
 		setupLog.Info("[Sentry] SentryDSN unset, all events waiting for report will be dropped.")
 	}
-	if err = sentry.Init(sentry.ClientOptions{Dsn: sentryDSN, Debug: true}); err != nil {
+	if err = sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
 		setupLog.Error(err, "unable to set sentry dsn")
 		os.Exit(1)
 	}
@@ -111,10 +112,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.BkAppReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	if err = controllers.NewBkAppReconciler(
+		client.New(mgr.GetClient()), mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
 		os.Exit(1)
 	}
@@ -124,10 +124,9 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	if err = (&controllers.DomainGroupMappingReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	if err = controllers.NewDomainGroupMappingReconciler(
+		client.New(mgr.GetClient()), mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}

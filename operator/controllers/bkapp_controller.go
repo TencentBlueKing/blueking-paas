@@ -38,10 +38,15 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 )
 
+// NewBkAppReconciler will return a BkAppReconciler with given k8s client and scheme
+func NewBkAppReconciler(cli client.Client, scheme *runtime.Scheme) *BkAppReconciler {
+	return &BkAppReconciler{client: cli, scheme: scheme}
+}
+
 // BkAppReconciler reconciles a BkApp object
 type BkAppReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	client client.Client
+	scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=paas.bk.tencent.com,resources=bkapps,verbs=get;list;watch;create;update;patch;delete
@@ -80,7 +85,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	log := logf.FromContext(ctx)
 
 	app := &v1alpha1.BkApp{}
-	err := r.Get(ctx, req.NamespacedName, app)
+	err := r.client.Get(ctx, req.NamespacedName, app)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
 		return reconcile.Result{}, client.IgnoreNotFound(err)
@@ -92,7 +97,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(app, v1alpha1.BkAppFinalizerName) {
 			controllerutil.AddFinalizer(app, v1alpha1.BkAppFinalizerName)
-			if err = r.Update(ctx, app); err != nil {
+			if err = r.client.Update(ctx, app); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -100,12 +105,12 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	var ret reconcilers.Result
 	for _, reconciler := range []reconcilers.Reconciler{
-		&reconcilers.BkappFinalizer{Client: r.Client},
-		&reconcilers.RevisionReconciler{Client: r.Client},
-		reconcilers.NewAddonReconciler(r.Client),
-		&reconcilers.HookReconciler{Client: r.Client},
-		&reconcilers.DeploymentReconciler{Client: r.Client},
-		&reconcilers.ServiceReconciler{Client: r.Client},
+		reconcilers.NewBkappFinalizer(r.client),
+		reconcilers.NewRevisionReconciler(r.client),
+		reconcilers.NewAddonReconciler(r.client),
+		reconcilers.NewHookReconciler(r.client),
+		reconcilers.NewDeploymentReconciler(r.client),
+		reconcilers.NewServiceReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue

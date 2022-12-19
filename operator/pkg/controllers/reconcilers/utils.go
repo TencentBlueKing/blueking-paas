@@ -77,7 +77,7 @@ func UpsertObject[T any, PT interface {
 	if err := cli.Get(ctx, client.ObjectKeyFromObject(obj), exists); err != nil {
 		// 获取失败，且不是不存在，直接退出
 		if !apierrors.IsNotFound(err) {
-			return errors.WithStack(err)
+			return err
 		}
 		// 资源在集群中不存在，创建资源
 		if err = cli.Create(ctx, obj); err != nil {

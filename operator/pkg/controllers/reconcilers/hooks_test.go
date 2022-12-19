@@ -89,9 +89,7 @@ var _ = Describe("Test HookReconciler", func() {
 	Describe("test Reconcile", func() {
 		It("case with no hook", func() {
 			bkapp.Spec.Hooks = nil
-			r := HookReconciler{
-				Client: builder.WithObjects(bkapp).Build(),
-			}
+			r := NewHookReconciler(builder.WithObjects(bkapp).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 			Expect(ret.err).NotTo(HaveOccurred())
@@ -100,9 +98,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 		It("test execute hook", func() {
 			bkapp.Status.HookStatuses = nil
-			r := HookReconciler{
-				Client: builder.WithObjects(bkapp).Build(),
-			}
+			r := NewHookReconciler(builder.WithObjects(bkapp).Build())
 
 			ret := r.Reconcile(ctx, bkapp)
 			Expect(ret.err).NotTo(HaveOccurred())
@@ -126,9 +122,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 				hook := resources.BuildPreReleaseHook(bkapp, &hookStatus)
 				hook.Pod.Status.Phase = phase
-				r := HookReconciler{
-					Client: builder.WithObjects(bkapp, hook.Pod).Build(),
-				}
+				r := NewHookReconciler(builder.WithObjects(bkapp, hook.Pod).Build())
 
 				ret := r.Reconcile(ctx, bkapp)
 				Expect(ret.ShouldAbort()).To(Equal(shouldHangup))
@@ -154,9 +148,7 @@ var _ = Describe("Test HookReconciler", func() {
 		var r *HookReconciler
 
 		BeforeEach(func() {
-			r = &HookReconciler{
-				Client: builder.Build(),
-			}
+			r = NewHookReconciler(builder.Build())
 		})
 
 		It("Pod not found", func() {
@@ -172,14 +164,14 @@ var _ = Describe("Test HookReconciler", func() {
 		})
 
 		It("Pod Execute Failed", func() {
-			Expect(r.Create(ctx, bkapp)).To(BeNil())
+			Expect(r.Client.Create(ctx, bkapp)).To(BeNil())
 
 			hook := resources.BuildPreReleaseHook(bkapp, nil)
 			Expect(r.ExecuteHook(ctx, bkapp, hook)).To(BeNil())
 
 			hook.Pod.Status.Phase = corev1.PodFailed
 			hook.Pod.Status.Message = "fail message"
-			_ = r.Status().Update(ctx, hook.Pod)
+			_ = r.Client.Status().Update(ctx, hook.Pod)
 
 			finished, err := CheckAndUpdatePreReleaseHookStatus(
 				ctx,
@@ -196,7 +188,7 @@ var _ = Describe("Test HookReconciler", func() {
 		// function. "podPhase" is the pre-release pod's status.
 		updatePreReleaseHook := func(podPhase corev1.PodPhase, timeout time.Duration) (bool, error) {
 			// Create related app and Pod resource
-			if err := r.Create(ctx, bkapp); err != nil {
+			if err := r.Client.Create(ctx, bkapp); err != nil {
 				panic(err)
 			}
 
@@ -207,7 +199,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 			hook.Pod.Status.Phase = podPhase
 			hook.Pod.Status.StartTime = lo.ToPtr(metav1.Now())
-			if err := r.Status().Update(ctx, hook.Pod); err != nil {
+			if err := r.Client.Status().Update(ctx, hook.Pod); err != nil {
 				panic(err)
 			}
 
@@ -278,9 +270,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 	Describe("test getCurrentState", func() {
 		It("Pod not found", func() {
-			r := HookReconciler{
-				Client: builder.Build(),
-			}
+			r := NewHookReconciler(builder.Build())
 			state := r.getCurrentState(ctx, bkapp)
 			Expect(state.Pod).To(BeNil())
 		})
@@ -298,9 +288,7 @@ var _ = Describe("Test HookReconciler", func() {
 				StartTime: hook.Pod.Status.StartTime,
 			})
 
-			r := HookReconciler{
-				Client: builder.WithObjects(bkapp, hook.Pod).Build(),
-			}
+			r := NewHookReconciler(builder.WithObjects(bkapp, hook.Pod).Build())
 
 			state := r.getCurrentState(ctx, bkapp)
 			Expect(state.Progressing()).To(Equal(executing))
@@ -318,10 +306,9 @@ var _ = Describe("Test HookReconciler", func() {
 
 	Describe("TestExecuteHook", func() {
 		It("normal case", func() {
-			r := HookReconciler{
-				Client: builder.Build(),
-			}
-			Expect(r.Create(ctx, bkapp)).To(BeNil())
+			r := NewHookReconciler(builder.Build())
+
+			Expect(r.Client.Create(ctx, bkapp)).To(BeNil())
 			hook := resources.BuildPreReleaseHook(bkapp, nil)
 
 			err := r.ExecuteHook(ctx, bkapp, hook)
@@ -335,9 +322,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 		It("Pod Existed!", func() {
 			hook := resources.BuildPreReleaseHook(bkapp, nil)
-			r := HookReconciler{
-				Client: builder.WithObjects(hook.Pod).Build(),
-			}
+			r := NewHookReconciler(builder.WithObjects(hook.Pod).Build())
 
 			err := r.ExecuteHook(ctx, bkapp, hook)
 			Expect(err).To(Equal(resources.ErrHookPodExists))

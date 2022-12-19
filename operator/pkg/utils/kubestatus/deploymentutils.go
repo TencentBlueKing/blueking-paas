@@ -71,10 +71,16 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		var message string
 		if deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
 			// Deployment 未完成滚动更新
-			message = fmt.Sprintf("Waiting for rollout to finish: %d/%d replicas are updated...", deployment.Status.UpdatedReplicas, deployment.Spec.Replicas)
+			message = fmt.Sprintf(
+				"Waiting for rollout to finish: %d/%d replicas are updated...",
+				deployment.Status.UpdatedReplicas, deployment.Spec.Replicas,
+			)
 		} else {
 			// Deployment 等待最新的 Pod 就绪
-			message = fmt.Sprintf("Waiting for rollout to finish: %d/%d replicas are available...", deployment.Status.AvailableReplicas, deployment.Spec.Replicas)
+			message = fmt.Sprintf(
+				"Waiting for rollout to finish: %d/%d replicas are available...",
+				deployment.Status.AvailableReplicas, deployment.Spec.Replicas,
+			)
 		}
 
 		return &HealthStatus{
@@ -100,7 +106,7 @@ func GetDeploymentDirectFailMessage(
 		client.InNamespace(deployment.Namespace),
 		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
 	); err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 	for _, pod := range pods.Items {
 		// 忽略已被标记删除的 Pod

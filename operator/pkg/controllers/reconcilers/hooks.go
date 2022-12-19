@@ -39,9 +39,14 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
+// NewHookReconciler will return a HookReconciler with given k8s client
+func NewHookReconciler(client client.Client) *HookReconciler {
+	return &HookReconciler{Client: client}
+}
+
 // HookReconciler 负责处理 Hook 相关的调和逻辑
 type HookReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -61,7 +66,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		switch {
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
-			if err := r.Delete(ctx, current.Pod); err != nil {
+			if err := r.Client.Delete(ctx, current.Pod); err != nil {
 				return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
 			return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
@@ -91,8 +96,8 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		Message:            "Pre-Release-Hook feature not turned on",
 		ObservedGeneration: bkapp.Status.ObservedGeneration,
 	})
-	if err := r.Status().Update(ctx, bkapp); err != nil {
-		return r.Result.withError(errors.WithStack(err))
+	if err := r.Client.Status().Update(ctx, bkapp); err != nil {
+		return r.Result.withError(err)
 	}
 	return r.Result
 }
@@ -101,7 +106,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.BkApp) resources.HookInstance {
 	currentStatus := bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)
 	pod := corev1.Pod{}
-	err := r.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
 	if err != nil {
 		return resources.HookInstance{
 			Pod:    nil,
@@ -145,15 +150,14 @@ func (r *HookReconciler) ExecuteHook(
 ) error {
 	pod := corev1.Pod{}
 	// Only proceed when Pod resource is not found
-	if err := r.Get(ctx, client.ObjectKeyFromObject(instance.Pod), &pod); err == nil {
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(instance.Pod), &pod); err == nil {
 		return errors.WithStack(resources.ErrHookPodExists)
 	} else if !apierrors.IsNotFound(err) {
-		return errors.WithStack(err)
+		return err
 	}
 
-	err := r.Create(ctx, instance.Pod)
-	if err != nil {
-		return errors.WithStack(err)
+	if err := r.Client.Create(ctx, instance.Pod); err != nil {
+		return err
 	}
 
 	bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
@@ -169,7 +173,7 @@ func (r *HookReconciler) ExecuteHook(
 		Message:            "The pre-release hook is executing.",
 		ObservedGeneration: bkapp.Status.ObservedGeneration,
 	})
-	return errors.WithStack(r.Status().Update(ctx, bkapp))
+	return r.Client.Status().Update(ctx, bkapp)
 }
 
 // UpdateStatus will update bkapp hook status from the given instance status
@@ -210,14 +214,14 @@ func (r *HookReconciler) UpdateStatus(
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
 	}
-	return errors.WithStack(r.Status().Update(ctx, bkapp))
+	return r.Client.Status().Update(ctx, bkapp)
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态
 func CheckAndUpdatePreReleaseHookStatus(
 	ctx context.Context, cli client.Client, bkapp *v1alpha1.BkApp, timeout time.Duration,
 ) (succeed bool, err error) {
-	r := HookReconciler{Client: cli}
+	r := NewHookReconciler(cli)
 	instance := r.getCurrentState(ctx, bkapp)
 
 	if instance.Pod == nil {
@@ -232,7 +236,7 @@ func CheckAndUpdatePreReleaseHookStatus(
 	// 删除超时的 pod
 	case instance.Timeout(timeout):
 		if err = cli.Delete(ctx, instance.Pod); err != nil {
-			return false, errors.WithStack(err)
+			return false, err
 		}
 		return false, errors.WithStack(resources.ErrExecuteTimeout)
 	case instance.Failed():

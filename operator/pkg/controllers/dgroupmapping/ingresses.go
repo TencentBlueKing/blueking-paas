@@ -38,25 +38,21 @@ import (
 // DGroupMappingSyncer sync ingress resources for DomainGroupMapping objs.
 // In order to use this type, the mapping object must reference to a valid BkApp.
 type DGroupMappingSyncer struct {
-	Client client.Client
-	BkApp  *v1alpha1.BkApp
+	client client.Client
+	bkapp  *v1alpha1.BkApp
 }
 
 // NewDGroupMappingSyncer creates a DGroupMappingSyncer object
 // - bkapp is the owner for current syncer, usually is the referenced BkApp object
 //   of DomainGroupMapping object.
-func NewDGroupMappingSyncer(
-	client client.Client,
-	bkapp *v1alpha1.BkApp,
-) *DGroupMappingSyncer {
-	return &DGroupMappingSyncer{Client: client, BkApp: bkapp}
+func NewDGroupMappingSyncer(client client.Client, bkapp *v1alpha1.BkApp) *DGroupMappingSyncer {
+	return &DGroupMappingSyncer{client: client, bkapp: bkapp}
 }
 
 // Sync is the main method for syncing resources, it returns the expected domain
 // groups if the sync procedure finished successfully.
 func (r *DGroupMappingSyncer) Sync(
-	ctx context.Context,
-	dgmapping *v1alpha1.DomainGroupMapping,
+	ctx context.Context, dgmapping *v1alpha1.DomainGroupMapping,
 ) ([]res.DomainGroup, error) {
 	// Sync ingress resources
 	current, err := r.ListCurrentIngresses(ctx, dgmapping)
@@ -73,8 +69,8 @@ func (r *DGroupMappingSyncer) Sync(
 	outdated := reconcilers.FindExtraByName(current, expected)
 	if len(outdated) != 0 {
 		for _, ingress := range outdated {
-			if err = r.Client.Delete(ctx, ingress); err != nil {
-				return nil, errors.WithStack(err)
+			if err = r.client.Delete(ctx, ingress); err != nil {
+				return nil, err
 			}
 		}
 	}
@@ -93,10 +89,10 @@ func (r *DGroupMappingSyncer) ListCurrentIngresses(
 	dgmapping *v1alpha1.DomainGroupMapping,
 ) (results []*networkingv1.Ingress, err error) {
 	current := networkingv1.IngressList{}
-	err = r.Client.List(
+	err = r.client.List(
 		ctx,
 		&current,
-		client.InNamespace(r.BkApp.GetNamespace()),
+		client.InNamespace(r.bkapp.GetNamespace()),
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),
 	)
 	if err != nil {
@@ -112,7 +108,7 @@ func (r *DGroupMappingSyncer) getWantedIngresses(
 ) ([]*networkingv1.Ingress, error) {
 	var results []*networkingv1.Ingress
 	for _, group := range domains {
-		builder, err := res.NewIngressBuilder(group.SourceType, r.BkApp)
+		builder, err := res.NewIngressBuilder(group.SourceType, r.bkapp)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to create builder")
 		}
@@ -128,7 +124,7 @@ func (r *DGroupMappingSyncer) getWantedIngresses(
 
 // applyIngress creates or update an Ingress object
 func (r *DGroupMappingSyncer) applyIngress(ctx context.Context, ingress *networkingv1.Ingress) error {
-	return reconcilers.UpsertObject(ctx, r.Client, ingress, nil)
+	return reconcilers.UpsertObject(ctx, r.client, ingress, nil)
 }
 
 // Set the labels and owner fields for a slice of ingresses
@@ -151,5 +147,5 @@ func DeleteIngresses(ctx context.Context, c client.Client, dgmapping *v1alpha1.D
 		client.InNamespace(dgmapping.GetNamespace()),
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),
 	}
-	return errors.WithStack(c.DeleteAllOf(ctx, &networkingv1.Ingress{}, opts...))
+	return c.DeleteAllOf(ctx, &networkingv1.Ingress{}, opts...)
 }

@@ -33,9 +33,14 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
 
+// NewServiceReconciler will return a ServiceReconciler with given k8s client
+func NewServiceReconciler(client client.Client) *ServiceReconciler {
+	return &ServiceReconciler{Client: client}
+}
+
 // ServiceReconciler 负责处理 Service 相关的调和逻辑
 type ServiceReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -52,13 +57,13 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 	if len(outdated) != 0 {
 		for _, svc := range outdated {
 			if err = r.Client.Delete(ctx, svc); err != nil {
-				return r.Result.withError(errors.WithStack(err))
+				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, svc := range expected {
 		if err = r.applyService(ctx, svc); err != nil {
-			return r.Result.withError(errors.WithStack(err))
+			return r.Result.withError(err)
 		}
 	}
 	return r.Result
@@ -71,7 +76,7 @@ func (r *ServiceReconciler) listCurrentServices(
 ) ([]*corev1.Service, error) {
 	current := corev1.ServiceList{}
 
-	if err := r.List(
+	if err := r.Client.List(
 		ctx, &current,
 		client.InNamespace(bkapp.GetNamespace()),
 		client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()},

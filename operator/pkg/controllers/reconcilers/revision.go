@@ -36,9 +36,14 @@ import (
 
 const defaultRevision int64 = 1
 
+// NewRevisionReconciler will return a RevisionReconciler with given k8s client
+func NewRevisionReconciler(client client.Client) *RevisionReconciler {
+	return &RevisionReconciler{Client: client}
+}
+
 // RevisionReconciler 处理版本相关的调和逻辑
 type RevisionReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -61,14 +66,14 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	}
 
 	allDeploys := appsv1.DeploymentList{}
-	err = r.List(
+	err = r.Client.List(
 		ctx,
 		&allDeploys,
 		client.InNamespace(bkapp.Namespace),
 		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
 	)
 	if err != nil {
-		return r.Result.withError(errors.WithStack(err))
+		return r.Result.withError(err)
 	}
 
 	maxOldRevision := revision.MaxRevision(lo.ToSlicePtr(allDeploys.Items))
@@ -93,10 +98,10 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	bkapp.Status.HookStatuses = nil
 	bkapp.Status.ObservedGeneration = bkapp.Generation
 	SetDefaultConditions(&bkapp.Status)
-	err = r.Status().Update(ctx, bkapp)
+	err = r.Client.Status().Update(ctx, bkapp)
 	if err != nil {
 		log.Error(err, "unable to update app revision")
-		return r.Result.withError(errors.WithStack(err))
+		return r.Result.withError(err)
 	}
 	return r.Result
 }

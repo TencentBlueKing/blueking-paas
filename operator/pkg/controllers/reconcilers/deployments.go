@@ -35,9 +35,14 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
 
+// NewDeploymentReconciler will return a DeploymentReconciler with given k8s client
+func NewDeploymentReconciler(client client.Client) *DeploymentReconciler {
+	return &DeploymentReconciler{Client: client}
+}
+
 // DeploymentReconciler 负责处理 Deployment 相关的调和逻辑
 type DeploymentReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -53,18 +58,18 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.Bk
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
 			if err = r.Client.Delete(ctx, deploy); err != nil {
-				return r.Result.withError(errors.WithStack(err))
+				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
 		if err = r.deploy(ctx, deploy); err != nil {
-			return r.Result.withError(errors.WithStack(err))
+			return r.Result.withError(err)
 		}
 	}
 
 	if err = r.updateCondition(ctx, bkapp); err != nil {
-		return r.Result.withError(errors.WithStack(err))
+		return r.Result.withError(err)
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
 	if bkapp.Status.Phase == v1alpha1.AppPending {
@@ -79,8 +84,9 @@ func (r *DeploymentReconciler) getCurrentState(
 	bkapp *v1alpha1.BkApp,
 ) (result []*appsv1.Deployment, err error) {
 	deployList := appsv1.DeploymentList{}
-	if err = r.List(
-		ctx, &deployList, client.InNamespace(bkapp.Namespace), client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
+	if err = r.Client.List(
+		ctx, &deployList, client.InNamespace(bkapp.Namespace),
+		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
 	); err != nil {
 		return nil, errors.Wrap(err, "failed to list app's deployments")
 	}
@@ -187,5 +193,5 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 			}
 		}
 	}
-	return errors.WithStack(r.Status().Update(ctx, bkapp))
+	return r.Client.Status().Update(ctx, bkapp)
 }

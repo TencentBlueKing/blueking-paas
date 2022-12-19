@@ -28,7 +28,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 )
@@ -47,7 +46,7 @@ func NewAddonReconciler(client client.Client) *AddonReconciler {
 
 // AddonReconciler 负责处理分配增强服务实例
 type AddonReconciler struct {
-	client.Client
+	Client         client.Client
 	Result         Result
 	ExternalClient *external.Client
 }
@@ -73,7 +72,7 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) 
 		})
 	}
 
-	if updateErr := r.Status().Update(ctx, bkapp); updateErr != nil {
+	if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
 		return r.Result.withError(updateErr)
 	}
 	return r.Result.withError(err)

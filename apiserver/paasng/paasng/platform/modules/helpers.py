@@ -268,30 +268,22 @@ def get_module_clusters(module: 'Module') -> Dict[AppEnvName, Cluster]:
     }
 
 
-def get_module_all_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
-    """返回当前模块支持的所有根域名
+def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
+    """返回当前模块（生产环境）支持的所有根域名
 
     :param module: 模块
     :param include_reserved: 是否包括保留域名
     :raise ValueError: when module.exposed_url_type is None
     """
-    if module.exposed_url_type is None:
-        raise ValueError("legacy exposed_url_type is unsupported.")
-
-    clusters = get_module_clusters(module)
-    if not clusters:
+    prod_env = module.envs.filter(environment=AppEnvName.PROD).first()
+    if not prod_env:
         return []
 
-    # FIXME 确定模块下的不同环境部署在不同集群的处理策略，目前是直接返回空值
-    if len(set(c.name for c in clusters)) > 1:
-        logging.warning('module stag and prod env deploy in different cluster, skip...')
-        return []
-
-    cluster_info = list(clusters.values())[0]
+    cluster = get_engine_app_cluster(module.region, prod_env.engine_app.name)
     if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-        root_domains = cluster_info.ingress_config.app_root_domains
+        root_domains = cluster.ingress_config.app_root_domains
     else:
-        root_domains = cluster_info.ingress_config.sub_path_domains
+        root_domains = cluster.ingress_config.sub_path_domains
     return [domain for domain in root_domains if include_reserved or not domain.reserved]
 
 

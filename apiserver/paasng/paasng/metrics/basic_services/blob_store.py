@@ -16,9 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from blue_krill.monitoring.probe.base import ProbeSet
 
-from .blob_store import BlobStoreAvailableMetric
-from .mysql import MySQLAvailableMetric
-from .redis import RedisAvailableMetric
+from paasng.monitoring.healthz.probes import PlatformBlobStoreProbe
 
-__all__ = ["BlobStoreAvailableMetric", "MySQLAvailableMetric", "RedisAvailableMetric"]
+
+class BlobStoreAvailableMetric:
+    name = 'blob_store_service'
+    metric_type = 'gauge'
+    description = 'blob_store service available'
+
+    @classmethod
+    def calc_value(cls) -> bool:
+        probe_set = ProbeSet([PlatformBlobStoreProbe])
+        return not probe_set.examination().is_death

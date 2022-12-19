@@ -21,6 +21,10 @@ from typing import Any, Dict, Type
 from prometheus_client.core import GaugeMetricFamily
 from typing_extensions import Protocol
 
+from paasng.metrics.basic_services.blob_store import BlobStoreAvailableMetric
+from paasng.metrics.basic_services.mysql import MySQLAvailableMetric
+from paasng.metrics.basic_services.redis import RedisAvailableMetric
+
 
 class CallbackMetric(Protocol):
     """
@@ -59,6 +63,7 @@ class CallbackMetricCollector:
 
 cb_metric_collector = CallbackMetricCollector()
 
-
-def cb_register(cls: Type['CallbackMetric']):
-    cb_metric_collector.add(cls)
+# 添加基础服务 metric 指标
+cb_metric_collector.add(BlobStoreAvailableMetric)
+cb_metric_collector.add(MySQLAvailableMetric)
+cb_metric_collector.add(RedisAvailableMetric)

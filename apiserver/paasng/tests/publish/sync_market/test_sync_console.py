@@ -118,26 +118,26 @@ class TestApp:
     - 同步应用信息：tests/api/test_market.py::TestGetAndUpdateProduct
     """
 
-    def test_validate_app_code(self, bk_app):
+    def test_validate_app_code(self, bk_app_full):
         # with pytest.raises(AppFieldValidationError):
         try:
-            validate_app_code_uniquely(self, bk_app.code)
+            validate_app_code_uniquely(self, bk_app_full.code)
         except Exception as e:
             print(e)
 
-    def test_validate_app_name(self, bk_app):
+    def test_validate_app_name(self, bk_app_full):
         new_app = create_app()
         with pytest.raises(AppFieldValidationError):
-            validate_app_name_uniquely(self, bk_app.name, new_app)
+            validate_app_name_uniquely(self, bk_app_full.name, new_app)
 
-    def test_change_app_name(self, bk_app):
+    def test_change_app_name(self, bk_app_full):
         new_app = create_app()
         # 修改应用名称冲突
         with pytest.raises(IntegrityError):
-            on_change_application_name(self, new_app.code, bk_app.name)
+            on_change_application_name(self, new_app.code, bk_app_full.name)
         # 修改一个不存在应用的名称
         with pytest.raises(AppFieldValidationError):
-            on_change_application_name(self, new_app.code + '2', bk_app.name)
+            on_change_application_name(self, new_app.code + '2', bk_app_full.name)
         # 修改名称成功
         new_name = generate_random_string(10)
         on_change_application_name(self, new_app.code, new_name)
@@ -145,10 +145,10 @@ class TestApp:
         app = AppManger(session).get(new_app.code)
         assert app.name == new_name
 
-    def test_register_app(self, bk_app):
+    def test_register_app(self, bk_app_full):
         # 再次手动注册会异常
         with pytest.raises(IntegrityError):
-            register_app_core_data(self, bk_app)
+            register_app_core_data(self, bk_app_full)
 
     def test_app_state(self, bk_user, create_custom_app):
         app = create_custom_app(bk_user)
@@ -171,15 +171,15 @@ class TestHandlers:
 
 
 class TestProduct:
-    def test_create_default_product(self, bk_app, create_default_tag):
-        product = Product.objects.create_default_product(bk_app)
-        assert product == bk_app.get_product()
+    def test_create_default_product(self, bk_app_full, create_default_tag):
+        product = Product.objects.create_default_product(bk_app_full)
+        assert product == bk_app_full.get_product()
         assert product.tag is not None
 
         # 将应用部署到生产环境
         on_product_deploy_success(product, 'prod')
         # 验证应用上线信息是否已经同步到桌面
         with console_db.session_scope() as session:
-            console_app = AppManger(session).get(bk_app.code)
+            console_app = AppManger(session).get(bk_app_full.code)
             assert console_app.is_already_online == 1
             assert console_app.open_mode == "new_tab"

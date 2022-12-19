@@ -18,6 +18,7 @@
 
 import Vue from 'vue';
 import Router from 'vue-router';
+import { pluginRouter } from './plugin';
 
 const frontPage = () => import(/* webpackChunkName: 'front-page' */'@/views/index').then(module => {
   return module;
@@ -454,6 +455,7 @@ const router = new Router({
     return { x: 0, y: 0 };
   },
   routes: [
+    ...pluginRouter,
     {
       path: '/',
       name: 'home',
@@ -462,7 +464,11 @@ const router = new Router({
     {
       path: '/developer-center/',
       name: 'index',
-      component: frontPage
+      component: frontPage,
+      meta: {
+        // 只有首页需要footer版本信息
+        showPaasFooter: true
+      }
     },
     {
       path: '/developer-center/apps/',

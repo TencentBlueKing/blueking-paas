@@ -16,28 +16,54 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Callable, Dict, Generator, Tuple
+from typing import Any, Dict, Type
 
 from prometheus_client.core import GaugeMetricFamily
+from typing_extensions import Protocol
+
+from paasng.metrics.basic_services.blob_store import BlobStoreAvailableMetric
+from paasng.metrics.basic_services.mysql import MySQLAvailableMetric
+from paasng.metrics.basic_services.redis import RedisAvailableMetric
 
 
-class CallbackGaugeCollector:
-    """A custom metrics collection based on callback function"""
+class CallbackMetric(Protocol):
+    """
+    支持回调求值的 Metric
+
+    :param name: 指标名
+    :param metric_type: 指标类型
+    :param description: 指标描述
+    """
+
+    name: str
+    metric_type: str
+    description: str
+
+    @classmethod
+    def calc_value(cls) -> Any:
+        """获取 metric 值"""
+
+
+class CallbackMetricCollector:
+    """采集器: 采集支持回调求值的 Metric"""
 
     def __init__(self):
-        self._metrics: Dict[str, Tuple] = {}
+        self._metrics: Dict[str, Type[CallbackMetric]] = {}
 
-    def add(self, name: str, description: str, callback: Callable):
-        """Add a new gauge value
+    def add(self, metric: Type[CallbackMetric]):
+        self._metrics[metric.name] = metric
 
-        :param callback: the function which returns latest gauge value
-        """
-        self._metrics[name] = (name, description, callback)
-
-    def collect(self) -> Generator[GaugeMetricFamily, None, None]:
-        for name, description, callback in self._metrics.values():
-            metric = GaugeMetricFamily(name, description, callback())
-            yield metric
+    def collect(self):
+        for metric in self._metrics.values():
+            if metric.metric_type == 'gauge':
+                yield GaugeMetricFamily(metric.name, metric.description, metric.calc_value())
+            else:
+                raise ValueError('CallbackMetricCollector only support add gauge metric at this time')
 
 
-cb_gauge_collector = CallbackGaugeCollector()
+cb_metric_collector = CallbackMetricCollector()
+
+# 添加基础服务 metric 指标
+cb_metric_collector.add(BlobStoreAvailableMetric)
+cb_metric_collector.add(MySQLAvailableMetric)
+cb_metric_collector.add(RedisAvailableMetric)

@@ -47,6 +47,7 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
     api_servers = APIServerSLZ(many=True, read_only=True)
     default_node_selector = serializers.JSONField(read_only=True)
     default_tolerations = serializers.JSONField(read_only=True)
+    feature_flags = serializers.JSONField(read_only=True)
 
     class Meta:
         model = Cluster
@@ -67,6 +68,7 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
             "token_value",
             'default_node_selector',
             'default_tolerations',
+            'feature_flags',
         ]
 
 
@@ -94,6 +96,7 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
     token_value = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     default_node_selector = serializers.JSONField(default={}, required=False)
     default_tolerations = serializers.JSONField(default=[], required=False)
+    feature_flags = serializers.JSONField(default=dict, required=False)
 
 
 class GenRegionClusterStateSLZ(serializers.Serializer):

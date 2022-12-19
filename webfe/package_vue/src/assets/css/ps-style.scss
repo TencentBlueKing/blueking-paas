@@ -20,6 +20,7 @@
 @import './components/tab.scss';
 @import './components/accordion.scss';
 @import './components/other.scss';
+@import './components/flex.scss';
 @import './pages/main.scss';
 @import './pages/overview.scss';
 @import './pages/service.scss';
@@ -145,10 +146,6 @@ span.ellipsis {
     /* autoprefixer: on */
 }
 
-/*日志查询 start*/
-.log-middle {
-}
-
 /*人员选择器focus边框样式覆盖默认*/
 .peripheral .section-box.focusStyle {
     border: none;
@@ -260,6 +257,10 @@ span.ellipsis {
     color: #999;
     display: table;
     margin: 0 auto;
+}
+
+.right-main-plugin{
+    width: 100% !important;
 }
 
 .paas-loading-panel .text,
@@ -481,7 +482,6 @@ span.ellipsis {
         line-height: 42px;
         font-size: 20px;
         color: #fff;
-        float: left;
         margin-right: 12px;
         background-color: #DCDEE5;
         display: inline-block;
@@ -857,6 +857,10 @@ span.ellipsis {
     background: #FFF;
 }
 
+.overview-fright-plugin .app-container {
+    max-width: calc(100% - 100px) !important;
+}
+
 .info-special-form.bk-form.bk-inline-form {
     width: 100%;
 
@@ -1034,13 +1038,18 @@ span.ellipsis {
     }
 }
 
-@media screen and (max-width: 1920px) {
+@media screen and (max-width: 2560px) {
     .ps-top-bar {
         .header-title,
         h2 {
             max-width: 1180px;
         }
     }
+    .overview-fright-plugin .ps-top-bar
+        .header-title, h2{
+            max-width: none;
+            margin: 0 60px;
+        }
     .ps-container,
     .app-container {
         max-width: 1180px;

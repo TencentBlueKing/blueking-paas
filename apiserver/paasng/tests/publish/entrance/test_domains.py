@@ -28,6 +28,7 @@ from paasng.publish.entrance.domains import (
     ModuleEnvDomains,
     SubDomainAllocator,
     get_preallocated_domain,
+    get_preallocated_domains_by_env,
 )
 from tests.utils.mocks.engine import replace_cluster_service
 
@@ -158,37 +159,6 @@ class TestModuleEnvDomainsCodeWithUnderscore:
         ]
 
 
-class TestMakeUserPreferredOne:
-    @pytest.fixture(autouse=True)
-    def _setup(self):
-        with replace_cluster_service(
-            ingress_config={
-                'app_root_domains': [
-                    {"name": 'bar-1.example.com'},
-                    {"name": 'bar-2.example.com', 'https_enabled': True},
-                ],
-            }
-        ):
-            yield
-
-    @pytest.mark.parametrize(
-        'host,https_enabled',
-        [
-            ('bar-1.example.com', False),
-            ('bar-2.example.com', True),
-        ],
-    )
-    def test_https_enabled(self, bk_prod_env, host, https_enabled):
-        bk_prod_env.module.user_preferred_root_domain = host
-        bk_prod_env.module.save()
-
-        d = ModuleEnvDomains(bk_prod_env).make_user_preferred_one()
-        assert d is not None
-        assert d.host == f'some-app-o.{host}'
-        assert d.https_enabled is https_enabled
-        assert d.type == DomainPriorityType.USER_PREFERRED
-
-
 class TestSubDomainAllocator:
     @pytest.fixture
     def allocator(self) -> SubDomainAllocator:
@@ -225,3 +195,38 @@ class TestSubDomainAllocator:
         domain = allocator.get_highest_priority(domain_cfg, 'm1', 'prod', is_default=True)
         assert domain.host == 'some-app.example.com'
         assert domain.type == DomainPriorityType.ONLY_CODE
+
+
+class TestGetPreallocatedDomainsByEnv:
+    @pytest.fixture(autouse=True)
+    def _setup_cluster(self):
+        """Replace cluster info in module level"""
+        with replace_cluster_service(
+            ingress_config={
+                'app_root_domains': [
+                    {"name": 'bar-1.example.com'},
+                    {"name": 'bar-2.example.org'},
+                ],
+            }
+        ):
+            yield
+
+    def test_default_prod_env(self, bk_module, bk_prod_env):
+        bk_module.is_default = True
+        bk_module.save(update_fields=['is_default'])
+
+        results = get_preallocated_domains_by_env(bk_prod_env)
+        assert [d.host for d in results] == [
+            'some-app-o.bar-1.example.com',
+            'some-app-o.bar-2.example.org',
+        ]
+
+    def test_non_default(self, bk_module, bk_stag_env):
+        bk_module.is_default = False
+        bk_module.save(update_fields=['is_default'])
+
+        results = get_preallocated_domains_by_env(bk_stag_env)
+        assert [d.host for d in results] == [
+            'stag-dot-default-dot-some-app-o.bar-1.example.com',
+            'stag-dot-default-dot-some-app-o.bar-2.example.org',
+        ]

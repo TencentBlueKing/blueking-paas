@@ -35,7 +35,6 @@ class SubpathPriorityType(int, StructuredEnum):
     STABLE = EnumField(1, label="无缩写")
     WITHOUT_MODULE = EnumField(2, label="无模块，指向主模块")
     ONLY_CODE = EnumField(3, label="无模块无环境，指向主模块生产环境")
-    USER_PREFERRED = EnumField(4, label="用户指定的域名")
 
 
 @dataclass
@@ -78,6 +77,29 @@ class PreSubpaths(NamedTuple):
 
     stag: Subpath
     prod: Subpath
+
+
+def get_preallocated_paths_by_env(env: ModuleEnvironment) -> List[Subpath]:
+    """Get all pre-allocated subpaths for a environment which may has not been
+    deployed yet. Results length is equal to length of configured subpath domains.
+    """
+    app = env.application
+    module = env.module
+    cluster = get_engine_app_cluster(app.region, env.engine_app.name)
+    ingress_config = cluster.ingress_config
+
+    # Iterate configured subpath domains, get subpaths
+    allocator = SubPathAllocator(app.code, ingress_config.port_map)
+    results: List[Subpath] = []
+    for domain_cfg in ingress_config.sub_path_domains:
+        if not env.module.is_default:
+            results.append(allocator.for_universal(domain_cfg, module.name, env.environment))
+        else:
+            if env.environment == AppEnvName.STAG.value:
+                results.append(allocator.for_default_module(domain_cfg, 'stag'))
+            else:
+                results.append(allocator.for_default_module_prod_env(domain_cfg))
+    return results
 
 
 def get_preallocated_path(
@@ -149,22 +171,6 @@ class ModuleEnvSubpaths:
             # Sort items because legacy subpath obj has low priority type
             items.sort(key=Subpath.sort_by_type)
         return items
-
-    def make_user_preferred_one(self) -> Optional[Subpath]:
-        """Make the subpath with user preferred root domain"""
-        host = self.env.module.user_preferred_root_domain
-        if not host:
-            return None
-
-        # Make a virtual domain config, use it to get the domain object
-        d = self.ingress_config.find_subpath_domain(host)
-        cfg = DomainCfg(name=host, https_enabled=d.https_enabled if d else False)
-        p = self.allocator.get_highest_priority(
-            cfg, self.env.module.name, self.env.environment, self.env.module.is_default
-        )
-        # Modify the subpath type manually
-        p.type = SubpathPriorityType.USER_PREFERRED
-        return p
 
 
 def get_legacy_compatible_path(env: ModuleEnvironment) -> str:

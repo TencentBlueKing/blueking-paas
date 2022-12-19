@@ -25,19 +25,21 @@ from typing import Dict, List, NamedTuple, Optional
 
 from attrs import define
 from django.conf import settings
+from django.dispatch import receiver
 
 from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import Cluster, get_region_cluster_helper
 from paasng.engine.controller.shortcuts import make_internal_client
-from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.env_vars import env_vars_providers
+from paasng.engine.signals import on_builtin_domains_subpaths_updated
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.core.storages.cache import region as cache_region
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
 from paasng.platform.region.models import get_region
-from paasng.publish.entrance.domains import ModuleEnvDomains, get_preallocated_domain, get_preallocated_domains_by_env
-from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, get_preallocated_path, get_preallocated_paths_by_env
+from paasng.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
+from paasng.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.publish.entrance.utils import URL
 from paasng.publish.market.models import MarketConfig
 
@@ -258,8 +260,24 @@ def get_live_addresses(module: Module) -> ModuleLiveAddrs:
     This is a low-level function, don't use it directly, use `get_addresses`
     instead.
     """
-    data = make_internal_client().list_env_addresses(module.application.code, module.name)
+    return _wrapped_get_live_addresses(module.application.code, module.name)
+
+
+# Add cache to decrease calls to workloads service because many function such as
+# `get_deployed_status` and `get_exposed_url` will call `get_live_addresses()`
+# repetitively.
+@cache_region.cache_on_arguments(namespace='v1', expiration_time=60)
+def _wrapped_get_live_addresses(code: str, module_name: str) -> ModuleLiveAddrs:
+    """Cache wrapper for `get_live_addresses`, use primitive type arguments"""
+    data = make_internal_client().list_env_addresses(code, module_name)
     return ModuleLiveAddrs(data)
+
+
+@receiver(on_builtin_domains_subpaths_updated)
+def _clear_get_live_addresses_cache(sender: ModuleEnvironment, **kwargs):
+    """When a deployment has been finished, clean live_addresses cache of it's module"""
+    module = sender.module
+    _wrapped_get_live_addresses.invalidate(module.application.code, module.name)
 
 
 # pre-allocated addresses related functions start
@@ -411,28 +429,24 @@ def refresh_module_domains(module: Module):
     """Refresh a module's domains, you should call the function when module's exposed_url_type
     has been changed or application's default module was updated.
     """
+    from paasng.engine.deploy.infras import AppDefaultDomains
+
     for env in module.envs.all():
         if not env.is_running():
             continue
-
-        logger.info(f"updating {env.engine_app.name}'s exposed_url_type to subdomain...")
-        engine_client = EngineDeployClient(env.engine_app)
-        domains = [d.as_dict() for d in ModuleEnvDomains(env).all()]
-        engine_client.update_domains(domains)
+        AppDefaultDomains(env).sync()
 
 
 def refresh_module_subpaths(module: Module) -> None:
     """Refresh a module's subpaths, you should call the function when module's exposed_url_type
     has been changed or application's default module was updated.
     """
+    from paasng.engine.deploy.infras import AppDefaultSubpaths
+
     for env in module.envs.all():
         if not env.is_running():
             continue
-
-        logger.info(f"refreshing {env.engine_app.name}'s subpaths...")
-        engine_client = EngineDeployClient(env.engine_app)
-        subpaths = [d.as_dict() for d in ModuleEnvSubpaths(env).all()]
-        engine_client.update_subpaths(subpaths)
+        AppDefaultSubpaths(env).sync()
 
 
 # Exposed URL type related functions end

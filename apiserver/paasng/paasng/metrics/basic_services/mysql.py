@@ -16,5 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .basic_services import *  # noqa
-from .metrics import *  # noqa
+from blue_krill.monitoring.probe.base import ProbeSet
+
+from paasng.monitoring.healthz.probes import PlatformMysqlProbe
+
+
+class MySQLAvailableMetric:
+    name = 'mysql_service'
+    metric_type = 'gauge'
+    description = 'mysql service available'
+
+    @classmethod
+    def calc_value(cls) -> bool:
+        probe_set = ProbeSet([PlatformMysqlProbe])
+        return not probe_set.examination().is_death

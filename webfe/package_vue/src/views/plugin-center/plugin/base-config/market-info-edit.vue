@@ -12,6 +12,7 @@
             ref="visitForm"
             :model="form"
             :rules="rules"
+            :label-width="100"
           >
             <bk-form-item
               class="w600"
@@ -245,13 +246,19 @@
         position: fixed;
         bottom: 0;
         margin-bottom: 20px;
-        margin-left: 150px;
+        margin-left: 100px;
     }
     .edit-form-item{
-        height: 300px;
+        // height: 300px;
         .editor{
-            height: calc(100vh - 400px);
+            height: calc(100vh - 415px);
         }
+    }
+
+    .app-container {
+        min-height: calc(100vh - 150px);
+        max-width: calc(100% - 50px) !important;
+        margin: 0 auto;
     }
 </style>
 <style>

@@ -82,7 +82,10 @@ class _RGWProbe(HttpProbe):
 
 class _BkRepoProbe(HttpProbe):
     name = "bkrepo"
-    bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG['ENDPOINT'] if settings.BLOBSTORE_BKREPO_CONFIG else ''
+
+    bkrepo_endpoint = ""
+    if isinstance(settings.BLOBSTORE_BKREPO_CONFIG, dict):
+        bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get('ENDPOINT', '')
     url = f"{bkrepo_endpoint}/generic/actuator/info"
 
 

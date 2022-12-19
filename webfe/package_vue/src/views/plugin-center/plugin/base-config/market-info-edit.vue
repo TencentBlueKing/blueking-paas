@@ -175,7 +175,7 @@
                     this.cateLoading = false;
                     setTimeout(() => {
                         this.isLoading = false;
-                    }, 200);
+                    }, 300);
                 }
             },
             // 获取市场信息
@@ -196,7 +196,7 @@
                 } finally {
                     setTimeout(() => {
                         this.isLoading = false;
-                    }, 200);
+                    }, 300);
                 }
             },
             // 保存
@@ -251,12 +251,13 @@
     .edit-form-item{
         // height: 300px;
         .editor{
-            height: calc(100vh - 398px);
+            height: 100%;
+            max-height: 898px;
+            padding-bottom: 20px;
         }
     }
 
     .app-container {
-        min-height: calc(100vh - 150px);
         max-width: calc(100% - 50px) !important;
         margin: 0 auto;
     }
@@ -266,6 +267,6 @@
         line-height: 24px;
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content {
-        height: calc(100vh - 398px);
+        height: calc(100vh - 365px);
     }
 </style>

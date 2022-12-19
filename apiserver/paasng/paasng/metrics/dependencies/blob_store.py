@@ -18,13 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.monitoring.probe.base import ProbeSet
 
+from paasng.metrics.collector import cb_register
 from paasng.monitoring.healthz.probes import PlatformBlobStoreProbe
 
-from ..collector import cb_register
 
-
-@cb_register  # type: ignore
-class MySQLAvailableMetric:
+@cb_register
+class BlobStoreAvailableMetric:
     name = 'blob_store_service'
     metric_type = 'gauge'
     description = 'blob_store service available'

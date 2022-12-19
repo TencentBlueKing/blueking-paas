@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Any, Dict
+from typing import Any, Dict, Type
 
 from prometheus_client.core import GaugeMetricFamily
 from typing_extensions import Protocol
@@ -44,9 +44,9 @@ class CallbackMetricCollector:
     """采集器: 采集支持回调求值的 Metric"""
 
     def __init__(self):
-        self._metrics: Dict[str, CallbackMetric] = {}
+        self._metrics: Dict[str, Type[CallbackMetric]] = {}
 
-    def add(self, metric: CallbackMetric):
+    def add(self, metric: Type[CallbackMetric]):
         self._metrics[metric.name] = metric
 
     def collect(self):
@@ -60,5 +60,5 @@ class CallbackMetricCollector:
 cb_metric_collector = CallbackMetricCollector()
 
 
-def cb_register(cls: CallbackMetric):
+def cb_register(cls: Type['CallbackMetric']):
     cb_metric_collector.add(cls)

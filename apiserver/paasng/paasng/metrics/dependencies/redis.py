@@ -18,12 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.monitoring.probe.base import ProbeSet
 
+from paasng.metrics.collector import cb_register
 from paasng.monitoring.healthz.probes import PlatformRedisProbe
 
-from ..collector import cb_register
 
-
-@cb_register  # type: ignore
+@cb_register
 class RedisAvailableMetric:
     name = 'redis_service'
     metric_type = 'gauge'

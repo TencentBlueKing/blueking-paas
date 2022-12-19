@@ -96,4 +96,4 @@ class FrozenDeployMentsMetric:
 
 def register_metrics():
     """Register metrics for engine app"""
-    cb_metric_collector.add(FrozenDeployMentsMetric)  # type: ignore
+    cb_metric_collector.add(FrozenDeployMentsMetric)

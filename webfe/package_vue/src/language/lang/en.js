@@ -1440,6 +1440,7 @@ export default {
   '未启动': 'Not started',
   '迁移到': 'Migration to',
   '新版开发者中心': 'New Developer Center',
+  '蓝鲸开发者中心': 'BlueKing Developer Center',
   '查看进度': 'View progress',
   '迁移时间': 'Migration time',
   '回滚至旧版本': 'Rollback to older versions',

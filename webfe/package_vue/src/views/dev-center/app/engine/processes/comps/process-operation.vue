@@ -2055,6 +2055,11 @@
 
             .process-item-table-wrapper {
                 padding: 0 30px !important;
+                .ps-table {
+                    td {
+                        font-size: 12px;
+                    }
+                }
             }
 
             td {

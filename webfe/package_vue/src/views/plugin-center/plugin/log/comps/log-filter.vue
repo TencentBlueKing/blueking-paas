@@ -151,7 +151,6 @@
       >
         <div
           slot="dropdown-trigger"
-          style="padding-left: 19px;"
         >
           <bk-button
             :text="true"

@@ -94,8 +94,11 @@ export default {
          * --
          * @param {Object} params 请求参数：appCode
          */
-    getVersionsManagerList ({ commit, state }, { data, pageParams }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkplugins/${data.pdId}/plugins/${data.pluginId}/releases/?${json2Query(pageParams)}`;
+    getVersionsManagerList ({ commit, state }, { data, pageParams, statusParams }, config = {}) {
+      let url = `${BACKEND_URL}/api/bkplugins/${data.pdId}/plugins/${data.pluginId}/releases/?${json2Query(pageParams)}`;
+      if (statusParams && statusParams.length) {
+        url += `&${statusParams}`;
+      }
       return http.get(url, config);
     },
     /**

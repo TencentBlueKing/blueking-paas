@@ -7,7 +7,7 @@
     >
       <div class="app-container middle">
         <paas-plugin-title />
-        <div class="market-Info">
+        <div class="market-Info plugin-base-info">
           <bk-form
             ref="visitForm"
             :model="form"
@@ -251,7 +251,7 @@
     .edit-form-item{
         // height: 300px;
         .editor{
-            height: calc(100vh - 415px);
+            height: calc(100vh - 398px);
         }
     }
 
@@ -264,5 +264,8 @@
 <style>
     .visible-range .editor .ql-snow .ql-formats {
         line-height: 24px;
+    }
+    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content {
+        height: calc(100vh - 398px);
     }
 </style>

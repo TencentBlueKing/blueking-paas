@@ -953,7 +953,7 @@
     box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
 }
 .edit-form-item{
-    height: 300px;
+    height: 272px;
     .editor{
         height: 200px;
     }

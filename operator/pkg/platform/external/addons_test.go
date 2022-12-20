@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -40,7 +41,7 @@ var _ = Describe("TestClient", func() {
 			if expectedError == nil {
 				Expect(err).To(BeNil())
 			} else {
-				Expect(err).To(Equal(expectedError))
+				Expect(errors.Is(err, expectedError)).To(BeTrue())
 			}
 			Expect(instance).To(Equal(expectedInstance))
 		},

@@ -30,6 +30,8 @@ type PlatformConfig struct {
 	BkAppSecret string `json:"bkAppSecret"`
 	// BlueKing's component API address, the gateway SDK depends on this configuration
 	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
+	// sentry server dsn, all events waiting for report will be dropped if unset
+	SentryDSN string `json:"sentryDSN"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config

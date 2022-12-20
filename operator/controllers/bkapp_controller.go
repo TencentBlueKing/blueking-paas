@@ -21,7 +21,9 @@ package controllers
 import (
 	"context"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,10 +38,15 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 )
 
+// NewBkAppReconciler will return a BkAppReconciler with given k8s client and scheme
+func NewBkAppReconciler(cli client.Client, scheme *runtime.Scheme) *BkAppReconciler {
+	return &BkAppReconciler{client: cli, scheme: scheme}
+}
+
 // BkAppReconciler reconciles a BkApp object
 type BkAppReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	client client.Client
+	scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=paas.bk.tencent.com,resources=bkapps,verbs=get;list;watch;create;update;patch;delete
@@ -60,10 +67,25 @@ type BkAppReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	result, err := r.reconcile(ctx, req)
+	if err != nil {
+		sentry.CaptureException(
+			errors.WithMessagef(
+				err,
+				"error found while executing BkApp (%s/%s) reconciler loop",
+				req.Namespace,
+				req.Name,
+			),
+		)
+	}
+	return result, err
+}
+
+func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	app := &v1alpha1.BkApp{}
-	err := r.Get(ctx, req.NamespacedName, app)
+	err := r.client.Get(ctx, req.NamespacedName, app)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
 		return reconcile.Result{}, client.IgnoreNotFound(err)
@@ -75,7 +97,7 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(app, v1alpha1.BkAppFinalizerName) {
 			controllerutil.AddFinalizer(app, v1alpha1.BkAppFinalizerName)
-			if err = r.Update(ctx, app); err != nil {
+			if err = r.client.Update(ctx, app); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -83,12 +105,12 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	var ret reconcilers.Result
 	for _, reconciler := range []reconcilers.Reconciler{
-		&reconcilers.BkappFinalizer{Client: r.Client},
-		&reconcilers.RevisionReconciler{Client: r.Client},
-		reconcilers.NewAddonReconciler(r.Client),
-		&reconcilers.HookReconciler{Client: r.Client},
-		&reconcilers.DeploymentReconciler{Client: r.Client},
-		&reconcilers.ServiceReconciler{Client: r.Client},
+		reconcilers.NewBkappFinalizer(r.client),
+		reconcilers.NewRevisionReconciler(r.client),
+		reconcilers.NewAddonReconciler(r.client),
+		reconcilers.NewHookReconciler(r.client),
+		reconcilers.NewDeploymentReconciler(r.client),
+		reconcilers.NewServiceReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue
@@ -103,8 +125,7 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BkAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	var err error
-	err = mgr.GetFieldIndexer().
+	err := mgr.GetFieldIndexer().
 		IndexField(context.Background(), &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
 	if err != nil {
 		return err

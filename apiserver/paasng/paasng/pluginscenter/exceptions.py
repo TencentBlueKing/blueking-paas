@@ -29,6 +29,7 @@ class ErrorCodes:
     CANNOT_RERUN_ONGOING_STEPS = ErrorCode(_("重试步骤失败, 当前步骤不支持重试。"))
     CANNOT_ROLLBACK_CURRENT_STEP = ErrorCode(_("无法退回至上一步"))
     CANNOT_CANCEL_RELEASE = ErrorCode(_("无法停止发布"))
+    NOT_SUPPORT_CANCEL_RELEASE = ErrorCode(_("插件不支持终止发布操作"))
     CANNOT_RESET_RELEASE = ErrorCode(_("无法重新发布该版本"))
     EXECUTE_STAGE_ERROR = ErrorCode(_("发布步骤执行失败"))
     STAGE_DEF_NOT_FOUND = ErrorCode(_("当前步骤在新的发布流程中被移除, 请重新发起部署流程或联系插件管理员"))
@@ -38,6 +39,8 @@ class ErrorCodes:
     # 下架或删除插件相关
     CANNOT_BE_DELETED = ErrorCode(_('不允许删除'))
     PLUGIN_ARCHIVED = ErrorCode(_("插件已下架, 无法进行该操作"))
+    # 插件仓库成员管理异常
+    MAINTAIN_REPO_MEMBERS_ERROR = ErrorCode(_("添加/删除仓库成员异常, 请稍后重试"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

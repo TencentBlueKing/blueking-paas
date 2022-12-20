@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import cattr
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django.db.utils import IntegrityError
@@ -137,6 +138,21 @@ class TestIngressConfigField:
         assert c.ingress_config.app_root_domains[1].reserved is False
         assert c.ingress_config.app_root_domains[2].name == "baz.com"
         assert c.ingress_config.app_root_domains[2].reserved is True
+
+    def test_find_app_root_domain(self):
+        d = {
+            "app_root_domains": [
+                {"name": "bar.example.com"},
+                {"name": "foo.example.com", "reserved": True},
+            ]
+        }
+        config = cattr.structure(d, IngressConfig)
+        root_domain = config.find_app_root_domain('test.foo.example.com')
+        assert root_domain is not None
+        assert root_domain.name == 'foo.example.com'
+        assert root_domain.reserved is True
+
+        assert config.find_app_root_domain('test.foo.example.org') is None
 
 
 class TestEnhancedConfiguration:

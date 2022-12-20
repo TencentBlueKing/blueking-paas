@@ -26,7 +26,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .authentication import BasicAuthentication
-from .collector import cb_gauge_collector
+from .collector import cb_metric_collector
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class ExportToDjangoView(APIView):
             logger.info("enable prometheus using multi processes mode")
             registry = prometheus_client.CollectorRegistry()
             multiprocess.MultiProcessCollector(registry)
-            registry.register(cb_gauge_collector)  # type: ignore
+            registry.register(cb_metric_collector)  # type: ignore
         else:
             logger.info("enable prometheus using single process mode")
             registry = prometheus_client.REGISTRY

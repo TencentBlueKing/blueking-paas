@@ -28,6 +28,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
 from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
@@ -173,14 +175,6 @@ class ProcessViewSet(SysModelViewSet):
         ProcessSpecManager(self.get_object()).sync(processes)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_abnormal_processes(self, request, **kwargs):
-        """Get abnormal processes name"""
-        region = self.kwargs['region']
-        scheduler = self.get_scheduler_client(region=region)
-        processes = scheduler.get_abnormal_processes(region=region)
-        abnormal_processes = self.serializer_class(processes, many=True).data
-        return Response({'results': abnormal_processes, 'count': len(abnormal_processes)})
-
 
 class SysAppRelatedViewSet(SysModelViewSet):
     """Base ViewSet for a app_name in url path"""
@@ -296,6 +290,20 @@ class ConfigViewSet(SysAppRelatedViewSet):
             raise error_codes.UPDATE_CONFIG_FAILED
 
         return Response(data=self.serializer_class(instance=latest_config).data, status=status.HTTP_201_CREATED)
+
+    def bind_cluster(self, request, region, name, cluster_name):
+        """Bind app to given cluster"""
+        app = self.get_app()
+        cluster = get_object_or_404(Cluster, name=cluster_name)
+        try:
+            latest_config: models.Config = self.model.objects.filter(app=app).latest()
+            latest_config.cluster = cluster.name
+            latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
+            latest_config.save()
+        except Exception:
+            logger.exception("bind app to cluster %s failed", cluster_name)
+            raise error_codes.UPDATE_CONFIG_FAILED.f("绑定应用集群失败")
+        return Response(data={}, status=status.HTTP_200_OK)
 
 
 class BuildViewSet(SysAppRelatedViewSet):
@@ -522,6 +530,7 @@ class EnvDeployedStatusViewSet(SysViewSet):
         列表（addresses）等。
 
         - “云原生”应用和普通应用都会返回有效的访问地址列表
+        - 访问地址排序：基于非保留系统域名，并且更短的排在前面
         """
         app = get_structured_app(code=code)
         results = []

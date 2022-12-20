@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -19,9 +19,7 @@
 package quota
 
 import (
-	"errors"
-	"fmt"
-
+	"github.com/pkg/errors"
 	"gopkg.in/inf.v0"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -63,7 +61,7 @@ const defaultScale = 3
 // NewQuantity 创建 Quantity，包含校验检查
 func NewQuantity(raw string, t ResType) (*resource.Quantity, error) {
 	if raw == "" {
-		return nil, ErrResQuotaRequired
+		return nil, errors.WithStack(ErrResQuotaRequired)
 	}
 	q, err := resource.ParseQuantity(raw)
 	if err != nil {
@@ -74,11 +72,11 @@ func NewQuantity(raw string, t ResType) (*resource.Quantity, error) {
 	switch t {
 	case CPU:
 		if q.Cmp(maxCPUQuantity) > 0 {
-			return nil, fmt.Errorf("%w: exceed cpu max limit %s", ErrExceedLimit, maxCPU)
+			return nil, errors.Wrapf(ErrExceedLimit, "exceed cpu max limit %s", maxCPU)
 		}
 	case Memory:
 		if q.Cmp(maxMemoryQuantity) > 0 {
-			return nil, fmt.Errorf("%w: exceed memory max limit %s", ErrExceedLimit, maxMemory)
+			return nil, errors.Wrapf(ErrExceedLimit, "exceed memory max limit %s", maxMemory)
 		}
 	}
 	return &q, nil

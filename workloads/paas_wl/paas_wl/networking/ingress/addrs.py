@@ -36,10 +36,13 @@ class Address:
 
     :param type: Type of address
     :param url: URL, includes protocol and port number
+    :param is_sys_reserved: Whether the address was generated from a reserved
+        system domain
     """
 
     type: AddressType
     url: str
+    is_sys_reserved: bool = False
 
 
 class EnvAddresses:
@@ -62,12 +65,17 @@ class EnvAddresses:
 
         if not env_is_running(self.env):
             return []
-        return self._get_subdomain() + self._get_subpath() + self._get_custom()
+        return self._sort(self._get_subdomain()) + self._sort(self._get_subpath()) + self._sort(self._get_custom())
 
     def _get_subdomain(self) -> List[Address]:
         """Get addresses from subdomain source"""
         subdomains = AppDomain.objects.filter(app=self.engine_app, source=AppDomainSource.AUTO_GEN)
-        return [Address(AddressType.SUBDOMAIN, self._make_url(d.https_enabled, d.host)) for d in subdomains]
+        addrs = []
+        for d in subdomains:
+            root_domain = self.ingress_cfg.find_app_root_domain(d.host)
+            is_sys_reserved = root_domain.reserved if root_domain else False
+            addrs.append(Address(AddressType.SUBDOMAIN, self._make_url(d.https_enabled, d.host), is_sys_reserved))
+        return addrs
 
     def _get_subpath(self) -> List[Address]:
         """Get addresses from subpath source"""
@@ -76,7 +84,7 @@ class EnvAddresses:
         for domain in self.ingress_cfg.sub_path_domains:
             for obj in path_objs:
                 url = self._make_url(domain.https_enabled, domain.name, obj.subpath)
-                addrs.append(Address(AddressType.SUBPATH, url))
+                addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
         return addrs
 
     def _get_custom(self) -> List[Address]:
@@ -90,3 +98,8 @@ class EnvAddresses:
         protocol = "https" if https_enabled else "http"
         port = self.ingress_cfg.port_map.get_port_num(protocol)
         return HumanizeURL(protocol, hostname=host, port=port, path=path).to_str()
+
+    @staticmethod
+    def _sort(addrs: List[Address]) -> List[Address]:
+        """Sort address list, short and not reserved address first"""
+        return list(sorted(addrs, key=lambda addr: (addr.is_sys_reserved, len(addr.url))))

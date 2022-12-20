@@ -108,7 +108,7 @@ class RegionClusterService(AbstractRegionClusterService):
 
     def set_engine_app_cluster(self, engine_app_name: str, cluster_name: str):
         """Set cluster for engine app"""
-        self.client.update_app_config(self.region, engine_app_name, {'cluster': cluster_name})
+        self.client.bind_app_cluster(self.region, engine_app_name, cluster_name=cluster_name)
 
 
 def get_region_cluster_helper(region: str) -> AbstractRegionClusterService:

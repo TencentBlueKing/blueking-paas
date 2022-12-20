@@ -81,7 +81,7 @@ def pd():
         id_schema={
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
-            "max_length": 16,
+            "maxlength": 10,
         },
         name_schema={
             "pattern": r"[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}",

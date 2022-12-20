@@ -20,13 +20,7 @@ import pytest
 
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.publish.sync_market.managers import AppTagManger
-from tests.utils.helpers import configure_regions, generate_random_string
-
-
-@pytest.fixture(autouse=True)
-def setup_ieod_region():
-    with configure_regions(['ieod']):
-        yield
+from tests.utils.helpers import generate_random_string
 
 
 @pytest.fixture

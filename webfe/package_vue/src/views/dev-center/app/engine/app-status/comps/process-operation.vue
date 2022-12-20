@@ -175,7 +175,7 @@
                             class="paasng-icon"
                             :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
                           />
-                          {{ instance.state }}
+                          <span v-bk-tooltips="{content: getInstanceStateToolTips(instance)}">{{ instance.state }}</span>
                         </td>
                         <td class="time">
                           <template v-if="instance.date_time !== 'Invalid date'">
@@ -1917,6 +1917,14 @@
             timeFormat (time, instanceTime) {
                 if (time === '几秒前') return time;
                 return time + ' ' + instanceTime;
+            },
+
+            // 获取进程状态 tooltips 展示内容
+            getInstanceStateToolTips (instance) {
+                if (!(instance.state_message && instance.state_message.length)) {
+                    return instance.state;
+                }
+                return instance.state_message;
             }
         }
     };

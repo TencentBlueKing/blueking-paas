@@ -197,12 +197,35 @@
                         this.USER_IS_ADMIN_IN_APP = false
                     })
                 },
-                bindAppEnvCluster: function (module, env, cluster_name) {
+                bindAppEnvCluster: function (module, env, clusterName) {
                     let url = URLRouter.bindCluster.replace("${module}", module).replace("${env}", env)
-                    this.$http.post(
-                        url, {cluster_name: cluster_name}
-                    ).then(resp => {
-                        this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境集群为 ${cluster_name} 成功，配置将在下次部署时生效`})
+                    const h = this.$createElement
+
+                    this.$bkInfo({
+                        width: 550,
+                        title: `更换应用部署集群确认`,
+                        subHeader: h('div', {
+                            style: {
+                                'color': 'red',
+                                'text-align': 'center'
+                            }
+                        }, `即将绑定 ${module} 模块 ${env} 环境部署集群为 ${clusterName}，是否确认？`),
+                        confirmLoading: true,
+                        confirmFn: async () => {
+                            try {
+                                await this.$http.post(
+                                    url, {cluster_name: clusterName}
+                                ).then(resp => {
+                                    this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境部署集群为 ${clusterName} 成功，配置将在下次部署时生效`})
+                                })
+                            } catch (e) {
+                                this.$bkMessage({theme: 'error', message: `更换应用部署环境绑定集群失败`})
+                                location.reload()
+                            }
+                        },
+                        cancelFn: async () => {
+                            location.reload()
+                        }
                     })
                 }
             }

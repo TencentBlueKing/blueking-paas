@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -113,16 +113,14 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&BkAppReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
+	err = NewBkAppReconciler(
+		k8sManager.GetClient(), k8sManager.GetScheme(),
+	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&DomainGroupMappingReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
+	err = NewDomainGroupMappingReconciler(
+		k8sManager.GetClient(), k8sManager.GetScheme(),
+	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

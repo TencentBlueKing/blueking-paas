@@ -1,5 +1,5 @@
-# Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-# Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Licensed under the MIT License (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
 #
@@ -73,6 +73,10 @@ fmt: ## 执行 golines，gofumpt ...
 .PHONY: vet
 vet: ## 执行 go vet ./...
 	go vet ./...
+
+.PHONY: tidy
+tidy: ## 执行 go mod tidy
+	go mod tidy
 
 .PHONY: test
 test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输出覆盖率报告

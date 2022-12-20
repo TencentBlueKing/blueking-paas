@@ -59,6 +59,14 @@ class CIResourceAtom(TimestampedModel):
     resource = models.ForeignKey(CIResourceAppEnvRelation, on_delete=models.CASCADE, related_name="related_atoms")
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
 
+    @property
+    def task_id(self):
+        """目前的 CIResourceAtom.id 由 {env.id}-{task_id} 组成, 获取 task_id 需要做字符串分割"""
+        if "-" in self.id:
+            return self.id.split("-", 1)[1]
+        # 存在部分历史数据, id 是 task_id
+        return self.id
+
     class Meta:
         unique_together = ('env', 'name', 'backend')
 

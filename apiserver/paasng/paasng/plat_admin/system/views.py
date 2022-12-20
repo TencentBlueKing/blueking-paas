@@ -41,6 +41,7 @@ from paasng.plat_admin.system.applications import (
     query_uni_apps_by_username,
 )
 from paasng.plat_admin.system.serializers import (
+    AddonCredentialsSLZ,
     AppBasicSLZ,
     ContactInfo,
     ModuleBasicSLZ,
@@ -137,7 +138,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         credentials = mixed_service_mgr.get_env_vars(engine_app=engine_app, service=svc)
         if not credentials:
             raise error_codes.CANNOT_READ_INSTANCE_INFO.f(_("无法获取到有效的配置信息."))
-        return Response(data={"credentials": credentials})
+        return Response(data=AddonCredentialsSLZ({"credentials": credentials}).data)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)

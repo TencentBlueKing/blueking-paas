@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -19,12 +19,12 @@
 package reconcilers
 
 import (
-	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"

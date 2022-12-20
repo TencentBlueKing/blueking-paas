@@ -43,7 +43,7 @@ from paasng.engine.deploy.preparations import (
 )
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_appenv_build, pre_phase_start
-from paasng.extensions.declarative.exceptions import ControllerError
+from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.modules.models.module import Module
@@ -65,13 +65,14 @@ class ApplicationBuilder(DeployStep):
             self.handle_app_description()
         except FileNotFoundError:
             logger.debug("App description file not defined, do not process.")
+        except DescriptionValidationError as e:
+            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
+            logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
             self.stream.write_message(Style.Error(e.message))
             logger.exception("Exception while processing app description file, skip.")
         except Exception:
-            self.stream.write_message(
-                Style.Error("An exception occurred while processing the app_desc.yaml file, please check.")
-            )
+            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
             logger.exception("Exception while processing app description file, skip.")
 
         # TODO: 改造提示信息&错误信息都需要入库

@@ -21,8 +21,8 @@ package reconcilers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -33,9 +33,14 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
 
+// NewServiceReconciler will return a ServiceReconciler with given k8s client
+func NewServiceReconciler(client client.Client) *ServiceReconciler {
+	return &ServiceReconciler{Client: client}
+}
+
 // ServiceReconciler 负责处理 Service 相关的调和逻辑
 type ServiceReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -51,13 +56,13 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 
 	if len(outdated) != 0 {
 		for _, svc := range outdated {
-			if err := r.Client.Delete(ctx, svc); err != nil {
+			if err = r.Client.Delete(ctx, svc); err != nil {
 				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, svc := range expected {
-		if err := r.applyService(ctx, svc); err != nil {
+		if err = r.applyService(ctx, svc); err != nil {
 			return r.Result.withError(err)
 		}
 	}
@@ -71,8 +76,12 @@ func (r *ServiceReconciler) listCurrentServices(
 ) ([]*corev1.Service, error) {
 	current := corev1.ServiceList{}
 
-	if err := r.List(ctx, &current, client.InNamespace(bkapp.GetNamespace()), client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()}); err != nil {
-		return nil, fmt.Errorf("failed to list app's Service: %w", err)
+	if err := r.Client.List(
+		ctx, &current,
+		client.InNamespace(bkapp.GetNamespace()),
+		client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()},
+	); err != nil {
+		return nil, errors.Wrap(err, "failed to list app's Service")
 	}
 	return lo.ToSlicePtr(current.Items), nil
 }
@@ -102,19 +111,19 @@ func (r *ServiceReconciler) handleUpdate(
 		!equality.Semantic.DeepEqual(current.Spec.Selector, want.Spec.Selector) {
 		patch, err := json.Marshal(want)
 		if err != nil {
-			return fmt.Errorf(
-				"failed to patch update Service(%s/%s) while marshal patching data: %w",
+			return errors.Wrapf(
+				err,
+				"failed to patch update Service(%s/%s) while marshal patching data",
 				want.GetNamespace(),
 				want.GetName(),
-				err,
 			)
 		}
-		if err := cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
-			return fmt.Errorf(
-				"failed to patch update Service(%s/%s): %w",
+		if err = cli.Patch(ctx, current, client.RawPatch(types.MergePatchType, patch)); err != nil {
+			return errors.Wrapf(
+				err,
+				"failed to patch update Service(%s/%s)",
 				want.GetNamespace(),
 				want.GetName(),
-				err,
 			)
 		}
 	}

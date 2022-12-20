@@ -19,10 +19,10 @@
 package resources
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,7 +143,7 @@ func NewIngressBuilder(
 	case DomainCustom:
 		return CustomIngressBuilder{bkapp: bkapp}, nil
 	default:
-		return nil, fmt.Errorf("%v: %w", sourceType, ErrDomainGroupSourceType)
+		return nil, errors.Wrap(ErrDomainGroupSourceType, string(sourceType))
 	}
 }
 

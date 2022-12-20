@@ -63,7 +63,7 @@ class BkMonitorClient:
         """
         # 在指定的命名空间下创建 APM 应用
         try:
-            resp = self.client.create_apm_application({"app_name": apm_name, "space_uid": bk_monitor_space_id})
+            resp = self.client.apm_create_application({"app_name": apm_name, "space_uid": bk_monitor_space_id})
         except APIGatewayResponseError as e:
             raise BkMonitorGatewayServiceError(f"Failed to create APM on BK Monitor, {e}")
 

@@ -60,6 +60,14 @@ class Group(OperationGroup):
         path="/create_apm_application/",
     )
 
+    # 快速创建APM应用
+    apm_create_application = bind_property(
+        Operation,
+        name="apm_create_application",
+        method="POST",
+        path="/apm/create_application1/",
+    )
+
     # 创建自定义指标
     create_custom_time_series = bind_property(
         Operation,

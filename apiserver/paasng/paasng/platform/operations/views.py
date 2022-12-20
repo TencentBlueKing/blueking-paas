@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from collections import namedtuple
 from typing import List
 
+from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -28,6 +29,7 @@ from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
 from paasng.platform.operations import serializers
@@ -89,7 +91,13 @@ class LatestApplicationsViewSet(APIView):
         helper = OperationRepresentHelper()
         op_types = helper.get_supported_types()
 
-        application_ids = UserApplicationFilter(self.request.user).filter().values_list("id", flat=True)
+        applications = UserApplicationFilter(self.request.user).filter()
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
+        application_ids = applications.values_list("id", flat=True)
+
         latest_operated_objs = (
             ApplicationLatestOp.objects.filter(operation_type__in=op_types, application__id__in=application_ids)
             .select_related('operation')

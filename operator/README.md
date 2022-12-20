@@ -124,7 +124,7 @@ operator 服务部署到集群中，进行任何功能测试。
 参考使用方式：
 - 第三方包返回的错误，如 `err := json.Unmarshal(...)`， 使用 `errors.WithStack(err)` 以携带堆栈信息
 - sentinel error，即 `var err = errors.New("xxx")`，在实际使用处也使用 `errors.WithStack` 包装
-- 新建的错误，应该使用 `error.Errorf("xxx: %s", val)`，不应使用 `fmt.Errorf("xxx: %s", val)`
+- 新建的错误，应该使用 `errors.Errorf("xxx: %s", val)`，不应使用 `fmt.Errorf("xxx: %s", val)`
 - 需要对调用方返回的错误进行包装，携带额外的信息，应该使用 `errors.Wrap / errors.Wrapf` 而非 `fmt.Errorf + %w`
 
 注意：

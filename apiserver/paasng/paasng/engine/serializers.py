@@ -421,6 +421,8 @@ class ResourceMetricsSLZ(serializers.Serializer):
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):
+    module = serializers.CharField(help_text='所属模块')
+    environment = serializers.CharField(help_text='部署环境')
     frontend_ingress_ip = serializers.CharField(help_text='独立域名应该指向的地址，为空字符串 "" 时表示不支持独立域名功能')
 
 

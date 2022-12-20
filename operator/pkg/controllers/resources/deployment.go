@@ -92,24 +92,10 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 
 // buildContainers 根据配置生产对应容器配置列表（目前设计单个 proc 只会有单个容器）
 func buildContainers(proc v1alpha1.Process, envs []corev1.EnvVar) []corev1.Container {
-	// 由于 webhook 中已做校验，因此这里不会有 err，可以忽略
-	cpuQuota, _ := quota.NewQuantity(proc.CPU, quota.CPU)
-	memQuota, _ := quota.NewQuantity(proc.Memory, quota.Memory)
-
 	container := corev1.Container{
-		Name:  proc.Name,
-		Image: proc.Image,
-		Resources: corev1.ResourceRequirements{
-			// 目前 Requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    *quota.Div(cpuQuota, 4),
-				corev1.ResourceMemory: *quota.Div(memQuota, 2),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    *cpuQuota,
-				corev1.ResourceMemory: *memQuota,
-			},
-		},
+		Name:            proc.Name,
+		Image:           proc.Image,
+		Resources:       buildContainerResources(proc.CPU, proc.Memory),
 		ImagePullPolicy: proc.ImagePullPolicy,
 		Env:             envs,
 		Command:         proc.Command,
@@ -120,6 +106,25 @@ func buildContainers(proc v1alpha1.Process, envs []corev1.EnvVar) []corev1.Conta
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
 	}
 	return []corev1.Container{container}
+}
+
+// buildContainerResources 构建容器资源配额信息
+func buildContainerResources(cpu, memory string) corev1.ResourceRequirements {
+	// 由于 webhook 中已做校验，因此这里不会有 err，可以忽略
+	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
+	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
+
+	return corev1.ResourceRequirements{
+		// 目前 Requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    *quota.Div(cpuQuota, 4),
+			corev1.ResourceMemory: *quota.Div(memQuota, 2),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    *cpuQuota,
+			corev1.ResourceMemory: *memQuota,
+		},
+	}
 }
 
 // buildImagePullSecrets 返回拉取镜像的 Secrets 列表

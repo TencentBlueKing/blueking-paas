@@ -123,7 +123,7 @@ def test_get_module_clusters_engineless(bk_module):
 
 
 @pytest.mark.parametrize(
-    'exposed_url_type,ingress_config,include_reserved,expected_domains',
+    'exposed_url_type, ingress_config, include_reserved, expected_domains',
     [
         (
             ExposedURLType.SUBDOMAIN,

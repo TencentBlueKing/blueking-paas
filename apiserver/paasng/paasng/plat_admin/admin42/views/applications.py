@@ -30,6 +30,7 @@ from paasng.accessories.iam.helpers import (
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import ClusterType
+from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.controller.state import controller_client
 from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
@@ -120,6 +121,8 @@ class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
         controller_client.bind_app_cluster(
             engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
         )
+        # 清理 engine_app 集群信息缓存
+        get_engine_app_cluster.invalidate(engine_app.region, engine_app.name)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

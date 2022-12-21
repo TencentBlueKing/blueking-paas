@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Manage logics related with how to expose an application
 """
 import json
@@ -26,13 +27,15 @@ from attrs import define
 from django.conf import settings
 from django.dispatch import receiver
 
-from paasng.engine.controller.cluster import Cluster, get_engine_app_cluster, get_region_cluster_helper
+from paasng.engine.constants import AppEnvName
+from paasng.engine.controller.cluster import Cluster, get_region_cluster_helper
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.engine.signals import on_builtin_domains_subpaths_updated
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.core.storages.cache import region as cache_region
 from paasng.platform.modules.constants import ExposedURLType
+from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
 from paasng.platform.region.models import get_region
 from paasng.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
@@ -315,11 +318,11 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
     for given module.
     """
     application = env.module.application
-    cluster = get_engine_app_cluster(application.region, env.get_engine_app().name)
+    clusters = get_module_clusters(env.module)
     addrs_value = ''
     try:
         addrs = get_preallocated_address(
-            application.code, application.region, cluster=cluster, module_name=env.module.name
+            application.code, env.module.region, clusters=clusters, module_name=env.module.name
         )
         addrs_value = json.dumps(addrs._asdict())
     except ValueError:
@@ -335,35 +338,56 @@ class PreAddresses(NamedTuple):
 
 
 def get_preallocated_address(
-    app_code: str, region: Optional[str] = None, cluster: Optional[Cluster] = None, module_name: Optional[str] = None
+    app_code: str,
+    region: Optional[str] = None,
+    clusters: Optional[Dict[AppEnvName, Cluster]] = None,
+    module_name: Optional[str] = None,
 ) -> PreAddresses:
     """Get the preallocated address for a application which was not released yet
 
     :param region: the region name on which the application will be deployed, if not given, use default region
-    :param cluster: the cluster object, if not given, use default cluster
-    :param module: the module name, if not given, use default module
+    :param clusters: the env-cluster map, if not given, all use default cluster
+    :param module_name: the module name, if not given, use default module
     :raises: ValueError no preallocated address can be found
     """
     region = region or settings.DEFAULT_REGION_NAME
+    clusters = clusters or {}
+
     helper = get_region_cluster_helper(region)
-    if not cluster:
-        cluster = helper.get_default_cluster()
+    default_cluster = helper.get_default_cluster()
+    stag_address, prod_address = "", ""
 
-    ingress_config = cluster.ingress_config
-    pre_subpaths = get_preallocated_path(app_code, ingress_config, module_name=module_name)
-    if pre_subpaths:
-        return PreAddresses(
-            stag=pre_subpaths.stag.as_url().as_address(),
-            prod=pre_subpaths.prod.as_url().as_address(),
+    # 生产环境
+    prod_cluster = clusters.get(AppEnvName.PROD, default_cluster)
+    prod_pre_subpaths = get_preallocated_path(app_code, prod_cluster.ingress_config, module_name=module_name)
+    prod_pre_subdomains = get_preallocated_domain(app_code, prod_cluster.ingress_config, module_name=module_name)
+
+    if prod_pre_subdomains:
+        prod_address = prod_pre_subdomains.prod.as_url().as_address()
+
+    # 若集群有子路径配置，则优先级高于子域名
+    if prod_pre_subpaths:
+        prod_address = prod_pre_subpaths.prod.as_url().as_address()
+
+    # 测试环境
+    stag_cluster = clusters.get(AppEnvName.STAG, default_cluster)
+    stag_pre_subpaths = get_preallocated_path(app_code, stag_cluster.ingress_config, module_name=module_name)
+    stag_pre_subdomains = get_preallocated_domain(app_code, stag_cluster.ingress_config, module_name=module_name)
+
+    if stag_pre_subdomains:
+        stag_address = stag_pre_subdomains.stag.as_url().as_address()
+
+    # 若集群有子路径配置，则优先级高于子域名
+    if stag_pre_subpaths:
+        stag_address = stag_pre_subpaths.stag.as_url().as_address()
+
+    if not (stag_address and prod_address):
+        raise ValueError(
+            "failed to get sub-path or sub-domain entrance config, "
+            f"stag cluster: {stag_cluster.name}, prod cluster: {prod_cluster.name}"
         )
 
-    pre_subdomains = get_preallocated_domain(app_code, ingress_config, module_name=module_name)
-    if pre_subdomains:
-        return PreAddresses(
-            stag=pre_subdomains.stag.as_url().as_address(),
-            prod=pre_subdomains.prod.as_url().as_address(),
-        )
-    raise ValueError(f'No sub-path or sub-domain entrance config was configured for cluster: "{cluster.name}"')
+    return PreAddresses(stag=stag_address, prod=prod_address)
 
 
 def get_bk_doc_url_prefix() -> str:

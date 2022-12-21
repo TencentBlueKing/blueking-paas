@@ -139,7 +139,7 @@ urlpatterns = [
         name='api.deploy_operation.lists',
     ),
     re_path(
-        make_app_pattern(r'/custom_domains/config/$', include_envs=False),
+        '^api/bkapps/applications/(?P<code>[^/]+)/custom_domains/config/$',
         views.CustomDomainsConfigViewset.as_view({'get': 'retrieve'}),
         name='api.custom_domains_config',
     ),

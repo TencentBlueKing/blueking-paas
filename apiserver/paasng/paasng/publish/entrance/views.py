@@ -156,12 +156,8 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         switchable_domains = [domain.name for domain in get_module_all_root_domains(module, include_reserved=False)]
         preferred_root_domain = module.user_preferred_root_domain
 
-        # 模块没有设置偏好根域名，则默认为集群设置的第一个根域
-        if not preferred_root_domain and switchable_domains:
-            preferred_root_domain = switchable_domains[0]
-
         # 如果当前的域名是保留域名, 那么则添加到
-        if preferred_root_domain not in switchable_domains:
+        if preferred_root_domain and preferred_root_domain not in switchable_domains:
             switchable_domains.append(preferred_root_domain)
 
         return Response(

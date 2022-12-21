@@ -106,6 +106,9 @@ var _ = BeforeSuite(func() {
 	err = (&BkApp{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&DomainGroupMapping{}).SetupWebhookWithManager(mgr, k8sClient)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:webhook
 
 	go func() {

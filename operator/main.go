@@ -112,10 +112,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = controllers.NewBkAppReconciler(
-		client.New(mgr.GetClient()), mgr.GetScheme(),
-	).SetupWithManager(mgr); err != nil {
+	mgrCli := client.New(mgr.GetClient())
+	mgrScheme := mgr.GetScheme()
+	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
+		os.Exit(1)
+	}
+	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
@@ -123,12 +127,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "BkApp")
 			os.Exit(1)
 		}
-	}
-	if err = controllers.NewDomainGroupMappingReconciler(
-		client.New(mgr.GetClient()), mgr.GetScheme(),
-	).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
-		os.Exit(1)
+		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr, mgrCli); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DomainGroupMapping")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

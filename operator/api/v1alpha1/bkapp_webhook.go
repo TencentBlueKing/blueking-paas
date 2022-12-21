@@ -96,7 +96,7 @@ func (r *BkApp) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete 应用删除时校验
 func (r *BkApp) ValidateDelete() error {
 	appLog.Info("validate delete (do nothing)", "name", r.Name)
-	// TODO P0 删除时候暂时不做任何校验，后续可以考虑支持删除保护？
+	// TODO: 删除时候暂时不做任何校验，后续可以考虑支持删除保护？
 	return nil
 }
 

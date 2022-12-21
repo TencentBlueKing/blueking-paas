@@ -65,7 +65,7 @@ class Group(OperationGroup):
         Operation,
         name="apm_create_application",
         method="POST",
-        path="/apm/create_application1/",
+        path="/apm/create_application/",
     )
 
     # 创建自定义指标

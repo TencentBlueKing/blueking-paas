@@ -73,6 +73,10 @@ class Provider(BaseProvider):
                 "grpc_url": settings.BK_OTEL_GRPC_URL,
             },
             config={
+                # APM 详情的查看链接
+                "admin_url": "{}/?space_uid={}#/apm/application?filter-app_name={}".format(
+                    settings.BK_MONITORV3_URL, bk_monitor_space_id, apm_data.app_name
+                ),
                 "bk_app_code": bk_app_code,
                 "app_name": apm_data.app_name,
                 "env": env,

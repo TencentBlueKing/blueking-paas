@@ -245,3 +245,5 @@ BK_API_URL_TMPL = env("BK_API_URL_TMPL", default='')
 APIGW_ENVIRONMENT = env("APIGW_ENVIRONMENT", default='prod')
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = env.bool("ENABLE_BK_MONITOR_APIGW", default=True)
+# 蓝鲸监控的访问地址, 用于拼接 APM 详情页面的访问地址
+BK_MONITORV3_URL = env("BK_MONITORV3_URL", default="")

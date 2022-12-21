@@ -51,7 +51,11 @@
           </bk-table-column>
           <bk-table-column :label="$t('角色')">
             <template slot-scope="props">
-              <span class="role-label" v-for="role in props.row.roles">
+              <span
+                v-for="(role, index) in props.row.roles"
+                :key="index"
+                class="role-label"
+              >
                 {{ $t(roleNames[role.name]) }}
               </span>
             </template>
@@ -61,7 +65,11 @@
             min-width="170"
           >
             <template slot-scope="props">
-              <span class="ps-pr" v-for="perm in genUserPerms(props.row.roles)">
+              <span
+                v-for="(perm, index) in genUserPerms(props.row.roles)"
+                :key="index"
+                class="ps-pr"
+              >
                 {{ $t(perm) }}
               </span>
             </template>
@@ -116,11 +124,11 @@
         style="min-height: 130px;"
       >
         <bk-alert
-          type="warning"
           v-if="memberMgrConfig.type === 'edit'"
+          type="warning"
           :title="$t('更新后仅保留用户的新角色')"
-          style="margin-bottom: 15px;">
-        </bk-alert>
+          style="margin-bottom: 15px;"
+        />
         <bk-form
           :label-width="120"
           form-type="vertical"
@@ -616,9 +624,6 @@
 
             canManageMe (roleInfo) {
                 if (roleInfo.user.username !== this.currentUser) {
-                    return false;
-                }
-                if (roleInfo.user.id === this.curAppInfo.application.owner) {
                     return false;
                 }
                 return true;

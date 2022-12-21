@@ -626,9 +626,6 @@
                 if (roleInfo.user.username !== this.currentUser) {
                     return false;
                 }
-                if (roleInfo.user.id === this.curAppInfo.application.owner) {
-                    return false;
-                }
                 return true;
             },
 

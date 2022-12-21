@@ -157,6 +157,10 @@ class ApplicationViewSet(viewsets.ViewSet):
             order_by=[params.get('order_by')],
         )
 
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         # 如果将用户标记的应用排在前面，需要特殊处理一下
         if params.get('prefer_marked'):
             applications_ids = applications.values_list('id', flat=True)
@@ -194,6 +198,11 @@ class ApplicationViewSet(viewsets.ViewSet):
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
+
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         results = [
             {'application': application, 'product': application.product if hasattr(application, "product") else None}
             for application in applications
@@ -680,9 +689,6 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
-        user = request.user
-        if application.owner == user.pk:  # owner can not leave application
-            raise error_codes.MEMBERSHIP_OWNER_FAILED
 
         self.check_admin_count(application.code, request.user.username)
         try:

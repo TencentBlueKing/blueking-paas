@@ -162,7 +162,7 @@
             pluginTips: function () {
                 return [
                     'pip install cookiecutter',
-                    `cookiecutter ${this.GLOBAL.LINK.BK_PLUGIN_TEMPLATE}`
+                    `cookiecutter https://github.com/TencentBlueKing/bk-plugin-framework-python/ --directory template`
                 ].join('\n');
             },
             initTips: function () {

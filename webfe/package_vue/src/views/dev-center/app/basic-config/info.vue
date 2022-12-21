@@ -411,7 +411,7 @@
                   </bk-button>
                   <bk-button
                     :theme="'default'"
-                    :title="$t('主要按钮')"
+                    :title="$t('还原')"
                     class="mr10"
                     @click="revivification"
                   >
@@ -426,7 +426,9 @@
             </bk-form>
           </div>
         </div>
-        <div
+        <!-- 鉴权信息 -->
+        <authentication-info />
+        <!-- <div
           v-if="canViewSecret"
           class="basic-info-item"
         >
@@ -517,7 +519,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </div> -->
         <div
           v-if="canDeleteApp"
           class="basic-info-item"
@@ -590,10 +592,12 @@
 <script>
     import moment from 'moment';
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import authenticationInfo from '@/components/authentication-info.vue';
     import 'BKSelectMinCss';
 
     export default {
         components: {
+            authenticationInfo,
             'bk-member-selector': () => {
                 return import('@/components/user/member-selector/member-selector.vue');
             }

@@ -1,20 +1,20 @@
 /*
-* Tencent is pleased to support the open source community by making
-* 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-* Copyright (C) 2017-2022THL A29 Limited, a Tencent company.  All rights reserved.
-* Licensed under the MIT License (the "License").
-* You may not use this file except in compliance with the License.
-* You may obtain a copy of the License at http://opensource.org/licenses/MIT
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on
-* an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-* either express or implied. See the License for the
-* specific language governing permissions and limitations under the License.
-*
-* We undertake not to change the open source license (MIT license) applicable
-*
-* to the current version of the project delivered to anyone in the future.
-*/
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://opensource.org/licenses/MIT
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ * to the current version of the project delivered to anyone in the future.
+ */
 
 /**
  * 函数柯里化
@@ -506,6 +506,52 @@ export function unique (array, key) {
         break;
       }
     }
+  }
+  return result;
+}
+
+/**
+ * 计算当前相对时间
+ *
+ * @param {string} time 日期
+ *
+ * @return {string} 转换后字符串
+ */
+export function formatTime (time) {
+  const dateTimeStamp = new Date(time).getTime();
+  const minute = 1000 * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
+
+  const month = day * 30;
+  const year = month * 12;
+  const now = new Date().getTime();
+  const diffValue = now - dateTimeStamp;
+  let result = '';
+  if (diffValue < 0) {
+    return;
+  }
+  const monthC = diffValue / month;
+  const weekC = diffValue / (7 * day);
+  const dayC = diffValue / day;
+  const hourC = diffValue / hour;
+  const minC = diffValue / minute;
+  const yearC = diffValue / year;
+  if (yearC >= 1) {
+    return '' + parseInt(yearC) + this.$t('年前');
+  }
+  if (monthC >= 1) {
+    result = '' + parseInt(monthC) + this.$t('月前');
+  } else if (weekC >= 1) {
+    result = '' + parseInt(weekC) + this.$t('周前');
+  } else if (dayC >= 1) {
+    result = '' + parseInt(dayC) + this.$t('天前');
+  } else if (hourC >= 1) {
+    result = '' + parseInt(hourC) + this.$t('小时前');
+  } else if (minC >= 1) {
+    result = '' + parseInt(minC) + this.$t('分钟前');
+  } else {
+    result = this.$t('刚刚');
   }
   return result;
 }

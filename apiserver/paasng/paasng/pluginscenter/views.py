@@ -40,6 +40,7 @@ from paasng.pluginscenter import log as log_api
 from paasng.pluginscenter import openapi_docs, serializers, shim
 from paasng.pluginscenter.bk_devops.client import BkDevopsClient
 from paasng.pluginscenter.bk_devops.exceptions import BkDevopsApiError, BkDevopsGatewayServiceError
+from paasng.pluginscenter.bk_devops.utils import get_devops_project_id
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
@@ -316,7 +317,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         # 获取代码仓库对应的蓝盾项目 ID
         repo_accessor = get_plugin_repo_accessor(plugin)
-        devops_project_id = repo_accessor.get_devops_project_id()
+        project_id = repo_accessor.get_project_id()
+        devops_project_id = get_devops_project_id(project_id)
 
         client = BkDevopsClient(request.user.username)
         try:

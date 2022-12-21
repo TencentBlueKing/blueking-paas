@@ -215,15 +215,9 @@ class PluginRepoAccessor:
         to_revision = self.extract_smart_revision(to_revision)
         return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
-    def get_devops_project_id(self) -> str:
-        """仓库对应的蓝盾项目ID, 用于获取仓库的代码检查等信息"""
-        project_id = self._get_project_id(self.project)
-        # 仓库对应的蓝盾项目ID为: 在工蜂项目ID前添加 git_ 前缀
-        return f"git_{project_id}"
-
-    def _get_project_id(self, project: GitProject) -> int:
+    def get_project_id(self) -> int:
         """获取工蜂仓库的项目ID"""
-        _id = quote(project.path_with_namespace, safe="")
+        _id = quote(self.project.path_with_namespace, safe="")
         _url = f"api/v3/projects/{_id}"
         resp = self._session.get(urljoin(self._api_url, _url))
         validate_response(resp)

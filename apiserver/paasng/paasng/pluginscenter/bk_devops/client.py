@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
@@ -32,8 +31,8 @@ logger = logging.getLogger(__name__)
 class BkDevopsClient:
     """bk-devops 通过 APIGW 提供的 API"""
 
-    def __init__(self, operator: str):
-        self.operator = operator
+    def __init__(self, bk_username: str):
+        self.bk_username = bk_username
         # 蓝盾只提供了正式环境的 API
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage="prod")
 
@@ -47,29 +46,28 @@ class BkDevopsClient:
 
     def _prepare_headers(self) -> dict:
         headers = {
-            'x-bkapi-authorization': json.dumps(
-                {
-                    'bk_app_code': settings.BK_APP_CODE,
-                    'bk_app_secret': settings.BK_APP_SECRET,
-                }
-            ),
             # 应用态 API 需要添加 X-DEVOPS-UID，用户态 API 不需要
-            "X-DEVOPS-UID": self.operator,
+            "X-DEVOPS-UID": self.bk_username,
         }
         return headers
 
-    def get_metrics_summary(self, project_id):
-        path_params = {"projectId": project_id}
+    def get_metrics_summary(self, devops_project_id):
+        """
+        :param devops_project_id: 蓝盾项目ID
+        """
+        path_params = {"projectId": devops_project_id}
         try:
             resp = self.client.v4_app_metrics_summary(
                 headers=self._prepare_headers(),
                 path_params=path_params,
             )
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(f'get stream ci metrics summary (id: {project_id}) error, detail: {e}')
+            raise BkDevopsGatewayServiceError(
+                f'get stream ci metrics summary (id: {devops_project_id}) error, detail: {e}'
+            )
 
         if resp.get('status') != 0:
-            logger.exception(f'get stream ci metrics summary (id: {project_id}) error, resp:{resp}')
+            logger.exception(f'get stream ci metrics summary (id: {devops_project_id}) error, resp:{resp}')
             raise BkDevopsApiError(resp['message'])
 
         return resp['data']['overview']

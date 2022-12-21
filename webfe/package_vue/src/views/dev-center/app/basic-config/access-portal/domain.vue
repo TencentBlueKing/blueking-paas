@@ -380,7 +380,7 @@
                 });
             },
             loadDomainConfig () {
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/custom_domains/config/').then(
+                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/custom_domains/config/').then(
                     res => {
                         this.curIngressIp = res.frontend_ingress_ip;
                     },

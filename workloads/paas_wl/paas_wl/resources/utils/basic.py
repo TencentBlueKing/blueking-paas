@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 """Basic utils for scheduler
 """
 import logging
@@ -6,17 +23,18 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding
+from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.utils.basic import make_subdict
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
     from paas_wl.platform.applications.models.config import Config
 
 
-def get_full_node_selector(app: 'App', config: Optional['Config'] = None) -> Dict:
+def get_full_node_selector(app: EngineApp, config: Optional['Config'] = None) -> Dict:
     """An app's node_selector was constituted by many parts.
 
     1. "node_selector" field in Config object
@@ -43,7 +61,7 @@ def get_full_node_selector(app: 'App', config: Optional['Config'] = None) -> Dic
     return result
 
 
-def get_full_tolerations(app: 'App', config: Optional['Config'] = None) -> List:
+def get_full_tolerations(app: EngineApp, config: Optional['Config'] = None) -> List:
     """An app's tolerations was constituted by many parts.
 
     1. "tolerations" field in Config object
@@ -60,7 +78,13 @@ def get_full_tolerations(app: 'App', config: Optional['Config'] = None) -> List:
     return standardize_tolerations(results)
 
 
-def get_client_by_app(app: 'App') -> EnhancedApiClient:
+def get_client_by_env(env: ModuleEnv) -> EnhancedApiClient:
+    """Get kubernetes client by environment object"""
+    app = EngineApp.objects.get_by_env(env)
+    return get_client_by_app(app)
+
+
+def get_client_by_app(app: EngineApp) -> EnhancedApiClient:
     """Get kubernetes client by given app"""
     cluster = get_cluster_by_app(app)
     return get_client_by_cluster_name(cluster.name)

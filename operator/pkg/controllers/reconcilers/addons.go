@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- * 	http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -19,16 +20,14 @@ package reconcilers
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
+	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 )
@@ -47,7 +46,7 @@ func NewAddonReconciler(client client.Client) *AddonReconciler {
 
 // AddonReconciler 负责处理分配增强服务实例
 type AddonReconciler struct {
-	client.Client
+	Client         client.Client
 	Result         Result
 	ExternalClient *external.Client
 }
@@ -60,7 +59,7 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) 
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.AddOnsProvisioned,
 			Status:             metav1.ConditionFalse,
-			Reason:             errors.Unwrap(err).Error(),
+			Reason:             "InternalServerError",
 			Message:            err.Error(),
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
@@ -73,7 +72,7 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) 
 		})
 	}
 
-	if updateErr := r.Status().Update(ctx, bkapp); updateErr != nil {
+	if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
 		return r.Result.withError(updateErr)
 	}
 	return r.Result.withError(err)
@@ -88,20 +87,20 @@ func (r *AddonReconciler) doReconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 	appInfo, err = applications.GetBkAppInfo(bkapp)
 	if err != nil {
 		log.Error(err, "failed to get bkapp info, skip addons reconcile")
-		return fmt.Errorf("InvalidAnnotations: missing bkapp info, Detail: %w", err)
+		return errors.Wrap(err, "InvalidAnnotations: missing bkapp info, Detail")
 	}
 
 	if addons, err = bkapp.ExtractAddons(); err != nil {
 		log.Error(err, "failed to extract addons info from annotation, skip addons reconcile")
-		return fmt.Errorf("InvalidAnnotations: invalid value for '%s', Detail: %w", v1alpha1.AddonsAnnoKey, err)
+		return errors.Wrapf(err, "InvalidAnnotations: invalid value for '%s', Detail", v1alpha1.AddonsAnnoKey)
 	}
 
 	for _, addon := range addons {
-		ctx, cancel := context.WithTimeout(ctx, external.DefaultTimeout)
+		cancelCtx, cancel := context.WithTimeout(ctx, external.DefaultTimeout)
 		defer cancel()
 
 		err = r.ExternalClient.ProvisionAddonInstance(
-			ctx,
+			cancelCtx,
 			appInfo.AppCode,
 			appInfo.ModuleName,
 			appInfo.Environment,
@@ -109,7 +108,7 @@ func (r *AddonReconciler) doReconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 		)
 		if err != nil {
 			log.Error(err, "failed to provision addon instance", "appInfo", appInfo, "addon", addon)
-			return fmt.Errorf("ProvisionFailed: failed to provision '%s' instance, Detail: %w", addon, err)
+			return errors.Wrapf(err, "ProvisionFailed: failed to provision '%s' instance, Detail", addon)
 		}
 	}
 	return nil

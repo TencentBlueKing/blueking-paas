@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from typing import Dict
 
 from django.utils.translation import gettext_lazy as _
@@ -37,11 +54,20 @@ class IngressConfigSLZ(serializers.Serializer):
         return data
 
 
+class ClusterFeatureFlagsSLZ(serializers.Serializer):
+    """Serializer for Cluster feature flags"""
+
+    enable_egress_ip = serializers.BooleanField(help_text='支持提供出口 IP', required=False, default=False)
+    enable_mount_log_to_host = serializers.BooleanField(help_text='允许挂载日志到主机', required=False, default=False)
+
+
 class ClusterSLZ(serializers.Serializer):
     """Serializer for Cluster object"""
 
     name = serializers.CharField()
+    type = serializers.CharField()
     is_default = serializers.BooleanField()
     bcs_cluster_id = serializers.CharField()
     support_bcs_metrics = serializers.BooleanField(default=False)
     ingress_config = IngressConfigSLZ()
+    feature_flags = ClusterFeatureFlagsSLZ()

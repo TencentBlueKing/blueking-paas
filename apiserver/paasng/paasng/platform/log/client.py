@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import datetime
@@ -42,6 +41,7 @@ from paasng.utils.datetime import (
     strftime_ms,
     time_to_epoch_millis,
 )
+from paasng.utils.text import calculate_percentage
 
 from .constants import LOG_FILTER_FIELD_MAPS
 from .exceptions import LogQueryError
@@ -283,10 +283,8 @@ class LogClient:
 
             options = []
             for key, count in key_counts:
-                percent = "{0:.2%}".format(count / total)
-                if percent == "0.00%":
-                    percent = "<0.01%"
-                options.append((key, percent))
+                percentage = calculate_percentage(count, total)
+                options.append((key, percentage))
 
             if total == 0:
                 # 该 field 无值可选, 直接忽略掉
@@ -333,10 +331,8 @@ class LogClient:
                 continue
 
             for value, count in values.items():
-                percent = "{0:.2%}".format(count / total)
-                if percent == "0.00%":
-                    percent = "<0.01%"
-                options.append((value, percent))
+                percentage = calculate_percentage(count, total)
+                options.append((value, percentage))
 
             filters.append(
                 {

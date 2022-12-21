@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from django.urls import path
@@ -33,9 +33,21 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/archive/",
+        views.PluginInstanceViewSet.as_view({"post": "archive"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/repo/commit-diff-external/"
         + "<str:from_revision>/<str:to_revision>/",
         views.PluginReleaseViewSet.as_view({"get": "get_compare_url"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/code_statistics/",
+        views.PluginInstanceViewSet.as_view({"get": "get_code_submit_info"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/feature_flags/",
+        views.PluginInstanceViewSet.as_view({"get": "get_feature_flags"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/",
@@ -94,6 +106,10 @@ urlpatterns = [
         views.PluginLogViewSet.as_view({"post": "aggregate_date_histogram"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logs/aggregate_fields_filters/<str:log_type>/",
+        views.PluginLogViewSet.as_view({"post": "aggregate_fields_filters"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/",
         views.PluginMembersViewSet.as_view({"get": "list", "post": "create"}),
     ),
@@ -122,6 +138,10 @@ urlpatterns = [
         views.PluginMembersViewSet.as_view({"delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/operations/",
+        views.OperationRecordViewSet.as_view({"get": "list"}),
+    ),
+    path(
         "api/bkplugins/plugin_definitions/schemas/",
         views.SchemaViewSet.as_view({"get": "get_plugins_schema"}),
     ),
@@ -146,11 +166,11 @@ urlpatterns = [
     # 创建插件审批回调 API
     path(
         "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/itsm/",
-        views.PluginReleaseStageApiViewSet.as_view({"post": "itsm_create_callback"}),
+        views.PluginCallBackApiViewSet.as_view({"post": "itsm_create_callback"}),
     ),
     # 发布流程中上线审批阶段回调 API
     path(
         "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/itsm/",
-        views.PluginReleaseStageApiViewSet.as_view({"post": "itsm_stage_callback"}),
+        views.PluginCallBackApiViewSet.as_view({"post": "itsm_stage_callback"}),
     ),
 ]

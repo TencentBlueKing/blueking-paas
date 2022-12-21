@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import datetime
 import logging
 import time
@@ -8,11 +25,9 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import arrow
 from django.conf import settings
 from django.utils.timezone import localtime
-from kubernetes import client as client_mod
 from kubernetes.client.rest import ApiException
 
 from paas_wl.release_controller.hooks.entities import Command, command_kmodel
-from paas_wl.resources.base.constants import BKAPP_CATEGORY
 from paas_wl.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     PodNotSucceededAbsentError,
@@ -76,58 +91,6 @@ class ProcessesHandler(ResourceHandlerBase):
             self.process_manager.update(process, "patch", mapper_version=self.mapper_version)
         except AppEntityNotFound:
             self.process_manager.create(process, mapper_version=self.mapper_version)
-
-    @staticmethod
-    def get_process_type(deployment):
-        name = deployment.metadata.name
-        namespace = deployment.metadata.namespace
-        labels = deployment.metadata.labels
-
-        # get process type
-        process_type = labels.get("process_id")
-        # we have to handle old deployments which is without labels,
-        # example: namespace: bkapp-test2-stag, name: ieod-bkapp-test2-stag-web-gunicorn-deployment
-        if not process_type:
-            process_type = name.split(namespace)[-1].split("-")[1]
-
-        return process_type
-
-    #########
-    # batch #
-    #########
-
-    def get_abnormal_deployments(self, region):
-        """查询整个命名空间下的deployments，并通过replica，获取异常状态的deployments"""
-        # TODO: remove when phalanx is ready for doing this
-        all_deployments = client_mod.ExtensionsV1beta1Api(self.client).list_deployment_for_all_namespaces(
-            _request_timeout=self.default_request_timeout
-        )
-
-        # format: {"engine_app_name": ["process_type"]}
-        abnormal_deployments = []
-        for deployment in all_deployments.items:
-            labels = deployment.spec.template.metadata.labels
-            # TODO: 为兼容已经部署的应用，现阶段先跳过校验labels中的region/category为空的应用
-            curr_region = labels.get("region")
-            curr_category = labels.get("category")
-            if curr_region not in [None, region]:
-                continue
-            if not (curr_category in [None, BKAPP_CATEGORY] and deployment.metadata.namespace.startswith('bkapp')):
-                continue
-
-            if deployment.status.available_replicas:
-                exist_failed_replica = int(deployment.spec.replicas) != int(deployment.status.available_replicas)
-            else:
-                exist_failed_replica = bool(int(deployment.spec.replicas))
-
-            if exist_failed_replica:
-                abnormal_deployments.append(deployment)
-
-        return abnormal_deployments
-
-    #################
-    # inner methods #
-    #################
 
 
 class NamespacesHandler(ResourceHandlerBase):

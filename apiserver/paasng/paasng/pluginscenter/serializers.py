@@ -1,24 +1,26 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional, Type
 
+import arrow
 import semver
+from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -27,14 +29,15 @@ from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
+    OperationRecord,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
 )
-from paasng.pluginscenter.thirdparty.log import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
@@ -53,6 +56,15 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
     class Meta:
         model = PluginDefinition
         exclude = ("uuid", "identifier", "created", "updated", "release_revision", "release_stages", "log_config")
+
+
+class PluginDefinitionBasicSLZ(serializers.ModelSerializer):
+    id = serializers.CharField(source="identifier")
+    name = TranslatedCharField()
+
+    class Meta:
+        model = PluginDefinition
+        fields = ("id", "name")
 
 
 class PlainReleaseStageSLZ(serializers.Serializer):
@@ -79,6 +91,13 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data['creator']:
+            user = get_user_by_user_id(data['creator'])
+            data['creator'] = user.username
+        return data
+
     class Meta:
         model = PluginRelease
         exclude = ("plugin", "stages_shortcut")
@@ -86,6 +105,8 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
 class ItsmDetailSLZ(serializers.Serializer):
     ticket_url = serializers.CharField(default=None)
+    sn = serializers.CharField(help_text="ITSM 单据单号")
+    fields = serializers.ListField(child=serializers.DictField())
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):
@@ -131,6 +152,7 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
+        "max_length": field_schema.maxlength,
     }
     if field_schema.default:
         init_kwargs["default"] = field_schema.default
@@ -314,10 +336,18 @@ class PluginLogQueryParamsSLZ(serializers.Serializer):
         return attrs
 
 
+class PluginLogQueryDSLSLZ(serializers.Serializer):
+    """查询插件日志的 DSL 参数"""
+
+    query_string = serializers.CharField(help_text="查询语句", default="", allow_blank=True)
+    terms = serializers.DictField(help_text="多值精准匹配", default=dict)
+    exclude = serializers.DictField(help_text="terms 取反", default=dict)
+
+
 class PluginLogQueryBodySLZ(serializers.Serializer):
     """查询插件标准输出的 body 参数"""
 
-    query_string = serializers.CharField(help_text="查询语句", default="")
+    query = PluginLogQueryDSLSLZ()
 
 
 class StandardOutputLogLineSLZ(serializers.Serializer):
@@ -382,6 +412,15 @@ class DateHistogramSLZ(serializers.Serializer):
     dsl = serializers.CharField(help_text="日志查询语句")
 
 
+class LogFieldFilterSLZ(serializers.Serializer):
+    """日志可选字段"""
+
+    name = serializers.CharField(help_text="展示名称")
+    key = serializers.CharField(help_text="传递给参数中的key")
+    options = serializers.ListField(help_text="该字段的选项和分布频率")
+    total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频次")
+
+
 class PluginRoleSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="角色名称")
     id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
@@ -418,6 +457,7 @@ class ItsmApprovalSLZ(serializers.Serializer):
 class PluginConfigColumnSLZ(serializers.Serializer):
     """插件「配置管理」表单-列定义"""
 
+    name = serializers.CharField(help_text="该字段对应的变量名")
     title = serializers.CharField(help_text="字段的标题")
     description = serializers.CharField(help_text="字段描述(placeholder)")
     pattern = serializers.CharField(required=False, help_text="校验字段的正则表达式")
@@ -449,10 +489,10 @@ def make_config_slz_class(pd: PluginDefinition) -> Type[serializers.Serializer]:
     according to the PluginConfigDefinition definition"""
     config_definition = pd.config_definition
     fields = {
-        column_definition.title: make_config_column_field(column_definition)
+        column_definition.name: make_config_column_field(column_definition)
         for column_definition in config_definition.columns
     }
-    fields["__id__"] = serializers.CharField(help_text="配置项id", source="unique_key")
+    fields["__id__"] = serializers.CharField(help_text="配置项id", required=False)
     return type("DynamicPluginConfigSerializer", (serializers.Serializer,), fields)
 
 
@@ -463,3 +503,36 @@ class StubConfigSLZ(serializers.Serializer):
     """
 
     __id__ = serializers.CharField(help_text="配置项id", source="unique_key")
+
+
+class OperationRecordSLZ(serializers.ModelSerializer):
+    display_text = serializers.CharField(source='get_display_text', read_only=True)
+
+    class Meta:
+        model = OperationRecord
+        fields = '__all__'
+
+
+class CodeCommitSearchSLZ(serializers.Serializer):
+    """代码提交统计搜索条件"""
+
+    begin_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+
+    def to_internal_value(self, instance):
+        data = super().to_internal_value(instance)
+
+        # 将时间转换为代码仓库指定的格式  YYYY-MM-DDTHH:mm:ssZ
+        data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        return data
+
+
+class PluginReleaseFilterSLZ(serializers.Serializer):
+    status = serializers.ListField(required=False)
+
+
+class PluginListFilterSlZ(serializers.Serializer):
+    status = serializers.ListField(required=False)
+    language = serializers.ListField(required=False)
+    pd__identifier = serializers.ListField(required=False)

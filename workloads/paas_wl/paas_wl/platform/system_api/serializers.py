@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import datetime
 import re
 from typing import TYPE_CHECKING
@@ -365,8 +382,9 @@ class WebConsolePostSLZ(serializers.Serializer):
     operator = serializers.CharField(required=True, help_text="操作者")
 
 
-class EnvIsRunningSLZ(serializers.Serializer):
-    """Display environment's "is_running" status"""
+class EnvAddressesSLZ(serializers.Serializer):
+    """Represents environment's address related status"""
 
     env = serializers.CharField(help_text="环境名")
     is_running = serializers.BooleanField(help_text="是否运行中")
+    addresses = serializers.JSONField(help_text="可访问地址列表")

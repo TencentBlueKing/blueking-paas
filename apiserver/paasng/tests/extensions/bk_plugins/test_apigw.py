@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest.mock import MagicMock, patch
@@ -43,6 +42,7 @@ def fake_good_client():
     empty_payload = {'data': None, 'code': 0, 'result': True, 'message': ''}
     fake_client.grant_permissions.return_value = empty_payload
     fake_client.revoke_permissions.return_value = empty_payload
+    fake_client.update_gateway_status.return_value = empty_payload
     return fake_client
 
 
@@ -53,6 +53,7 @@ def fake_bad_client():
     fake_client.sync_api.side_effect = BKAPIError('foo error')
     fake_client.grant_permissions.side_effect = BKAPIError('foo error')
     fake_client.revoke_permissions.side_effect = BKAPIError('foo error')
+    fake_client.update_gateway_status.side_effect = BKAPIError('foo error')
     return fake_client
 
 
@@ -64,7 +65,6 @@ class TestPluginDefaultAPIGateway:
         assert apigw_id == 1
         assert fake_good_client.sync_api.called
         _, kwargs = fake_good_client.sync_api.call_args_list[0]
-        assert kwargs['headers']['X-Bkapi-Authorization'] != ''
         assert len(kwargs['data']['maintainers']) > 0
 
     def test_sync_failed(self, bk_plugin_app, fake_bad_client):
@@ -93,6 +93,11 @@ class TestPluginDefaultAPIGateway:
         apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
         apigw_service.revoke(distributor)
         assert fake_good_client.revoke_permissions.called
+
+    def test_update_status_succeeded(self, bk_plugin_app, fake_good_client):
+        apigw_service = PluginDefaultAPIGateway(bk_plugin_app, client=fake_good_client)
+        apigw_service.update_gateway_status(True)
+        assert fake_good_client.update_gateway_status.called
 
 
 def test_safe_sync_apigw_succeeded(bk_plugin_app, fake_good_client):

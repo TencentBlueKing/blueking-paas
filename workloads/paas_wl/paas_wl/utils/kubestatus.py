@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import json
 from typing import List, Optional
 
@@ -59,6 +77,8 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
     elif pod_status.phase == "Running":
         pod_spec: kmodels.V1PodSpec = pod.spec
         if pod_spec.restart_policy == "Always":
+            # Ready means the pod is able to service requests
+            # and should be added to the load balancing pools of all matching services.
             cond_ready = find_pod_status_condition(pod_status.conditions or [], cond_type="Ready")
             if cond_ready and cond_ready.status == "True":
                 return healthy
@@ -75,6 +95,17 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
     elif pod_status.phase == "Pending":
         if fail_message := get_any_container_fail_message(pod):
             return unhealthy.with_message(fail_message)
+        # PodScheduled represents status of the scheduling process for this pod.
+        scheduled_cond = find_pod_status_condition(pod_status.conditions or [], cond_type="PodScheduled")
+        if scheduled_cond and scheduled_cond.status == "False":
+            # PodScheduled will be False for many reason, something should be regarded as Failed
+            # - Unschedulable means that the scheduler can't schedule the pod right now,
+            # for example due to insufficient resources in the cluster.
+            # - SchedulingGated means that the scheduler skips scheduling the pod
+            # because one or more scheduling gates are still present.
+            if scheduled_cond.reason in ["Unschedulable", "SchedulingGated"]:
+                return unhealthy.with_message(scheduled_cond.message)
+            # otherwise, the pod is still scheduling
         return progressing
     else:
         return HealthStatus(

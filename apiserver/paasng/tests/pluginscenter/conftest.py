@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
@@ -25,6 +25,7 @@ from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
 from paasng.pluginscenter.constants import MarketInfoStorageType
+from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
     ApprovalService,
@@ -80,6 +81,7 @@ def pd():
         id_schema={
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
+            "maxlength": 10,
         },
         name_schema={
             "pattern": r"[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}",
@@ -105,22 +107,16 @@ def pd():
     pd.config_definition = G(
         PluginConfigInfoDefinition,
         pd=pd,
-        title="配置管理",
+        title_zh_cn="配置管理",
         sync_api=make_api_resource("sync-configuration-{ plugin_id }"),
         columns=[
-            {"type": "string", "title": "FOO", "unique": True},
-            {"type": "string", "title": "BAR", "unique": False},
+            {"type": "string", "title": "FOO", "unique": True, "name": "FOO"},
+            {"type": "string", "title": "BAR", "unique": False, "name": "BAR"},
         ],
     )
     pd.save()
     pd.refresh_from_db()
     return pd
-
-
-@pytest.fixture
-def mock_client():
-    with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
-        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
 
 
 @pytest.fixture
@@ -179,3 +175,19 @@ def online_approval_service():
         ApprovalService, **{"service_name": ApprovalServiceName.ONLINE_APPROVAL.value, "service_id": 1}
     )
     return svc
+
+
+@pytest.fixture
+def thirdparty_client():
+    with mock.patch("paasng.pluginscenter.thirdparty.utils.DynamicClient") as cls:
+        yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
+
+
+@pytest.fixture
+def iam_policy_client():
+    with mock.patch(
+        "paasng.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client", new=mock.MagicMock(), spec=BKIAMClient
+    ) as iam_policy_client:
+        iam_policy_client.is_action_allowed.return_value = True
+        iam_policy_client.is_actions_allowed.return_value = {"": True}
+        yield iam_policy_client

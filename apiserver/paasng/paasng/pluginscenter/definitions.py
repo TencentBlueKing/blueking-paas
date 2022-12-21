@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from functools import partial
@@ -54,6 +54,7 @@ class FieldSchema(BaseModel):
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
     default: Optional[str] = Field(description="默认值")
+    maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
@@ -103,6 +104,12 @@ class PluginCodeTemplate(BaseModel):
         if source_dir.is_absolute():
             return source_dir.relative_to("/")
         return source_dir
+
+
+@registry
+class PluginFeature(BaseModel):
+    name: str = Field(description="功能特性名称")
+    value: bool = Field(default=False, description="功能特性开关")
 
 
 @registry
@@ -299,6 +306,7 @@ class PluginDefinition(BaseModel):
     releaseRevision: ReleaseRevisionDefinition = Field(description="插件发布版本规则")
     releaseStages: List[ReleaseStageDefinition] = Field(description="插件发布步骤")
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
+    features: List[PluginFeature] = Field(default_factory=list)
 
 
 def find_stage_by_id(

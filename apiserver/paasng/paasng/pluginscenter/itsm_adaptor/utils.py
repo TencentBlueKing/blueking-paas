@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from typing import List, Optional
@@ -38,8 +38,8 @@ def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     # 查询上线审批服务ID
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.CREATE_APPROVAL.value).service_id
 
-    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为注册在 APIGW 上的地址
-    paas_url = f'{settings.BKPAAS_URL}/backend'
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
     callback_url = f"{paas_url}/sys/api/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/itsm/"
 
     # 组装提单数据,包含插件的基本信息
@@ -77,8 +77,8 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     # 查询上线审批服务ID
     service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.ONLINE_APPROVAL.value).service_id
 
-    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为注册在 APIGW 上的地址
-    paas_url = f'{settings.BKPAAS_URL}/backend'
+    # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
+    paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
     callback_url = (
         f"{paas_url}/sys/api/bkplugins/"
         + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/stages/{current_stage.id}/itsm/"

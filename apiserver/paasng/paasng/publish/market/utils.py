@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -25,7 +24,7 @@ from urllib.parse import urlparse
 from paasng.engine.domains import CustomDomainService
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import EnvExposedURL, get_default_access_entrance, get_default_access_entrances
+from paasng.publish.entrance.exposer import EnvExposedURL, get_addresses, get_exposed_url
 from paasng.publish.entrance.utils import default_port_map
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
@@ -40,7 +39,7 @@ class AvailableAddressMixin:
     @property
     def default_access_entrance(self) -> AvailableAddress:
         """由平台提供的首选默认访问入口"""
-        entrance = get_default_access_entrance(self.env)
+        entrance = get_exposed_url(self.env)
         return AvailableAddress(
             address=entrance.address if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
@@ -49,7 +48,8 @@ class AvailableAddressMixin:
     @property
     def default_access_entrances(self) -> List[AvailableAddress]:
         """由平台提供的所有默认访问入口"""
-        entrances = get_default_access_entrances(self.env) or []
+        addrs = get_addresses(self.env)
+        entrances = [a.to_exposed_url() for a in addrs]
         return [
             AvailableAddress(address=entrance.address, type=ProductSourceUrlType.ENGINE_PROD_ENV.value)
             for entrance in entrances
@@ -104,6 +104,8 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
             and self.default_access_entrance.address
             and self.default_access_entrance.address == self.default_access_entrance_with_https.address
         ):
+            # Return both HTTP and HTTPS options when current default address is
+            # using HTTPS protocol.
             return [
                 self.default_access_entrance_with_http,
                 self.default_access_entrance_with_https,
@@ -114,7 +116,7 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
     @property
     def default_access_entrance_with_http(self) -> AvailableAddress:
         """由平台提供的首选默认访问入口(HTTP协议)"""
-        entrance = self.transform_entrance(get_default_access_entrance(self.env), protocol="http")
+        entrance = self.transform_entrance(get_exposed_url(self.env), protocol="http")
         return AvailableAddress(
             address=entrance.address if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
@@ -123,7 +125,7 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
     @property
     def default_access_entrance_with_https(self) -> AvailableAddress:
         """由平台提供的首选默认访问入口(HTTPS协议)"""
-        entrance = self.transform_entrance(get_default_access_entrance(self.env), protocol="https")
+        entrance = self.transform_entrance(get_exposed_url(self.env), protocol="https")
         return AvailableAddress(
             address=entrance.address if entrance else None,
             type=ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS.value,

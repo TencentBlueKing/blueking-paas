@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from unittest import mock
 
 import pytest
@@ -48,12 +65,13 @@ class TestBuildProcessViewSet:
 
 
 class TestReleaseViewSet:
-    def testcase(self, build, engine_app, api_client, release_url, create_release):
+    @pytest.mark.mock_get_structured_app
+    def testcase(self, build, bk_stag_engine_app, api_client, release_url, create_release):
         response = create_release()
         assert response.status_code == 201
         assert response.json()["failed"] is False
 
-        data = {"release_id": str(Release.objects.get_latest(engine_app).uuid)}
+        data = {"release_id": str(Release.objects.get_latest(bk_stag_engine_app).uuid)}
         with mock.patch('rest_framework.request.Request.data', data):
             response = api_client.get(release_url)
         assert response.status_code == 200

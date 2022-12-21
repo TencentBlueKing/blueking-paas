@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- *  http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -14,11 +15,13 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
 package resources
 
 import (
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 )
 
 // ReplicasGetter get replicas from BkApp object

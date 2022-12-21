@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
@@ -168,7 +169,13 @@ class Command(BaseCommand):
         # 1。检查有没有该应用的分级管理员信息，如果没有，则需要创建
         grade_manager_id = self.grade_manager_map.get(app_code)
         if not grade_manager_id:
-            migrate_logs.append(f"grade manager not exists, create and add {first_grade_manager} as members...")
+            migrate_logs.append("grade manager not exists, create...")
+            if first_grade_manager in self.exclude_users:
+                first_grade_manager = None
+                migrate_logs.append(f"{first_grade_manager} in exclude users, skip add as members...")
+            else:
+                migrate_logs.append(f"add {first_grade_manager} as grade manager members...")
+
             grade_manager_id = self.cli.create_grade_managers(app_code, app_name, first_grade_manager)
 
             # 更新分级管理员映射表信息 & ApplicationGradeManager 表数据

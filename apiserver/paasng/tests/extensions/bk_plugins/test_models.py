@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
-
 from functools import partial
 
 import pytest
@@ -47,7 +45,7 @@ class TestBkPlugin:
         assert obj.id == bk_plugin_app.id.hex
 
 
-def test_get_deployed_statuses(bk_plugin_app):
+def test_get_deployed_statuses(with_empty_live_addrs, bk_plugin_app):
     obj = BkPlugin.from_application(bk_plugin_app)
     assert get_deployed_statuses(obj) is not None
 
@@ -73,12 +71,12 @@ def test_get_or_create_by_application(bk_app):
     assert profile.tag.name == 'sample-tag-1'
 
 
-def test_plugin_to_detailed_default(bk_plugin):
+def test_plugin_to_detailed_default(with_empty_live_addrs, bk_plugin):
     ret = plugin_to_detailed(bk_plugin)
     assert ret.dict()['deployed_statuses']['stag'].get('addresses') is not None
 
 
-def test_plugin_to_detailed_no_addresses(bk_plugin):
+def test_plugin_to_detailed_no_addresses(with_empty_live_addrs, bk_plugin):
     ret = plugin_to_detailed(bk_plugin, include_addresses=False)
     assert ret.dict()['deployed_statuses']['stag'].get('addresses') is None
 

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
@@ -22,8 +21,9 @@ from unittest import mock
 import pytest
 
 from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
+from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.views import PluginReleaseStageApiViewSet
+from paasng.pluginscenter.views import PluginCallBackApiViewSet
 
 pytestmark = pytest.mark.django_db
 
@@ -39,6 +39,25 @@ CALLBACK_DATA = {
     "token": "token",
     "last_approver": "最后一个节点的审批人",
 }
+
+
+class TestArchived:
+    @pytest.fixture
+    def plugin(self, plugin):
+        plugin.status = PluginStatus.ARCHIVED
+        plugin.save()
+        return plugin
+
+    def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client):
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
+        resp = api_client.get(url)
+        assert resp.status_code == 200
+
+    def test_update_api(self, api_client, pd, plugin, release, iam_policy_client):
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
+        resp = api_client.post(url)
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == error_codes.PLUGIN_ARCHIVED.message
 
 
 class TestSysApis:
@@ -63,7 +82,7 @@ class TestSysApis:
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginReleaseStageApiViewSet, "_verify_itsm_token") as mocked_verify:
+        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify:
             mocked_verify.return_value = True
             resp_data = api_client.post(callback_url, callback_data).json()
 
@@ -88,7 +107,7 @@ class TestSysApis:
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginReleaseStageApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
+        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
             "paasng.pluginscenter.shim.init_plugin_in_view"
         ):
             mocked_verify.return_value = True

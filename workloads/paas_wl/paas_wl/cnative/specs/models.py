@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import json
 from typing import Dict, List, Optional
 
@@ -8,7 +26,6 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.cluster.models import Cluster
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.platform.applications.struct_models import Application, ModuleAttrFromID, ModuleEnv, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
@@ -267,42 +284,12 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-class EnvResourcePlanner:
-    """Plan Kubernetes resource for app's different envs, "multiple-modules" is not supported
-    ATM, only default module is supported.
+def default_bkapp_name(env: ModuleEnv) -> str:
+    """Get name of the default BkApp resource by env.
 
-    :param env: The env object
+    :param env: ModuleEnv object
+    :return: BkApp resource name
     """
-
-    namespace_prefix = 'bkapp'
-
-    def __init__(self, env: ModuleEnv):
-        self.application = env.application
-        self.engine_app = EngineApp.objects.get_by_env(env)
-
-    @property
-    def cluster(self) -> Cluster:
-        """Get the cluster for model resource"""
-        cluster_name = self._get_cluster_name()
-
-        try:
-            if cluster_name:
-                return Cluster.objects.get(name=cluster_name, region=self.application.region)
-            return Cluster.objects.get(is_default=True, region=self.application.region)
-        except Cluster.DoesNotExist:
-            raise RuntimeError(f'No available cluster found in region `{self.application.region}`')
-
-    def _get_cluster_name(self):
-        """Get name of cluster to deploy"""
-        return self.engine_app.latest_config.cluster
-
-    @property
-    def namespace(self) -> str:
-        """The Kubernetes namespace for storing BkApp resource"""
-        return self.engine_app.namespace
-
-    @property
-    def default_app_name(self) -> str:
-        """BkApp's default resource name"""
-        # TODO: Should we append {self.environment}? It will exceeds the max-length on the Operator side.
-        return f'{self.application.code}'
+    # TODO: Should we add "environment" field to name? Result may exceeds the
+    # max-length limit on the operator side.
+    return f'{env.application.code}'

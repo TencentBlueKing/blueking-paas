@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
@@ -54,16 +54,7 @@ class TestReleaseStages:
         pd.save()
         pd.refresh_from_db()
 
-    @pytest.fixture
-    def disable_permission_check(self):
-        with mock.patch("paasng.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client") as iam_policy_client:
-            iam_policy_client.is_action_allowed.return_value = True
-            iam_policy_client.is_actions_allowed.return_value = {"": True}
-            yield
-
-    def test_release_version(
-        self, mock_client, pd, plugin, setup_release_stages, api_client, disable_permission_check
-    ):
+    def test_release_version(self, thirdparty_client, pd, plugin, setup_release_stages, api_client, iam_policy_client):
         assert PluginRelease.objects.count() == 0
         with mock.patch("paasng.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
@@ -136,7 +127,7 @@ class TestReleaseStages:
             else:
                 return {"logs": ["1", "2", "3"], "finished": True}
 
-        mock_client.call.side_effect = deploy_action_side_effect
+        thirdparty_client.call.side_effect = deploy_action_side_effect
 
         # 再次测试进入下一步(成功)
         resp = api_client.post(f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/next/")
@@ -168,7 +159,7 @@ class TestReleaseStages:
             'status': 'pending',
             'fail_message': '',
             'detail': {
-                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'pending'}],
+                'steps': [{'id': 'step-1', 'name': '步骤1', 'status': 'successful'}],
                 'finished': True,
                 'logs': ['1', '2', '3'],
             },
@@ -189,16 +180,16 @@ class TestOperationRecord:
         record = OperationRecord.objects.create(
             plugin=plugin,
             operator=bk_user.pk,
-            action=ActionTypes.DELETE.value,
-            subject=SubjectTypes.PLUGIN.value,
+            action=ActionTypes.DELETE,
+            subject=SubjectTypes.PLUGIN,
         )
         assert record.get_display_text() == f"{bk_user.username} 删除插件"
 
         record1 = OperationRecord.objects.create(
             plugin=plugin,
             operator=bk_user.pk,
-            action=ActionTypes.ADD.value,
+            action=ActionTypes.ADD,
             specific="0.0.1",
-            subject=SubjectTypes.VERSION.value,
+            subject=SubjectTypes.VERSION,
         )
         assert record1.get_display_text() == f"{bk_user.username} 新建 0.0.1 版本"

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
@@ -93,6 +94,9 @@ def delete_role_members(app_code: str, role: ApplicationRole, usernames: Union[L
 
 def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
     """原实现中用户只会有一个角色，但是接入权限中心后，角色表现为用户组，同一用户可能有多个角色"""
+    if username == settings.ADMIN_USERNAME:
+        return [ApplicationRole.ADMINISTRATOR]
+
     user_roles = []
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
         if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
@@ -106,6 +110,9 @@ def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
 
 def fetch_user_main_role(app_code: str, username: str) -> ApplicationRole:
     """获取用户在某个应用中最高优先级的角色"""
+    if username == settings.ADMIN_USERNAME:
+        return ApplicationRole.ADMINISTRATOR
+
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by('role'):
         if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
             return group.role

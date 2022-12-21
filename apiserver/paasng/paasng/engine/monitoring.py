@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 """Utils for monitoring engine related stuff
@@ -26,7 +25,7 @@ from typing import Optional
 import arrow
 
 from paasng.engine.deploy.engine_svc import EngineDeployClient
-from paasng.metrics.collector import cb_gauge_collector
+from paasng.metrics.collector import cb_metric_collector
 from paasng.platform.core.storages.cache import region as cache_region
 
 from .constants import JobStatus
@@ -81,11 +80,20 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
     return last_line_created < arrow.get(since)
 
 
+class FrozenDeployMentsMetric:
+    name = 'frozen_deployments'
+    metric_type = 'gauge'
+    description = 'count of frozen deployments'
+
+    @classmethod
+    def calc_value(cls) -> int:
+        # Cached version of `count_frozen_deployments` function
+        cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace='v1', expiration_time=60)(
+            count_frozen_deployments
+        )
+        return cached_count_frozen_deployments()
+
+
 def register_metrics():
     """Register metrics for engine app"""
-    # Cached version of `count_frozen_deployments` function
-    cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace='v1', expiration_time=60)(
-        count_frozen_deployments
-    )
-
-    cb_gauge_collector.add('frozen_deployments', "count of frozen deployments", cached_count_frozen_deployments)
+    cb_metric_collector.add(FrozenDeployMentsMetric)

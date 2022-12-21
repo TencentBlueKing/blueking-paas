@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
-Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
@@ -26,7 +27,7 @@ from .constants import NEVER_EXPIRE_TIMESTAMP, ONE_DAY_SECONDS
 from .permissions.resources.application import AppAction
 
 
-def gen_grade_member_name(app_code: str) -> str:
+def gen_grade_manager_name(app_code: str) -> str:
     """
     生成分级管理员名称（最大字符数限制 32）
     中：开发者中心-{app_code}
@@ -35,7 +36,7 @@ def gen_grade_member_name(app_code: str) -> str:
     return _('开发者中心-{}').format(app_code)
 
 
-def gen_grade_member_desc(app_code: str) -> str:
+def gen_grade_manager_desc(app_code: str) -> str:
     """
     生成分级管理员描述
     中：开发者中心应用（{app_code}）分级管理员，拥有审批用户加入管理者/开发者/运营者用户组权限。
@@ -98,6 +99,7 @@ def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
     elif role == ApplicationRole.DEVELOPER:
         return [
             AppAction.VIEW_BASIC_INFO,
+            AppAction.MANAGE_APP_MARKET,
             AppAction.DATA_STATISTICS,
             AppAction.BASIC_DEVELOP,
             AppAction.MANAGE_CLOUD_API,

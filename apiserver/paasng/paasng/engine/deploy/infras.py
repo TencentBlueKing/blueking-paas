@@ -1,26 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
-
----
-
-Infrastructure functions and tools for deploy
 """
+"""Infrastructure functions and tools for deploy"""
 import abc
 import json
 import logging
@@ -50,7 +46,7 @@ from paasng.engine.exceptions import DuplicateNameInSamePhaseError, InternalEven
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.config_var import generate_blobstore_env_vars, generate_builtin_env_vars, get_config_vars
 from paasng.engine.models.operations import ModuleEnvironmentOperations
-from paasng.engine.signals import post_appenv_deploy, post_phase_end
+from paasng.engine.signals import on_builtin_domains_subpaths_updated, post_appenv_deploy, post_phase_end
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.platform.modules.constants import ExposedURLType
@@ -387,6 +383,8 @@ class AppDefaultDomains:
         """Sync app's default subdomains to engine"""
         domains = [d.as_dict() for d in self.domains]
         self.engine_client.update_domains(domains)
+
+        on_builtin_domains_subpaths_updated.send(self.env)
 
     def as_env_vars(self) -> Dict:
         """Return current subdomains as env vars"""
@@ -735,6 +733,8 @@ class AppDefaultSubpaths:
         subpaths = [d.as_dict() for d in self.subpaths]
         if subpaths:
             self.engine_client.update_subpaths(subpaths)
+
+            on_builtin_domains_subpaths_updated.send(self.env)
 
     def as_env_vars(self) -> Dict:
         """Return current subpath as env vars"""

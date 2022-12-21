@@ -1,11 +1,28 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from unittest import mock
 
 import pytest
-from cattr import structure
 
 from paas_wl.cnative.specs.addresses import AddrResourceManager
 from paas_wl.cnative.specs.addresses import Domain as MappingDomain
-from paas_wl.cnative.specs.addresses import ExposedUrl, save_addresses, to_domain, to_shared_tls_domain
+from paas_wl.cnative.specs.addresses import save_addresses, to_domain, to_shared_tls_domain
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
 from paas_wl.platform.applications.models.app import EngineApp
@@ -100,18 +117,3 @@ class TestAddrResourceManager:
         Domain.objects.all().delete()
         mapping = addr_mgr.build_mapping()
         assert len(mapping.spec.data) == 0
-
-
-@pytest.mark.parametrize(
-    "given, expected",
-    [
-        ({"host": "www.example.com", "https_enabled": True}, "https://www.example.com"),
-        ({"host": "www.example.com", "https_enabled": False}, "http://www.example.com"),
-        ({"subpath": "", "host": "www.example.com", "https_enabled": True}, "https://www.example.com"),
-        ({"subpath": "", "host": "www.example.com", "https_enabled": False}, "http://www.example.com"),
-        ({"subpath": "/foo", "host": "www.example.com", "https_enabled": True}, "https://www.example.com/foo"),
-        ({"subpath": "/foo", "host": "www.example.com", "https_enabled": False}, "http://www.example.com/foo"),
-    ],
-)
-def test_exposed_url(given, expected):
-    assert structure(given, ExposedUrl).as_url() == expected

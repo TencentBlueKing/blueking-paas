@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- *  http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -117,9 +118,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			Type:   appsv1.DeploymentAvailable,
 		})
 		cli := builder.WithObjects(bkapp, outdated, web).Build()
-		r := DeploymentReconciler{
-			Client: cli,
-		}
+		r := NewDeploymentReconciler(cli)
 
 		result := r.Reconcile(ctx, bkapp)
 		Expect(result.ShouldAbort()).To(BeFalse())
@@ -135,9 +134,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 
 	Context("test get current state", func() {
 		It("not any deployment exists", func() {
-			r := DeploymentReconciler{
-				Client: builder.Build(),
-			}
+			r := NewDeploymentReconciler(builder.Build())
 			deployList, err := r.getCurrentState(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deployList)).To(Equal(0))
@@ -145,9 +142,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 
 		It("with a deployment", func() {
 			client := builder.WithObjects(&fakeDeploy).Build()
-			r := DeploymentReconciler{
-				Client: client,
-			}
+			r := NewDeploymentReconciler(client)
 			deployList, err := r.getCurrentState(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deployList)).To(Equal(1))
@@ -158,9 +153,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 		It("without namesake deployment", func() {
 			ctx := context.Background()
 			client := builder.Build()
-			r := DeploymentReconciler{
-				Client: client,
-			}
+			r := NewDeploymentReconciler(client)
 			want := resources.GetWantedDeploys(bkapp)
 			Expect(len(want)).To(Equal(1))
 
@@ -183,7 +176,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 			current.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
 			client := builder.WithObjects(bkapp, current).Build()
-			r := DeploymentReconciler{Client: client}
+			r := NewDeploymentReconciler(client)
 
 			objKey := types.NamespacedName{Name: current.Name, Namespace: current.Namespace}
 

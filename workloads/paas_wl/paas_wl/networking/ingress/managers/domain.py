@@ -1,17 +1,34 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import logging
-from typing import List, Optional, Set, Type
+from typing import List, Set
 
 from django.db import transaction
 
-from paas_wl.networking.ingress.certs.utils import AppDomainCertController
+from paas_wl.networking.ingress.certs.utils import DomainWithCert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
-from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain
+from paas_wl.networking.ingress.managers.base import AppIngressMgr
+from paas_wl.networking.ingress.managers.common import SubpathCompatPlugin
+from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain
 from paas_wl.platform.applications.models import App
-
-from .base import AppIngressMgr
-from .common import SubpathCompatPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -70,9 +87,9 @@ class SubdomainAppIngressMgr(AppIngressMgr):
         if config.domain:
             domains.append(PIngressDomain(host=config.domain))
 
-        factory = IngressDomainFactory()
+        factory = IngressDomainFactory(self.app)
         for d in AppDomain.objects.filter(app=self.app, source=AppDomainSource.AUTO_GEN):
-            domains.append(factory.create(d, raise_on_no_cert=False))
+            domains.append(factory.create(DomainWithCert.from_app_domain(d), raise_on_no_cert=False))
         return domains
 
 
@@ -82,39 +99,43 @@ class CustomDomainIngressMgr(AppIngressMgr):
     plugins = [SubpathCompatPlugin]
     CUSTOM_DOMAIN_PREFIX = "custom-"
 
-    def __init__(self, app_domain: AppDomain):
-        self.app_domain = app_domain
-        super().__init__(self.app_domain.app)
+    def __init__(self, domain: Domain):
+        self.domain = domain
+        super().__init__(App.objects.get_by_env(domain.environment))
 
     def make_ingress_name(self) -> str:
         """Make the name of Ingress resource
 
         :raise: PersistentAppDomainRequired when unable to generate ingress_name
         """
-        if self.app_domain.has_customized_path_prefix():
-            if not self.app_domain.id:
+        if self.domain.has_customized_path_prefix():
+            if not self.domain.id:
                 raise PersistentAppDomainRequired(
-                    '"id" field is required when generating name for AppDomain object with customized path_prefix'
+                    '"id" field is required when generating name for Domain object with customized path_prefix'
                 )
 
             # When path prefix is non-default, a different name is required to avoid conflict
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.app_domain.host}-{self.app_domain.id}'
+            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}-{self.domain.id}'
         else:
-            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.app_domain.host}'
+            return f'{self.CUSTOM_DOMAIN_PREFIX}{self.domain.name}'
 
     def list_desired_domains(self) -> List[PIngressDomain]:
-        factory = IngressDomainFactory()
-        return [factory.create(self.app_domain, raise_on_no_cert=False)]
+        factory = IngressDomainFactory(self.app)
+        return [
+            factory.create(
+                DomainWithCert.from_custom_domain(region=self.app.region, domain=self.domain), raise_on_no_cert=False
+            )
+        ]
 
 
 class IngressDomainFactory:
     """A factory class creates `PIngressDomain` objects"""
 
-    def __init__(self, cert_controller_cls: Optional[Type[AppDomainCertController]] = None):
-        self.cert_controller_cls = cert_controller_cls or AppDomainCertController
+    def __init__(self, app: App):
+        self.app = app
 
-    def create(self, app_domain: AppDomain, raise_on_no_cert: bool = True) -> PIngressDomain:
-        """Detect domain scheme, return a ingress domain config
+    def create(self, app_domain: DomainWithCert, raise_on_no_cert: bool = True) -> PIngressDomain:
+        """Detect domain scheme, return an ingress domain config
 
         :param app_domain: domain object stores in database
         :param raise_on_no_cert: when domain requires HTTPS and no valid cert can be found, raise
@@ -125,10 +146,8 @@ class IngressDomainFactory:
         if not app_domain.https_enabled:
             return PIngressDomain(host=app_domain.host, path_prefix_list=[path_prefix], tls_enabled=False)
 
-        cert_controller = self.cert_controller_cls(app_domain)
-        cert = cert_controller.get_cert()
-        if cert:
-            secret_name, created = cert_controller.update_or_create_secret_by_cert(cert)
+        if app_domain.cert:
+            secret_name, created = update_or_create_secret_by_cert(self.app, app_domain.cert)
             if created:
                 logger.info("created a secret %s for host %s", secret_name, app_domain.host)
 

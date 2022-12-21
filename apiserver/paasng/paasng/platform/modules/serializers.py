@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict
+
+import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -28,6 +30,7 @@ from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
+from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
@@ -58,6 +61,7 @@ class ModuleSLZ(serializers.ModelSerializer):
     web_config = serializers.SerializerMethodField(help_text='模块配置信息，可用于驱动客户端功能')
     template_display_name = serializers.SerializerMethodField(help_text='初始化时使用的模板名称')
     source_origin = serializers.IntegerField(help_text='模块源码来源，例如 1 表示 Git 等代码仓库', source='get_source_origin')
+    clusters = serializers.SerializerMethodField(help_text="模块下属各环境部署的集群信息")
 
     def get_repo_auth_info(self, instance):
         if not isinstance(instance.get_source_obj(), (SvnRepository, GitRepository)):
@@ -78,10 +82,19 @@ class ModuleSLZ(serializers.ModelSerializer):
             return ""
 
         try:
-            return Template.objects.get(name=obj.source_init_template, type=TemplateType.NORMAL).display_name
+            return Template.objects.get(
+                name=obj.source_init_template, type__in=TemplateType.normal_app_types()
+            ).display_name
         except ObjectDoesNotExist:
             # 可能存在远古模版，并不在当前模版配置中
             return ""
+
+    def get_clusters(self, obj) -> Dict:
+        env_clusters = {}
+        for env in obj.envs.all():
+            cluster = get_engine_app_cluster(obj.region, env.engine_app.name)
+            env_clusters[env.environment] = cattr.unstructure(cluster) if cluster else None
+        return env_clusters
 
     class Meta(object):
         model = Module

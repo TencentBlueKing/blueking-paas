@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- * 	http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -18,12 +19,10 @@
 package quota
 
 import (
-	"errors"
-
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 var _ = Describe("TestQuota", func() {
@@ -92,10 +91,10 @@ var _ = Describe("TestQuota", func() {
 	It("exceed limit case", func() {
 		_, err := NewQuantity("6", CPU)
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
-		Expect(err.Error()).To(Equal("exceed limit: exceed cpu max limit 4"))
+		Expect(err.Error()).To(Equal("exceed cpu max limit 4: exceed limit"))
 
 		_, err = NewQuantity("5000Mi", Memory)
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
-		Expect(err.Error()).To(Equal("exceed limit: exceed memory max limit 4Gi"))
+		Expect(err.Error()).To(Equal("exceed memory max limit 4Gi: exceed limit"))
 	})
 })

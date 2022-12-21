@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import copy
@@ -151,8 +150,9 @@ class TranslatedCharField(serializers.CharField):
         for language_code in self.languages:
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
             try:
-                values[language_code] = str(get_attribute(instance, [i18n_field_name]))
-                if values[language_code] == "" and not self.allow_blank:
+                _value = get_attribute(instance, [i18n_field_name])
+                values[language_code] = str(_value) if _value is not None else ""
+                if values[language_code] == "" and not self.allow_blank and _value is not None:
                     values[language_code] = str(super().get_attribute(instance))
             except (KeyError, AttributeError):
                 values[language_code] = str(super().get_attribute(instance))
@@ -162,6 +162,7 @@ class TranslatedCharField(serializers.CharField):
         """Return a Dict, which take the language code as the key and the translation result as the value"""
         values = {}
         for language_code in self.languages:
+
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
             values[i18n_field_name] = dictionary.get(
                 i18n_field_name, dictionary.get(self.field_name, serializers.empty)

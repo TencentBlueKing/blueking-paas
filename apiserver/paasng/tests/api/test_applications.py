@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -158,7 +157,8 @@ class TestMembershipViewset:
     @pytest.mark.parametrize(
         "another_user_role, request_user_idx, status, code",
         [
-            (ApplicationRole.ADMINISTRATOR, 0, 400, "MEMBERSHIP_OWNER_FAILED"),
+            # 创建者也可以离开应用
+            (ApplicationRole.ADMINISTRATOR, 0, 204, ...),
             (ApplicationRole.ADMINISTRATOR, 1, 204, ...),
             (ApplicationRole.DEVELOPER, 1, 204, ...),
             (ApplicationRole.ADMINISTRATOR, 2, 403, "ERROR"),
@@ -356,13 +356,13 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
-    def test_normal(self, api_client, bk_app, bk_user, random_name, mock_current_engine_client):
+    def test_normal(self, api_client, bk_app_full, bk_user, random_name, mock_current_engine_client):
         response = api_client.put(
-            '/api/bkapps/applications/{}/'.format(bk_app.code),
+            '/api/bkapps/applications/{}/'.format(bk_app_full.code),
             data={'name': random_name},
         )
         assert response.status_code == 200
-        assert Application.objects.get(pk=bk_app.pk).name == random_name
+        assert Application.objects.get(pk=bk_app_full.pk).name == random_name
 
     def test_duplicated(self, api_client, bk_app, bk_user, random_name, mock_current_engine_client):
         G(Application, name=random_name)

@@ -74,6 +74,19 @@
                     <bk-collapse v-bind:value="module.envs.map(env=>env.environment)">
                         <bk-collapse-item v-for="(env, index) in module.envs" :name="env.environment" accordion>
                             $[ env.environment ] 环境
+                            <div slot="content" style="margin-bottom: 20px">
+                                <div style="margin-bottom: 5px" >部署集群：</div>
+                                <bk-select
+                                    v-model="env.cluster_name"
+                                    style="width: 250px;"
+                                    @change="bindAppEnvCluster(module.name, env.environment, env.cluster_name)">
+                                   <bk-option v-for="choice in cluster_choices"
+                                        :key="choice.id"
+                                        :id="choice.id"
+                                        :name="choice.name">
+                                    </bk-option>
+                                </bk-select>
+                            </div>
                             <div slot="content">
                                 <bk-container :col="2" v-if="env.latest_operation">
                                     <bk-row>
@@ -136,7 +149,13 @@
 {% block main_script %}
 <script>
     const data = {{ application | to_json }}
+    const cluster_choices = {{ cluster_choices | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
+
+    const URLRouter = {
+        memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+        bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}")
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
@@ -155,7 +174,8 @@
             },
             methods: {
                 beAppAdmin: function () {
-                    this.$http.post(decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+                    this.$http.post(
+                        URLRouter.memberManage,
                         {
                             // 管理员
                             username: '{{ request.user.username }}',
@@ -166,7 +186,8 @@
                     })
                 },
                 exitApp: function () {
-                    this.$http.delete(decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+                    this.$http.delete(
+                        URLRouter.memberManage,
                         {
                             params: {
                                 username: '{{ request.user.username }}'
@@ -176,6 +197,37 @@
                         this.USER_IS_ADMIN_IN_APP = false
                     })
                 },
+                bindAppEnvCluster: function (module, env, clusterName) {
+                    let url = URLRouter.bindCluster.replace("${module}", module).replace("${env}", env)
+                    const h = this.$createElement
+
+                    this.$bkInfo({
+                        width: 550,
+                        title: `更换应用部署集群确认`,
+                        subHeader: h('div', {
+                            style: {
+                                'color': 'red',
+                                'text-align': 'center'
+                            }
+                        }, `即将绑定 ${module} 模块 ${env} 环境部署集群为 ${clusterName}，是否确认？`),
+                        confirmLoading: true,
+                        confirmFn: async () => {
+                            try {
+                                await this.$http.post(
+                                    url, {cluster_name: clusterName}
+                                ).then(resp => {
+                                    this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境部署集群为 ${clusterName} 成功，配置将在下次部署时生效`})
+                                })
+                            } catch (e) {
+                                this.$bkMessage({theme: 'error', message: `更换应用部署环境绑定集群失败`})
+                                location.reload()
+                            }
+                        },
+                        cancelFn: async () => {
+                            location.reload()
+                        }
+                    })
+                }
             }
         })
     })

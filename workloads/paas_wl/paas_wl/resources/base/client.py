@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
@@ -15,7 +32,6 @@ from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.base.kres import KNode, set_default_options
 from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.processes.models import Process
-from paas_wl.workloads.processes.readers import process_kmodel
 
 if TYPE_CHECKING:
     from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
@@ -119,10 +135,6 @@ class K8sScheduler:
                 ProcDefaultServices(process).remove()
             self.processes_handler.delete(process=process)
 
-    def get_abnormal_processes(self, region):
-        deployments = self.processes_handler.get_abnormal_deployments(region=region)
-        return self._make_deployments_to_processes(deployments)
-
     #############
     # build API #
     #############
@@ -200,28 +212,3 @@ class K8sScheduler:
         """确保应用镜像的访问凭证存在"""
         credentials = ImageCredentials.load_from_app(app)
         self.credential_handler.upsert(credentials)
-
-    #################
-    # inner methods #
-    #################
-
-    def _make_deployments_to_processes(self, deployments):
-        """transfer deployments to process
-
-        :param deployments: deployments from k8s
-        :return: processes: instance list of process
-        """
-        processes = []
-        for deployment in deployments:
-            process_type = self.processes_handler.get_process_type(deployment)
-
-            namespace = deployment.metadata.namespace.replace("0us0", "_")
-            app_name = namespace
-            try:
-                app = App.objects.get(name=app_name)
-            except App.DoesNotExist:
-                logger.warning('Can not find app by deployment name %s, skip', app_name)
-                continue
-
-            processes.append(process_kmodel.get_by_type(app, process_type))
-        return processes

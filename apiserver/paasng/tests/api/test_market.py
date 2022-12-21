@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import json
@@ -110,9 +109,10 @@ class TestGetAndUpdateProduct:
         assert response.json()['name'] == bk_app.name
         assert response.json()['open_mode'] == OpenMode.NEW_TAB.value
 
-    def test_update_market_app(self, api_client, bk_app):
+    def test_update_market_app(self, api_client, bk_app_full):
         # Get the origin product value
-        response = api_client.get(reverse('api.market.products.detail', args=(bk_app.code,)), format='json')
+        Product.objects.create_default_product(bk_app_full)
+        response = api_client.get(reverse('api.market.products.detail', args=(bk_app_full.code,)), format='json')
         data = response.json()
 
         # Change name to a new value
@@ -127,10 +127,10 @@ class TestGetAndUpdateProduct:
             {"id": 2001, "type": "user", "name": "user1"},
         ]
         put_response = api_client.put(
-            reverse('api.market.products.detail', args=(bk_app.code,)), data=data, format='json'
+            reverse('api.market.products.detail', args=(bk_app_full.code,)), data=data, format='json'
         )
         assert put_response.status_code == 200
-        product = Product.objects.get(code=bk_app.code)
+        product = Product.objects.get(code=bk_app_full.code)
         assert product.name == target_name
         assert product.displayoptions.width == 841
         assert product.displayoptions.contact == 'nobody;nobody1'
@@ -141,7 +141,7 @@ class TestGetAndUpdateProduct:
             from paasng.publish.sync_market.managers import AppManger
 
             session = console_db.get_scoped_session()
-            console_app = AppManger(session).get(bk_app.code)
+            console_app = AppManger(session).get(bk_app_full.code)
             assert console_app.width == product.displayoptions.width == 841
             assert console_app.open_mode == product.displayoptions.open_mode
             try:

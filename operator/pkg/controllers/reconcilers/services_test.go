@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- *  http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -100,9 +101,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 		outdated := fakeService.DeepCopy()
 		web := fakeService.DeepCopy()
 		web.Name = names.Service(bkapp, "web")
-		r := ServiceReconciler{
-			Client: builder.WithObjects(outdated).Build(),
-		}
+		r := NewServiceReconciler(builder.WithObjects(outdated).Build())
 
 		result := r.Reconcile(context.Background(), bkapp)
 		Expect(result.ShouldAbort()).To(BeFalse())
@@ -115,9 +114,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 
 	Context("test get current state", func() {
 		It("not any Service exists", func() {
-			r := ServiceReconciler{
-				Client: builder.Build(),
-			}
+			r := NewServiceReconciler(builder.Build())
 			svcList, err := r.listCurrentServices(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svcList)).To(Equal(0))
@@ -125,9 +122,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 
 		It("with a Service", func() {
 			client := builder.WithObjects(fakeService).Build()
-			r := ServiceReconciler{
-				Client: client,
-			}
+			r := NewServiceReconciler(client)
 			svcList, err := r.listCurrentServices(context.Background(), bkapp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svcList)).To(Equal(1))
@@ -135,7 +130,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 	})
 
 	It("test getWantedService", func() {
-		r := ServiceReconciler{}
+		r := NewServiceReconciler(builder.Build())
 		svcList := r.getWantedService(bkapp)
 
 		Expect(len(svcList)).To(Equal(1))
@@ -146,7 +141,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 		current := fakeService.DeepCopy()
 		want := fakeService.DeepCopy()
 		cli := builder.WithObjects(current).Build()
-		r := ServiceReconciler{Client: cli}
+		r := NewServiceReconciler(cli)
 
 		Expect(r.handleUpdate(ctx, cli, current, want)).NotTo(HaveOccurred())
 

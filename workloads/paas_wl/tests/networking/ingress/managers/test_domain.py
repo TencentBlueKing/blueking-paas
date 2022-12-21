@@ -1,8 +1,27 @@
 # -*- coding: utf-8 -*-
-from unittest.mock import Mock, patch
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
+from unittest.mock import patch
 
 import pytest
+from django_dynamic_fixture import G
 
+from paas_wl.networking.ingress.certs.utils import DomainWithCert
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError, ValidCertNotFound
@@ -12,7 +31,7 @@ from paas_wl.networking.ingress.managers.domain import (
     SubdomainAppIngressMgr,
     assign_custom_hosts,
 )
-from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AutoGenDomain
+from paas_wl.networking.ingress.models import AppDomain, AppDomainCert, AppDomainSharedCert, AutoGenDomain, Domain
 from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.basic import get_client_by_app
@@ -209,8 +228,9 @@ class TestSubdomainAppIngressMgr:
         assert len(ingress_mgr.list_desired_domains()) == 0
 
 
+@pytest.mark.mock_get_structured_app
+@pytest.mark.auto_create_ns
 class TestCustomDomainIngressMgr:
-    @pytest.mark.auto_create_ns
     @pytest.mark.parametrize(
         'path_prefix,expected_path_prefixes,customized_ingress_name',
         [
@@ -218,35 +238,42 @@ class TestCustomDomainIngressMgr:
             ('/foo/', ['/foo/'], True),
         ],
     )
-    def test_create(self, path_prefix, expected_path_prefixes, customized_ingress_name, app):
-        domain = AppDomain.objects.create(
-            app=app,
-            region=app.region,
-            host='foo.example.com',
+    def test_create(
+        self, path_prefix, expected_path_prefixes, customized_ingress_name, bk_stag_env, bk_stag_engine_app
+    ):
+        domain = G(
+            Domain,
+            name='foo.example.com',
             path_prefix=path_prefix,
-            source=AppDomainSource.INDEPENDENT,
+            module_id=bk_stag_env.module.id,
+            environment_id=bk_stag_env.id,
         )
         mgr = CustomDomainIngressMgr(domain)
 
-        mgr.sync(default_service_name=app.name)
-        obj = ingress_kmodel.get(app, mgr.make_ingress_name())
+        mgr.sync(default_service_name=bk_stag_engine_app.name)
+        obj = ingress_kmodel.get(bk_stag_engine_app, mgr.make_ingress_name())
 
         if customized_ingress_name:
             assert obj.name == f"custom-foo.example.com-{domain.id}"
         else:
             assert obj.name == "custom-foo.example.com"
         assert obj.domains[0].path_prefix_list == expected_path_prefixes
-        assert obj.service_name == app.name
-
-    def test_normal_delete(self, app):
-        domain = AppDomain.objects.create(
-            app=app, region=app.region, host='foo.example.com', source=AppDomainSource.INDEPENDENT
-        )
-        mgr = CustomDomainIngressMgr(domain)
+        assert obj.service_name == bk_stag_engine_app.name
         mgr.delete()
 
+    def test_normal_delete(self, bk_stag_env, bk_stag_engine_app):
+        domain = G(
+            Domain,
+            name='foo.example.com',
+            module_id=bk_stag_env.module.id,
+            environment_id=bk_stag_env.id,
+        )
+        mgr = CustomDomainIngressMgr(domain)
+        mgr.sync(default_service_name=bk_stag_engine_app.name)
+        _ = ingress_kmodel.get(bk_stag_engine_app, mgr.make_ingress_name())
+        mgr.delete()
         with pytest.raises(AppEntityNotFound):
-            ingress_kmodel.get(app, mgr.make_ingress_name())
+            ingress_kmodel.get(bk_stag_engine_app, mgr.make_ingress_name())
 
 
 @pytest.mark.auto_create_ns
@@ -265,37 +292,36 @@ class TestIntegratedDomains:
 
 
 class TestIngressDomainFactory:
-    def test_make_ingress_domain_with_http(self):
-        factory = IngressDomainFactory()
-        host = "example.com"
-        domain = factory.create(AppDomain(https_enabled=False, host=host))
-        assert domain.host == host
-        assert domain.tls_enabled is False
+    def test_make_ingress_domain_with_http(self, app):
+        domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=False)
+        factory = IngressDomainFactory(app)
+        domain = factory.create(domain_with_cert)
+        assert domain.host == domain_with_cert.host
+        assert domain.tls_enabled == domain_with_cert.https_enabled
         assert domain.tls_secret_name == ''
 
-    def test_https_cert_not_found(self):
-        cert_controller_mocker = Mock(return_value=Mock(get_cert=Mock(return_value=None)))
-        factory = IngressDomainFactory(cert_controller_mocker)
+    def test_https_cert_not_found(self, app):
+        domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=True)
+        factory = IngressDomainFactory(app)
         with pytest.raises(ValidCertNotFound):
-            factory.create(AppDomain(https_enabled=True, host='example.com'))
+            factory.create(domain_with_cert)
 
-    def test_https_cert_not_found_no_exception(self):
-        cert_controller_mocker = Mock(return_value=Mock(get_cert=Mock(return_value=None)))
-        factory = IngressDomainFactory(cert_controller_mocker)
-        domain = factory.create(AppDomain(https_enabled=True, host='example.com'), raise_on_no_cert=False)
+    def test_https_cert_not_found_no_exception(self, app):
+        domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=True)
+        factory = IngressDomainFactory(app)
+        domain = factory.create(domain_with_cert, raise_on_no_cert=False)
         assert domain.tls_enabled is False
 
-    def test_https_cert_created(self):
-        cert_controller_mocker = Mock(
-            return_value=Mock(
-                get_cert=Mock(return_value=object()),
-                update_or_create_secret_by_cert=Mock(return_value=("test", True)),
-            )
-        )
-        factory = IngressDomainFactory(cert_controller_mocker)
-        host = "example.com"
+    @pytest.mark.auto_create_ns
+    @pytest.mark.parametrize(
+        "cert_type, expected_cert_name", [(AppDomainCert, "eng-normal-test"), (AppDomainSharedCert, "eng-shared-test")]
+    )
+    def test_https_cert_created(self, app, cert_type, expected_cert_name):
+        cert = G(cert_type, name="test")
+        domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=True, cert=cert)
+        factory = IngressDomainFactory(app)
 
-        domain = factory.create(AppDomain(https_enabled=True, host=host))
-        assert domain.host == host
-        assert domain.tls_enabled is True
-        assert domain.tls_secret_name == 'test'
+        domain = factory.create(domain_with_cert)
+        assert domain.host == domain_with_cert.host
+        assert domain.tls_enabled == domain_with_cert.https_enabled
+        assert domain.tls_secret_name == expected_cert_name

@@ -1,29 +1,33 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Optional
+
 from rest_framework import serializers
 
 from paasng.engine.constants import JobStatus
+from paasng.engine.controller.cluster import RegionClusterService
+from paasng.engine.models.base import EngineApp
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.serializers import OperationSLZ as BaseModuleEnvironmentOperationsSLZ
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.manager import ModuleInitializer
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
 
@@ -48,6 +52,7 @@ class ModuleEnvironmentOperationsSLZ(BaseModuleEnvironmentOperationsSLZ):
 class EnvironmentSLZ(serializers.ModelSerializer):
     latest_operation = serializers.SerializerMethodField()
     latest_successful_operation = serializers.SerializerMethodField()
+    cluster_name = serializers.SerializerMethodField()
 
     @staticmethod
     def get_latest_operation(obj: ModuleEnvironment):
@@ -64,6 +69,17 @@ class EnvironmentSLZ(serializers.ModelSerializer):
             ).data
         except ModuleEnvironmentOperations.DoesNotExist:
             return None
+
+    @staticmethod
+    def get_cluster_name(obj: ModuleEnvironment) -> Optional[str]:
+        # 目前云原生应用在 Admin42 没有概览页，先只考虑普通应用的情况
+        engine_app_name = ModuleInitializer(obj.module).make_engine_app_name(obj.environment)
+
+        if not EngineApp.objects.filter(name=engine_app_name).exists():
+            return None
+
+        cluster = RegionClusterService(obj.module.region).get_engine_app_cluster(engine_app_name)
+        return cluster.name
 
     class Meta:
         model = ModuleEnvironment

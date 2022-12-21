@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -25,6 +25,7 @@ from urllib.parse import quote, urljoin, urlparse
 import arrow
 import requests
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from requests import models
 from requests.auth import AuthBase
@@ -33,6 +34,7 @@ from requests.models import Response
 from paasng.dev_resources.sourcectl.git.client import GitClient, MutableURL
 from paasng.dev_resources.sourcectl.models import GitProject
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
+from paasng.pluginscenter.constants import PluginRole
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
@@ -116,6 +118,20 @@ class PluginRepoAccessor:
             for tag in self.list_tags(self.project):
                 result.append(self._branch_data_to_version("tag", tag))
         return sorted(result, key=lambda item: item.last_update, reverse=True)  # type: ignore
+
+    def get_submit_info(self, begin_time: str, end_time: str) -> List[dict]:
+        """查询项目的提交次数、提交用户数，默认统计全部分支的统计情况
+        : param begin_time: 开始时间；例如 2019-03-25T00:10:19+0000
+        : param end_time: 结束时间：例如 2019-03-26T00:10:19+0000
+        """
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}/tloc/daily/count"
+        # 指定你的当前时区，默认是 0 时区，范围 (-11,11)
+        time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
+
+        params = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
+        resp = self._session.get(urljoin(self._api_url, _url), params=params)
+        return validate_response(resp).json()
 
     def list_branches(self, project: GitProject, **kwargs) -> List[dict]:
         """获取仓库的所有 branches
@@ -307,3 +323,32 @@ class PluginRepoInitializer:
         _url = f"api/v3/projects/{project_id}/ci/enable"
         resp = self._session.put(urljoin(self._api_url, _url), params={"enable_ci": True})
         validate_response(resp)
+
+
+class PluginRepoMemberMaintainer:
+    """PluginRepoMemberMaintainer implement with TencentGit"""
+
+    def __init__(self, plugin: PluginInstance, api_url: str, user_credentials: Dict):
+        self.project = GitProject.parse_from_repo_url(plugin.repository, "tc_git")
+        self._api_url = api_url
+        self._session = requests.session()
+        self._session.auth = TencentGitAuth(**user_credentials)
+
+    def add_member(self, username: str, role: PluginRole = PluginRole.DEVELOPER):
+        """添加仓库成员"""
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}/members"
+        data = {"user_id": self._get_user_id(username), "access_level": 40 if role == PluginRole.ADMINISTRATOR else 30}
+        self._session.post(urljoin(self._api_url, _url), data=data)
+
+    def remove_member(self, username: str):
+        """移除仓库成员"""
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}/members/{self._get_user_id(username)}"
+        self._session.delete(urljoin(self._api_url, _url))
+
+    def _get_user_id(self, username: str) -> int:
+        """根据用户名获取 user_id"""
+        _url = f"api/v3/users/{username}"
+        resp = self._session.get(urljoin(self._api_url, _url))
+        return validate_response(resp).json()["id"]

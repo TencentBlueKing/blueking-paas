@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 
@@ -151,6 +150,16 @@ def strftime_ms(ms, fmt="%Y-%m-%d %H:%M:%S") -> str:
     local_dt = dt.astimezone(current_tz)
 
     return local_dt.strftime(fmt)
+
+
+def convert_timestamp_to_str(timestamp: int, timespec: str = 'seconds') -> str:
+    """基于 datetime 的 isoformat, 将整型的时间戳转化成标准化的时间字符串
+
+    :param timestamp: 整型时间戳
+    :param timespec: 时间组件值. 默认 seconds, 表示以 YYYY-MM-DD HH:MM:SS 格式包含 hour, minute 和 second
+           timespec 设置具体可参考 https://docs.python.org/3.8/library/datetime.html#datetime.datetime.isoformat
+    """
+    return datetime.datetime.fromtimestamp(timestamp).isoformat(' ', timespec)
 
 
 def valid_date_type(arg_date_str) -> datetime.date:

@@ -1,28 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 
 import pytest
 
+from paasng.engine.controller.models import Domain
+from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.exceptions import BindError
-from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager, get_module_cluster
+from paasng.platform.modules.helpers import (
+    ModuleRuntimeBinder,
+    ModuleRuntimeManager,
+    get_module_clusters,
+    get_module_prod_env_root_domains,
+)
 from tests.utils.helpers import generate_random_string
+from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -106,12 +113,47 @@ def test_bind_buildpack(bk_module, slugbuilder, buildpack, slugbuilder_attrs, bu
             binder.bind_buildpack(buildpack)
 
 
-def test_get_module_cluster(bk_module, mock_current_engine_client):
-    cluster = get_module_cluster(bk_module)
-    assert cluster is not None
+def test_get_module_clusters(bk_module, mock_current_engine_client):
+    assert len(get_module_clusters(bk_module)) != 0
 
 
-def test_get_module_cluster_engineless(bk_module):
+def test_get_module_clusters_engineless(bk_module):
     bk_module.envs.all().delete()
-    cluster = get_module_cluster(bk_module)
-    assert cluster is None
+    assert len(get_module_clusters(bk_module)) == 0
+
+
+@pytest.mark.parametrize(
+    'exposed_url_type, ingress_config, include_reserved, expected_domains',
+    [
+        (
+            ExposedURLType.SUBDOMAIN,
+            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com'}]},
+            False,
+            [Domain('foo.com'), Domain('bar.com')],
+        ),
+        (
+            ExposedURLType.SUBDOMAIN,
+            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com', 'reserved': True}]},
+            False,
+            [Domain('foo.com')],
+        ),
+        (
+            ExposedURLType.SUBDOMAIN,
+            {'app_root_domains': [{'name': 'foo.com'}, {'name': 'bar.com', 'reserved': True}]},
+            True,
+            [Domain('foo.com'), Domain('bar.com', reserved=True)],
+        ),
+        (
+            ExposedURLType.SUBPATH,
+            {'sub_path_domains': [{'name': 'foo.com'}, {'name': 'bar.com'}]},
+            False,
+            [Domain('foo.com'), Domain('bar.com')],
+        ),
+    ],
+)
+def test_get_module_prod_env_root_domains(
+    bk_module, exposed_url_type, ingress_config, include_reserved, expected_domains
+):
+    with replace_cluster_service(replaced_ingress_config=ingress_config):
+        bk_module.exposed_url_type = exposed_url_type
+        assert get_module_prod_env_root_domains(bk_module, include_reserved) == expected_domains

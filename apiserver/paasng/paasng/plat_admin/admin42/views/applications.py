@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
     fetch_application_members,
@@ -29,7 +29,11 @@ from paasng.accessories.iam.helpers import (
 )
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ
+from paasng.engine.constants import ClusterType
+from paasng.engine.controller.cluster import get_engine_app_cluster
+from paasng.engine.controller.shortcuts import make_internal_client
+from paasng.engine.controller.state import controller_client
+from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
@@ -38,6 +42,7 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.utils.error_codes import error_codes
 
 
 class ApplicationListView(GenericTemplateView):
@@ -77,6 +82,10 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
             kwargs['view'] = self
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs['application'] = application
+        kwargs['cluster_choices'] = [
+            {'id': cluster['name'], 'name': f"{cluster['name']} -- {ClusterType.get_choice_label(cluster['type'])}"}
+            for cluster in make_internal_client().list_region_clusters(application['region'])
+        ]
         return kwargs
 
     def get(self, request, *args, **kwargs):
@@ -97,6 +106,24 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
             self.get_application().code, ApplicationRole.ADMINISTRATOR
         )
         return kwargs
+
+
+class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+    """应用部署环境配置管理"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def bind_cluster(self, request, code, module_name, environment):
+        slz = BindEnvClusterSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        engine_app = self.get_engine_app_via_path()
+        controller_client.bind_app_cluster(
+            engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
+        )
+        # 清理 engine_app 集群信息缓存
+        get_engine_app_cluster.invalidate(engine_app.region, engine_app.name)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationMembersManageView(ApplicationDetailBaseView):
@@ -133,18 +160,26 @@ class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.Gener
 
     def destroy(self, request, code):
         application = self.get_application()
-        remove_user_all_roles(application.code, request.query_params["username"])
+        try:
+            remove_user_all_roles(application.code, request.query_params["username"])
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
+
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, code):
         application = self.get_application()
         username, role = request.data['username'], request.data['role']
 
-        remove_user_all_roles(application.code, username)
-        add_role_members(application.code, ApplicationRole(role), username)
+        try:
+            remove_user_all_roles(application.code, username)
+            add_role_members(application.code, ApplicationRole(role), username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
         self.sync_membership(application)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def sync_membership(self, application):
         sync_developers_to_sentry.delay(application.id)
@@ -182,4 +217,4 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
     def update(self, request, code):
         application = self.get_application()
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,50 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from unittest import mock
 
 import pytest
 
-from paasng.engine.constants import JobStatus
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_all_regions
-from paasng.publish.entrance.exposer import SubDomainURLProvider, SubPathURLProvider
+from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 from paasng.publish.market.utils import MarketAvailableAddressHelper
-from tests.engine.setup_utils import create_fake_deployment
 from tests.utils.mocks.domain import FakeCustomDomainService
-from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture(autouse=True)
-def setup_cluster():
-    """Replace cluster info in module level"""
-    with replace_cluster_service(
-        ingress_config={
-            'app_root_domains': [{'name': 'example.com', 'https_enabled': True}],
-            'sub_path_domains': [{'name': 'example.com', 'https_enabled': True}],
-        }
-    ):
-        yield
 
 
 @pytest.fixture
@@ -58,17 +42,31 @@ def domain_svc():
 
 class TestMarketAvailableAddressHelper:
     @pytest.fixture(autouse=True)
-    def make_deployment(self, bk_module):
-        create_fake_deployment(bk_module, status=JobStatus.SUCCESSFUL.value)
+    def _setup(self):
+        with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
+            mocker.return_value = ModuleLiveAddrs(
+                [
+                    {
+                        "env": "prod",
+                        "is_running": True,
+                        "addresses": [
+                            {"type": "subdomain", "url": "https://foo.example.com"},
+                            {"type": "subpath", "url": "https://example.org/foo/"},
+                        ],
+                    },
+                ]
+            )
+            yield
 
     @pytest.mark.parametrize(
-        'exposed_url_type, address_cls',
+        'exposed_url_type, expected_addr',
         [
-            (ExposedURLType.SUBDOMAIN.value, SubDomainURLProvider),
-            (ExposedURLType.SUBPATH.value, SubPathURLProvider),
+            (ExposedURLType.SUBDOMAIN.value, '//foo.example.com'),
+            (ExposedURLType.SUBPATH.value, '//example.org/foo/'),
         ],
     )
-    def test_list_by_exposed_url_type(self, exposed_url_type, address_cls, bk_app, bk_module, domain_svc):
+    def test_no_prefer_different_exposed_type(self, exposed_url_type, expected_addr, bk_app, domain_svc):
+        """No prefer HTTPS, test different exposed types"""
         for region in get_all_regions().keys():
             market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
             market_config.source_module.region = region
@@ -76,70 +74,46 @@ class TestMarketAvailableAddressHelper:
             market_config.prefer_https = False
             market_config.source_module.save()
 
-            helper = MarketAvailableAddressHelper(market_config)
-
             domain_svc.set_hostnames(['test.example.com'])
-            default_entrance = address_cls(helper.env).provide()
+            helper = MarketAvailableAddressHelper(market_config)
             assert helper.addresses == [
-                AvailableAddress(address=default_entrance.address.replace("https://", "http://"), type=2),
-                AvailableAddress(address=default_entrance.address.replace("http://", "https://"), type=5),
+                AvailableAddress(address='http:' + expected_addr, type=2),
+                AvailableAddress(address='https:' + expected_addr, type=5),
                 AvailableAddress(address="http://test.example.com", type=4),
             ]
 
     @pytest.mark.parametrize(
-        'exposed_url_type, address_cls',
+        'addr,expected_addr',
         [
-            (ExposedURLType.SUBDOMAIN.value, SubDomainURLProvider),
-            (ExposedURLType.SUBPATH.value, SubPathURLProvider),
+            ('https://foo.example.com', 'https://foo.example.com'),
+            ('http://foo.example.com', 'http://foo.example.com'),
         ],
     )
-    def test_prefer_https(self, exposed_url_type, address_cls, bk_app, bk_module, domain_svc):
-        for region in get_all_regions().keys():
-            market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-            market_config.source_module.region = region
-            market_config.source_module.exposed_url_type = exposed_url_type
-            market_config.prefer_https = True
-            market_config.source_module.save()
+    def test_prefer_https(self, addr, expected_addr, bk_app, domain_svc):
+        with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
+            mocker.return_value = ModuleLiveAddrs(
+                [
+                    {
+                        "env": "prod",
+                        "is_running": True,
+                        "addresses": [{"type": "subdomain", "url": addr}],
+                    },
+                ]
+            )
 
-            helper = MarketAvailableAddressHelper(market_config)
-
-            domain_svc.set_hostnames(['test.example.com'])
-            default_entrance = address_cls(helper.env).provide()
-            assert default_entrance.url.protocol == "https"
-            assert helper.addresses == [
-                AvailableAddress(address=default_entrance.address, type=2),
-                AvailableAddress(address="http://test.example.com", type=4),
-            ]
-
-    @pytest.mark.parametrize(
-        'exposed_url_type, address_cls',
-        [
-            (ExposedURLType.SUBDOMAIN.value, SubDomainURLProvider),
-            (ExposedURLType.SUBPATH.value, SubPathURLProvider),
-        ],
-    )
-    def test_https_unsupported(self, exposed_url_type, address_cls, bk_app, bk_module, domain_svc):
-        with replace_cluster_service(
-            ingress_config={
-                'app_root_domains': [{'name': 'example.com', 'https_enabled': False}],
-                'sub_path_domains': [{'name': 'example.com', 'https_enabled': False}],
-            }
-        ):
             for region in get_all_regions().keys():
                 market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
                 market_config.source_module.region = region
-                market_config.source_module.exposed_url_type = exposed_url_type
+                market_config.source_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
                 market_config.prefer_https = True
                 market_config.source_module.save()
 
                 helper = MarketAvailableAddressHelper(market_config)
 
                 domain_svc.set_hostnames(['test.example.com'])
-                default_entrance = address_cls(helper.env).provide()
-                assert default_entrance.url.protocol == "http"
                 assert helper.addresses == [
-                    AvailableAddress(address=default_entrance.address, type=2),
-                    AvailableAddress(address="http://test.example.com", type=4),
+                    AvailableAddress(address=expected_addr, type=2),
+                    AvailableAddress(address='http://test.example.com', type=4),
                 ]
 
     @pytest.mark.parametrize(
@@ -208,7 +182,12 @@ class TestMarketAvailableAddressHelper:
 
 
 class TestMarketAvailableAddressHelperNoDeployment:
-    def test_list_without_deploy(self, bk_app, bk_module, domain_svc):
+    @mock.patch('paasng.publish.market.utils.get_exposed_url')
+    def test_list_without_deploy(self, mocker, bk_app, bk_module, domain_svc):
+        # Mock get_exposed_url to return None in order to simulate env which has
+        # not been deployed yet.
+        mocker.return_value = None
+
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         helper = MarketAvailableAddressHelper(market_config)
 

@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 """Manage application's custom domains"""
 import logging
 from typing import Dict, Optional, Protocol, Type
@@ -13,7 +31,6 @@ from paas_wl.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainSLZ
 from paas_wl.platform.applications.constants import ApplicationType
-from paas_wl.platform.applications.models import EngineApp
 from paas_wl.platform.applications.struct_models import Application, ModuleEnv, to_structured
 from paas_wl.platform.external.client import get_plat_client
 from paas_wl.utils.error_codes import error_codes
@@ -63,9 +80,8 @@ class DftCustomDomainManager:
         if not env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
-        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
         try:
-            DomainResourceCreateService(engine_app).do(host=host, path_prefix=path_prefix, https_enabled=https_enabled)
+            DomainResourceCreateService(env).do(host=host, path_prefix=path_prefix, https_enabled=https_enabled)
         except ValidCertNotFound:
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f("找不到有效的 TLS 证书")
         except IntegrityError:
@@ -88,9 +104,8 @@ class DftCustomDomainManager:
         if check_domain_used_by_market(self.application, instance.name):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行更新操作')
 
-        engine_app = EngineApp.objects.get(pk=instance.environment.engine_app_id)
         try:
-            svc = ReplaceAppDomainService(engine_app, instance.name, instance.path_prefix)
+            svc = ReplaceAppDomainService(instance.environment, instance.name, instance.path_prefix)
             svc.replace_with(host, path_prefix, https_enabled)
         except ReplaceAppDomainFailed as e:
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
@@ -108,8 +123,9 @@ class DftCustomDomainManager:
         if check_domain_used_by_market(self.application, instance.name):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行删除操作')
 
-        engine_app = EngineApp.objects.get(pk=instance.environment.engine_app_id)
-        ret = DomainResourceDeleteService(engine_app).do(host=instance.name, path_prefix=instance.path_prefix)
+        ret = DomainResourceDeleteService(instance.environment).do(
+            host=instance.name, path_prefix=instance.path_prefix
+        )
         if not ret:
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")
         instance.delete()

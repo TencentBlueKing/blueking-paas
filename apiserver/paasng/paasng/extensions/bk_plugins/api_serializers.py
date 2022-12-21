@@ -1,8 +1,27 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 """Serializer for third-party api"""
 from rest_framework import serializers
 
 from paasng.engine.serializers import field_env_var_key
 from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.serializers import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
@@ -17,14 +36,20 @@ class PluginTemplateSLZ(serializers.Serializer):
 
 
 @i18n
-class PluginRequestSLZ(serializers.Serializer):
+class PluginSyncRequestSLZ(serializers.Serializer):
     """同步插件信息至第三方系统的请求体格式"""
 
-    id = serializers.CharField()
-    name = I18NExtend(serializers.CharField())
+    id = AppIDField()
+    name = I18NExtend(AppNameField())
     template = PluginTemplateSLZ()
     extra_fields = serializers.DictField(allow_null=True, help_text="第三方系统声明的额外字段")
     repository = serializers.CharField(help_text="源码仓库")
+    operator = serializers.CharField()
+
+
+class PluginArchiveRequestSLZ(serializers.Serializer):
+    """下架插件的请求体格式"""
+
     operator = serializers.CharField()
 
 

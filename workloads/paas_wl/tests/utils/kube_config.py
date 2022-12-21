@@ -1,8 +1,26 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import base64
 
 from django.conf import settings
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.loaders import LegacyKubeConfigLoader
 from paas_wl.cluster.models import APIServer, Cluster
 
@@ -36,6 +54,7 @@ def init_kube_config_from_yaml(file: str = '', clear: bool = False):
                     "frontend_ingress_ip": "0.0.0.0",
                     "port_map": {"http": "80", "https": "443"},
                 },
+                feature_flags={ff: True for ff in ClusterFeatureFlag},
             )
             api_server, _ = APIServer.objects.get_or_create(
                 host=config.host,

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import base64
@@ -26,7 +25,6 @@ from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
 
-import cattr
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import transaction
@@ -41,6 +39,7 @@ from rest_framework.views import APIView
 
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
     fetch_application_members,
@@ -59,7 +58,7 @@ from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_engine_app_cluster, get_region_cluster_helper
+from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.extensions.bk_plugins.config import get_bk_plugin_config
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.scene_app.initializer import SceneAPPInitializer
@@ -157,6 +156,10 @@ class ApplicationViewSet(viewsets.ViewSet):
             order_by=[params.get('order_by')],
         )
 
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         # 如果将用户标记的应用排在前面，需要特殊处理一下
         if params.get('prefer_marked'):
             applications_ids = applications.values_list('id', flat=True)
@@ -194,18 +197,17 @@ class ApplicationViewSet(viewsets.ViewSet):
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
+
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         results = [
             {'application': application, 'product': application.product if hasattr(application, "product") else None}
             for application in applications
         ]
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
-
-    def get_cluster_by_app(self, application: Application):
-        for env in application.envs.all():
-            cluster = get_engine_app_cluster(application.region, env.engine_app.name)
-            if cluster:
-                return cluster
 
     def retrieve(self, request, code):
         """获取单个应用的信息"""
@@ -216,7 +218,6 @@ class ApplicationViewSet(viewsets.ViewSet):
         product = application.get_product()
 
         web_config = application.config_info
-        cluster = self.get_cluster_by_app(application)
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
@@ -227,7 +228,6 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 'web_config': web_config,
-                'cluster': cattr.unstructure(cluster) if cluster else None,
             }
         )
 
@@ -554,7 +554,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # `source_init_template` is optional
         source_init_template = engine_params.get('source_init_template', '')
         if source_init_template:
-            language = Template.objects.get(name=source_init_template, type=TemplateType.NORMAL).language
+            language = Template.objects.get(
+                name=source_init_template, type__in=TemplateType.normal_app_types()
+            ).language
 
         module = create_default_module(
             application,
@@ -646,8 +648,11 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
             for role in info['roles']:
                 role_members_map[role['id']].append(info['user']['username'])
 
-        for role, members in role_members_map.items():
-            add_role_members(application.code, role, members)
+        try:
+            for role, members in role_members_map.items():
+                add_role_members(application.code, role, members)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
         application_member_updated.send(sender=application, application=application)
         sync_developers_to_sentry.delay(application.id)
@@ -662,8 +667,11 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         username = get_username_by_bkpaas_user_id(kwargs['user_id'])
         self.check_admin_count(application.code, username)
-        remove_user_all_roles(application.code, username)
-        add_role_members(application.code, ApplicationRole(serializer.data['role']['id']), username)
+        try:
+            remove_user_all_roles(application.code, username)
+            add_role_members(application.code, ApplicationRole(serializer.data['role']['id']), username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
@@ -672,12 +680,12 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
-        user = request.user
-        if application.owner == user.pk:  # owner can not leave application
-            raise error_codes.MEMBERSHIP_OWNER_FAILED
 
         self.check_admin_count(application.code, request.user.username)
-        remove_user_all_roles(application.code, request.user.username)
+        try:
+            remove_user_all_roles(application.code, request.user.username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
@@ -689,7 +697,10 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
 
         username = get_username_by_bkpaas_user_id(kwargs['user_id'])
         self.check_admin_count(application.code, username)
-        remove_user_all_roles(application.code, username)
+        try:
+            remove_user_all_roles(application.code, username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
 
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)

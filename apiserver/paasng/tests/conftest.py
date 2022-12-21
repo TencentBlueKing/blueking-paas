@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -49,7 +48,8 @@ from paasng.platform.core.storages.utils import SADBManager
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
-from paasng.publish.market.models import Product
+from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
+from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
@@ -129,8 +129,10 @@ def legacy_app_code():
 
 
 @pytest.fixture(autouse=True)
-def init_legacy_app(legacy_app_code):
-    # hook 所有调用 legacy db 的单元测试, 创建供单元测试使用的 legacy app
+def auto_init_legacy_app(request):
+    if "legacy_app_code" not in request.fixturenames:
+        return
+    legacy_app_code = request.getfixturevalue("legacy_app_code")
     call_command("make_legacy_app_for_test", f"--code={legacy_app_code}", "--username=nobody", "--silence")
 
 
@@ -304,10 +306,7 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch('paasng.platform.applications.handlers.BKIAMClient', new=StubBKIAMClient), mock.patch(
-        'paasng.platform.mgrlegacy.app_migrations.basic.BKIAMClient',
-        new=StubBKIAMClient,
-    ), mock.patch(
+    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(
@@ -333,7 +332,11 @@ def bk_app(request, bk_user):
     This result object is not fully functional in order to speed up fixture, if you want a full featured application.
     use `bk_app_full` instead.
     """
-    return create_app(owner_username=bk_user.username)
+    # skip registry app core data to console
+    before_finishing_application_creation.disconnect(register_app_core_data)
+    app = create_app(owner_username=bk_user.username)
+    before_finishing_application_creation.connect(register_app_core_data)
+    return app
 
 
 @pytest.fixture
@@ -397,13 +400,6 @@ def bk_deployment(bk_module):
 def bk_deployment_full(bk_module_full):
     """Generate a simple deployment object for bk_module_full(which have source_obj)"""
     return create_fake_deployment(bk_module_full)
-
-
-@pytest.fixture
-def bk_product(request, bk_app):
-    """Generate a random product related with current app"""
-    product = G(Product, application=bk_app, type=1)
-    return product
 
 
 @pytest.fixture
@@ -690,3 +686,43 @@ def check_console_enabled():
 def mark_skip_if_console_not_configured():
     """Return a pytest mark to skip tests when console database was not configured"""
     return pytest.mark.skipif(not check_console_enabled(), reason='Console db engine is not initialized')
+
+
+@pytest.fixture
+def with_empty_live_addrs():
+    """Always return empty addresses by patching `get_addresses` function"""
+    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
+        mocker.return_value = ModuleLiveAddrs(
+            [
+                {"env": "stag", "is_running": False, "addresses": []},
+                {"env": "prod", "is_running": False, "addresses": []},
+            ]
+        )
+        yield
+
+
+@pytest.fixture
+def with_live_addrs():
+    """Always return valid addresses by patching `get_live_addresses` function"""
+    with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
+        mocker.return_value = ModuleLiveAddrs(
+            [
+                {
+                    "env": "stag",
+                    "is_running": True,
+                    "addresses": [
+                        {"type": "subpath", "url": "http://example.com/foo-stag/"},
+                        {"type": "subdomain", "url": "http://foo-stag.example.com"},
+                    ],
+                },
+                {
+                    "env": "prod",
+                    "is_running": True,
+                    "addresses": [
+                        {"type": "subpath", "url": "http://example.com/foo-prod/"},
+                        {"type": "subdomain", "url": "http://foo-prod.example.com"},
+                    ],
+                },
+            ]
+        )
+        yield

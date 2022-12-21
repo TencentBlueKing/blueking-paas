@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import logging
 import time
 
@@ -13,6 +31,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.events import list_failed_events
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.platform.applications.permissions import AppAction, application_perm_class
@@ -200,7 +219,7 @@ class MresStatusViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """查看应用模型资源当前状态"""
         env = self.get_module_env_via_path()
         try:
-            latest_dp = AppModelDeploy.objects.filter_by_env(env).latest("created")
+            latest_dp: AppModelDeploy = AppModelDeploy.objects.filter_by_env(env).latest("created")
         except AppModelDeploy.DoesNotExist:
             raise error_codes.GET_DEPLOYMENT_FAILED.f("App not deployed")
 
@@ -216,6 +235,7 @@ class MresStatusViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
                     "deployment": latest_dp,
                     "ingress": {"url": get_exposed_url(env)},
                     "conditions": mres.status.conditions,
+                    "events": list_failed_events(env, latest_dp.created),
                 }
             ).data
         )

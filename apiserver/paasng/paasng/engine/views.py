@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import datetime
@@ -44,6 +43,7 @@ from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, JobStatus, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.controller.state import controller_client
 from paasng.engine.deploy.infras import DeploymentCoordinator
@@ -99,9 +99,8 @@ from paasng.platform.applications.signals import module_environment_offline_succ
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
-from paasng.platform.modules.helpers import get_module_cluster
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import get_default_access_entrance, get_exposed_url
+from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url, get_preallocated_url
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
@@ -146,10 +145,8 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_env = self.get_env_via_path()
         serializer = self.serializer_class(request.query_params)
 
-        deployment_data = None
         offline_data = None
-        exposed_link = None
-        default_access_entrance = get_default_access_entrance(module_env, include_no_running=True)
+        default_access_entrance = get_preallocated_url(module_env)
 
         if module_env.is_offlined:
             try:
@@ -158,17 +155,14 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.APP_NOT_RELEASED
             offline_data = OfflineOperationSLZ(offline_operation).data
 
-        else:
-            try:
-                deployment = Deployment.objects.filter(app_environment=module_env).latest_succeeded()
-            except Deployment.DoesNotExist:
-                raise error_codes.APP_NOT_RELEASED
-            deployment_data = DeploymentSLZ(deployment).data
-            exposed_link = get_exposed_url(module_env)
+        # Check if current env is running
+        if not env_is_deployed(module_env):
+            raise error_codes.APP_NOT_RELEASED
 
+        exposed_link = get_exposed_url(module_env)
         data = {
             "is_offlined": module_env.is_offlined,
-            'deployment': deployment_data,
+            'deployment': self.get_deployment_data(module_env),
             "offline": offline_data,
             'exposed_link': {"url": exposed_link.address if exposed_link else None},
             "default_access_entrance": {"url": default_access_entrance.address if default_access_entrance else None},
@@ -186,6 +180,16 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data['processes'] = specs
 
         return Response(data)
+
+    @staticmethod
+    def get_deployment_data(env) -> Optional[Dict]:
+        """Try to get the latest deployment data by querying Deployment model"""
+        try:
+            deployment = Deployment.objects.filter(app_environment=env).latest_succeeded()
+        except Deployment.DoesNotExist:
+            # Cloud-native app does not has any deployment objects
+            return None
+        return DeploymentSLZ(deployment).data
 
 
 class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -726,16 +730,26 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ()})
-    def retrieve(self, request, code, module_name):
+    @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ(many=True)})
+    def retrieve(self, request, code):
         """查看独立域名相关配置信息，比如前端负载均衡 IP 地址等"""
-        module = self.get_module_via_path()
-        cluster_info = get_module_cluster(module)
+        application = self.get_application()
 
-        # `cluster_info` could be None when application's engine was disabled
-        frontend_ingress_ip = cluster_info.ingress_config.frontend_ingress_ip if cluster_info else ''
-        serializer = CustomDomainsConfigSLZ({'frontend_ingress_ip': frontend_ingress_ip})
-        return Response(dict(serializer.data))
+        custom_domain_configs = []
+        for module in application.modules.all():
+            for env in module.envs.all():
+                cluster = get_engine_app_cluster(module.region, env.engine_app.name)
+                # `cluster` could be None when application's engine was disabled
+                frontend_ingress_ip = cluster.ingress_config.frontend_ingress_ip if cluster else ''
+                custom_domain_configs.append(
+                    {
+                        'module': module.name,
+                        'environment': env.environment,
+                        'frontend_ingress_ip': frontend_ingress_ip,
+                    }
+                )
+
+        return Response(CustomDomainsConfigSLZ(custom_domain_configs, many=True).data)
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

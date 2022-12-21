@@ -1,17 +1,33 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from dataclasses import dataclass
 
 from django.core.validators import RegexValidator
 from django.db import models
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.platform.applications.models import App, AuditedModel
 from paas_wl.platform.applications.struct_models import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
-
-from .constants import AppDomainSource, AppSubpathSource
 
 
 @dataclass
@@ -132,8 +148,6 @@ class Domain(TimestampedModel):
     path_prefix = models.CharField(max_length=64, default='/', help_text="the accessable path for current domain")
     module_id = models.UUIDField(help_text='关联的模块 ID', null=False)
     environment_id = models.BigIntegerField(help_text='关联的环境 ID', null=False)
-    # TODO: lb_plan 应该已经废弃了，在迁移数据时删除该字段
-    lb_plan = models.CharField("load balancer plan", max_length=64, default='LBDefaultPlan')
     https_enabled = models.NullBooleanField(default=False, help_text="该域名是否开启 https.")
 
     module = ModuleAttrFromID()
@@ -146,8 +160,12 @@ class Domain(TimestampedModel):
     def protocol(self) -> str:
         return "https" if self.https_enabled else "http"
 
+    def has_customized_path_prefix(self) -> bool:
+        """Check if current domain has configured a custom path prefix"""
+        return self.path_prefix != '/'
+
     def __str__(self):
         return f'module={self.module_id}-{self.name}'
 
 
-# PaaS "custom domain"(end-user) model start
+# PaaS "custom domain"(end-user) model end

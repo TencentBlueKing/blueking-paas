@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 # type: ignore
@@ -189,6 +188,9 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+ADMIN_USERNAME = settings.get('ADMIN_USERNAME', 'admin')
+
 AUTH_USER_MODEL = 'bkpaas_auth.User'
 
 AUTHENTICATION_BACKENDS = ['bkpaas_auth.backends.UniversalAuthBackend', 'bkpaas_auth.backends.APIGatewayAuthBackend']
@@ -243,6 +245,8 @@ LANGUAGE_COOKIE_PATH = "/"
 LANGUAGE_COOKIE_DOMAIN = settings.get('BK_COOKIE_DOMAIN')
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
+
+CHANGELOG_PATH = os.path.join(BASE_DIR, 'changelog')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
@@ -519,6 +523,9 @@ COMPONENT_SYSTEM_HOST_IN_TEST = settings.get('COMPONENT_SYSTEM_HOST_IN_TEST', 'h
 APIGW_DASHBOARD_HOST = settings.get('APIGW_DASHBOARD_URL', 'http://localhost:8080')
 
 BK_APIGW_NAME = settings.get('BK_APIGW_NAME')
+# 网关运行环境
+# TODO BK_LESSCODE_APIGW_STAGE 和 BK_IAM_APIGW_SERVICE_STAGE 考虑复用 APIGW_ENVIRONMENT?
+APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关 API 访问地址模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
 
@@ -552,6 +559,7 @@ HEALTHZ_PROBES = settings.get(
         'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
+        'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
     ],
 )
 
@@ -628,7 +636,7 @@ BK_SSM_URL = settings.get('BK_SSM_URL', '')
 BK_IAM_V3_INNER_URL = settings.get('BK_IAM_V3_INNER_URL', 'http://localhost:8080')
 
 # 访问的权限中心 APIGW 版本
-BK_IAM_APIGW_SERVICE_STAGE = settings.get('BK_IAM_APIGW_SERVICE_STAGE', 'prod')
+BK_IAM_APIGW_SERVICE_STAGE = settings.get('BK_IAM_APIGW_SERVICE_STAGE', 'stage')
 
 # 参数说明 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#22-config
 # 如果通过网关访问, BK_IAM_APIGATEWAY_URL 将替代 BK_IAM_V3_INNER_URL
@@ -1081,6 +1089,19 @@ DOCKER_REGISTRY_CONFIG = settings.get(
     'DOCKER_REGISTRY_CONFIG', {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
 
+# -----------------
+# 插件开发中心配置项
+# -----------------
+# 插件中心「源码仓库」相关配置
+PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
+
+# 插件开发中心在权限中心注册的系统 ID
+IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')
+
+# 是否在开发者中心应用列表中展示插件应用
+DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
+
+
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
@@ -1123,11 +1144,5 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
-
-# 插件中心「源码仓库」相关配置
-PLUGIN_REPO_CONF = settings.get("PLUGIN_REPO_CONF")
-
-# 插件开发中心在权限中心注册的系统 ID
-IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', default='bk_plugins')
 
 MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

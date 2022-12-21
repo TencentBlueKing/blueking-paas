@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- *  http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -35,7 +36,7 @@ import (
 
 var _ = Describe("Test AddonReconciler", func() {
 	var bkapp *v1alpha1.BkApp
-	var r AddonReconciler
+	var r *AddonReconciler
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var ctx context.Context
@@ -68,7 +69,7 @@ var _ = Describe("Test AddonReconciler", func() {
 	It("test normal", func() {
 		testing.WithAppInfoAnnotations(bkapp)
 
-		r = AddonReconciler{
+		r = &AddonReconciler{
 			Client:         builder.WithObjects(bkapp).Build(),
 			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 200}),
 		}
@@ -82,7 +83,7 @@ var _ = Describe("Test AddonReconciler", func() {
 	})
 
 	It("when not metadata", func() {
-		r = AddonReconciler{
+		r = &AddonReconciler{
 			Client:         builder.WithObjects(bkapp).Build(),
 			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{}),
 		}
@@ -102,7 +103,7 @@ var _ = Describe("Test AddonReconciler", func() {
 			bkapp.Annotations[v1alpha1.AddonsAnnoKey] = "['foo-service']"
 		})
 
-		r = AddonReconciler{
+		r = &AddonReconciler{
 			Client:         builder.WithObjects(bkapp).Build(),
 			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 200}),
 		}
@@ -120,7 +121,7 @@ var _ = Describe("Test AddonReconciler", func() {
 	It("when provision addon failed", func() {
 		testing.WithAppInfoAnnotations(bkapp)
 		By("set a failed external client", func() {
-			r = AddonReconciler{
+			r = &AddonReconciler{
 				Client:         builder.WithObjects(bkapp).Build(),
 				ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 400, Body: "bar"}),
 			}

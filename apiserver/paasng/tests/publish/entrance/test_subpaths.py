@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 """Testcases for application entrance management
@@ -23,8 +22,16 @@ import cattr
 import pytest
 from django.test.utils import override_settings
 
-from paasng.engine.controller.models import IngressConfig
-from paasng.publish.entrance.subpaths import ModuleEnvSubpaths, get_legacy_compatible_path, get_preallocated_path
+from paasng.engine.controller.models import Domain as DomainCfg
+from paasng.engine.controller.models import IngressConfig, PortMap
+from paasng.publish.entrance.subpaths import (
+    ModuleEnvSubpaths,
+    SubPathAllocator,
+    SubpathPriorityType,
+    get_legacy_compatible_path,
+    get_preallocated_path,
+    get_preallocated_paths_by_env,
+)
 from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
@@ -51,8 +58,8 @@ class TestModuleEnvSubpaths:
         legacy_path = get_legacy_compatible_path(env)
         assert [d.as_url().as_address() for d in subpaths] == [
             'http://sub.example.com/prod--default--some-app-o/',
-            f'http://sub.example.com{legacy_path}',
             'http://sub.example.cn/prod--default--some-app-o/',
+            f'http://sub.example.com{legacy_path}',
             f'http://sub.example.cn{legacy_path}',
             'http://sub.example.com/prod--some-app-o/',
             'http://sub.example.cn/prod--some-app-o/',
@@ -68,8 +75,8 @@ class TestModuleEnvSubpaths:
         legacy_path = get_legacy_compatible_path(env)
         assert [d.as_url().as_address() for d in subpaths] == [
             'http://sub.example.com/stag--default--some-app-o/',
-            f'http://sub.example.com{legacy_path}',
             'http://sub.example.cn/stag--default--some-app-o/',
+            f'http://sub.example.com{legacy_path}',
             f'http://sub.example.cn{legacy_path}',
             'http://sub.example.com/stag--some-app-o/',
             'http://sub.example.cn/stag--some-app-o/',
@@ -84,8 +91,8 @@ class TestModuleEnvSubpaths:
         legacy_path = get_legacy_compatible_path(env)
         assert [d.as_url().as_address() for d in subpaths] == [
             'http://sub.example.com/stag--default--some-app-o/',
-            f'http://sub.example.com{legacy_path}',
             'http://sub.example.cn/stag--default--some-app-o/',
+            f'http://sub.example.com{legacy_path}',
             f'http://sub.example.cn{legacy_path}',
         ]
 
@@ -157,3 +164,76 @@ class TestGetPreallocatedPath:
 def test_get_legacy_compatible_path(bk_stag_env):
     module = bk_stag_env.module
     assert get_legacy_compatible_path(bk_stag_env) == f'/{module.region}-{bk_stag_env.engine_app.name}/'
+
+
+class TestSubPathAllocator:
+    @pytest.fixture
+    def allocator(self) -> SubPathAllocator:
+        return SubPathAllocator('some-app', PortMap())
+
+    @pytest.fixture
+    def domain_cfg(self) -> DomainCfg:
+        return DomainCfg(name='example.com', https_enabled=True)
+
+    def test_list_available_universal(self, bk_app, allocator, domain_cfg):
+        subpaths = allocator.list_available([domain_cfg], 'm1', 'stag', is_default=False)
+        assert [p.subpath for p in subpaths] == ['/stag--m1--some-app/']
+
+    def test_list_available_default(self, bk_app, allocator, domain_cfg):
+        subpaths = allocator.list_available([domain_cfg], 'm1', 'prod', is_default=True)
+        assert [p.subpath for p in subpaths] == [
+            '/prod--m1--some-app/',
+            '/prod--some-app/',
+            '/some-app/',
+        ]
+
+    def test_get_highest_priority_universal(self, bk_app, allocator, domain_cfg):
+        p = allocator.get_highest_priority(domain_cfg, 'm1', 'stag', is_default=False)
+        assert p.subpath == '/stag--m1--some-app/'
+        assert p.type == SubpathPriorityType.STABLE
+        assert p.https_enabled is True
+
+    def test_get_highest_priority_default(self, bk_app, allocator, domain_cfg):
+        p = allocator.get_highest_priority(domain_cfg, 'm1', 'stag', is_default=True)
+        assert p.subpath == '/stag--some-app/'
+        assert p.type == SubpathPriorityType.WITHOUT_MODULE
+
+    def test_get_highest_priority_default_prod(self, allocator, domain_cfg):
+        p = allocator.get_highest_priority(domain_cfg, 'm1', 'prod', is_default=True)
+        assert p.subpath == '/some-app/'
+        assert p.type == SubpathPriorityType.ONLY_CODE
+
+
+class TestGetPreallocatedPathsByEnv:
+    @pytest.fixture(autouse=True)
+    def _setup_cluster(self):
+        """Replace cluster info in module level"""
+        with replace_cluster_service(
+            ingress_config={
+                'sub_path_domains': [
+                    {"name": 'sub.example.com'},
+                    {"name": 'sub.example.org'},
+                ]
+            }
+        ):
+            yield
+
+    def test_default_prod_env(self, bk_app, bk_module, bk_prod_env):
+        bk_module.is_default = True
+        bk_module.save(update_fields=['is_default'])
+
+        results = get_preallocated_paths_by_env(bk_prod_env)
+        assert [(d.host, d.subpath) for d in results] == [
+            ('sub.example.com', f'/{bk_app.code}/'),
+            ('sub.example.org', f'/{bk_app.code}/'),
+        ]
+
+    def test_non_default(self, bk_app, bk_module, bk_stag_env):
+        bk_module.is_default = False
+        bk_module.save(update_fields=['is_default'])
+
+        results = get_preallocated_paths_by_env(bk_stag_env)
+        assert [(d.host, d.subpath) for d in results] == [
+            ('sub.example.com', f'/stag--default--{bk_app.code}/'),
+            ('sub.example.org', f'/stag--default--{bk_app.code}/'),
+        ]

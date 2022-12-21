@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import string
@@ -23,6 +22,7 @@ import pytest
 from django.conf import settings
 from django.urls import reverse
 
+from paasng.dev_resources.templates.constants import TemplateType
 from paasng.platform.modules.constants import SourceOrigin
 from tests.utils import mock
 from tests.utils.helpers import generate_random_string
@@ -45,7 +45,7 @@ class TestSceneApp:
         ],
     )
     def test_list(self, api_client, query_params, result_count):
-        url = reverse('api.scene_app.list_tmpls')
+        url = reverse('api.templates.list_tmpls', kwargs=dict(tpl_type=TemplateType.SCENE.value))
         response = api_client.get(url, data=query_params)
         assert len(response.data) == result_count
 

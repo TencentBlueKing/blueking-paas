@@ -1,10 +1,11 @@
 /*
- * Tencent is pleased to support the open source community by making BlueKing - PaaS System available.
- * Copyright (C) 2017-2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- * 	http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -20,6 +21,7 @@ package reconcilers
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -34,9 +36,14 @@ import (
 
 const defaultRevision int64 = 1
 
+// NewRevisionReconciler will return a RevisionReconciler with given k8s client
+func NewRevisionReconciler(client client.Client) *RevisionReconciler {
+	return &RevisionReconciler{Client: client}
+}
+
 // RevisionReconciler 处理版本相关的调和逻辑
 type RevisionReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -59,7 +66,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	}
 
 	allDeploys := appsv1.DeploymentList{}
-	err = r.List(
+	err = r.Client.List(
 		ctx,
 		&allDeploys,
 		client.InNamespace(bkapp.Namespace),
@@ -76,10 +83,12 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 		// 检测上一个版本的 PreReleaseHook 是否仍在运行
 		preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
 		if preReleaseHook != nil && preReleaseHook.Status.Status == v1alpha1.HealthProgressing {
-			if _, err = CheckAndUpdatePreReleaseHookStatus(ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold); err != nil {
+			if _, err = CheckAndUpdatePreReleaseHookStatus(
+				ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
+			); err != nil {
 				return r.Result.withError(err)
 			}
-			return r.Result.withError(resources.ErrLastHookStillRunning)
+			return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
 		}
 	}
 
@@ -89,7 +98,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	bkapp.Status.HookStatuses = nil
 	bkapp.Status.ObservedGeneration = bkapp.Generation
 	SetDefaultConditions(&bkapp.Status)
-	err = r.Status().Update(ctx, bkapp)
+	err = r.Client.Status().Update(ctx, bkapp)
 	if err != nil {
 		log.Error(err, "unable to update app revision")
 		return r.Result.withError(err)

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import datetime
@@ -31,14 +30,13 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
-from paasng.utils.models import BkUserField, RegionListField, TimestampedModel
+from paasng.accounts.constants import FUNCTION_TYPE_MAP
+from paasng.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
+from paasng.accounts.constants import SiteRole
+from paasng.accounts.oauth.models import Scope
+from paasng.accounts.oauth.utils import get_backend
+from paasng.utils.models import AuditedModel, BkUserField, RegionListField, TimestampedModel
 from paasng.utils.text import generate_token
-
-from .constants import FUNCTION_TYPE_MAP
-from .constants import AccountFeatureFlag as AccountFeatureFlagConst
-from .constants import SiteRole
-from .oauth.models import Scope
-from .oauth.utils import get_backend
 
 if TYPE_CHECKING:
     from paasng.dev_resources.sourcectl.models import GitProject
@@ -241,6 +239,8 @@ class Oauth2TokenHolderQS(models.QuerySet):
 
 
 class Oauth2TokenHolder(TimestampedModel):
+    """OAuth2 Token for sourcectl"""
+
     provider = models.CharField(max_length=32)
     access_token = EncryptField(default="")
     token_type = models.CharField(max_length=16)
@@ -275,6 +275,29 @@ class Oauth2TokenHolder(TimestampedModel):
         """
         backend = get_backend(self.provider)
         return backend.get_scope(self.scope)
+
+
+class PrivateTokenHolder(AuditedModel):
+    """Private Token for sourcectl"""
+
+    provider = models.CharField(max_length=32)
+    private_token = EncryptField(default="")
+    expire_at = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="private_token_holder")
+
+    objects = Oauth2TokenHolderQS().as_manager()
+
+    def refresh(self):
+        raise NotImplementedError("can't refresh private token")
+
+    @property
+    def expired(self):
+        if self.expire_at:
+            return self.expire_at < datetime.datetime.now()
+        return False
+
+    def get_scope(self) -> str:
+        return "user:user"
 
 
 class AccountFeatureFlagManager(models.Manager):

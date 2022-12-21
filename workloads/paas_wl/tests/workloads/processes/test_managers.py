@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from unittest import mock
 
 import pytest
@@ -70,23 +87,24 @@ class TestProcInstManager:
         assert insts[0].envs
 
     def test_query_instances_without_process_id_label(self, client, app, pod):
-        # 使用 kind 部署的 k8s 集群会导致 Pod 的内容被更新, 因此需要获取最新的 Pod
-        current_pod = KPod(client).get(name=pod.metadata.name, namespace=pod.metadata.namespace)
-
         # Delete `process_id` label to simulate resources created by legacy engine versions
-        del current_pod.metadata.labels.__dict__['process_id']
-        KPod(client).replace_or_patch(name=pod.metadata.name, body=current_pod, namespace=pod.metadata.namespace)
+        labels = dict(pod.metadata.labels)
+        del labels['process_id']
+        KPod(client).patch(
+            name=pod.metadata.name, body={'metadata': {'labels': labels}}, namespace=pod.metadata.namespace
+        )
 
         # Query process instances
         insts = instance_kmodel.list_by_process_type(app, 'web')
         assert len(insts) == 1
 
     def test_watch_from_rv0(self, client, app, pod):
-        # 使用 kind 部署的 k8s 集群会导致 Pod 的内容被更新, 因此需要获取最新的 Pod
-        current_pod = KPod(client).get(name=pod.metadata.name, namespace=pod.metadata.namespace)
-
-        current_pod.metadata.labels.foo = 'bar'
-        KPod(client).replace_or_patch(name=pod.metadata.name, body=current_pod, namespace=pod.metadata.namespace)
+        labels = dict(pod.metadata.labels)
+        # Update labels to produce events
+        labels['foo'] = 'bar'
+        KPod(client).patch(
+            name=pod.metadata.name, body={'metadata': {'labels': labels}}, namespace=pod.metadata.namespace
+        )
 
         events = list(instance_kmodel.watch_by_app(app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0

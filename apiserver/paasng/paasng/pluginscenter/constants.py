@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
@@ -63,6 +63,17 @@ class PluginStatus(str, StructuredEnum):
     DEVELOPING = EnumField("developing", label="开发中")
     RELEASING = EnumField("releasing", label="发布中")
     RELEASED = EnumField("released", label="已发布")
+    # 后台轮询下架进度, 进入「下架」相关的状态后, 插件不可进行任何操作
+    ARCHIVED = EnumField("archived", label="已下架")
+
+    @classmethod
+    def archive_status(cls):
+        """下架相关的状态"""
+        return [cls.ARCHIVED]
+
+    @classmethod
+    def approval_status(cls):
+        return [cls.APPROVAL_FAILED, cls.WAITING_APPROVAL]
 
 
 class PluginRole(int, StructuredEnum):
@@ -117,9 +128,11 @@ class ActionTypes(str, StructuredEnum):
 
     CREATE = EnumField("create", label=_("创建"))
     ADD = EnumField('add', label=_("新建"))
+    RE_RELEASE = EnumField('re-release', label=_("重新发布"))
     TERMINATE = EnumField('terminate', label=_("终止发布"))
     MODIFY = EnumField("modify", label=_("修改"))
     DELETE = EnumField("delete", label=_("删除"))
+    ARCHIVE = EnumField("archive", label=_("下架"))
 
 
 class SubjectTypes(str, StructuredEnum):

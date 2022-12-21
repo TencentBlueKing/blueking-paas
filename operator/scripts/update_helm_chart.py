@@ -148,19 +148,23 @@ content_patch_conf = {
         (
             # 白名单控制支持 enabled & 挪到 values 顶层
             wrap_multiline_str(
-                6,
+                4,
                 """
-      accessControlConfig:
-        redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
+      ingressPluginConfig:
+        accessControlConfig:
+          redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
             """,
             ),
             wrap_multiline_str(
-                6,
+                4,
                 """
       {{ if .Values.accessControl.enabled -}}
-      accessControlConfig:
-        redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
-      {{- end -}}
+      ingressPluginConfig:
+        accessControlConfig:
+          redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
+      {{- else -}}
+      ingressPluginConfig: {}
+      {{- end }}
             """,
             ),
         ),

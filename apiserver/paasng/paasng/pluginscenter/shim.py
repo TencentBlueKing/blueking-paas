@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -27,7 +27,7 @@ from paasng.pluginscenter.iam_adaptor.management.shim import (
     setup_builtin_user_groups,
 )
 from paasng.pluginscenter.models import PluginInstance, PluginMarketInfo
-from paasng.pluginscenter.sourcectl import get_plugin_repo_initializer
+from paasng.pluginscenter.sourcectl import add_repo_member, get_plugin_repo_initializer
 from paasng.pluginscenter.sourcectl.exceptions import APIError
 from paasng.pluginscenter.thirdparty.instance import create_instance
 
@@ -42,7 +42,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     """
     # 初始化插件仓库后, plugin.repository 才真正赋值
     if plugin.pd.basic_info_definition.release_method == constants.PluginReleaseMethod.CODE:
-        init_plugin_repository(plugin)
+        init_plugin_repository(plugin, operator)
 
     # 调用第三方系统API时, 必须保证 plugin.repository 不为空
     if plugin.pd.basic_info_definition.api.create:
@@ -62,7 +62,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
 
 
-def init_plugin_repository(plugin: PluginInstance):
+def init_plugin_repository(plugin: PluginInstance, operator: str):
     """初始化插件仓库"""
     initializer = get_plugin_repo_initializer(plugin.pd)
     try:
@@ -78,6 +78,8 @@ def init_plugin_repository(plugin: PluginInstance):
     except GitCommandExecutionError:
         logger.exception("执行 git 指令异常, 请联系管理员排查")
         raise error_codes.INITIAL_REPO_ERROR
+
+    add_repo_member(plugin, operator, role=constants.PluginRole.ADMINISTRATOR)
 
 
 def build_repository_template(repository_group: str) -> str:

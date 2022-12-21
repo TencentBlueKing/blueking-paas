@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import logging
@@ -30,7 +29,7 @@ from paasng.engine.deploy.pre_release import ApplicationPreReleaseExecutor
 from paasng.engine.deploy.preparations import get_app_description_handler, get_processes
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_phase_start
-from paasng.extensions.declarative.exceptions import ControllerError
+from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 
 logger = logging.getLogger(__name__)
@@ -48,6 +47,9 @@ class ImageReleaseMgr(DeployStep):
             self.handle_app_description()
         except FileNotFoundError:
             logger.debug("App description file not defined, do not process.")
+        except DescriptionValidationError as e:
+            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
+            logger.exception("Exception while parsing app description file, skip.")
         except ControllerError as e:
             self.stream.write_message(Style.Error(e.message))
             logger.exception("Exception while processing app description file, skip.")

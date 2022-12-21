@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 """Client to communicate with controller
@@ -259,6 +258,16 @@ class ControllerClient:
             json=payload,
         )
 
+    def bind_app_cluster(self, region: str, app_name: str, cluster_name: str):
+        """Bind App to given cluster"""
+        return self.request(
+            'POST',
+            '/regions/{region}/apps/{name}/bind_cluster/{cluster_name}/'.format(
+                region=region, name=app_name, cluster_name=cluster_name
+            ),
+            desired_code=codes.ok,
+        )
+
     def update_app_metadata(self, region, app_name, payload):
         """Patch app config"""
         return self.request(
@@ -275,10 +284,6 @@ class ControllerClient:
             desired_code=codes.ok,
             json=credentials,
         )
-
-    def get_abnormal_processes(self, region):
-        """Get abnormal processes"""
-        return self.request('GET', '/regions/{region}/processes/abnormal/'.format(region=region))
 
     def create_webconsole(
         self, region, app_name, process_type, process_instance, operator, container_name=None, command="bash"
@@ -318,9 +323,9 @@ class ControllerClient:
 
     # Bk-App(module) related start
 
-    def list_env_is_running(self, app_code: str, module_name: str):
-        """List all env's "is_running" status under given module"""
-        return self.request('GET', f'/applications/{app_code}/modules/{module_name}/env_is_running/')
+    def list_env_addresses(self, app_code: str, module_name: str):
+        """List all env's addresses under given module, result include "is_running" status"""
+        return self.request('GET', f'/applications/{app_code}/modules/{module_name}/addresses/')
 
     # Bk-App(module) related end
 

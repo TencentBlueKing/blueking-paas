@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 """
-Tencent is pleased to support the open source community by making
+TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017-2022THL A29 Limited,
-a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://opensource.org/licenses/MIT
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on
-an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
-
 to the current version of the project delivered to anyone in the future.
 """
 import pytest
@@ -81,8 +81,8 @@ class TestDeployAPIStage:
     def stage_executor(self, stage):
         return stages.DeployAPIStage(stage)
 
-    def test_execute(self, mock_client, stage, stage_executor):
-        mock_client.call.return_value = {
+    def test_execute(self, thirdparty_client, stage, stage_executor):
+        thirdparty_client.call.return_value = {
             "deploy_id": "...",
             "status": "pending",
             "detail": "",
@@ -110,12 +110,13 @@ class TestDeployAPIStage:
             ],
         }
 
-    def test_render_to_view(self, mock_client, stage, stage_executor):
+    def test_render_to_view(self, thirdparty_client, stage, stage_executor):
         stage.api_detail = {"deploy_id": "..."}
         stage.status = PluginReleaseStatus.PENDING
         stage.save()
 
         counter = 0
+
         def deploy_action_side_effect(*args, **kwargs):
             nonlocal counter
             counter += 1
@@ -135,7 +136,7 @@ class TestDeployAPIStage:
             else:
                 return {"logs": ["1", "2", "3"], "finished": True}
 
-        mock_client.call.side_effect = deploy_action_side_effect
+        thirdparty_client.call.side_effect = deploy_action_side_effect
         stage_info = stage_executor.render_to_view()
 
         assert stage_info["detail"]["steps"] == [

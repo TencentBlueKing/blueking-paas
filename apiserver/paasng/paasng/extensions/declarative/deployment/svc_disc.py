@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Service discovery module"""
 import base64
 import json
@@ -26,13 +27,14 @@ import cattr
 from django.conf import settings
 from django.utils.encoding import force_bytes, force_str
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.models import Cluster
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.engine.models import Deployment
 from paasng.extensions.declarative.deployment.resources import BkSaaSItem
 from paasng.extensions.declarative.models import DeploymentDescription
 from paasng.platform.applications.models import Application
-from paasng.platform.modules.helpers import get_module_cluster
+from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
 from paasng.publish.entrance.exposer import get_preallocated_address
 
@@ -73,11 +75,11 @@ class BkSaaSEnvVariableFactory:
     def _get_preallocated_addresses(self) -> List[Dict]:
         """Get each app_code's preallocated addresses"""
         data: List[Dict] = []
-        for saas_item, cluster in self.extend_with_cluster(self.saas_items):
+        for saas_item, clusters in self.extend_with_clusters(self.saas_items):
             value: Optional[Dict]
             try:
                 value = get_preallocated_address(
-                    saas_item.bk_app_code, module_name=saas_item.module_name, cluster=cluster
+                    saas_item.bk_app_code, module_name=saas_item.module_name, clusters=clusters
                 )._asdict()
             except ValueError:
                 value = None
@@ -85,7 +87,9 @@ class BkSaaSEnvVariableFactory:
         return data
 
     @staticmethod
-    def extend_with_cluster(items: Sequence[BkSaaSItem]) -> Iterable[Tuple[BkSaaSItem, Optional[Cluster]]]:
+    def extend_with_clusters(
+        items: Sequence[BkSaaSItem],
+    ) -> Iterable[Tuple[BkSaaSItem, Optional[Dict[AppEnvName, Cluster]]]]:
         """Extends given `BkSaaSItem` objects with their clusters, if the SaaS has
         not been deployed yet, the cluster value will be `None`, otherwise the
         real cluster object will be returned.
@@ -97,7 +101,7 @@ class BkSaaSEnvVariableFactory:
             module = query_module(item)
             if module:
                 # Return the actual cluster object of current module
-                yield item, get_module_cluster(module)
+                yield item, get_module_clusters(module)
             else:
                 logger.info('Module not found in system, no cluster for %s', item)
                 yield item, None

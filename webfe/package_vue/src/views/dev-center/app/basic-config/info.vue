@@ -146,20 +146,6 @@
                 </div>
               </bk-form-item>
             </bk-form>
-            <bk-form
-              v-if="curAppInfo.cluster"
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('所属集群') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div class="item-content">
-                  {{ curAppInfo.cluster ? curAppInfo.cluster.bcs_cluster_id : '--' }}
-                </div>
-              </bk-form-item>
-            </bk-form>
           </div>
         </div>
         <div

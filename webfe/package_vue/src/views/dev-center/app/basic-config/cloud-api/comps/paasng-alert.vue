@@ -41,6 +41,9 @@
                 color: #3a84ff;
             }
         }
+        &::before {
+            content: "";
+        }
         i {
             margin-right: 8px;
             font-size: 16px;

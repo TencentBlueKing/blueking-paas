@@ -330,7 +330,6 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             # 已测试用离职用户也能创建成功
             owner_username = get_user_by_user_id(self.db_application.owner).username
 
-            # TODO 监控提供更新空间的 API 后，修改应用名称后需要同步修改空间的名称
             bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
                 self.db_application.code, self.db_application.name, owner_username
             )

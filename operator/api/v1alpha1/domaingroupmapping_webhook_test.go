@@ -160,7 +160,6 @@ var _ = Describe("Integrated tests for webhooks", func() {
 		}
 		Expect(k8sClient.Create(ctx, dgm)).NotTo(HaveOccurred())
 
-		// Check if default values have been set
 		var created DomainGroupMapping
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(dgm), &created)).NotTo(HaveOccurred())
 		Expect(created.Spec.Data[0].SourceType).To(Equal(SourceTypeSubDomain))

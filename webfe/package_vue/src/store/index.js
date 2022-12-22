@@ -374,6 +374,22 @@ const actions = {
   getRepoList ({ commit, state }, { sourceControlType }, config = {}) {
     const url = `${BACKEND_URL}/api/sourcectl/${sourceControlType}/repos/`;
     return http.get(url, config);
+  },
+
+  /**
+     * 获取版本日志
+     */
+  getVersionLog ({ commit, state }, config = {}) {
+    const url = `${BACKEND_URL}/api/changelogs/`;
+    return http.get(url, config);
+  },
+
+  /**
+     * 切换语言
+     */
+  switchLanguage ({ commit, state }, { data }, config = {}) {
+    const url = `${BACKEND_URL}/i18n/setlang/`;
+    return http.post(url, data, config);
   }
 
 };

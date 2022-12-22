@@ -44,6 +44,7 @@
                   ext-cls="paas-info-app-name-cls"
                   :clearable="false"
                   :maxlength="20"
+                  @blur="updatePluginBaseInfo('nameInput')"
                 />
                 <div
                   v-else
@@ -615,6 +616,10 @@
 
             // 保存基本信息
             async updatePluginBaseInfo (ref) {
+                if (this.resPluginInfo.name_zh_cn === this.pluginInfo.name_zh_cn) {
+                    this.cancelBasicInfo(ref, 'reset');
+                    return;
+                }
                 // this.pluginInfo
                 const data = {
                     name: this.pluginInfo.name_zh_cn,

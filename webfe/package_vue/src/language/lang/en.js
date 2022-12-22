@@ -1440,6 +1440,7 @@ export default {
   '未启动': 'Not started',
   '迁移到': 'Migration to',
   '新版开发者中心': 'New Developer Center',
+  '蓝鲸开发者中心': 'BlueKing Developer Center',
   '查看进度': 'View progress',
   '迁移时间': 'Migration time',
   '回滚至旧版本': 'Rollback to older versions',
@@ -1923,6 +1924,6 @@ export default {
   '进程副本数变更': 'Change in the number of process replicas',
   '目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。': 'The number of copies of some processes in the target environment is inconsistent with the current model, and the data in the current model will be used to overwrite the target environment.',
   '副本数将发生以下变化：': 'The number of replicas will change as follows:',
-  '（当前模型）': '(current model)'
-
+  '（当前模型）': '(current model)',
+  '插件开发': '插件开发'
 };

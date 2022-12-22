@@ -43,7 +43,6 @@
           />
         </div>
         <div
-          v-bkloading="{isLoading: isLoading, size: 'mini', zIndex: 10}"
           class="plugin-list"
         >
           <template v-if="viewPluinList.length">
@@ -93,6 +92,7 @@
   </div>
 </template>
 <script>
+    import _ from 'lodash';
     export default {
         components: {
         },
@@ -114,9 +114,7 @@
                 }
             },
             searchValue (newVal, oldVal) {
-                if (oldVal && !newVal) {
-                    this.searchPlugin();
-                }
+                this.searchPlugin();
             },
             showSelectData (val) {
                 if (!val) {
@@ -166,7 +164,7 @@
                 });
                 this.hideSelectData();
             },
-            searchPlugin () {
+            searchPlugin: _.debounce(function () {
                 if (this.searchValue === '') {
                     this.viewPluinList = this.pluginList;
                 }
@@ -175,7 +173,7 @@
                 setTimeout(() => {
                     this.isLoading = false;
                 }, 200);
-            }
+            }, 100)
         }
     };
 </script>

@@ -118,7 +118,4 @@
   .plugin-top-title {
       margin-top: 6px;
   }
-  .right-main section {
-      margin-top: 14px;
-  }
 </style>

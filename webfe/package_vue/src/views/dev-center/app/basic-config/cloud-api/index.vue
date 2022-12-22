@@ -1,5 +1,7 @@
 <template lang="html">
-  <div class="right-main">
+  <div
+    :class="['right-main', { 'plugin-cloud-box': isPlugin }]"
+  >
     <div class="ps-top-bar">
       <div class="header-title">
         {{ $t('云API权限管理') }}
@@ -107,7 +109,8 @@
                 ],
                 active: 'gatewayApi',
                 comKey: -1,
-                pageKey: -1
+                pageKey: -1,
+                isPlugin: false
             };
         },
         watch: {
@@ -116,6 +119,9 @@
                 this.pageKey = +new Date();
                 this.isLoading = true;
             }
+        },
+        created () {
+            this.isPlugin = this.$route.meta && this.$route.meta.isGetAppInfo;
         },
         methods: {
             toLink (type) {
@@ -162,5 +168,19 @@
     .api-type-list a.active {
         border-bottom: solid 3px #3a84ff;
         color: #3a84ff;
+    }
+
+    .plugin-cloud-box {
+        .ps-top-bar {
+            padding-top: 16px;
+            font-size: 16px;
+            color: #313238;
+            line-height: 24px;
+            letter-spacing: 0;
+            .header-title {
+                border: none;
+                margin: 0 50px;
+            }
+        }
     }
 </style>

@@ -102,7 +102,9 @@
             </bk-table>
           </template>
           <template v-else>
+            <!-- 如果所有模块 & 环境出口 IP 一致，则展示一行即可 -->
             <table
+              v-if="allIngressIpEqual(curIngressIpConfigs)"
               class="ps-table ps-table-border"
               style="width: 100%;"
             >
@@ -113,8 +115,8 @@
                 >
                   {{ $t('域名解析目标IP') }}
                 </td>
-                <td v-if="curIngressIp">
-                  {{ curIngressIp }}
+                <td v-if="(curIngressIpConfigs.length !== 0)">
+                  {{ curIngressIpConfigs[0].frontend_ingress_ip }}
                 </td>
                 <td v-else>
                   {{ $t('暂无信息') }}
@@ -123,6 +125,32 @@
                 </td>
               </tr>
             </table>
+            <!-- 如果任一模块或环境出口 IP 不同，则每项都展示 -->
+            <bk-table
+              v-else
+              :data="curIngressIpConfigs"
+              size="small"
+              :ext-cls="'ps-permission-table'"
+            >
+              <bk-table-column
+                :label="$t('模块')"
+              >
+                <template slot-scope="props">
+                  <span>{{ props.row.module }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column :label="$t('环境')">
+                <template slot-scope="props">
+                  <span v-if="props.row.environment === 'prod'">{{ $t('生产环境') }}</span>
+                  <span v-if="props.row.environment === 'stag'">{{ $t('预发布环境') }}</span>
+                </template>
+              </bk-table-column>
+              <bk-table-column :label="$t('域名解析目标 IP')">
+                <template slot-scope="props">
+                  <span>{{ props.row.frontend_ingress_ip || '--' }}</span>
+                </template>
+              </bk-table-column>
+            </bk-table>
           </template>
           <div
             v-if="active === 'ipInfo'"
@@ -244,8 +272,7 @@
                     { id: 'stag', text: this.$t('预发布环境') },
                     { id: 'prod', text: this.$t('生产环境') }
                 ],
-                curIngressIp: '',
-
+                curIngressIpConfigs: [],
                 panels: [
                     { name: 'domain', label: this.$t('域名管理') },
                     { name: 'ipInfo', label: this.$t('IP 信息') }
@@ -351,7 +378,7 @@
         methods: {
             init () {
                 this.active = 'domain';
-                this.curIngressIp = '';
+                this.curIngressIpConfigs = [];
                 this.requestQueue = ['domain', 'config'];
                 this.isDomainLoading = true;
                 this.checkAppRegion();
@@ -386,9 +413,9 @@
                 });
             },
             loadDomainConfig () {
-                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/custom_domains/config/').then(
+                this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/custom_domains/config/').then(
                     res => {
-                        this.curIngressIp = res.frontend_ingress_ip;
+                        this.curIngressIpConfigs = res;
                     },
                     res => {
                         this.$paasMessage({
@@ -619,6 +646,18 @@
                         this.handleDelete(data);
                     }
                 });
+            },
+            allIngressIpEqual (ipConfigs) {
+              if (ipConfigs.length === 0) {
+                return true;
+              }
+              let firstIngIp = ipConfigs[0].frontend_ingress_ip;
+              for (let config of ipConfigs) {
+                if (config.frontend_ingress_ip !== firstIngIp) {
+                  return false;
+                }
+              }
+              return true;
             }
         }
     };

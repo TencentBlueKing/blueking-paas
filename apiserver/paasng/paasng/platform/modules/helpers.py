@@ -18,10 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from operator import attrgetter
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Dict, Iterable, List
 
 from django.db import transaction
 
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.models import Cluster, Domain
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
@@ -259,36 +260,30 @@ class ModuleRuntimeManager:
         ]
 
 
-def get_module_cluster(module: 'Module') -> Optional[Cluster]:
-    """Return the cluster info of module object"""
-    # NOTE: Use the FIRST environment object because we consider all environments in a module
-    # shares same cluster info.
-    env = module.envs.first()
-    if not env:
-        return None
-
-    cluster = get_engine_app_cluster(module.region, env.engine_app.name)
-    return cluster
+def get_module_clusters(module: 'Module') -> Dict[AppEnvName, Cluster]:
+    """return all cluster info of module envs"""
+    return {
+        AppEnvName(env.environment): get_engine_app_cluster(module.region, env.engine_app.name)
+        for env in module.envs.all()
+    }
 
 
-def get_module_all_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
-    """返回当前模块支持的所有根域名
+def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
+    """返回当前模块（生产环境）支持的所有根域名
 
     :param module: 模块
     :param include_reserved: 是否包括保留域名
-    :raise NotImplementedError: when module.exposed_url_type is None
+    :raise ValueError: when module.exposed_url_type is None
     """
-    if module.exposed_url_type is None:
-        raise ValueError("legacy exposed_url_type is unsupported.")
-
-    cluster_info = get_module_cluster(module)
-    if not cluster_info:
+    prod_env = module.envs.filter(environment=AppEnvName.PROD).first()
+    if not prod_env:
         return []
 
+    cluster = get_engine_app_cluster(module.region, prod_env.engine_app.name)
     if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
-        root_domains = cluster_info.ingress_config.app_root_domains
+        root_domains = cluster.ingress_config.app_root_domains
     else:
-        root_domains = cluster_info.ingress_config.sub_path_domains
+        root_domains = cluster.ingress_config.sub_path_domains
     return [domain for domain in root_domains if include_reserved or not domain.reserved]
 
 

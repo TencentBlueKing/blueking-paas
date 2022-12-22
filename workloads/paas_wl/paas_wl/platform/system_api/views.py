@@ -278,6 +278,11 @@ class ConfigViewSet(SysAppRelatedViewSet):
             for attr, value in data.items():
                 setattr(latest_config, attr, value)
 
+            # 若更新了绑定的集群信息，则也需要修改集群特性相关配置
+            if cluster_name := data.get('cluster'):
+                cluster: Cluster = Cluster.objects.get(name=cluster_name)
+                latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
+
             # Always update "resource_requirements", value was fetched from database
             resource_requirements = {
                 pack.name: pack.plan.get_resource_summary()

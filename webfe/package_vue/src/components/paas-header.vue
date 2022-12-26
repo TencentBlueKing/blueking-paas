@@ -181,7 +181,6 @@
           </li>
           <!-- 语言切换 -->
           <bk-popover
-            v-if="false"
             theme="light navigation-message"
             ext-cls="top-bar-popover"
             placement="bottom"
@@ -191,7 +190,7 @@
             :tippy-options="{ 'hideOnClick': false }"
           >
             <div class="header-mind is-left header-mind-cls">
-              <span :class="`bk-icon icon-${curLangIcon} lang-icon`" />
+              <span :class="`bk-icon icon-${curLangIcon} lang-icon nav-lang-icon`" />
             </div>
             <template slot="content">
               <ul class="monitor-navigation-admin">
@@ -685,20 +684,23 @@
                 window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + window.location.href;
             },
             async switchLanguage (language) {
-                const data = {
-                    language
-                };
-                try {
-                    await this.$store.dispatch('switchLanguage', { data });
+                const data = new URLSearchParams()
+                data.append('language', language)
+                this.$http.post(BACKEND_URL + '/i18n/setlang/', data, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }).then(res => {
                     this.$i18n.locale = language;
                     this.$store.commit('updateLocalLanguage', language);
                     this.curLangIcon = language === 'en' ? 'english' : 'chinese';
-                } catch (e) {
+                    this.$router.go(0);
+                }, (e) => {
                     this.$paasMessage({
                         theme: 'error',
                         message: e.message || e.detail || this.$t('接口异常')
                     });
-                }
+                })
             },
             handlerLogVersion () {
                 this.showLogVersion = true;
@@ -1372,6 +1374,9 @@ border-color:#F0F1F5;
 }
 .top-bar-wrapper .header-mind .lang-icon{
     font-size:18px;
+}
+.top-bar-wrapper .header-mind .nav-lang-icon {
+    transform: translateY(1px);
 }
 .top-bar-wrapper .header-help{
     color:#768197;

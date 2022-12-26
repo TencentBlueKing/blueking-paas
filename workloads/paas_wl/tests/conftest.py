@@ -34,7 +34,7 @@ from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 from rest_framework.test import APIClient
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.platform.applications.constants import ApplicationType
@@ -143,25 +143,40 @@ def k8s_version(k8s_client):
     return VersionApi(k8s_client).get_code()
 
 
-@pytest.fixture
-def namespace_maker(k8s_client, k8s_version):
-    created_namespaces = []
+@pytest.fixture(scope="module")
+def namespace_maker(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock():
+        k8s_client = get_client_by_cluster_name(get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION).name)
+        k8s_version = VersionApi(k8s_client).get_code()
 
-    def maker(ns):
-        kres = KNamespace(k8s_client)
-        obj, created = kres.get_or_create(ns)
-        if created:
-            created_namespaces.append(ns)
-        # k8s 1.8 只起了 apiserver 模拟测试, 不支持 wait_for_default_sa.
-        # 其他更高版本的集群为集成测试, 必须执行 wait_for_default_sa, 否则测试可能会出错
-        if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
-            kres.wait_for_default_sa(ns)
-        return obj, created
+    class Maker:
+        def __init__(self):
+            self.block = False
+            self.created_namespaces = []
 
+        def __call__(self, ns):
+            kres = KNamespace(k8s_client)
+            obj, created = kres.get_or_create(ns)
+            if created:
+                self.created_namespaces.append(ns)
+            # k8s 1.8 只起了 apiserver 模拟测试, 不支持 wait_for_default_sa.
+            # 其他更高版本的集群为集成测试, 必须执行 wait_for_default_sa, 否则测试可能会出错
+            if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
+                kres.wait_for_default_sa(ns)
+            return obj, created
+
+        def set_block(self):
+            self.block = True
+
+    maker = Maker()
     yield maker
 
-    for ns in created_namespaces:
+    for ns in maker.created_namespaces:
         KNamespace(k8s_client).delete(ns)
+
+    if maker.block:
+        for ns in maker.created_namespaces:
+            KNamespace(k8s_client).wait_for_delete(ns)
 
 
 @pytest.fixture(autouse=True)
@@ -181,8 +196,10 @@ def _auto_create_ns(request):
         yield
         return
 
-    request.getfixturevalue("namespace_maker")(app.namespace)
+    maker = request.getfixturevalue("namespace_maker")
+    maker(app.namespace)
     yield
+    maker.set_block()
 
 
 @pytest.fixture
@@ -238,7 +255,7 @@ def create_default_cluster():
         ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
         cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
         key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
-        feature_flags={ff: ClusterFeatureFlag.get_default_flags()[ff] for ff in ClusterFeatureFlag},
+        feature_flags=ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
     )
     APIServer.objects.get_or_create(
         host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],

@@ -20,7 +20,7 @@ import base64
 
 from django.conf import settings
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
 from paas_wl.cluster.loaders import LegacyKubeConfigLoader
 from paas_wl.cluster.models import APIServer, Cluster
 
@@ -54,7 +54,7 @@ def init_kube_config_from_yaml(file: str = '', clear: bool = False):
                     "frontend_ingress_ip": "0.0.0.0",
                     "port_map": {"http": "80", "https": "443"},
                 },
-                feature_flags={ff: True for ff in ClusterFeatureFlag},
+                feature_flags=ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
             )
             api_server, _ = APIServer.objects.get_or_create(
                 host=config.host,

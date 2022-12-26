@@ -26,7 +26,6 @@ from paas_wl.networking.ingress.certs.utils import pick_shared_cert, update_or_c
 from paas_wl.networking.ingress.constants import AppSubpathSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.models import AppSubpath
-from paas_wl.networking.ingress.plugins.common import SubpathCompatPlugin
 from paas_wl.platform.applications.models import App
 
 from .base import AppIngressMgr
@@ -78,8 +77,6 @@ class SubPathAppIngressMgr(AppIngressMgr):
 
     More details: https://kubernetes.github.io/ingress-nginx/how-it-works/#building-the-nginx-model
     """
-
-    plugins = [SubpathCompatPlugin]
 
     def make_ingress_name(self) -> str:
         return f'{self.app.region}-{self.app.scheduler_safe_name}--subpath'

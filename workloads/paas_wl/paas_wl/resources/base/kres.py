@@ -35,7 +35,12 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.resource import Resource, ResourceInstance
 
 from paas_wl.resources.base.constants import QUERY_LOG_DEFAULT_TIMEOUT
-from paas_wl.resources.base.exceptions import CreateServiceAccountTimeout, ReadTargetStatusTimeout, ResourceMissing
+from paas_wl.resources.base.exceptions import (
+    CreateServiceAccountTimeout,
+    ReadTargetStatusTimeout,
+    ResourceDeleteTimeout,
+    ResourceMissing,
+)
 from paas_wl.resources.base.kube_client import CoreDynamicClient
 from paas_wl.utils.kubestatus import parse_pod
 
@@ -487,6 +492,32 @@ class KNamespace(BaseKresource):
             logger.warning("No default ServiceAccount found in namespace %s", namespace)
             time.sleep(check_period)
         raise CreateServiceAccountTimeout(namespace=namespace, timeout=timeout)
+
+    def wait_for_delete(
+        self,
+        namespace: Namespace,
+        timeout: float = 60,
+        check_period: float = 0.5,
+        raise_timeout: bool = False,
+    ):
+        """Calling this function will blocks until the given namespace was deleted
+
+        :param timeout: timeout seconds for this join operation
+        :param check_period: wait interval for polling
+        :param raise_timeout: whether to throw an exception when timeout.
+        :raises: ResourceDeleteTimeout if the namespace is still exists in given timeout and raise_timeout is True
+        """
+        now = time.time()
+        when_timeout = now + timeout
+        while now < when_timeout:
+            now = time.time()
+            try:
+                self.get(namespace)
+            except ResourceMissing:
+                return True
+            time.sleep(check_period)
+        if raise_timeout:
+            raise ResourceDeleteTimeout(resource_type=self.kind, namespace=namespace, name='')
 
     def default_sa_exists(self, namespace: Namespace) -> bool:
         """Check if a namespace has default ServiceAccount or not, this account was usually created

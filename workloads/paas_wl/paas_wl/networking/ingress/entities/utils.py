@@ -18,27 +18,24 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.text import remove_prefix, remove_suffix
 
-from paas_wl.networking.ingress.plugins.ingress import IngressPlugin
 
+class NginxPatternAdaptor:
+    """Maintains compatibility for ingress-nginx >= 0.22.0, which use pattern in rewrite-target
 
-class SubpathCompatPlugin(IngressPlugin):
-    """Plugin which maintains compatibility when app was configured to handle requests under a non-default
-    subpath, responsibilities includes set proper `X-Script-Name` header(required by backend service
-    for handling path).
+    In Version 0.22.0 +, any substrings within the request URI that need to be passed to the rewritten path
+    must explicitly be defined in a capture group.
+    Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
     """
 
-    def make_configuration_snippet(self) -> str:
-        """
+    @staticmethod
+    def make_configuration_snippet() -> str:
+        """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
+
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
         directive will stop working because it already can be found in location block.
-
-        :raise: RuntimeError when `self.domains` has a non-standard structure
         """
-        if not self.domains:
-            return ''
-
         # "/$1$3" is the sub-path provided from platform or custom domain, for root path case, it should be "/"
-        # See also: the guarantee of makeLocationPath
+        # See also: the guarantee of make_location_path
         return "proxy_set_header X-Script-Name /$1$3;"
 
     @staticmethod
@@ -84,23 +81,23 @@ class SubpathCompatPlugin(IngressPlugin):
         # $1 = "/a/b/c/d", $2 = "e/f", $3 = "", "/$1$3" = "/a/b/c/d
         if trim_path.endswith("/"):
             # for the case trimPath ends with "/"
-            return "/{}/(.*)()".format(remove_suffix(trim_path, "/"))
+            return "/({})/(.*)()".format(remove_suffix(trim_path, "/"))
         # adapter the trimPath that ends without slash
-        return "/{}/(.*)|/({}$)".format(trim_path, trim_path)
+        return "/({})/(.*)|/({}$)".format(trim_path, trim_path)
 
     @staticmethod
     def parse_location_path(path_pattern: str) -> str:
         """parse path_str from path pattern(which is return by make_location_path)
 
-        >>> SubpathCompatPlugin.parse_location_path("/()(.*)")
+        >>> NginxPatternAdaptor.parse_location_path("/()(.*)")
         "/"
-        >>> SubpathCompatPlugin.parse_location_path("/foo/(.*)()")
+        >>> NginxPatternAdaptor.parse_location_path("/(foo)/(.*)()")
         "/foo/"
-        >>> SubpathCompatPlugin.parse_location_path("/foo/bar/(.*)()")
+        >>> NginxPatternAdaptor.parse_location_path("/(foo/bar)/(.*)()")
         "/foo/bar/
-        >>> SubpathCompatPlugin.parse_location_path("/foo/(.*)|/(foo)")
+        >>> NginxPatternAdaptor.parse_location_path("/(foo)/(.*)|/(foo)")
         "/foo"
-        >>> SubpathCompatPlugin.parse_location_path("/foo/bar/(.*)|/(foo/bar)")
+        >>> NginxPatternAdaptor.parse_location_path("/(foo/bar)/(.*)|/(foo/bar)")
         "/foo/bar"
         """
         # 兼容解析旧正则表达式
@@ -110,5 +107,9 @@ class SubpathCompatPlugin(IngressPlugin):
             return path_pattern[: -len("(/|$)(.*)")] + "/"
 
         if "|" not in path_pattern:
-            return path_pattern[: -len("(.*)()")]
-        return path_pattern[: path_pattern.index("|") - len("/(.*)")]
+            # 处理规则 "/(foo)/(.*)()"
+            # 去掉末尾的 /(.*)(), 再去掉 "/(" 和 ")" 即可提取出 path_str
+            return "/" + remove_suffix(path_pattern, "/(.*)()")[2:-1] + "/"
+        # 处理规则 "/(foo)/(.*)|/(foo)"
+        # 从子字符串 "/(.*)|" 截断, 再去掉 "/(" 和 ")" 即可提取出 path_str
+        return "/" + path_pattern[: path_pattern.index("/(.*)|")][2:-1]

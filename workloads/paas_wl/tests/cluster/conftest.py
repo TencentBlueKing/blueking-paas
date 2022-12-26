@@ -21,7 +21,7 @@ from textwrap import dedent
 
 import pytest
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ def example_cluster_config():
         'ca_data': '',
         'cert_data': '',
         'key_data': '',
-        'feature_flags': {ff: True for ff in ClusterFeatureFlag},
+        'feature_flags': ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
     }
 
 

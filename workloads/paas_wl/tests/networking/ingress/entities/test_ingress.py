@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from textwrap import dedent
 from typing import Dict
 
 import pytest
@@ -25,6 +26,7 @@ from kubernetes.dynamic.resource import ResourceInstance
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.entities.ingress import (
+    ConfigurationSnippetPatcher,
     IngressV1Beta1Deserializer,
     IngressV1Beta1Serializer,
     IngressV1Deserializer,
@@ -195,6 +197,24 @@ def subpath_ingress(app, https_ingress_domain, http_ingress_domain):
     )
 
 
+@pytest.fixture
+def fallback_configuration_snippet(https_ingress_domain):
+    return dedent(
+        f"""\
+            if ($location_path = '') {{
+                set $location_path "{https_ingress_domain.primary_prefix_path}";
+            }}
+
+            proxy_set_header X-Script-Name $location_path;
+            """
+    )
+
+
+@pytest.fixture
+def pattern_configuration_snippet():
+    return "proxy_set_header X-Script-Name /$1$3;"
+
+
 def build_v1beta1_ingress_path(path) -> Dict:
     return {
         "backend": {
@@ -205,16 +225,26 @@ def build_v1beta1_ingress_path(path) -> Dict:
     }
 
 
+def compare_ingress(left: ProcessIngress, right: ProcessIngress) -> bool:
+    """compare 2 ProcessIngress, return True if left and right is same except 'configuration_snippet'"""
+    if not left.configuration_snippet.startswith(right.configuration_snippet):
+        return False
+    left.configuration_snippet = right.configuration_snippet
+    return left == right
+
+
 @pytest.mark.parametrize("api_version", ["extensions/v1beta1", "networking.k8s.io/v1beta1"])
 class TestIngressV1Beta1:
     @pytest.fixture
-    def spec(self, api_version, app, https_ingress_domain, http_ingress_domain):
+    def spec(self, api_version, app, https_ingress_domain, http_ingress_domain, fallback_configuration_snippet):
         return {
             "apiVersion": api_version,
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher().patch(
+                        INGRESS_DATA["configuration_snippet"], fallback_configuration_snippet
+                    ),
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     **INGRESS_DATA["annotations"],
@@ -246,13 +276,17 @@ class TestIngressV1Beta1:
         }
 
     @pytest.fixture
-    def subpath_spec(self, api_version, app, https_ingress_domain, http_ingress_domain):
+    def subpath_spec(
+        self, api_version, app, https_ingress_domain, http_ingress_domain, fallback_configuration_snippet
+    ):
         return {
             "apiVersion": api_version,
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher().patch(
+                        INGRESS_DATA["configuration_snippet"], fallback_configuration_snippet
+                    ),
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/",
@@ -314,12 +348,12 @@ class TestIngressV1Beta1:
     def test_deserialize(self, gvk_config, app, kube_data, ingress):
         deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, kube_data)
-        assert result == ingress
+        assert compare_ingress(result, ingress)
 
     def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
         deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, subpath_kube_data)
-        assert result == subpath_ingress
+        assert compare_ingress(result, subpath_ingress)
 
 
 def build_v1_ingress_path(path_str) -> Dict:
@@ -327,9 +361,9 @@ def build_v1_ingress_path(path_str) -> Dict:
     if path_str == "/":
         path = "/()(.*)"
     elif trim_path.endswith("/"):
-        path = "/{}/(.*)()".format(remove_suffix(trim_path, "/"))
+        path = "/({})/(.*)()".format(remove_suffix(trim_path, "/"))
     else:
-        path = "/{}/(.*)|/({}$)".format(trim_path, trim_path)
+        path = "/({})/(.*)|/({}$)".format(trim_path, trim_path)
 
     return {
         "backend": {
@@ -355,14 +389,16 @@ class TestProcessIngressV1:
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
 
     @pytest.fixture
-    def subpath_spec(self, app, https_ingress_domain, http_ingress_domain):
+    def subpath_spec(self, app, https_ingress_domain, http_ingress_domain, pattern_configuration_snippet):
         """spec rewrite to root"""
         return {
             "apiVersion": "networking.k8s.io/v1",
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher().patch(
+                        INGRESS_DATA["configuration_snippet"], pattern_configuration_snippet
+                    ),
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
@@ -411,7 +447,7 @@ class TestProcessIngressV1:
     def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
         deserializer = IngressV1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, subpath_kube_data)
-        assert result == subpath_ingress
+        assert compare_ingress(result, subpath_ingress)
 
 
 def build_legacy_pattern(path_str):
@@ -561,4 +597,4 @@ class TestPatternCompatible:
         )
         deserializer = deserializer_cls(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, ResourceInstance(None, request.getfixturevalue(spec_fixture)))
-        assert result == subpath_ingress
+        assert compare_ingress(result, subpath_ingress)

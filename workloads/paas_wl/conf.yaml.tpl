@@ -251,8 +251,8 @@
 
 ## 是否开启“现代” Ingress 资源的支持，将产生以下影响
 ## - 支持使用 networking.k8s.io/v1 版本的 Ingress 资源
-## - （**重要**）对于 K8S > 1.22 版本的集群, 必须开启该选项。因为这些集群只能使用 networking.k8s.io/v1 版本的 Ingress 资源
-## - （**重要**）对于 K8S > 1.22 版本的集群, 必须使用 >1.0.0 版本的 ingress-nginx
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须开启该选项。因为这些集群只能使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须使用 >1.0.0 版本的 ingress-nginx
 ##
 ## 假如关闭此配置，可能有以下风险：
 ##  - 只能处理 extensions/v1beta1 和 networking.k8s.io/v1beta1 版本的 Ingress 资源, 如果未来的 Kubernetes 集群版本删除了对该

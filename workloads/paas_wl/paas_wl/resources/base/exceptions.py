@@ -68,7 +68,10 @@ class ResourceMissing(KubeException):
 
 class ResourceDeleteTimeout(KubeException):
     def __init__(self, resource_type, namespace, name, *args, **kwargs):
-        msg = f"{resource_type}<{namespace}/{name}> delete timeout"
+        if name != '':
+            msg = f"{resource_type}<{namespace}/{name}> delete timeout"
+        else:
+            msg = f"{resource_type}<{namespace}> delete timeout"
         super().__init__(msg, *args, **kwargs)
 
 

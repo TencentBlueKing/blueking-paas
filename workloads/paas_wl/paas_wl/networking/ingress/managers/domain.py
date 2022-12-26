@@ -27,7 +27,6 @@ from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.networking.ingress.managers.base import AppIngressMgr
 from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain
-from paas_wl.networking.ingress.plugins.common import SubpathCompatPlugin
 from paas_wl.platform.applications.models import App
 
 logger = logging.getLogger(__name__)
@@ -74,8 +73,6 @@ def save_subdomains(app: App, domains: List[AutoGenDomain]) -> Set[App]:
 class SubdomainAppIngressMgr(AppIngressMgr):
     """manage the ingress rule with individual subdomains"""
 
-    plugins = [SubpathCompatPlugin]
-
     def make_ingress_name(self) -> str:
         return f'{self.app.region}-{self.app.scheduler_safe_name}--direct'
 
@@ -96,7 +93,6 @@ class SubdomainAppIngressMgr(AppIngressMgr):
 class CustomDomainIngressMgr(AppIngressMgr):
     """Manager for custom domain"""
 
-    plugins = [SubpathCompatPlugin]
     CUSTOM_DOMAIN_PREFIX = "custom-"
 
     def __init__(self, domain: Domain):

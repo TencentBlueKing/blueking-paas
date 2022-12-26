@@ -2,7 +2,7 @@
   <div class="app-container middle">
     <paas-content-loader
       :is-loading="isProdLoading"
-      placeholder="process-loading"
+      placeholder="plugin-process-loading"
       :offset-top="10"
     >
       <paas-plugin-title />

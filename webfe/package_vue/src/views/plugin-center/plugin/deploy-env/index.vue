@@ -9,10 +9,10 @@
       <div class="plugin-deploy-wrapper">
         <div class="ps-top-card mb15">
           <p class="main-title">
-            {{ envVarConfig.title }}
+            {{ $t(envVarConfig.title) }}
           </p>
           <p class="desc">
-            {{ envVarConfig.description }}
+            {{ $t(envVarConfig.description) }}
           </p>
         </div>
         <table

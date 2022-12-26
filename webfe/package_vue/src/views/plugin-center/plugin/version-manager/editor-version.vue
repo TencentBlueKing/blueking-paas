@@ -113,19 +113,19 @@
             >
               <bk-radio-group v-model="curVersion.version">
                 <bk-radio
-                  v-bk-tooltips.top="'非兼容式升级时使用'"
+                  v-bk-tooltips.top="$t('非兼容式升级时使用')"
                   :value="curVersion.semver_choices.major"
                 >
                   {{ $t('重大版本') }}
                 </bk-radio>
                 <bk-radio
-                  v-bk-tooltips.top="'兼容式功能更新时使用'"
+                  v-bk-tooltips.top="$t('兼容式功能更新时使用')"
                   :value="curVersion.semver_choices.minor"
                 >
                   {{ $t('次版本') }}
                 </bk-radio>
                 <bk-radio
-                  v-bk-tooltips.top="'兼容式问题修正时使用'"
+                  v-bk-tooltips.top="$t('兼容式问题修正时使用')"
                   :value="curVersion.semver_choices.patch"
                 >
                   {{ $t('修正版本') }}
@@ -179,7 +179,7 @@
                         </bk-form-item> -->
             <bk-form-item label="">
               <div
-                v-bk-tooltips.top="{ content: '已有发布任务进行中', disabled: !isPending }"
+                v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isPending }"
                 style="display: inline-block;"
               >
                 <bk-button

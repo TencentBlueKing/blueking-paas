@@ -628,9 +628,6 @@
                             case 5:
                                 this.curSubNav = this.headerStaticInfo.list.subnav_doc;
                                 break;
-                            case 5:
-                                this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-                                break;
                             default:
                                 this.curSubNav = [];
                         }

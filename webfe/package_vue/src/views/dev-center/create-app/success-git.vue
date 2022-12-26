@@ -174,15 +174,6 @@
                   `init_apigw_maintainer：插件应用网关管理员`
                 ].join('\n');
             },
-            initTips: function () {
-                return [
-                  `project_name：插件项目名`,
-                  `app_code：插件 APP CODE`,
-                  `plugin_desc：插件描述`,
-                  `init_admin：插件应用初始化管理员`,
-                  `init_apigw_maintainer：插件应用网关管理员`
-                ].join('\n');
-            },
             pushTips: function () {
                 return [
                     `cd ${this.application.code}`,

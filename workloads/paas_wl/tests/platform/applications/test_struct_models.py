@@ -40,6 +40,12 @@ from tests.utils.mocks.platform import FakePlatformSvcClient, make_structured_ap
 
 
 @pytest.fixture
+def structured_app_data(bk_app):
+    """Structured application data with one default module"""
+    return make_structured_app_data(bk_app)
+
+
+@pytest.fixture
 def application():
     return Application(
         id=uuid.uuid4(),

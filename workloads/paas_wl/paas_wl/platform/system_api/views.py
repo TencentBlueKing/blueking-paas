@@ -20,6 +20,7 @@ import logging
 
 from attrs import asdict
 from django.conf import settings
+from django.db import transaction
 from django.db.models import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -38,12 +39,13 @@ from paas_wl.platform.applications import models
 from paas_wl.platform.applications.models import Release
 from paas_wl.platform.applications.models.app import create_initial_config
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
+from paas_wl.platform.applications.models_utils import delete_module_related_res
 from paas_wl.platform.applications.struct_models import get_structured_app
 from paas_wl.platform.auth.permissions import IsInternalAdmin
 from paas_wl.platform.system_api import serializers
 from paas_wl.release_controller.builder import tasks as builder_task
 from paas_wl.release_controller.builder.executor import interrupt_build
-from paas_wl.resources.actions.delete import AppDeletion
+from paas_wl.resources.actions.delete import delete_app_resources
 from paas_wl.resources.base.bcs_client import BCSClient
 from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.base.generation import get_latest_mapper_version
@@ -118,7 +120,7 @@ class AppViewSet(SysModelViewSet):
         app = self.get_object()
 
         try:
-            AppDeletion(app=app).perform()
+            delete_app_resources(app)
         except Exception as e:
             raise error_codes.APP_DELETE_FAILED.f(f"reason: {e}")
 
@@ -550,3 +552,16 @@ class EnvDeployedStatusViewSet(SysViewSet):
                 }
             )
         return Response(serializers.EnvAddressesSLZ(results, many=True).data)
+
+
+class BkModuleRelatedResourcesViewSet(SysViewSet):
+    """以蓝鲸模块为单位管理所有 workloads 服务资源"""
+
+    @transaction.atomic
+    def destroy(self, request, code, module_name):
+        """删除蓝鲸模块的所有相关资源，仅在删除模块时调用"""
+        app = get_structured_app(code=code)
+        module = app.get_module_by_name(module_name)
+
+        delete_module_related_res(module)
+        return Response(status=status.HTTP_204_NO_CONTENT)

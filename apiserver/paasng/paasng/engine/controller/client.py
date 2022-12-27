@@ -327,6 +327,12 @@ class ControllerClient:
         """List all env's addresses under given module, result include "is_running" status"""
         return self.request('GET', f'/applications/{app_code}/modules/{module_name}/addresses/')
 
+    def delete_module_related_res(self, app_code: str, module_name: str):
+        """Delete module's related resources"""
+        return self.request(
+            'DELETE', f'/applications/{app_code}/modules/{module_name}/related_resources/', desired_code=204
+        )
+
     # Bk-App(module) related end
 
     # App Domains start

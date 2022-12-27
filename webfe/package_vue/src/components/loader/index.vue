@@ -72,6 +72,10 @@
     import SummaryPluginLoading from './loading/summary-plugin.vue';
     import PluginNewVersionLoading from './loading/plugin-new-version.vue';
     import PluginMarketInfoLoading from './loading/plugin-market-info.vue';
+    import PluinListLoading from './loading/pluin-list.vue';
+    import CreatePluginLoading from './loading/create-plugin.vue';
+    import PluginProcessLoading from './loading/plugin-process.vue';
+    import PluginBaseInfoLoading from './loading/plugin-base-info.vue';
     export default {
         components: {
             ByUserLoading,
@@ -124,7 +128,11 @@
             DeployHookLoading,
             SummaryPluginLoading,
             PluginNewVersionLoading,
-            PluginMarketInfoLoading
+            PluginMarketInfoLoading,
+            PluinListLoading,
+            CreatePluginLoading,
+            PluginProcessLoading,
+            PluginBaseInfoLoading
         },
         props: {
             isLoading: {

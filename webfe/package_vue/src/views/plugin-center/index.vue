@@ -2,7 +2,7 @@
   <div class="bk-plugin-wrapper mt30 right-main-plugin">
     <paas-content-loader
       :is-loading="loading"
-      :placeholder="loaderPlaceholder"
+      placeholder="pluin-list-loading"
       offset-top="20"
       class="wrap"
       :height="575"
@@ -177,7 +177,7 @@
     <bk-dialog
       v-model="removePluginDialog.visiable"
       width="420"
-      title="确定删除插件"
+      :title="$t('确定删除插件')"
       :theme="'primary'"
       :mask-close="false"
       :loading="removePluginDialog.isLoading"

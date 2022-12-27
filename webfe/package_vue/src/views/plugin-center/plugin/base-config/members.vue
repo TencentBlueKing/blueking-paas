@@ -121,7 +121,7 @@
 
     <bk-dialog
       v-model="memberMgrConfig.visiable"
-      width="540"
+      width="600"
       :title="memberMgrConfig.title"
       header-position="left"
       :theme="'primary'"

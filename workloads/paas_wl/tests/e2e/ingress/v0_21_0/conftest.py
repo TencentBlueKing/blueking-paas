@@ -41,10 +41,10 @@ def ingress_nginx_reload_checker():
     return _checker.check_keyword_from_logs
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 def setup_cluster(cluster):
     # ingress-controller == 0.21.0 不支持正则表达式
-    cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_PATTERN] = False
+    cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_REGEX] = False
     cluster.save()
 
 

@@ -92,7 +92,7 @@ class IngressConfig:
 class ClusterFeatureFlags:
     enable_egress_ip: bool = False
     enable_mount_log_to_host: bool = False
-    ingress_user_pattern: bool = False
+    ingress_use_regex: bool = False
 
 
 @define

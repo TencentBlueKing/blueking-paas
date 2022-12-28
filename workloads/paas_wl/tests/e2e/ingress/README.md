@@ -69,7 +69,7 @@ EOF
 
 其中与 ingress-nginx E2E 相关的配置项如下:
 ```python
-E2E_INGRESS_CONFIG = {
+FOR_TEST_E2E_INGRESS_CONFIG = {
     # 运行 ingress-nginx 的宿主机 IP
     "NGINX_NODE_IP": "xxx",
     # 宿主机上暴露 nginx http 服务的端口

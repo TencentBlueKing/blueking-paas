@@ -20,16 +20,16 @@ import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from textwrap import dedent
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
+from django.utils.functional import lazy
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.ingress.entities.utils import NginxPatternAdaptor
+from paas_wl.networking.ingress.entities.utils import LegacyNginxRewrittenProvider, NginxRegexRewrittenProvider
 from paas_wl.platform.applications.models import App
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
@@ -49,12 +49,10 @@ logger = logging.getLogger(__name__)
 class IngressNginxAdaptor:
     """An Adaptor shield different versions of the ingress-nginx-controller implementation"""
 
-    def __init__(self, cluster: "Cluster", force_use_pattern: bool = False):
+    def __init__(self, cluster: "Cluster"):
         self.cluster = cluster
-        use_pattern = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_PATTERN)
-        if force_use_pattern:
-            use_pattern = True
-        self.use_pattern = use_pattern
+        use_regex = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_REGEX)
+        self.use_regex = use_regex
 
     def make_configuration_snippet(self, fallback_script_name: Optional[str] = '') -> str:
         """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
@@ -62,34 +60,9 @@ class IngressNginxAdaptor:
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
         directive will stop working because it already can be found in location block.
         """
-        if not self.use_pattern:
-            # `$location_path` was a variable set by ingress-controller which lives in `location` block ,
-            # it's value equals `rules.https?.paths[].path` in the ingress's specification, we will use it
-            # as the `Script-Name` for application.
-            #
-            # Which means while a domain might have many different paths, the `Script-Name` will always
-            # be determined by the requests path. For example:
-            #
-            # - when user requests '/prod--default--foo/something', which matches `/prod--default--foo/` location,
-            #   the `X-Script-Name` would be set to `/prod--default--foo/`
-            # - when user requests '/foo/something', which matches `/foo/` location, `X-Script-Name` will be `/foo/`
-            #
-            # However, `$location_path` was added in version 0.16.0
-            # For forward compatibility, we should set $location_path to shortest_path as fallback.
-            # To know "How the fallback work", see also: [nginx-variables-variable-scope](https://openresty.org/download/agentzh-nginx-tutorials-en.html#nginx-variables-variable-scope)  # noqa
-
-            snippet = dedent(
-                f"""\
-            if ($location_path = '') {{
-                set $location_path "{fallback_script_name}";
-            }}
-
-            proxy_set_header X-Script-Name $location_path;
-            """
-            )
-            return snippet
-
-        return NginxPatternAdaptor().make_configuration_snippet()
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().make_configuration_snippet(fallback_script_name)
+        return NginxRegexRewrittenProvider().make_configuration_snippet()
 
     def build_http_path(self, path_str: str) -> str:
         """build the http path, which is compatible with `rewrite-target` for all version nginx-ingress-controller
@@ -97,11 +70,9 @@ class IngressNginxAdaptor:
         To be compatible with `rewrite-target` nginx-ingress-controller >=0.22, the http path should be a pattern
         Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
         """
-        if not self.use_pattern:
-            if not settings.APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH:
-                path_str = path_str.rstrip("/")
-            return path_str
-        return NginxPatternAdaptor.make_location_path(path_str)
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().make_location_path(path_str)
+        return NginxRegexRewrittenProvider.make_location_path(path_str)
 
     def build_rewrite_target(self) -> str:
         """build the rewrite target which will rewrite all request to sub-path provided from platform or custom domain
@@ -110,33 +81,32 @@ class IngressNginxAdaptor:
         must explicitly be defined in a capture group.
         Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
         """
-        if not self.use_pattern:
-            return "/"
-        return NginxPatternAdaptor.make_rewrite_target()
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().make_rewrite_target()
+        return NginxRegexRewrittenProvider.make_rewrite_target()
 
     def parse_http_path(self, pattern_or_path: str) -> str:
         """parse path_str from path pattern(which is return by build_http_path)"""
-        if not self.use_pattern:
-            # not a pattern, return directly
-            return pattern_or_path
-        return NginxPatternAdaptor.parse_location_path(pattern_or_path)
+        if not self.use_regex:
+            return LegacyNginxRewrittenProvider().parse_location_path(pattern_or_path)
+        return NginxRegexRewrittenProvider.parse_location_path(pattern_or_path)
 
 
 class ConfigurationSnippetPatcher:
     START_MARK = "# WARNING: BLOCK FOR IngressNginxAdaptor BEGIN"
     END_MARK = "# WARNING: BLOCK FOR IngressNginxAdaptor END"
-    _REGEX = re.compile(f"{START_MARK}.+?{END_MARK}")
+    REGEX = f"{START_MARK}.+?{END_MARK}"
 
     def patch(self, base: str, extend: str) -> str:
         """patch base configuration_snippet with extend if unpatched"""
-        if not self._REGEX.findall(base, re.M | re.S):
+        if not re.findall(self.REGEX, base, re.M | re.S):
             return "\n".join([base, self.START_MARK, extend, self.END_MARK])
         return base
 
     def unpatch(self, snippet: str) -> str:
         """reverse patch_configuration_snippet"""
-        if self._REGEX.findall(snippet, re.M | re.S):
-            return self._REGEX.sub("", snippet, re.M | re.S)
+        if re.findall(self.REGEX, snippet, re.M | re.S):
+            return re.sub(self.REGEX, "", snippet, 0, re.M | re.S).strip()
         return snippet
 
 
@@ -307,27 +277,23 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
 
     @staticmethod
     def get_api_version_from_gvk(gvk_config):
-        # 虽然不用正则表达式下发 Ingress 不会有问题, 但是将无法保证 rewrite-target/X-Script-Name 等逻辑
-        # 因此在 ENABLE_MODERN_INGRESS_SUPPORT 未打开时禁用对 networking.k8s.io/v1 的支持
-        if not settings.ENABLE_MODERN_INGRESS_SUPPORT:
-            return "unsupported"
         return "networking.k8s.io/v1"
 
     def serialize(self, obj: "ProcessIngress", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         """serialize obj into Ingress(networking.k8s.io/v1)"""
-        nginx_adaptor = IngressNginxAdaptor(get_cluster_by_app(obj.app), force_use_pattern=True)
+        nginx_adaptor = NginxRegexRewrittenProvider()
         annotations = {
             ANNOT_SERVER_SNIPPET: obj.server_snippet,
             ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher().patch(
                 obj.configuration_snippet,
-                nginx_adaptor.make_configuration_snippet(fallback_script_name=obj.domains[0].primary_prefix_path),
+                nginx_adaptor.make_configuration_snippet(),
             ),
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
             **obj.annotations,
         }
         if obj.rewrite_to_root:
-            annotations[ANNOT_REWRITE_TARGET] = nginx_adaptor.build_rewrite_target()
+            annotations[ANNOT_REWRITE_TARGET] = nginx_adaptor.make_rewrite_target()
 
         tls_group_by_secret_name: Dict[str, List] = defaultdict(list)
         for domain in obj.domains:
@@ -344,7 +310,7 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
             for path_str in domain.path_prefix_list:
                 paths.append(
                     {
-                        "path": nginx_adaptor.build_http_path(path_str or '/') if obj.rewrite_to_root else path_str,
+                        "path": nginx_adaptor.make_location_path(path_str or '/') if obj.rewrite_to_root else path_str,
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {"name": obj.service_name, "port": {"name": obj.service_port_name}},
@@ -378,14 +344,9 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
 
     @staticmethod
     def get_api_version_from_gvk(gvk_config):
-        # 虽然不用正则表达式下发 Ingress 不会有问题, 但是将无法保证 rewrite-target/X-Script-Name 等逻辑
-        # 因此在 ENABLE_MODERN_INGRESS_SUPPORT 未打开时禁用对 networking.k8s.io/v1 的支持
-        if not settings.ENABLE_MODERN_INGRESS_SUPPORT:
-            return "unsupported"
         return "networking.k8s.io/v1"
 
     def deserialize(self, app: App, kube_data: ResourceInstance) -> "ProcessIngress":
-        nginx_adaptor = IngressNginxAdaptor(get_cluster_by_app(app), force_use_pattern=True)
         spec = kube_data.spec
         rules = spec.get("rules") or []
         service_name, service_port_name = self.parse_service_info_from_rules(rules)
@@ -395,7 +356,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         return ProcessIngress(
             app=app,
             name=kube_data.metadata.name,
-            domains=self.parse_domains(rules or [], spec.get("tls") or [], nginx_adaptor=nginx_adaptor),
+            domains=self.parse_domains(rules or [], spec.get("tls") or []),
             service_name=service_name,
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
@@ -406,10 +367,9 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             annotations=extra_annotations,
         )
 
-    def parse_domains(
-        self, rules: List[ResourceInstance], tls: List[ResourceInstance], nginx_adaptor: IngressNginxAdaptor
-    ) -> List["PIngressDomain"]:
+    def parse_domains(self, rules: List[ResourceInstance], tls: List[ResourceInstance]) -> List["PIngressDomain"]:
         """parse PIngressDomain from given rules and tls"""
+        nginx_adaptor = NginxRegexRewrittenProvider()
         domains = []
         # Analyze TLS section first
         host_secret_map = {}
@@ -426,7 +386,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
                     tls_enabled=(rule.host in host_secret_map),
                     tls_secret_name=host_secret_map.get(rule.host, ''),
                     path_prefix_list=[
-                        nginx_adaptor.parse_http_path(ingress_path.path) for ingress_path in rule.http.paths
+                        nginx_adaptor.parse_location_path(ingress_path.path) for ingress_path in rule.http.paths
                     ],
                 )
             )
@@ -475,6 +435,15 @@ class PIngressDomain:
         return self.path_prefix_list[0]
 
 
+def make_serializers():
+    if not settings.ENABLE_MODERN_INGRESS_SUPPORT:
+        return [IngressV1Beta1Serializer]
+    return [
+        IngressV1Beta1Serializer,
+        IngressV1Serializer,
+    ]
+
+
 @dataclass
 class ProcessIngress(AppEntity):
     """Ingress object for process, external service
@@ -497,13 +466,10 @@ class ProcessIngress(AppEntity):
 
     class Meta:
         kres_class = kres.KIngress
+        serializers = lazy(make_serializers, list)()
         deserializers = [
             IngressV1Beta1Deserializer,
             IngressV1Deserializer,
-        ]
-        serializers = [
-            IngressV1Beta1Serializer,
-            IngressV1Serializer,
         ]
 
 

@@ -21,7 +21,6 @@ import time
 import pytest
 import requests
 from django.conf import settings
-from django.db import transaction
 
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress
@@ -41,7 +40,7 @@ def ingress_nginx_ns():
 @pytest.fixture(scope="session")
 def cluster(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        yield get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION)
+        return get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION)
 
 
 @pytest.fixture(scope="session")
@@ -72,7 +71,7 @@ def framework(
 
 @pytest.fixture(scope="session", autouse=True)
 def skip_if_configuration_not_ready():
-    if not settings.E2E_INGRESS_CONFIG:
+    if not settings.FOR_TEST_E2E_INGRESS_CONFIG:
         pytest.skip("nginx-ingress e2e configuration not ready, skip e2e test")
 
 
@@ -80,9 +79,9 @@ def skip_if_configuration_not_ready():
 def http_client():
     return HttpClient(
         session=requests.session(),
-        nginx_node_ip=settings.E2E_INGRESS_CONFIG["NGINX_NODE_IP"],
-        nginx_http_port=settings.E2E_INGRESS_CONFIG["NGINX_HTTP_PORT"],
-        nginx_https_port=settings.E2E_INGRESS_CONFIG["NGINX_HTTPS_PORT"],
+        nginx_node_ip=settings.FOR_TEST_E2E_INGRESS_CONFIG["NGINX_NODE_IP"],
+        nginx_http_port=settings.FOR_TEST_E2E_INGRESS_CONFIG["NGINX_HTTP_PORT"],
+        nginx_https_port=settings.FOR_TEST_E2E_INGRESS_CONFIG["NGINX_HTTPS_PORT"],
     )
 
 
@@ -117,12 +116,12 @@ def http_ingress_domain(echo_hostname, root_path, foo_path, multi_layer_path_end
 @pytest.fixture(scope="module")
 def e2e_app(namespace_maker, django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        with transaction.atomic():
-            app = create_app(structure={"web": 2})
-            release_setup(app)
-            namespace_maker(app.namespace)
-            namespace_maker.set_block()
-            yield app
+        app = create_app(structure={"web": 2})
+        release_setup(app)
+        namespace_maker(app.namespace)
+        namespace_maker.set_block()
+        yield app
+        app.delete()
 
 
 # Note: ingress_kmodel.save 会修改 ProcessIngress, 因此需要设置 scope=function

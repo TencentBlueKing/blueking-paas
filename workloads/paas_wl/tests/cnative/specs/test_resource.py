@@ -87,7 +87,7 @@ class TestBkAppClusterOperator:
         with mock.patch('paas_wl.platform.external.client._global_plat_client', new=FakePlatformSvcClient()):
             yield
 
-    def test_deploy_and_get_status(self, bk_app, bk_stag_env):
+    def test_deploy_and_get_status(self, bk_app, bk_stag_env, mock_knamespace):
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha1",
             "kind": "BkApp",
@@ -101,10 +101,7 @@ class TestBkAppClusterOperator:
             },
         }
 
-        # Don't wait for controller
-        with mock.patch('paas_wl.cnative.specs.resource.KNamespace.wait_for_default_sa'):
-            ret = deploy(bk_stag_env, manifest)
-
+        ret = deploy(bk_stag_env, manifest)
         assert ret["spec"]["processes"][0]["name"] == "web"
         assert get_mres_from_cluster(bk_stag_env) is not None
 

@@ -16,10 +16,71 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from textwrap import dedent
+from typing import Optional
+
 from blue_krill.text import remove_prefix, remove_suffix
+from django.conf import settings
 
 
-class NginxPatternAdaptor:
+class LegacyNginxRewrittenProvider:
+    """Maintains compatibility for ingress-nginx <= 0.21.0"""
+
+    @staticmethod
+    def make_configuration_snippet(fallback_script_name: Optional[str] = '') -> str:
+        """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
+
+        Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
+        directive will stop working because it already can be found in location block.
+        """
+        # `$location_path` was a variable set by ingress-controller which lives in `location` block ,
+        # it's value equals `rules.https?.paths[].path` in the ingress's specification, we will use it
+        # as the `Script-Name` for application.
+        #
+        # Which means while a domain might have many different paths, the `Script-Name` will always
+        # be determined by the requests path. For example:
+        #
+        # - when user requests '/prod--default--foo/something', which matches `/prod--default--foo/` location,
+        #   the `X-Script-Name` would be set to `/prod--default--foo/`
+        # - when user requests '/foo/something', which matches `/foo/` location, `X-Script-Name` will be `/foo/`
+        #
+        # However, `$location_path` was added in version 0.16.0
+        # For forward compatibility, we should set $location_path to shortest_path as fallback.
+        # To know "How the fallback work", see also: [nginx-variables-variable-scope](https://openresty.org/download/agentzh-nginx-tutorials-en.html#nginx-variables-variable-scope)  # noqa
+
+        snippet = dedent(
+            f"""\
+        if ($location_path = '') {{
+            set $location_path "{fallback_script_name}";
+        }}
+
+        proxy_set_header X-Script-Name $location_path;
+        """
+        )
+        return snippet
+
+    @staticmethod
+    def make_location_path(path_str: str) -> str:
+        """Get the path pattern, which should work well with `rewrite-target`"""
+        if not settings.APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH:
+            path_str = path_str.rstrip("/")
+        return path_str
+
+    @staticmethod
+    def make_rewrite_target() -> str:
+        """build the rewrite target which will rewrite all request to sub-path provided from platform or custom domain
+
+        In Version <= 0.21.0, set rewrite-target to "/" will always rewrite to root
+        """
+        return "/"
+
+    @staticmethod
+    def parse_location_path(location_path) -> str:
+        """parse IngressRule.Path to the real path, In Version <= 0.21.0, return it directly"""
+        return location_path
+
+
+class NginxRegexRewrittenProvider:
     """Maintains compatibility for ingress-nginx >= 0.22.0, which use pattern in rewrite-target
 
     In Version 0.22.0 +, any substrings within the request URI that need to be passed to the rewritten path
@@ -89,22 +150,22 @@ class NginxPatternAdaptor:
     def parse_location_path(path_pattern: str) -> str:
         """parse path_str from path pattern(which is return by make_location_path)
 
-        >>> NginxPatternAdaptor.parse_location_path("/()(.*)")
+        >>> NginxRegexRewrittenProvider.parse_location_path("/()(.*)")
         "/"
-        >>> NginxPatternAdaptor.parse_location_path("/(foo)/(.*)()")
+        >>> NginxRegexRewrittenProvider.parse_location_path("/(foo)/(.*)()")
         "/foo/"
-        >>> NginxPatternAdaptor.parse_location_path("/(foo/bar)/(.*)()")
+        >>> NginxRegexRewrittenProvider.parse_location_path("/(foo/bar)/(.*)()")
         "/foo/bar/
-        >>> NginxPatternAdaptor.parse_location_path("/(foo)/(.*)|/(foo)")
+        >>> NginxRegexRewrittenProvider.parse_location_path("/(foo)/(.*)|/(foo)")
         "/foo"
-        >>> NginxPatternAdaptor.parse_location_path("/(foo/bar)/(.*)|/(foo/bar)")
+        >>> NginxRegexRewrittenProvider.parse_location_path("/(foo/bar)/(.*)|/(foo/bar)")
         "/foo/bar"
         """
         # 兼容解析旧正则表达式
-        if "()(.*)" in path_pattern:
-            return path_pattern[: -len("()(.*)")]
-        elif "(/|$)(.*)" in path_pattern:
-            return path_pattern[: -len("(/|$)(.*)")] + "/"
+        if path_pattern.endswith("()(.*)"):
+            return remove_suffix(path_pattern, "()(.*)")
+        elif path_pattern.endswith("(/|$)(.*)"):
+            return remove_suffix(path_pattern, "(/|$)(.*)") + "/"
 
         if "|" not in path_pattern:
             # 处理规则 "/(foo)/(.*)()"

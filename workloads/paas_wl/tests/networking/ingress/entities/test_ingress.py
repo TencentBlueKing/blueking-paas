@@ -225,14 +225,6 @@ def build_v1beta1_ingress_path(path) -> Dict:
     }
 
 
-def compare_ingress(left: ProcessIngress, right: ProcessIngress) -> bool:
-    """compare 2 ProcessIngress, return True if left and right is same except 'configuration_snippet'"""
-    if not left.configuration_snippet.startswith(right.configuration_snippet):
-        return False
-    left.configuration_snippet = right.configuration_snippet
-    return left == right
-
-
 @pytest.mark.parametrize("api_version", ["extensions/v1beta1", "networking.k8s.io/v1beta1"])
 class TestIngressV1Beta1:
     @pytest.fixture
@@ -348,12 +340,12 @@ class TestIngressV1Beta1:
     def test_deserialize(self, gvk_config, app, kube_data, ingress):
         deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, kube_data)
-        assert compare_ingress(result, ingress)
+        assert result == ingress
 
     def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
         deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, subpath_kube_data)
-        assert compare_ingress(result, subpath_ingress)
+        assert result == subpath_ingress
 
 
 def build_v1_ingress_path(path_str) -> Dict:
@@ -384,7 +376,7 @@ class TestProcessIngressV1:
     def _setup(self, app, settings):
         # 目前 networking.k8s.io/v1 仅支持正则模式
         cluster = get_cluster_by_app(app)
-        cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_PATTERN] = True
+        cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_REGEX] = True
         cluster.save()
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
 
@@ -447,7 +439,7 @@ class TestProcessIngressV1:
     def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
         deserializer = IngressV1Deserializer(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, subpath_kube_data)
-        assert compare_ingress(result, subpath_ingress)
+        assert result == subpath_ingress
 
 
 def build_legacy_pattern(path_str):
@@ -465,7 +457,7 @@ class TestPatternCompatible:
     def _setup(self, app, settings):
         # 目前 networking.k8s.io/v1 仅支持正则模式
         cluster = get_cluster_by_app(app)
-        cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_PATTERN] = True
+        cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_REGEX] = True
         cluster.save()
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
 
@@ -597,4 +589,4 @@ class TestPatternCompatible:
         )
         deserializer = deserializer_cls(ProcessIngress, gvk_config)
         result = deserializer.deserialize(app, ResourceInstance(None, request.getfixturevalue(spec_fixture)))
-        assert compare_ingress(result, subpath_ingress)
+        assert result == subpath_ingress

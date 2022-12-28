@@ -54,12 +54,20 @@ def create_cnative_deploy(env: ModuleEnv, user: User, status: DeployStatus = Dep
 
 
 @pytest.fixture
-def deploy_stag_env(bk_stag_env):
+def mock_knamespace(namespace_maker):
+    def get_or_create(name: str):
+        return namespace_maker(name)
+
+    with mock.patch("paas_wl.cnative.specs.resource.KNamespace") as mocked:
+        mocked().get_or_create.side_effect = get_or_create
+        yield
+
+
+@pytest.fixture
+def deploy_stag_env(bk_stag_env, mock_knamespace):
     """Deploy a default payload to cluster for stag environment"""
     app = bk_stag_env.application
-    with mock.patch('paas_wl.platform.external.client._global_plat_client', new=FakePlatformSvcClient()), mock.patch(
-        'paas_wl.cnative.specs.resource.KNamespace.wait_for_default_sa'
-    ):
+    with mock.patch('paas_wl.platform.external.client._global_plat_client', new=FakePlatformSvcClient()):
         resource = create_app_resource(app.name, 'nginx:latest')
         deploy(bk_stag_env, resource.to_deployable())
         yield

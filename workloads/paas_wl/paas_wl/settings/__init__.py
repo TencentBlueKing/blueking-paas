@@ -586,4 +586,4 @@ APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关前缀 URL 模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
 
-E2E_INGRESS_CONFIG = settings.get("E2E_INGRESS_CONFIG", {})
+FOR_TEST_E2E_INGRESS_CONFIG = settings.get("FOR_TEST_E2E_INGRESS_CONFIG", {})

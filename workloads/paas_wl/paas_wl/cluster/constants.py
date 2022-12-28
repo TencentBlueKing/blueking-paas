@@ -38,10 +38,14 @@ class ClusterFeatureFlag(FeatureFlag):
 
     ENABLE_EGRESS_IP = FeatureFlagField('enable_egress_ip', label=_('支持提供出口 IP'))
     ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
-    INGRESS_USE_PATTERN = FeatureFlagField("ingress_user_pattern", label=_("Ingress资源使用正则表达式"), default=False)
+    # Indicates if the paths defined on an Ingress use regular expressions
+    INGRESS_USE_REGEX = FeatureFlagField("ingress_use_regex", label=_("Ingress路径是否使用正则表达式"), default=False)
 
     @classmethod
     def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:
+        """get default flags by cluster_type
+
+        for virtual cluster, ENABLE_EGRESS_IP and ENABLE_MOUNT_LOG_TO_HOST is default to False"""
         default_flags = cls.get_default_flags()
         if cluster_type == ClusterType.VIRTUAL:
             default_flags[cls.ENABLE_EGRESS_IP] = False

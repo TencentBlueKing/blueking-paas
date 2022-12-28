@@ -278,18 +278,12 @@ class TestKPod:
             is None
         )
 
-    def test_get_logs(self, k8s_client, app, k8s_version):
+    def test_get_logs(self, k8s_client, app):
         KPod(k8s_client).create_or_update(
             app.scheduler_safe_name,
             namespace=app.namespace,
             body=construct_foo_pod(app.scheduler_safe_name, restart_policy="Never"),
         )
-        # k8s 1.8 只起了 apiserver 模拟测试, 无需等待 Pod 就绪即可调用读取日志的接口
-        # 其他高版本的集群需要等待 Pod 就绪才能读取日志
-        if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
-            KPod(k8s_client).wait_for_status(
-                app.scheduler_safe_name, {"Running", "Succeeded", "Failed"}, namespace=app.namespace, timeout=30
-            )
         logs = KPod(k8s_client).get_log(app.scheduler_safe_name, namespace=app.namespace, timeout=0.1)
         assert logs is not None
 
@@ -343,5 +337,5 @@ def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: 
             'schedulerName': 'no-running-scheduler',
             'containers': [{'name': "main", 'image': "busybox", "imagePullPolicy": "IfNotPresent"}],
             "restartPolicy": restart_policy,
-        }
+        },
     }

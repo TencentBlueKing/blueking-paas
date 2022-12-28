@@ -150,7 +150,6 @@ class TestSubdomainAppIngressMgrCommon:
 
         assert len(ingresses) == 1
         ingress = ingresses[0]
-        assert ingress.configuration_snippet != ''
         assert len(ingress.domains) > 0
 
     def test_sync_update(self, app):

@@ -58,15 +58,6 @@ var _ = Describe("test webhook.Validator", func() {
 				},
 			},
 		}
-		// 预先准备好被引用的 BkApp
-		bkapp := &BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: KindBkApp, APIVersion: GroupVersion.String()},
-			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-q67hn2n3", Namespace: "default"},
-			Spec: AppSpec{
-				Processes: []Process{{Name: "web", Replicas: ReplicasOne, Image: "nginx:latest"}},
-			},
-		}
-		_ = k8sClient.Create(ctx, bkapp)
 	})
 
 	Context("Test DomainGroupMapping actions", func() {
@@ -92,12 +83,6 @@ var _ = Describe("test webhook.Validator", func() {
 			err := dgm.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"BkApp\""))
 		})
-
-		It("not found referred bkapp", func() {
-			dgm.Spec.Ref.Name = "bkapp-wigeqago"
-			err := dgm.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("Not found"))
-		})
 	})
 
 	Context("Test spec domain group", func() {
@@ -117,16 +102,6 @@ var _ = Describe("test webhook.Validator", func() {
 
 var _ = Describe("Integrated tests for webhooks", func() {
 	It("Create DomainGroupMapping with minimal required fields", func() {
-		// 预先准备好被引用的 BkApp
-		bkapp := &BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: KindBkApp, APIVersion: GroupVersion.String()},
-			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-7rxsa1gf", Namespace: "default"},
-			Spec: AppSpec{
-				Processes: []Process{{Name: "web", Replicas: ReplicasOne, Image: "nginx:latest"}},
-			},
-		}
-		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
-
 		// DomainGroupMapping 创建测试
 		host := "bkapp-sample.example.com"
 		dgm := &DomainGroupMapping{

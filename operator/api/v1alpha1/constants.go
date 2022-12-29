@@ -94,8 +94,8 @@ const (
 	DefaultImagePullSecretName = "bkapp-dockerconfigjson"
 )
 
-// EnabledDomainGroupMappingRefKinds 允许被 DomainGroupMapping 引用的资源类型
-var EnabledDomainGroupMappingRefKinds = []string{KindBkApp}
+// AllowedDomainGroupMappingRefKinds 允许被 DomainGroupMapping 引用的资源类型
+var AllowedDomainGroupMappingRefKinds = []string{KindBkApp}
 
 const (
 	// SourceTypeSubDomain means domain was allocated by platform, apps are
@@ -110,5 +110,5 @@ const (
 	SourceTypeCustom = "custom"
 )
 
-// EnabledSourceTypes 允许使用的 SourceType
-var EnabledSourceTypes = []string{SourceTypeSubDomain, SourceTypeSubPath, SourceTypeCustom}
+// AllowedSourceTypes 允许使用的 SourceType
+var AllowedSourceTypes = []string{SourceTypeSubDomain, SourceTypeSubPath, SourceTypeCustom}

@@ -19,16 +19,14 @@
 package v1alpha1
 
 import (
-	"context"
-
+	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -36,11 +34,8 @@ import (
 // log is for logging in this package.
 var dgmLog = logf.Log.WithName("domaingroupmapping-resource")
 
-var cli client.Client
-
 // SetupWebhookWithManager ...
-func (r *DomainGroupMapping) SetupWebhookWithManager(mgr ctrl.Manager, mgrCli client.Client) error {
-	cli = mgrCli
+func (r *DomainGroupMapping) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(r).Complete()
 }
 
@@ -51,13 +46,21 @@ var _ webhook.Validator = &DomainGroupMapping{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *DomainGroupMapping) ValidateCreate() error {
 	dgmLog.Info("validate create", "name", r.Name)
-	return r.validateDomainGroupMapping()
+	err := r.validateDomainGroupMapping()
+	if err != nil {
+		sentry.CaptureException(errors.Wrapf(err, "webhook validate dgmapping [%s/%s] failed", r.Namespace, r.Name))
+	}
+	return err
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *DomainGroupMapping) ValidateUpdate(old runtime.Object) error {
 	dgmLog.Info("validate update", "name", r.Name)
-	return r.validateDomainGroupMapping()
+	err := r.validateDomainGroupMapping()
+	if err != nil {
+		sentry.CaptureException(errors.Wrapf(err, "webhook validate dgmapping [%s/%s] failed", r.Namespace, r.Name))
+	}
+	return err
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -86,17 +89,11 @@ func (r *DomainGroupMapping) validateDomainGroupMapping() error {
 
 func (r *DomainGroupMapping) validateSpecRef() *field.Error {
 	// 目前只支持 BkApp 作为引用对象
-	if !lo.Contains(EnabledDomainGroupMappingRefKinds, r.Spec.Ref.Kind) {
+	if !lo.Contains(AllowedDomainGroupMappingRefKinds, r.Spec.Ref.Kind) {
 		return field.NotSupported(
 			field.NewPath("spec").Child("ref").Child("kind"),
-			r.Spec.Ref.Kind, EnabledDomainGroupMappingRefKinds,
+			r.Spec.Ref.Kind, AllowedDomainGroupMappingRefKinds,
 		)
-	}
-
-	// 预先检查 BkApp 是否存在于集群中
-	objKey := client.ObjectKey{Namespace: r.Namespace, Name: r.Spec.Ref.Name}
-	if err := cli.Get(context.Background(), objKey, &BkApp{}); err != nil {
-		return field.NotFound(field.NewPath("spec").Child("ref").Child("name"), r.Spec.Ref.Name)
 	}
 	return nil
 }
@@ -104,8 +101,8 @@ func (r *DomainGroupMapping) validateSpecRef() *field.Error {
 func (r *DomainGroupMapping) validateDomainGroup() *field.Error {
 	for idx, dg := range r.Spec.Data {
 		dgField := field.NewPath("spec").Child("data").Index(idx)
-		if !lo.Contains(EnabledSourceTypes, dg.SourceType) {
-			return field.NotSupported(dgField.Child("sourceType"), dg.SourceType, EnabledSourceTypes)
+		if !lo.Contains(AllowedSourceTypes, dg.SourceType) {
+			return field.NotSupported(dgField.Child("sourceType"), dg.SourceType, AllowedSourceTypes)
 		}
 		if len(dg.Domains) == 0 {
 			return field.Invalid(dgField.Child("domains"), dg.Domains, "at least one domain required")

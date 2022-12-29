@@ -127,7 +127,7 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "BkApp")
 			os.Exit(1)
 		}
-		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr, mgrCli); err != nil {
+		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DomainGroupMapping")
 			os.Exit(1)
 		}

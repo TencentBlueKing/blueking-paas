@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -83,20 +85,28 @@ var _ webhook.Validator = &BkApp{}
 // ValidateCreate 应用创建时校验
 func (r *BkApp) ValidateCreate() error {
 	appLog.Info("validate create", "name", r.Name)
-	return r.validateApp()
+	err := r.validateApp()
+	if err != nil {
+		sentry.CaptureException(errors.Wrapf(err, "webhook validate bkapp [%s/%s] failed", r.Namespace, r.Name))
+	}
+	return err
 }
 
 // ValidateUpdate 应用更新时校验
 func (r *BkApp) ValidateUpdate(old runtime.Object) error {
 	appLog.Info("validate update", "name", r.Name)
-	// TODO P2 更新校验逻辑，限制部分不可变字段（若存在）
-	return r.validateApp()
+	// TODO 更新校验逻辑，限制部分不可变字段（若存在）
+	err := r.validateApp()
+	if err != nil {
+		sentry.CaptureException(errors.Wrapf(err, "webhook validate bkapp [%s/%s] failed", r.Namespace, r.Name))
+	}
+	return err
 }
 
 // ValidateDelete 应用删除时校验
 func (r *BkApp) ValidateDelete() error {
 	appLog.Info("validate delete (do nothing)", "name", r.Name)
-	// TODO P0 删除时候暂时不做任何校验，后续可以考虑支持删除保护？
+	// TODO: 删除时候暂时不做任何校验，后续可以考虑支持删除保护？
 	return nil
 }
 

@@ -93,7 +93,7 @@ var _ = Describe("test webhook.Validator", func() {
 		}
 	})
 
-	Context("Test update BkApp actions", func() {
+	Context("Test BkApp actions", func() {
 		It("Create normal", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).ShouldNot(HaveOccurred())

@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     'paasng.platform.operations',
     'paasng.platform.environments',
     'paasng.ci',
+    'paasng.cnative',
     'paasng.engine',
     'paasng.engine.streaming',
     'paasng.publish.market',

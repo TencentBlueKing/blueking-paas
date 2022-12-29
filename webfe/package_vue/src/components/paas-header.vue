@@ -614,21 +614,26 @@
             // 二级导航mouseover
             showSubNav (index, item) {
                 clearTimeout(this.navHideController);
-                if (index === 0 || index === 1 || index === 2 || index === 3) {
+                if (index === 0 || index === 1 || index === 2 || (index === 3 && this.userFeature.ALLOW_PLUGIN_CENTER)) {
                     this.navIndex = index;
                 } else {
                     this.navShowController = setTimeout(() => {
                         this.navIndex = index;
                         this.navText = item.text;
                         switch (index) {
-                            case 4:
+                            case 3:
+                              if(!this.userFeature.ALLOW_PLUGIN_CENTER) {
                                 this.curSubNav = this.headerStaticInfo.list.subnav_service;
-                                break;
+                              }
+                              break;
+                            case 4:
+                              this.curSubNav = this.headerStaticInfo.list.subnav_service;
+                              break;
                             case 5:
-                                this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-                                break;
+                              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+                              break;
                             default:
-                                this.curSubNav = [];
+                              this.curSubNav = [];
                         }
                     }, 500);
                 }

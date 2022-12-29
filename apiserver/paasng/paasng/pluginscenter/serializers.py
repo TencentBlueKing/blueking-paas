@@ -536,3 +536,25 @@ class PluginListFilterSlZ(serializers.Serializer):
     status = serializers.ListField(required=False)
     language = serializers.ListField(required=False)
     pd__identifier = serializers.ListField(required=False)
+
+
+class CodeCheckInfoSLZ(serializers.Serializer):
+    """蓝盾 API 返回的代码检查结果的数据格式，保留驼峰格式"""
+
+    resolvedDefectNum = serializers.FloatField(help_text="已解决缺陷数", required=False)
+    repoCodeccAvgScore = serializers.IntegerField(help_text="代码质量", required=False)
+
+
+class QualityInfoSLZ(serializers.Serializer):
+    """蓝盾 API 返回的代码质量的数据格式，保留驼峰格式"""
+
+    qualityInterceptionRate = serializers.FloatField(help_text="质量红线拦截率", required=False)
+    interceptionCount = serializers.IntegerField(help_text="拦截次数", required=False)
+    totalExecuteCount = serializers.IntegerField(help_text="运行总次数", required=False)
+
+
+class MetricsSummarySLZ(serializers.Serializer):
+    """蓝盾 API 返回的代码仓库概览信息的数据格式，保留驼峰格式"""
+
+    codeCheckInfo = CodeCheckInfoSLZ(required=False)
+    qualityInfo = QualityInfoSLZ(required=False)

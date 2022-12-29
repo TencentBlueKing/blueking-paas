@@ -72,6 +72,10 @@
     import SummaryPluginLoading from './loading/summary-plugin.vue';
     import PluginNewVersionLoading from './loading/plugin-new-version.vue';
     import PluginMarketInfoLoading from './loading/plugin-market-info.vue';
+    import PluinListLoading from './loading/pluin-list.vue';
+    import CreatePluginLoading from './loading/create-plugin.vue';
+    import PluginProcessLoading from './loading/plugin-process.vue';
+    import PluginBaseInfoLoading from './loading/plugin-base-info.vue';
     export default {
         components: {
             ByUserLoading,
@@ -124,7 +128,11 @@
             DeployHookLoading,
             SummaryPluginLoading,
             PluginNewVersionLoading,
-            PluginMarketInfoLoading
+            PluginMarketInfoLoading,
+            PluinListLoading,
+            CreatePluginLoading,
+            PluginProcessLoading,
+            PluginBaseInfoLoading
         },
         props: {
             isLoading: {
@@ -160,7 +168,8 @@
                 isLoaderShow: this.isLoading,
                 baseWidth: 1180,
                 contentWidth: 1180,
-                curPlaceholder: ''
+                curPlaceholder: '',
+                isPlugin: false
             };
         },
         watch: {
@@ -177,14 +186,25 @@
                     this.localLoading = this.isLoading;
                     this.isLoaderShow = this.isLoading;
                 }
+            },
+            '$route': {
+                handler (value) {
+                  this.isPlugin = value.path.includes('/plugin-center');
+                },
+                immediate: true
             }
         },
         mounted () {
+          if (this.isPlugin) {
+            this.baseWidth = 1680;
+            this.contentWidth = 2450;
+          } else {
             this.initContentWidth();
 
             window.onresize = () => {
                 this.initContentWidth();
             };
+          }
         },
         methods: {
             initContentWidth () {
@@ -248,8 +268,10 @@
 
 @media (min-width: 1280px) {
     .right-main-plugin .paas-loading-content .loading-placeholder {
-        left: 80px;
         width: auto;
+        svg {
+          width: 100%;
+        }
     }
 }
 @media screen and(min-width: 1680px) {
@@ -260,8 +282,10 @@
 }
 @media screen and(min-width: 2450px) {
     .right-main-plugin .paas-loading-content .loading-placeholder {
-        left: 20%;
-        width: auto;
+      width: auto;
+      svg {
+        width: 100%;
+      }
     }
 }
   .hide {

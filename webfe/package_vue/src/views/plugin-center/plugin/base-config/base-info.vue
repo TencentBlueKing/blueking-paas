@@ -3,7 +3,7 @@
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
-      placeholder="base-info-loading"
+      placeholder="plugin-base-info-loading"
     >
       <paas-plugin-title />
       <section>
@@ -44,6 +44,7 @@
                   ext-cls="paas-info-app-name-cls"
                   :clearable="false"
                   :maxlength="20"
+                  @blur="updatePluginBaseInfo('nameInput')"
                 />
                 <div
                   v-else
@@ -57,7 +58,7 @@
                   />
                 </div>
 
-                <div class="action-box">
+                <!-- <div class="action-box">
                   <template v-if="isFormEdited.nameInput">
                     <bk-button
                       style="margin-right: 6px;"
@@ -67,7 +68,6 @@
                     >
                       {{ $t('保存') }}
                     </bk-button>
-                    <!-- 点击取消，input绑定的值变为未改值 -->
                     <bk-button
                       theme="primary"
                       text
@@ -76,7 +76,7 @@
                       {{ $t('取消') }}
                     </bk-button>
                   </template>
-                </div>
+                </div> -->
               </bk-form-item>
             </bk-form>
             <!-- 属于额外字段(extra_fields) -->
@@ -615,6 +615,10 @@
 
             // 保存基本信息
             async updatePluginBaseInfo (ref) {
+                if (this.resPluginInfo.name_zh_cn === this.pluginInfo.name_zh_cn) {
+                    this.cancelBasicInfo(ref, 'reset');
+                    return;
+                }
                 // this.pluginInfo
                 const data = {
                     name: this.pluginInfo.name_zh_cn,

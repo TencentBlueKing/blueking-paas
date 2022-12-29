@@ -7,11 +7,12 @@
     >
       <div class="app-container middle">
         <paas-plugin-title />
-        <div class="market-Info">
+        <div class="market-Info plugin-base-info">
           <bk-form
             ref="visitForm"
             :model="form"
             :rules="rules"
+            :label-width="100"
           >
             <bk-form-item
               class="w600"
@@ -174,7 +175,7 @@
                     this.cateLoading = false;
                     setTimeout(() => {
                         this.isLoading = false;
-                    }, 200);
+                    }, 300);
                 }
             },
             // 获取市场信息
@@ -195,7 +196,7 @@
                 } finally {
                     setTimeout(() => {
                         this.isLoading = false;
-                    }, 200);
+                    }, 300);
                 }
             },
             // 保存
@@ -245,17 +246,27 @@
         position: fixed;
         bottom: 0;
         margin-bottom: 20px;
-        margin-left: 150px;
+        margin-left: 100px;
     }
     .edit-form-item{
-        height: 300px;
+        // height: 300px;
         .editor{
-            height: calc(100vh - 400px);
+            height: 100%;
+            max-height: 898px;
+            padding-bottom: 20px;
         }
+    }
+
+    .app-container {
+        max-width: calc(100% - 50px) !important;
+        margin: 0 auto;
     }
 </style>
 <style>
     .visible-range .editor .ql-snow .ql-formats {
         line-height: 24px;
+    }
+    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content {
+        height: calc(100vh - 365px);
     }
 </style>

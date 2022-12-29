@@ -87,6 +87,9 @@ class PluginRepoAccessor(Protocol):
     def get_submit_info(self, begin_time: str, end_time: str) -> List[dict]:
         """查询项目的提交次数"""
 
+    def get_project_id(self) -> int:
+        """仓库的项目ID"""
+
 
 class TemplateRender:
     """插件模板渲染器"""

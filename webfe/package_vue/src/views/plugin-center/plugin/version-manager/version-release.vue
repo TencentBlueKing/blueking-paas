@@ -7,7 +7,10 @@
       :offset-left="20"
       class="deploy-action-box"
     >
-      <div class="plugin-release-top">
+      <div
+        class="plugin-release-top"
+        :style="`height: ${ releaseTopHeight }px;`"
+      >
         <div class="father-wrapper">
           <div class="bg-top">
             <div class="bg-content">
@@ -125,7 +128,7 @@
               <div class="release-log-warp flex-row">
                 <div
                   id="release-timeline-box"
-                  style="width: 230px"
+                  style="width: 230px;padding-left: 8px;"
                 >
                   <release-timeline
                     ref="deployTimelineRef"
@@ -146,6 +149,7 @@
               ref="visitForm"
               :model="form"
               :rules="rules"
+              :label-width="100"
             >
               <bk-form-item
                 class="w600"
@@ -199,7 +203,7 @@
 
           <div
             v-if="stageId === 'market'"
-            class="btn-warp mt30"
+            class="btn-warp"
           >
             <!-- <bk-button>上一步</bk-button> -->
             <bk-button
@@ -343,6 +347,11 @@
             },
             pluginFeatureFlags () {
                 return this.$store.state.plugin.pluginFeatureFlags;
+            },
+            releaseTopHeight () {
+                let topHeight = this.stageId === 'deploy' ? 173 : 173 - 56;
+                // 是否展示steps
+                return this.isNotStep ? topHeight : topHeight - 44;
             }
         },
         watch: {
@@ -857,16 +866,32 @@
             border-bottom: 1px solid #EAEBF0;
             .bg-content {
                 max-width: calc(100% - 100px);
-                min-width: 1250px;
                 margin: 0 50px;
+                .title-warp {
+                    min-width: 1243px;
+                }
             }
         }
         .release-info-box {
             max-width: calc(100% - 100px);
-            min-width: 1250px;
+            min-width: 1243px;
             margin: 0 50px;
             margin-top: 16px;
         }
+    }
+}
+#release-timeline-box {
+    width: 230px;
+    height: calc(100vh - 272px);
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+        width: 4px;
+        background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+        height: 5px;
+        border-radius: 2px;
+        background-color: #C4C6CC;
     }
 }
 .steps-warp{
@@ -913,7 +938,7 @@
     width: 600px;
 }
 .btn-warp{
-    margin-left: 150px;
+    margin-left: 100px;
 }
 .footer-btn-warp {
     position: fixed;
@@ -928,7 +953,7 @@
     box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
 }
 .edit-form-item{
-    height: 300px;
+    height: 272px;
     .editor{
         height: 200px;
     }

@@ -620,6 +620,7 @@
                     this.navShowController = setTimeout(() => {
                         this.navIndex = index;
                         this.navText = item.text;
+                        console.log('test');
                         switch (index) {
                             case 3:
                               if (!this.userFeature.ALLOW_PLUGIN_CENTER) {

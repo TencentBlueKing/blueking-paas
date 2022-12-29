@@ -53,8 +53,8 @@ class DummyBkMonitorClient:
 class BkMonitorClient:
     def __init__(self):
         self.client = DummyBkMonitorClient()
-        # 空间类型ID，TODO 等监控修改改为 bksaas
-        self.space_type_id = "paas"
+        # 空间类型ID，bksaas(蓝鲸应用)
+        self.space_type_id = "bksaas"
 
     def get_or_create_space(self, app_code: str, app_name: str, creator: str) -> str:
         try:

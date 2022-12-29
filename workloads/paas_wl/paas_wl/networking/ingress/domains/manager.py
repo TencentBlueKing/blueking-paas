@@ -28,6 +28,7 @@ from rest_framework.serializers import Serializer
 from paas_wl.cnative.specs.resource import deploy_networking
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.exceptions import ValidCertNotFound
+from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainSLZ
 from paas_wl.platform.applications.constants import ApplicationType
@@ -38,7 +39,7 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.processes.controllers import env_is_running
 
 from .exceptions import ReplaceAppDomainFailed
-from .independent import DomainResourceCreateService, DomainResourceDeleteService, ReplaceAppDomainService
+from .independent import DomainResourceDeleteService, ReplaceAppDomainService, get_service_name
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +82,17 @@ class DftCustomDomainManager:
         if not env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
-        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+        engine_app = EngineApp.objects.get_by_env(env)
+        service_name = get_service_name(engine_app)
         try:
-            DomainResourceCreateService(engine_app).do(host=host, path_prefix=path_prefix, https_enabled=https_enabled)
+            domain, _ = Domain.objects.update_or_create(
+                name=host,
+                path_prefix=path_prefix,
+                module_id=env.module_id,
+                environment_id=env.id,
+                defaults={"https_enabled": https_enabled},
+            )
+            CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
         except ValidCertNotFound:
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f("找不到有效的 TLS 证书")
         except IntegrityError:
@@ -91,14 +100,7 @@ class DftCustomDomainManager:
         except Exception:
             logger.exception("create custom domain failed")
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f("未知错误")
-
-        return Domain.objects.create(
-            module_id=env.module.id,
-            environment_id=env.id,
-            name=host,
-            path_prefix=path_prefix,
-            https_enabled=https_enabled,
-        )
+        return domain
 
     @transaction.atomic
     def update(self, instance: Domain, *, host: str, path_prefix: str, https_enabled: bool) -> Domain:
@@ -106,18 +108,11 @@ class DftCustomDomainManager:
         if check_domain_used_by_market(self.application, instance.name):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行更新操作')
 
-        engine_app = EngineApp.objects.get(pk=instance.environment.engine_app_id)
         try:
-            svc = ReplaceAppDomainService(engine_app, instance.name, instance.path_prefix)
+            svc = ReplaceAppDomainService(instance.environment, instance.name, instance.path_prefix)
             svc.replace_with(host, path_prefix, https_enabled)
         except ReplaceAppDomainFailed as e:
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
-
-        # Update Domain instance
-        instance.name = host
-        instance.path_prefix = path_prefix
-        instance.https_enabled = https_enabled
-        instance.save()
         return instance
 
     @transaction.atomic
@@ -126,11 +121,11 @@ class DftCustomDomainManager:
         if check_domain_used_by_market(self.application, instance.name):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行删除操作')
 
-        engine_app = EngineApp.objects.get(pk=instance.environment.engine_app_id)
-        ret = DomainResourceDeleteService(engine_app).do(host=instance.name, path_prefix=instance.path_prefix)
+        ret = DomainResourceDeleteService(instance.environment).do(
+            host=instance.name, path_prefix=instance.path_prefix
+        )
         if not ret:
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")
-        instance.delete()
 
 
 def validate_domain_payload(

@@ -15,6 +15,7 @@ platformConfig:
   bkAppCode: ""
   bkAppSecret: ""
   bkAPIGatewayURL: ""
+  sentryDSN: ""
 resLimitConfig:
   procDefaultCPULimits: "4"
   procDefaultMemLimits: "1Gi"

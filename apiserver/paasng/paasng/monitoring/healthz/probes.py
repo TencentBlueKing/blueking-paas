@@ -27,6 +27,7 @@ from django.utils.module_loading import import_string
 from django.utils.translation import gettext as _
 
 from paasng.settings.utils import is_redis_sentinel_backend
+from paasng.utils.blobstore import StoreType, detect_default_blob_store
 
 
 def get_default_healthz_token():
@@ -74,9 +75,18 @@ class BKDocsProbe(HttpProbe):
     is_core = False
 
 
-class RGWProbe(HttpProbe):
+class _RGWProbe(HttpProbe):
     name = "rgw"
     url = settings.BLOBSTORE_S3_ENDPOINT
+
+
+class _BkRepoProbe(HttpProbe):
+    name = "bkrepo"
+
+    bkrepo_endpoint = ""
+    if isinstance(settings.BLOBSTORE_BKREPO_CONFIG, dict):
+        bkrepo_endpoint = settings.BLOBSTORE_BKREPO_CONFIG.get('ENDPOINT', '')
+    url = f"{bkrepo_endpoint}/generic/actuator/info"
 
 
 class ServiceHubProbe(VirtualProbe):
@@ -141,4 +151,13 @@ def _get_redis_probe_cls() -> Union[Type[_RedisSentinelProbe], Type[_RedisProbe]
     return _RedisProbe
 
 
+def _get_blob_store_probe_cls() -> Union[Type[_RGWProbe], Type[_BkRepoProbe]]:
+    store_type = detect_default_blob_store()
+    if store_type == StoreType.S3:
+        return _RGWProbe
+    return _BkRepoProbe
+
+
 PlatformRedisProbe = _get_redis_probe_cls()
+
+PlatformBlobStoreProbe = _get_blob_store_probe_cls()

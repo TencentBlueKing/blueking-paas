@@ -121,7 +121,7 @@
 
     <bk-dialog
       v-model="memberMgrConfig.visiable"
-      width="540"
+      width="600"
       :title="memberMgrConfig.title"
       header-position="left"
       :theme="'primary'"
@@ -197,21 +197,6 @@
             </div>
           </bk-form-item>
         </bk-form>
-      </div>
-    </bk-dialog>
-
-    <bk-dialog
-      v-model="removeUserDialog.visiable"
-      width="540"
-      :title=" `${$t('删除成员 ')}${selectedMember.name}`"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="removeUserDialog.isLoading"
-      @confirm="delSave"
-      @cancel="closeDelModal"
-    >
-      <div class="tc">
-        {{ $t('用户') }} {{ selectedMember.name }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
       </div>
     </bk-dialog>
 
@@ -326,10 +311,6 @@
                     showForm: false
                 },
                 leaveAppDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                removeUserDialog: {
                     visiable: false,
                     isLoading: false
                 },
@@ -612,7 +593,14 @@
             delMember (delMemberName, delMemberID) {
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
-                this.removeUserDialog.visiable = true;
+                this.$bkInfo({
+                    title: `${this.$t('删除成员')} ${delMemberName}`,
+                    subTitle: `${this.$t('用户')} ${delMemberName} ${this.$t('将失去此应用的对应权限，是否确定删除？')}`,
+                    width: 520,
+                    confirmFn: () => {
+                        this.delSave();
+                    }
+                });
             },
 
             async delSave () {
@@ -622,7 +610,6 @@
                         pluginId: this.pluginId,
                         username: this.selectedMember.name
                     });
-                    this.closeDelModal();
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('删除成员成功！')
@@ -634,10 +621,6 @@
                         message: `${this.$t('删除成员失败：')} ${e.detail}`
                     });
                 }
-            },
-
-            closeDelModal () {
-                this.removeUserDialog.visiable = false;
             },
 
             closeMemberMgrModal () {

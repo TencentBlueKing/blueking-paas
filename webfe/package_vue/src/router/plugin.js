@@ -89,6 +89,7 @@ const pluginProcess = () => import(/* webpackChunkName: 'app-basic-config' */'@/
   window.showDeployTip(error);
 });
 
+import i18n from '@/language/i18n.js';
 export const pluginRouter = [
   {
     path: '/plugin-center/',
@@ -100,7 +101,7 @@ export const pluginRouter = [
     name: 'createPlugin',
     component: createPlugin,
     meta: {
-      pathName: '创建插件',
+      pathName: i18n.t('创建插件'),
       supportBack: true
     }
   },
@@ -123,7 +124,7 @@ export const pluginRouter = [
         component: pluginSummary,
         name: 'pluginSummary',
         meta: {
-          pathName: '概览',
+          pathName: i18n.t('概览'),
           capture403Error: false
         }
       },
@@ -132,7 +133,7 @@ export const pluginRouter = [
         component: pluginVersionManager,
         name: 'pluginVersionManager',
         meta: {
-          pathName: '版本管理',
+          pathName: i18n.t('版本管理'),
           capture403Error: false
         }
       },
@@ -141,7 +142,7 @@ export const pluginRouter = [
         component: pluginDeployEnv,
         name: 'pluginDeployEnv',
         meta: {
-          pathName: '配置管理',
+          pathName: i18n.t('配置管理'),
           capture403Error: false
         }
       },
@@ -150,7 +151,7 @@ export const pluginRouter = [
         component: pluginVersionRelease,
         name: 'pluginVersionRelease',
         meta: {
-          pathName: '发布',
+          pathName: i18n.t('发布'),
           supportBack: true
         }
       },
@@ -159,7 +160,7 @@ export const pluginRouter = [
         component: pluginVersionEditor,
         name: 'pluginVersionEditor',
         meta: {
-          pathName: '新建版本',
+          pathName: i18n.t('新建版本'),
           capture403Error: false,
           supportBack: true
         }
@@ -169,7 +170,7 @@ export const pluginRouter = [
         component: pluginLog,
         name: 'pluginLog',
         meta: {
-          pathName: '日志查询',
+          pathName: i18n.t('日志查询'),
           capture403Error: false
         }
       },
@@ -178,7 +179,7 @@ export const pluginRouter = [
         component: pluginProcess,
         name: 'pluginProcess',
         meta: {
-          pathName: '进程管理',
+          pathName: i18n.t('进程管理'),
           capture403Error: false,
           isGetAppInfo: true
         }
@@ -188,7 +189,7 @@ export const pluginRouter = [
         component: appCloudAPI,
         name: 'appCloudAPI',
         meta: {
-          pathName: '云 API 权限',
+          pathName: i18n.t('云 API 权限'),
           capture403Error: false,
           isGetAppInfo: true
         }
@@ -198,7 +199,7 @@ export const pluginRouter = [
         component: pluginBaseInfo,
         name: 'pluginBaseInfo',
         meta: {
-          pathName: '基本信息',
+          pathName: i18n.t('基本信息'),
           capture403Error: false,
           isGetAppInfo: true
         }
@@ -208,7 +209,7 @@ export const pluginRouter = [
         component: marketInfoEdit,
         name: 'marketInfoEdit',
         meta: {
-          pathName: '编辑市场信息',
+          pathName: i18n.t('编辑市场信息'),
           supportBack: true,
           capture403Error: false
         }
@@ -218,7 +219,7 @@ export const pluginRouter = [
         component: pluginVisibleRange,
         name: 'pluginVisibleRange',
         meta: {
-          pathName: '可见范围',
+          pathName: i18n.t('可见范围'),
           capture403Error: false
         }
       },
@@ -227,7 +228,7 @@ export const pluginRouter = [
         component: pluginRoles,
         name: 'pluginRoles',
         meta: {
-          pathName: '成员管理',
+          pathName: i18n.t('成员管理'),
           capture403Error: false,
           isPlugin: true
         }

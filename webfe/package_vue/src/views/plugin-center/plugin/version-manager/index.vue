@@ -3,7 +3,7 @@
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
-      placeholder="roles-loading"
+      placeholder="pluin-list-loading"
     >
       <div class="middle">
         <paas-plugin-title />
@@ -122,7 +122,7 @@
                 v-else
                 :class="['dot', row.status]"
               />
-              <span v-bk-tooltips="versionStatus[row.status]">{{ versionStatus[row.status] || '--' }}</span>
+              <span v-bk-tooltips="$t(versionStatus[row.status])">{{ $t(versionStatus[row.status]) || '--' }}</span>
             </template>
           </bk-table-column>
           <!-- <bk-table-column :label="$t('标签')">
@@ -245,14 +245,14 @@
                   :class="['dot', versionDetail.status]"
                 />
                 <span
-                  v-bk-tooltips="versionStatus[versionDetail.status]"
+                  v-bk-tooltips="$t(versionStatus[versionDetail.status])"
                   class="pl5"
-                >{{ versionStatus[versionDetail.status] || '--' }}</span>
+                >{{ $t(versionStatus[versionDetail.status]) || '--' }}</span>
                 <template v-if="versionDetail.status === 'failed'">
-                  （部署失败，查看 <span
+                  （{{ $t('部署失败，查看') }} <span
                     class="active"
                     @click="handleRelease(versionDetail)"
-                  >详情</span>）
+                  >{{ $t('详情') }}</span>）
                 </template>
               </div>
             </div>
@@ -267,6 +267,14 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import { PLUGIN_VERSION_STATUS } from '@/common/constants';
+    import i18n from '@/language/i18n.js';
+
+    const PLUGIN_VERSION_STATUS_FILTER = {
+        'successful': i18n.t('已上线'),
+        'failed': i18n.t('失败'),
+        'pending': i18n.t('发布中'),
+        'interrupted': i18n.t('已中断')
+    };
 
     const PLUGIN_VERSION_STATUS_FILTER = {
         'successful': '已上线',
@@ -283,9 +291,9 @@
         data () {
             // 是否根据version判断
             this.versionTypeMap = {
-                major: '重大版本',
-                minor: '次版本',
-                patch: '修正版本'
+                major: i18n.t('重大版本'),
+                minor: i18n.t('次版本'),
+                patch: i18n.t('修正版本')
             };
             return {
                 isLoading: true,
@@ -658,7 +666,7 @@
 
             .describe {
                 flex-direction: row-reverse;
-                width: 100px;
+                width: 130px;
                 text-align: right;
                 padding-right: 16px;
                 font-size: 12px;

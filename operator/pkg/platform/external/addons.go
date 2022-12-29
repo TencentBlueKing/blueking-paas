@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -49,13 +50,13 @@ func (c *Client) QueryAddonInstance(
 
 	req, err := c.NewRequest(ctx, "GET", path, bytes.NewBuffer([]byte{}))
 	if err != nil {
-		return instance, err
+		return instance, errors.WithStack(err)
 	}
 	err = c.Do(req).Into(&instance, json.Unmarshal)
 	if err != nil {
-		return instance, err
+		return instance, errors.WithStack(err)
 	}
-	return instance, err
+	return instance, nil
 }
 
 // ProvisionAddonInstance 调用 bkpaas 对应接口, 分配应用的增强服务实例
@@ -73,8 +74,8 @@ func (c *Client) ProvisionAddonInstance(
 
 	req, err := c.NewRequest(ctx, "POST", path, bytes.NewBuffer([]byte{}))
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
-	return c.Do(req).err
+	return errors.WithStack(c.Do(req).err)
 }

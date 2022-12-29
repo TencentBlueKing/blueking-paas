@@ -23,18 +23,24 @@ from unittest import mock
 
 import pytest
 
-from paasng.engine.constants import JobStatus
+from paasng.engine.constants import AppEnvName
+from paasng.engine.controller.models import Cluster, Domain, IngressConfig
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import (
+    Address,
     ModuleLiveAddrs,
-    SubDomainURLProvider,
-    SubPathURLProvider,
     _default_preallocated_urls,
-    get_exposed_url_live,
-    get_module_exposed_links_live,
+    _get_legacy_url,
+    env_is_deployed,
+    get_addresses,
+    get_exposed_url,
+    get_market_address,
     get_preallocated_address,
+    get_preallocated_url,
+    get_preallocated_urls,
 )
-from tests.engine.setup_utils import create_fake_deployment
+from paasng.publish.market.models import MarketConfig
+from tests.utils.helpers import override_region_configs
 from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
@@ -75,203 +81,283 @@ class TestGetPreallocatedAddress:
         with replace_cluster_service(replaced_ingress_config=ingress_config):
             assert get_preallocated_address('test-code').prod == expected_address
 
-
-class TestSubPathURLProvider:
-    @pytest.fixture(autouse=True)
-    def _setup_deployment(self, bk_module):
-        # Create a successful deployment or no address will be generated
-        create_fake_deployment(bk_module, 'stag', status=JobStatus.SUCCESSFUL.value)
-        create_fake_deployment(bk_module, 'prod', status=JobStatus.SUCCESSFUL.value)
-        with replace_cluster_service(
-            replaced_ingress_config={'sub_path_domains': [{"name": 'foo.com'}, {"name": 'bar.com'}]}
-        ):
-            yield
-
-    def test_disabled(self, bk_module, bk_prod_env):
-        bk_module.exposed_url_type = None
-        bk_module.save()
-
-        url = SubPathURLProvider(bk_prod_env).provide()
-        assert url is None
-
     @pytest.mark.parametrize(
-        "bk_env, user_preferred_root_domain, expected_template",
+        'clusters, stag_address, prod_address',
         [
-            ("bk_stag_env", None, "http://foo.com/stag--{bk_app.code}/"),
-            ("bk_prod_env", None, "http://foo.com/{bk_app.code}/"),
-            ("bk_stag_env", "bar.com", "http://bar.com/stag--{bk_app.code}/"),
-            ("bk_prod_env", "bar.com", "http://bar.com/{bk_app.code}/"),
-            ("bk_stag_env", "baz.com", "http://baz.com/stag--{bk_app.code}/"),
-            ("bk_prod_env", "baz.com", "http://baz.com/{bk_app.code}/"),
-        ],
-        indirect=["bk_env"],
-    )
-    def test_enabled(self, bk_app, bk_module, bk_env, user_preferred_root_domain, expected_template):
-        bk_module.exposed_url_type = ExposedURLType.SUBPATH
-        bk_module.user_preferred_root_domain = user_preferred_root_domain
-        bk_module.save()
-
-        url = SubPathURLProvider(bk_env).provide()
-        assert url
-        assert url.provider_type == 'subpath'
-        assert url.address == expected_template.format(bk_app=bk_app)
-
-    @pytest.mark.parametrize(
-        "bk_env, user_preferred_root_domain, expected_templates",
-        [
+            # 同集群的情况
             (
-                "bk_stag_env",
-                None,
-                ["http://foo.com/stag--{bk_app.code}/", "http://bar.com/stag--{bk_app.code}/"],
+                {
+                    AppEnvName.STAG: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                    AppEnvName.PROD: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                },
+                'http://c1.foo.com/stag--test-code/',
+                'http://c1.foo.com/test-code/',
             ),
-            ("bk_prod_env", None, ["http://foo.com/{bk_app.code}/", "http://bar.com/{bk_app.code}/"]),
+            # 不同集群, 类型相同的情况
             (
-                "bk_stag_env",
-                "bar.com",
-                ["http://foo.com/stag--{bk_app.code}/", "http://bar.com/stag--{bk_app.code}/"],
+                {
+                    AppEnvName.STAG: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                    AppEnvName.PROD: Cluster(
+                        name='c2',
+                        is_default=False,
+                        ingress_config=IngressConfig(sub_path_domains=[Domain(name='c2.foo.com', reserved=False)]),
+                    ),
+                },
+                'http://c1.foo.com/stag--test-code/',
+                'http://c2.foo.com/test-code/',
             ),
-            ("bk_prod_env", "bar.com", ["http://foo.com/{bk_app.code}/", "http://bar.com/{bk_app.code}/"]),
-        ],
-        indirect=["bk_env"],
-    )
-    def test_provide_all(self, bk_app, bk_module, bk_env, user_preferred_root_domain, expected_templates):
-        bk_module.exposed_url_type = ExposedURLType.SUBPATH
-        bk_module.user_preferred_root_domain = user_preferred_root_domain
-        bk_module.save()
-
-        urls = SubPathURLProvider(bk_env).provide_all()
-        assert urls is not None
-        for url, expected_template in zip(urls, expected_templates):
-            assert url.address == expected_template.format(bk_app=bk_app)
-
-    def test_order_reserved(self, bk_app, bk_module, bk_prod_env):
-        bk_module.exposed_url_type = ExposedURLType.SUBPATH
-        bk_module.save()
-        with replace_cluster_service(
-            replaced_ingress_config={'sub_path_domains': [{"name": 'foo.com', 'reserved': True}, {"name": 'fool.com'}]}
-        ):
-            url = SubPathURLProvider(bk_prod_env).provide()
-            assert url
-            assert url.address == "http://fool.com/{bk_app.code}/".format(bk_app=bk_app)
-
-
-class TestSubDomainURLProvider:
-    @pytest.fixture(autouse=True)
-    def _setup_deployment(self, bk_module):
-        # Create a successful deployment or no address will be generated
-        create_fake_deployment(bk_module, 'stag', status=JobStatus.SUCCESSFUL.value)
-        create_fake_deployment(bk_module, 'prod', status=JobStatus.SUCCESSFUL.value)
-        with replace_cluster_service(
-            replaced_ingress_config={'app_root_domains': [{"name": 'foo.com'}, {"name": 'bar.com'}]}
-        ):
-            yield
-
-    def test_disabled(self, bk_module, bk_prod_env):
-        bk_module.exposed_url_type = None
-        bk_module.save()
-
-        url = SubDomainURLProvider(bk_prod_env).provide()
-        assert url is None
-
-    @pytest.mark.parametrize(
-        "bk_env, user_preferred_root_domain, expected_template",
-        [
-            ("bk_stag_env", None, "http://stag-dot-{bk_app.code}.foo.com"),
-            ("bk_prod_env", None, "http://{bk_app.code}.foo.com"),
-            ("bk_stag_env", "bar.com", "http://stag-dot-{bk_app.code}.bar.com"),
-            ("bk_prod_env", "bar.com", "http://{bk_app.code}.bar.com"),
-            ("bk_stag_env", "baz.com", "http://stag-dot-{bk_app.code}.baz.com"),
-            ("bk_prod_env", "baz.com", "http://{bk_app.code}.baz.com"),
-        ],
-        indirect=["bk_env"],
-    )
-    def test_enabled(self, bk_app, bk_module, bk_env, user_preferred_root_domain, expected_template):
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.user_preferred_root_domain = user_preferred_root_domain
-        bk_module.save()
-
-        url = SubDomainURLProvider(bk_env).provide()
-        assert url
-        assert url.provider_type == 'default_subdomain'
-        assert url.address == expected_template.format(bk_app=bk_app)
-
-    @pytest.mark.parametrize(
-        "bk_env, user_preferred_root_domain, expected_templates",
-        [
+            # 不同集群, 类型不同的情况
             (
-                "bk_stag_env",
-                None,
-                ["http://stag-dot-{bk_app.code}.foo.com", "http://stag-dot-{bk_app.code}.bar.com"],
+                {
+                    AppEnvName.STAG: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(
+                            sub_path_domains=[Domain(name='c1.foo.com', reserved=False)],
+                        ),
+                    ),
+                    AppEnvName.PROD: Cluster(
+                        name='c2',
+                        is_default=False,
+                        ingress_config=IngressConfig(
+                            app_root_domains=[Domain(name='c2.foo.com', reserved=False)],
+                        ),
+                    ),
+                },
+                'http://c1.foo.com/stag--test-code/',
+                'http://test-code.c2.foo.com',
             ),
-            ("bk_prod_env", None, ["http://{bk_app.code}.foo.com", "http://{bk_app.code}.bar.com"]),
+            # 优先级的情况
             (
-                "bk_stag_env",
-                "bar.com",
-                ["http://stag-dot-{bk_app.code}.foo.com", "http://stag-dot-{bk_app.code}.bar.com"],
+                {
+                    AppEnvName.STAG: Cluster(
+                        name='c1',
+                        is_default=False,
+                        ingress_config=IngressConfig(app_root_domains=[Domain(name='c1.foo.com', reserved=False)]),
+                    ),
+                    AppEnvName.PROD: Cluster(
+                        name='c2',
+                        is_default=False,
+                        ingress_config=IngressConfig(
+                            sub_path_domains=[Domain(name='c2.foo.com', reserved=False)],
+                            app_root_domains=[Domain(name='c2.foo.com', reserved=False)],
+                        ),
+                    ),
+                },
+                'http://stag-dot-test-code.c1.foo.com',
+                'http://c2.foo.com/test-code/',
             ),
-            ("bk_prod_env", "bar.com", ["http://{bk_app.code}.foo.com", "http://{bk_app.code}.bar.com"]),
         ],
-        indirect=["bk_env"],
     )
-    def test_provide_all(self, bk_app, bk_module, bk_env, user_preferred_root_domain, expected_templates):
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.user_preferred_root_domain = user_preferred_root_domain
-        bk_module.save()
-
-        urls = SubDomainURLProvider(bk_env).provide_all()
-        assert urls is not None
-        for url, expected_template in zip(urls, expected_templates):
-            assert url.address == expected_template.format(bk_app=bk_app)
-
-    def test_order_reserved(self, bk_app, bk_module, bk_prod_env):
-        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
-        bk_module.save()
-        with replace_cluster_service(
-            replaced_ingress_config={'app_root_domains': [{"name": 'foo.com', 'reserved': True}, {"name": 'fool.com'}]}
-        ):
-            url = SubDomainURLProvider(bk_prod_env).provide()
-            assert url
-            assert url.address == "http://{bk_app.code}.fool.com".format(bk_app=bk_app)
+    def test_with_clusters(self, clusters, stag_address, prod_address, mock_current_engine_client):
+        addr = get_preallocated_address('test-code', clusters=clusters)
+        assert addr.prod == prod_address
+        assert addr.stag == stag_address
 
 
-@pytest.fixture
-def module_addrs_data():
-    return [
+class TestModuleLiveAddrs:
+    module_addrs_data = [
         {"env": "prod", "is_running": False, "addresses": []},
         {
             "env": "stag",
             "is_running": True,
             "addresses": [
+                # The addresses was given in random order in purpose
+                {"type": "subpath", "url": "http://bar.example.com/bar-2/", "is_sys_reserved": True},
+                {"type": "custom", "url": "http://custom.example.com/"},
                 {"type": "subdomain", "url": "http://foo.example.com/"},
-                {"type": "subpath", "url": "https://bar.example.com/bar/"},
+                {"type": "unknown", "url": "http://unknown.example.com/"},
+                {"type": "subpath", "url": "http://bar.example.com/bar/"},
             ],
         },
     ]
 
-
-class TestModuleLiveAddrs:
-    def test_get_is_running(self, module_addrs_data):
-        addrs = ModuleLiveAddrs(module_addrs_data)
+    def test_get_is_running(self):
+        addrs = ModuleLiveAddrs(self.module_addrs_data)
         assert addrs.get_is_running('stag') is True
         assert addrs.get_is_running('prod') is False
         assert addrs.get_is_running('invalid-env') is False
 
-    def test_get_addresses(self, module_addrs_data):
-        addrs = ModuleLiveAddrs(module_addrs_data)
-        assert len(addrs.get_addresses('stag')) == 2
+    def test_get_addresses(self):
+        addrs = ModuleLiveAddrs(self.module_addrs_data)
         assert addrs.get_addresses('prod') == []
         assert addrs.get_addresses('invalid-env') == []
 
+        stag_addrs = addrs.get_addresses('stag')
+        assert len(stag_addrs) == 5
+        assert [addr.type for addr in stag_addrs] == ['subpath', 'subpath', 'subdomain', 'custom', 'unknown']
 
-@mock.patch('paasng.publish.entrance.exposer.get_live_addresses')
-def test_get_module_exposed_links_live(mocker, module_addrs_data, bk_module):
-    mocker.return_value = ModuleLiveAddrs(module_addrs_data)
-    ret = get_module_exposed_links_live(bk_module)
-    assert ret['stag'] == {'deployed': True, 'url': 'http://foo.example.com/'}
+    def test_get_addresses_with_type(self):
+        addrs = ModuleLiveAddrs(self.module_addrs_data)
+        assert addrs.get_addresses('stag', addr_type='subpath') == [
+            Address("subpath", "http://bar.example.com/bar/"),
+            Address("subpath", "http://bar.example.com/bar-2/", True),
+        ]
 
 
-@mock.patch('paasng.publish.entrance.exposer.get_live_addresses')
-def test_get_exposed_url_live(mocker, module_addrs_data, bk_stag_env, bk_prod_env):
-    mocker.return_value = ModuleLiveAddrs(module_addrs_data)
-    assert get_exposed_url_live(bk_stag_env) is not None
-    assert get_exposed_url_live(bk_prod_env) is None
+def test__get_legacy_url(bk_stag_env):
+    url = _get_legacy_url(bk_stag_env)
+    assert url is not None
+    assert len(url) > 0
+
+
+@pytest.fixture
+def setup_addrs(bk_app):
+    """Set up common mock and configs for testing functions related with addresses"""
+
+    def update_region_hook(config):
+        config['basic_info']['link_engine_app'] = "http://example.com/{region}-legacy-path/"
+
+    with override_region_configs(bk_app.region, update_region_hook), mock.patch(
+        'paasng.publish.entrance.exposer.get_live_addresses'
+    ) as mocker:
+        mocker.return_value = ModuleLiveAddrs(
+            [
+                {"env": "prod", "is_running": False, "addresses": []},
+                {
+                    "env": "stag",
+                    "is_running": True,
+                    "addresses": [
+                        {"type": "subdomain", "url": "http://default-foo.example.com/"},
+                        {"type": "subdomain", "url": "http://foo.example.com/"},
+                        {"type": "subdomain", "url": "http://default-foo.example.org/"},
+                        {"type": "subpath", "url": "http://bar.example.com/bar/"},
+                        {"type": "custom", "url": "http://custom.example.com/"},
+                    ],
+                },
+            ]
+        )
+        yield
+
+
+def test_env_is_deployed(bk_stag_env, bk_prod_env, setup_addrs):
+    # See setup_addrs for details
+    assert env_is_deployed(bk_stag_env) is True
+    assert env_is_deployed(bk_prod_env) is False
+
+
+class TestGetAddresses:
+    @pytest.fixture(autouse=True)
+    def _setup(self, setup_addrs):
+        yield
+
+    def test_not_running(self, bk_prod_env):
+        addrs = get_addresses(bk_prod_env)
+        assert addrs == []
+
+    def test_subpath(self, bk_module, bk_stag_env):
+        bk_module.exposed_url_type = ExposedURLType.SUBPATH
+        bk_module.save()
+
+        addrs = get_addresses(bk_stag_env)
+        assert len(addrs) == 1 and addrs[0].url == 'http://bar.example.com/bar/'
+
+    def test_subdomain(self, bk_module, bk_stag_env):
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
+        bk_module.save()
+
+        addrs = get_addresses(bk_stag_env)
+        assert len(addrs) == 3 and addrs[0].url == 'http://foo.example.com/'
+
+    def test_none(self, bk_app, bk_module, bk_stag_env):
+        bk_module.exposed_url_type = None
+        bk_module.save()
+
+        addrs = get_addresses(bk_stag_env)
+        assert len(addrs) == 1 and addrs[0].url == f'http://example.com/{bk_app.region}-legacy-path/'
+
+
+class TestGetExposedUrl:
+    @pytest.fixture(autouse=True)
+    def _setup(self, setup_addrs):
+        yield
+
+    def test_not_running(self, bk_prod_env):
+        assert get_exposed_url(bk_prod_env) is None
+
+    @pytest.mark.parametrize(
+        "preferred_root, expected",
+        [
+            (None, "http://foo.example.com/"),
+            ("example.org", "http://default-foo.example.org/"),
+            # An invalid preferred root domain should have no effect
+            ("invalid-example.com", "http://foo.example.com/"),
+        ],
+    )
+    def test_preferred_root(self, preferred_root, expected, bk_module, bk_stag_env):
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
+        bk_module.user_preferred_root_domain = preferred_root
+        bk_module.save()
+
+        url = get_exposed_url(bk_stag_env)
+        assert url is not None
+        assert url.provider_type == 'subdomain'
+        assert url.address == expected
+
+
+class TestDefaultEntrance:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        with replace_cluster_service(
+            ingress_config={
+                'app_root_domains': [
+                    {"name": 'bar-1.example.com'},
+                    {"name": 'bar-2.example.org'},
+                ],
+            }
+        ):
+            yield
+
+    def test_single_entrance(setup_addrs, bk_app, bk_module, bk_stag_env):
+        """Test: default module's stag env"""
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
+        bk_module.is_default = True
+        bk_module.save()
+
+        url = get_preallocated_url(bk_stag_env)
+        assert url is not None
+        assert url.address == f'http://stag-dot-{bk_app.code}.bar-1.example.com'
+
+    def test_sub_domain(setup_addrs, bk_app, bk_module, bk_stag_env):
+        """Test: default module's stag env"""
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN
+        bk_module.is_default = True
+        bk_module.save()
+
+        urls = get_preallocated_urls(bk_stag_env)
+        assert [u.address for u in urls] == [
+            f'http://stag-dot-{bk_app.code}.bar-1.example.com',
+            f'http://stag-dot-{bk_app.code}.bar-2.example.org',
+        ]
+
+    def test_get_preallocated_urls_legacy(setup_addrs, bk_app, bk_module, bk_stag_env):
+        """Test: default module's stag env with exposed url type set to None"""
+        bk_module.exposed_url_type = None
+        bk_module.is_default = True
+        bk_module.save()
+
+        def update_region_hook(config):
+            config['basic_info']['link_engine_app'] = "http://example.com/{region}-legacy-path/"
+
+        with override_region_configs(bk_app.region, update_region_hook):
+            urls = get_preallocated_urls(bk_stag_env)
+            assert [u.address for u in urls] == [f'http://example.com/{bk_app.region}-legacy-path/']
+
+
+def test_get_market_address(bk_app):
+    MarketConfig.objects.enable_app(bk_app)
+    addr = get_market_address(bk_app)
+    assert addr is not None
+    assert len(addr) > 0

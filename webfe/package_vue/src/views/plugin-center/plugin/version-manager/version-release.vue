@@ -1017,6 +1017,10 @@
         color: #3A84FF;
     }
 }
+.visible-range-release .app-container {
+    margin-top: 0;
+    padding-top: 0;
+}
 </style>
 <style>
     .visible-range-release .editor .ql-snow .ql-formats {

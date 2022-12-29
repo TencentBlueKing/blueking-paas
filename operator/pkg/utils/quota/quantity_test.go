@@ -19,12 +19,10 @@
 package quota
 
 import (
-	"errors"
-
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 var _ = Describe("TestQuota", func() {
@@ -93,10 +91,10 @@ var _ = Describe("TestQuota", func() {
 	It("exceed limit case", func() {
 		_, err := NewQuantity("6", CPU)
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
-		Expect(err.Error()).To(Equal("exceed limit: exceed cpu max limit 4"))
+		Expect(err.Error()).To(Equal("exceed cpu max limit 4: exceed limit"))
 
 		_, err = NewQuantity("5000Mi", Memory)
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
-		Expect(err.Error()).To(Equal("exceed limit: exceed memory max limit 4Gi"))
+		Expect(err.Error()).To(Equal("exceed memory max limit 4Gi: exceed limit"))
 	})
 })

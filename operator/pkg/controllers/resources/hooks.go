@@ -19,9 +19,9 @@
 package resources
 
 import (
-	"errors"
 	"time"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -106,7 +106,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookSta
 				Labels: map[string]string{
 					paasv1alpha1.BkAppNameKey:    bkapp.GetName(),
 					paasv1alpha1.ResourceTypeKey: "hook",
-					paasv1alpha1.HookTypeKey:     "pre-release",
+					paasv1alpha1.HookTypeKey:     string(paasv1alpha1.HookPreRelease),
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
@@ -125,7 +125,8 @@ func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookSta
 						Env:             GetAppEnvs(bkapp),
 						Name:            "hook",
 						ImagePullPolicy: proc.ImagePullPolicy,
-						Resources:       corev1.ResourceRequirements{},
+						// pre-hook 使用 web 进程的资源配额
+						Resources: buildContainerResources(proc.CPU, proc.Memory),
 						// TODO: 挂载点
 						VolumeMounts: nil,
 					},
@@ -136,8 +137,8 @@ func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookSta
 				// TODO: 亲和性、污点
 				NodeSelector: nil,
 				Tolerations:  nil,
-				// TODO: 镜像拉取凭证
-				ImagePullSecrets: nil,
+				// 镜像拉取凭证
+				ImagePullSecrets: buildImagePullSecrets(bkapp),
 			},
 		},
 		Status: status,

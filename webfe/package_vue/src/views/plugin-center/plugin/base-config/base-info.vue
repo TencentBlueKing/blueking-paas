@@ -180,7 +180,7 @@
               >
                 <bk-input
                   ref="classifyInput"
-                  v-model="marketInfo.category"
+                  :value="marketInfo.category ? marketInfo.category : marketDefault"
                   :readonly="!isFormEdited.classifyInput"
                   ext-cls="paas-info-app-name-cls"
                   :clearable="false"
@@ -200,8 +200,8 @@
               >
                 <bk-input
                   ref="profileInput"
-                  v-model="marketInfo.introduction"
                   v-bk-tooltips.top="marketInfo.introduction"
+                  :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
                   :readonly="!isFormEdited.profileInput"
                   ext-cls="paas-info-app-name-cls"
                   :clearable="false"
@@ -209,7 +209,7 @@
               </bk-form-item>
             </bk-form>
             <bk-form
-              class="info-special-form user-select-wrapper"
+              :class="['info-special-form', 'user-select-wrapper', { 'user-cls': !marketInfo.contactArr.length }]"
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
@@ -220,8 +220,17 @@
                 :class="{ 'mask-layer': !isFormEdited.contactsInput }"
               >
                 <user
+                  v-if="marketInfo.contactArr.length"
                   ref="contactsInput"
                   v-model="marketInfo.contactArr"
+                />
+                <bk-input
+                  v-else
+                  ref="profileInput"
+                  :value="marketDefault"
+                  :readonly="true"
+                  ext-cls="paas-info-app-name-cls"
+                  :clearable="false"
                 />
                 <div
                   v-if="!isFormEdited.contactsInput"
@@ -250,7 +259,7 @@
                   <div :class="['display-description', { 'description-ellipsis': editorLabelHeight }, isUnfold ? 'unfold' : 'up']">
                     <div
                       ref="editorRef"
-                      v-html="marketInfo.description"
+                      v-html="marketInfo.description ? marketInfo.description : marketDefault"
                     />
                   </div>
                   <span
@@ -468,6 +477,7 @@
                 marketInfo: {
                     contactArr: []
                 },
+                marketDefault: '--',
                 resMarketInfo: {},
                 // 市场信息只读
                 isMarketInfo: true,
@@ -1167,6 +1177,7 @@
     .content-box {
         font-size: 12px;
         border: 1px solid #dcdee5;
+        background: #fff;
         padding: 0 5px 30px 25px;
         border-radius: 0 2px 2px 0;
         .unfold {
@@ -1207,6 +1218,9 @@
             width: 100%;
             border: 1px solid #dcdee5;
         }
+    }
+    .user-select-wrapper.user-cls .user-mask-layer {
+        border-bottom: none;
     }
     .plugin-top-title {
         margin-top: 6px;

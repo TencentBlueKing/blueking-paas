@@ -5,7 +5,7 @@
       placeholder="plugin-new-version-loading"
       class="app-container middle"
     >
-      <div class="app-container middle">
+      <div class="new-version">
         <paas-plugin-title />
         <!-- <bk-alert type="info" :show-icon="true">
             <div slot="title">

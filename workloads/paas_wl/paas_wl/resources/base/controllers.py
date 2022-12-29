@@ -208,7 +208,7 @@ class PodScheduleHandler(ResourceHandlerBase):
         time_started = time.time()
         while timeout is None or time.time() - time_started < timeout:
             try:
-                pod_phase, health_status = self._get_pod_status(namespace, pod_name)
+                _, health_status = self._get_pod_status(namespace, pod_name)
             except ResourceMissing as e:
                 raise PodNotSucceededAbsentError(f"Pod<{namespace}/{pod_name}> not found") from e
 

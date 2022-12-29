@@ -622,12 +622,16 @@
                         this.navText = item.text;
                         switch (index) {
                             case 3:
-                              if(!this.userFeature.ALLOW_PLUGIN_CENTER) {
+                              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
                                 this.curSubNav = this.headerStaticInfo.list.subnav_service;
                               }
                               break;
                             case 4:
+                            if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
+                              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+                            } else {
                               this.curSubNav = this.headerStaticInfo.list.subnav_service;
+                            }
                               break;
                             case 5:
                               this.curSubNav = this.headerStaticInfo.list.subnav_doc;
@@ -689,8 +693,8 @@
                 window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + window.location.href;
             },
             async switchLanguage (language) {
-                const data = new URLSearchParams()
-                data.append('language', language)
+                const data = new URLSearchParams();
+                data.append('language', language);
                 this.$http.post(BACKEND_URL + '/i18n/setlang/', data, {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
@@ -705,7 +709,7 @@
                         theme: 'error',
                         message: e.message || e.detail || this.$t('接口异常')
                     });
-                })
+                });
             },
             handlerLogVersion () {
                 this.showLogVersion = true;

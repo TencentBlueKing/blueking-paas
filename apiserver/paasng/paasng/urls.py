@@ -52,6 +52,7 @@ urlpatterns = [
     url(r'^', include('paasng.engine.urls')),
     url(r'^', include('paasng.engine.processes.urls')),
     url(r'^', include('paasng.ci.urls')),
+    url(r'^', include('paasng.cnative.urls')),
     url(r'^', include('paasng.engine.streaming.urls')),
     url(r'^', include('paasng.dev_resources.sourcectl.urls')),
     url(r'^', include('paasng.dev_resources.servicehub.urls')),

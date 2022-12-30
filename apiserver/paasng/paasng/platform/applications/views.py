@@ -55,7 +55,7 @@ from paasng.accounts.permissions.application import application_perm_class, chec
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.accounts.serializers import VerificationCodeSLZ
-from paasng.cnative import initialize_simple
+from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.controller.cluster import get_region_cluster_helper

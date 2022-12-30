@@ -263,6 +263,9 @@ def update_app_resource(app: Application, payload: Dict):
     :raise: `ValidationError` when payload is invalid
     :raise: `ValueError` if model resource has not been initialized for given application
     """
+    # force replace metadata.name with app_code to avoid user modify
+    payload['metadata']['name'] = app.code
+
     try:
         obj = BkAppResource(**payload)
     except PDValidationError as e:

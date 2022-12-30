@@ -24,7 +24,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.display_blocks import ServicesInfo
+from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 from .constants import BKPAAS_ADDONS_ANNO_KEY
@@ -38,10 +38,7 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
     def retrieve(self, request, code, module_name, environment):
         """提供应用扩展信息，主要来源为平台扩展功能，如增强服务配置等"""
         engine_app = self.get_engine_app_via_path()
-        service_info = ServicesInfo.get_detail(engine_app)['services_info']
-        manifest_ext = {
-            "metadata": {
-                "annotations": {BKPAAS_ADDONS_ANNO_KEY: json.dumps([addons["name"] for addons in service_info])}
-            }
-        }
+        # 只要绑定即可用于展示，不关心是否已经分配实例
+        service_names = [svc.name for svc in mixed_service_mgr.list_binded(engine_app.env.module)]
+        manifest_ext = {"metadata": {"annotations": {BKPAAS_ADDONS_ANNO_KEY: json.dumps(service_names)}}}
         return Response(data=manifest_ext)

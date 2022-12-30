@@ -38,6 +38,9 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.pluginscenter import constants
 from paasng.pluginscenter import log as log_api
 from paasng.pluginscenter import openapi_docs, serializers, shim
+from paasng.pluginscenter.bk_devops.client import BkDevopsClient
+from paasng.pluginscenter.bk_devops.exceptions import BkDevopsApiError, BkDevopsGatewayServiceError
+from paasng.pluginscenter.bk_devops.utils import get_devops_project_id
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
@@ -306,6 +309,24 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         """获取插件支持的功能特性"""
         plugin = self.get_plugin_instance()
         return Response(data=PluginFeatureFlagsManager(plugin).list_all_features())
+
+    @swagger_auto_schema(responses={200: serializers.MetricsSummarySLZ})
+    def get_repo_overview(self, request, pd_id, plugin_id):
+        """插件代码仓库的概览信息"""
+        plugin = self.get_plugin_instance()
+
+        # 获取代码仓库对应的蓝盾项目 ID
+        repo_accessor = get_plugin_repo_accessor(plugin)
+        project_id = repo_accessor.get_project_id()
+        devops_project_id = get_devops_project_id(project_id)
+
+        client = BkDevopsClient(request.user.username)
+        try:
+            summary = client.get_metrics_summary(devops_project_id)
+        except (BkDevopsApiError, BkDevopsGatewayServiceError):
+            raise error_codes.QUERY_REPO_OVERVIEW_DATA_ERROR
+
+        return Response(data=serializers.MetricsSummarySLZ(summary).data)
 
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):

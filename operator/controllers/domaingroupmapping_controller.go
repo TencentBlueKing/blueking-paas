@@ -84,7 +84,7 @@ func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.R
 	err := r.client.Get(ctx, req.NamespacedName, dgmapping)
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to fetch DomainGroupMapping %v", req.NamespacedName))
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Handle deletion and finalizer related logics:
@@ -93,7 +93,7 @@ func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.R
 		if !controllerutil.ContainsFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName) {
 			controllerutil.AddFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName)
 			if err = r.client.Update(ctx, dgmapping); err != nil {
-				return reconcile.Result{}, err
+				return ctrl.Result{}, err
 			}
 		}
 	} else {

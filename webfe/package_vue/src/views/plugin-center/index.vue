@@ -2,7 +2,7 @@
   <div class="bk-plugin-wrapper mt30 right-main-plugin">
     <paas-content-loader
       :is-loading="loading"
-      :placeholder="loaderPlaceholder"
+      placeholder="pluin-list-loading"
       offset-top="20"
       class="wrap"
       :height="575"
@@ -45,11 +45,11 @@
             scene="part"
           />
           <div class="empty-tips">
-            可以尝试调整关键词 或
+            {{ $t('可以尝试调整关键词 或') }}
             <span
               class="clear-search"
               @click="clearFilterKey"
-            >清空搜索条件</span>
+            >{{ $t('清空搜索条件') }}</span>
           </div>
         </div>
         <bk-table-column :label="$t('插件标识')">
@@ -177,7 +177,7 @@
     <bk-dialog
       v-model="removePluginDialog.visiable"
       width="420"
-      title="确定删除插件"
+      :title="$t('确定删除插件')"
       :theme="'primary'"
       :mask-close="false"
       :loading="removePluginDialog.isLoading"
@@ -266,6 +266,7 @@
                     const pageParams = {
                         limit: this.pagination.limit,
                         offset: this.pagination.limit * (curPage - 1),
+                        order_by: 'id',
                         search_term: this.filterKey
                     };
                     let statusParams = '';
@@ -394,7 +395,6 @@
                 if (filters.pd_name) {
                     this.filterPdName = filters.pd_name.length ? filters.pd_name : [];
                 }
-                console.log('filters', filters);
             },
 
             handleSearch () {
@@ -551,7 +551,7 @@
     }
     .empty-tips {
         margin-top: 5px;
-        color: #96aeac;
+        color: #979BA5;
         .clear-search {
             cursor: pointer;
             color: #3a84ff;

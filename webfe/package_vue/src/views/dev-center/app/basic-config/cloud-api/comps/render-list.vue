@@ -101,6 +101,20 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <bk-exception
+              class="exception-wrap-item exception-part"
+              type="search-empty"
+              scene="part"
+            />
+            <div class="empty-tips">
+              {{ $t('可以尝试调整关键词 或') }}
+              <span
+                class="clear-search"
+                @click="clearFilterKey"
+              >{{ $t('清空搜索条件') }}</span>
+            </div>
+          </div>
           <bk-table-column
             label="id"
             :render-header="renderHeader"
@@ -879,6 +893,10 @@
 
             toggleChoose () {
                 this.ifopen = !this.ifopen;
+            },
+
+            clearFilterKey () {
+                this.searchValue = '';
             }
         }
     };
@@ -972,11 +990,26 @@
     .shaixuan {
         line-height: 32px;
     }
+
+    .empty-tips {
+        margin-top: 5px;
+        color: #979BA5;
+        .clear-search {
+            cursor: pointer;
+            color: #3a84ff;
+        }
+    }
 </style>
 
 <style>
     marked {
         background: yellow;
         color: black;
+    }
+    .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
+        height: 130px;
+    }
+    .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
+        color: #3a84ff !important;
     }
 </style>

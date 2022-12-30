@@ -345,5 +345,10 @@ def construct_foo_pod(name: str, labels: Dict = {}) -> Dict:
         'apiVersion': 'v1',
         'kind': 'Pod',
         'metadata': {'name': name, 'labels': labels},
-        'spec': {'containers': [{'name': "main", 'image': "busybox"}]},
+        'spec': {
+            # Set "schedulerName", so the pod won't be processed by the default
+            # scheduler.
+            'schedulerName': 'no-running-scheduler',
+            'containers': [{'name': "main", 'image': "busybox"}],
+        },
     }

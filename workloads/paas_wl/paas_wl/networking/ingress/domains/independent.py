@@ -75,7 +75,7 @@ class ReplaceAppDomainService:
     @transaction.atomic
     def replace_with(self, host: str, path_prefix, https_enabled: bool):
         """Replace current AppDomain object"""
-        # Save a copy of old data to perfor deletion later
+        # Save a copy of old data to perform deletion later
         old_copy_obj = copy.deepcopy(self.domain_obj)
         # Try modify the database object first
 
@@ -103,28 +103,6 @@ class ReplaceAppDomainService:
         except Exception:
             logger.exception("replace ingress failed")
             raise ReplaceAppDomainFailed("未知错误，请稍后重试")
-
-
-class DomainResourceCreateService:
-    """Create custom domain related resources, such as Kubernetes Ingress resource and AppDomain
-    records(the data which prevent duplicated domains in one cluster)
-    """
-
-    def __init__(self, env: ModuleEnv):
-        self.engine_app = EngineApp.objects.get_by_env(env)
-        self.env = env
-
-    def do(self, *, host: str, path_prefix: str, https_enabled: bool):
-        """Create a custom domain"""
-        service_name = get_service_name(self.engine_app)
-        domain_ins, _ = Domain.objects.update_or_create(
-            name=host,
-            path_prefix=path_prefix,
-            module_id=self.env.module_id,
-            environment_id=self.env.id,
-            defaults={"https_enabled": https_enabled},
-        )
-        CustomDomainIngressMgr(domain_ins).sync(default_service_name=service_name)
 
 
 class DomainResourceDeleteService:

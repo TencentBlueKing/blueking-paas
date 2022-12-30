@@ -102,7 +102,7 @@
         <div
           ref="tableBox"
           v-bkloading="{ isLoading: isLogListLoading }"
-          class="table-wrapper"
+          class="plugin-table-wrapper"
         >
           <table
             id="log-table"
@@ -1310,8 +1310,9 @@
         margin-bottom: 10px;
         border-radius: 2px;
     }
-    .table-wrapper {
-        width: auto;
+    .plugin-table-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
     }
     .tooltip-icon {
         cursor: pointer;

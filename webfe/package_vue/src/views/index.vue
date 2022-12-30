@@ -185,7 +185,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-right: 6px;"
+                      style="margin-right: 6px; height:38px"
                       @click="toDeploy(recordItem)"
                     >
                       {{ $t('部署') }}
@@ -193,7 +193,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-right: 10px;"
+                      style="margin-right: 10px;height: 38px"
                       @click="toViewLog(recordItem)"
                     >
                       {{ $t('查看日志') }}

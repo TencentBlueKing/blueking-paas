@@ -109,7 +109,7 @@ export const PLATFORM_CONFIG = {
         APIGW_INDEX: BK_APIGW_URL,
 
         // 问题反馈
-        PA_ISSUE: '',
+        PA_ISSUE: 'https://bk.tencent.com/s-mart/community/question',
 
         // 加入圈子
         PA_MARKER: '',
@@ -124,7 +124,13 @@ export const PLATFORM_CONFIG = {
         BK_PLUGIN: '',
 
         //BKtemplate
-        BK_PLUGIN_TEMPLATE: ''
+        BK_PLUGIN_TEMPLATE: '',
+
+        // 产品文档
+        BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',
+
+        // 开源社区
+        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas'
     },
 
     // 文档
@@ -311,11 +317,6 @@ export const PAAS_STATIC_CONFIG = {
                             "explain": staticI18n.$t("蓝鲸代码托管服务")
                         },
                         {
-                            "text": "MagicBox",
-                            "url": "magicbox",
-                            "explain": staticI18n.$t("蓝鲸前端组件样例库")
-                        },
-                        {
                             "text": staticI18n.$t("API 网关"),
                             "url": "apigateway",
                             "explain": staticI18n.$t("蓝鲸API网关服务")
@@ -324,6 +325,11 @@ export const PAAS_STATIC_CONFIG = {
                             "text": staticI18n.$t("开发框架"),
                             "url": "framework",
                             "explain": staticI18n.$t("蓝鲸应用统一开发框架，集成基础功能模块及功能样例")
+                        },
+                        {
+                            "text": staticI18n.$t("前端组件库"),
+                            "url": "magicbox",
+                            "explain": staticI18n.$t("蓝鲸前端组件样例库")
                         },
                         {
                             "text": staticI18n.$t("可视化开发"),
@@ -922,12 +928,6 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     },
                     {
-                        "name": "MagicBox",
-                        "destRoute": {
-                            "name": "serviceMagicBox"
-                        }
-                    },
-                    {
                         "name": staticI18n.$t("API 网关"),
                         "destRoute": {
                             "name": "serviceAPIGateway"
@@ -937,6 +937,12 @@ export const PAAS_STATIC_CONFIG = {
                         "name": staticI18n.$t("开发框架"),
                         "destRoute": {
                             "name": "serviceFramework"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("前端组件库"),
+                        "destRoute": {
+                            "name": "serviceMagicBox"
                         }
                     },
                     {

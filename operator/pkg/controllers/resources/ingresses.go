@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -19,10 +19,10 @@
 package resources
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,7 +143,7 @@ func NewIngressBuilder(
 	case DomainCustom:
 		return CustomIngressBuilder{bkapp: bkapp}, nil
 	default:
-		return nil, fmt.Errorf("%v: %w", sourceType, ErrDomainGroupSourceType)
+		return nil, errors.Wrap(ErrDomainGroupSourceType, string(sourceType))
 	}
 }
 

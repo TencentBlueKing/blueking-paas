@@ -58,7 +58,7 @@ class ProcDefaultServices:
         """Create or patch service / (ingress) resources"""
         service = build_process_service(self.app, self.process.type)
         try:
-            service = service_kmodel.get(service.app, service.name)
+            service = service_kmodel.get(self.app, service.name)
         except AppEntityNotFound:
             service_kmodel.create(service)
         else:

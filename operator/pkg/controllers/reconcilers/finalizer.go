@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -20,8 +20,8 @@ package reconcilers
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +32,14 @@ import (
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 )
 
+// NewBkappFinalizer will return a BkappFinalizer with given k8s client
+func NewBkappFinalizer(client client.Client) *BkappFinalizer {
+	return &BkappFinalizer{Client: client}
+}
+
 // BkappFinalizer 负责处理 finalize 相关的调和逻辑
 type BkappFinalizer struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -50,7 +55,7 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 	// our finalizer is present, so lets handle any external dependency
 	finished, err := r.hooksFinished(ctx, bkapp)
 	if err != nil {
-		return r.Result.withError(fmt.Errorf("failed to check hook status: %w", err))
+		return r.Result.withError(errors.Wrap(err, "failed to check hook status"))
 	}
 	if !finished {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
@@ -60,21 +65,21 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 			Message:            "Deletion request was issued, but hooks are not finished.",
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
-		if err = r.Status().Update(ctx, bkapp); err != nil {
-			return r.Result.withError(fmt.Errorf("failed to update condition status: %w", err))
+		if err = r.Client.Status().Update(ctx, bkapp); err != nil {
+			return r.Result.withError(errors.Wrap(err, "failed to update condition status"))
 		}
 		return r.Result.requeue(v1alpha1.DefaultRequeueAfter)
 	}
 	if err = r.deleteResources(ctx, bkapp); err != nil {
 		// if fail to delete the external dependency here, return with error
 		// so that it can be retried
-		return r.Result.withError(fmt.Errorf("failed to delete external resources: %w", err))
+		return r.Result.withError(errors.Wrap(err, "failed to delete external resources"))
 	}
 
 	// remove our finalizer from the finalizers list and update it.
 	controllerutil.RemoveFinalizer(bkapp, v1alpha1.BkAppFinalizerName)
-	if err = r.Update(ctx, bkapp); err != nil {
-		return r.Result.withError(fmt.Errorf("failed to remove finilizer for app: %w", err))
+	if err = r.Client.Update(ctx, bkapp); err != nil {
+		return r.Result.withError(errors.Wrap(err, "failed to remove finalizer for app"))
 	}
 	return r.Result.End()
 }
@@ -82,7 +87,8 @@ func (r *BkappFinalizer) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 // 检查是否所有 Hooks 都执行完毕
 func (r *BkappFinalizer) hooksFinished(ctx context.Context, bkapp *v1alpha1.BkApp) (bool, error) {
 	pods := &corev1.PodList{}
-	err := r.List(ctx, pods,
+	err := r.Client.List(
+		ctx, pods,
 		client.InNamespace(bkapp.Namespace),
 		client.MatchingLabels{
 			v1alpha1.BkAppNameKey:    bkapp.GetName(),
@@ -105,10 +111,10 @@ func (r *BkappFinalizer) hooksFinished(ctx context.Context, bkapp *v1alpha1.BkAp
 func (r *BkappFinalizer) deleteResources(ctx context.Context, bkapp *v1alpha1.BkApp) error {
 	var err error
 	if err = r.deleteHookPods(ctx, bkapp); err != nil {
-		return fmt.Errorf("failed to delete hook pods: %w", err)
+		return errors.Wrap(err, "failed to delete hook pods")
 	}
 	if err = r.deleteServices(ctx, bkapp); err != nil {
-		return fmt.Errorf("failed to delete services: %w", err)
+		return errors.Wrap(err, "failed to delete services")
 	}
 	return nil
 }
@@ -123,29 +129,26 @@ func (r *BkappFinalizer) deleteHookPods(ctx context.Context, bkapp *v1alpha1.BkA
 		},
 		client.GracePeriodSeconds(5),
 	}
-	return r.DeleteAllOf(ctx, &corev1.Pod{}, opts...)
+	return r.Client.DeleteAllOf(ctx, &corev1.Pod{}, opts...)
 }
 
 func (r *BkappFinalizer) deleteServices(ctx context.Context, bkapp *v1alpha1.BkApp) error {
 	// Delete individually instead of deleteCollection
 	// issue: https://github.com/kubernetes/kubernetes/issues/68468
 	svcList := corev1.ServiceList{}
-	err := r.List(
+	err := r.Client.List(
 		ctx,
 		&svcList,
 		client.InNamespace(bkapp.GetNamespace()),
 		client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to query ServiceList: %w", err)
+		return errors.Wrap(err, "failed to query ServiceList")
 	}
 	for _, svc := range svcList.Items {
-		if err = r.Delete(ctx, &svc); err != nil {
-			return fmt.Errorf(
-				"failed to delete Service(%s/%s) when finalizing the BkApp: %w",
-				svc.GetNamespace(),
-				svc.GetName(),
-				err,
+		if err = r.Client.Delete(ctx, &svc); err != nil {
+			return errors.Wrapf(
+				err, "failed to delete Service(%s/%s) when finalizing the BkApp", svc.GetNamespace(), svc.GetName(),
 			)
 		}
 	}

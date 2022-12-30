@@ -1,199 +1,404 @@
 <template>
-    <div :class="[&quot;ps-header&quot;,&quot;clearfix&quot;,{ &quot;bk-header-static&quot;: is_static }]">
-        <div class="ps-header-visible clearfix">
-            <router-link :to="{ name: 'index' }" class="ps-logo">
-                <h1>
-                    <img v-if="localLanguage === 'zh-cn'" src="/static/images/logo.png" alt="" />
-                    <img v-else style="height: 28px" src="/static/images/logo_env3.png" alt="" />
-                </h1>
-            </router-link>
-            <ul class="ps-nav">
+  <div :class="['ps-header','clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]">
+    <div class="ps-header-visible clearfix">
+      <router-link
+        :to="{ name: 'index' }"
+        class="ps-logo"
+      >
+        <span class="logo-warp">
+          <img
+            src="/static/images/logo.svg"
+            alt=""
+          >
+          <span class="logo-text">{{ $t('蓝鲸开发者中心') }}</span>
+        </span>
+      </router-link>
+      <ul class="ps-nav">
+        <li
+          v-for="(item,index) in headerStaticInfo.list.nav"
+          :key="index"
+          :class="{ 'active': curpage === index }"
+          @mouseover.stop.prevent="showSubNav(index, item)"
+          @mouseout.stop.prevent="hideSubNav"
+        >
+          <router-link
+            v-if="index === 0"
+            :to="{ name: 'index' }"
+          >
+            {{ item.text }}
+          </router-link>
+          <router-link
+            v-else-if="index === 1"
+            :class="{ 'has-angle': index !== 1 }"
+            :to="{ name: 'myApplications' }"
+          >
+            {{ item.text }}
+          </router-link>
+          <router-link
+            v-else-if="(index === 2 && userFeature.ALLOW_PLUGIN_CENTER)"
+            :to="{ name: 'plugin' }"
+          >
+            {{ item.text }}
+          </router-link>
+          <a
+            v-else-if="(item.text === $t('云 API'))"
+            :href="link"
+            target="_blank"
+          >
+            {{ item.text }}
+          </a>
+          <a
+            v-else
+            :class="{ 'has-angle': index !== 0 }"
+            href="javascript:;"
+          >
+            {{ item.text }}<i
+              v-show="index !== 0"
+              class="paasng-icon paasng-angle-down"
+            />
+          </a>
+          <!-- <span
+            v-if="isShowInput"
+            class="line"
+          /> -->
+        </li>
+      </ul>
+      <!-- 右侧 -->
+      <ul
+        v-if="userInitialized && !user.isAuthenticated"
+        class="ps-head-right"
+      >
+        <li>
+          <div class="ps-search clearfix">
+            <input
+              type="text"
+              placeholder=""
+            >
+            <input type="button">
+          </div>
+        </li>
+        <li>
+          <a
+            class="notice-button"
+            href="javascript:"
+          />
+        </li>
+        <li>
+          <a
+            class="login-button"
+            href="javascript:"
+            @click="open_login_dialog()"
+          > {{ $t('登录') }} </a>
+        </li>
+      </ul>
+      <ul
+        v-if="userInitialized && user.isAuthenticated"
+        class="ps-head-right"
+      >
+        <template v-if="GLOBAL.APP_VERSION === 'te'">
+          <li class="mr20">
+            <dropdown
+              ref="dropdown"
+              :options="{
+                position: 'bottom right',
+                classes: 'ps-header-dropdown',
+                tetherOptions: {
+                  targetOffset: '0px 40px'
+                }, beforeClose
+              }"
+            >
+              <div
+                slot="trigger"
+                class="ps-search clearfix"
+              >
+                <input
+                  v-if="isShowInput"
+                  v-model="filterKey"
+                  type="text"
+                  :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
+                  @keydown.down.prevent="emitChildKeyDown"
+                  @keydown.up.prevent="emitChildKeyUp"
+                  @keypress.enter="enterCallBack($event)"
+                  @compositionstart="handleCompositionstart"
+                  @compositionend="handleCompositionend"
+                >
+                <div class="ps-search-icon">
+                  <span
+                    v-if="filterKey === ''"
+                    class="paasng-icon paasng-search"
+                  />
+                  <span
+                    v-else
+                    class="paasng-icon paasng-close close-cursor"
+                    @click="clearInputValue"
+                  />
+                </div>
+              </div>
+              <!-- 先不显示搜索蓝鲸应用的功能，需要前端：1）添加dropdwon插件，即鼠标点击其它位置时关闭下来框内容；2）下来框样式调整 -->
+              <div
+                slot="content"
+                class="header-search-result"
+              >
+                <div
+                  v-if="filterKey !== ''"
+                  class="paas-search-trigger"
+                  @click.stop="handleToSearchPage"
+                >
+                  <span> {{ $t('查看更多结果') }} </span>
+                </div>
+                <div
+                  v-for="(searchComponent, index) of searchComponentList"
+                  v-show="filterKey"
+                  :key="index"
+                >
+                  <h3>{{ searchComponent.title }}</h3>
+                  <component
+                    :is="searchComponent.component"
+                    ref="searchPanelList"
+                    :theme="'ps-header-search'"
+                    :max="searchComponent.max"
+                    :filter-key="filterKey"
+                    :params="searchComponent.params"
+                    @selectAppCallback="selectAppCallback"
+                    @key-up-overflow="onKeyUp(), emitChildKeyUp()"
+                    @key-down-overflow="onKeyDown(), emitChildKeyDown()"
+                  />
+                </div>
+              </div>
+            </dropdown>
+          </li>
+          <li
+            v-bk-tooltips.bottom="{ content: $t('我的告警'), distance: 20 }"
+            class="ps-head-last my-alarm"
+          >
+            <a
+              class="link-text"
+              href="javascript:"
+              @click="handleToMonitor"
+            >
+              <i class="paasng-icon paasng-monitor-fill monitor-icon" />
+            </a>
+          </li>
+          <!-- 语言切换 -->
+          <bk-popover
+            theme="light navigation-message"
+            ext-cls="top-bar-popover"
+            placement="bottom"
+            :arrow="false"
+            offset="0, 10"
+            trigger="mouseenter"
+            :tippy-options="{ 'hideOnClick': false }"
+          >
+            <div class="header-mind is-left header-mind-cls">
+              <span :class="`bk-icon icon-${curLangIcon} lang-icon nav-lang-icon`" />
+            </div>
+            <template slot="content">
+              <ul class="monitor-navigation-admin">
                 <li
-                    :class="{ 'active': curpage === index }"
-                    v-for="(item,index) in headerStaticInfo.list.nav"
-                    :key="index"
-                    @mouseover.stop.prevent="showSubNav(index)"
-                    @mouseout.stop.prevent="hideSubNav">
-                    <router-link :to="{ name: 'index' }" v-if="index === 0">
-                        {{item.text}}
-                    </router-link>
-                    <router-link :class="{ 'has-angle': index !== 1 }" :to="{ name: 'myApplications' }" v-else-if="index === 1">
-                        {{item.text}}<i class="paasng-icon paasng-angle-down" v-show="index !== 1"></i>
-                    </router-link>
-                    <a :class="{ 'has-angle': index !== 0 }" v-else href="javascript:;">
-                        {{item.text}}<i class="paasng-icon paasng-angle-down" v-show="index !== 0"></i>
-                    </a>
-                    <span class="line" v-if="isShowInput"></span>
+                  class="nav-item"
+                  @click="switchLanguage('zh-cn')"
+                >
+                  <i class="bk-icon icon-chinese lang-icon" />{{ $t('中文') }}
                 </li>
+                <li
+                  class="nav-item"
+                  @click="switchLanguage('en')"
+                >
+                  <i class="bk-icon icon-english lang-icon" />{{ $t('英文') }}
+                </li>
+              </ul>
+            </template>
+          </bk-popover>
+          <bk-popover
+            theme="light navigation-message"
+            ext-cls="top-bar-popover"
+            :arrow="false"
+            offset="-20, 10"
+            placement="bottom-start"
+            :tippy-options="{ 'hideOnClick': false }"
+          >
+            <div class="header-help is-left">
+              <svg
+                class="bk-icon"
+                style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;"
+                viewBox="0 0 64 64"
+                version="1.1"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M32,4C16.5,4,4,16.5,4,32c0,3.6,0.7,7.1,2,10.4V56c0,1.1,0.9,2,2,2h13.6C36,63.7,52.3,56.8,58,42.4S56.8,11.7,42.4,6C39.1,4.7,35.6,4,32,4z M31.3,45.1c-1.7,0-3-1.3-3-3s1.3-3,3-3c1.7,0,3,1.3,3,3S33,45.1,31.3,45.1z M36.7,31.7c-2.3,1.3-3,2.2-3,3.9v0.9H29v-1c-0.2-2.8,0.7-4.4,3.2-5.8c2.3-1.4,3-2.2,3-3.8s-1.3-2.8-3.3-2.8c-1.8-0.1-3.3,1.2-3.5,3c0,0.1,0,0.1,0,0.2h-4.8c0.1-4.4,3.1-7.4,8.5-7.4c5,0,8.3,2.8,8.3,6.9C40.5,28.4,39.2,30.3,36.7,31.7z" />
+              </svg>
+            </div>
+            <template slot="content">
+              <ul class="monitor-navigation-admin">
+                <li class="nav-item">
+                  <a
+                    :href="GLOBAL.LINK.BK_APP_DOC"
+                    target="_blank"
+                  > {{ $t('产品文档') }} </a>
+                </li>
+                <li
+                  v-if="GLOBAL.APP_VERSION === 'ee'"
+                  class="nav-item"
+                >
+                  <a
+                    href="javascript:"
+                    @click="handlerLogVersion"
+                  > {{ $t('版本日志') }} </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    :href="GLOBAL.LINK.PA_ISSUE"
+                    target="_blank"
+                  > {{ $t('问题反馈') }} </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    :href="GLOBAL.LINK.BK_OPEN_COMMUNITY"
+                    target="_blank"
+                  > {{ $t('开源社区') }} </a>
+                </li>
+              </ul>
+            </template>
+          </bk-popover>
+        </template>
+        <!-- 退出登录 -->
+        <bk-popover
+          theme="light navigation-message"
+          ext-cls="top-bar-popover"
+          :arrow="false"
+          offset="30, 18"
+          placement="bottom-start"
+          :tippy-options="{ 'hideOnClick': false }"
+        >
+          <div class="header-user is-left ps-head-last">
+            <!-- 头像 -->
+            <!-- <img
+                :src="avatars"
+                width="36px"
+              > -->
+            {{ user.chineseName || user.username }}
+            <i class="bk-icon icon-down-shape" />
+          </div>
+          <template slot="content">
+            <ul class="monitor-navigation-admin">
+              <li class="nav-item">
+                <a
+                  id="logOut"
+                  href="javascript:"
+                  target="_blank"
+                  @click="logout"
+                > {{ $t('退出登录') }} </a>
+              </li>
             </ul>
-            <!-- 右侧 -->
-            <ul class="ps-head-right" v-if="userInitialized && !user.isAuthenticated">
-                <li>
-                    <div class="ps-search clearfix">
-                        <input type="text" placeholder="" />
-                        <input type="button" />
-                    </div>
-                </li>
-                <li>
-                    <a class="notice-button" href="javascript:">
-                    </a>
-                </li>
-                <li>
-                    <a class="login-button" href="javascript:" @click="open_login_dialog()"> {{ $t('登录') }} </a>
-                </li>
-            </ul>
-            <ul class="ps-head-right" v-if="userInitialized && user.isAuthenticated">
-                <template v-if="GLOBAL.APP_VERSION === 'te'">
-                    <li class="switch-language" v-if="false" @click="switchLanguage">
-                        <!-- <i class="paasng-icon paasng-plus"></i> -->
-                        <img class="translate-icon" src="/static/images/translate-icon.svg" alt="">
-                        <span class="translate-icon-font">{{ $t('切换语言') }}</span>
-                    </li>
-                    <li class="mr20">
-                        <dropdown ref="dropdown" :options="{
-                            position: 'bottom right',
-                            classes: 'ps-header-dropdown',
-                            tetherOptions: {
-                                targetOffset: '0px 40px'
-                            }, beforeClose
-                        }">
-                            <div class="ps-search clearfix" slot="trigger">
-                                <input
-                                    type="text"
-                                    :placeholder="`${$t('输入')} &quot;FAQ&quot; ${$t('看看')}`"
-                                    v-model="filterKey"
-                                    v-if="isShowInput"
-                                    @keydown.down.prevent="emitChildKeyDown"
-                                    @keydown.up.prevent="emitChildKeyUp"
-                                    @keypress.enter="enterCallBack($event)"
-                                    @compositionstart="handleCompositionstart"
-                                    @compositionend="handleCompositionend" />
-                                <div class="ps-search-icon">
-                                    <span class="paasng-icon paasng-search" v-if="filterKey === ''"></span>
-                                    <span v-else class="paasng-icon paasng-close close-cursor" @click="clearInputValue"></span>
-                                </div>
-                            </div>
-                            <!-- 先不显示搜索蓝鲸应用的功能，需要前端：1）添加dropdwon插件，即鼠标点击其它位置时关闭下来框内容；2）下来框样式调整 -->
-                            <div class="header-search-result" slot="content">
-                                <div class="paas-search-trigger" @click.stop="handleToSearchPage" v-if="filterKey !== ''">
-                                    <span> {{ $t('查看更多结果') }} </span>
-                                </div>
-                                <div
-                                    v-for="(searchComponent, index) of searchComponentList"
-                                    v-show="filterKey"
-                                    :key="index">
-                                    <h3>{{ searchComponent.title }}</h3>
-                                    <component
-                                        ref="searchPanelList"
-                                        :is="searchComponent.component"
-                                        :theme="'ps-header-search'"
-                                        :max="searchComponent.max"
-                                        :filterKey="filterKey"
-                                        :params="searchComponent.params"
-                                        @selectAppCallback="selectAppCallback"
-                                        @key-up-overflow="onKeyUp(), emitChildKeyUp()"
-                                        @key-down-overflow="onKeyDown(), emitChildKeyDown()" />
-                                </div>
-                            </div>
-                        </dropdown>
-                    </li>
-                    <li class="ps-head-last">
-                        <a class="link-text" href="javascript:" v-bk-tooltips.bottom="$t('我的告警')" @click="handleToMonitor">
-                            <i class="paasng-icon paasng-monitor-fill monitor-icon"></i>
-                        </a>
-                    </li>
-                    <li class="ps-head-last">
-                        <a class="link-text" href="javascript:">
-                            <i class="paasng-icon paasng-help"></i>
-                        </a>
-                        <div class="contact">
-                            <ul>
-                                <li v-if="GLOBAL.HELPER.name && GLOBAL.HELPER.href">
-                                    <a :href="GLOBAL.HELPER.href">{{GLOBAL.HELPER.name}}</a>
-                                </li>
-                                <li>
-                                    <a :href="GLOBAL.LINK.PA_ISSUE" target="_blank"> {{ $t('问题反馈') }} </a>
-                                </li>
-                                <li>
-                                    <a :href="GLOBAL.LINK.PA_MARKER" target="_blank"> {{ $t('加入圈子') }} </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                </template>
-                <li class="ps-head-last">
-                    <a class="link-text pr20" href="javascript:">
-                        {{user.username}}<i class="paasng-icon paasng-down-shape"></i>
-                    </a>
-                    <div :class="['user',{ 'info-show': userInfoShow }]">
-                        <div class="user-yourname">
-                            <img :src="avatars" width="36px">
-                            <span class="fright">{{ user.chineseName || user.username }}</span>
-                        </div>
-                        <div class="user-opation">
-                            <p><a href="javascript:" target="_blank" @click="logout" id="logOut"> {{ $t('退出') }} </a></p>
-                        </div>
-                    </div>
-                </li>
-            </ul>
-        </div>
-        <div :class="[&quot;ps-header-invisible&quot;,&quot;invisible1&quot;,&quot;clearfix&quot;,{ &quot;hoverStatus&quot;: navIndex === 2, &quot;hoverStatus2&quot;: navIndex === 3, &quot;hoverStatus3&quot;: navIndex === 4 }]" @mouseover.stop.prevent="showSubNav(navIndex)" @mouseout.stop.prevent="hideSubNav">
-            <dl v-for="colitem in curSubNav">
-                <template v-if="colitem.hasOwnProperty('title')">
-                    <dt>{{colitem.title}}</dt>
-                    <!-- 给有三级导航的dd添加sub-native类 -->
-                    <dd class="sub-native" v-for="sitem in colitem.items">
-                        <a href="javascript:;" v-if="sitem.navs">
-                            {{sitem.text}}
-                            <i class="paasng-icon paasng-angle-right" v-if="sitem.navs"></i>
-                        </a>
-                        <template v-else>
-                            <a :href="sitem.url" target="_blank" v-if="sitem.url.startsWith('http')">
-                                {{sitem.text}}
-                            </a>
-                            <a href="javascript:;" v-else @click="goRouter(sitem)">{{sitem.text}}
-                            </a>
-                        </template>
-                        <dl v-if="sitem.navs">
-                            <dd v-for="minItem in sitem.navs">
-                                <a :href="minItem.url" target="_blank">
-                                    {{minItem.text}}
-                                    <span class="white">{{minItem.eName}}</span>
-                                </a>
-                            </dd>
-                        </dl>
-                    </dd>
-                </template>
-
-                <template v-else v-for="subColitem in colitem.items">
-                    <dt>{{subColitem.title}}</dt>
-                    <!-- 给有三级导航的dd添加sub-native类 -->
-                    <dd class="sub-native" v-for="sitem in subColitem.items">
-                        <a href="javascript:;" v-if="sitem.navs">
-                            {{sitem.text}}
-                            <i class="paasng-icon paasng-angle-right" v-if="sitem.navs"></i>
-                        </a>
-                        <template v-else>
-                            <a :href="sitem.url" target="_blank" v-if="sitem.url.startsWith('http')">
-                                {{sitem.text}}
-                            </a>
-                            <a href="javascript:;" v-else @click="goRouter(sitem)">{{sitem.text}}
-                            </a>
-                        </template>
-                        <dl v-if="sitem.navs">
-                            <dd v-for="minItem in sitem.navs">
-                                <a :href="minItem.url" target="_blank">
-                                    {{minItem.text}}
-                                    <span class="white">{{minItem.eName}}</span>
-                                </a>
-                            </dd>
-                        </dl>
-                    </dd>
-                </template>
-                <dd class="last"></dd>
-            </dl>
-        </div>
+          </template>
+        </bk-popover>
+      </ul>
     </div>
+    <div
+      :class="['ps-header-invisible','invisible1','clearfix',{ 'hoverStatus2': navText === $t('服务'), 'hoverStatus3': navText === $t('文档与支持') }]"
+      @mouseover.stop.prevent="showSubNav(navIndex)"
+      @mouseout.stop.prevent="hideSubNav"
+    >
+      <dl v-for="colitem in curSubNav">
+        <template v-if="colitem.hasOwnProperty('title')">
+          <dt>{{ colitem.title }}</dt>
+          <!-- 给有三级导航的dd添加sub-native类 -->
+          <dd
+            v-for="sitem in colitem.items"
+            class="sub-native"
+          >
+            <a
+              v-if="sitem.navs"
+              href="javascript:;"
+            >
+              {{ sitem.text }}
+              <i
+                v-if="sitem.navs"
+                class="paasng-icon paasng-angle-right"
+              />
+            </a>
+            <template v-else>
+              <a
+                v-if="sitem.url.startsWith('http')"
+                :href="sitem.url"
+                target="_blank"
+              >
+                {{ sitem.text }}
+              </a>
+              <a
+                v-else
+                href="javascript:;"
+                @click="goRouter(sitem)"
+              >{{ sitem.text }}
+              </a>
+            </template>
+            <dl v-if="sitem.navs">
+              <dd v-for="minItem in sitem.navs">
+                <a
+                  :href="minItem.url"
+                  target="_blank"
+                >
+                  {{ minItem.text }}
+                  <span class="white">{{ minItem.eName }}</span>
+                </a>
+              </dd>
+            </dl>
+          </dd>
+        </template>
+
+        <template
+          v-for="subColitem in colitem.items"
+          v-else
+        >
+          <dt>{{ subColitem.title }}</dt>
+          <!-- 给有三级导航的dd添加sub-native类 -->
+          <dd
+            v-for="sitem in subColitem.items"
+            class="sub-native"
+          >
+            <a
+              v-if="sitem.navs"
+              href="javascript:;"
+            >
+              {{ sitem.text }}
+              <i
+                v-if="sitem.navs"
+                class="paasng-icon paasng-angle-right"
+              />
+            </a>
+            <template v-else>
+              <a
+                v-if="sitem.url.startsWith('http')"
+                :href="sitem.url"
+                target="_blank"
+              >
+                {{ sitem.text }}
+              </a>
+              <a
+                v-else
+                href="javascript:;"
+                @click="goRouter(sitem)"
+              >{{ sitem.text }}
+              </a>
+            </template>
+            <dl v-if="sitem.navs">
+              <dd v-for="minItem in sitem.navs">
+                <a
+                  :href="minItem.url"
+                  target="_blank"
+                >
+                  {{ minItem.text }}
+                  <span class="white">{{ minItem.eName }}</span>
+                </a>
+              </dd>
+            </dl>
+          </dd>
+        </template>
+        <dd class="last" />
+      </dl>
+    </div>
+    <log-version :dialog-show.sync="showLogVersion" />
+  </div>
 </template>
 
 <script>
@@ -205,11 +410,13 @@
     import Dropdown from '@/components/ui/Dropdown';
     import { psHeaderInfo } from '@/mixins/ps-static-mixin';
     import defaultUserLogo from '../../static/images/default-user.png';
+    import logVersion from './log-version.vue';
 
     export default {
         components: {
             'dropdown': Dropdown,
-            'searchAppList': searchAppList
+            'searchAppList': searchAppList,
+            logVersion
         },
         mixins: [psHeaderInfo, selectEventMixin],
         props: [],
@@ -231,6 +438,7 @@
                 filterKey: '',
                 enableSearchApp: true, // 是否开启搜索APP功能
                 currenSearchPanelIndex: -1,
+                showLogVersion: false,
                 searchComponentList: [
                     {
                         title: this.$t('蓝鲸应用'),
@@ -241,18 +449,34 @@
                         }
                     }
                 ],
-                isShowInput: true
+                isShowInput: true,
+                // eslint-disable-next-line comma-dangle
+                link: this.GLOBAL.LINK.APIGW_INDEX,
+                navText: '',
+                curLangIcon: 'chinese'
             };
         },
         computed: {
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            userFeature () {
+                return this.$store.state.userFeature;
             }
         },
         watch: {
             '$route': 'checkRouter',
             filterKey: function () {
                 this.curActiveIndex = -1;
+            },
+            userFeature: {
+              handler (val) {
+                if (!val.ALLOW_PLUGIN_CENTER) {
+                  this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
+                  console.log('this.headerStaticInfo.list.nav', this.headerStaticInfo.list.nav);
+                }
+              },
+              deep: true
             }
         },
         created () {
@@ -384,28 +608,36 @@
                 clearTimeout(this.navShowController);
                 this.navHideController = setTimeout(() => {
                     this.navIndex = 0;
+                    this.navText = '';
                 }, 300);
             },
             // 二级导航mouseover
-            showSubNav (index) {
+            showSubNav (index, item) {
                 clearTimeout(this.navHideController);
-                if (index === 0 || index === 1) {
+                if (index === 0 || index === 1 || index === 2 || (index === 3 && this.userFeature.ALLOW_PLUGIN_CENTER)) {
                     this.navIndex = index;
                 } else {
                     this.navShowController = setTimeout(() => {
                         this.navIndex = index;
+                        this.navText = item.text;
                         switch (index) {
-                            case 2:
-                                this.curSubNav = this.headerStaticInfo.list.api_subnav_service;
-                                break;
                             case 3:
+                              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
                                 this.curSubNav = this.headerStaticInfo.list.subnav_service;
-                                break;
+                              }
+                              break;
                             case 4:
-                                this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-                                break;
+                            if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
+                              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+                            } else {
+                              this.curSubNav = this.headerStaticInfo.list.subnav_service;
+                            }
+                              break;
+                            case 5:
+                              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+                              break;
                             default:
-                                this.curSubNav = [];
+                              this.curSubNav = [];
                         }
                     }, 500);
                 }
@@ -422,6 +654,9 @@
                 if (this.$route.path.indexOf('/developer-center/app') !== -1) {
                     noteIndex = 1;
                 }
+                if (this.$route.path.indexOf('/plugin-center') !== -1) {
+                    noteIndex = 2;
+                }
                 if (this.$route.path.indexOf('/developer-center/service') !== -1) {
                     noteIndex = 3;
                 }
@@ -433,6 +668,10 @@
                     case 1:
                         this.backgroundHidden = false;
                         this.curpage = 1;
+                        break;
+                    case 2:
+                        this.backgroundHidden = false;
+                        this.curpage = 2;
                         break;
                     case 3:
                         this.backgroundHidden = false;
@@ -453,15 +692,27 @@
                 bkLogout.logout();
                 window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + window.location.href;
             },
-            switchLanguage () {
-                // 切换语言
-                if (this.localLanguage === 'zh-cn') {
-                    this.$i18n.locale = 'en';
-                    this.$store.commit('updateLocalLanguage', 'en');
-                } else {
-                    this.$i18n.locale = 'zh-en';
-                    this.$store.commit('updateLocalLanguage', 'zh-cn');
-                }
+            async switchLanguage (language) {
+                const data = new URLSearchParams();
+                data.append('language', language);
+                this.$http.post(BACKEND_URL + '/i18n/setlang/', data, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }).then(res => {
+                    this.$i18n.locale = language;
+                    this.$store.commit('updateLocalLanguage', language);
+                    this.curLangIcon = language === 'en' ? 'english' : 'chinese';
+                    this.$router.go(0);
+                }, (e) => {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
+                });
+            },
+            handlerLogVersion () {
+                this.showLogVersion = true;
             }
         }
     };
@@ -507,9 +758,9 @@
         top: 0px;
         width: 100%;
         z-index: 1001;
-        min-width: 1280px;
+        min-width: 1440px;
         transition: all .5s;
-        background: #191929;
+        background: #182132;
         box-sizing: border-box;
 
         > * {
@@ -546,12 +797,21 @@
             position: relative;
             margin: 0 0 0 20px;
             padding: 10px 0;
-
-            img {
-                display: inline-block;
-                vertical-align: middle;
-                height: 30px;
+            .logo-warp{
+              display: flex;
+              align-items: center;
+              img {
+                  display: inline-block;
+                  vertical-align: middle;
+                  height: 30px;
+              }
+              .logo-text{
+                color: #EAEBF0;
+                font-size: 16px;
+                padding-left: 10px;
+              }
             }
+
         }
     }
 
@@ -572,6 +832,10 @@
     }
 
     .ps-header a {
+        color: #96A2B9;
+    }
+
+    .ps-header .active a {
         color: #ffffff;
     }
 
@@ -626,15 +890,17 @@
         float: right;
         margin: 0;
         padding: 8px 10px;
+        display: flex;
+        align-items: center;
 
         li {
             float: left;
-            margin: 0 10px;
+            // margin: 0 10px;
         }
     }
 
     .ps-search {
-        background: #48485E;
+        background: #252F43;
         overflow: hidden;
         border-radius: 2px;
         position: relative;
@@ -647,19 +913,18 @@
             line-height: 30px;
             background: none;
             float: left;
-            color: rgba(255, 255, 255, 0.8);
-            border: solid 1px #323241;
+            color: #D3D9E4;
+            border: none;
             z-index: 1;
             transition: all .5s;
             border-radius: 2px;
 
-            :focus {
+            &:focus {
                 outline: none;
-                border-color: #3a84ff;
             }
 
-            ::placeholder {
-                color: red;
+            &::-webkit-input-placeholder {
+                color: #D3D9E4;
             }
         }
 
@@ -671,9 +936,8 @@
             height: 16px;
             border: none;
             z-index: 2;
-            background: #48485E;
-            border-left: 1px solid rgba(117, 117, 117, 0.6);
-            color: rgba(117, 117, 117, 0.6);
+            border-left: 1px solid #979BA5;
+            color: #D3D9E4;
             font-size: 16px;
 
             .close-cursor {
@@ -877,7 +1141,7 @@
     }
 
     .ps-head-right li a.link-text {
-        color: #9b9ca8;
+        color: #96A2B9;
         font-size: 14px;
         line-height: 34px;
         position: relative;
@@ -982,10 +1246,14 @@
     }
 
     .user-opation {
-        padding: 10px 24px;
+        width: 80px;
+        height: 40px;
+        text-align: center;
+        line-height: 40px;
     }
 
     .user-opation a {
+        font-size: 12px;
         line-height: 36px;
         color: #666666;
     }
@@ -1001,6 +1269,21 @@
     .ps-head-last:hover .contact {
         opacity: 1;
         visibility: visible;
+    }
+    .ps-head-last .language {
+        li {
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            &:hover i {
+                color: #3a84ff;
+            }
+        }
+        li i {
+          font-size: 16px;
+          margin-right: 5px;
+        }
     }
     .switch-language {
         line-height: 34px;
@@ -1020,4 +1303,189 @@
     .translate-icon-font {
         padding-left: 3px;
     }
+    .my-alarm {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        justify-content: center;
+        align-content: center;
+        margin-right: 8px;
+        color: #96A2B9 !important;
+        transition: all .0s !important;
+        &:hover {
+          color: #fff;
+          cursor: pointer;
+          background: rgba(255,255,255,0.10);
+          border-radius: 100%;
+          i {
+              color: #fff !important;
+          }
+        }
+        i {
+            color: #96A2B9 !important;
+        }
+    }
+
+</style>
+<style lang="scss">
+.top-bar-popover .tippy-backdrop {
+    background: transparent !important;
+}
+.top-bar-popover .tippy-content {
+    box-shadow:0 2px 6px 0 rgba(0,0,0,0.10) !important;
+    border: 1px solid #DCDEE5;
+    border-radius: 2px;
+}
+.top-bar-wrapper .header-mind{
+    color:#768197;
+    font-size:16px;
+    position:relative;
+    height:32px;
+    width:32px;
+    display:-webkit-box;
+    display:-ms-flexbox;
+    display:flex;
+    -webkit-box-align:center;
+    -ms-flex-align:center;
+    align-items:center;
+    -webkit-box-pack:center;
+    -ms-flex-pack:center;
+    justify-content:center;
+    margin-right:8px
+}
+.top-bar-wrapper .header-mind.is-left{
+    color:#96A2B9;
+    line-height: 34px;
+}
+.top-bar-wrapper .header-mind.is-left:hover{
+    color: #fff;
+    background: rgba(255,255,255,0.10);
+}
+.top-bar-wrapper .header-mind-mark{
+    position:absolute;
+    right:8px;
+    top:8px;
+    height:7px;
+    width:7px;
+    border:1px solid #27334C;
+    background-color:#EA3636;
+    border-radius:100%
+}
+.top-bar-wrapper .header-mind-mark.is-left{
+border-color:#F0F1F5;
+}
+.top-bar-wrapper .header-mind:hover{
+    background:-webkit-gradient(linear,right top, left top,from(rgba(37,48,71,1)),to(rgba(38,50,71,1)));
+    background:linear-gradient(270deg,rgba(37,48,71,1) 0%,rgba(38,50,71,1) 100%);
+    border-radius:100%;
+    cursor:pointer;
+    color:#D3D9E4;
+}
+.top-bar-wrapper .header-mind .lang-icon{
+    font-size:18px;
+}
+.top-bar-wrapper .header-mind .nav-lang-icon {
+    transform: translateY(1px);
+}
+.top-bar-wrapper .header-help{
+    color:#768197;
+    font-size:16px;
+    position:relative;
+    height:32px;
+    width:32px;
+    display:-webkit-box;
+    display:-ms-flexbox;
+    display:flex;
+    -webkit-box-align:center;
+    -ms-flex-align:center;
+    align-items:center;
+    -webkit-box-pack:center;
+    -ms-flex-pack:center;
+    justify-content:center;
+    margin-right:8px
+}
+.top-bar-wrapper .header-help.is-left{
+    color:#96A2B9;
+}
+.top-bar-wrapper .header-help.is-left:hover{
+    color: #fff;
+    background: rgba(255,255,255,0.10);
+}
+.top-bar-wrapper .header-help:hover{
+    background:-webkit-gradient(linear,right top, left top,from(rgba(37,48,71,1)),to(rgba(38,50,71,1)));
+    background:linear-gradient(270deg,rgba(37,48,71,1) 0%,rgba(38,50,71,1) 100%);
+    border-radius:100%;
+    cursor:pointer;
+    color:#D3D9E4;
+}
+.top-bar-wrapper .header-user{
+    height:100%;
+    display:-webkit-box;
+    display:-ms-flexbox;
+    display:flex;
+    -webkit-box-align:center;
+    -ms-flex-align:center;
+    align-items:center;
+    -webkit-box-pack:center;
+    -ms-flex-pack:center;
+    justify-content:center;
+    color:#96A2B9;
+    margin-left:8px;
+}
+.top-bar-wrapper .header-user .bk-icon{
+    margin-left:5px;
+    font-size:12px;
+}
+.top-bar-wrapper .header-user.is-left:hover{
+    color: #fff;
+}
+.top-bar-wrapper .header-user:hover{
+    cursor:pointer;
+    color:#D3D9E4;
+}
+.monitor-navigation-admin{
+    width:170px #96A2B9;
+    display:-webkit-box;
+    display:-ms-flexbox;
+    display:flex;
+    -webkit-box-orient:vertical;
+    -webkit-box-direction:normal;
+    -ms-flex-direction:column;
+    flex-direction:column;
+    background:#FFFFFF;
+    padding:6px 0;
+    margin:0;
+    color:#63656E;
+}
+.monitor-navigation-admin .nav-item{
+    -webkit-box-flex:0;
+    -ms-flex:0 0 32px;
+    flex:0 0 32px;
+    display:-webkit-box;
+    display:-ms-flexbox;
+    display:flex;
+    -webkit-box-align:center;
+    -ms-flex-align:center;
+    align-items:center;
+    padding:0 16px;
+    list-style:none;
+    color: #63656E;
+    a {
+        color: #63656E;
+    }
+}
+.monitor-navigation-admin .nav-item .lang-icon{
+    font-size:18px;
+    margin-right:6px;
+}
+.monitor-navigation-admin .nav-item:hover{
+    cursor:pointer;
+    background: #F5F7FA;
+}
+.tippy-popper .tippy-tooltip.navigation-message-theme{
+    padding:0;
+    border-radius:0;
+    -webkit-box-shadow:none;
+    box-shadow:none;
+}
 </style>

@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -93,3 +93,22 @@ const (
 	// DefaultImagePullSecretName 平台默认的 pullImageSecret 名称
 	DefaultImagePullSecretName = "bkapp-dockerconfigjson"
 )
+
+// AllowedDomainGroupMappingRefKinds 允许被 DomainGroupMapping 引用的资源类型
+var AllowedDomainGroupMappingRefKinds = []string{KindBkApp}
+
+const (
+	// SourceTypeSubDomain means domain was allocated by platform, apps are
+	// distinguished by subdomains
+	SourceTypeSubDomain = "subdomain"
+
+	// SourceTypeSubPath means domain was allocated by platform, apps are
+	// distinguished by sub-paths, share a single root domain.
+	SourceTypeSubPath = "subpath"
+
+	// SourceTypeCustom means domain was created by user
+	SourceTypeCustom = "custom"
+)
+
+// AllowedSourceTypes 允许使用的 SourceType
+var AllowedSourceTypes = []string{SourceTypeSubDomain, SourceTypeSubPath, SourceTypeCustom}

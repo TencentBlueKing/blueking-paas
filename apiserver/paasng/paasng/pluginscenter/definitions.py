@@ -54,6 +54,7 @@ class FieldSchema(BaseModel):
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
     default: Optional[str] = Field(description="默认值")
+    maxlength: Optional[int] = Field(description="最大长度")
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
@@ -103,6 +104,12 @@ class PluginCodeTemplate(BaseModel):
         if source_dir.is_absolute():
             return source_dir.relative_to("/")
         return source_dir
+
+
+@registry
+class PluginFeature(BaseModel):
+    name: str = Field(description="功能特性名称")
+    value: bool = Field(default=False, description="功能特性开关")
 
 
 @registry
@@ -299,6 +306,7 @@ class PluginDefinition(BaseModel):
     releaseRevision: ReleaseRevisionDefinition = Field(description="插件发布版本规则")
     releaseStages: List[ReleaseStageDefinition] = Field(description="插件发布步骤")
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
+    features: List[PluginFeature] = Field(default_factory=list)
 
 
 def find_stage_by_id(

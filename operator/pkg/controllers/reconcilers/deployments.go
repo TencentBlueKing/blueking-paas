@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -20,9 +20,9 @@ package reconcilers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -35,9 +35,14 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
 
+// NewDeploymentReconciler will return a DeploymentReconciler with given k8s client
+func NewDeploymentReconciler(client client.Client) *DeploymentReconciler {
+	return &DeploymentReconciler{Client: client}
+}
+
 // DeploymentReconciler 负责处理 Deployment 相关的调和逻辑
 type DeploymentReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -52,18 +57,18 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.Bk
 
 	if len(outdated) != 0 {
 		for _, deploy := range outdated {
-			if err := r.Client.Delete(ctx, deploy); err != nil {
+			if err = r.Client.Delete(ctx, deploy); err != nil {
 				return r.Result.withError(err)
 			}
 		}
 	}
 	for _, deploy := range expected {
-		if err := r.deploy(ctx, deploy); err != nil {
+		if err = r.deploy(ctx, deploy); err != nil {
 			return r.Result.withError(err)
 		}
 	}
 
-	if err := r.updateCondition(ctx, bkapp); err != nil {
+	if err = r.updateCondition(ctx, bkapp); err != nil {
 		return r.Result.withError(err)
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
@@ -79,10 +84,11 @@ func (r *DeploymentReconciler) getCurrentState(
 	bkapp *v1alpha1.BkApp,
 ) (result []*appsv1.Deployment, err error) {
 	deployList := appsv1.DeploymentList{}
-	if err = r.List(
-		ctx, &deployList, client.InNamespace(bkapp.Namespace), client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
+	if err = r.Client.List(
+		ctx, &deployList, client.InNamespace(bkapp.Namespace),
+		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
 	); err != nil {
-		return nil, fmt.Errorf("failed to list app's deployments: %w", err)
+		return nil, errors.Wrap(err, "failed to list app's deployments")
 	}
 
 	return lo.ToSlicePtr(deployList.Items), nil
@@ -104,11 +110,8 @@ func (r *DeploymentReconciler) updateHandler(
 	wantRevision, _ := revision.GetRevision(want)
 	if currentRevision != wantRevision {
 		if err := cli.Update(ctx, want); err != nil {
-			return fmt.Errorf(
-				"failed to update %s(%s): %w",
-				want.GetObjectKind().GroupVersionKind().String(),
-				want.GetName(),
-				err,
+			return errors.Wrapf(
+				err, "failed to update %s(%s)", want.GetObjectKind().GroupVersionKind().String(), want.GetName(),
 			)
 		}
 	}
@@ -179,14 +182,16 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 			} else {
 				bkapp.Status.Phase = v1alpha1.AppPending
 				apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-					Type:               v1alpha1.AppAvailable,
-					Status:             metav1.ConditionFalse,
-					Reason:             "Progressing",
-					Message:            fmt.Sprintf("Waiting for deployment finish: %d/%d Process are available...", availableCount, len(current)),
+					Type:   v1alpha1.AppAvailable,
+					Status: metav1.ConditionFalse,
+					Reason: "Progressing",
+					Message: fmt.Sprintf(
+						"Waiting for deployment finish: %d/%d Process are available...", availableCount, len(current),
+					),
 					ObservedGeneration: bkapp.Status.ObservedGeneration,
 				})
 			}
 		}
 	}
-	return r.Status().Update(ctx, bkapp)
+	return r.Client.Status().Update(ctx, bkapp)
 }

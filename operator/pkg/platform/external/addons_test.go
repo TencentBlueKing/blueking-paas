@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -27,6 +27,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var _ = Describe("TestClient", func() {
@@ -39,24 +41,38 @@ var _ = Describe("TestClient", func() {
 			if expectedError == nil {
 				Expect(err).To(BeNil())
 			} else {
-				Expect(err).To(Equal(expectedError))
+				Expect(errors.Is(err, expectedError)).To(BeTrue())
 			}
 			Expect(instance).To(Equal(expectedInstance))
 		},
-		Entry("addon found and get 1 extra envs", func(req *http.Request) *http.Response {
+		Entry("addon found and get 1 extra envs(string)", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 200,
 				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
 				Header:     make(http.Header),
 			}
-		}, AddonInstance{Credentials: map[string]string{"FAKE_FOO": "FOO"}}, nil),
+		}, AddonInstance{Credentials: map[string]intstr.IntOrString{"FAKE_FOO": intstr.Parse("FOO")}}, nil),
+		Entry("addon found and get 1 extra envs(int)", func(req *http.Request) *http.Response {
+			return &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": 1}}`)),
+				Header:     make(http.Header),
+			}
+		}, AddonInstance{Credentials: map[string]intstr.IntOrString{"FAKE_FOO": intstr.FromInt(1)}}, nil),
+		Entry("addon found and get 1 extra envs(string-int)", func(req *http.Request) *http.Response {
+			return &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "1"}}`)),
+				Header:     make(http.Header),
+			}
+		}, AddonInstance{Credentials: map[string]intstr.IntOrString{"FAKE_FOO": intstr.FromString("1")}}, nil),
 		Entry("addon found but no extra envs", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 200,
 				Body:       ioutil.NopCloser(bytes.NewBufferString(`{"credentials": {}}`)),
 				Header:     make(http.Header),
 			}
-		}, AddonInstance{Credentials: map[string]string{}}, nil),
+		}, AddonInstance{Credentials: map[string]intstr.IntOrString{}}, nil),
 		Entry("addon not found!", func(req *http.Request) *http.Response {
 			return &http.Response{
 				StatusCode: 404,

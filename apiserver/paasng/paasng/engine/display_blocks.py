@@ -149,9 +149,9 @@ class AccessInfo(DisplayBlock):
 
     @classmethod
     def get_detail(cls, engine_app: 'EngineApp') -> dict:
-        from paasng.publish.entrance.exposer import get_default_access_entrance
+        from paasng.publish.entrance.exposer import get_preallocated_url
 
-        info = get_default_access_entrance(module_env=engine_app.env, include_no_running=True)
+        info = get_preallocated_url(engine_app.env)
         if info is None:
             return {}
 

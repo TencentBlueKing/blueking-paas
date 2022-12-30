@@ -181,7 +181,7 @@
                           class="paasng-icon"
                           :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
                         />
-                        {{ instance.state }}
+                        <span v-bk-tooltips="{content: getInstanceStateToolTips(instance)}">{{ instance.state }}</span>
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">
@@ -401,7 +401,7 @@
             <section class="detail-item">
               <label class="label"> {{ $t('单实例资源配额：') }} </label>
               <div class="content">
-                {{ $t('内存:') }} {{ processPlan.memLimit }} \ CPU: {{ processPlan.cpuLimit }}
+                {{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}
               </div>
             </section>
             <section class="detail-item">
@@ -410,8 +410,8 @@
                 {{ processPlan.clusterLink }}
               </div>
             </section>
-            <p style="padding-left: 112px; margin-top: -10px; color: #c4c6cc;">
-              {{ $t('更多进程间通信的说明，请参看') }} <a
+            <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc;">
+              {{ $t('注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考') }} <a
                 target="_blank"
                 :href="GLOBAL.DOC.PROCESS_SERVICE"
               > {{ $t('进程间通信') }} </a>
@@ -1915,6 +1915,14 @@
             timeFormat (time, instanceTime) {
                 if (time === '几秒前') return time;
                 return time + ' ' + instanceTime;
+            },
+
+            // 获取进程状态 tooltips 展示内容
+            getInstanceStateToolTips (instance) {
+                if (!(instance.state_message && instance.state_message.length)) {
+                    return instance.state;
+                }
+                return instance.state_message;
             }
         }
     };
@@ -1937,7 +1945,8 @@
             .process-basic-info {
                 display: inline-block;
                 padding: 16px 24px;
-                width: 185px;
+                min-width: 185px;
+                max-width: 230px;
                 vertical-align: middle;
                 cursor: pointer;
                 .expanded-icon {
@@ -2046,6 +2055,11 @@
 
             .process-item-table-wrapper {
                 padding: 0 30px !important;
+                .ps-table {
+                    td {
+                        font-size: 12px;
+                    }
+                }
             }
 
             td {

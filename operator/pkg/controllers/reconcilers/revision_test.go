@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -92,9 +92,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 	Context("test Reconcile", func() {
 		It("first revision", func() {
 			bkapp.Generation = 1
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 
@@ -107,9 +105,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			bkapp.Generation = 1
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 
@@ -126,9 +122,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			}
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeFalse())
@@ -143,7 +137,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			}
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
-			r := RevisionReconciler{Client: builder.WithObjects(bkapp, web).Build()}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeFalse())
@@ -165,9 +159,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
 			Expect(hook.Pod).NotTo(BeNil())
 
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web, hook.Pod).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web, hook.Pod).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeTrue())

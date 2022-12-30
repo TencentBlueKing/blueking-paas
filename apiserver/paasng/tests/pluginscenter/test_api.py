@@ -21,8 +21,9 @@ from unittest import mock
 import pytest
 
 from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
+from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.views import PluginReleaseStageApiViewSet
+from paasng.pluginscenter.views import PluginCallBackApiViewSet
 
 pytestmark = pytest.mark.django_db
 
@@ -38,6 +39,25 @@ CALLBACK_DATA = {
     "token": "token",
     "last_approver": "最后一个节点的审批人",
 }
+
+
+class TestArchived:
+    @pytest.fixture
+    def plugin(self, plugin):
+        plugin.status = PluginStatus.ARCHIVED
+        plugin.save()
+        return plugin
+
+    def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client):
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
+        resp = api_client.get(url)
+        assert resp.status_code == 200
+
+    def test_update_api(self, api_client, pd, plugin, release, iam_policy_client):
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
+        resp = api_client.post(url)
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == error_codes.PLUGIN_ARCHIVED.message
 
 
 class TestSysApis:
@@ -62,7 +82,7 @@ class TestSysApis:
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginReleaseStageApiViewSet, "_verify_itsm_token") as mocked_verify:
+        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify:
             mocked_verify.return_value = True
             resp_data = api_client.post(callback_url, callback_data).json()
 
@@ -87,7 +107,7 @@ class TestSysApis:
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginReleaseStageApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
+        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
             "paasng.pluginscenter.shim.init_plugin_in_view"
         ):
             mocked_verify.return_value = True

@@ -2,7 +2,7 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-clusters-list" style="width: 100%;" class="p20">
-    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效"></bk-alert>
+    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群状态" style="margin-bottom: 15px;"></bk-alert>
     <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
         创建集群
     </bk-button>
@@ -30,13 +30,19 @@
         </bk-table-column>
         <bk-table-column label="集群名称" prop="name"></bk-table-column>
         <bk-table-column label="所属区域" prop="region"></bk-table-column>
+        <bk-table-column label="集群类型" prop="type">
+            <template slot-scope="props">
+                <span v-if="props.row.type == 'normal'">普通</span>
+                <span v-if="props.row.type == 'virtual'">虚拟</span>
+            </template>
+        </bk-table-column>
         <bk-table-column label="默认集群" prop="is_default">
             <template slot-scope="props">
                 <span v-if="props.row.is_default">是</span>
                 <span v-else>否</span>
             </template>
         </bk-table-column>
-        <bk-table-column label="集群信息" prop="description"></bk-table-column>
+        <bk-table-column label="集群描述" prop="description"></bk-table-column>
         <bk-table-column label="接入层配置" prop="ingress_config" width="300">
             <template slot-scope="props">
                 <json-pretty :data="props.row.ingress_config" show-length highlight-mouseover-node :deep="2"></json-pretty>
@@ -47,10 +53,18 @@
                 <json-pretty :data="props.row.annotations" show-length highlight-mouseover-node :deep="2"></json-pretty>
             </template>
         </bk-table-column>
-
-        <bk-table-column label="操作">
+        <bk-table-column label="特性标志" prop="feature_flags" width="400">
             <template slot-scope="props">
-                <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
+                <div v-for="ff in featureFlagList" style="display: flex">
+                    <bk-tag v-if="hasFeatureFlag(props.row, ff.value)" theme="success">✔ $[ ff.text ]</bk-tag>
+                    <bk-tag v-else theme="danger">✘ $[ ff.text ]</bk-tag>
+                </div>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="130">
+            <template slot-scope="props">
+                <bk-button theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button theme="primary" text @click="handleGenState(props.row.region, props.row.name)">更新状态</bk-button>
             </template>
         </bk-table-column>
     </bk-table>
@@ -62,15 +76,26 @@
         <bk-form :label-width="120" :model="dialog.form">
             <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
-                    <bk-option v-for="region in regionList"
-                               :key="region.value"
-                               :id="region.value"
-                               :name="region.text">
+                    <bk-option
+                        v-for="region in regionList"
+                        :key="region.value"
+                        :id="region.value"
+                        :name="region.text">
                     </bk-option>
                 </bk-select>
             </bk-form-item>
             <bk-form-item label="集群名称" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="集群类型" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
+                <bk-select v-model="dialog.form.type" :disabled="dialog.type !== 'create'">
+                    <bk-option
+                        v-for="type in clusterTypeList"
+                        :key="type.value"
+                        :id="type.value"
+                        :name="type.text">
+                    </bk-option>
+                </bk-select>
             </bk-form-item>
             <bk-form-item label="默认集群" required :desc="dialog.type !== 'create'?'不支持通过编辑切换默认集群':''">
                 <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type !== 'create'"></bk-switcher>
@@ -95,6 +120,22 @@
             </bk-form-item>
             <bk-form-item label="注解" required>
                 <json-editor v-model="dialog.form.annotations" :disabled="dialog.type === 'delete'"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="特性标志" desc="不同的集群可能拥有不同的特性，请根据实际需要编辑">
+                <bk-select
+                    multiple
+                    v-model="dialog.form.enabled_feature_flags"
+                    display-tag
+                    @change="updateFeatureFlags"
+                    :disabled="dialog.type === 'delete'"
+                >
+                    <bk-option
+                        v-for="type in featureFlagList"
+                        :key="type.value"
+                        :id="type.value"
+                        :name="type.text">
+                    </bk-option>
+                </bk-select>
             </bk-form-item>
             <bk-form-item label="数字证书认证机构（cert-authority）">
                 <bk-input
@@ -192,6 +233,8 @@
 <script>
     /* beautify preserve:start */
     const regionList = {{ region_list | to_json }}
+    const clusterTypeList = {{ cluster_type_list | to_json }}
+    const featureFlagList = {{ feature_flag_list | to_json }}
     /* beautify preserve:end */
     const DomainSchema = {
         type: "array",
@@ -211,6 +254,7 @@
         create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
         list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
         detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/' %}"),
+        genState: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/gen_state/' %}"),
         apiServer: {
             upsert: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers' %}"),
             delete: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers/${api_server_id}' %}"),
@@ -225,13 +269,13 @@
             data: function() {
                 return {
                     data: [],
-                    regionList: regionList,
                     dialog: {
                         fullscreen: false,
                         form: {
                             uuid: '',
                             region: '',
                             name: '',
+                            type: '',
                             is_default: false,
                             description: '',
                             ingress_config: {
@@ -243,6 +287,10 @@
                                 default_ingress_domain_tmpl: ''
                             },
                             annotations: {},
+                            // 全量 feature_flags 信息
+                            feature_flags: {},
+                            // 已经启用的 feature_flags
+                            enabled_feature_flags: [],
                             ca_data: undefined,
                             cert_data: undefined,
                             key_data: undefined,
@@ -304,12 +352,21 @@
                     this.dialog.row = undefined
 
                     this.dialog.form.uuid = undefined
-                    this.dialog.form.region = this.regionList[0].value
+                    this.dialog.form.region = regionList[0].value
                     this.dialog.form.name = undefined
+                    this.dialog.form.type = clusterTypeList[0].value
                     this.dialog.form.is_default = false
                     this.dialog.form.description = undefined
                     this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}
                     this.dialog.form.annotations = {}
+                    this.dialog.form.feature_flags = {}
+                    this.dialog.form.enabled_feature_flags = []
+                    // 默认集群拥有全量的 featureflag 功能
+                    for (var i = 0; i < featureFlagList.length; i++) {
+                        ff = featureFlagList[i].value
+                        this.dialog.form.feature_flags[ff] = true
+                        this.dialog.form.enabled_feature_flags.push(ff)
+                    }
                     this.dialog.form.ca_data = undefined
                     this.dialog.form.cert_data = undefined
                     this.dialog.form.key_data = undefined
@@ -322,7 +379,15 @@
                     this.dialog.type = "edit"
                     this.dialog.row = row
 
-                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
+                    // 将 dict 转换成 bk-select 需要的 list
+                    var enabled_feature_flags = [];
+                    for (var ff in row.feature_flags) {
+                      if (row.feature_flags[ff] === true) {
+                        enabled_feature_flags.push(ff);
+                      }
+                    }
+
+                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config}, enabled_feature_flags: enabled_feature_flags }
                     this.dialog.visible = true
                 },
                 handleDelete: function(row) {
@@ -331,6 +396,24 @@
 
                     this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
                     this.dialog.visible = true
+                },
+                handleGenState: function (region, clusterName) {
+                    this.$http.post(
+                        URLRouter.genState, {region: region, cluster_name: clusterName}
+                    ).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 状态成功`})
+                    })
+                },
+                // 在多选框被修改时，根据选中的项目，同步更新 feature_flags 内容
+                updateFeatureFlags: function () {
+                    for (var i = 0; i < featureFlagList.length; i++) {
+                      var ff = featureFlagList[i].value;
+                      this.dialog.form.feature_flags[ff] = this.dialog.form.enabled_feature_flags.indexOf(ff) >= 0;
+                    }
+                },
+                // 判断当前集群是否支持某特性
+                hasFeatureFlag: function (row, ff) {
+                    return row.feature_flags[ff]
                 },
                 cellStyleCallback: function({ row, column, rowIndex, columnIndex }) {
                     if (column.label === "接入层配置" || column.label === '注解')

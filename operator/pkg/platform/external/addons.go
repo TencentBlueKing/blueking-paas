@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -23,12 +23,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // AddonInstance define the structure return from QueryAddonInstance API
 type AddonInstance struct {
 	// Credentials contains the EnvVar offered by the AddonInstance
-	Credentials map[string]string `json:"credentials"`
+	Credentials map[string]intstr.IntOrString `json:"credentials"`
 }
 
 // QueryAddonInstance 调用 bkpaas 对应的接口, 查询应用的增强服务实例
@@ -47,13 +50,13 @@ func (c *Client) QueryAddonInstance(
 
 	req, err := c.NewRequest(ctx, "GET", path, bytes.NewBuffer([]byte{}))
 	if err != nil {
-		return instance, err
+		return instance, errors.WithStack(err)
 	}
 	err = c.Do(req).Into(&instance, json.Unmarshal)
 	if err != nil {
-		return instance, err
+		return instance, errors.WithStack(err)
 	}
-	return instance, err
+	return instance, nil
 }
 
 // ProvisionAddonInstance 调用 bkpaas 对应接口, 分配应用的增强服务实例
@@ -71,8 +74,8 @@ func (c *Client) ProvisionAddonInstance(
 
 	req, err := c.NewRequest(ctx, "POST", path, bytes.NewBuffer([]byte{}))
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
-	return c.Do(req).err
+	return errors.WithStack(c.Do(req).err)
 }

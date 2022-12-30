@@ -24,7 +24,6 @@ import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django.conf import settings
 from django.utils import timezone
-from kubernetes import client
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
@@ -45,7 +44,7 @@ from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.processes.managers import AppProcessManager
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
-from tests.utils.app import random_fake_app, release_setup
+from tests.utils.app import release_setup
 
 from .test_kres import construct_foo_pod
 
@@ -59,10 +58,12 @@ RG = settings.FOR_TESTS_DEFAULT_REGION
 
 class TestClientProcess:
     @pytest.fixture
-    def app(self, set_structure):
-        app = random_fake_app(force_app_info={"region": RG, "name": "bk-fake-stag"})
-        set_structure(app, {"web": 2, "worker": 1})
-        return app
+    def app(self, set_structure, bk_stag_engine_app):
+        bk_stag_engine_app.region = RG
+        bk_stag_engine_app.name = "bk-fake-stag"
+        bk_stag_engine_app.save()
+        set_structure(bk_stag_engine_app, {"web": 2, "worker": 1})
+        return bk_stag_engine_app
 
     @pytest.fixture
     def release(self, app):
@@ -85,6 +86,7 @@ class TestClientProcess:
     def worker_process(self, app, release):
         return AppProcessManager(app=app).assemble_process("worker", release=release)
 
+    @pytest.mark.mock_get_structured_app
     def test_deploy_processes(self, scheduler_client, web_process):
         with patch('paas_wl.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
             'paas_wl.networking.ingress.managers.service.service_kmodel'
@@ -178,36 +180,6 @@ class TestClientProcess:
             assert kd.called
             args, kwargs = kd.call_args_list[0]
             assert kwargs['body']['spec']['replicas'] == 0
-
-    def test_get_abnormal_processes(self, scheduler_client):
-        foo1 = random_fake_app(force_app_info={'name': 'bkapp-bk-foo1-stag'})
-        foo2 = random_fake_app(force_app_info={'name': 'bkapp-bk-foo2-stag'})
-        foo3 = random_fake_app(force_app_info={'name': 'bkapp-bk-foo3-stag'})
-        for foo in [foo1, foo2, foo3]:
-            release_setup(
-                fake_app=foo,
-                build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
-                release_params={"version": 5},
-            )
-
-        get_all_deployments = Mock(return_value=construct_abnormal_deployments())
-        # we do not check instance api here
-        kres_pod_list = Mock(return_value=DummyObjectList([], {}))
-        # get deployment status has been test before
-        mocked_procspecs = Mock()
-        mocked_procspecs.get_replicas_dict.side_effect = [
-            {"replicas": 1, "success": 0, "failed": 0},
-            {"replicas": 2, "success": 1, "failed": 1},
-        ]
-
-        with patch(
-            'kubernetes.client.ExtensionsV1beta1Api.list_deployment_for_all_namespaces', get_all_deployments
-        ), patch('paas_wl.resources.base.kres.LabelBasedOperations.list', kres_pod_list), patch(
-            'paas_wl.resources.base.client.process_kmodel.get_by_type', mocked_procspecs
-        ):
-
-            all_abnormal_processes = scheduler_client.get_abnormal_processes(RG)
-            assert len(all_abnormal_processes) == 2
 
 
 class TestClientBuild:
@@ -360,39 +332,3 @@ class TestClientBuildNew:
 
         with exc_context:
             scheduler_client.wait_build_succeeded(app.namespace, pod_name, timeout=1)
-
-
-def construct_bkapp_deployment(app_name, replicas, available_replicas):
-    return client.V1beta2Deployment(
-        api_version='extensions/v1beta1',
-        kind='Deployment',
-        metadata=client.V1ObjectMeta(
-            namespace=app_name,
-            annotations={"age": "3"},
-            name=app_name + '-web-deployment',
-            labels={'env': 'stag', 'release_version': 10, 'region': RG, 'category': 'bkapp'},
-        ),
-        spec=client.V1beta2DeploymentSpec(
-            selector=client.V1LabelSelector(match_labels={'pod_selector': app_name}),
-            template=client.V1PodTemplateSpec(
-                spec=client.V1PodSpec(
-                    containers=[client.V1Container(image="busybox", name="main", command=["sleep", "3600"])]
-                ),
-                metadata=client.V1ObjectMeta(
-                    labels={"deployment-name": app_name, 'release_version': 10, 'env': 'stag', 'region': RG},
-                    name=app_name,
-                ),
-            ),
-            replicas=replicas,
-        ),
-        status=client.V1beta2DeploymentStatus(replicas=replicas, available_replicas=available_replicas),
-    )
-
-
-def construct_abnormal_deployments():
-    abnormal_deployments = list()
-    abnormal_deployments.append(construct_bkapp_deployment("bkapp-bk-foo1-stag", 1, 1))
-    abnormal_deployments.append(construct_bkapp_deployment("bkapp-bk-foo2-stag", 1, 0))
-    abnormal_deployments.append(construct_bkapp_deployment("bkapp-bk-foo3-stag", 2, 1))
-
-    return type("DeploymentItems", (), {"items": abnormal_deployments})

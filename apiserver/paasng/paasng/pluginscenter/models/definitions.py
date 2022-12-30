@@ -28,6 +28,7 @@ from paasng.pluginscenter.definitions import (
     PluginCodeTemplate,
     PluginConfigColumnDefinition,
     PluginCreateApproval,
+    PluginFeature,
     PluginLogConfig,
     ReleaseRevisionDefinition,
     ReleaseStageDefinition,
@@ -46,6 +47,7 @@ PluginExtraFieldField = make_json_field("PluginExtraFieldField", Dict[str, Field
 PluginConfigColumnDefinitionField = make_json_field(
     "PluginConfigColumnDefinitionField", List[PluginConfigColumnDefinition]
 )
+PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -61,6 +63,7 @@ class PluginDefinition(UuidAuditedModel):
     release_revision: ReleaseRevisionDefinition = ReleaseRevisionDefinitionField()
     release_stages: List[ReleaseStageDefinition] = ReleaseStageDefinitionField()
     log_config: PluginLogConfig = PluginLogConfigField(null=True)
+    features: List[PluginFeature] = PluginFeaturesField(default=list)
 
 
 class PluginBasicInfoDefinition(AuditedModel):
@@ -86,7 +89,7 @@ class PluginBasicInfoDefinition(AuditedModel):
             languages = [t.language for t in templates]
             language_list.extend(languages)
 
-        return language_list
+        return list(set(language_list))
 
 
 class PluginMarketInfoDefinition(AuditedModel):

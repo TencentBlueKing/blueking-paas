@@ -29,7 +29,7 @@ from django.db import models, transaction
 from jsonfield import JSONField
 from kubernetes.client import Configuration
 
-from paas_wl.cluster.constants import ClusterTokenType
+from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
 from paas_wl.cluster.exceptions import DuplicatedDefaultClusterError, NoDefaultClusterError, SwitchDefaultClusterError
 from paas_wl.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
@@ -86,6 +86,13 @@ class IngressConfig:
     frontend_ingress_ip: str = ''
     port_map: PortMap = Factory(PortMap)
 
+    def find_app_root_domain(self, hostname: str) -> Optional[Domain]:
+        """Find the possible app_root_domain by given hostname"""
+        for d in self.app_root_domains:
+            if hostname.endswith(d.name):
+                return d
+        return None
+
 
 class ClusterManager(models.Manager):
     @transaction.atomic()
@@ -93,6 +100,7 @@ class ClusterManager(models.Manager):
         self,
         region: str,
         name: str,
+        type: str = ClusterType.NORMAL,
         is_default: bool = False,
         description: Optional[str] = None,
         ingress_config: Optional[Dict] = None,
@@ -104,6 +112,7 @@ class ClusterManager(models.Manager):
         token_value: Optional[str] = None,
         default_node_selector: Optional[Dict] = None,
         default_tolerations: Optional[List] = None,
+        feature_flags: Optional[Dict] = None,
         pk: Optional[str] = None,
         **kwargs,
     ) -> 'Cluster':
@@ -135,6 +144,7 @@ class ClusterManager(models.Manager):
         validate_ingress_config(ingress_config)
 
         defaults: Dict[str, Any] = {
+            "type": type,
             "is_default": is_default,
             "description": description,
             "ingress_config": ingress_config,
@@ -144,6 +154,7 @@ class ClusterManager(models.Manager):
             "key_data": key_data,
             "default_node_selector": default_node_selector,
             "default_tolerations": default_tolerations,
+            "feature_flags": feature_flags,
         }
         if token_value:
             _token_type = token_type or ClusterTokenType.SERVICE_ACCOUNT
@@ -191,6 +202,7 @@ class Cluster(UuidAuditedModel):
 
     region = models.CharField(max_length=32, db_index=True)
     name = models.CharField(max_length=32, help_text="name of the cluster", unique=True)
+    type = models.CharField(max_length=32, help_text='cluster type', default=ClusterType.NORMAL)
     description = models.TextField(help_text="描述信息", blank=True)
     is_default = models.NullBooleanField(default=False)
 
@@ -208,6 +220,7 @@ class Cluster(UuidAuditedModel):
     # App related default configs
     default_node_selector = JSONField(default={}, help_text="default value for app's 'node_selector' field")
     default_tolerations = JSONField(default=[], help_text="default value for app's 'tolerations' field")
+    feature_flags = JSONField(default={}, help_text="cluster's feature flag set")
 
     objects = ClusterManager()
 
@@ -215,6 +228,10 @@ class Cluster(UuidAuditedModel):
     def bcs_cluster_id(self) -> Optional[str]:
         """Property 'bcs_cluster_id' of cluster object, return None when not configured"""
         return self.annotations.get('bcs_cluster_id', None)
+
+    def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
+        """检查当前集群是否支持某个特性"""
+        return self.feature_flags.get(ff) is True
 
 
 class APIServer(UuidAuditedModel):

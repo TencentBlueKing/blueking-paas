@@ -38,26 +38,29 @@ class TestLegacyAppIngressMgr:
         )
 
 
+@pytest.mark.mock_get_structured_app
 @pytest.mark.auto_create_ns
 class TestAppDefaultIngresses:
-    def test_integrated(self, app):
-        app_default_ingresses = AppDefaultIngresses(app)
+    def test_integrated(self, bk_stag_engine_app):
+        app_default_ingresses = AppDefaultIngresses(bk_stag_engine_app)
         app_default_ingresses.sync_ignore_empty(default_service_name='foo')
-        assert len(ingress_kmodel.list_by_app(app)) == 1
+        assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 1
 
-        AppDomain.objects.create(app=app, region=app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(
+            app=bk_stag_engine_app, region=bk_stag_engine_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+        )
 
         app_default_ingresses.sync_ignore_empty(default_service_name='foo')
-        assert len(ingress_kmodel.list_by_app(app)) == 2
+        assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 2
 
         ret = app_default_ingresses.safe_update_target(service_name='foo-copy', service_port_name='foo-port-copy')
         assert ret.num_of_successful > 0
-        for ingress in ingress_kmodel.list_by_app(app):
+        for ingress in ingress_kmodel.list_by_app(bk_stag_engine_app):
             assert ingress.service_name == 'foo-copy'
             assert ingress.service_port_name == 'foo-port-copy'
 
         app_default_ingresses.delete_if_service_matches(service_name='not-matched')
-        assert len(ingress_kmodel.list_by_app(app)) == 2
+        assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 2
 
         app_default_ingresses.delete_if_service_matches(service_name='foo-copy')
-        assert len(ingress_kmodel.list_by_app(app)) == 0
+        assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 0

@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -20,7 +20,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,6 +28,8 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -38,6 +39,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	"bk.tencent.com/paas-app-operator/controllers"
+	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
@@ -87,6 +89,16 @@ func main() {
 	// not use global because import cycle
 	paasv1alpha1.SetConfig(projConf)
 
+	// ref: how to usage sentry in go -> https://docs.sentry.io/platforms/go/usage/
+	sentryDSN := config.Global.PlatformConfig.SentryDSN
+	if sentryDSN == "" {
+		setupLog.Info("[Sentry] SentryDSN unset, all events waiting for report will be dropped.")
+	}
+	if err = sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
+		setupLog.Error(err, "unable to set sentry dsn")
+		os.Exit(1)
+	}
+
 	if err = initExtensionClient(); err != nil {
 		setupLog.Error(err, "unable to init extension client")
 		os.Exit(1)
@@ -100,11 +112,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.BkAppReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	mgrCli := client.New(mgr.GetClient())
+	mgrScheme := mgr.GetScheme()
+	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
+		os.Exit(1)
+	}
+	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
@@ -112,13 +127,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "BkApp")
 			os.Exit(1)
 		}
-	}
-	if err = (&controllers.DomainGroupMappingReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
-		os.Exit(1)
+		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DomainGroupMapping")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -141,7 +153,7 @@ func initExtensionClient() error {
 	if config.Global.PlatformConfig.BkAPIGatewayURL != "" {
 		bkpaasGatewayBaseURL, err := url.Parse(config.Global.PlatformConfig.BkAPIGatewayURL)
 		if err != nil {
-			return fmt.Errorf("failed to parse bkpaas gateway url to net.Url: %w", err)
+			return errors.Wrap(err, "failed to parse bkpaas gateway url to net.Url")
 		}
 		external.SetDefaultClient(
 			external.NewClient(

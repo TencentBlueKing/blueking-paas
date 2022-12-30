@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -30,6 +30,8 @@ type PlatformConfig struct {
 	BkAppSecret string `json:"bkAppSecret"`
 	// BlueKing's component API address, the gateway SDK depends on this configuration
 	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
+	// sentry server dsn, all events waiting for report will be dropped if unset
+	SentryDSN string `json:"sentryDSN"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config

@@ -20,13 +20,15 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, List, Tuple
 
-from paas_wl.cnative.specs.models import EnvResourcePlanner
+from paas_wl.cnative.specs.models import default_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, ReplicasOverlay
+from paas_wl.platform.applications.models.app import get_ns
 from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base import crd
-from paas_wl.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
+from paas_wl.resources.base.base import EnhancedApiClient
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import PatchType
+from paas_wl.resources.utils.basic import get_client_by_env
 from paas_wl.workloads.processes.constants import AppEnvName
 
 from .exceptions import ProcNotDeployed, ProcNotFoundInRes
@@ -42,7 +44,8 @@ class ProcReplicas:
 
     def __init__(self, env: ModuleEnv):
         self.env = env
-        self.planer = EnvResourcePlanner(self.env)
+        self.ns = get_ns(self.env)
+        self.res_name = default_bkapp_name(self.env)
 
     def get(self, proc_type: str) -> int:
         """Get the replicas count by process type"""
@@ -53,7 +56,7 @@ class ProcReplicas:
 
         :return: (replicas, whether replicas was defined in "envOverlay")
         """
-        with get_client_by_cluster_name(self.planer.cluster.name) as client:
+        with get_client_by_env(self.env) as client:
             bkapp_res = self._get_bkapp_res(client)
 
         counts = ReplicasReader(bkapp_res).read_all(AppEnvName(self.env.environment))
@@ -73,7 +76,7 @@ class ProcReplicas:
         if count < 0:
             raise ValueError('count must greater than or equal to 0')
 
-        with get_client_by_cluster_name(self.planer.cluster.name) as client:
+        with get_client_by_env(self.env) as client:
             bkapp_res = self._get_bkapp_res(client)
             self._validate_proc_type(bkapp_res, proc_type)
 
@@ -89,8 +92,8 @@ class ProcReplicas:
             # "strategic json merge" is not available for CRD resources, use
             # "json merge" to replace the entire array.
             crd.BkApp(client).patch(
-                self.planer.default_app_name,
-                namespace=self.planer.namespace,
+                self.res_name,
+                namespace=self.ns,
                 body=patch_body,
                 ptype=PatchType.MERGE,
             )
@@ -98,7 +101,7 @@ class ProcReplicas:
     def _get_bkapp_res(self, client: EnhancedApiClient) -> BkAppResource:
         """Get app model resource from cluster"""
         try:
-            data = crd.BkApp(client).get(self.planer.default_app_name, namespace=self.planer.namespace)
+            data = crd.BkApp(client).get(self.res_name, namespace=self.ns)
         except ResourceMissing:
             raise ProcNotDeployed(f'{self.env} not deployed')
         return BkAppResource(**data)

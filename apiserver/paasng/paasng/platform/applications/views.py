@@ -25,7 +25,6 @@ from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
 
-import cattr
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import transaction
@@ -56,10 +55,10 @@ from paasng.accounts.permissions.application import application_perm_class, chec
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.accounts.serializers import VerificationCodeSLZ
-from paasng.cnative import initialize_simple
+from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_engine_app_cluster, get_region_cluster_helper
+from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.extensions.bk_plugins.config import get_bk_plugin_config
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.scene_app.initializer import SceneAPPInitializer
@@ -157,6 +156,10 @@ class ApplicationViewSet(viewsets.ViewSet):
             order_by=[params.get('order_by')],
         )
 
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         # 如果将用户标记的应用排在前面，需要特殊处理一下
         if params.get('prefer_marked'):
             applications_ids = applications.values_list('id', flat=True)
@@ -194,18 +197,17 @@ class ApplicationViewSet(viewsets.ViewSet):
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
+
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         results = [
             {'application': application, 'product': application.product if hasattr(application, "product") else None}
             for application in applications
         ]
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
-
-    def get_cluster_by_app(self, application: Application):
-        for env in application.envs.all():
-            cluster = get_engine_app_cluster(application.region, env.engine_app.name)
-            if cluster:
-                return cluster
 
     def retrieve(self, request, code):
         """获取单个应用的信息"""
@@ -216,7 +218,6 @@ class ApplicationViewSet(viewsets.ViewSet):
         product = application.get_product()
 
         web_config = application.config_info
-        cluster = self.get_cluster_by_app(application)
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
@@ -227,7 +228,6 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 'web_config': web_config,
-                'cluster': cattr.unstructure(cluster) if cluster else None,
             }
         )
 
@@ -554,7 +554,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # `source_init_template` is optional
         source_init_template = engine_params.get('source_init_template', '')
         if source_init_template:
-            language = Template.objects.get(name=source_init_template, type=TemplateType.NORMAL).language
+            language = Template.objects.get(
+                name=source_init_template, type__in=TemplateType.normal_app_types()
+            ).language
 
         module = create_default_module(
             application,
@@ -678,9 +680,6 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
-        user = request.user
-        if application.owner == user.pk:  # owner can not leave application
-            raise error_codes.MEMBERSHIP_OWNER_FAILED
 
         self.check_admin_count(application.code, request.user.username)
         try:

@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -136,7 +136,7 @@ var _ = Describe("Test utils", func() {
 				},
 				false,
 			),
-			Entry("deployment's handleUpdate", (&DeploymentReconciler{}).updateHandler, false),
+			Entry("deployment's handleUpdate", NewDeploymentReconciler(builder.Build()).updateHandler, false),
 		)
 
 		It("test create object", func() {

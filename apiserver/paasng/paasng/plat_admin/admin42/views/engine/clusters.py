@@ -20,6 +20,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
+from paasng.engine.constants import ClusterFeatureFlag, ClusterType
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.region.models import get_all_regions
 
@@ -36,7 +37,17 @@ class ClusterManageView(GenericTemplateView):
         if 'view' not in kwargs:
             kwargs['view'] = self
 
-        kwargs["region_list"] = [
-            dict(value=region.name, text=region.display_name) for region in get_all_regions().values()
-        ]
+        kwargs.update(
+            {
+                'region_list': [
+                    {'value': region.name, 'text': region.display_name} for region in get_all_regions().values()
+                ],
+                'cluster_type_list': [
+                    {'value': value, 'text': display_name} for value, display_name in ClusterType.get_choices()
+                ],
+                'feature_flag_list': [
+                    {'value': value, 'text': display_name} for value, display_name in ClusterFeatureFlag.get_choices()
+                ],
+            }
+        )
         return kwargs

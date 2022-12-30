@@ -146,20 +146,6 @@
                 </div>
               </bk-form-item>
             </bk-form>
-            <bk-form
-              v-if="curAppInfo.cluster"
-              class="info-special-form"
-              form-type="inline"
-            >
-              <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('所属集群') }} </label>
-              </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
-                <div class="item-content">
-                  {{ curAppInfo.cluster ? curAppInfo.cluster.bcs_cluster_id : '--' }}
-                </div>
-              </bk-form-item>
-            </bk-form>
           </div>
         </div>
         <div
@@ -411,7 +397,7 @@
                   </bk-button>
                   <bk-button
                     :theme="'default'"
-                    :title="$t('主要按钮')"
+                    :title="$t('还原')"
                     class="mr10"
                     @click="revivification"
                   >
@@ -426,7 +412,9 @@
             </bk-form>
           </div>
         </div>
-        <div
+        <!-- 鉴权信息 -->
+        <authentication-info />
+        <!-- <div
           v-if="canViewSecret"
           class="basic-info-item"
         >
@@ -517,7 +505,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </div> -->
         <div
           v-if="canDeleteApp"
           class="basic-info-item"
@@ -590,10 +578,12 @@
 <script>
     import moment from 'moment';
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import authenticationInfo from '@/components/authentication-info.vue';
     import 'BKSelectMinCss';
 
     export default {
         components: {
+            authenticationInfo,
             'bk-member-selector': () => {
                 return import('@/components/user/member-selector/member-selector.vue');
             }

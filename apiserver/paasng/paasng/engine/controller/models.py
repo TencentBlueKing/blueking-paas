@@ -17,9 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from operator import attrgetter
-from typing import List
+from typing import List, Optional
 
 from attrs import Factory, asdict, define
+
+from paasng.engine.constants import ClusterType
 
 
 @define
@@ -57,6 +59,26 @@ class IngressConfig:
         self.app_root_domains = sorted(self.app_root_domains, key=attrgetter("reserved"))
         self.sub_path_domains = sorted(self.sub_path_domains, key=attrgetter("reserved"))
 
+    def find_subdomain_domain(self, host: str) -> Optional[Domain]:
+        """Find domain object in configured sub-domains by given host.
+
+        :param host: Any valid host name
+        """
+        for d in self.app_root_domains:
+            if d.name == host:
+                return d
+        return None
+
+    def find_subpath_domain(self, host: str) -> Optional[Domain]:
+        """Find domain object in configured sub-path domains by given host.
+
+        :param host: Any valid host name
+        """
+        for d in self.sub_path_domains:
+            if d.name == host:
+                return d
+        return None
+
     @property
     def default_root_domain(self) -> Domain:
         return self.app_root_domains[0]
@@ -67,9 +89,18 @@ class IngressConfig:
 
 
 @define
+class ClusterFeatureFlags:
+    enable_egress_ip: bool = False
+    enable_mount_log_to_host: bool = False
+
+
+@define
 class Cluster:
     name: str
     is_default: bool
     ingress_config: IngressConfig = Factory(IngressConfig)
     # BCS 所属集群, 用于前端展示
     bcs_cluster_id: str = ""
+    type: str = ClusterType.NORMAL
+    # 集群特性（一般与集群类型相关）
+    feature_flags: ClusterFeatureFlags = Factory(ClusterFeatureFlags)

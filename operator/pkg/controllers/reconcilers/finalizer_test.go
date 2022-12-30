@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -101,9 +101,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 	Context("test hooksFinished", func() {
 		It("no any pods", func() {
-			r := BkappFinalizer{
-				Client: builder.Build(),
-			}
+			r := NewBkappFinalizer(builder.Build())
 			finished, err := r.hooksFinished(context.Background(), bkapp)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -112,9 +110,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 		It("no any running pods", func() {
 			pod.Status.Phase = corev1.PodSucceeded
-			r := BkappFinalizer{
-				Client: builder.WithObjects(pod).Build(),
-			}
+			r := NewBkappFinalizer(builder.WithObjects(pod).Build())
 
 			finished, err := r.hooksFinished(context.Background(), bkapp)
 
@@ -124,9 +120,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 		It("with running pods", func() {
 			pod.Status.Phase = corev1.PodRunning
-			r := BkappFinalizer{
-				Client: builder.WithObjects(pod).Build(),
-			}
+			r := NewBkappFinalizer(builder.WithObjects(pod).Build())
 
 			finished, err := r.hooksFinished(context.Background(), bkapp)
 
@@ -143,9 +137,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 		})
 
 		It("test normal", func() {
-			r := BkappFinalizer{
-				Client: builder.WithObjects(bkapp).Build(),
-			}
+			r := NewBkappFinalizer(builder.WithObjects(bkapp).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 
@@ -156,9 +148,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 		It("test be blocked", func() {
 			pod.Status.Phase = corev1.PodRunning
-			r := BkappFinalizer{
-				Client: builder.WithObjects(bkapp, pod).Build(),
-			}
+			r := NewBkappFinalizer(builder.WithObjects(bkapp, pod).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 

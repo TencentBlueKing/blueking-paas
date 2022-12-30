@@ -23,43 +23,47 @@ from typing import Optional, Tuple
 
 from django.utils.encoding import force_bytes, force_str
 
-from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert
-from paas_wl.platform.applications.models import App
+from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert, Domain
+from paas_wl.platform.applications.models import EngineApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.utils.basic import get_client_by_app
 
 logger = logging.getLogger(__name__)
 
 
-class AppDomainCertController:
-    """Controller for app_domains's certs"""
+class DomainWithCert:
+    def __init__(self, host: str, path_prefix: str, https_enabled: bool, cert: Optional[BasicCert] = None):
+        """DomainWithCert is a combination with an accessible address and cert
 
-    def __init__(self, app_domain: AppDomain):
-        self.app_domain = app_domain
-        self.app = self.app_domain.app
+        :param host: 域名
+        :param path_prefix: 该域名的可访问路径前缀
+        :param https_enabled: 该域名是否开启 https
+        :param cert: 该域名关联的证书
+        """
+        self.host = host
+        self.path_prefix = path_prefix
+        self.https_enabled = https_enabled
+        self.cert = cert
 
-    def get_cert(self) -> Optional[BasicCert]:
-        """Get cert object"""
-        if self.app_domain.cert:
-            return self.app_domain.cert
-        if self.app_domain.shared_cert:
-            return self.app_domain.shared_cert
+    @classmethod
+    def from_app_domain(cls, domain: AppDomain) -> 'DomainWithCert':
+        """get DomainWithCert from `AppDomain`, will set shared_cert if found some matched"""
+        cert = domain.cert or domain.shared_cert
+        if not cert:
+            cert = pick_shared_cert(domain.app.region, domain.host)
+            if cert:
+                domain.shared_cert = cert
+                domain.save(update_fields=["shared_cert", "updated"])
+        return cls(host=domain.host, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
-        # Try to pick a matched shared cert by CN
-        shared_cert = pick_shared_cert(self.app.region, self.app_domain.host)
-        if shared_cert:
-            logger.debug('Shared cert found for %s', self.app_domain)
-            self.app_domain.shared_cert = shared_cert
-            self.app_domain.save(update_fields=['shared_cert'])
-            return shared_cert
-        return None
-
-    def update_or_create_secret_by_cert(self, cert: BasicCert) -> Tuple[str, bool]:
-        # Forward function call directly
-        return update_or_create_secret_by_cert(self.app, cert)
+    @classmethod
+    def from_custom_domain(cls, region: str, domain: Domain) -> 'DomainWithCert':
+        """get DomainWithCert from `Domain`, will pick shared cert by domain.name for backward compatibility"""
+        cert = pick_shared_cert(region, domain.name)
+        return cls(host=domain.name, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
 
-def update_or_create_secret_by_cert(app: App, cert: BasicCert) -> Tuple[str, bool]:
+def update_or_create_secret_by_cert(app: EngineApp, cert: BasicCert) -> Tuple[str, bool]:
     """Update or create the secret resource by cert object
 
     :param app: `App` object, the Secret resource which holds HTTPS cert will be created
@@ -80,8 +84,6 @@ def update_or_create_secret_by_cert(app: App, cert: BasicCert) -> Tuple[str, boo
             'tls.key': force_str(base64.b64encode(force_bytes(cert.key_data))),
         },
     }
-    # FIXME: For cloud-native applications, we should use EnvPlaner to get namespace
-    # instead of app.namespace, although these two are returning identical values.
     _, created = kres.KSecret(client).create_or_update(
         name=secret_name, namespace=app.namespace, body=body, update_method='patch'
     )

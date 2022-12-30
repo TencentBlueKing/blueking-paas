@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -20,9 +20,9 @@ package kubestatus
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,10 +34,11 @@ import (
 var ErrDeploymentStillProgressing = errors.New("deployment is progressing")
 
 // CheckDeploymentHealthStatus check if the deployment is healthy
-// For a deployment, healthy means the deployment is available, see also: DeploymentAvailable.
-//                   unhealthy means the deployment is failed to reconcile.
-//                   progressing is meaningless for deployment, if you want to know if those pods that associated with this deployment
-//                   is progressing, you should call GetDeploymentDirectFailMessage.
+// For a deployment:
+//   healthy means the deployment is available, see also: DeploymentAvailable.
+//   unhealthy means the deployment is failed to reconcile.
+//   progressing is meaningless for deployment, if you want to know if those pods that
+//   associated with this deployment is progressing, you should call GetDeploymentDirectFailMessage.
 func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		return &HealthStatus{
@@ -70,10 +71,16 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		var message string
 		if deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
 			// Deployment 未完成滚动更新
-			message = fmt.Sprintf("Waiting for rollout to finish: %d/%d replicas are updated...", deployment.Status.UpdatedReplicas, deployment.Spec.Replicas)
+			message = fmt.Sprintf(
+				"Waiting for rollout to finish: %d/%d replicas are updated...",
+				deployment.Status.UpdatedReplicas, deployment.Spec.Replicas,
+			)
 		} else {
 			// Deployment 等待最新的 Pod 就绪
-			message = fmt.Sprintf("Waiting for rollout to finish: %d/%d replicas are available...", deployment.Status.AvailableReplicas, deployment.Spec.Replicas)
+			message = fmt.Sprintf(
+				"Waiting for rollout to finish: %d/%d replicas are available...",
+				deployment.Status.AvailableReplicas, deployment.Spec.Replicas,
+			)
 		}
 
 		return &HealthStatus{
@@ -93,7 +100,12 @@ func GetDeploymentDirectFailMessage(
 	deployment *appsv1.Deployment,
 ) (string, error) {
 	var pods corev1.PodList
-	if err := cli.List(ctx, &pods, client.InNamespace(deployment.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
+	if err := cli.List(
+		ctx,
+		&pods,
+		client.InNamespace(deployment.Namespace),
+		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
+	); err != nil {
 		return "", err
 	}
 	for _, pod := range pods.Items {
@@ -105,7 +117,7 @@ func GetDeploymentDirectFailMessage(
 			return healthStatus.Message, nil
 		}
 	}
-	return "", ErrDeploymentStillProgressing
+	return "", errors.WithStack(ErrDeploymentStillProgressing)
 }
 
 // FindDeploymentStatusCondition finds the conditionType in conditions.

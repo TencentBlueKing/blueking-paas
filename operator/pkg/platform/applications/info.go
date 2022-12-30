@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -19,8 +19,9 @@
 package applications
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 )
@@ -46,20 +47,20 @@ func GetBkAppInfo(bkapp *v1alpha1.BkApp) (*BluekingAppInfo, error) {
 	var ok bool
 
 	if region, ok = annotations[v1alpha1.BkAppRegionKey]; !ok {
-		return nil, fmt.Errorf("%w, for missing %s", ErrParseAppMetadata, v1alpha1.BkAppRegionKey)
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha1.BkAppRegionKey)
 	}
 
 	if appCode, ok = annotations[v1alpha1.BkAppCodeKey]; !ok {
-		return nil, fmt.Errorf("%w, for missing %s", ErrParseAppMetadata, v1alpha1.BkAppCodeKey)
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha1.BkAppCodeKey)
 	}
 	if appName, ok = annotations[v1alpha1.BkAppNameKey]; !ok {
-		return nil, fmt.Errorf("%w, for missing %s", ErrParseAppMetadata, v1alpha1.BkAppNameKey)
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha1.BkAppNameKey)
 	}
 	if moduleName, ok = annotations[v1alpha1.ModuleNameKey]; !ok {
-		return nil, fmt.Errorf("%w, for missing %s", ErrParseAppMetadata, v1alpha1.ModuleNameKey)
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha1.ModuleNameKey)
 	}
 	if environment, ok = annotations[v1alpha1.EnvironmentKey]; !ok {
-		return nil, fmt.Errorf("%w, for missing %s", ErrParseAppMetadata, v1alpha1.EnvironmentKey)
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha1.EnvironmentKey)
 	}
 	if engineAppName, ok = annotations[v1alpha1.EngineAppNameKey]; !ok {
 		engineAppName = fmt.Sprintf("bkapp-%s-%s", appCode, environment)

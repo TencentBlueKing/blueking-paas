@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,9 +39,14 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 )
 
+// NewHookReconciler will return a HookReconciler with given k8s client
+func NewHookReconciler(client client.Client) *HookReconciler {
+	return &HookReconciler{Client: client}
+}
+
 // HookReconciler 负责处理 Hook 相关的调和逻辑
 type HookReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -60,36 +66,38 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 		switch {
 		case current.Timeout(resources.HookExecuteTimeoutThreshold):
 			// 删除超时的 pod
-			if err := r.Delete(ctx, current.Pod); err != nil {
-				return r.Result.withError(resources.ErrExecuteTimeout)
+			if err := r.Client.Delete(ctx, current.Pod); err != nil {
+				return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
 			}
-			return r.Result.withError(resources.ErrExecuteTimeout)
+			return r.Result.withError(errors.WithStack(resources.ErrExecuteTimeout))
 		case current.Progressing():
 			return r.Result.requeue(v1alpha1.DefaultRequeueAfter)
 		case current.Succeeded():
 			return r.Result
 		default:
 			return r.Result.withError(
-				fmt.Errorf("%w: hook failed with: %s", resources.ErrPodEndsUnsuccessfully, current.Status.Message),
+				errors.Wrapf(resources.ErrPodEndsUnsuccessfully, "hook failed with: %s", current.Status.Message),
 			)
 		}
-	} else if preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)); preReleaseHook != nil {
-		if err := r.ExecuteHook(ctx, bkapp, preReleaseHook); err != nil {
+	}
+
+	if hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)); hook != nil {
+		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
 			return r.Result.withError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环
 		return r.Result.End()
-	} else {
-		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.HooksFinished,
-			Status:             metav1.ConditionUnknown,
-			Reason:             "Disabled",
-			Message:            "Pre-Release-Hook feature not turned on",
-			ObservedGeneration: bkapp.Status.ObservedGeneration,
-		})
-		if err := r.Status().Update(ctx, bkapp); err != nil {
-			return r.Result.withError(err)
-		}
+	}
+
+	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.HooksFinished,
+		Status:             metav1.ConditionUnknown,
+		Reason:             "Disabled",
+		Message:            "Pre-Release-Hook feature not turned on",
+		ObservedGeneration: bkapp.Status.ObservedGeneration,
+	})
+	if err := r.Client.Status().Update(ctx, bkapp); err != nil {
+		return r.Result.withError(err)
 	}
 	return r.Result
 }
@@ -98,7 +106,7 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) R
 func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.BkApp) resources.HookInstance {
 	currentStatus := bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)
 	pod := corev1.Pod{}
-	err := r.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
 	if err != nil {
 		return resources.HookInstance{
 			Pod:    nil,
@@ -142,14 +150,13 @@ func (r *HookReconciler) ExecuteHook(
 ) error {
 	pod := corev1.Pod{}
 	// Only proceed when Pod resource is not found
-	if err := r.Get(ctx, client.ObjectKeyFromObject(instance.Pod), &pod); err == nil {
-		return resources.ErrHookPodExists
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(instance.Pod), &pod); err == nil {
+		return errors.WithStack(resources.ErrHookPodExists)
 	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	err := r.Create(ctx, instance.Pod)
-	if err != nil {
+	if err := r.Client.Create(ctx, instance.Pod); err != nil {
 		return err
 	}
 
@@ -166,7 +173,7 @@ func (r *HookReconciler) ExecuteHook(
 		Message:            "The pre-release hook is executing.",
 		ObservedGeneration: bkapp.Status.ObservedGeneration,
 	})
-	return r.Status().Update(ctx, bkapp)
+	return r.Client.Status().Update(ctx, bkapp)
 }
 
 // UpdateStatus will update bkapp hook status from the given instance status
@@ -207,35 +214,35 @@ func (r *HookReconciler) UpdateStatus(
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
 		})
 	}
-	return r.Status().Update(ctx, bkapp)
+	return r.Client.Status().Update(ctx, bkapp)
 }
 
 // CheckAndUpdatePreReleaseHookStatus 检查并更新 PreReleaseHook 执行状态
 func CheckAndUpdatePreReleaseHookStatus(
 	ctx context.Context, cli client.Client, bkapp *v1alpha1.BkApp, timeout time.Duration,
 ) (succeed bool, err error) {
-	r := HookReconciler{Client: cli}
+	r := NewHookReconciler(cli)
 	instance := r.getCurrentState(ctx, bkapp)
 
 	if instance.Pod == nil {
-		return false, fmt.Errorf("pre-release-hook not found")
+		return false, errors.New("pre-release-hook not found")
 	}
 
-	if err := r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
+	if err = r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
 		return false, err
 	}
 
 	switch {
 	// 删除超时的 pod
 	case instance.Timeout(timeout):
-		if err := cli.Delete(ctx, instance.Pod); err != nil {
+		if err = cli.Delete(ctx, instance.Pod); err != nil {
 			return false, err
 		}
-		return false, resources.ErrExecuteTimeout
+		return false, errors.WithStack(resources.ErrExecuteTimeout)
 	case instance.Failed():
-		return false, fmt.Errorf(
-			"%w: hook failed with: %s",
+		return false, errors.Wrapf(
 			resources.ErrPodEndsUnsuccessfully,
+			"hook failed with: %s",
 			instance.Status.Message,
 		)
 	}

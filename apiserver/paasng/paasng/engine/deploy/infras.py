@@ -15,11 +15,8 @@ limitations under the License.
 
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
-
----
-
-Infrastructure functions and tools for deploy
 """
+"""Infrastructure functions and tools for deploy"""
 import abc
 import json
 import logging
@@ -49,7 +46,7 @@ from paasng.engine.exceptions import DuplicateNameInSamePhaseError, InternalEven
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.config_var import generate_blobstore_env_vars, generate_builtin_env_vars, get_config_vars
 from paasng.engine.models.operations import ModuleEnvironmentOperations
-from paasng.engine.signals import post_appenv_deploy, post_phase_end
+from paasng.engine.signals import on_builtin_domains_subpaths_updated, post_appenv_deploy, post_phase_end
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.platform.modules.constants import ExposedURLType
@@ -386,6 +383,8 @@ class AppDefaultDomains:
         """Sync app's default subdomains to engine"""
         domains = [d.as_dict() for d in self.domains]
         self.engine_client.update_domains(domains)
+
+        on_builtin_domains_subpaths_updated.send(self.env)
 
     def as_env_vars(self) -> Dict:
         """Return current subdomains as env vars"""
@@ -734,6 +733,8 @@ class AppDefaultSubpaths:
         subpaths = [d.as_dict() for d in self.subpaths]
         if subpaths:
             self.engine_client.update_subpaths(subpaths)
+
+            on_builtin_domains_subpaths_updated.send(self.env)
 
     def as_env_vars(self) -> Dict:
         """Return current subpath as env vars"""

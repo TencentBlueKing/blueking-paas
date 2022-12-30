@@ -1,5 +1,5 @@
 /*
- * Tencent is pleased to support the open source community by making
+ * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
  * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
@@ -21,7 +21,6 @@ package external
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,6 +29,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 )
 
@@ -39,8 +39,8 @@ var defaultClient *Client
 const AuthorizationHeaderKey = "X-Bkapi-Authorization"
 
 var (
-	// ErrClientUnconfigured 未初始化 DefaultClient, 表示当前 operator 不支持访问 bkpaas 服务
-	ErrClientUnconfigured = errors.New("the DefaultClient is unconfigured")
+	// ErrClientUninitialized 未初始化 DefaultClient, 表示当前 operator 不支持访问 bkpaas 服务
+	ErrClientUninitialized = errors.New("the DefaultClient is uninitialized")
 	// ErrStatusNotOk return when the status code not equal to 2xx
 	ErrStatusNotOk = errors.New("response not ok")
 )
@@ -69,7 +69,7 @@ func (r Result) Into(obj any, decoder decoder) error {
 	return err
 }
 
-// Client follow the authenticate conventions of Blueking API Gateway.
+// Client follow to authenticate conventions of Blueking API Gateway.
 // The baseURL is expected to point to an HTTP or HTTPS path that
 // is the Gateway URL of a Blueking API Gateway.
 type Client struct {
@@ -106,8 +106,7 @@ func (c *Client) NewRequest(ctx context.Context, method, endpoint string, body i
 	return http.NewRequestWithContext(ctx, method, finalURL.String(), body)
 }
 
-// Do formats and executes the request. Returns a Result object for easy response
-// processing.
+// Do formats and executes the request. Returns a Result object for easy response processing.
 //
 // Error type:
 //  * http.Client.Do errors are returned directly.
@@ -120,9 +119,7 @@ func (c *Client) Do(req *http.Request) Result {
 	// 发送请求到后端
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return Result{
-			err: err,
-		}
+		return Result{err: err}
 	}
 	return c.transformResponse(resp, req)
 }
@@ -140,15 +137,13 @@ func (c *Client) transformResponse(resp *http.Response, req *http.Request) Resul
 		case http2.StreamError:
 			// This is trying to catch the scenario that the server may close the connection when sending the
 			// response body. This can be caused by server timeout due to a slow network connection.
-			streamErr := fmt.Errorf("stream error when reading response body, may be caused by closed connection. Please retry. Original error: %w", err)
-			return Result{
-				err: streamErr,
-			}
+			streamErr := errors.Wrap(
+				err, "stream error when reading response body, may be caused by closed connection. Please retry.",
+			)
+			return Result{err: streamErr}
 		default:
-			unexpectedErr := fmt.Errorf("unexpected error when reading response body. Please retry. Original error: %w", err)
-			return Result{
-				err: unexpectedErr,
-			}
+			unexpectedErr := errors.Wrap(err, "unexpected error when reading response body. Please retry. ")
+			return Result{err: unexpectedErr}
 		}
 	}
 	contentType := resp.Header.Get("Content-Type")
@@ -158,14 +153,14 @@ func (c *Client) transformResponse(resp *http.Response, req *http.Request) Resul
 	if !(statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices) {
 		err = ErrStatusNotOk
 		if contentType == "application/json" {
-			err = fmt.Errorf("%w: %s", err, string(body))
+			err = errors.Wrap(err, string(body))
 		}
 	}
 
 	return Result{
 		body:        body,
 		contentType: contentType,
-		statusCode:  resp.StatusCode,
+		statusCode:  statusCode,
 		err:         err,
 	}
 }
@@ -173,7 +168,7 @@ func (c *Client) transformResponse(resp *http.Response, req *http.Request) Resul
 // GetDefaultClient is used to get default bkpaas client
 func GetDefaultClient() (*Client, error) {
 	if defaultClient == nil {
-		return nil, ErrClientUnconfigured
+		return nil, errors.WithStack(ErrClientUninitialized)
 	}
 	return defaultClient, nil
 }

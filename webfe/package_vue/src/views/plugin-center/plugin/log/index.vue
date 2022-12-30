@@ -1,0 +1,121 @@
+<template lang="html">
+  <div
+    :key="appCode"
+    class="right-main"
+  >
+    <paas-content-loader
+      class="app-container log-middle"
+      :is-loading="isLoading"
+      placeholder="log-loading"
+      :offset-top="60"
+    >
+      <paas-plugin-title />
+      <section>
+        <bk-tab
+          :active.sync="tabActive"
+          type="unborder-card"
+          @tab-change="handleTabChange"
+        >
+          <bk-tab-panel
+            v-if="pluginFeatureFlags.STRUCTURE_LOG"
+            name="structured"
+            :label="$t('结构化日志')"
+          >
+            <custom-log
+              v-if="tabActive === 'structured'"
+              ref="customLog"
+            />
+          </bk-tab-panel>
+          <bk-tab-panel
+            name="stream"
+            :label="$t('标准输出日志')"
+          >
+            <standart-log v-if="tabActive === 'stream'" />
+          </bk-tab-panel>
+          <bk-tab-panel
+            name="access"
+            :label="$t('访问日志')"
+          >
+            <access-log
+              v-if="tabActive === 'access'"
+              ref="accessLog"
+            />
+          </bk-tab-panel>
+        </bk-tab>
+      </section>
+    </paas-content-loader>
+  </div>
+</template>
+
+<script>
+    import appBaseMixin from '@/mixins/app-base-mixin';
+    import standartLog from './standart-log.vue';
+    import accessLog from './access-log.vue';
+    import customLog from './custom-log.vue';
+    import paasPluginTitle from '@/components/pass-plugin-title';
+
+    export default {
+        components: {
+            standartLog,
+            accessLog,
+            customLog,
+            paasPluginTitle
+        },
+        mixins: [appBaseMixin],
+        data () {
+            return {
+                name: 'log-component',
+                tabActive: 'structured',
+                tabChangeIndex: 0,
+                isLoading: false
+            };
+        },
+        computed: {
+            pluginFeatureFlags () {
+                return this.$store.state.plugin.pluginFeatureFlags;
+            }
+        },
+        watch: {
+            tabActive () {
+                // this.$nextTick(() => {
+                //     if (this.tabActive === 'structured') {
+                //         this.$refs.customLog.initTableBox();
+                //     }
+                //     if (this.tabActive === 'access') {
+                //         this.$refs.accessLog.initTableBox();
+                //     }
+                // });
+            }
+        },
+        mounted () {
+            this.isLoading = true;
+            if (this.$route.query.tab) {
+                const isExistTab = ['stream', 'access'].includes(this.$route.query.tab);
+                this.tabActive = isExistTab ? this.$route.query.tab : 'stream';
+            }
+            setTimeout(() => {
+                this.isLoading = false;
+            }, 2000);
+        },
+        methods: {
+            handleTabChange (payload) {
+                this.$router.push({
+                    name: 'pluginLog',
+                    params: {
+                        id: this.$route.params.id,
+                        moduleId: this.$route.params.pluginTypeId
+                    },
+                    query: {
+                        tab: payload
+                    }
+                });
+            }
+        }
+    };
+</script>
+
+<style scoped>
+  .plugin-top-title {
+      margin-top: 6px;
+  }
+</style>

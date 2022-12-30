@@ -169,7 +169,13 @@ class Command(BaseCommand):
         # 1。检查有没有该应用的分级管理员信息，如果没有，则需要创建
         grade_manager_id = self.grade_manager_map.get(app_code)
         if not grade_manager_id:
-            migrate_logs.append(f"grade manager not exists, create and add {first_grade_manager} as members...")
+            migrate_logs.append("grade manager not exists, create...")
+            if first_grade_manager in self.exclude_users:
+                first_grade_manager = None
+                migrate_logs.append(f"{first_grade_manager} in exclude users, skip add as members...")
+            else:
+                migrate_logs.append(f"add {first_grade_manager} as grade manager members...")
+
             grade_manager_id = self.cli.create_grade_managers(app_code, app_name, first_grade_manager)
 
             # 更新分级管理员映射表信息 & ApplicationGradeManager 表数据

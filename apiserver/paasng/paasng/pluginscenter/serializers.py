@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, Optional, Type
 
+import arrow
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
@@ -28,14 +29,15 @@ from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
+    OperationRecord,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
 )
-from paasng.pluginscenter.thirdparty.log import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
@@ -103,6 +105,8 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 
 class ItsmDetailSLZ(serializers.Serializer):
     ticket_url = serializers.CharField(default=None)
+    sn = serializers.CharField(help_text="ITSM 单据单号")
+    fields = serializers.ListField(child=serializers.DictField())
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):
@@ -148,6 +152,7 @@ def make_string_field(field_schema: FieldSchema) -> serializers.Field:
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
+        "max_length": field_schema.maxlength,
     }
     if field_schema.default:
         init_kwargs["default"] = field_schema.default
@@ -335,6 +340,8 @@ class PluginLogQueryDSLSLZ(serializers.Serializer):
     """查询插件日志的 DSL 参数"""
 
     query_string = serializers.CharField(help_text="查询语句", default="", allow_blank=True)
+    terms = serializers.DictField(help_text="多值精准匹配", default=dict)
+    exclude = serializers.DictField(help_text="terms 取反", default=dict)
 
 
 class PluginLogQueryBodySLZ(serializers.Serializer):
@@ -403,6 +410,15 @@ class DateHistogramSLZ(serializers.Serializer):
     series = serializers.ListField(child=serializers.IntegerField(), help_text="按时间排序的值(文档数)")
     timestamps = serializers.ListField(child=serializers.IntegerField(), help_text="Series 中对应位置记录的时间点的时间戳")
     dsl = serializers.CharField(help_text="日志查询语句")
+
+
+class LogFieldFilterSLZ(serializers.Serializer):
+    """日志可选字段"""
+
+    name = serializers.CharField(help_text="展示名称")
+    key = serializers.CharField(help_text="传递给参数中的key")
+    options = serializers.ListField(help_text="该字段的选项和分布频率")
+    total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频次")
 
 
 class PluginRoleSLZ(serializers.Serializer):
@@ -487,3 +503,58 @@ class StubConfigSLZ(serializers.Serializer):
     """
 
     __id__ = serializers.CharField(help_text="配置项id", source="unique_key")
+
+
+class OperationRecordSLZ(serializers.ModelSerializer):
+    display_text = serializers.CharField(source='get_display_text', read_only=True)
+
+    class Meta:
+        model = OperationRecord
+        fields = '__all__'
+
+
+class CodeCommitSearchSLZ(serializers.Serializer):
+    """代码提交统计搜索条件"""
+
+    begin_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", required=True)
+
+    def to_internal_value(self, instance):
+        data = super().to_internal_value(instance)
+
+        # 将时间转换为代码仓库指定的格式  YYYY-MM-DDTHH:mm:ssZ
+        data['begin_time'] = arrow.get(data['begin_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        data['end_time'] = arrow.get(data['end_time']).format("YYYY-MM-DDTHH:mm:ssZ")
+        return data
+
+
+class PluginReleaseFilterSLZ(serializers.Serializer):
+    status = serializers.ListField(required=False)
+
+
+class PluginListFilterSlZ(serializers.Serializer):
+    status = serializers.ListField(required=False)
+    language = serializers.ListField(required=False)
+    pd__identifier = serializers.ListField(required=False)
+
+
+class CodeCheckInfoSLZ(serializers.Serializer):
+    """蓝盾 API 返回的代码检查结果的数据格式，保留驼峰格式"""
+
+    resolvedDefectNum = serializers.FloatField(help_text="已解决缺陷数", required=False)
+    repoCodeccAvgScore = serializers.IntegerField(help_text="代码质量", required=False)
+
+
+class QualityInfoSLZ(serializers.Serializer):
+    """蓝盾 API 返回的代码质量的数据格式，保留驼峰格式"""
+
+    qualityInterceptionRate = serializers.FloatField(help_text="质量红线拦截率", required=False)
+    interceptionCount = serializers.IntegerField(help_text="拦截次数", required=False)
+    totalExecuteCount = serializers.IntegerField(help_text="运行总次数", required=False)
+
+
+class MetricsSummarySLZ(serializers.Serializer):
+    """蓝盾 API 返回的代码仓库概览信息的数据格式，保留驼峰格式"""
+
+    codeCheckInfo = CodeCheckInfoSLZ(required=False)
+    qualityInfo = QualityInfoSLZ(required=False)

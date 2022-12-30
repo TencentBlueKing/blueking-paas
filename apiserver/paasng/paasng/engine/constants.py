@@ -36,6 +36,20 @@ class EngineAppType(str, StructuredEnum):
     CLOUD_NATIVE = EnumField('cloud_native')
 
 
+class ClusterType(str, StructuredEnum):
+    """集群类别"""
+
+    NORMAL = EnumField('normal', label=_('普通集群'))
+    VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
+
+
+class ClusterFeatureFlag(str, StructuredEnum):
+    """集群特性标志"""
+
+    ENABLE_EGRESS_IP = EnumField('enable_egress_ip', label=_('支持提供出口 IP'))
+    ENABLE_MOUNT_LOG_TO_HOST = EnumField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
+
+
 class AppEnvName(str, StructuredEnum):
     """The default environment names"""
 

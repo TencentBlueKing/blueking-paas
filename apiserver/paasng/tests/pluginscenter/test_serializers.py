@@ -57,6 +57,11 @@ def make_translate_fields(field, value) -> Dict:
             },
         ),
         (
+            {"id": "12345678901", "name": "2", "template": "foo"},
+            False,
+            {'id': [ErrorDetail(string='请确保这个字段不能超过 10 个字符。', code='max_length')]},
+        ),
+        (
             {"id": 1, "name": "2", "template": "foo", "extra_fields": {"email": "foo@example.com"}},
             True,
             {

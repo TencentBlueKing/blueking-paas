@@ -26,11 +26,14 @@ from rest_framework.status import HTTP_204_NO_CONTENT
 
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
-from paasng.platform.modules.helpers import get_module_all_root_domains
-from paasng.publish.entrance.exposer import get_default_access_entrances, update_exposed_url_type_to_subdomain
+from paasng.platform.modules.helpers import get_module_prod_env_root_domains
+from paasng.publish.entrance.exposer import (
+    get_deployed_status,
+    get_preallocated_urls,
+    update_exposed_url_type_to_subdomain,
+)
 from paasng.publish.entrance.serializers import (
     ApplicationAvailableEntranceSLZ,
     ApplicationCustomDomainEntranceSLZ,
@@ -75,15 +78,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
     def list_module_default_entrances(self, request, code, module_name):
         """查看模块的默认的所有访问入口(由平台提供的)，无论是否运行"""
         module = self.get_module_via_path()
-
-        # Get "is_running" data from workloads service
-        #
-        # INFO: Below logic is different from other places in where we get "is_running"
-        # from ModuleEnv's attribute directly by querying for successful Deployment
-        # objects. That approach is not suitable for cloud-native applications and
-        # should be optimized eventually.
-        is_running_data = make_internal_client().list_env_is_running(module.application.code, module.name)
-        is_running_map = {d['env']: d['is_running'] for d in is_running_data}
+        deployed_status = get_deployed_status(module)
 
         def get_plain_entrance():
             # 默认 stag 在 prod 之前创建
@@ -91,10 +86,10 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
                 yield from [
                     dict(
                         env=env.environment,
-                        is_running=is_running_map.get(env.environment, False),
+                        is_running=deployed_status.get(env.environment, False),
                         address=entrance.address,
                     )
-                    for entrance in (get_default_access_entrances(env, include_no_running=True) or [])
+                    for entrance in get_preallocated_urls(env)
                 ]
 
         return Response(
@@ -153,31 +148,30 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(responses={'200': RootDoaminSLZ()}, tags=["访问入口"])
     def get(self, request, code, module_name):
-        """查看模块所属集群的子域名根域名和当前模块的偏好的根域名"""
+        """
+        查看模块所属集群的子域名根域名和当前模块的偏好的根域名
+        NOTE: 已确认偏好根域名设置仅影响生产环境访问，因此只取生产环境可用的根域名
+        """
         module = self.get_module_via_path()
         if module.exposed_url_type is None:
             return Response(status=HTTP_204_NO_CONTENT)
 
-        switchable_domains = [domain.name for domain in get_module_all_root_domains(module, include_reserved=False)]
+        switchable_domains = [
+            domain.name for domain in get_module_prod_env_root_domains(module, include_reserved=False)
+        ]
         preferred_root_domain = module.user_preferred_root_domain
 
-        # 模块没有设置偏好根域名，则默认为集群设置的第一个根域
-        if not preferred_root_domain and switchable_domains:
-            preferred_root_domain = switchable_domains[0]
-
         # 如果当前的域名是保留域名, 那么则添加到
-        if preferred_root_domain not in switchable_domains:
+        if preferred_root_domain and preferred_root_domain not in switchable_domains:
             switchable_domains.append(preferred_root_domain)
 
         return Response(
-            data=dict(
-                RootDoaminSLZ(
-                    {
-                        "root_domains": switchable_domains,
-                        "preferred_root_domain": preferred_root_domain,
-                    }
-                ).data
-            )
+            data=RootDoaminSLZ(
+                {
+                    "root_domains": switchable_domains,
+                    "preferred_root_domain": preferred_root_domain,
+                }
+            ).data
         )
 
 
@@ -185,9 +179,12 @@ class ModulePreferredRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathM
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def update(self, request, code, module_name):
-        """更新模块的偏好根域"""
+        """
+        更新模块的偏好根域
+        NOTE: 已确认偏好根域名设置仅影响生产环境访问，因此只取生产环境可用的根域名
+        """
         module = self.get_module_via_path()
-        root_domains = get_module_all_root_domains(module, include_reserved=True)
+        root_domains = get_module_prod_env_root_domains(module, include_reserved=True)
 
         serializer = PreferredRootDoaminSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)

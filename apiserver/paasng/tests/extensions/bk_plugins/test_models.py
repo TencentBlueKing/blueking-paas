@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-
 from functools import partial
 
 import pytest
@@ -46,7 +45,7 @@ class TestBkPlugin:
         assert obj.id == bk_plugin_app.id.hex
 
 
-def test_get_deployed_statuses(bk_plugin_app):
+def test_get_deployed_statuses(with_empty_live_addrs, bk_plugin_app):
     obj = BkPlugin.from_application(bk_plugin_app)
     assert get_deployed_statuses(obj) is not None
 
@@ -72,12 +71,12 @@ def test_get_or_create_by_application(bk_app):
     assert profile.tag.name == 'sample-tag-1'
 
 
-def test_plugin_to_detailed_default(bk_plugin):
+def test_plugin_to_detailed_default(with_empty_live_addrs, bk_plugin):
     ret = plugin_to_detailed(bk_plugin)
     assert ret.dict()['deployed_statuses']['stag'].get('addresses') is not None
 
 
-def test_plugin_to_detailed_no_addresses(bk_plugin):
+def test_plugin_to_detailed_no_addresses(with_empty_live_addrs, bk_plugin):
     ret = plugin_to_detailed(bk_plugin, include_addresses=False)
     assert ret.dict()['deployed_statuses']['stag'].get('addresses') is None
 

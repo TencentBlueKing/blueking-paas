@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from attrs import asdict
 from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
@@ -27,9 +28,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
 from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
+from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.platform.applications import models
 from paas_wl.platform.applications.models import Release
 from paas_wl.platform.applications.models.app import create_initial_config
@@ -171,14 +175,6 @@ class ProcessViewSet(SysModelViewSet):
         ProcessSpecManager(self.get_object()).sync(processes)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_abnormal_processes(self, request, **kwargs):
-        """Get abnormal processes name"""
-        region = self.kwargs['region']
-        scheduler = self.get_scheduler_client(region=region)
-        processes = scheduler.get_abnormal_processes(region=region)
-        abnormal_processes = self.serializer_class(processes, many=True).data
-        return Response({'results': abnormal_processes, 'count': len(abnormal_processes)})
-
 
 class SysAppRelatedViewSet(SysModelViewSet):
     """Base ViewSet for a app_name in url path"""
@@ -282,6 +278,11 @@ class ConfigViewSet(SysAppRelatedViewSet):
             for attr, value in data.items():
                 setattr(latest_config, attr, value)
 
+            # 若更新了绑定的集群信息，则也需要修改集群特性相关配置
+            if cluster_name := data.get('cluster'):
+                cluster: Cluster = Cluster.objects.get(name=cluster_name)
+                latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
+
             # Always update "resource_requirements", value was fetched from database
             resource_requirements = {
                 pack.name: pack.plan.get_resource_summary()
@@ -294,6 +295,20 @@ class ConfigViewSet(SysAppRelatedViewSet):
             raise error_codes.UPDATE_CONFIG_FAILED
 
         return Response(data=self.serializer_class(instance=latest_config).data, status=status.HTTP_201_CREATED)
+
+    def bind_cluster(self, request, region, name, cluster_name):
+        """Bind app to given cluster"""
+        app = self.get_app()
+        cluster = get_object_or_404(Cluster, name=cluster_name)
+        try:
+            latest_config: models.Config = self.model.objects.filter(app=app).latest()
+            latest_config.cluster = cluster.name
+            latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
+            latest_config.save()
+        except Exception:
+            logger.exception("bind app to cluster %s failed", cluster_name)
+            raise error_codes.UPDATE_CONFIG_FAILED.f("绑定应用集群失败")
+        return Response(data={}, status=status.HTTP_200_OK)
 
 
 class BuildViewSet(SysAppRelatedViewSet):
@@ -511,21 +526,27 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         return Response(data=serializers.InstanceMetricsResultSerializer(instance=metric_results, many=True).data)
 
 
-class EnvIsRunningViewSet(SysViewSet):
-    """获取模块下各环境是否处于“运行中”状态"""
+class EnvDeployedStatusViewSet(SysViewSet):
+    """获取模块下各环境与“部署”有关的状信息"""
 
-    @swagger_auto_schema(responses={"200": serializers.EnvIsRunningSLZ(many=True)})
-    def list(self, request, code, module_name):
-        """返回当前模块下所有环境的运行状态（is_running），该值为 true 时，代表至少存在
-        一次成功的部署，意味着：
+    @swagger_auto_schema(responses={"200": serializers.EnvAddressesSLZ(many=True)})
+    def list_addrs(self, request, code, module_name):
+        """返回当前模块下所有环境的可访问地址，包含：运行状态（is_running）、可访问地址
+        列表（addresses）等。
 
-        - 允许在该环境下创建独立域名
-        - 客户端可将环境入口地址展示为“可访问”状态
-        - ...
+        - “云原生”应用和普通应用都会返回有效的访问地址列表
+        - 访问地址排序：基于非保留系统域名，并且更短的排在前面
         """
         app = get_structured_app(code=code)
         results = []
         module = app.get_module_by_name(module_name)
         for env in app.get_envs_by_module(module):
-            results.append({'env': env.environment, 'is_running': env_is_running(env)})
-        return Response(serializers.EnvIsRunningSLZ(results, many=True).data)
+            addrs = [asdict(obj) for obj in EnvAddresses(env).get()]
+            results.append(
+                {
+                    'env': env.environment,
+                    'is_running': env_is_running(env),
+                    'addresses': addrs,
+                }
+            )
+        return Response(serializers.EnvAddressesSLZ(results, many=True).data)

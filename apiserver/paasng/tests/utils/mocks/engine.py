@@ -142,3 +142,6 @@ class StubControllerClient:
 
     def sync_processes_specs(self, region: str, app_name: str, processes: List[Dict]):
         return
+
+    def delete_module_related_res(self, app_code: str, module_name: str):
+        return

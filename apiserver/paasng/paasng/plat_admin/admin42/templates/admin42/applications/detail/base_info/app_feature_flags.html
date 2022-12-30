@@ -16,7 +16,7 @@
             </bk-select>
         </bk-form-item>
         <bk-form-item label="状态">
-            <bk-select v-model="form.isEffect" style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom">
+            <bk-select v-model="form.isEffect" :clearable=false style="width: 250px;" ext-cls="select-custom" ext-popover-cls="select-popover-custom">
                 <bk-option :key="true" :id="true" name="允许"></bk-option>
                 <bk-option :key="false" :id="false" name="拒绝"></bk-option>
             </bk-select>
@@ -107,10 +107,14 @@
                             effect: row.effect
                         }
                     ).then(() => {
-                            this.fetchData()
+                        this.fetchData()
                     })
                 },
                 updateOrCreate: function () {
+                    if (!this.form.feature) {
+                        this.$bkMessage({theme: 'error', message: `添加特性时，必须选择某个具体的应用特性`})
+                        return
+                    }
                     this.$http.post(URLRouter.detail,
                         {
                             name: this.form.feature,

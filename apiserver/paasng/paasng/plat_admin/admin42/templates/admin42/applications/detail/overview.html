@@ -55,11 +55,12 @@
     <div v-for="(module, index) in application.modules" :key="index" class="panel" >
         <h4>$[ module.is_default?'主': '']模块: $[ module.name ]</h4>
         <bk-container :col="2">
-            <bk-row v-if="application.config_info.engine_enabled">
+            <!--云原生应用不包含开发语言，仓库等信息-->
+            <bk-row v-if="application.config_info.engine_enabled && application.type !== 'cloud_native'">
                 <bk-col>开发语言: <b>$[ module.language ]</b></bk-col>
                 <bk-col>初始化代码模板: <b>$[ module.template_display_name ]</b></bk-col>
             </bk-row>
-            <bk-row v-if="application.config_info.engine_enabled">
+            <bk-row v-if="application.config_info.engine_enabled && application.type !== 'cloud_native'">
                 <bk-col>仓库类型: <b>$[ module.repo.display_name ]</b></bk-col>
                 <bk-col style=" white-space: nowrap;text-overflow:ellipsis;overflow:hidden;">仓库地址:
                     <b v-bk-tooltips="{content: module.repo.trunk_url }">$[ module.repo.trunk_url ]</b></bk-col>

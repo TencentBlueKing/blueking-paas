@@ -34,10 +34,6 @@ urlpatterns = [
         f'^regions/{text.PVAR_REGION}/apps/{text.PVAR_NAME}/domains/$',
         views.AppDomainViewSet.as_view({'get': 'list', 'put': 'update'}),
     ),
-    re_path(
-        '^applications/(?P<code>[^/]+)/custom_domains/$',
-        views.AppCustomDomainViewSet.as_view({'get': 'list'}),
-    ),
     # Shared certificates
     re_path(
         '^app_certs/shared/$',

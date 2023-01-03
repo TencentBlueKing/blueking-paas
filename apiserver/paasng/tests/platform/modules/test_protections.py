@@ -73,15 +73,15 @@ class TestAllEnvsArchivedCondition:
 
 class TestCustomDomainUnBoundCondition:
     @pytest.fixture
-    def list_domains_stub(self):
-        with mock.patch("paasng.platform.modules.protections.CustomDomainService") as mocker:
-            yield mocker().list_urls_by_module
+    def list_addrs_stub(self):
+        with mock.patch("paasng.platform.modules.protections.list_module_custom_addresses") as mocker:
+            yield mocker
 
-    def test_no_domain(self, bk_module, list_domains_stub):
-        list_domains_stub.return_value = []
+    def test_no_domain(self, bk_module, list_addrs_stub):
+        list_addrs_stub.return_value = []
         CustomDomainUnBoundCondition(bk_module).validate()
 
-    def test_any_domain(self, bk_module, list_domains_stub):
-        list_domains_stub.return_value = [1]
+    def test_any_domain(self, bk_module, list_addrs_stub):
+        list_addrs_stub.return_value = [1]
         with pytest.raises(ConditionNotMatched):
             CustomDomainUnBoundCondition(bk_module).validate()

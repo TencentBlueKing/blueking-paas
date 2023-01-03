@@ -49,8 +49,7 @@ class DeployPhaseTypes(str, StructuredEnum):
             cls.BUILD: [display_blocks.RuntimeInfo, display_blocks.BuildHelpDocs],
             cls.RELEASE: [
                 display_blocks.AccessInfo,
-                # NOTE: 等 workloads 修复下架应用无法查询独立域名后恢复下面的代码
-                # display_blocks.CustomDomainInfo,
+                display_blocks.CustomDomainInfo,
                 display_blocks.ReleaseHelpDocs,
             ],
         }

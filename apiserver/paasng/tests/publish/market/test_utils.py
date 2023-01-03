@@ -22,22 +22,24 @@ import pytest
 
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_all_regions
-from paasng.publish.entrance.exposer import ModuleLiveAddrs
+from paasng.publish.entrance.exposer import Address, ModuleLiveAddrs
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 from paasng.publish.market.utils import MarketAvailableAddressHelper
-from tests.utils.mocks.domain import FakeCustomDomainService
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def domain_svc():
-    """Replace real custom domain service with fake one"""
-    with mock.patch(
-        'paasng.publish.market.utils.CustomDomainService', new_callable=FakeCustomDomainService
-    ) as domain_svc:
-        yield domain_svc
+def set_custom_domain():
+    """Allow to set custom domains by mocking"""
+    with mock.patch('paasng.publish.market.utils.list_custom_addresses') as mocker:
+
+        def _set_hostname(hostname):
+            """Set mocker to return given hostname as return value"""
+            mocker.return_value = [Address(type='custom', url=f'http://{hostname}')]
+
+        yield _set_hostname
 
 
 class TestMarketAvailableAddressHelper:
@@ -65,7 +67,7 @@ class TestMarketAvailableAddressHelper:
             (ExposedURLType.SUBPATH.value, '//example.org/foo/'),
         ],
     )
-    def test_no_prefer_different_exposed_type(self, exposed_url_type, expected_addr, bk_app, domain_svc):
+    def test_no_prefer_different_exposed_type(self, exposed_url_type, expected_addr, bk_app, set_custom_domain):
         """No prefer HTTPS, test different exposed types"""
         for region in get_all_regions().keys():
             market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
@@ -74,7 +76,7 @@ class TestMarketAvailableAddressHelper:
             market_config.prefer_https = False
             market_config.source_module.save()
 
-            domain_svc.set_hostnames(['test.example.com'])
+            set_custom_domain('test.example.com')
             helper = MarketAvailableAddressHelper(market_config)
             assert helper.addresses == [
                 AvailableAddress(address='http:' + expected_addr, type=2),
@@ -89,7 +91,7 @@ class TestMarketAvailableAddressHelper:
             ('http://foo.example.com', 'http://foo.example.com'),
         ],
     )
-    def test_prefer_https(self, addr, expected_addr, bk_app, domain_svc):
+    def test_prefer_https(self, addr, expected_addr, bk_app, set_custom_domain):
         with mock.patch('paasng.publish.entrance.exposer.get_live_addresses') as mocker:
             mocker.return_value = ModuleLiveAddrs(
                 [
@@ -110,7 +112,7 @@ class TestMarketAvailableAddressHelper:
 
                 helper = MarketAvailableAddressHelper(market_config)
 
-                domain_svc.set_hostnames(['test.example.com'])
+                set_custom_domain('test.example.com')
                 assert helper.addresses == [
                     AvailableAddress(address=expected_addr, type=2),
                     AvailableAddress(address='http://test.example.com', type=4),
@@ -123,14 +125,14 @@ class TestMarketAvailableAddressHelper:
             ('http://404.bking.com', None),
         ],
     )
-    def test_filter_domain_address_not_found(self, filter_domain, results, bk_app, bk_module, domain_svc):
+    def test_filter_domain_address_not_found(self, filter_domain, results, bk_app, bk_module, set_custom_domain):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         market_config.source_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
         market_config.source_module.save()
 
         helper = MarketAvailableAddressHelper(market_config)
 
-        domain_svc.set_hostnames(['test.example.com'])
+        set_custom_domain('test.example.com')
         assert helper.filter_domain_address(filter_domain) == results
 
     def test_access_entrance(self, bk_app):
@@ -147,14 +149,14 @@ class TestMarketAvailableAddressHelper:
         market_config.save()
         assert helper.access_entrance.address == helper.default_access_entrance_with_https.address
 
-    def test_access_entrance_for_custom_domain(self, bk_app, bk_module, domain_svc):
+    def test_access_entrance_for_custom_domain(self, bk_app, bk_module, set_custom_domain):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         market_config.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN.value
         market_config.custom_domain_url = "http://test.example.com"
         market_config.save()
         helper = MarketAvailableAddressHelper(market_config)
 
-        domain_svc.set_hostnames(["test.example.com"])
+        set_custom_domain("test.example.com")
         entrance = helper.access_entrance
         assert entrance
         assert entrance.address == 'http://test.example.com'
@@ -183,7 +185,7 @@ class TestMarketAvailableAddressHelper:
 
 class TestMarketAvailableAddressHelperNoDeployment:
     @mock.patch('paasng.publish.market.utils.get_exposed_url')
-    def test_list_without_deploy(self, mocker, bk_app, bk_module, domain_svc):
+    def test_list_without_deploy(self, mocker, bk_app, bk_module, set_custom_domain):
         # Mock get_exposed_url to return None in order to simulate env which has
         # not been deployed yet.
         mocker.return_value = None
@@ -191,7 +193,7 @@ class TestMarketAvailableAddressHelperNoDeployment:
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         helper = MarketAvailableAddressHelper(market_config)
 
-        domain_svc.set_hostnames(['test.example.com'])
+        set_custom_domain('test.example.com')
 
         assert helper.addresses == [
             AvailableAddress(address=None, type=2),

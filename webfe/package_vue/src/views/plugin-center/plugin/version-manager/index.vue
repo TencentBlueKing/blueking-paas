@@ -3,7 +3,7 @@
     <paas-content-loader
       class="app-container middle"
       :is-loading="isLoading"
-      placeholder="roles-loading"
+      placeholder="pluin-list-loading"
     >
       <div class="middle">
         <paas-plugin-title />
@@ -49,6 +49,20 @@
           @page-change="pageChange"
           @filter-change="handleFilterChange"
         >
+          <div slot="empty">
+            <bk-exception
+              class="exception-wrap-item exception-part"
+              type="search-empty"
+              scene="part"
+            />
+            <div class="empty-tips">
+              {{ $t('可以尝试调整关键词 或') }}
+              <span
+                class="clear-search"
+                @click="clearFilterKey"
+              >{{ $t('清空搜索条件') }}</span>
+            </div>
+          </div>
           <bk-table-column
             :label="$t('版本')"
             prop="version"
@@ -58,6 +72,8 @@
               <span
                 v-bk-tooltips="row.version"
                 :class="{ 'version-num': row.version }"
+                style="cursor: pointer;"
+                @click="handleDetail(row)"
               >{{ row.version || '--' }}</span>
             </template>
           </bk-table-column>
@@ -98,7 +114,7 @@
             prop="status"
             column-key="status"
             :filters="statusFilters"
-            :filter-multiple="false"
+            :filter-multiple="true"
           >
             <template slot-scope="{ row }">
               <round-loading v-if="row.status === 'pending' || row.status === 'initial'" />
@@ -106,7 +122,7 @@
                 v-else
                 :class="['dot', row.status]"
               />
-              <span v-bk-tooltips="versionStatus[row.status]">{{ versionStatus[row.status] || '--' }}</span>
+              <span v-bk-tooltips="$t(versionStatus[row.status])">{{ $t(versionStatus[row.status]) || '--' }}</span>
             </template>
           </bk-table-column>
           <!-- <bk-table-column :label="$t('标签')">
@@ -229,14 +245,14 @@
                   :class="['dot', versionDetail.status]"
                 />
                 <span
-                  v-bk-tooltips="versionStatus[versionDetail.status]"
+                  v-bk-tooltips="$t(versionStatus[versionDetail.status])"
                   class="pl5"
-                >{{ versionStatus[versionDetail.status] || '--' }}</span>
+                >{{ $t(versionStatus[versionDetail.status]) || '--' }}</span>
                 <template v-if="versionDetail.status === 'failed'">
-                  （部署失败，查看 <span
+                  （{{ $t('部署失败，查看') }} <span
                     class="active"
                     @click="handleRelease(versionDetail)"
-                  >详情</span>）
+                  >{{ $t('详情') }}</span>）
                 </template>
               </div>
             </div>
@@ -251,6 +267,14 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import { PLUGIN_VERSION_STATUS } from '@/common/constants';
+    import i18n from '@/language/i18n.js';
+
+    const PLUGIN_VERSION_STATUS_FILTER = {
+        'successful': i18n.t('已上线'),
+        'failed': i18n.t('失败'),
+        'pending': i18n.t('发布中'),
+        'interrupted': i18n.t('已中断')
+    };
 
     export default {
         components: {
@@ -260,9 +284,9 @@
         data () {
             // 是否根据version判断
             this.versionTypeMap = {
-                major: '重大版本',
-                minor: '次版本',
-                patch: '修正版本'
+                major: i18n.t('重大版本'),
+                minor: i18n.t('次版本'),
+                patch: i18n.t('修正版本')
             };
             return {
                 isLoading: true,
@@ -282,7 +306,8 @@
                 versionStatus: PLUGIN_VERSION_STATUS,
                 filterCreator: '',
                 filterStatus: '',
-                curIsPending: ''
+                curIsPending: '',
+                statusFilter: PLUGIN_VERSION_STATUS_FILTER
             };
         },
         computed: {
@@ -297,10 +322,10 @@
             },
             statusFilters () {
                 const statusList = [];
-                for (const key in this.versionStatus) {
+                for (const key in this.statusFilter) {
                     statusList.push({
                         value: key,
-                        text: this.versionStatus[key]
+                        text: this.statusFilter[key]
                     });
                 }
                 return statusList;
@@ -355,9 +380,20 @@
                 };
                 if (this.filterCreator) {
                     pageParams.creator = this.filterCreator;
-                }
-                if (this.filterStatus) {
-                    pageParams.status = this.filterStatus;
+              }
+                // 选择发布中直接传递 status=pending&status=inital
+                let statusParams = '';
+                if (this.filterStatus.length) {
+                    // pageParams.status = this.filterStatus;
+                    let paramsText = '';
+                    this.filterStatus.forEach(item => {
+                        if (item === 'pending') {
+                            paramsText += `status=pending&status=initial&`;
+                        } else {
+                            paramsText += `status=${item}&`;
+                        }
+                    });
+                    statusParams = paramsText.substring(0, paramsText.length - 1);
                 }
                 this.isDataLoading = true;
                 const data = {
@@ -365,7 +401,11 @@
                     pluginId: this.pluginId
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/getVersionsManagerList', { data, pageParams });
+                    const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
+                      data,
+                      pageParams,
+                      statusParams
+                    });
                     this.versionList = res.results;
                     this.pagination.count = res.count;
                     // 当前是否已有任务进行中
@@ -407,7 +447,7 @@
 
             handleFilterChange (filters) {
                 if (filters.status) {
-                    this.filterStatus = filters.status[0] ? filters.status[0] : '';
+                    this.filterStatus = filters.status.length ? filters.status : [];
                 }
 
                 if (filters.creator) {
@@ -502,6 +542,9 @@
                         this.isLoading = false;
                     }, 200);
                 }
+            },
+            clearFilterKey () {
+                this.keyword = '';
             }
         }
     };
@@ -616,7 +659,7 @@
 
             .describe {
                 flex-direction: row-reverse;
-                width: 100px;
+                width: 130px;
                 text-align: right;
                 padding-right: 16px;
                 font-size: 12px;
@@ -655,5 +698,22 @@
             height: auto;
             line-height: 22px;
         }
+    }
+    .empty-tips {
+        margin-top: 5px;
+        color: #979BA5;
+        .clear-search {
+            cursor: pointer;
+            color: #3a84ff;
+        }
+    }
+</style>
+
+<style>
+    .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
+        height: 130px;
+    }
+    .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
+        color: #3a84ff !important;
     }
 </style>

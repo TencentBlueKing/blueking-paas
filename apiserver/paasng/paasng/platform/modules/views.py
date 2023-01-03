@@ -50,7 +50,7 @@ from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager, get_image_labels_by_module
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
-from paasng.platform.modules.protections import ConditionNotMatched, ModuleDeletionPreparer
+from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
     CreateModuleSLZ,
     ListModulesSLZ,
@@ -189,10 +189,9 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DELETE_MODULE.f(_("主模块不允许被删除"))
 
         module = application.get_module(module_name)
-        try:
-            ModuleDeletionPreparer(module).perform()
-        except ConditionNotMatched as e:
-            raise error_codes.CANNOT_DELETE_MODULE.f(e.message)
+        protection_status = ModuleDeletionPreparer(module).perform()
+        if protection_status.activated:
+            raise error_codes.CANNOT_DELETE_MODULE.f(protection_status.reason)
 
         # 审计记录在事务外创建, 避免由于数据库回滚而丢失
         pre_delete_module.send(sender=Module, module=module, operator=request.user.pk)

@@ -21,10 +21,9 @@ from dataclasses import dataclass
 from typing import List, Optional
 from urllib.parse import urlparse
 
-from paasng.engine.domains import CustomDomainService
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import EnvExposedURL, get_addresses, get_exposed_url
+from paasng.publish.entrance.exposer import EnvExposedURL, get_addresses, get_exposed_url, list_custom_addresses
 from paasng.publish.entrance.utils import default_port_map
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
@@ -58,8 +57,8 @@ class AvailableAddressMixin:
     @property
     def domain_addresses(self) -> List[AvailableAddress]:
         return [
-            AvailableAddress(address=url.as_address(), type=ProductSourceUrlType.CUSTOM_DOMAIN.value)
-            for url in CustomDomainService().list_urls(self.env)
+            AvailableAddress(address=addr.url, type=ProductSourceUrlType.CUSTOM_DOMAIN.value)
+            for addr in list_custom_addresses(self.env)
         ]
 
     def filter_domain_address(self, address: str) -> Optional['AvailableAddress']:

@@ -38,6 +38,8 @@ from paasng.publish.entrance.exposer import (
     get_preallocated_address,
     get_preallocated_url,
     get_preallocated_urls,
+    list_custom_addresses,
+    list_module_custom_addresses,
 )
 from paasng.publish.market.models import MarketConfig
 from tests.utils.helpers import override_region_configs
@@ -207,6 +209,36 @@ class TestModuleLiveAddrs:
         ]
 
 
+class TestModuleLiveAddrsAllAddrs:
+    module_addrs_data = [
+        {
+            "env": "prod",
+            "is_running": True,
+            "addresses": [
+                {"type": "custom", "url": "http://prod-custom.example.com/"},
+            ],
+        },
+        {
+            "env": "stag",
+            "is_running": True,
+            "addresses": [
+                {"type": "custom", "url": "http://custom.example.com/"},
+                {"type": "subdomain", "url": "http://foo.example.com/"},
+            ],
+        },
+    ]
+
+    def test_get_all_addresses(self):
+        addrs = ModuleLiveAddrs(self.module_addrs_data)
+        all_addrs = addrs.get_all_addresses()
+        assert len(all_addrs) == 3
+        assert [addr.type for addr in all_addrs] == ['subdomain', 'custom', 'custom']
+
+    def test_get_all_addresses_with_type(self):
+        addrs = ModuleLiveAddrs(self.module_addrs_data)
+        assert len(addrs.get_all_addresses(addr_type='custom')) == 2
+
+
 def test__get_legacy_url(bk_stag_env):
     url = _get_legacy_url(bk_stag_env)
     assert url is not None
@@ -361,3 +393,16 @@ def test_get_market_address(bk_app):
     addr = get_market_address(bk_app)
     assert addr is not None
     assert len(addr) > 0
+
+
+def test_list_custom_addresses(bk_stag_env, bk_prod_env, setup_addrs):
+    list_custom_addresses(bk_stag_env) == []
+    list_custom_addresses(bk_prod_env) == [
+        Address("custom", "http://custom.example.com/"),
+    ]
+
+
+def test_list_module_custom_addresses(bk_module, setup_addrs):
+    list_module_custom_addresses(bk_module) == [
+        Address("custom", "http://custom.example.com/"),
+    ]

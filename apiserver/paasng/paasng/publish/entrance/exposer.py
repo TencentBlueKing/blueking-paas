@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 
 """Manage logics related with how to expose an application
 """
+import itertools
 import json
 import logging
 from typing import Dict, List, NamedTuple, Optional
@@ -178,7 +179,20 @@ def get_addresses(env: ModuleEnvironment) -> 'List[Address]':
     return addrs
 
 
-# TODO: Add `def get_addresses_with_custom` function which include custom domains.
+def list_custom_addresses(env: ModuleEnvironment) -> 'List[Address]':
+    """List all custom addresses of given environment object, items will be
+    returned even if the environment isn't running.
+    """
+    live_addrs = get_live_addresses(env.module)
+    return live_addrs.get_addresses(env.environment, addr_type='custom')
+
+
+def list_module_custom_addresses(module: Module) -> 'List[Address]':
+    """List all custom addresses of given module object, items will be
+    returned even if environment isn't running.
+    """
+    live_addrs = get_live_addresses(module)
+    return live_addrs.get_all_addresses(addr_type='custom')
 
 
 @define
@@ -227,12 +241,28 @@ class ModuleLiveAddrs:
         addrs = d['addresses']
         if addr_type:
             addrs = [a for a in d['addresses'] if a['type'] == addr_type]
-
         items = [Address(**a) for a in addrs]
+        self._sort_addrs(items)
+        return items
 
+    def get_all_addresses(self, addr_type: Optional[str] = None) -> List[Address]:
+        """Return all addresses despite environment and running status
+
+        :param addr_type: If given, include items whose type equal to this value
+        """
+        addrs = list(itertools.chain(*[d['addresses'] for d in self._map_by_env.values()]))
+        if addr_type:
+            addrs = [a for a in addrs if a['type'] == addr_type]
+        items = [Address(**a) for a in addrs]
+        self._sort_addrs(items)
+        return items
+
+    @classmethod
+    def _sort_addrs(cls, items: List[Address]):
+        """Sort a list of address objects"""
         # Make a map for sorting
         addr_type_ordering_map = {}
-        for i, val in enumerate(self.default_addr_type_ordering):
+        for i, val in enumerate(cls.default_addr_type_ordering):
             addr_type_ordering_map[val] = i
 
         # Sort the addresses by below factors:
@@ -241,7 +271,7 @@ class ModuleLiveAddrs:
         # - shorter URL first
         items.sort(
             key=lambda addr: (
-                (addr_type_ordering_map.get(addr.type, float('inf')), addr_type),
+                addr_type_ordering_map.get(addr.type, float('inf')),
                 addr.is_sys_reserved,
                 len(addr.url),
             )

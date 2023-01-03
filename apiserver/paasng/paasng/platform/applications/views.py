@@ -55,7 +55,7 @@ from paasng.accounts.permissions.application import application_perm_class, chec
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.accounts.serializers import VerificationCodeSLZ
-from paasng.cnative import initialize_simple
+from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.controller.cluster import get_region_cluster_helper
@@ -99,7 +99,7 @@ from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
-from paasng.platform.modules.protections import ConditionNotMatched, ModuleDeletionPreparer
+from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.region.models import get_all_regions
 from paasng.platform.region.permissions import HasPostRegionPermission
@@ -276,10 +276,9 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         modules = application.modules.all()
         for module in modules:
-            try:
-                ModuleDeletionPreparer(module).perform()
-            except ConditionNotMatched as e:
-                raise error_codes.CANNOT_DELETE_APP.f(e.message)
+            protection_status = ModuleDeletionPreparer(module).perform()
+            if protection_status.activated:
+                raise error_codes.CANNOT_DELETE_APP.f(protection_status.reason)
 
         # 审计记录在事务外创建, 避免由于数据库回滚而丢失
         pre_delete_application.send(sender=Application, application=application, operator=self.request.user.pk)

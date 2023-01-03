@@ -28,11 +28,11 @@ from paas_wl.release_controller.builder.tasks import start_build_process
 
 
 @pytest.fixture
-def engine_app(fake_app):
+def engine_app(bk_stag_engine_app):
     Config.objects.create(
-        app=fake_app, metadata={"environment": 'prod', "paas_app_code": 'foo', "module_name": 'default'}
+        app=bk_stag_engine_app, metadata={"environment": 'prod', "paas_app_code": 'foo', "module_name": 'default'}
     )
-    return fake_app
+    return bk_stag_engine_app
 
 
 @pytest.fixture

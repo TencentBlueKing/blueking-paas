@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tags import DeployPhaseTag
-from paasng.engine.domains import CustomDomainService
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -165,8 +164,12 @@ class CustomDomainInfo(DisplayBlock):
 
     @classmethod
     def get_detail(cls, engine_app: 'EngineApp') -> dict:
-        domains = CustomDomainService().list_urls(engine_app.env)
+        from paasng.publish.entrance.exposer import list_custom_addresses
+
+        domains = list_custom_addresses(engine_app.env)
         if not domains:
             return {}
 
-        return {cls.name: [dict(env=engine_app.env.environment, domain=d.hostname) for d in domains]}
+        return {
+            cls.name: [dict(env=engine_app.env.environment, domain=d.to_exposed_url().url.hostname) for d in domains]
+        }

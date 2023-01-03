@@ -43,6 +43,20 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <bk-exception
+              class="exception-wrap-item exception-part"
+              type="search-empty"
+              scene="part"
+            />
+            <div class="empty-tips">
+              {{ $t('可以尝试调整关键词 或') }}
+              <span
+                class="clear-search"
+                @click="clearFilterKey"
+              >{{ $t('清空搜索条件') }}</span>
+            </div>
+          </div>
           <bk-table-column :label="$t('成员姓名')">
             <template slot-scope="props">
               <span
@@ -107,7 +121,7 @@
 
     <bk-dialog
       v-model="memberMgrConfig.visiable"
-      width="540"
+      width="600"
       :title="memberMgrConfig.title"
       header-position="left"
       :theme="'primary'"
@@ -183,21 +197,6 @@
             </div>
           </bk-form-item>
         </bk-form>
-      </div>
-    </bk-dialog>
-
-    <bk-dialog
-      v-model="removeUserDialog.visiable"
-      width="540"
-      :title=" `${$t('删除成员 ')}${selectedMember.name}`"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="removeUserDialog.isLoading"
-      @confirm="delSave"
-      @cancel="closeDelModal"
-    >
-      <div class="tc">
-        {{ $t('用户') }} {{ selectedMember.name }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
       </div>
     </bk-dialog>
 
@@ -312,10 +311,6 @@
                     showForm: false
                 },
                 leaveAppDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                removeUserDialog: {
                     visiable: false,
                     isLoading: false
                 },
@@ -598,7 +593,14 @@
             delMember (delMemberName, delMemberID) {
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
-                this.removeUserDialog.visiable = true;
+                this.$bkInfo({
+                    title: `${this.$t('删除成员')} ${delMemberName}`,
+                    subTitle: `${this.$t('用户')} ${delMemberName} ${this.$t('将失去此应用的对应权限，是否确定删除？')}`,
+                    width: 520,
+                    confirmFn: () => {
+                        this.delSave();
+                    }
+                });
             },
 
             async delSave () {
@@ -608,7 +610,6 @@
                         pluginId: this.pluginId,
                         username: this.selectedMember.name
                     });
-                    this.closeDelModal();
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('删除成员成功！')
@@ -620,10 +621,6 @@
                         message: `${this.$t('删除成员失败：')} ${e.detail}`
                     });
                 }
-            },
-
-            closeDelModal () {
-                this.removeUserDialog.visiable = false;
             },
 
             closeMemberMgrModal () {
@@ -677,6 +674,9 @@
                 } else {
                     this.fetchMemberList();
                 }
+            },
+            clearFilterKey () {
+                this.keyword = '';
             }
         }
     };
@@ -803,4 +803,23 @@
     .developer {
         left: 110px;
     }
+
+    .empty-tips {
+        margin-top: 5px;
+        color: #979BA5;
+        .clear-search {
+            cursor: pointer;
+            color: #3a84ff;
+        }
+    }
 </style>
+
+<style>
+.bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
+    height: 130px;
+}
+.bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
+    color: #3a84ff !important;
+}
+</style>
+

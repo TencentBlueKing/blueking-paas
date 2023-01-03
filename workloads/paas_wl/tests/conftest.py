@@ -20,9 +20,9 @@ import copy
 import logging
 import tempfile
 import uuid
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, ContextManager, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 from unittest import mock
 
 import pytest
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 # IDs for default "bk_app"'s ModuleEnv objects
 DEFAULT_STAG_ENV_ID = 1
-DEFAULT_PROD_ENV_ID = 1
+DEFAULT_PROD_ENV_ID = 2
 
 
 def pytest_addoption(parser):
@@ -153,10 +153,10 @@ def _auto_create_ns(request):
         yield
         return
 
-    if "app" in request.fixturenames:
-        app = request.getfixturevalue("app")
-    elif "bk_stag_engine_app" in request.fixturenames:
+    if "bk_stag_engine_app" in request.fixturenames:
         app = request.getfixturevalue("bk_stag_engine_app")
+    elif "app" in request.fixturenames:
+        app = request.getfixturevalue("app")
     else:
         yield
         return
@@ -384,23 +384,9 @@ def bk_module(bk_app):
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_app, bk_module, structured_app_data):
+def bk_stag_env(request, bk_app, bk_module):
     """A random ModuleEnv object"""
-    env = create_env(request, bk_app, bk_module, 'stag')
-    ctx: ContextManager = nullcontext()
-    if request.keywords.get('mock_get_structured_app'):
-        ctx = mock.patch(
-            "paas_wl.platform.applications.struct_models.get_structured_app",
-            return_value=StructuredApp.from_json_data(
-                make_structured_app_data(
-                    bk_app,
-                    default_module_id=str(bk_module.id),
-                    engine_app_ids=[str(env.engine_app_id), str(uuid.uuid4())],
-                )
-            ),
-        )
-    with ctx:
-        yield env
+    return create_env(request, bk_app, bk_module, 'stag')
 
 
 @pytest.fixture
@@ -411,21 +397,7 @@ def bk_stag_engine_app(bk_stag_env) -> EngineApp:
 @pytest.fixture
 def bk_prod_env(request, bk_app, bk_module):
     """A random ModuleEnv object"""
-    env = create_env(request, bk_app, bk_module, 'prod')
-    ctx: ContextManager = nullcontext()
-    if request.keywords.get('mock_get_structured_app'):
-        ctx = mock.patch(
-            "paas_wl.platform.applications.struct_models.get_structured_app",
-            return_value=StructuredApp.from_json_data(
-                make_structured_app_data(
-                    bk_app,
-                    default_module_id=str(bk_module.id),
-                    engine_app_ids=[str(uuid.uuid4()), str(env.engine_app_id)],
-                )
-            ),
-        )
-    with ctx:
-        yield env
+    return create_env(request, bk_app, bk_module, 'prod')
 
 
 @pytest.fixture
@@ -433,15 +405,37 @@ def bk_prod_engine_app(bk_prod_env) -> EngineApp:
     return EngineApp.objects.get_by_env(bk_prod_env)
 
 
+@pytest.fixture(autouse=True)
+def _mock_get_structured_app(request, bk_app, bk_module):
+    """Handle "mock_get_structured_app" mark, auto mock `get_structured_app`
+    function call to return response related with current fixture data.
+    """
+    if request.keywords.get('mock_get_structured_app'):
+        # Get bk_stag_env and bk_prod_env fixture dynamically instead of reference
+        # directly to avoid requiring db access every time.
+        stag_env = request.getfixturevalue("bk_stag_env")
+        prod_env = request.getfixturevalue("bk_prod_env")
+
+        structured_app = StructuredApp.from_json_data(
+            make_structured_app_data(
+                bk_app,
+                default_module_id=str(bk_module.id),
+                engine_app_ids=[str(stag_env.engine_app_id), str(prod_env.engine_app_id)],
+            )
+        )
+        # Patch multiple occurrences
+        with mock.patch(
+            "paas_wl.platform.applications.struct_models.get_structured_app", return_value=structured_app
+        ), mock.patch("paas_wl.platform.applications.models_utils.get_structured_app", return_value=structured_app):
+            yield
+    else:
+        yield
+
+
 def create_env(request, bk_app, bk_module, environment: str) -> ModuleEnv:
     # Use fixed ID
     id_map = {'stag': DEFAULT_STAG_ENV_ID, 'prod': DEFAULT_PROD_ENV_ID}
-    engine_app = None
-    # compatible with app fixtures
-    if "app" in request.fixturenames:
-        engine_app = request.getfixturevalue("app")
-    if not engine_app:
-        engine_app = EngineApp.objects.first() or create_app()
+    engine_app = create_app()
     return ModuleEnv(
         id=id_map[environment],
         application=bk_app,
@@ -450,12 +444,6 @@ def create_env(request, bk_app, bk_module, environment: str) -> ModuleEnv:
         engine_app_id=engine_app.uuid,
         is_offlined=False,
     )
-
-
-@pytest.fixture
-def structured_app_data(bk_app):
-    """Structured application data with one default module"""
-    return make_structured_app_data(bk_app)
 
 
 @pytest.fixture

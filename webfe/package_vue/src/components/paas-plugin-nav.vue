@@ -65,7 +65,7 @@
 
     // 需要控制的菜单项
     const PLUGIN_NAV_MAP = {
-        'API_GATEWAY': 'appCloudAPI',
+        'API_GATEWAY': 'pluginCloudAPI',
         'PROCESS_MANAGE': 'pluginProcess',
         'STRUCTURE_LOG': 'pluginLog'
     };

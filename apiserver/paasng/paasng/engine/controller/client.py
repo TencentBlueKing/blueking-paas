@@ -337,10 +337,6 @@ class ControllerClient:
 
     # App Domains start
 
-    def list_custom_domains(self, app_code: str):
-        """List application's all custom domains"""
-        return self.request('GET', f'/services/applications/{app_code}/custom_domains/')
-
     def get_region_settings(self, region: str):
         """Get a region's settings in workloads service"""
         return self.request('GET', f'/regions/{region}/settings/')

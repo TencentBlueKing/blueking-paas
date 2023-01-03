@@ -22,16 +22,14 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 
-from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.exceptions import EmptyAppIngressError
-from paas_wl.platform.applications.models import EngineApp, Release
-from paas_wl.platform.applications.struct_models import get_structured_app
+from paas_wl.platform.applications.models import Release
 from paas_wl.platform.system_api.views import SysAppRelatedViewSet, SysModelViewSet
 from paas_wl.utils.error_codes import error_codes
 
 from .exceptions import DefaultServiceNameRequired
 from .managers import AppDefaultIngresses, assign_custom_hosts, assign_subpaths
-from .models import AppDomain, AppDomainSharedCert, AppSubpath, AutoGenDomain, Domain
+from .models import AppDomain, AppDomainSharedCert, AppSubpath, AutoGenDomain
 from .serializers import (
     AppDomainSharedCertSLZ,
     AppDomainSLZ,
@@ -138,31 +136,3 @@ class AppSubpathViewSet(SysAppRelatedViewSet):
         subpaths = [d['subpath'] for d in data['subpaths']]
         assign_subpaths(app, subpaths, default_service_name=default_service_name)
         return Response(serializer.data)
-
-
-class AppCustomDomainViewSet(SysAppRelatedViewSet):
-    """A viewset managing app's custom domains"""
-
-    def list(self, request, code):
-        """Get application's all custom domains"""
-        struct_app = get_structured_app(code=code)
-        results = []
-        for domain in Domain.objects.filter(module_id__in=struct_app.module_ids):
-            env = struct_app.get_env_by_id(domain.environment_id)
-            engine_app = EngineApp.objects.get(pk=env.engine_app_id)
-            port_map = get_cluster_by_app(engine_app).ingress_config.port_map
-            port = port_map.get_port_num(domain.protocol)
-
-            results.append(
-                {
-                    'module_id': domain.module_id,
-                    'environment_id': domain.environment_id,
-                    'domain_url': {
-                        'protocol': domain.protocol,
-                        'hostname': domain.name,
-                        'port': port,
-                        'path_prefix': domain.path_prefix,
-                    },
-                }
-            )
-        return Response(results)

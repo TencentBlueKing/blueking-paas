@@ -359,10 +359,12 @@ class ModuleCleaner:
 
     def delete_engine_apps(self):
         """调用 workloads 接口删除与当前模块关联的 EngineApp"""
+        # Delete all related resources in workloads
+        controller_client.delete_module_related_res(self.module.application.code, self.module.name)
+
+        # Delete related EngineApp db records
         for env in self.module.get_envs():
-            engine_app = env.get_engine_app()
-            controller_client.app__delete(app_name=engine_app.name, region=engine_app.region)
-            engine_app.delete()
+            env.get_engine_app().delete()
 
     def delete_module(self):
         """删除模块的数据库记录(真删除)"""

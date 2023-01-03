@@ -94,16 +94,16 @@ var _ = Describe("HookUtils", func() {
 			Expect(hook.Pod.Spec.Containers[0].Command).To(Equal(bkapp.Spec.Hooks.PreRelease.Command))
 			Expect(hook.Pod.Spec.Containers[0].Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(0))
-			Expect(hook.Status.Status).To(Equal(v1alpha1.HealthUnknown))
+			Expect(hook.Status.Phase).To(Equal(v1alpha1.HealthUnknown))
 		})
 
-		It("complex case - override Pod.name by Revision and Status.Status by PreRelease.Status", func() {
+		It("complex case - override Pod.name by Revision and Status.Phase by PreRelease.Status", func() {
 			bkapp.Status.Revision = &v1alpha1.Revision{Revision: 100}
 			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{Type: v1alpha1.HookPreRelease})
 
 			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-100"))
-			Expect(hook.Status.Status).To(Equal(v1alpha1.HealthStatus("")))
+			Expect(hook.Status.Phase).To(Equal(v1alpha1.HealthPhase("")))
 		})
 
 		It("complex case - with env vars", func() {

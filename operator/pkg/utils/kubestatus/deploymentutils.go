@@ -42,7 +42,7 @@ var ErrDeploymentStillProgressing = errors.New("deployment is progressing")
 func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		return &HealthStatus{
-			Status:  paasv1alpha1.HealthProgressing,
+			Phase:   paasv1alpha1.HealthProgressing,
 			Reason:  "UnobservedDeploy",
 			Message: "Waiting for rollout to finish: observed deployment generation less then desired generation",
 		}
@@ -84,7 +84,7 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		}
 
 		return &HealthStatus{
-			Status:  paasv1alpha1.HealthProgressing,
+			Phase:   paasv1alpha1.HealthProgressing,
 			Reason:  "Progressing",
 			Message: message,
 		}
@@ -113,7 +113,7 @@ func GetDeploymentDirectFailMessage(
 		if !pod.DeletionTimestamp.IsZero() {
 			continue
 		}
-		if healthStatus := CheckPodHealthStatus(&pod); healthStatus.Status == paasv1alpha1.HealthUnhealthy {
+		if healthStatus := CheckPodHealthStatus(&pod); healthStatus.Phase == paasv1alpha1.HealthUnhealthy {
 			return healthStatus.Message, nil
 		}
 	}
@@ -135,11 +135,11 @@ func FindDeploymentStatusCondition(
 
 // a shortcut for making a HealthStatus with given status and condition
 func makeStatusFromDeploymentCondition(
-	status paasv1alpha1.HealthStatus,
+	phase paasv1alpha1.HealthPhase,
 	condition *appsv1.DeploymentCondition,
 ) *HealthStatus {
 	return &HealthStatus{
-		Status:  status,
+		Phase:   phase,
 		Reason:  condition.Reason,
 		Message: condition.Message,
 	}

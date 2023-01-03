@@ -282,7 +282,7 @@ spec:
                         otherwise, same with PodStatus.Message
                       type: string
                     phase:
-                      description: HealthStatus Represents the hook pod health status
+                      description: Phase Represents the hook pod health status
                       type: string
                     reason:
                       description: Same with PodStatus.Reason

@@ -168,14 +168,14 @@ var _ = Describe("", func() {
 		condHooks := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.HooksFinished)
 		Expect(condHooks.Reason).To(Equal("Progressing"))
 		Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
-		Expect(hookStatus.Status).To(Equal(v1alpha1.HealthProgressing))
+		Expect(hookStatus.Phase).To(Equal(v1alpha1.HealthProgressing))
 
 		// Check addons envs
 		Expect(
 			lo.Contains(preReleaseHookPod.Spec.Containers[0].Env, corev1.EnvVar{Name: "FAKE_FOO", Value: "FOO"}),
 		).To(BeTrue())
 
-		By("By update the pre-release-hook pod Status.Status to Succeeded")
+		By("By update the pre-release-hook pod Status.Phase to Succeeded")
 		preReleaseHookPod.Status.Phase = corev1.PodSucceeded
 		Expect(k8sClient.Status().Update(ctx, preReleaseHookPod)).NotTo(HaveOccurred())
 
@@ -279,7 +279,7 @@ var _ = Describe("", func() {
 		Expect(condAvailable.Status).To(Equal(metav1.ConditionUnknown))
 		Expect(podCounter()).To(Equal(2))
 
-		By("By update the pre-release-hook pod Status.Status to Running to block the BkApp finalizer", func() {
+		By("By update the pre-release-hook pod Status.Phase to Running to block the BkApp finalizer", func() {
 			preReleaseHook1LookupKey.Name = "pre-release-hook-2"
 			Expect(k8sClient.Get(ctx, preReleaseHook1LookupKey, preReleaseHookPod)).NotTo(HaveOccurred())
 			preReleaseHookPod.Status.Phase = corev1.PodRunning
@@ -304,7 +304,7 @@ var _ = Describe("", func() {
 			return podCounter() == 2
 		}, timeout, interval).Should(BeTrue())
 
-		By("By update the pre-release-hook pod Status.Status to Failed to unblock the BkApp finalizer", func() {
+		By("By update the pre-release-hook pod Status.Phase to Failed to unblock the BkApp finalizer", func() {
 			preReleaseHookPod.Status.Phase = corev1.PodSucceeded
 			Expect(k8sClient.Status().Update(ctx, preReleaseHookPod)).NotTo(HaveOccurred())
 		})

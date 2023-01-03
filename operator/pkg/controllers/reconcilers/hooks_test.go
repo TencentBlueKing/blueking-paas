@@ -264,7 +264,7 @@ var _ = Describe("Test HookReconciler", func() {
 			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.HooksFinished)
 			Expect(condHooks.Status).To(Equal(metav1.ConditionTrue))
 			Expect(condHooks.Reason).To(Equal("Finished"))
-			Expect(hookStatus.Status).To(Equal(v1alpha1.HealthHealthy))
+			Expect(hookStatus.Phase).To(Equal(v1alpha1.HealthHealthy))
 		})
 	})
 
@@ -317,7 +317,7 @@ var _ = Describe("Test HookReconciler", func() {
 			hookStatus := bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)
 			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.HooksFinished)
 			Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
-			Expect(hookStatus.Status).To(Equal(v1alpha1.HealthProgressing))
+			Expect(hookStatus.Phase).To(Equal(v1alpha1.HealthProgressing))
 		})
 
 		It("Pod Existed!", func() {

@@ -40,17 +40,17 @@ const (
 //            progressing is meaning that the Pod is still running and condition `PodReady` is False.
 func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	healthyStatus := &HealthStatus{
-		Status:  paasv1alpha1.HealthHealthy,
+		Phase:   paasv1alpha1.HealthHealthy,
 		Reason:  pod.Status.Reason,
 		Message: pod.Status.Message,
 	}
 	unhealthyStatus := &HealthStatus{
-		Status:  paasv1alpha1.HealthUnhealthy,
+		Phase:   paasv1alpha1.HealthUnhealthy,
 		Reason:  pod.Status.Reason,
 		Message: pod.Status.Message,
 	}
 	progressingStatus := &HealthStatus{
-		Status:  paasv1alpha1.HealthProgressing,
+		Phase:   paasv1alpha1.HealthProgressing,
 		Reason:  pod.Status.Reason,
 		Message: pod.Status.Message,
 	}
@@ -105,7 +105,7 @@ func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	default:
 		// unknown pod phase
 		return &HealthStatus{
-			Status:  paasv1alpha1.HealthUnknown,
+			Phase:   paasv1alpha1.HealthUnknown,
 			Reason:  string(pod.Status.Phase),
 			Message: pod.Status.Message,
 		}

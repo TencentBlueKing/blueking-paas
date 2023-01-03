@@ -29,10 +29,10 @@ import (
 var _ = Describe("Test kubestatus/podutils", func() {
 	DescribeTable(
 		"test CheckPodHealthStatus",
-		func(pod *corev1.Pod, phase paasv1alpha1.HealthStatus, reason, message string) {
+		func(pod *corev1.Pod, phase paasv1alpha1.HealthPhase, reason, message string) {
 			healthStatus := CheckPodHealthStatus(pod)
 
-			Expect(healthStatus.Status).To(Equal(phase))
+			Expect(healthStatus.Phase).To(Equal(phase))
 			Expect(healthStatus.Reason).To(Equal(reason))
 			Expect(healthStatus.Message).To(Equal(message))
 		},

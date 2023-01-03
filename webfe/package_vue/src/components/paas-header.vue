@@ -41,7 +41,7 @@
             {{ item.text }}
           </router-link>
           <a
-            v-else-if="(item.text === $t('云 API'))"
+            v-else-if="(item.text === $t('API 网关'))"
             :href="link"
             target="_blank"
           >

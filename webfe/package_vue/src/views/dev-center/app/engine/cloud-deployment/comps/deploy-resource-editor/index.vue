@@ -210,7 +210,9 @@
             const setValue = (value) => {
                 try {
                     if (typeof value !== 'string') {
-                        value = yamljs.dump(value);
+                        value = yamljs.dump(value, {
+                            'sortKeys': true
+                        });
                     }
                     const editor = getEditor();
                     if (editor) return editor.setValue(value);

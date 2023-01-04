@@ -15,7 +15,17 @@ spec:
     singular: bkapp
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.hookStatuses[?(@.type == "pre-release")].phase
+      name: PreRelease Hook Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: BkApp is the Schema for the bkapps API
@@ -282,7 +292,7 @@ spec:
                         otherwise, same with PodStatus.Message
                       type: string
                     phase:
-                      description: HealthStatus Represents the hook pod health status
+                      description: Phase Represents the hook pod health status
                       type: string
                     reason:
                       description: Same with PodStatus.Reason

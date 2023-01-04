@@ -30,6 +30,9 @@ import (
 // BkApp is the Schema for the bkapps API
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -301,8 +304,8 @@ func (status *AppStatus) SetHookStatus(hookStatus HookStatus) {
 		return
 	}
 
-	if existingStatus.Status != hookStatus.Status {
-		existingStatus.Status = hookStatus.Status
+	if existingStatus.Phase != hookStatus.Phase {
+		existingStatus.Phase = hookStatus.Phase
 		existingStatus.setLastTransitionTime(hookStatus.LastTransitionTime)
 	}
 
@@ -331,21 +334,21 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 	return nil
 }
 
-// HealthStatus Represents resource health status, such as pod, deployment(man by in the feature)
+// HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
 //            unhealthy is meaning that the Pod is restarting or is Failed
 //            progressing is meaning that the Pod is still running and condition `PodReady` is False.
-type HealthStatus string
+type HealthPhase string
 
 const (
 	// HealthHealthy  resource is healthy
-	HealthHealthy HealthStatus = "Healthy"
+	HealthHealthy HealthPhase = "Healthy"
 	// HealthUnhealthy resource is unhealthy
-	HealthUnhealthy HealthStatus = "Unhealthy"
+	HealthUnhealthy HealthPhase = "Unhealthy"
 	// HealthProgressing resource is still progressing
-	HealthProgressing HealthStatus = "Progressing"
+	HealthProgressing HealthPhase = "Progressing"
 	// HealthUnknown health status is unknown
-	HealthUnknown HealthStatus = "Unknown"
+	HealthUnknown HealthPhase = "Unknown"
 )
 
 // HookStatus define the status of Hook execution
@@ -357,8 +360,8 @@ type HookStatus struct {
 	// The hook's start time
 	StartTime *metav1.Time `json:"startTime,omitempty"`
 
-	// HealthStatus Represents the hook pod health status
-	Status HealthStatus `json:"phase"`
+	// Phase Represents the hook pod health status
+	Phase HealthPhase `json:"phase"`
 	// if pod is unhealthy, message will be the fail message, otherwise, same with PodStatus.Message
 	Message string `json:"message,omitempty"`
 	// Same with PodStatus.Reason

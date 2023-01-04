@@ -83,7 +83,7 @@ class TestAssignDomains:
         domains_app1 = [AutoGenDomain('foo.com'), AutoGenDomain('bar.com')]
         assign_custom_hosts(app, domains_app1, 'foo-service')
         app_2 = create_app()
-        namespace_maker(app_2.namespace)
+        namespace_maker.make(app_2.namespace)
 
         # Transfer "bar.com" to app_2
         domains_app1 = [
@@ -110,7 +110,7 @@ class TestAssignDomains:
 
         # Transfer all domains to app_2
         app_2 = create_app()
-        namespace_maker(app_2.namespace)
+        namespace_maker.make(app_2.namespace)
         assign_custom_hosts(app_2, domains, 'foo-service')
 
         with pytest.raises(AppEntityNotFound):

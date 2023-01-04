@@ -72,7 +72,7 @@ class IngressNginxAdaptor:
         """
         if not self.use_regex:
             return LegacyNginxRewrittenProvider().make_location_path(path_str)
-        return NginxRegexRewrittenProvider.make_location_path(path_str)
+        return NginxRegexRewrittenProvider().make_location_path(path_str)
 
     def build_rewrite_target(self) -> str:
         """build the rewrite target which will rewrite all request to sub-path provided from platform or custom domain
@@ -83,13 +83,13 @@ class IngressNginxAdaptor:
         """
         if not self.use_regex:
             return LegacyNginxRewrittenProvider().make_rewrite_target()
-        return NginxRegexRewrittenProvider.make_rewrite_target()
+        return NginxRegexRewrittenProvider().make_rewrite_target()
 
     def parse_http_path(self, pattern_or_path: str) -> str:
         """parse path_str from path pattern(which is return by build_http_path)"""
         if not self.use_regex:
             return LegacyNginxRewrittenProvider().parse_location_path(pattern_or_path)
-        return NginxRegexRewrittenProvider.parse_location_path(pattern_or_path)
+        return NginxRegexRewrittenProvider().parse_location_path(pattern_or_path)
 
 
 class ConfigurationSnippetPatcher:
@@ -444,6 +444,15 @@ def make_serializers():
     ]
 
 
+def make_deserializers():
+    if not settings.ENABLE_MODERN_INGRESS_SUPPORT:
+        return [IngressV1Beta1Deserializer]
+    return [
+        IngressV1Beta1Deserializer,
+        IngressV1Deserializer,
+    ]
+
+
 @dataclass
 class ProcessIngress(AppEntity):
     """Ingress object for process, external service
@@ -467,10 +476,7 @@ class ProcessIngress(AppEntity):
     class Meta:
         kres_class = kres.KIngress
         serializers = lazy(make_serializers, list)()
-        deserializers = [
-            IngressV1Beta1Deserializer,
-            IngressV1Deserializer,
-        ]
+        deserializers = lazy(make_deserializers, list)()
 
 
 ingress_kmodel: AppEntityManager[ProcessIngress] = AppEntityManager[ProcessIngress](ProcessIngress)

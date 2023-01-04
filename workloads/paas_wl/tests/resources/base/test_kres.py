@@ -56,11 +56,11 @@ class TestNameBasedOps:
 
     def test_get_or_create(self, k8s_client, namespace_maker):
         namespace = random_resource_name()
-        obj, created = namespace_maker(namespace)
+        obj, created = namespace_maker.make(namespace)
         assert obj.metadata.name == namespace
         assert created is True
 
-        obj, created = namespace_maker(namespace)
+        obj, created = namespace_maker.make(namespace)
         assert obj.metadata.name == namespace
         assert created is False
 
@@ -69,7 +69,7 @@ class TestNameBasedOps:
         name = random_resource_name()
         deployment_body = construct_foo_deployment(name, KDeployment(k8s_client).get_preferred_version())
 
-        obj, created = namespace_maker(namespace)
+        obj, created = namespace_maker.make(namespace)
         assert obj.metadata.name == namespace
         assert created is True
 
@@ -86,7 +86,7 @@ class TestNameBasedOps:
 
     def test_replace_or_patch(self, k8s_client, namespace_maker, resource_name):
         namespace = resource_name
-        namespace_maker(namespace)
+        namespace_maker.make(namespace)
 
         deployment_body = construct_foo_deployment(resource_name, KDeployment(k8s_client).get_preferred_version())
         KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
@@ -97,7 +97,7 @@ class TestNameBasedOps:
 
     def test_patch(self, k8s_client, namespace_maker, resource_name):
         namespace = resource_name
-        namespace_maker(namespace)
+        namespace_maker.make(namespace)
 
         deployment_body = construct_foo_deployment(resource_name, KDeployment(k8s_client).get_preferred_version())
         KDeployment(k8s_client).create_or_update(resource_name, namespace=namespace, body=deployment_body)
@@ -141,7 +141,7 @@ class TestLabelBasedOps:
         results = KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace)
         assert len(results.items) == 0
 
-        obj, created = namespace_maker(another_namespace)
+        obj, created = namespace_maker.make(another_namespace)
         assert obj.metadata.name == another_namespace
         assert created is True
 

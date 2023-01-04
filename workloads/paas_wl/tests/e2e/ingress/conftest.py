@@ -70,9 +70,12 @@ def framework(
 
 
 @pytest.fixture(scope="session", autouse=True)
-def skip_if_configuration_not_ready():
+def skip_if_configuration_not_ready(request):
     if not settings.FOR_TEST_E2E_INGRESS_CONFIG:
         pytest.skip("nginx-ingress e2e configuration not ready, skip e2e test")
+
+    if not request.config.getvalue('run_e2e_test'):
+        pytest.skip("run_e2e_test is disabled, skip e2e test")
 
 
 @pytest.fixture(scope="session")
@@ -118,7 +121,7 @@ def e2e_app(namespace_maker, django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         app = create_app(structure={"web": 2})
         release_setup(app)
-        namespace_maker(app.namespace)
+        namespace_maker.make(app.namespace)
         namespace_maker.set_block()
         yield app
         app.delete()

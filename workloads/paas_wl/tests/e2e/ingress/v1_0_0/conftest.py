@@ -57,7 +57,7 @@ def setup_ingress_nginx_controller(skip_if_configuration_not_ready, namespace_ma
     if (int(k8s_version.major), int(k8s_version.minor)) >= (1, 23):
         pytest.skip("ingress-nginx-controller(0.22.0) do not support k8s >= 1.23")
     # 创建命名空间
-    namespace_maker(ingress_nginx_ns)
+    namespace_maker.make(ingress_nginx_ns)
     try:
         # 下发权限相关的资源
         create_from_yaml_allow_conflict(

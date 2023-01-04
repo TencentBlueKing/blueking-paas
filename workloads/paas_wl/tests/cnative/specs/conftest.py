@@ -56,7 +56,7 @@ def create_cnative_deploy(env: ModuleEnv, user: User, status: DeployStatus = Dep
 @pytest.fixture
 def mock_knamespace(namespace_maker):
     def get_or_create(name: str):
-        return namespace_maker(name)
+        return namespace_maker.make(name)
 
     with mock.patch("paas_wl.cnative.specs.resource.KNamespace") as mocked:
         mocked().get_or_create.side_effect = get_or_create

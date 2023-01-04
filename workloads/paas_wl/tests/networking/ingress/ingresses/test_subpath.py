@@ -70,7 +70,7 @@ class TestAssignSubpaths:
 
         # Transfer "/bar/" to app_2
         paths_app2 = ['/bar/', '/foobar/']
-        namespace_maker(app_2.namespace)
+        namespace_maker.make(app_2.namespace)
         assign_subpaths(app_2, paths_app2, 'foo-service')
 
         ingress = SubPathAppIngressMgr(app).get()
@@ -87,7 +87,7 @@ class TestAssignSubpaths:
 
         # Transfer all paths to app2
         app_2 = create_app()
-        namespace_maker(app_2.namespace)
+        namespace_maker.make(app_2.namespace)
         assign_subpaths(app_2, paths, 'foo-service')
 
         with pytest.raises(AppEntityNotFound):

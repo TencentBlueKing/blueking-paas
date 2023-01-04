@@ -60,6 +60,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--init-s3-bucket", dest="init_s3_bucket", action="store_true", default=False, help="是否需要执行 s3 初始化流程"
     )
+    parser.addoption("--run-e2e-test", dest="run_e2e_test", action="store_true", default=False, help="是否执行 e2e 测试")
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -154,7 +155,7 @@ def namespace_maker(django_db_setup, django_db_blocker):
             self.block = False
             self.created_namespaces = []
 
-        def __call__(self, ns):
+        def make(self, ns):
             kres = KNamespace(k8s_client)
             obj, created = kres.get_or_create(ns)
             if created:
@@ -197,10 +198,10 @@ def _auto_create_ns(request):
         yield
         return
 
-    maker = request.getfixturevalue("namespace_maker")
-    maker(app.namespace)
+    namespace_maker = request.getfixturevalue("namespace_maker")
+    namespace_maker.make(app.namespace)
     yield
-    maker.set_block()
+    namespace_maker.set_block()
 
 
 @pytest.fixture

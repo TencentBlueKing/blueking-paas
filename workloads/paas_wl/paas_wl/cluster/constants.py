@@ -39,6 +39,10 @@ class ClusterFeatureFlag(FeatureFlag):
     ENABLE_EGRESS_IP = FeatureFlagField('enable_egress_ip', label=_('支持提供出口 IP'))
     ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
     # Indicates if the paths defined on an Ingress use regular expressions
+    # if not use regex, the cluster can only deploy ingress-nginx-controller <= 0.21.0
+    # Because in ingress-nginx-controller >= 0.22.0, any substrings within the request URI that
+    # need to be passed to the rewritten path must explicitly be defined in a capture group.
+    # Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
     INGRESS_USE_REGEX = FeatureFlagField("ingress_use_regex", label=_("Ingress路径是否使用正则表达式"), default=False)
 
     @classmethod

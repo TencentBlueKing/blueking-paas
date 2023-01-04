@@ -126,7 +126,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 	}
 
 	if len(current) == 0 {
-		// TODO: Status 应该是应用下架、休眠？
+		// TODO: Phase 应该是应用下架、休眠？
 		bkapp.Status.Phase = v1alpha1.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.AppAvailable,
@@ -140,7 +140,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 		anyFailed := false
 		for _, deployment := range current {
 			healthStatus := kubestatus.CheckDeploymentHealthStatus(deployment)
-			if healthStatus.Status == v1alpha1.HealthHealthy {
+			if healthStatus.Phase == v1alpha1.HealthHealthy {
 				availableCount += 1
 				continue
 			}
@@ -149,7 +149,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 			if errors.Is(err, kubestatus.ErrDeploymentStillProgressing) {
 				continue
 			}
-			if healthStatus.Status == v1alpha1.HealthUnhealthy {
+			if healthStatus.Phase == v1alpha1.HealthUnhealthy {
 				failMessage = deployment.Name + ": " + healthStatus.Message
 			}
 

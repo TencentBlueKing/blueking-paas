@@ -22,7 +22,7 @@ import paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 
 // HealthStatus the resource health status
 type HealthStatus struct {
-	Status  paasv1alpha1.HealthStatus
+	Phase   paasv1alpha1.HealthPhase
 	Reason  string
 	Message string
 }

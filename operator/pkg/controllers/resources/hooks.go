@@ -57,12 +57,12 @@ type HookInstance struct {
 
 // Progressing 返回当前 hook 是否执行中
 func (i *HookInstance) Progressing() bool {
-	return i.Status.Status == paasv1alpha1.HealthProgressing
+	return i.Status.Phase == paasv1alpha1.HealthProgressing
 }
 
 // Succeeded 返回当前 hook 是否执行成功
 func (i *HookInstance) Succeeded() bool {
-	return i.Status.Status == paasv1alpha1.HealthHealthy
+	return i.Status.Phase == paasv1alpha1.HealthHealthy
 }
 
 // Failed 返回当前 hook 是否执行失败
@@ -89,8 +89,8 @@ func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookSta
 
 	if status == nil {
 		status = &paasv1alpha1.HookStatus{
-			Type:   paasv1alpha1.HookPreRelease,
-			Status: paasv1alpha1.HealthUnknown,
+			Type:  paasv1alpha1.HookPreRelease,
+			Phase: paasv1alpha1.HealthUnknown,
 		}
 	}
 

@@ -82,7 +82,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	if newRevision != defaultRevision {
 		// 检测上一个版本的 PreReleaseHook 是否仍在运行
 		preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
-		if preReleaseHook != nil && preReleaseHook.Status.Status == v1alpha1.HealthProgressing {
+		if preReleaseHook != nil && preReleaseHook.Status.Phase == v1alpha1.HealthProgressing {
 			if _, err = CheckAndUpdatePreReleaseHookStatus(
 				ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
 			); err != nil {

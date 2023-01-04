@@ -40,13 +40,14 @@ def find_deployment_condition(conditions: List, cond_type: str):
     return None
 
 
-def list_abnormal_deployments(client: CoreDynamicClient) -> List:
-    """查询整个命名空间下的deployments，并通过replica，获取异常状态的deployments"""
+def list_unavailable_deployment(client: CoreDynamicClient) -> List:
+    """查询整个命名空间下的deployments，并通过replica，获取不处于 Available 的 deployments"""
     abnormal_deployments = []
     kind_deployment = client.get_preferred_resource(kind="Deployment")
     deployment_list = client.get(kind_deployment)
 
     for deployment in deployment_list.items:
+        # 判断 Deployment 是否由蓝鲸应用的工作负载
         if not deployment.metadata.namespace.startswith('bkapp'):
             continue
 

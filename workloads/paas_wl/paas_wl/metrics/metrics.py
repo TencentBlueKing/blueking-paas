@@ -25,7 +25,7 @@ from prometheus_client.core import GaugeMetricFamily
 from paas_wl.cluster.models import Cluster
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kube_client import CoreDynamicClient
-from paas_wl.workloads.processes.utils import list_abnormal_deployments
+from paas_wl.workloads.processes.utils import list_unavailable_deployment
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class AbnormalDeploymentsGaugeMetric:
             except ValueError:
                 logger.exception(f"configuration of cluster<{cluster.name}> is not ready")
                 continue
-            abnormal_deployments = list_abnormal_deployments(CoreDynamicClient(client))
+            abnormal_deployments = list_unavailable_deployment(CoreDynamicClient(client))
             gauge_family.add_metric(
                 labels=[cluster.region, cluster.name],
                 value=len(abnormal_deployments),

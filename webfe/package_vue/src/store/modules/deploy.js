@@ -419,6 +419,16 @@ const actions = {
   getCloudAppDeployHistory ({ commit, state }, { appCode, moduleId, env, pageParams }, config = {}) {
     const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/envs/${env}/mres/deployments/?${json2Query(pageParams)}`;
     return http.get(url, config);
+  },
+  /**
+     * 获取云原生应用ext
+     *
+     * @param {Object} params 请求参数：appCode, moduleId
+     */
+  getManifestExt ({ commit, state }, { appCode, moduleId, env }, config = {}) {
+    console.log('BACKEND_URL', moduleId, env);
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/manifest_ext/`;
+    return http.get(url, config);
   }
 };
 

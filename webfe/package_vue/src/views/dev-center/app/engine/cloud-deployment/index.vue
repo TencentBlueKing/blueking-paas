@@ -154,7 +154,8 @@
                     stageTitle: this.$t('预发布环境'),
                     stage: 'stag'
                 },
-                replicasChanges: []
+                replicasChanges: [],
+                manifestExt: {}
             };
         },
         computed: {
@@ -200,6 +201,7 @@
                     });
                     this.cloudAppData = res.manifest;
                     this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
+                    this.getManifestExt();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -207,6 +209,29 @@
                     });
                 } finally {
                     this.isLoading = false;
+                }
+            },
+
+            async getManifestExt () {
+                try {
+                    const res = await this.$store.dispatch('deploy/getManifestExt', {
+                        appCode: this.appCode,
+                        moduleId: this.curModuleId,
+                        // 增强服务不分环境，目前指定为prod
+                        env: 'prod'
+                    });
+                    this.manifestExt = res;
+                    // 展示数据
+                    if (this.cloudAppData.metadata && this.cloudAppData.metadata.annotations) {
+                        const ext = Object.assign({}, this.cloudAppData.metadata.annotations, res.metadata.annotations);
+                        this.$set(this.cloudAppData.metadata, 'annotations', ext);
+                        this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);
+                    }
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
                 }
             },
 

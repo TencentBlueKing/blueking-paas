@@ -214,7 +214,7 @@ class ApplicationPermission(Permission):
         try:
             filters = self.iam.make_filter(request, key_mapping=key_mapping)
         except AuthAPIError as e:
-            logger.warning("generate user app filters failed", str(e))
+            logger.warning("generate user app filters failed: %s", str(e))
             return None
 
         return filters

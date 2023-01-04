@@ -25,7 +25,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
 
 import arrow
-from bkpaas_auth import get_user_by_user_id
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
@@ -328,7 +327,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         if 'bk_monitor_space_id' in params_tmpl:
             # 蓝鲸监控命名空间的成员只能初始化一个成员，默认初始化应用的创建者
             # 已测试用离职用户也能创建成功
-            owner_username = get_user_by_user_id(self.db_application.owner).username
+            owner_username = self.db_application.owner.username
 
             bk_monitor_space_id = make_bk_monitor_client().get_or_create_space(
                 self.db_application.code, self.db_application.name, owner_username

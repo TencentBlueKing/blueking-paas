@@ -18,7 +18,8 @@ to the current version of the project delivered to anyone in the future.
 import random
 from typing import List
 
-from paasng.accessories.bkmonitorv3.constants import QueryAlertsParams
+from paasng.accessories.bkmonitorv3.client import BkMonitorClient
+from paasng.accessories.bkmonitorv3.utils import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 
@@ -39,7 +40,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
     return alerts
 
 
-class StubBKMonitorClient:
+class StubBKMonitorClient(BkMonitorClient):
     """蓝鲸监控提供的API，仅供单元测试使用"""
 
     def query_alerts(self, query_params: QueryAlertsParams) -> List:

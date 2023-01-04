@@ -34,5 +34,5 @@ class BkMonitorApiError(BkMonitorGatewayServiceError):
     """
 
 
-class BkMonitorSpaceDoesNotExist(BkMonitorGatewayServiceError):
+class BkMonitorSpaceDoesNotExist(BkMonitorApiError):
     """The namespace applied to BK Monitoring does not exist"""

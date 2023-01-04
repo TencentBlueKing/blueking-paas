@@ -228,7 +228,7 @@ PAAS_SERVICE_JWT_CLIENTS = [
 ]
 
 # 是否开启管理端功能
-ENABLE_ADMIN = False
+ENABLE_ADMIN = True
 
 # 跳转回应用首页的 url 模板
 DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/apps/{app_code}/{module}/summary"

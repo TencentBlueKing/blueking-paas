@@ -25,9 +25,14 @@ from rest_framework.renderers import StaticHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .authentication import BasicAuthentication
+from paas_wl.metrics.authentication import BasicAuthentication
+from paas_wl.metrics.collector import cb_metric_collector
 
 logger = logging.getLogger(__name__)
+
+
+# register cb_metric_collector to default Metric collector registry
+prometheus_client.REGISTRY.register(cb_metric_collector)
 
 
 class ExportToDjangoView(APIView):
@@ -41,8 +46,10 @@ class ExportToDjangoView(APIView):
         if 'prometheus_multiproc_dir' in os.environ:
             logger.info("enable prometheus using multi processes mode")
             registry = prometheus_client.CollectorRegistry()
+            registry.register(cb_metric_collector)
             multiprocess.MultiProcessCollector(registry)
         else:
+            # cb_metric_collector is already registered
             logger.info("enable prometheus using single process mode")
             registry = prometheus_client.REGISTRY
 

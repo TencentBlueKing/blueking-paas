@@ -111,6 +111,23 @@ class PluginReleaseVersionManager(models.Manager):
         except self.model.DoesNotExist:
             return None
 
+    def get_latest_release(self, plugin: Optional['PluginInstance'] = None) -> Optional['PluginRelease']:
+        """获取最新的版本"""
+        # 兼容关联查询(RelatedManager)的接口
+        if plugin is None:
+            if hasattr(self, "instance"):
+                plugin = self.instance
+            else:
+                raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
+
+        if ongoing_release := self.get_ongoing_release(plugin):
+            return ongoing_release
+
+        try:
+            return self.filter(plugin=plugin).latest('created')
+        except self.model.DoesNotExist:
+            return None
+
 
 class PluginRelease(AuditedModel):
     """插件发布版本"""

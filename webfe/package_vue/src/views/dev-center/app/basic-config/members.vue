@@ -191,7 +191,7 @@
     <bk-dialog
       v-model="removeUserDialog.visiable"
       width="540"
-      :title=" `${$t('删除成员 ')}${selectedMember.name}`"
+      :title=" `${$t('删除成员')} ${selectedMember.name}`"
       :theme="'primary'"
       :mask-close="false"
       :loading="removeUserDialog.isLoading"

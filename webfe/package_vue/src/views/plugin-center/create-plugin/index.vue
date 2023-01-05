@@ -100,7 +100,7 @@
           <bk-input
             v-model="form.plugin_id"
             class="w480"
-            :placeholder="pdIdPlaceholder"
+            :placeholder="$t(pdIdPlaceholder)"
             :maxlength="pdIdMaxLength"
             :show-word-limit="true"
           />
@@ -116,7 +116,7 @@
           <bk-input
             v-model="form.name"
             class="w480"
-            :placeholder="namePlaceholder"
+            :placeholder="$t(namePlaceholder)"
             :maxlength="nameMaxLength"
             :show-word-limit="true"
           />
@@ -202,7 +202,7 @@
       </bk-form>
       <template v-if="Object.keys(extraFields).length">
         <div class="base-info-tit">
-          更多信息
+          {{ $t('更多信息') }}
         </div>
         <bk-form
           ref="form"

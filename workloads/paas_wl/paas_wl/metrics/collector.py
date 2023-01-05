@@ -20,7 +20,7 @@ from typing import Dict, Iterator, Protocol, Type
 
 from prometheus_client.core import Metric
 
-from paas_wl.metrics.metrics import AbnormalDeploymentsGaugeMetric
+from paas_wl.metrics.metrics import UnavailableDeploymentTotalMetric
 
 
 class CallbackMetric(Protocol):
@@ -57,4 +57,4 @@ class CallbackMetricCollector:
 
 
 cb_metric_collector = CallbackMetricCollector()
-cb_metric_collector.add(AbnormalDeploymentsGaugeMetric)
+cb_metric_collector.add(UnavailableDeploymentTotalMetric)

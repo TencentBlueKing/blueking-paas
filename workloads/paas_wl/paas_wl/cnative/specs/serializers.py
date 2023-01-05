@@ -124,11 +124,14 @@ class MresConditionSLZ(serializers.Serializer):
 class KubeEventSLZ(serializers.Serializer):
     """Serializer for k8s event"""
 
-    name = serializers.CharField()
-    type = serializers.CharField()
-    reason = serializers.CharField()
-    count = serializers.CharField()
-    message = serializers.CharField()
+    name = serializers.CharField(help_text="事件名称")
+    type = serializers.CharField(help_text="事件级别")
+    reason = serializers.CharField(help_text="事件原因")
+    count = serializers.CharField(help_text="事件累计触发次数")
+    message = serializers.CharField(help_text="事件消息内容")
+    source_component = serializers.CharField(help_text="事件来源组件")
+    first_seen = serializers.DateTimeField(help_text="事件首次被记录的时间")
+    last_seen = serializers.DateTimeField(help_text="事件最后被记录的时间")
 
 
 class MresStatusSLZ(serializers.Serializer):

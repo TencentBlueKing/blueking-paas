@@ -1864,10 +1864,8 @@ msgid "创建 {module_name} 模块"
 msgstr "Create {module_name} module"
 
 #: paasng/pluginscenter/constants.py:129
-#, fuzzy
-#| msgid "创建应用"
 msgid "创建"
-msgstr "Creating app"
+msgstr "Create "
 
 #: paasng/pluginscenter/constants.py:130
 msgid "新建"

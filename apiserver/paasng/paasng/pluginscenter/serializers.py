@@ -115,6 +115,9 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     ongoing_release = PluginReleaseVersionSLZ(
         source="all_versions.get_ongoing_release", help_text="当前正在发布的版本", allow_null=True
     )
+    latest_release = PluginReleaseVersionSLZ(
+        source="all_versions.get_latest_release", help_text="最新的版本", allow_null=True
+    )
     logo = serializers.CharField(source="pd.logo", help_text="插件logo", allow_null=True)
     itsm_detail = ItsmDetailSLZ()
 

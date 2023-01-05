@@ -324,7 +324,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         try:
             summary = client.get_metrics_summary(devops_project_id)
         except (BkDevopsApiError, BkDevopsGatewayServiceError):
-            raise error_codes.QUERY_REPO_OVERVIEW_DATA_ERROR
+            # TODO 蓝盾API 还在灰度中，先不抛错误异常
+            # raise error_codes.QUERY_REPO_OVERVIEW_DATA_ERROR
+            return Response(data={})
 
         return Response(data=serializers.MetricsSummarySLZ(summary).data)
 
@@ -404,6 +406,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         )
         release.initial_stage_set()
         PluginReleaseExecutor(release).execute_current_stage(operator=request.user.username)
+
+        # 如果插件的状态不是已发布，则更新为发布中
+        if plugin.status != constants.PluginStatus.RELEASED:
+            plugin.status = constants.PluginStatus.RELEASING
+            plugin.save()
 
         # 操作记录: 新建 xx 版本
         OperationRecord.objects.create(

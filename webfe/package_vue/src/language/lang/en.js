@@ -1997,5 +1997,11 @@ export default {
   '插件指引': 'Plugin guide',
   '质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考': 'The quality evaluation is based on Tencent open-source governance index system (in which the document quality is temporarily calculated as 100 points), and the score is only for reference',
   '运行总次数:': 'Total running times:',
-  '拦截次数:': 'Number of interceptions:'
+  '拦截次数:': 'Number of interceptions:',
+  '终止发布': 'Terminate publishing',
+  '创建审批中': 'Creating approval',
+  '创建审批失败': 'Failed to create approval',
+  '开发中': 'Developing',
+  '已发布': 'Published',
+  '更多信息': 'More information'
 };

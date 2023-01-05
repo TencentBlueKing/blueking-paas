@@ -42,6 +42,7 @@ ALLOWED_PATH_PATTERNS = (
     re.compile('^api/cnative/'),
     re.compile('^api/credentials/'),
     re.compile('^admin42/'),
+    re.compile('^metrics$'),
 )
 
 

@@ -42,7 +42,7 @@ def find_deployment_condition(conditions: List, cond_type: str):
 
 def list_unavailable_deployment(client: CoreDynamicClient) -> List:
     """查询整个命名空间下的deployments，并通过replica，获取不处于 Available 的 deployments"""
-    abnormal_deployments = []
+    unavailable_deployments = []
     kind_deployment = client.get_preferred_resource(kind="Deployment")
     deployment_list = client.get(kind_deployment)
 
@@ -56,6 +56,6 @@ def list_unavailable_deployment(client: CoreDynamicClient) -> List:
             available_cond = find_deployment_condition(deployment.status.get("conditions") or [], "Available")
             if available_cond and available_cond.status == "True":
                 continue
-        # 其他情况的 Deployment 均认为 abnormal
-        abnormal_deployments.append(deployment)
-    return abnormal_deployments
+        # 其他情况的 Deployment 均认为 unavailable
+        unavailable_deployments.append(deployment)
+    return unavailable_deployments

@@ -104,7 +104,7 @@ class PluginReleaseVersionManager(models.Manager):
             if hasattr(self, "instance"):
                 plugin = self.instance
             else:
-                raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
+                raise TypeError("get_ongoing_release() 1 required positional argument: 'plugin'")
 
         try:
             return self.filter(plugin=plugin, status__in=PluginReleaseStatus.running_status()).latest('created')
@@ -118,7 +118,7 @@ class PluginReleaseVersionManager(models.Manager):
             if hasattr(self, "instance"):
                 plugin = self.instance
             else:
-                raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
+                raise TypeError("get_latest_release() 1 required positional argument: 'plugin'")
 
         if ongoing_release := self.get_ongoing_release(plugin):
             return ongoing_release

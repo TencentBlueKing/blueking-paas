@@ -77,11 +77,11 @@ const marketInfoEdit = () => import(/* webpackChunkName: 'plugin-config' */'@/vi
   window.showDeployTip(error);
 });
 
-// const appCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/cloud-api').then(module => {
-//   return module;
-// }).catch(error => {
-//   window.showDeployTip(error);
-// });
+const pluginCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/cloud-api').then(module => {
+  return module;
+}).catch(error => {
+  window.showDeployTip(error);
+});
 
 const pluginProcess = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/plugin-center/plugin/process/index').then(module => {
   return module;
@@ -184,16 +184,16 @@ export const pluginRouter = [
           isGetAppInfo: true
         }
       },
-      // {
-      //   path: ':pluginTypeId/:id/cloudapi',
-      //   component: appCloudAPI,
-      //   name: 'appCloudAPI',
-      //   meta: {
-      //     pathName: i18n.t('云 API 权限'),
-      //     capture403Error: false,
-      //     isGetAppInfo: true
-      //   }
-      // },
+      {
+        path: ':pluginTypeId/:id/cloudapi',
+        component: pluginCloudAPI,
+        name: 'pluginCloudAPI',
+        meta: {
+          pathName: i18n.t('云 API 权限'),
+          capture403Error: false,
+          isGetAppInfo: true
+        }
+      },
       {
         path: ':pluginTypeId/:id/base-info',
         component: pluginBaseInfo,

@@ -39,6 +39,7 @@
         </div>
 
         <bk-table
+          ref="versionTable"
           v-bkloading="{ isLoading: isTableLoading }"
           class="ps-version-list"
           :data="versionList"
@@ -545,6 +546,7 @@
             },
             clearFilterKey () {
                 this.keyword = '';
+                this.$refs.versionTable.clearFilter();
             }
         }
     };
@@ -713,7 +715,7 @@
     .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
         height: 130px;
     }
-    .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
+    .biz-create-success .bk-table th .bk-table-column-filter-trigger.is-filtered {
         color: #3a84ff !important;
     }
 </style>

@@ -435,6 +435,14 @@ export default {
     getAuthorizedUse ({ commit, state }, { pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/distributors/`;
       return http.get(url, {}, config);
+    },
+    /**
+         * 插件代码仓库概览信息
+         * @param {Object} params 请求参数：
+         */
+    getStoreOverview ({ commit, state }, { pdId, pluginId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/overview/`;
+      return http.get(url, {}, config);
     }
   }
 };

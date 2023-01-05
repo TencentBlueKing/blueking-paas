@@ -200,7 +200,6 @@
               >
                 <bk-input
                   ref="profileInput"
-                  v-bk-tooltips.top="marketInfo.introduction"
                   :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
                   :readonly="!isFormEdited.profileInput"
                   ext-cls="paas-info-app-name-cls"

@@ -279,7 +279,7 @@ export const PAAS_STATIC_CONFIG = {
                     "text": staticI18n.$t("插件开发")
                 },
                 {
-                    "text": staticI18n.$t("云 API")
+                    "text": staticI18n.$t("API 网关")
                 },
                 {
                     "text": staticI18n.$t("服务")

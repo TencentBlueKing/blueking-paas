@@ -994,7 +994,6 @@
                         this.$set(item, 'creation_allowed', true);
                     });
                     this.appList.splice(0, this.appList.length, ...(res.results || []));
-                    console.log('this.appList', this.appList);
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',

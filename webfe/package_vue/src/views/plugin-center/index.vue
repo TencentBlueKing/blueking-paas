@@ -27,6 +27,7 @@
         />
       </div>
       <bk-table
+        ref="pluginTable"
         v-bkloading="{ isLoading: isDataLoading }"
         :data="pluginList"
         size="small"
@@ -230,7 +231,7 @@
                 for (const key in PLUGIN_STATUS) {
                     statusList.push({
                         value: key,
-                        text: PLUGIN_STATUS[key]
+                        text: this.$t(PLUGIN_STATUS[key])
                     });
                 }
                 return statusList;
@@ -458,6 +459,7 @@
 
             clearFilterKey () {
                 this.filterKey = '';
+                this.$refs.pluginTable.clearFilter();
             }
         }
     };

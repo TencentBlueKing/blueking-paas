@@ -30,9 +30,9 @@ from paas_wl.workloads.processes.utils import list_unavailable_deployment
 logger = logging.getLogger(__name__)
 
 
-class AbnormalDeploymentsGaugeMetric:
-    name = "abnormal_deployments_gauge"
-    description = "A gauge for abnormal deployments"
+class UnavailableDeploymentTotalMetric:
+    name = "unavailable_deployments_total"
+    description = "A gauge for counting unavailable deployments"
 
     @classmethod
     def calc_metric(cls) -> GaugeMetricFamily:
@@ -53,10 +53,10 @@ class AbnormalDeploymentsGaugeMetric:
             except ValueError:
                 logger.exception(f"configuration of cluster<{cluster.name}> is not ready")
                 continue
-            abnormal_deployments = list_unavailable_deployment(CoreDynamicClient(client))
+            unavailable_deployments = list_unavailable_deployment(CoreDynamicClient(client))
             gauge_family.add_metric(
                 labels=[cluster.region, cluster.name],
-                value=len(abnormal_deployments),
+                value=len(unavailable_deployments),
                 timestamp=dt.timestamp(),
             )
         cache.set(cache_key, gauge_family, timeout=60 * 5)

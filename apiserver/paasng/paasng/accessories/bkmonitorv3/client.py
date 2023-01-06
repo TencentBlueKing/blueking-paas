@@ -30,7 +30,7 @@ from paasng.accessories.bkmonitorv3.exceptions import (
     BkMonitorGatewayServiceError,
     BkMonitorSpaceDoesNotExist,
 )
-from paasng.accessories.bkmonitorv3.utils import QueryAlertsParams
+from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
 
 logger = logging.getLogger(__name__)
 

@@ -19,7 +19,7 @@ import random
 from typing import List
 
 from paasng.accessories.bkmonitorv3.client import BkMonitorClient
-from paasng.accessories.bkmonitorv3.utils import QueryAlertsParams
+from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 

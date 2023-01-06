@@ -92,9 +92,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 	Context("test Reconcile", func() {
 		It("first revision", func() {
 			bkapp.Generation = 1
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 
@@ -107,9 +105,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			bkapp.Generation = 1
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 
 			ret := r.Reconcile(context.Background(), bkapp)
 
@@ -126,9 +122,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			}
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeFalse())
@@ -143,7 +137,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			}
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
 
-			r := RevisionReconciler{Client: builder.WithObjects(bkapp, web).Build()}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeFalse())
@@ -157,7 +151,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			}
 			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
 				Type:      v1alpha1.HookPreRelease,
-				Status:    v1alpha1.HealthProgressing,
+				Phase:     v1alpha1.HealthProgressing,
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
@@ -165,9 +159,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
 			Expect(hook.Pod).NotTo(BeNil())
 
-			r := RevisionReconciler{
-				Client: builder.WithObjects(bkapp, web, hook.Pod).Build(),
-			}
+			r := NewRevisionReconciler(builder.WithObjects(bkapp, web, hook.Pod).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeTrue())

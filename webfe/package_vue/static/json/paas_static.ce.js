@@ -109,7 +109,7 @@ export const PLATFORM_CONFIG = {
         APIGW_INDEX: BK_APIGW_URL,
 
         // 问题反馈
-        PA_ISSUE: '',
+        PA_ISSUE: 'https://bk.tencent.com/s-mart/community/question',
 
         // 加入圈子
         PA_MARKER: '',
@@ -124,7 +124,13 @@ export const PLATFORM_CONFIG = {
         BK_PLUGIN: '',
 
         //BKtemplate
-        BK_PLUGIN_TEMPLATE: ''
+        BK_PLUGIN_TEMPLATE: '',
+
+        // 产品文档
+        BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',
+
+        // 开源社区
+        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas'
     },
 
     // 文档
@@ -270,7 +276,10 @@ export const PAAS_STATIC_CONFIG = {
                     "url": "apps"
                 },
                 {
-                    "text": staticI18n.$t("云 API")
+                    "text": staticI18n.$t("插件开发")
+                },
+                {
+                    "text": staticI18n.$t("API 网关")
                 },
                 {
                     "text": staticI18n.$t("服务")
@@ -299,11 +308,6 @@ export const PAAS_STATIC_CONFIG = {
                     "title": staticI18n.$t("开发"),
                     "items": [
                         {
-                            "text": "MagicBox",
-                            "url": "magicbox",
-                            "explain": staticI18n.$t("蓝鲸前端组件样例库")
-                        },
-                        {
                             "text": staticI18n.$t("API 网关"),
                             "url": "apigateway",
                             "explain": staticI18n.$t("蓝鲸API网关服务")
@@ -312,6 +316,11 @@ export const PAAS_STATIC_CONFIG = {
                             "text": staticI18n.$t("开发框架"),
                             "url": "framework",
                             "explain": staticI18n.$t("蓝鲸应用统一开发框架，集成基础功能模块及功能样例")
+                        },
+                        {
+                            "text": staticI18n.$t("前端组件库"),
+                            "url": "magicbox",
+                            "explain": staticI18n.$t("蓝鲸前端组件样例库")
                         },
                         {
                             "text": staticI18n.$t("可视化开发"),
@@ -619,6 +628,87 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
         ],
+        "pluginList": [
+            {
+                "name": "pluginSummary",
+                "label": staticI18n.$t("概览"),
+                "matchRouters": [
+                    "appSummaryEmpty",
+                    "pluginSummary"
+                ],
+                "iconfontName": "overview",
+                "supportModule": true,
+                "destRoute": {
+                    "name": "pluginSummary"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginVersionManager",
+                "label": staticI18n.$t("版本管理"),
+                "matchRouters": [
+                    "pluginVersionManager",
+                    "pluginVersionEditor",
+                    "pluginVersionRelease"
+                ],
+                "iconfontName": "publish-fill",
+                "supportModule": true,
+                "destRoute": {
+                    "name": "pluginVersionManager"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginDeployEnv",
+                "label": staticI18n.$t("配置管理"),
+                "matchRouters": [
+                    "pluginDeployEnv"
+                ],
+                "iconfontName": "list-fill",
+                "supportModule": true,
+                "destRoute": {
+                    "name": "pluginDeployEnv"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginLog",
+                "label": staticI18n.$t("日志查询"),
+                "matchRouters": ["pluginLog"],
+                "iconfontName": "log-2",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "pluginLog"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginConfigs",
+                "label": staticI18n.$t("基本设置"),
+                "iconfontName": "setting-2",
+                "children": [
+                    {
+                        "name": staticI18n.$t("基本信息"),
+                        "destRoute": {
+                          "name": "pluginBaseInfo"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("可见范围"),
+                        "destRoute": {
+                          "name": "pluginVisibleRange"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("成员管理"),
+                        "destRoute": {
+                          "name": "pluginRoles"
+                        }
+                    }
+                ]
+            },
+
+        ],
         "list": [
             {
                 "name": "appSummary",
@@ -823,12 +913,6 @@ export const PAAS_STATIC_CONFIG = {
                 "iconfontName": "window-source-code",
                 "sublist": [
                     {
-                        "name": "MagicBox",
-                        "destRoute": {
-                            "name": "serviceMagicBox"
-                        }
-                    },
-                    {
                         "name": staticI18n.$t("API 网关"),
                         "destRoute": {
                             "name": "serviceAPIGateway"
@@ -838,6 +922,12 @@ export const PAAS_STATIC_CONFIG = {
                         "name": staticI18n.$t("开发框架"),
                         "destRoute": {
                             "name": "serviceFramework"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("前端组件库"),
+                        "destRoute": {
+                            "name": "serviceMagicBox"
                         }
                     },
                     {

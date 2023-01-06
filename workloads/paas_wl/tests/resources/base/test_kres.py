@@ -249,7 +249,7 @@ class TestKNamespace:
         namespace = random_resource_name()
 
         with pytest.raises(CreateServiceAccountTimeout):
-            assert KNamespace(k8s_client).wait_for_default_sa(namespace, timeout=2)
+            assert KNamespace(k8s_client).wait_for_default_sa(namespace, timeout=2, check_period=0.1)
         assert int(time.time() - time_started) == 2
 
     def test_wait_for_default_sa_succeed(self, k8s_client):
@@ -345,5 +345,10 @@ def construct_foo_pod(name: str, labels: Dict = {}) -> Dict:
         'apiVersion': 'v1',
         'kind': 'Pod',
         'metadata': {'name': name, 'labels': labels},
-        'spec': {'containers': [{'name': "main", 'image': "busybox"}]},
+        'spec': {
+            # Set "schedulerName", so the pod won't be processed by the default
+            # scheduler.
+            'schedulerName': 'no-running-scheduler',
+            'containers': [{'name': "main", 'image': "busybox"}],
+        },
     }

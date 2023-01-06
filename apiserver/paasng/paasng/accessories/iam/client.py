@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -60,20 +60,20 @@ class BKIAMClient:
         }
         return headers
 
-    def create_grade_managers(self, app_code: str, app_name: str, creator: str) -> int:
+    def create_grade_managers(self, app_code: str, app_name: str, init_member: Optional[str] = None) -> int:
         """
         在权限中心上为应用注册分级管理员，若已存在，则返回
 
         :param app_code: 蓝鲸应用 ID
         :param app_name: 蓝鲸应用名称
-        :param creator: 创建人用户名，如 admin
+        :param init_member: 初始分级管理员用户名，如 admin，若为空值，则该用户组没有分级管理员
         :returns: 分级管理员 ID
         """
         data = {
             'system': settings.IAM_PAAS_V3_SYSTEM_ID,
             'name': utils.gen_grade_manager_name(app_code),
             'description': utils.gen_grade_manager_desc(app_code),
-            'members': [creator],
+            'members': [init_member] if init_member else [],
             # 仅可对指定的单个应用授权
             'authorization_scopes': [
                 {
@@ -188,6 +188,11 @@ class BKIAMClient:
         :param grade_manager_id: 分级管理员 ID
         :param usernames: 待添加成员名称
         """
+        # admin 用户拥有全量权限，不应占用配额也不需要授权
+        usernames = [u for u in usernames if u != settings.ADMIN_USERNAME]
+        if not usernames:
+            return
+
         path_params, data = {'id': grade_manager_id}, {'members': usernames}
 
         try:
@@ -328,6 +333,11 @@ class BKIAMClient:
         :param usernames: 待添加成员名称
         :param expired_after_days: X 天后权限过期（-1 表示永不过期）
         """
+        # admin 用户拥有全量权限，不应占用配额也不需要授权
+        usernames = [u for u in usernames if u != settings.ADMIN_USERNAME]
+        if not usernames:
+            return
+
         path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': user_group_id}
         data = {
             'members': [{'type': 'user', 'id': username} for username in usernames],

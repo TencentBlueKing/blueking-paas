@@ -23,12 +23,12 @@ import logging
 
 from django.db import IntegrityError, transaction
 
-from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
-from paas_wl.networking.ingress.models import AppDomain
+from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.utils import get_main_process_service_name, guess_default_service_name
 from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
 from .exceptions import ReplaceAppDomainFailed
@@ -37,13 +37,13 @@ logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
-def restore_ingress_on_error(app_domain: AppDomain, service_name: str):
+def restore_ingress_on_error(domain: Domain, service_name: str):
     """A context manager which syncs a domain's ingress resource when exception happenes"""
     try:
         yield
     except Exception:
         logger.warning('Exception happened in `restore_ingress_on_error` block, will sync ingress resource.')
-        CustomDomainIngressMgr(app_domain).sync(default_service_name=service_name)
+        CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
         raise
 
 
@@ -54,32 +54,32 @@ class ReplaceAppDomainService:
     :param path_prefix: used for locating original domain object
     """
 
-    def __init__(self, app: EngineApp, host: str, path_prefix: str):
-        self.app = app
+    def __init__(self, env: ModuleEnv, host: str, path_prefix: str):
+        self.engine_app = EngineApp.objects.get_by_env(env)
+        self.env = env
         self.host = host
         self.path_prefix = path_prefix
         self.domain_obj = self._get_obj()
 
-    def _get_obj(self) -> AppDomain:
+    def _get_obj(self) -> Domain:
         try:
-            return AppDomain.objects.get(
-                region=self.app.region,
-                app=self.app,
-                source=AppDomainSource.INDEPENDENT,
-                host=self.host,
+            return Domain.objects.get(
+                name=self.host,
                 path_prefix=self.path_prefix,
+                module_id=self.env.module_id,
+                environment_id=self.env.id,
             )
-        except AppDomain.DoesNotExist:
+        except Domain.DoesNotExist:
             raise ReplaceAppDomainFailed("无法找到旧域名记录，请稍后重试")
 
     @transaction.atomic
     def replace_with(self, host: str, path_prefix, https_enabled: bool):
         """Replace current AppDomain object"""
-        # Save a copy of old data to perfor deletion later
+        # Save a copy of old data to perform deletion later
         old_copy_obj = copy.deepcopy(self.domain_obj)
         # Try modify the database object first
 
-        self.domain_obj.host = host
+        self.domain_obj.name = host
         self.domain_obj.path_prefix = path_prefix
         self.domain_obj.https_enabled = https_enabled
         try:
@@ -87,7 +87,7 @@ class ReplaceAppDomainService:
         except IntegrityError:
             raise ReplaceAppDomainFailed(f"域名记录 {host}{path_prefix} 已被占用")
 
-        service_name = get_service_name(self.app)
+        service_name = get_service_name(self.engine_app)
         try:
             with restore_ingress_on_error(old_copy_obj, service_name):
                 # Delete the old ingress resource first, then create a new one.
@@ -105,33 +105,12 @@ class ReplaceAppDomainService:
             raise ReplaceAppDomainFailed("未知错误，请稍后重试")
 
 
-class DomainResourceCreateService:
-    """Create custom domain related resources, such as Kubernetes Ingress resource and AppDomain
-    records(the data which prevent duplicated domains in one cluster)
-    """
-
-    def __init__(self, engine_app: EngineApp):
-        self.engine_app = engine_app
-
-    def do(self, *, host: str, path_prefix: str, https_enabled: bool):
-        """Create a custom domain"""
-        service_name = get_service_name(self.engine_app)
-        domain_ins, _ = AppDomain.objects.update_or_create(
-            region=self.engine_app.region,
-            app=self.engine_app,
-            source=AppDomainSource.INDEPENDENT,
-            host=host,
-            path_prefix=path_prefix,
-            defaults={'https_enabled': https_enabled},
-        )
-        CustomDomainIngressMgr(domain_ins).sync(default_service_name=service_name)
-
-
 class DomainResourceDeleteService:
     """Delete custom domain related resources"""
 
-    def __init__(self, engine_app: EngineApp):
-        self.engine_app = engine_app
+    def __init__(self, env: ModuleEnv):
+        self.engine_app = EngineApp.objects.get_by_env(env)
+        self.env = env
 
     def do(self, *, host: str, path_prefix: str) -> bool:
         """Delete a domain by given condition
@@ -154,26 +133,21 @@ class DomainResourceDeleteService:
             db_or_mem_domain.delete()
         return True
 
-    def _get_app_domain_for_deletion(self, host: str, path_prefix: str) -> AppDomain:
+    def _get_app_domain_for_deletion(self, host: str, path_prefix: str) -> Domain:
         """Get a AppDomain object for deletion, when not entry can be found via given kwargs, will
         make an in-memory object instead, which is still useful for deleting Ingress resource
         """
         fields = dict(
-            region=self.engine_app.region,
-            app=self.engine_app,
-            source=AppDomainSource.INDEPENDENT,
-            host=host,
+            name=host,
             path_prefix=path_prefix,
+            module_id=self.env.module_id,
+            environment_id=self.env.id,
         )
         try:
-            return AppDomain.objects.get(**fields)
-        except AppDomain.DoesNotExist:
-            logger.warning(
-                'AppDomain record: %s-%s no longer exists in database, skip deletion',
-                fields['host'],
-                fields['path_prefix'],
-            )
-            return AppDomain(**fields)
+            return Domain.objects.get(**fields)
+        except Domain.DoesNotExist:
+            logger.warning('AppDomain record: %s-%s no longer exists in database, skip deletion', host, path_prefix)
+            return Domain(**fields)
 
 
 def get_service_name(app) -> str:

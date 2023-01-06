@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     'paasng.platform.operations',
     'paasng.platform.environments',
     'paasng.ci',
+    'paasng.cnative',
     'paasng.engine',
     'paasng.engine.streaming',
     'paasng.publish.market',
@@ -187,6 +188,9 @@ MIDDLEWARE = [
     'paasng.utils.middlewares.AutoDisableCSRFMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
+
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+ADMIN_USERNAME = settings.get('ADMIN_USERNAME', 'admin')
 
 AUTH_USER_MODEL = 'bkpaas_auth.User'
 
@@ -556,6 +560,7 @@ HEALTHZ_PROBES = settings.get(
         'paasng.monitoring.healthz.probes.PlatformMysqlProbe',
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
+        'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
     ],
 )
 

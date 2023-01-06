@@ -25,7 +25,6 @@ from io import BytesIO
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional
 
-import cattr
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import transaction
@@ -58,10 +57,10 @@ from paasng.accounts.permissions.application import application_perm_class, chec
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.accounts.serializers import VerificationCodeSLZ
-from paasng.cnative import initialize_simple
+from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_engine_app_cluster, get_region_cluster_helper
+from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.extensions.bk_plugins.config import get_bk_plugin_config
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.scene_app.initializer import SceneAPPInitializer
@@ -102,7 +101,7 @@ from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
-from paasng.platform.modules.protections import ConditionNotMatched, ModuleDeletionPreparer
+from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.region.models import get_all_regions
 from paasng.platform.region.permissions import HasPostRegionPermission
@@ -200,18 +199,17 @@ class ApplicationViewSet(viewsets.ViewSet):
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
+
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
+
         results = [
             {'application': application, 'product': application.product if hasattr(application, "product") else None}
             for application in applications
         ]
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
-
-    def get_cluster_by_app(self, application: Application):
-        for env in application.envs.all():
-            cluster = get_engine_app_cluster(application.region, env.engine_app.name)
-            if cluster:
-                return cluster
 
     def retrieve(self, request, code):
         """获取单个应用的信息"""
@@ -222,7 +220,6 @@ class ApplicationViewSet(viewsets.ViewSet):
         product = application.get_product()
 
         web_config = application.config_info
-        cluster = self.get_cluster_by_app(application)
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
@@ -233,7 +230,6 @@ class ApplicationViewSet(viewsets.ViewSet):
                     application=application, owner=request.user.pk
                 ).exists(),
                 'web_config': web_config,
-                'cluster': cattr.unstructure(cluster) if cluster else None,
             }
         )
 
@@ -282,10 +278,9 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         modules = application.modules.all()
         for module in modules:
-            try:
-                ModuleDeletionPreparer(module).perform()
-            except ConditionNotMatched as e:
-                raise error_codes.CANNOT_DELETE_APP.f(e.message)
+            protection_status = ModuleDeletionPreparer(module).perform()
+            if protection_status.activated:
+                raise error_codes.CANNOT_DELETE_APP.f(protection_status.reason)
 
         # 审计记录在事务外创建, 避免由于数据库回滚而丢失
         pre_delete_application.send(sender=Application, application=application, operator=self.request.user.pk)

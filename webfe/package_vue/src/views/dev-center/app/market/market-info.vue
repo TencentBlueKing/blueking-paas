@@ -594,4 +594,7 @@
     .bk-form-control {
         margin-top: -5px;
     }
+    .icon-wrapper {
+        float: left;
+    }
 </style>

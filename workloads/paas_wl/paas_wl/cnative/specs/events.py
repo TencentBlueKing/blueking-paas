@@ -44,6 +44,7 @@ class Event:
     reason: str
     message: str
     count: int
+    source_component: Optional[str]
     involved_object: Optional[ObjectReference]
     first_seen: datetime.datetime
     last_seen: datetime.datetime
@@ -59,20 +60,26 @@ def deserialize(kube_data: ResourceInstance) -> Event:
             namespace=kube_data["involvedObject"]["namespace"],
             name=kube_data["involvedObject"]["name"],
         )
+
+    source_component = None
+    if source := kube_data.get("source"):
+        source_component = source["component"]
+
     return Event(
         name=kube_data["metadata"]["name"],
         type=kube_data["type"],
         reason=kube_data["reason"],
         message=kube_data["message"],
         count=int(kube_data["count"] or 0),
+        source_component=source_component,
         involved_object=involved_object,
         first_seen=arrow.get(kube_data["firstTimestamp"]).datetime,
         last_seen=arrow.get(kube_data["lastTimestamp"]).datetime,
     )
 
 
-def list_failed_events(env: ModuleEnv, dt: Optional[datetime.datetime]) -> List[Event]:
-    """List all reason=Failed Events in 'env'
+def list_events(env: ModuleEnv, dt: Optional[datetime.datetime]) -> List[Event]:
+    """List all Events in 'env'
 
     :param env: 模块环境
     :param dt: datetime, Optional, filter events first seen after dt
@@ -83,7 +90,6 @@ def list_failed_events(env: ModuleEnv, dt: Optional[datetime.datetime]) -> List[
         ret = KEvent(client).ops_label.list(namespace=get_ns(env), labels={})
         for kube_data in ret.items:
             all_events.append(deserialize(kube_data))
-    failed_events = [e for e in all_events if e.reason == "Failed"]
     if dt:
-        failed_events = [e for e in failed_events if e.first_seen >= dt]
-    return failed_events
+        all_events = [e for e in all_events if e.first_seen >= dt]
+    return all_events

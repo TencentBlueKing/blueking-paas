@@ -43,6 +43,8 @@ import alarm from './modules/alarm';
 import docuManagement from './modules/docu-management';
 import cloudApi from './modules/cloud-api';
 import voucher from './modules/voucher';
+import plugin from './modules/plugin';
+import cloudMembers from './modules/cloud-members';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -64,6 +66,8 @@ const state = {
   curAppDefaultModule: {},
   curAppModuleList: [],
   appInfo: {},
+  pluginInfo: {},
+  curPluginInfo: {},
   isAppLoading: true,
   canCreateModule: true,
   loadingConf: {
@@ -159,6 +163,12 @@ const mutations = {
     } else if (data.application.modules.length) {
       state.curAppModule = state.curAppDefaultModule;
     }
+  },
+
+  updatePluginInfo (state, { pluginId, pluginTypeId, data }) {
+    state.curPluginInfo = data;
+    state.curPluginId = pluginId;
+    state.curPluginTypeId = pluginTypeId;
   },
   addAppModule (state, data) {
     // state.curAppModuleList.push(data)
@@ -295,6 +305,22 @@ const actions = {
   },
 
   /**
+     * 获取插件信息
+     *
+     * @param {Number} appCode 应用code
+     */
+  getPluginInfo ({ commit, state }, { pluginId, pluginTypeId }) {
+    const url = `${BACKEND_URL}/api/bkplugins/${pluginTypeId}/plugins/${pluginId}/`;
+    commit('updateAppLoading', true);
+    return http.get(url).then(response => {
+      commit('updatePluginInfo', { pluginId, pluginTypeId, data: response });
+      return response;
+    }).finally(() => {
+      commit('updateAppLoading', false);
+    });
+  },
+
+  /**
      * 获取应用列表
      *
      * @param {Object} params 参数配置
@@ -348,6 +374,22 @@ const actions = {
   getRepoList ({ commit, state }, { sourceControlType }, config = {}) {
     const url = `${BACKEND_URL}/api/sourcectl/${sourceControlType}/repos/`;
     return http.get(url, config);
+  },
+
+  /**
+     * 获取版本日志
+     */
+  getVersionLog ({ commit, state }, config = {}) {
+    const url = `${BACKEND_URL}/api/changelogs/`;
+    return http.get(url, config);
+  },
+
+  /**
+     * 切换语言
+     */
+  switchLanguage ({ commit, state }, { data }, config = {}) {
+    const url = `${BACKEND_URL}/i18n/setlang/`;
+    return http.post(url, data, config);
   }
 
 };
@@ -379,7 +421,9 @@ export default new Vuex.Store({
     alarm,
     docuManagement,
     cloudApi,
-    voucher
+    voucher,
+    plugin,
+    cloudMembers
   },
   state,
   getters,

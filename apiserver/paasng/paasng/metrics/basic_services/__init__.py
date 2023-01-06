@@ -16,22 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.test import TestCase
-from rest_framework.test import APIRequestFactory
-
-
-class TestOauth2(TestCase):
-    def setUp(self):
-        self.factory = APIRequestFactory()
-
-    def test_get_available_backend(self):
-        pass
-
-    def test_get_backend(self):
-        pass
-
-    def test_get_auth_url(self):
-        pass
-
-    def test_get_access_token(self):
-        pass

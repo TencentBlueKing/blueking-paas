@@ -215,6 +215,14 @@ class PluginRepoAccessor:
         to_revision = self.extract_smart_revision(to_revision)
         return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
+    def get_project_id(self) -> int:
+        """获取工蜂仓库的项目ID"""
+        _id = quote(self.project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}"
+        resp = self._session.get(urljoin(self._api_url, _url))
+        validate_response(resp)
+        return resp.json()["id"]
+
 
 class PluginRepoInitializer:
     """PluginRepoInitializer implement with TencentGit"""

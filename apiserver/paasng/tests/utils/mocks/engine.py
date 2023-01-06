@@ -137,8 +137,14 @@ class StubControllerClient:
     def app_proc_ingress_actions__sync(self, region, app_name):
         pass
 
-    def list_custom_domains(self, code: str):
-        return []
+    def list_env_addresses(self, app_code: str, module_name: str):
+        return [
+            {'env': 'stag', 'is_running': False, 'addresses': []},
+            {'env': 'prod', 'is_running': False, 'addresses': []},
+        ]
 
     def sync_processes_specs(self, region: str, app_name: str, processes: List[Dict]):
+        return
+
+    def delete_module_related_res(self, app_code: str, module_name: str):
         return

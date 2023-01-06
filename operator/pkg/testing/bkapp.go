@@ -48,9 +48,3 @@ func WithAddons(bkapp *paasv1alpha1.BkApp, addons ...string) *paasv1alpha1.BkApp
 	annotations[paasv1alpha1.AddonsAnnoKey] = string(data)
 	return bkapp
 }
-
-// WithPhase will set the Status.Phase field
-func WithPhase(bkapp *paasv1alpha1.BkApp, phase paasv1alpha1.AppPhase) *paasv1alpha1.BkApp {
-	bkapp.Status.Phase = phase
-	return bkapp
-}

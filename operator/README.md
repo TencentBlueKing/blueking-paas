@@ -117,6 +117,19 @@ operator 服务部署到集群中，进行任何功能测试。
 > 
 > 更多 Operator 开发信息请参考 [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
+### 项目 Error 使用指南
+
+由于项目支持接入 sentry 以及时监控并报告调和循环中的错误，因此要求 error 均携带堆栈信息。目前的解决方案是基于 `github.com/pkg/errors` 的能力，对 stderr 进行包装。
+
+参考使用方式：
+- 第三方包返回的错误，如 `err := json.Unmarshal(...)`， 使用 `errors.WithStack(err)` 以携带堆栈信息
+- sentinel error，即 `var err = errors.New("xxx")`，在实际使用处也使用 `errors.WithStack` 包装
+- 新建的错误，应该使用 `errors.Errorf("xxx: %s", val)`，不应使用 `fmt.Errorf("xxx: %s", val)`
+- 需要对调用方返回的错误进行包装，携带额外的信息，应该使用 `errors.Wrap / errors.Wrapf` 而非 `fmt.Errorf + %w`
+
+注意：
+- 与 k8s 交互返回的错误，如 `r.Client.Get()`, `r.Client.Status().Update()` 等在 client 中封装过，可不添加 `errors.WithStack`
+
 ## 目录说明
 
 ```text

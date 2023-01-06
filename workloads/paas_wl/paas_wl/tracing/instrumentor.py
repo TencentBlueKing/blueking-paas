@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Collection
+from typing import Collection, Optional
 
 from django.conf import settings
 from opentelemetry.instrumentation import dbapi
@@ -27,12 +27,21 @@ from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.trace import Span, Status, StatusCode
+from requests.models import Response
 
 
-def requests_callback(span: Span, response):
+def requests_callback(span: Span, response: Optional[Response]):
     """
     处理蓝鲸标准协议响应
     """
+    # requests 请求异常, 例如访问超时等
+    if response is None:
+        return
+
+    # 并非所有返回内容都是 json 格式的, 因此需要根据返回头进行判断, 避免处理二进制格式的内容
+    if response.headers.get("Content-Type") != "application/json":
+        return
+
     try:
         json_result = response.json()
     except Exception:  # pylint: disable=broad-except

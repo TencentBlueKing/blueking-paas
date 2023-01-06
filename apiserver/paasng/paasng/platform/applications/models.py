@@ -540,13 +540,9 @@ class ApplicationFeatureFlag(TimestampedModel):
 
 def get_exposed_links(application: Application) -> Dict:
     """Return exposed links for default module"""
-    from paasng.publish.entrance.exposer import get_module_exposed_links, get_module_exposed_links_live
+    from paasng.publish.entrance.exposer import get_module_exposed_links
 
-    # TODO: use get_module_exposed_links_live universally after refactor
-    if application.type == ApplicationType.CLOUD_NATIVE:
-        return get_module_exposed_links_live(application.get_default_module())
-    else:
-        return get_module_exposed_links(application.get_default_module())
+    return get_module_exposed_links(application.get_default_module())
 
 
 class UserMarkedApplication(OwnerTimestampedModel):

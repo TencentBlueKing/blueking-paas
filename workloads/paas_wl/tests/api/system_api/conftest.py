@@ -28,11 +28,11 @@ from paas_wl.release_controller.builder.tasks import start_build_process
 
 
 @pytest.fixture
-def engine_app(fake_app):
+def engine_app(bk_stag_engine_app):
     Config.objects.create(
-        app=fake_app, metadata={"environment": 'prod', "paas_app_code": 'foo', "module_name": 'default'}
+        app=bk_stag_engine_app, metadata={"environment": 'prod', "paas_app_code": 'foo', "module_name": 'default'}
     )
-    return fake_app
+    return bk_stag_engine_app
 
 
 @pytest.fixture
@@ -126,13 +126,15 @@ def webconsole_url(engine_app):
 
 
 @pytest.fixture
-def create_release(engine_app, build, api_client, release_url):
+def create_release(bk_stag_env, bk_stag_engine_app, build, api_client, release_url):
     def handler():
         data = {
             'build': build.uuid,
             'extra_envs': {
                 'BKPAAS_WEIXIN_REMOTE_STATIC_URL': 'https://blueking-fake.com',
-                'BKPAAS_SUB_PATH': '/{region}-{name}/'.format(region=engine_app.region, name=engine_app.name),
+                'BKPAAS_SUB_PATH': '/{region}-{name}/'.format(
+                    region=bk_stag_engine_app.region, name=bk_stag_engine_app.name
+                ),
                 'BKPAAS_ENVIRONMENT': 'stag',
                 'BKPAAS_REMOTE_STATIC_URL': 'http://blueking-fake.com',
                 'BKPAAS_WEIXIN_URL': 'https://blueking-fake.com',

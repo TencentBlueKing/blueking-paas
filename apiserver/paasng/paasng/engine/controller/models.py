@@ -21,6 +21,8 @@ from typing import List, Optional
 
 from attrs import Factory, asdict, define
 
+from paasng.engine.constants import ClusterType
+
 
 @define
 class PortMap:
@@ -87,9 +89,18 @@ class IngressConfig:
 
 
 @define
+class ClusterFeatureFlags:
+    enable_egress_ip: bool = False
+    enable_mount_log_to_host: bool = False
+
+
+@define
 class Cluster:
     name: str
     is_default: bool
     ingress_config: IngressConfig = Factory(IngressConfig)
     # BCS 所属集群, 用于前端展示
     bcs_cluster_id: str = ""
+    type: str = ClusterType.NORMAL
+    # 集群特性（一般与集群类型相关）
+    feature_flags: ClusterFeatureFlags = Factory(ClusterFeatureFlags)

@@ -40,7 +40,7 @@ func GetRevision(obj metav1.Object) (int64, error) {
 func MaxRevision(allProcesses []*appsv1.Deployment) (max int64) {
 	for _, process := range allProcesses {
 		if v, err := GetRevision(process); err != nil {
-			// TODO: 记录日志？
+			continue
 		} else if v > max {
 			max = v
 		}

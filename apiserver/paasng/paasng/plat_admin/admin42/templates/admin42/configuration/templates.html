@@ -180,6 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
         mixins: [SubmitMixin],
         data: function () {
             return {
+                typeChoices: typeChoices,
+                langChoices: langChoices,
                 data: [],
                 dialog: {
                     fullscreen: false,

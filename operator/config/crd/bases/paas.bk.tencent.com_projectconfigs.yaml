@@ -171,10 +171,15 @@ spec:
                 type: string
               bkAppSecret:
                 type: string
+              sentryDSN:
+                description: sentry server dsn, all events waiting for report will
+                  be dropped if unset
+                type: string
             required:
             - bkAPIGatewayURL
             - bkAppCode
             - bkAppSecret
+            - sentryDSN
             type: object
           resLimitConfig:
             description: ResLimitConfig contains bkapp resource limit

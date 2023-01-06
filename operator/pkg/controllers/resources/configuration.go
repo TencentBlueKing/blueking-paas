@@ -32,7 +32,7 @@ import (
 // GetAppEnvs will return all EnvVar for the given BkApp, this will include:
 // - user defined Configuration in Spec
 // - env vars from addons
-// - (TODO) built-in env vars
+// - TODO: built-in env vars
 func GetAppEnvs(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
 	// 应用声明的环境变量(优先级最低)
 	envs := NewEnvVarsGetter(bkapp).Get()
@@ -76,7 +76,7 @@ func retrieveAddonEnvVar(bkapp *v1alpha1.BkApp) []corev1.EnvVar {
 			continue
 		}
 		for key, value := range instance.Credentials {
-			envs = append(envs, corev1.EnvVar{Name: key, Value: value})
+			envs = append(envs, corev1.EnvVar{Name: key, Value: value.String()})
 		}
 	}
 	return envs

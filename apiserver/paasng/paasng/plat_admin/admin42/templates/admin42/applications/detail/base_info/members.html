@@ -50,7 +50,7 @@
                     </bk-form-item>
                     <bk-form-item label="角色">
                         <bk-radio-group v-model="form.roleId">
-                            <bk-radio :value="value" v-for="(value, chineseName) in ROLE_CHOICES">$[chineseName]</bk-radio>
+                            <bk-radio class="mr20" :value="value" v-for="(value, chineseName) in ROLE_CHOICES">$[chineseName]</bk-radio>
                         </bk-radio-group>
                     </bk-form-item>
                     <bk-form-item label="权限列表">

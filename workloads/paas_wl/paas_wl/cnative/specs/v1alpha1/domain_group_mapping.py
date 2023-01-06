@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Resource Definition of `DomainGroupMapping` kind"""
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, validator
 
@@ -81,3 +81,7 @@ class DomainGroupMapping(BaseModel):
         if v != ApiVersion.V1ALPHA1:
             raise ValueError(f'{v} is not valid, use {ApiVersion.V1ALPHA1}')
         return v
+
+    def to_deployable(self) -> Dict:
+        """Return the deployable manifest, none fields are excluded."""
+        return self.dict(exclude_none=True)

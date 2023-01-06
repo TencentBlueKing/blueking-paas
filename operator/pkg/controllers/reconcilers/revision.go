@@ -21,6 +21,7 @@ package reconcilers
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -35,9 +36,14 @@ import (
 
 const defaultRevision int64 = 1
 
+// NewRevisionReconciler will return a RevisionReconciler with given k8s client
+func NewRevisionReconciler(client client.Client) *RevisionReconciler {
+	return &RevisionReconciler{Client: client}
+}
+
 // RevisionReconciler 处理版本相关的调和逻辑
 type RevisionReconciler struct {
-	client.Client
+	Client client.Client
 	Result Result
 }
 
@@ -60,7 +66,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	}
 
 	allDeploys := appsv1.DeploymentList{}
-	err = r.List(
+	err = r.Client.List(
 		ctx,
 		&allDeploys,
 		client.InNamespace(bkapp.Namespace),
@@ -76,11 +82,13 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	if newRevision != defaultRevision {
 		// 检测上一个版本的 PreReleaseHook 是否仍在运行
 		preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
-		if preReleaseHook != nil && preReleaseHook.Status.Status == v1alpha1.HealthProgressing {
-			if _, err = CheckAndUpdatePreReleaseHookStatus(ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold); err != nil {
+		if preReleaseHook != nil && preReleaseHook.Status.Phase == v1alpha1.HealthProgressing {
+			if _, err = CheckAndUpdatePreReleaseHookStatus(
+				ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
+			); err != nil {
 				return r.Result.withError(err)
 			}
-			return r.Result.withError(resources.ErrLastHookStillRunning)
+			return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
 		}
 	}
 
@@ -90,7 +98,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	bkapp.Status.HookStatuses = nil
 	bkapp.Status.ObservedGeneration = bkapp.Generation
 	SetDefaultConditions(&bkapp.Status)
-	err = r.Status().Update(ctx, bkapp)
+	err = r.Client.Status().Update(ctx, bkapp)
 	if err != nil {
 		log.Error(err, "unable to update app revision")
 		return r.Result.withError(err)

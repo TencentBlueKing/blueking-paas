@@ -242,7 +242,7 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "bkapi-bk-apigateway"
-version = "1.0.8"
+version = "1.0.9"
 description = "蓝鲸API网关"
 category = "main"
 optional = false
@@ -3244,7 +3244,7 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "2b178f65ecd711c6b1104ae9e3559b375106f0281439f2205d0e45a84d65a575"
+content-hash = "921078e8f61426a9f12b55f742378820269dbd626d6a0019daffe15a7150c1d5"
 
 [metadata.files]
 aenum = [
@@ -3302,7 +3302,7 @@ bk-iam = [
     {file = "bk_iam-1.1.20-py2.py3-none-any.whl", hash = "sha256:e94089eed968f968f1022d0c95004a4704e0f84ee714830029b2f2025c750f21"},
 ]
 bkapi-bk-apigateway = [
-    {file = "bkapi-bk-apigateway-1.0.8.tar.gz", hash = "md5:0a5e9f359541fd443bb9d29664ad129c"},
+    {file = "bkapi-bk-apigateway-1.0.9.tar.gz", hash = "md5:d1e907906376cc502d677e4311045493"},
 ]
 bkapi-client-core = [
     {file = "bkapi_client_core-1.1.8-py2.py3-none-any.whl", hash = "md5:219e351260fde025291d506310c836d2"},
@@ -3311,7 +3311,7 @@ bkapi-component-open = [
     {file = "bkapi-component-open-1.1.0.tar.gz", hash = "md5:7e3ca24196f7c2cff9cdf4e3b4a86a06"},
 ]
 bkpaas-auth = [
-    {file = "bkpaas-auth-2.0.2.tar.gz", hash = "md5:d9c23bd9870bb5aa112b5dd330b6864e"},
+    {file = "bkpaas-auth-2.0.2.tar.gz", hash = "md5:89de6ec08ef91c65a5e58c7d2ed78e82"},
     {file = "bkpaas_auth-2.0.2-py3-none-any.whl", hash = "md5:1e12c3c69c282ac309860d02fc92f376"},
 ]
 bkstorages = [

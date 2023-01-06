@@ -69,11 +69,15 @@
         watch: {
             filterKey () {
                 this.curActiveIndex = -1;
-                this.fetchObj();
+                if (this.$route.path.indexOf('/plugin-center') === -1) {
+                    this.fetchObj();
+                }
             }
         },
         created () {
-            this.init();
+            if (this.$route.path.indexOf('/plugin-center') === -1) {
+                this.init();
+            }
         },
         methods: {
             // 拼接当前页新路由地址

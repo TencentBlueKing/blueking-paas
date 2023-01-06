@@ -38,9 +38,12 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.pluginscenter import constants
 from paasng.pluginscenter import log as log_api
 from paasng.pluginscenter import openapi_docs, serializers, shim
+from paasng.pluginscenter.bk_devops.client import BkDevopsClient
+from paasng.pluginscenter.bk_devops.exceptions import BkDevopsApiError, BkDevopsGatewayServiceError
+from paasng.pluginscenter.bk_devops.utils import get_devops_project_id
 from paasng.pluginscenter.configuration import PluginConfigManager
 from paasng.pluginscenter.exceptions import error_codes
-from paasng.pluginscenter.features import PluginFeatureFlagsManager
+from paasng.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.pluginscenter.filters import PluginInstancePermissionFilter
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.pluginscenter.iam_adaptor.management import shim as members_api
@@ -307,6 +310,26 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         plugin = self.get_plugin_instance()
         return Response(data=PluginFeatureFlagsManager(plugin).list_all_features())
 
+    @swagger_auto_schema(responses={200: serializers.MetricsSummarySLZ})
+    def get_repo_overview(self, request, pd_id, plugin_id):
+        """插件代码仓库的概览信息"""
+        plugin = self.get_plugin_instance()
+
+        # 获取代码仓库对应的蓝盾项目 ID
+        repo_accessor = get_plugin_repo_accessor(plugin)
+        project_id = repo_accessor.get_project_id()
+        devops_project_id = get_devops_project_id(project_id)
+
+        client = BkDevopsClient(request.user.username)
+        try:
+            summary = client.get_metrics_summary(devops_project_id)
+        except (BkDevopsApiError, BkDevopsGatewayServiceError):
+            # TODO 蓝盾API 还在灰度中，先不抛错误异常
+            # raise error_codes.QUERY_REPO_OVERVIEW_DATA_ERROR
+            return Response(data={})
+
+        return Response(data=serializers.MetricsSummarySLZ(summary).data)
+
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     queryset = OperationRecord.objects.all().order_by('-created')
@@ -384,6 +407,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         release.initial_stage_set()
         PluginReleaseExecutor(release).execute_current_stage(operator=request.user.username)
 
+        # 如果插件的状态不是已发布，则更新为发布中
+        if plugin.status != constants.PluginStatus.RELEASED:
+            plugin.status = constants.PluginStatus.RELEASING
+            plugin.save()
+
         # 操作记录: 新建 xx 版本
         OperationRecord.objects.create(
             plugin=plugin,
@@ -444,11 +472,15 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def cancel_release(self, request, pd_id, plugin_id, release_id):
         """取消发布"""
+        plugin = self.get_plugin_instance()
+        # 插件可设置不能取消发布的特性
+        if not PluginFeatureFlagsManager(plugin).has_feature(PluginFeatureFlag.CANCEL_RELEASE):
+            raise error_codes.NOT_SUPPORT_CANCEL_RELEASE.f(_("插件不支持终止发布操作"))
+
         release = self.get_queryset().get(pk=release_id)
         PluginReleaseExecutor(release).cancel_release(operator=request.user.username)
 
         # 操作记录: 终止发布 xx 版本
-        plugin = self.get_plugin_instance()
         OperationRecord.objects.create(
             plugin=plugin,
             operator=request.user.pk,

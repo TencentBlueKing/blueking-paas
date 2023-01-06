@@ -20,9 +20,9 @@ package kubestatus
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,14 +34,15 @@ import (
 var ErrDeploymentStillProgressing = errors.New("deployment is progressing")
 
 // CheckDeploymentHealthStatus check if the deployment is healthy
-// For a deployment, healthy means the deployment is available, see also: DeploymentAvailable.
-//                   unhealthy means the deployment is failed to reconcile.
-//                   progressing is meaningless for deployment, if you want to know if those pods that associated with this deployment
-//                   is progressing, you should call GetDeploymentDirectFailMessage.
+// For a deployment:
+//   healthy means the deployment is available, see also: DeploymentAvailable.
+//   unhealthy means the deployment is failed to reconcile.
+//   progressing is meaningless for deployment, if you want to know if those pods that
+//   associated with this deployment is progressing, you should call GetDeploymentDirectFailMessage.
 func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		return &HealthStatus{
-			Status:  paasv1alpha1.HealthProgressing,
+			Phase:   paasv1alpha1.HealthProgressing,
 			Reason:  "UnobservedDeploy",
 			Message: "Waiting for rollout to finish: observed deployment generation less then desired generation",
 		}
@@ -70,14 +71,20 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		var message string
 		if deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
 			// Deployment 未完成滚动更新
-			message = fmt.Sprintf("Waiting for rollout to finish: %d/%d replicas are updated...", deployment.Status.UpdatedReplicas, deployment.Spec.Replicas)
+			message = fmt.Sprintf(
+				"Waiting for rollout to finish: %d/%d replicas are updated...",
+				deployment.Status.UpdatedReplicas, deployment.Spec.Replicas,
+			)
 		} else {
 			// Deployment 等待最新的 Pod 就绪
-			message = fmt.Sprintf("Waiting for rollout to finish: %d/%d replicas are available...", deployment.Status.AvailableReplicas, deployment.Spec.Replicas)
+			message = fmt.Sprintf(
+				"Waiting for rollout to finish: %d/%d replicas are available...",
+				deployment.Status.AvailableReplicas, deployment.Spec.Replicas,
+			)
 		}
 
 		return &HealthStatus{
-			Status:  paasv1alpha1.HealthProgressing,
+			Phase:   paasv1alpha1.HealthProgressing,
 			Reason:  "Progressing",
 			Message: message,
 		}
@@ -93,7 +100,12 @@ func GetDeploymentDirectFailMessage(
 	deployment *appsv1.Deployment,
 ) (string, error) {
 	var pods corev1.PodList
-	if err := cli.List(ctx, &pods, client.InNamespace(deployment.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
+	if err := cli.List(
+		ctx,
+		&pods,
+		client.InNamespace(deployment.Namespace),
+		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
+	); err != nil {
 		return "", err
 	}
 	for _, pod := range pods.Items {
@@ -101,11 +113,11 @@ func GetDeploymentDirectFailMessage(
 		if !pod.DeletionTimestamp.IsZero() {
 			continue
 		}
-		if healthStatus := CheckPodHealthStatus(&pod); healthStatus.Status == paasv1alpha1.HealthUnhealthy {
+		if healthStatus := CheckPodHealthStatus(&pod); healthStatus.Phase == paasv1alpha1.HealthUnhealthy {
 			return healthStatus.Message, nil
 		}
 	}
-	return "", ErrDeploymentStillProgressing
+	return "", errors.WithStack(ErrDeploymentStillProgressing)
 }
 
 // FindDeploymentStatusCondition finds the conditionType in conditions.
@@ -123,11 +135,11 @@ func FindDeploymentStatusCondition(
 
 // a shortcut for making a HealthStatus with given status and condition
 func makeStatusFromDeploymentCondition(
-	status paasv1alpha1.HealthStatus,
+	phase paasv1alpha1.HealthPhase,
 	condition *appsv1.DeploymentCondition,
 ) *HealthStatus {
 	return &HealthStatus{
-		Status:  status,
+		Phase:   phase,
 		Reason:  condition.Reason,
 		Message: condition.Message,
 	}

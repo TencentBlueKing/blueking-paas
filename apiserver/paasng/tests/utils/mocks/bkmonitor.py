@@ -15,16 +15,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import random
+from typing import List
 
-from requests import Response
-
-from paasng.monitoring.monitor.client import BKMonitorClient
+from paasng.accessories.bkmonitorv3.client import BkMonitorClient
+from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 
-def get_fake_alerts(start_time: int, end_time: int) -> dict:
+def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
             'id': generate_random_string(6),
@@ -38,22 +37,12 @@ def get_fake_alerts(start_time: int, end_time: int) -> dict:
         }
         for _ in range(3)
     ]
-
-    return {
-        'code': 200,
-        'result': True,
-        'data': {'alerts': alerts},
-    }
+    return alerts
 
 
-class StubBKMonitorClient(BKMonitorClient):
-    def handle_request(self, operation, context):
-        resp = Response()
-        resp.status_code = 200
+class StubBKMonitorClient(BkMonitorClient):
+    """蓝鲸监控提供的API，仅供单元测试使用"""
 
-        data = {}
-        if operation.name == 'search_alert':
-            data = get_fake_alerts(context['json']['start_time'], context['json']['end_time'])
-
-        resp._content = json.dumps(data).encode('utf-8')
-        return resp
+    def query_alerts(self, query_params: QueryAlertsParams) -> List:
+        query_data = query_params.to_dict()
+        return get_fake_alerts(query_data['start_time'], query_data['end_time'])

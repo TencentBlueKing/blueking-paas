@@ -188,6 +188,11 @@ class BKIAMClient:
         :param grade_manager_id: 分级管理员 ID
         :param usernames: 待添加成员名称
         """
+        # admin 用户拥有全量权限，不应占用配额也不需要授权
+        usernames = [u for u in usernames if u != settings.ADMIN_USERNAME]
+        if not usernames:
+            return
+
         path_params, data = {'id': grade_manager_id}, {'members': usernames}
 
         try:
@@ -328,6 +333,11 @@ class BKIAMClient:
         :param usernames: 待添加成员名称
         :param expired_after_days: X 天后权限过期（-1 表示永不过期）
         """
+        # admin 用户拥有全量权限，不应占用配额也不需要授权
+        usernames = [u for u in usernames if u != settings.ADMIN_USERNAME]
+        if not usernames:
+            return
+
         path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'group_id': user_group_id}
         data = {
             'members': [{'type': 'user', 'id': username} for username in usernames],

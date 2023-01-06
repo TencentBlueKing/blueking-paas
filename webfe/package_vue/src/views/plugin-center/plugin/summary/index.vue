@@ -18,10 +18,10 @@
                   <i class="paasng-icon paasng-version" />
                 </span>
                 <div class="item-info">
-                  <h3>--</h3>
+                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore || '--' }}</h3>
                   <span class="text">{{ $t('代码质量') }}</span>
                   <i
-                    v-bk-tooltips="'由工蜂 Stream 提供数据'"
+                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考')"
                     style="color: #C4C6CC;margin-top:1px;"
                     class="paasng-icon paasng-info-line"
                   />
@@ -34,7 +34,7 @@
                   <i class="paasng-icon paasng-alert2" />
                 </span>
                 <div class="item-info">
-                  <h3>--</h3>
+                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.resolvedDefectNum || '--' }}</h3>
                   <span class="text">{{ $t('已解决缺陷数') }}</span>
                 </div>
               </div>
@@ -45,8 +45,13 @@
                   <i class="paasng-icon paasng-alert" />
                 </span>
                 <div class="item-info">
-                  <h3>--</h3>
+                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.qualityInfo.qualityInterceptionRate || '--' }}</h3>
                   <span class="text">{{ $t('质量红线拦截率') }}</span>
+                  <i
+                    v-bk-tooltips="`${$t('拦截次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.interceptionCount || '--'} / ${$t('运行总次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.totalExecuteCount || '--'}`"
+                    style="color: #C4C6CC;margin-top:1px;"
+                    class="paasng-icon paasng-info-line"
+                  />
                 </div>
               </div>
             </div>
@@ -197,6 +202,7 @@
                         return date && date.valueOf() > Date.now() - 86400;
                     }
                 },
+                viewInfo: {},
                 shortcuts: [
                     {
                         text: this.$t('今天'),
@@ -269,6 +275,7 @@
             init () {
                 moment.locale(this.localLanguage);
                 this.getPluginOperations();
+                this.getStoreOverview();
             },
 
             // 获取动态
@@ -284,6 +291,37 @@
                         item['created_format'] = moment(item.created).startOf('minute').fromNow();
                         this.operationsList.push(item);
                     }
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                }
+            },
+
+            // 获取插件仓库概览信息
+            async getStoreOverview () {
+                const params = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId
+                };
+                try {
+                    const res = await this.$store.dispatch('plugin/getStoreOverview', params);
+                    if (res.codeCheckInfo) {
+                        for (const key in res.codeCheckInfo) {
+                            if (res.codeCheckInfo[key] === 0) {
+                                res.codeCheckInfo[key] = '' + res.codeCheckInfo[key];
+                            }
+                        }
+                    }
+                    if (res.qualityInfo) {
+                        for (const key in res.qualityInfo) {
+                            if (res.qualityInfo[key] === 0) {
+                                res.qualityInfo[key] = '' + res.qualityInfo[key];
+                            }
+                        }
+                    }
+                    this.viewInfo = res;
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

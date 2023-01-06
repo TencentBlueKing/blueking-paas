@@ -114,7 +114,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.Bk
 		}
 	}
 
-	// 如果创建 Pod 后未正常写入 Status, 这里则重新写这个状态
+	// 如果创建 Pod 后未正常写入 Phase, 这里则重新写这个状态
 	if currentStatus == nil {
 		currentStatus = &v1alpha1.HookStatus{
 			Type:      v1alpha1.HookPreRelease,
@@ -137,7 +137,7 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *v1alpha1.Bk
 			Type:      v1alpha1.HookPreRelease,
 			Started:   currentStatus.Started,
 			StartTime: currentStatus.StartTime,
-			Status:    healthStatus.Status,
+			Phase:     healthStatus.Phase,
 			Message:   healthStatus.Message,
 			Reason:    healthStatus.Reason,
 		},
@@ -164,7 +164,7 @@ func (r *HookReconciler) ExecuteHook(
 		Type:      v1alpha1.HookPreRelease,
 		Started:   lo.ToPtr(true),
 		StartTime: lo.ToPtr(metav1.Now()),
-		Status:    v1alpha1.HealthProgressing,
+		Phase:     v1alpha1.HealthProgressing,
 	})
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.HooksFinished,

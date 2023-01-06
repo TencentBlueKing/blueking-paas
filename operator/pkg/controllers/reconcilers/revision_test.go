@@ -151,7 +151,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 			}
 			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
 				Type:      v1alpha1.HookPreRelease,
-				Status:    v1alpha1.HealthProgressing,
+				Phase:     v1alpha1.HealthProgressing,
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
 			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"

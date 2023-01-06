@@ -27,6 +27,7 @@
         />
       </div>
       <bk-table
+        ref="pluginTable"
         v-bkloading="{ isLoading: isDataLoading }"
         :data="pluginList"
         size="small"
@@ -113,14 +114,14 @@
         >
           <template slot-scope="{ row }">
             <template
-              v-if="row.ongoing_release"
+              v-if="row.latest_release"
             >
-              <round-loading v-if="releaseStatusMap[row.ongoing_release.status]" />
+              <round-loading v-if="releaseStatusMap[row.latest_release.status]" />
               <div
                 v-else
-                :class="['dot', row.ongoing_release.status]"
+                :class="['dot', row.latest_release.status]"
               />
-              {{ row.ongoing_release.version }}
+              {{ row.latest_release.version }}
             </template>
             <template
               v-else
@@ -230,7 +231,7 @@
                 for (const key in PLUGIN_STATUS) {
                     statusList.push({
                         value: key,
-                        text: PLUGIN_STATUS[key]
+                        text: this.$t(PLUGIN_STATUS[key])
                     });
                 }
                 return statusList;
@@ -458,6 +459,7 @@
 
             clearFilterKey () {
                 this.filterKey = '';
+                this.$refs.pluginTable.clearFilter();
             }
         }
     };

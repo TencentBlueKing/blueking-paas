@@ -109,16 +109,16 @@ var _ = Describe("HookUtils", func() {
 			Expect(memLimit.Cmp(hookRes.Limits[corev1.ResourceMemory])).To(Equal(0))
 			// 镜像拉取密钥
 			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(v1alpha1.DefaultImagePullSecretName))
-			Expect(hook.Status.Status).To(Equal(v1alpha1.HealthUnknown))
+			Expect(hook.Status.Phase).To(Equal(v1alpha1.HealthUnknown))
 		})
 
-		It("complex case - override Pod.name by Revision and Status.Status by PreRelease.Status", func() {
+		It("complex case - override Pod.name by Revision and Status.Phase by PreRelease.Status", func() {
 			bkapp.Status.Revision = &v1alpha1.Revision{Revision: 100}
 			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{Type: v1alpha1.HookPreRelease})
 
 			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-100"))
-			Expect(hook.Status.Status).To(Equal(v1alpha1.HealthStatus("")))
+			Expect(hook.Status.Phase).To(Equal(v1alpha1.HealthPhase("")))
 		})
 
 		It("complex case - with env vars", func() {

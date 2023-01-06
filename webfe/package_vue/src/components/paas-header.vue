@@ -41,7 +41,7 @@
             {{ item.text }}
           </router-link>
           <a
-            v-else-if="(item.text === $t('云 API'))"
+            v-else-if="(item.text === $t('API 网关'))"
             :href="link"
             target="_blank"
           >
@@ -190,7 +190,7 @@
             :tippy-options="{ 'hideOnClick': false }"
           >
             <div class="header-mind is-left header-mind-cls">
-              <span :class="`bk-icon icon-${curLangIcon} lang-icon nav-lang-icon`" />
+              <span :class="`bk-icon icon-${localLanguage === 'en' ? 'english' : 'chinese'} lang-icon nav-lang-icon`" />
             </div>
             <template slot="content">
               <ul class="monitor-navigation-admin">
@@ -452,8 +452,7 @@
                 isShowInput: true,
                 // eslint-disable-next-line comma-dangle
                 link: this.GLOBAL.LINK.APIGW_INDEX,
-                navText: '',
-                curLangIcon: 'chinese'
+                navText: ''
             };
         },
         computed: {
@@ -702,7 +701,6 @@
                 }).then(res => {
                     this.$i18n.locale = language;
                     this.$store.commit('updateLocalLanguage', language);
-                    this.curLangIcon = language === 'en' ? 'english' : 'chinese';
                     this.$router.go(0);
                 }, (e) => {
                     this.$paasMessage({

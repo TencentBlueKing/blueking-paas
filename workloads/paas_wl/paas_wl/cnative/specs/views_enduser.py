@@ -31,7 +31,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.cnative.specs.events import list_failed_events
+from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.platform.applications.permissions import AppAction, application_perm_class
@@ -235,7 +235,7 @@ class MresStatusViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
                     "deployment": latest_dp,
                     "ingress": {"url": get_exposed_url(env)},
                     "conditions": mres.status.conditions,
-                    "events": list_failed_events(env, latest_dp.created),
+                    "events": list_events(env, latest_dp.created),
                 }
             ).data
         )

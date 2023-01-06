@@ -283,9 +283,6 @@ export const PAAS_STATIC_CONFIG = {
                 },
                 {
                     "text": staticI18n.$t("服务")
-                },
-                {
-                    "text": staticI18n.$t("文档与支持")
                 }
             ],
             "api_subnav_service": [

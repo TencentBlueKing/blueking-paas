@@ -102,7 +102,7 @@
         </div>
       </div>
       <!-- 内容 -->
-      <div class="app-container plugin-container">
+      <div class="plugin-container">
         <div
           id="release-box"
           class="release-warp"
@@ -848,6 +848,10 @@
     };
 </script>
 <style lang="scss" scoped>
+.deploy-action-box {
+    max-width: calc(100% - 100px);
+    margin: 0 auto;
+}
 .plugin-release-top {
     height: 173px;
     margin: 0 auto;
@@ -953,10 +957,7 @@
     box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
 }
 .edit-form-item{
-    height: 272px;
-    .editor{
-        height: 200px;
-    }
+    margin-bottom: 20px;
 }
 .time-cls{
     color: #C4C6CC;
@@ -1025,5 +1026,10 @@
 <style>
     .visible-range-release .editor .ql-snow .ql-formats {
         line-height: 24px;
+    }
+    .visible-range-release .editor {
+        display: flex;
+        flex-direction: column;
+        height: 300px;
     }
 </style>

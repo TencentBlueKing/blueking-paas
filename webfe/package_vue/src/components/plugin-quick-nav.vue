@@ -137,6 +137,10 @@
                     });
                     this.pluginList = res.results;
                     this.viewPluinList = res.results;
+                    // 根据id排序
+                    this.viewPluinList.sort((a, b) => {
+                        return ('' + a.id).localeCompare(b.id);
+                    });
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,

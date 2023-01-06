@@ -670,7 +670,7 @@ export const PAAS_STATIC_CONFIG = {
                 "matchRouters": [
                     "pluginDeployEnv"
                 ],
-                "iconfontName": "list-fill",
+                "iconfontName": "configuration",
                 "supportModule": true,
                 "destRoute": {
                     "name": "pluginDeployEnv"
@@ -689,6 +689,26 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "pluginProcess",
+                "label": staticI18n.$t("进程管理"),
+                "iconfontName": "process",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "pluginProcess"
+                },
+                "children": []
+            },
+            {
+                "name": "pluginCloudAPI",
+                "label": staticI18n.$t("云 API 权限"),
+                "iconfontName": "api",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "pluginCloudAPI"
+                },
+                "children": []
+            },
+            {
                 "name": "pluginConfigs",
                 "label": staticI18n.$t("基本设置"),
                 "iconfontName": "setting-2",
@@ -700,12 +720,6 @@ export const PAAS_STATIC_CONFIG = {
                         }
                     },
                     {
-                        "name": staticI18n.$t("可见范围"),
-                        "destRoute": {
-                          "name": "pluginVisibleRange"
-                        }
-                    },
-                    {
                         "name": staticI18n.$t("成员管理"),
                         "destRoute": {
                           "name": "pluginRoles"
@@ -713,7 +727,6 @@ export const PAAS_STATIC_CONFIG = {
                     }
                 ]
             },
-
         ],
         "list": [
             {

@@ -77,6 +77,7 @@ from paasng.platform.applications.models import (
     UserApplicationFilter,
     UserMarkedApplication,
 )
+from paasng.platform.applications.pagination import ApplicationListPagination
 from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
 from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import (
@@ -124,15 +125,6 @@ logger = logging.getLogger(__name__)
 class ApplicationViewSet(viewsets.ViewSet):
     """View class for applications"""
 
-    @property
-    def paginator(self):
-        if not hasattr(self, '_paginator'):
-            from rest_framework.pagination import LimitOffsetPagination
-
-            self._paginator = LimitOffsetPagination()
-            self._paginator.default_limit = 12
-        return self._paginator
-
     @swagger_auto_schema(query_serializer=slzs.ApplicationListDetailedSLZ)
     def list_detailed(self, request):
         """[API] 查询应用列表详情"""
@@ -166,23 +158,39 @@ class ApplicationViewSet(viewsets.ViewSet):
             applications_ids = sorted(applications_ids, key=lambda x: x in marked_application_ids, reverse=True)
 
             # Paginator
-            page = self.paginator.paginate_queryset(applications_ids, self.request, view=self)
+            paginator = ApplicationListPagination()
+            page = paginator.paginate_queryset(applications_ids, self.request, view=self)
             page_applications = list(Application.objects.filter(id__in=page).select_related('product'))
             page_applications = sorted(page_applications, key=lambda x: applications_ids.index(x.id))
         else:
-            page_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
+            page_applications = paginator.paginate_queryset(applications, self.request, view=self)
 
         data = [
             {
                 'application': application,
                 'product': application.product if hasattr(application, "product") else None,
                 'marked': application.id in marked_application_ids,
+                # 应用市场访问地址信息
+                'market_config': application.market_config,
             }
             for application in page_applications
         ]
 
+        # 统计普通应用、云原生应用、外链应用的数量
+        # 需要先上线插件开发者中心，不在应用列表中显示插件应用
+        default_app_count = applications.filter(type=ApplicationType.DEFAULT).count()
+        engineless_app_count = applications.filter(type=ApplicationType.ENGINELESS_APP).count()
+        cloud_native_app_count = applications.filter(type=ApplicationType.CLOUD_NATIVE).count()
+
         serializer = slzs.ApplicationWithMarketSLZ(data, many=True)
-        return self.paginator.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(
+            serializer.data,
+            context={
+                'default_app_count': default_app_count,
+                'engineless_app_count': engineless_app_count,
+                'cloud_native_app_count': cloud_native_app_count,
+            },
+        )
 
     @swagger_auto_schema(query_serializer=slzs.ApplicationListMinimalSLZ)
     def list_minimal(self, request):

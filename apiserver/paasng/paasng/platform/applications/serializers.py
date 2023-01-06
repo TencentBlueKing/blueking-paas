@@ -454,10 +454,16 @@ class ProductSLZ(serializers.Serializer):
     logo = serializers.CharField(source='get_logo_url')
 
 
+class MarketConfigSLZ(serializers.Serializer):
+    # 第三方应用直接打开应用地址，不需要打开应用市场的地址
+    source_tp_url = serializers.URLField(required=False, allow_blank=True, allow_null=True, help_text="第三方访问地址")
+
+
 class ApplicationWithMarketSLZ(serializers.Serializer):
     application = ApplicationWithDeployInfoSLZ(read_only=True)
     product = ProductSLZ(read_only=True)
     marked = serializers.BooleanField(read_only=True)
+    market_config = MarketConfigSLZ(read_only=True)
 
 
 # Minimal serializers

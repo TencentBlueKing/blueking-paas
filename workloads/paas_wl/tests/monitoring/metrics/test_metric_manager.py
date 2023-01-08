@@ -50,14 +50,16 @@ class TestResourceMetricManager:
         yield PrometheusMetricClient(basic_auth=("foo", "bar"), host="example.com")
 
     def test_normal_gen_series_query(self, metric_client):
-        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
+        manager = ResourceMetricManager(
+            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bkcc_biz_id=''
+        )
         fake_metrics_value = [[1234, 1234], [1234, 1234], [1234, 1234]]
         query_range_mock = Mock(return_value=fake_metrics_value)
         with patch('paas_wl.monitoring.metrics.clients.PrometheusMetricClient.query_range', query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
-                    resource_types=[MetricsResourceType.MEM.value],
+                    resource_types=[MetricsResourceType.MEM],
                 )
             )
 
@@ -67,7 +69,9 @@ class TestResourceMetricManager:
             assert result[0].results[0].results[0].results == fake_metrics_value
 
     def test_empty_gen_series_query(self, metric_client):
-        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
+        manager = ResourceMetricManager(
+            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bkcc_biz_id=''
+        )
         fake_metrics_value: List = []
         query_range_mock = Mock(return_value=fake_metrics_value)
         with patch('paas_wl.monitoring.metrics.clients.PrometheusMetricClient.query_range', query_range_mock):
@@ -83,7 +87,9 @@ class TestResourceMetricManager:
             assert result[0].results[0].results[0].results == fake_metrics_value
 
     def test_exception_gen_series_query(self, metric_client):
-        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
+        manager = ResourceMetricManager(
+            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bkcc_biz_id=''
+        )
         FakeResponse = namedtuple('FakeResponse', 'status_code')
 
         query_range_mock = Mock(side_effect=RequestMetricBackendError(FakeResponse(status_code=400)))
@@ -100,11 +106,13 @@ class TestResourceMetricManager:
     def test_gen_series_query(self, metric_client):
         temp_process = self.worker_process
         temp_process.instances[0].name = f"{settings.FOR_TESTS_DEFAULT_REGION}-test-test-stag-asdfasdf"
-        manager = ResourceMetricManager(process=temp_process, metric_client=metric_client, bcs_cluster_id='')
+        manager = ResourceMetricManager(
+            process=temp_process, metric_client=metric_client, bcs_cluster_id='', bkcc_biz_id=''
+        )
         query = manager.gen_series_query(
             instance_name=temp_process.instances[0].name,
-            resource_type=MetricsResourceType.MEM.value,
-            series_type=MetricsSeriesType.CURRENT.value,
+            resource_type=MetricsResourceType.MEM,
+            series_type=MetricsSeriesType.CURRENT,
             time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
         )
 
@@ -117,10 +125,12 @@ class TestResourceMetricManager:
         )
 
     def test_gen_all_series_query(self, metric_client):
-        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
+        manager = ResourceMetricManager(
+            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bkcc_biz_id=''
+        )
         queries = manager.gen_all_series_query(
             instance_name=self.web_process.instances[0].name,
-            resource_type=MetricsResourceType.MEM.value,
+            resource_type=MetricsResourceType.MEM,
             time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
         )
 

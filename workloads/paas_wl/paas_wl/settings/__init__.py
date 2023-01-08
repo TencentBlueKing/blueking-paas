@@ -442,7 +442,7 @@ METRIC_CLIENT_TOKEN_DICT = settings.get('METRIC_CLIENT_TOKEN_DICT', {})
 # healthz: 将使用该 token 校验调用方身份
 HEALTHZ_TOKEN = settings.get('HEALTHZ_TOKEN')
 
-# 插件监控图表相关配置
+# 插件监控图表相关配置 TODO 看看这里是怎么换成蓝鲸监控需要的
 MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
 
 # ---------------
@@ -579,9 +579,11 @@ if ENABLE_OTEL_TRACE:
 
 # 蓝鲸监控相关配置
 # 是否下发 ServiceMonitor 的总开关
-BKMONITOR_ENABLED = settings.get("BKMONITOR_ENABLED", False)
+BKMONITOR_ENABLED = settings.get('BKMONITOR_ENABLED', False)
 # 蓝鲸监控运维相关的额外配置
-BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
+
+BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 'stage')
 
 # 网关运行环境
 APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')

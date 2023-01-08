@@ -226,8 +226,17 @@ class Cluster(UuidAuditedModel):
 
     @property
     def bcs_cluster_id(self) -> Optional[str]:
-        """Property 'bcs_cluster_id' of cluster object, return None when not configured"""
+        """集群在 bcs 中注册的集群 ID，若没有配置，则返回 None"""
         return self.annotations.get('bcs_cluster_id', None)
+
+    @property
+    def bkcc_biz_id(self) -> Optional[str]:
+        """bcs 集群所在项目在 bkcc 中的业务 ID，若没有配置，则返回 None"""
+        # 如果不是 bcs 集群，则 bkcc 业务 ID 不会生效
+        if not self.bcs_cluster_id:
+            return None
+
+        return self.annotations.get('bkcc_biz_id', None)
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""

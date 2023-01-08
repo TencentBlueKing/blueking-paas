@@ -340,9 +340,9 @@ class ResourceMetricsSerializer(serializers.Serializer):
     def get_query_metrics(self, data):
         """根据 metric_type 注入 query_metrics 字段"""
         if data["metric_type"] == "__all__":
-            query_metrics = [MetricsResourceType.MEM.value, MetricsResourceType.CPU.value]
+            query_metrics = [MetricsResourceType.MEM, MetricsResourceType.CPU]
         else:
-            query_metrics = [MetricsResourceType(data["metric_type"]).value]
+            query_metrics = [MetricsResourceType(data["metric_type"])]
         return query_metrics
 
     def get_time_range(self, data):

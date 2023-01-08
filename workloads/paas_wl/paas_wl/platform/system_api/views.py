@@ -455,6 +455,8 @@ class ArchiveViewSet(SysAppRelatedViewSet):
 
 
 class ResourceMetricsViewSet(SysAppRelatedViewSet):
+
+    # TODO 这里需要切换成 bk_monitor
     def get_resource_metric_manager(self, process_type):
         # fetch instances of process
         app = self.get_app()
@@ -467,9 +469,7 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         except ObjectDoesNotExist:
             raise RuntimeError('no cluster can be found, query aborted')
 
-        try:
-            bcs_cluster_id = cluster.annotations["bcs_cluster_id"]
-        except KeyError as e:
+        if not cluster.bcs_cluster_id:
             raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BCS 信息, 不支持该功能")
 
         try:
@@ -481,9 +481,14 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         if not process.instances:
             raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("找不到进程实例")
 
-        # 这里默认只有 Prometheus，暂不支持用户选择数据来源
+        # 这里默认只有 Prometheus，暂不支持用户选择数据来源 TODO 直接换成蓝鲸监控数据
         metric_client = PrometheusMetricClient(**settings.MONITOR_CONFIG["metrics"]["prometheus"])
-        return ResourceMetricManager(process=process, metric_client=metric_client, bcs_cluster_id=bcs_cluster_id)
+        return ResourceMetricManager(
+            process=process,
+            metric_client=metric_client,
+            bcs_cluster_id=cluster.bcs_cluster_id,
+            bkcc_biz_id=cluster.bkcc_biz_id,
+        )
 
     @swagger_auto_schema(
         query_serializer=serializers.ResourceMetricsSerializer,

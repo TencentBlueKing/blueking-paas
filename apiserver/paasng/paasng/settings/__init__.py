@@ -1146,4 +1146,7 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
+# 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
+ENABLE_BK_MONITOR = settings.get('ENABLE_BK_MONITOR', False)
+
 MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

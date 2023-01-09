@@ -761,6 +761,10 @@
         }
     }
 
+    // .paasng-api-panel .fr {
+    //     margin-top: 0;
+    // }
+
     .table-operate-buttons {
         position: relative;
         left: -12px;

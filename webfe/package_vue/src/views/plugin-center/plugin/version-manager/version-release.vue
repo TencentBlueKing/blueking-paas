@@ -144,7 +144,10 @@
           </template>
 
           <!-- 完善市场信息模块 -->
-          <div v-if="stageId === 'market'">
+          <div
+            v-if="stageId === 'market'"
+            class="info-mt"
+          >
             <bk-form
               ref="visitForm"
               :model="form"
@@ -1022,6 +1025,9 @@
 .visible-range-release .app-container {
     margin-top: 0;
     padding-top: 0;
+}
+.release-warp .info-mt {
+    margin-top: 72px;
 }
 </style>
 <style>

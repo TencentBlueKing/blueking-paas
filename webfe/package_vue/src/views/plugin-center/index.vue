@@ -559,9 +559,6 @@
             color: #3a84ff;
         }
     }
-    .right-main-plugin {
-        width: 100% !important;
-    }
 </style>
 
 <style>

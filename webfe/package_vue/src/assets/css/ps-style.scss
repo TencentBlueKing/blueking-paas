@@ -1089,6 +1089,16 @@ span.ellipsis {
     }
 }
 
+@media screen and (max-width: 1100px) {
+    .right-main-release {
+        width: calc(100% - 200px) !important;
+    }
+    .container {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
 .container {
     margin-right: auto;
     margin-left: auto;

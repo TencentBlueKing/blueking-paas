@@ -1089,9 +1089,13 @@ span.ellipsis {
     }
 }
 
-@media screen and (max-width: 1366px) {
+@media screen and (max-width: 1100px) {
     .right-main-release {
-        width: 95vw !important;
+        width: calc(100% - 200px) !important;
+    }
+    .container {
+        margin: 0 !important;
+        padding: 0 !important;
     }
 }
 

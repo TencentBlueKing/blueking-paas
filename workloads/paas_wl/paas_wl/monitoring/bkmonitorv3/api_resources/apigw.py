@@ -16,9 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .base import MetricClient, MetricQuery, MetricSeriesResult
-from .promethues import PrometheusMetricClient
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
-__all__ = ['PrometheusMetricClient', 'MetricClient', 'MetricQuery', 'MetricSeriesResult']
 
-# TODO 考虑移除 clients 模块
+class Group(OperationGroup):
+
+    # 统一查询时序数据
+    promql_query = bind_property(Operation, name='promql_query', method='POST', path='/promql_query/')
+
+
+class Client(APIGatewayClient):
+    """bkmonitorv3 监控平台 v3 上云版"""
+
+    _api_name = "bkmonitorv3"
+
+    api = bind_property(Group, name="api")

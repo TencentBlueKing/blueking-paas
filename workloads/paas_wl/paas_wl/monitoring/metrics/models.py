@@ -47,10 +47,11 @@ class MetricsInstanceResult:
 
 
 class ResourceMetricManager:
-    def __init__(self, process: 'Process', metric_client: 'MetricClient', bcs_cluster_id: str):
+    def __init__(self, process: 'Process', metric_client: 'MetricClient', bcs_cluster_id: str, bkcc_biz_id: str):
         self.process = process
         self.metric_client = metric_client
         self.bcs_cluster_id = bcs_cluster_id
+        self.bkcc_biz_id = bkcc_biz_id
         if not self.process.instances:
             raise ValueError("Process should contain info of instances when querying metrics")
 
@@ -63,7 +64,7 @@ class ResourceMetricManager:
         """get all series type queries"""
 
         # not expose request series
-        for single_series_type in [MetricsSeriesType.CURRENT.value, MetricsSeriesType.LIMIT.value]:
+        for single_series_type in [MetricsSeriesType.CURRENT, MetricsSeriesType.LIMIT]:
             try:
                 yield self.gen_series_query(single_series_type, resource_type, instance_name, time_range)
             except KeyError:

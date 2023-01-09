@@ -28,7 +28,6 @@ class MetricsSeriesType(str, StructuredEnum):
 class MetricsResourceType(str, StructuredEnum):
     MEM = EnumField('mem')
     CPU = EnumField('cpu')
-    NETWORK_IO = EnumField('network_io')
 
     @classmethod
     def choices(cls):

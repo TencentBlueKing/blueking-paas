@@ -1072,7 +1072,7 @@ span.ellipsis {
     //     width: 85vw !important;
     // }
     .right-main-release {
-        width: 100vw !important;
+        width: 85vw !important;
     }
 }
 
@@ -1086,6 +1086,12 @@ span.ellipsis {
     .ps-container,
     .app-container {
         max-width: 980px;
+    }
+}
+
+@media screen and (max-width: 1366px) {
+    .right-main-release {
+        width: 95vw !important;
     }
 }
 

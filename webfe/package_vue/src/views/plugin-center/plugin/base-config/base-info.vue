@@ -1339,7 +1339,6 @@
     .right-main {
         section {
             margin-top: 20px;
-            padding-left: 16px;
         }
         .cls-bk-input {
             input {

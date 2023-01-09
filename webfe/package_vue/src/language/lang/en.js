@@ -44,7 +44,7 @@ export default {
   '管理员': 'Administrator',
   '开发者': 'Developers',
   '运营者': 'Operator',
-  '应用开发': 'App Development',
+  '应用开发': 'Application',
   '上线审核': 'Online review',
   '应用推广': 'App Markets',
   '成员管理': 'Member',
@@ -1925,7 +1925,7 @@ export default {
   '目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。': 'The number of copies of some processes in the target environment is inconsistent with the current model, and the data in the current model will be used to overwrite the target environment.',
   '副本数将发生以下变化：': 'The number of replicas will change as follows:',
   '（当前模型）': '(current model)',
-  '插件开发': 'Plugin Development',
+  '插件开发': 'Plugin Center',
   '我的插件': 'My Plugins',
   '创建插件': 'Create plugin',
   '插件标识': 'Plugin ID',
@@ -2003,5 +2003,6 @@ export default {
   '创建审批失败': 'Failed to create approval',
   '开发中': 'Developing',
   '已发布': 'Published',
-  '更多信息': 'More information'
+  '更多信息': 'More information',
+  '下一步': 'Next'
 };

@@ -1,7 +1,10 @@
 <template>
   <div id="app">
     <paas-header />
-    <div style="min-height: calc(100% - 70px); overflow: auto;">
+    <div
+      style="min-height: calc(100% - 70px); overflow: auto;"
+      :class="{ 'plugin-min-width': isPlugin }"
+    >
       <router-view />
     </div>
     <paas-footer v-if="$route.meta.showPaasFooter" />
@@ -38,12 +41,21 @@
             return {
                 userInfo: {},
                 loginURL: loginURL,
-                showLoginModal: false
+                showLoginModal: false,
+                isPlugin: false
             };
         },
         computed: {
             isGray () {
                 return ['myApplications', 'appLegacyMigration'].includes(this.$route.name);
+            }
+        },
+        watch: {
+            '$route': {
+                handler (value) {
+                    this.isPlugin = value.path.includes('/plugin-center');
+                },
+                immediate: true
             }
         },
         created () {
@@ -144,5 +156,9 @@
         background-color: #ff9600;
         color: #fff;
         max-height: 32px;
+    }
+
+    .plugin-min-width {
+        min-width: 1366px;
     }
 </style>

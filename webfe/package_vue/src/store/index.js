@@ -262,7 +262,6 @@ const actions = {
   getAppFeature ({ commit, state }, { appCode }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/`;
     return http.get(url, config).then(data => {
-      console.log('updateAppFeature', data);
       commit('updateAppFeature', { appCode, data });
     });
   },

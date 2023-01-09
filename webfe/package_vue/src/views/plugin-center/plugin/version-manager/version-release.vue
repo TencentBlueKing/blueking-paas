@@ -1,5 +1,5 @@
 <template>
-  <div class="container visible-range-release">
+  <div class="container visible-range-release right-main-release">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-inner-loading"
@@ -1021,9 +1021,6 @@
         font-size: 12px;
         color: #3A84FF;
     }
-}
-.container.visible-range-release {
-     width: 85vw !important;
 }
 .visible-range-release .app-container {
     margin-top: 0;

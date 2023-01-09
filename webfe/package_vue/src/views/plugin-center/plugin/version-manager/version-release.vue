@@ -1022,6 +1022,9 @@
         color: #3A84FF;
     }
 }
+.container.visible-range-release {
+     width: 85vw !important;
+}
 .visible-range-release .app-container {
     margin-top: 0;
     padding-top: 0;

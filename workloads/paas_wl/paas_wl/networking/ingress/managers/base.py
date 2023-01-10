@@ -43,6 +43,9 @@ class AppIngressMgr(abc.ABC):
     # more details, enabled by default.
     rewrite_ingress_path_to_root: bool = True
 
+    # Whether to set header `X-Script-Name` to all request
+    set_header_x_script_name: bool = True
+
     def __init__(self, app: 'App'):
         self.app = app
         self.ingress_name = self.make_ingress_name()
@@ -76,6 +79,7 @@ class AppIngressMgr(abc.ABC):
             configuration_snippet=self.construct_configuration_snippet(domains),
             annotations=self.get_annotations(),
             rewrite_to_root=self.rewrite_ingress_path_to_root,
+            set_header_x_script_name=self.set_header_x_script_name,
         )
 
     def update_target(self, service_name: str, service_port_name: str):
@@ -160,6 +164,7 @@ class IngressUpdater:
         configuration_snippet: str = '',
         annotations: Optional[Dict] = None,
         rewrite_to_root: bool = True,
+        set_header_x_script_name: bool = True,
     ):
         """Sync current ingress resource with kubernetes apiserver
 
@@ -170,6 +175,8 @@ class IngressUpdater:
         :param configuration_snippet: configuration snippet
         :param annotations: ingress annotations
         :param rewrite_to_root: whether to remove matched path prefix, which means rewrite path to "/(.*)"
+        :param set_header_x_script_name: whether to set http header `X-Script-Name`,
+            which means the sub-path provided by platform or custom domain
         :raises: DefaultServiceNameRequired when no default service name is given
         :raises: EmptyAppIngressError no domains are found
         """
@@ -193,6 +200,7 @@ class IngressUpdater:
                 configuration_snippet=configuration_snippet,
                 annotations=annotations or {},
                 rewrite_to_root=rewrite_to_root,
+                set_header_x_script_name=set_header_x_script_name,
             )
             ingress_kmodel.save(desired_ingress)
         else:
@@ -202,6 +210,7 @@ class IngressUpdater:
             ingress.configuration_snippet = configuration_snippet
             ingress.annotations = annotations or {}
             ingress.rewrite_to_root = rewrite_to_root
+            ingress.set_header_x_script_name = set_header_x_script_name
             ingress_kmodel.save(ingress)
 
     def update_target(self, service_name: str, service_port_name: str):

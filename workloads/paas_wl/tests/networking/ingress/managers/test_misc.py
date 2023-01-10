@@ -37,6 +37,18 @@ class TestLegacyAppIngressMgr:
             domains[0].host == cluster.ingress_config.default_ingress_domain_tmpl % app.scheduler_safe_name_with_region
         )
 
+    @pytest.mark.auto_create_ns
+    def test_set_header_x_script_name(self, app):
+        ingress_mgr = LegacyAppIngressMgr(app)
+        ingress_mgr.sync(default_service_name="foo")
+        ingress = ingress_kmodel.get(app, name=ingress_mgr.make_ingress_name())
+        assert ingress.set_header_x_script_name is False
+        assert (
+            ingress._kube_data["metadata"]["annotations"]["nginx.ingress.kubernetes.io/configuration-snippet"]
+            == ingress.configuration_snippet
+        )
+        ingress_mgr.delete()
+
 
 @pytest.mark.mock_get_structured_app
 @pytest.mark.auto_create_ns
@@ -64,3 +76,23 @@ class TestAppDefaultIngresses:
 
         app_default_ingresses.delete_if_service_matches(service_name='foo-copy')
         assert len(ingress_kmodel.list_by_app(bk_stag_engine_app)) == 0
+
+    def test_set_header_x_script_name(self, bk_stag_engine_app):
+        AppDomain.objects.create(
+            app=bk_stag_engine_app, region=bk_stag_engine_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+        )
+        ingress_mgr = AppDefaultIngresses(bk_stag_engine_app)
+        ingress_mgr.sync_ignore_empty(default_service_name="foo")
+
+        ingresses = ingress_kmodel.list_by_app(bk_stag_engine_app)
+        assert len(ingresses) == 2
+
+        for ingress in ingresses:
+            if ingress.name == LegacyAppIngressMgr(bk_stag_engine_app).make_ingress_name():
+                continue
+            assert ingress.set_header_x_script_name is True
+            assert (
+                "X-Script-Name"
+                in ingress._kube_data["metadata"]["annotations"]["nginx.ingress.kubernetes.io/configuration-snippet"]
+            )
+            assert "X-Script-Name" not in ingress.configuration_snippet

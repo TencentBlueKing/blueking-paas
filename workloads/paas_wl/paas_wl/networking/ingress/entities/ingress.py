@@ -58,7 +58,7 @@ class IngressNginxAdaptor:
         self.use_regex = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_REGEX)
 
     def make_configuration_snippet(self, fallback_script_name: Optional[str] = '') -> str:
-        """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
+        """Make configuration snippet which set X-Script-Name as the sub-path provided by platform or custom domain
 
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
         directive will stop working because it already can be found in location block.
@@ -78,7 +78,7 @@ class IngressNginxAdaptor:
         return NginxRegexRewrittenProvider().make_location_path(path_str)
 
     def build_rewrite_target(self) -> str:
-        """build the rewrite target which will rewrite all request to sub-path provided from platform or custom domain
+        """build the rewrite target which will rewrite all request to sub-path provided by platform or custom domain
 
         In Version 0.22.0 +, any substrings within the request URI that need to be passed to the rewritten path
         must explicitly be defined in a capture group.
@@ -153,18 +153,22 @@ class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
         nginx_adaptor = IngressNginxAdaptor(get_cluster_by_app(obj.app))
         annotations = {
             ANNOT_SERVER_SNIPPET: obj.server_snippet,
-            ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher()
-            .patch(
-                obj.configuration_snippet,
-                nginx_adaptor.make_configuration_snippet(fallback_script_name=obj.domains[0].primary_prefix_path),
-            )
-            .configuration_snippet,
+            ANNOT_CONFIGURATION_SNIPPET: obj.configuration_snippet,
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
             **obj.annotations,
         }
         if obj.rewrite_to_root:
             annotations[ANNOT_REWRITE_TARGET] = nginx_adaptor.build_rewrite_target()
+        if obj.set_header_x_script_name:
+            annotations[ANNOT_CONFIGURATION_SNIPPET] = (
+                ConfigurationSnippetPatcher()
+                .patch(
+                    obj.configuration_snippet,
+                    nginx_adaptor.make_configuration_snippet(fallback_script_name=obj.domains[0].primary_prefix_path),
+                )
+                .configuration_snippet
+            )
 
         tls_group_by_secret_name: Dict[str, List] = defaultdict(list)
         for domain in obj.domains:
@@ -230,6 +234,9 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         all_annotations = kube_data.metadata.annotations or {}
         extra_annotations = {k: v for k, v in all_annotations.items() if k not in reserved_annotations}
 
+        configuration_snippet = all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
+        # check whether set x-script-name http header in configuration_snippet
+        set_header_x_script_name = "proxy_set_header X-Script-Name" in configuration_snippet
         return ProcessIngress(
             app=app,
             name=kube_data.metadata.name,
@@ -237,10 +244,9 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             service_name=service_name,
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
-            configuration_snippet=ConfigurationSnippetPatcher()
-            .unpatch(all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, ""))
-            .configuration_snippet,
+            configuration_snippet=ConfigurationSnippetPatcher().unpatch(configuration_snippet).configuration_snippet,
             rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations.keys(),
+            set_header_x_script_name=set_header_x_script_name,
             annotations=extra_annotations,
         )
 
@@ -305,18 +311,22 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
         nginx_adaptor = NginxRegexRewrittenProvider()
         annotations = {
             ANNOT_SERVER_SNIPPET: obj.server_snippet,
-            ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher()
-            .patch(
-                obj.configuration_snippet,
-                nginx_adaptor.make_configuration_snippet(),
-            )
-            .configuration_snippet,
+            ANNOT_CONFIGURATION_SNIPPET: obj.configuration_snippet,
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
             **obj.annotations,
         }
         if obj.rewrite_to_root:
             annotations[ANNOT_REWRITE_TARGET] = nginx_adaptor.make_rewrite_target()
+        if obj.set_header_x_script_name:
+            annotations[ANNOT_CONFIGURATION_SNIPPET] = (
+                ConfigurationSnippetPatcher()
+                .patch(
+                    obj.configuration_snippet,
+                    nginx_adaptor.make_configuration_snippet(),
+                )
+                .configuration_snippet
+            )
 
         tls_group_by_secret_name: Dict[str, List] = defaultdict(list)
         for domain in obj.domains:
@@ -376,6 +386,9 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
         all_annotations = kube_data.metadata.annotations or {}
         extra_annotations = {k: v for k, v in all_annotations.items() if k not in reserved_annotations}
 
+        configuration_snippet = all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
+        # check whether set x-script-name http header in configuration_snippet
+        set_header_x_script_name = "proxy_set_header X-Script-Name" in configuration_snippet
         return ProcessIngress(
             app=app,
             name=kube_data.metadata.name,
@@ -383,10 +396,9 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             service_name=service_name,
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
-            configuration_snippet=ConfigurationSnippetPatcher()
-            .unpatch(all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, ""))
-            .configuration_snippet,
+            configuration_snippet=ConfigurationSnippetPatcher().unpatch(configuration_snippet).configuration_snippet,
             rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations.keys(),
+            set_header_x_script_name=set_header_x_script_name,
             annotations=extra_annotations,
         )
 
@@ -494,6 +506,11 @@ class ProcessIngress(AppEntity):
     # when path pattern is "/foo/" and user is requesting "/foo/bar", the path will be rewritten
     # to "/bar" if `rewrite_to_root`` is True.
     rewrite_to_root: bool = False
+
+    # Whether to set http header `X-Script-Name` to all request,
+    # which means the sub-path provided by platform or custom domain
+    # This config should always bo True, except those ingresses managed by `LegacyAppIngressMgr`
+    set_header_x_script_name: bool = True
     annotations: Dict = field(default_factory=dict)
 
     class Meta:

@@ -28,7 +28,7 @@ class LegacyNginxRewrittenProvider:
 
     @staticmethod
     def make_configuration_snippet(fallback_script_name: Optional[str] = '') -> str:
-        """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
+        """Make configuration snippet which set X-Script-Name as the sub-path provided by platform or custom domain
 
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
         directive will stop working because it already can be found in location block.
@@ -68,7 +68,7 @@ class LegacyNginxRewrittenProvider:
 
     @staticmethod
     def make_rewrite_target() -> str:
-        """build the rewrite target which will rewrite all request to sub-path provided from platform or custom domain
+        """build the rewrite target which will rewrite all request to sub-path provided by platform or custom domain
 
         In Version <= 0.21.0, set rewrite-target to "/" will always rewrite to root
         """
@@ -90,18 +90,18 @@ class NginxRegexRewrittenProvider:
 
     @staticmethod
     def make_configuration_snippet() -> str:
-        """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
+        """Make configuration snippet which set X-Script-Name as the sub-path provided by platform or custom domain
 
         Must use "configuration-snippet" instead of "server-snippet" otherwise "proxy-set-header"
         directive will stop working because it already can be found in location block.
         """
-        # "/$1$3" is the sub-path provided from platform or custom domain, for root path case, it should be "/"
+        # "/$1$3" is the sub-path provided by platform or custom domain, for root path case, it should be "/"
         # See also: the guarantee of make_location_path
         return "proxy_set_header X-Script-Name /$1$3;"
 
     @staticmethod
     def make_rewrite_target() -> str:
-        # "/$2" is the user request path to the app (without any sub-path provided from platform or custom domain)
+        # "/$2" is the user request path to the app (without any sub-path provided by platform or custom domain)
         # See also: the guarantee of ProcessIngressSerializerRegexpRewriteMixin.get_path_pattern
         return "/$2"
 
@@ -110,8 +110,8 @@ class NginxRegexRewrittenProvider:
         """Get the path pattern, which should work well with `rewrite-target`
 
         In this function, we guarantee that:
-        1. "/$2" is the user request path to the app (without any sub-path provided from platform or custom domain)
-        2. "/$1$3" is the sub-path provided from platform or custom domain, for root path case,
+        1. "/$2" is the user request path to the app (without any sub-path provided by platform or custom domain)
+        2. "/$1$3" is the sub-path provided by platform or custom domain, for root path case,
            it should be root path "/"
         3. "/$1$3/$2" is the real request path to the ingress
         Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target

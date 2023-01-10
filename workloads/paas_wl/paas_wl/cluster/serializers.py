@@ -57,9 +57,9 @@ class IngressConfigSLZ(serializers.Serializer):
 class ClusterFeatureFlagsSLZ(serializers.Serializer):
     """Serializer for Cluster feature flags"""
 
-    enable_egress_ip = serializers.BooleanField(help_text='支持提供出口 IP', required=False, default=False)
-    enable_mount_log_to_host = serializers.BooleanField(help_text='允许挂载日志到主机', required=False, default=False)
-    ingress_use_regex = serializers.BooleanField(help_text='Ingress路径是否使用正则表达式', required=False, default=False)
+    ENABLE_EGRESS_IP = serializers.BooleanField(help_text='支持提供出口 IP', required=False, default=False)
+    ENABLE_MOUNT_LOG_TO_HOST = serializers.BooleanField(help_text='允许挂载日志到主机', required=False, default=False)
+    INGRESS_USE_REGEX = serializers.BooleanField(help_text='Ingress路径是否使用正则表达式', required=False, default=False)
 
 
 class ClusterSLZ(serializers.Serializer):

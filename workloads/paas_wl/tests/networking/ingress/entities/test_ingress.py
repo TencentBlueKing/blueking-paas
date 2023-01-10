@@ -234,9 +234,9 @@ class TestIngressV1Beta1:
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher().patch(
-                        INGRESS_DATA["configuration_snippet"], fallback_configuration_snippet
-                    ),
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher()
+                    .patch(INGRESS_DATA["configuration_snippet"], fallback_configuration_snippet)
+                    .configuration_snippet,
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     **INGRESS_DATA["annotations"],
@@ -276,9 +276,9 @@ class TestIngressV1Beta1:
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher().patch(
-                        INGRESS_DATA["configuration_snippet"], fallback_configuration_snippet
-                    ),
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher()
+                    .patch(INGRESS_DATA["configuration_snippet"], fallback_configuration_snippet)
+                    .configuration_snippet,
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/",
@@ -388,9 +388,9 @@ class TestProcessIngressV1:
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher().patch(
-                        INGRESS_DATA["configuration_snippet"], pattern_configuration_snippet
-                    ),
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher()
+                    .patch(INGRESS_DATA["configuration_snippet"], pattern_configuration_snippet)
+                    .configuration_snippet,
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/$2",

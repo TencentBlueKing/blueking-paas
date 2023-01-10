@@ -47,12 +47,15 @@ logger = logging.getLogger(__name__)
 
 
 class IngressNginxAdaptor:
-    """An Adaptor shield different versions of the ingress-nginx-controller implementation"""
+    """An Adaptor shield different versions(0.20.0 ~ 0.51.0) of the ingress-nginx-controller implementation
+    Note: IngressNginxAdaptor only work for Ingress api version in ["extensions/v1beta1", "networking.k8s.io/v1beta1"]
+
+    :param cluster: The k8s cluster where the ingress will be applied to
+    """
 
     def __init__(self, cluster: "Cluster"):
         self.cluster = cluster
-        use_regex = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_REGEX)
-        self.use_regex = use_regex
+        self.use_regex = self.cluster.has_feature_flag(ClusterFeatureFlag.INGRESS_USE_REGEX)
 
     def make_configuration_snippet(self, fallback_script_name: Optional[str] = '') -> str:
         """Make configuration snippet which set X-Script-Name as the sub-path provided from platform or custom domain
@@ -97,17 +100,33 @@ class ConfigurationSnippetPatcher:
     END_MARK = "# WARNING: BLOCK FOR IngressNginxAdaptor END"
     REGEX = f"{START_MARK}.+?{END_MARK}"
 
-    def patch(self, base: str, extend: str) -> str:
-        """patch base configuration_snippet with extend if unpatched"""
-        if not re.findall(self.REGEX, base, re.M | re.S):
-            return "\n".join([base, self.START_MARK, extend, self.END_MARK])
-        return base
+    @dataclass
+    class PatchResult:
+        """
+        :param changed: whether the given configuration_snippet is changed by ConfigurationSnippetPatcher
+        :param configuration_snippet: the new(or unchanged if changed is False) configuration_snippet
+        """
 
-    def unpatch(self, snippet: str) -> str:
-        """reverse patch_configuration_snippet"""
+        changed: bool
+        configuration_snippet: str
+
+    def patch(self, base: str, extend: str) -> PatchResult:
+        """patch base configuration_snippet with extend if unpatched
+
+        :return: PatchResult
+        """
+        if not re.findall(self.REGEX, base, re.M | re.S):
+            return self.PatchResult(True, "\n".join([base, self.START_MARK, extend, self.END_MARK]))
+        return self.PatchResult(False, base)
+
+    def unpatch(self, snippet: str) -> PatchResult:
+        """reverse patch_configuration_snippet
+
+        :return: PatchResult
+        """
         if re.findall(self.REGEX, snippet, re.M | re.S):
-            return re.sub(self.REGEX, "", snippet, 0, re.M | re.S).strip()
-        return snippet
+            return self.PatchResult(True, re.sub(self.REGEX, "", snippet, 0, re.M | re.S).strip())
+        return self.PatchResult(False, snippet)
 
 
 class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
@@ -134,10 +153,12 @@ class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
         nginx_adaptor = IngressNginxAdaptor(get_cluster_by_app(obj.app))
         annotations = {
             ANNOT_SERVER_SNIPPET: obj.server_snippet,
-            ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher().patch(
+            ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher()
+            .patch(
                 obj.configuration_snippet,
                 nginx_adaptor.make_configuration_snippet(fallback_script_name=obj.domains[0].primary_prefix_path),
-            ),
+            )
+            .configuration_snippet,
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
             **obj.annotations,
@@ -216,9 +237,9 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             service_name=service_name,
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
-            configuration_snippet=ConfigurationSnippetPatcher().unpatch(
-                all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
-            ),
+            configuration_snippet=ConfigurationSnippetPatcher()
+            .unpatch(all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, ""))
+            .configuration_snippet,
             rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations.keys(),
             annotations=extra_annotations,
         )
@@ -284,10 +305,12 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
         nginx_adaptor = NginxRegexRewrittenProvider()
         annotations = {
             ANNOT_SERVER_SNIPPET: obj.server_snippet,
-            ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher().patch(
+            ANNOT_CONFIGURATION_SNIPPET: ConfigurationSnippetPatcher()
+            .patch(
                 obj.configuration_snippet,
                 nginx_adaptor.make_configuration_snippet(),
-            ),
+            )
+            .configuration_snippet,
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
             **obj.annotations,
@@ -360,9 +383,9 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             service_name=service_name,
             service_port_name=service_port_name,
             server_snippet=all_annotations.get(ANNOT_SERVER_SNIPPET, ""),
-            configuration_snippet=ConfigurationSnippetPatcher().unpatch(
-                all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, "")
-            ),
+            configuration_snippet=ConfigurationSnippetPatcher()
+            .unpatch(all_annotations.get(ANNOT_CONFIGURATION_SNIPPET, ""))
+            .configuration_snippet,
             rewrite_to_root=ANNOT_REWRITE_TARGET in all_annotations.keys(),
             annotations=extra_annotations,
         )

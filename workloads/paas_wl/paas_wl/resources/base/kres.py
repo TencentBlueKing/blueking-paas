@@ -493,7 +493,7 @@ class KNamespace(BaseKresource):
             time.sleep(check_period)
         raise CreateServiceAccountTimeout(namespace=namespace, timeout=timeout)
 
-    def wait_for_delete(
+    def wait_until_removed(
         self,
         namespace: Namespace,
         timeout: float = 60,

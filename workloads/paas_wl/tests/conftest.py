@@ -178,7 +178,7 @@ def namespace_maker(django_db_setup, django_db_blocker):
     if maker.block:
         for ns in maker.created_namespaces:
             if (int(k8s_version.major), int(k8s_version.minor)) > (1, 8):
-                KNamespace(k8s_client).wait_for_delete(ns)
+                KNamespace(k8s_client).wait_until_removed(ns)
 
 
 @pytest.fixture(autouse=True)

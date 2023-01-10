@@ -176,7 +176,7 @@ class IngressUpdater:
         :param annotations: ingress annotations
         :param rewrite_to_root: whether to remove matched path prefix, which means rewrite path to "/(.*)"
         :param set_header_x_script_name: whether to set http header `X-Script-Name`,
-            which means the sub-path provided from platform or custom domain
+            which means the sub-path provided by platform or custom domain
         :raises: DefaultServiceNameRequired when no default service name is given
         :raises: EmptyAppIngressError no domains are found
         """

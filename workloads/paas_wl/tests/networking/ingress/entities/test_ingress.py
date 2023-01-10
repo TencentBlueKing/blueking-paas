@@ -36,6 +36,7 @@ from paas_wl.networking.ingress.entities.ingress import (
     ingress_kmodel,
 )
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
+from paas_wl.networking.ingress.entities.utils import NginxRegexRewrittenProvider
 from paas_wl.resources.kube_res.base import GVKConfig
 from tests.utils.app import release_setup
 
@@ -468,7 +469,11 @@ class TestPatternCompatible:
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher()
+                    .patch(
+                        INGRESS_DATA["configuration_snippet"], NginxRegexRewrittenProvider.make_configuration_snippet()
+                    )
+                    .configuration_snippet,
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/",
@@ -521,7 +526,11 @@ class TestPatternCompatible:
             "kind": "Ingress",
             "metadata": {
                 "annotations": {
-                    "nginx.ingress.kubernetes.io/configuration-snippet": INGRESS_DATA["configuration_snippet"],
+                    "nginx.ingress.kubernetes.io/configuration-snippet": ConfigurationSnippetPatcher()
+                    .patch(
+                        INGRESS_DATA["configuration_snippet"], NginxRegexRewrittenProvider.make_configuration_snippet()
+                    )
+                    .configuration_snippet,
                     "nginx.ingress.kubernetes.io/server-snippet": INGRESS_DATA["server_snippet"],
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
                     "nginx.ingress.kubernetes.io/rewrite-target": "/",

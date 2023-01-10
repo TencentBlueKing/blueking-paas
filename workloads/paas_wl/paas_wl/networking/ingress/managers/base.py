@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import abc
 import logging
-from typing import Dict, List, Optional, Sequence, Type, cast
+from typing import Dict, List, Optional, Sequence, Type
 
 from django.conf import settings
 
@@ -50,8 +50,7 @@ class AppIngressMgr(abc.ABC):
 
     def get(self) -> ProcessIngress:
         """Return the default ingress object"""
-        ret = ingress_kmodel.get(self.app, self.ingress_name)
-        return cast(ProcessIngress, ret)
+        return ingress_kmodel.get(self.app, self.ingress_name)
 
     def delete(self):
         """Delete the default ingress rule"""
@@ -178,7 +177,7 @@ class IngressUpdater:
             raise EmptyAppIngressError("no domains(rules) found for current ingress")
 
         try:
-            ingress: ProcessIngress = ingress_kmodel.get(self.app, self.ingress_name)
+            ingress = ingress_kmodel.get(self.app, self.ingress_name)
         except AppEntityNotFound:
             if not default_service_name:
                 raise DefaultServiceNameRequired('no existed ingress found, default_server_name is required')
@@ -207,8 +206,7 @@ class IngressUpdater:
 
     def update_target(self, service_name: str, service_port_name: str):
         """Update target service and port_name for current ingress resource"""
-        _ingress = ingress_kmodel.get(self.app, self.ingress_name)
-        ingress = cast(ProcessIngress, _ingress)
+        ingress = ingress_kmodel.get(self.app, self.ingress_name)
         logger.info(
             f'updating existed ingress<{ingress.name}>, set service_name={service_name} '
             f'port_name={service_port_name}'

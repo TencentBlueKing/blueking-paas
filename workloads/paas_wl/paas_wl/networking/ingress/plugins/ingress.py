@@ -20,16 +20,17 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from abc import ABC
 from textwrap import dedent
-from typing import Optional, Sequence
+from typing import TYPE_CHECKING, Optional, Sequence
 
 from django.conf import settings
 
-from paas_wl.networking.ingress.entities.ingress import PIngressDomain
+from paas_wl.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.platform.applications.models import App
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.utils.configs import RegionAwareConfig
 
-from .exceptions import PluginNotConfigured
+if TYPE_CHECKING:
+    from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class IngressPlugin(ABC):
 
     config_key: str
 
-    def __init__(self, app: App, domains: Optional[Sequence[PIngressDomain]] = None):
+    def __init__(self, app: App, domains: Optional[Sequence['PIngressDomain']] = None):
         self.app = app
         self.domains = domains
 
@@ -101,7 +102,7 @@ class AccessControlPlugin(IngressPlugin):
         """
     )
 
-    def __init__(self, app: App, domains: Optional[Sequence[PIngressDomain]] = None):
+    def __init__(self, app: App, domains: Optional[Sequence['PIngressDomain']] = None):
         super().__init__(app, domains)
 
     def make_configuration_snippet(self) -> str:
@@ -155,7 +156,7 @@ class PaasAnalysisPlugin(IngressPlugin):
         '''
     )
 
-    def __init__(self, app: App, domains: Optional[Sequence[PIngressDomain]] = None):
+    def __init__(self, app: App, domains: Optional[Sequence['PIngressDomain']] = None):
         super().__init__(app, domains)
 
     def make_configuration_snippet(self) -> str:

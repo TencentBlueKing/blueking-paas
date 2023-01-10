@@ -32,6 +32,7 @@ class TestBuildProcessViewSet:
         assert response.status_code == 201
         assert response.json()["status"] == "pending"
 
+    @pytest.mark.auto_create_ns
     def test_retrieve_result(self, engine_app, create_build_process, api_client, mock_bp_executor):
         create_response, start_build_process_args = create_build_process()
         build = create_response.json()["uuid"]
@@ -46,6 +47,7 @@ class TestBuildProcessViewSet:
         assert response.status_code == 200
         assert response.json()["status"] == 'successful'
 
+    @pytest.mark.auto_create_ns
     def test_list_builds(self, engine_app, api_client, create_build_process, mock_bp_executor):
         url = f'/regions/{engine_app.region}/apps/{engine_app.name}/builds/'
         response = api_client.get(url)
@@ -66,6 +68,7 @@ class TestBuildProcessViewSet:
 
 class TestReleaseViewSet:
     @pytest.mark.mock_get_structured_app
+    @pytest.mark.auto_create_ns
     def testcase(self, build, bk_stag_engine_app, api_client, release_url, create_release):
         response = create_release()
         assert response.status_code == 201

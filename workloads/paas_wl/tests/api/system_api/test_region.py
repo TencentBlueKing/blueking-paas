@@ -53,13 +53,13 @@ class TestRegionAPIs:
         try:
             yield
         finally:
-            # Always destroy all nodes when exiting
-            KNode(kube_client).ops_label.delete_collection({})
+            # clean up node
+            KNode(kube_client).delete(name=node_name)
 
     def test_create_normal(self, api_client, url_default, fake_app):
         region = settings.FOR_TESTS_DEFAULT_REGION
         with self.add_node_to_cluster(region):
-            call_command("region_gen_state", region=region, no_input=True)
+            call_command("region_gen_state", region=region, no_input=True, ignore_labels=["kind-node=true"])
 
             resp = api_client.post(url_default)
             assert resp.status_code == 201
@@ -74,7 +74,7 @@ class TestRegionAPIs:
     def test_create_duplicated(self, api_client, url_default):
         region = settings.FOR_TESTS_DEFAULT_REGION
         with self.add_node_to_cluster(region):
-            call_command("region_gen_state", region=region, no_input=True)
+            call_command("region_gen_state", region=region, no_input=True, ignore_labels=["kind-node=true"])
 
             api_client.post(url_default)
             # Duplicated POST
@@ -89,7 +89,7 @@ class TestRegionAPIs:
         assert RCStateAppBinding.objects.filter(app=fake_app).count() == 0
 
         with self.add_node_to_cluster(region):
-            call_command("region_gen_state", region=region, no_input=True)
+            call_command("region_gen_state", region=region, no_input=True, ignore_labels=["kind-node=true"])
 
             api_client.post(url_default).json()
             binding = RCStateAppBinding.objects.get(app=fake_app)

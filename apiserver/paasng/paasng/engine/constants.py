@@ -48,6 +48,7 @@ class ClusterFeatureFlag(str, StructuredEnum):
 
     ENABLE_EGRESS_IP = EnumField('enable_egress_ip', label=_('支持提供出口 IP'))
     ENABLE_MOUNT_LOG_TO_HOST = EnumField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
+    INGRESS_USE_REGEX = EnumField('ingress_use_regex', label=_('Ingress路径是否使用正则表达式'))
 
 
 class AppEnvName(str, StructuredEnum):

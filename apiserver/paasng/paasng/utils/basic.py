@@ -21,6 +21,8 @@ import re
 import subprocess
 from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Tuple
 
+import requests
+import requests.adapters
 from bkpaas_auth import get_user_by_user_id
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_text
@@ -203,3 +205,15 @@ def re_path(route, view, kwargs=None, name=None):
         return URLPattern(pattern, view, kwargs, name)
     else:
         raise TypeError('view must be a callable or a list/tuple in the case of include().')
+
+
+# Make a global session object to turn on connection polling
+_requests_session = requests.Session()
+_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
+_requests_session.mount('http://', _adapter)
+_requests_session.mount('https://', _adapter)
+
+
+def get_requests_session() -> requests.Session:
+    """Return the global requests session object which supports connection polling"""
+    return _requests_session

@@ -152,13 +152,12 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
 
+        paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下
         if params.get('prefer_marked'):
             applications_ids = applications.values_list('id', flat=True)
             applications_ids = sorted(applications_ids, key=lambda x: x in marked_application_ids, reverse=True)
 
-            # Paginator
-            paginator = ApplicationListPagination()
             page = paginator.paginate_queryset(applications_ids, self.request, view=self)
             page_applications = list(Application.objects.filter(id__in=page).select_related('product'))
             page_applications = sorted(page_applications, key=lambda x: applications_ids.index(x.id))
@@ -177,15 +176,14 @@ class ApplicationViewSet(viewsets.ViewSet):
         ]
 
         # 统计普通应用、云原生应用、外链应用的数量
-        # 需要先上线插件开发者中心，不在应用列表中显示插件应用
-        default_app_count = applications.filter(type=ApplicationType.DEFAULT).count()
+        default_app_count = applications.filter(type__in=ApplicationType.normal_app_type()).count()
         engineless_app_count = applications.filter(type=ApplicationType.ENGINELESS_APP).count()
         cloud_native_app_count = applications.filter(type=ApplicationType.CLOUD_NATIVE).count()
 
         serializer = slzs.ApplicationWithMarketSLZ(data, many=True)
         return paginator.get_paginated_response(
             serializer.data,
-            context={
+            extra_data={
                 'default_app_count': default_app_count,
                 'engineless_app_count': engineless_app_count,
                 'cloud_native_app_count': cloud_native_app_count,

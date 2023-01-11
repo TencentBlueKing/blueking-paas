@@ -27,14 +27,14 @@ class ApplicationListPagination(LimitOffsetPagination):
 
     default_limit = 12
 
-    def get_paginated_response(self, data, context):
+    def get_paginated_response(self, data, extra_data):
         return Response(
             OrderedDict(
                 [
                     ('count', self.count),
                     ('next', self.get_next_link()),
                     ('previous', self.get_previous_link()),
-                    ('context', context),
+                    ('extra_data', extra_data),
                     ('results', data),
                 ]
             )

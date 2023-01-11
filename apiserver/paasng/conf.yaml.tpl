@@ -145,6 +145,8 @@
 #   bkmonitor: example-metric-client-token
 ## 是否默认允许创建 Smart 应用
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
+# 是否允许创建蓝鲸插件应用
+IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 
 
 ## ------------------------------------------ Healthz 配置 ------------------------------------------

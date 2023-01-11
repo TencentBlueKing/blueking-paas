@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import List, Union
+from typing import Dict, List, Union
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -34,8 +34,9 @@ logger = logging.getLogger(__name__)
 class BkMonitorClient:
     """蓝鲸监控 client"""
 
-    def __init__(self, client: Union[ApigwGroup, ESBGroup]):
+    def __init__(self, client: Union[ApigwGroup, ESBGroup], use_apigw: bool = True):
         self.client = client
+        self.use_apigw = use_apigw
 
     def promql_query(self, promql: str, start: str, end: str, step: str) -> List:
         """
@@ -47,9 +48,14 @@ class BkMonitorClient:
         :param step: 步长，如："1m"
         :returns: 时序数据 Series
         """
+        params: Dict[str, Union[str, int]] = {'promql': promql, 'start': start, 'end': end, 'step': step}
+        # esb api 参数差异：start -> start_time, end -> end_time，类型从 str 换成 int
+        if not self.use_apigw:
+            params['start_time'] = int(params.pop('start'))
+            params['end_time'] = int(params.pop('end'))
 
         try:
-            resp = self.client.promql_query(data={'promql': promql, 'start': start, 'end': end, 'step': step})
+            resp = self.client.promql_query(data=params)
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
@@ -68,4 +74,4 @@ def make_bk_monitor_client() -> BkMonitorClient:
 
     # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
     esb_client = get_client_by_username("admin")
-    return BkMonitorClient(esb_client.monitor_v3)
+    return BkMonitorClient(esb_client.monitor_v3, use_apigw=False)

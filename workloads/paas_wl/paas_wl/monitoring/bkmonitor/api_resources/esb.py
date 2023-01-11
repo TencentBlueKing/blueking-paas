@@ -24,7 +24,7 @@ from bkapi_client_core.esb.django_helper import get_client_by_username as _get_c
 class Group(OperationGroup):
     """蓝鲸监控在 ESB 上注册的 API"""
 
-    # 统一查询时序数据 TODO 待确认
+    # 统一查询时序数据
     promql_query = bind_property(
         Operation,
         name='promql_query',

@@ -85,7 +85,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
 
         for name, path in crd_infos:
             logger.info('Configure CRD %s...', name)
-            body = yaml.load((Path(__file__).parent / path).read_text())
+            body = yaml.safe_load((Path(__file__).parent / path).read_text())
             try:
                 name = body['metadata']['name']
                 crd_client.create_or_update(name=name, body=body)
@@ -231,6 +231,7 @@ def create_default_cluster():
         ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
         cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
         key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
+        token_value=settings.FOR_TESTS_CLUSTER_CONFIG["token_value"],
         feature_flags={ff: True for ff in ClusterFeatureFlag},
     )
     APIServer.objects.get_or_create(

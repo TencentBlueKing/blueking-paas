@@ -22,9 +22,11 @@ from typing import List, Union
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
-from .api_resources.apigw import Client as ApigwClient, Group as ApigwGroup
-from .api_resources.esb import Group as ESBGroup, get_client_by_username
-from .exceptions import BkMonitorGatewayServiceError, BkMonitorApiError
+from .api_resources.apigw import Client as ApigwClient
+from .api_resources.apigw import Group as ApigwGroup
+from .api_resources.esb import Group as ESBGroup
+from .api_resources.esb import get_client_by_username
+from .exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -47,22 +49,22 @@ class BkMonitorClient:
         """
 
         try:
-            resp = self.client.search_alert(data={'promql': promql, 'start': start, 'end': end, 'step': step})
+            resp = self.client.promql_query(data={'promql': promql, 'start': start, 'end': end, 'step': step})
         except APIGatewayResponseError:
             # 详细错误信息 bkapi_client_core 会自动记录
             raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
 
-        if not resp.get('result'):
-            raise BkMonitorApiError(resp['message'])
+        if resp.get('error'):
+            raise BkMonitorApiError(resp['error'])
 
-        return resp.get('data', {}).get('series', [])
+        return resp.get('series', [])
 
 
 def make_bk_monitor_client() -> BkMonitorClient:
     if settings.ENABLE_BK_MONITOR_APIGW:
-        apigw_cli = ApigwClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE).api
+        apigw_cli = ApigwClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
         apigw_cli.update_bkapi_authorization(bk_app_code=settings.BK_APP_CODE, bk_app_secret=settings.BK_APP_SECRET)
-        return BkMonitorClient(apigw_cli)
+        return BkMonitorClient(apigw_cli.api)
 
     # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
     esb_client = get_client_by_username("admin")

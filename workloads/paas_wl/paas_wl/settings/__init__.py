@@ -69,7 +69,7 @@ settings = LazySettings(
         # Configure minimal required settings
         Validator('BKKRILL_ENCRYPT_SECRET_KEY', must_exist=True),
     ],
-    # Envvar name configs
+    # EnvVar name configs
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS_WL",
     ENVVAR_FOR_DYNACONF="PAAS_WL_SETTINGS",
 )
@@ -442,9 +442,6 @@ METRIC_CLIENT_TOKEN_DICT = settings.get('METRIC_CLIENT_TOKEN_DICT', {})
 # healthz: 将使用该 token 校验调用方身份
 HEALTHZ_TOKEN = settings.get('HEALTHZ_TOKEN')
 
-# 插件监控图表相关配置 TODO 看看这里是怎么换成蓝鲸监控需要的
-MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
-
 # ---------------
 # 多区域配置
 # ---------------
@@ -543,12 +540,14 @@ FOR_TESTS_CA_DATA = settings.get('FOR_TESTS_CA_DATA', '')
 FOR_TESTS_CERT_DATA = settings.get('FOR_TESTS_CERT_DATA', '')
 FOR_TESTS_KEY_DATA = settings.get('FOR_TESTS_KEY_DATA', '')
 FOR_TESTS_FORCE_DOMAIN = settings.get('FOR_TESTS_FORCE_DOMAIN', '')
+FOR_TESTS_TOKEN_VALUE = settings.get('FOR_TESTS_TOKEN_VALUE', '')
 
 FOR_TESTS_CLUSTER_CONFIG = {
     "url": FOR_TESTS_APISERVER_URL,
     "ca_data": FOR_TESTS_CA_DATA,
     "cert_data": FOR_TESTS_CERT_DATA,
     "key_data": FOR_TESTS_KEY_DATA,
+    "token_value": FOR_TESTS_TOKEN_VALUE,
     "force_domain": FOR_TESTS_FORCE_DOMAIN,
 }
 
@@ -577,12 +576,16 @@ OTEL_GRPC_URL = settings.get('OTEL_GRPC_URL', '')
 if ENABLE_OTEL_TRACE:
     INSTALLED_APPS += ('paas_wl.tracing',)
 
-# 蓝鲸监控相关配置
-# 是否下发 ServiceMonitor 的总开关
+# -----------------
+# 蓝鲸监控配置项
+# -----------------
+# 是否支持蓝鲸监控（下发 ServiceMonitor 的总开关）
 BKMONITOR_ENABLED = settings.get('BKMONITOR_ENABLED', False)
 # 蓝鲸监控运维相关的额外配置
 BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
-
+# 能否通过 APIGW 访问蓝鲸监控 API，要求该环境已注册
+ENABLE_BK_MONITOR_APIGW = settings.get('ENABLE_BK_MONITOR_APIGW', True)
+# 蓝鲸监控网关环境：测试 stage、正式 prod
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 'stage')
 
 # 网关运行环境

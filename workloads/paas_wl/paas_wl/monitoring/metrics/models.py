@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generator, List, Optional
+from typing import TYPE_CHECKING, Generator, List
 
 from paas_wl.monitoring.metrics.clients import MetricClient, MetricQuery, MetricSeriesResult
 from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
@@ -33,34 +33,34 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MetricsResourceResult:
-    type_name: 'MetricsResourceType'
-    results: List['MetricSeriesResult']
+    type_name: MetricsResourceType
+    results: List[MetricSeriesResult]
 
 
 @dataclass
 class MetricsInstanceResult:
     instance_name: str
-    results: List['MetricsResourceResult']
+    results: List[MetricsResourceResult]
 
     def __len__(self):
         return len(self.results)
 
 
 class ResourceMetricManager:
-    def __init__(self, process: 'Process', metric_client: 'MetricClient', bcs_cluster_id: str, bkcc_biz_id: str):
+    def __init__(self, process: 'Process', metric_client: MetricClient, bcs_cluster_id: str, bk_biz_id: str):
         self.process = process
         self.metric_client = metric_client
         self.bcs_cluster_id = bcs_cluster_id
-        self.bkcc_biz_id = bkcc_biz_id
+        self.bk_biz_id = bk_biz_id
         if not self.process.instances:
             raise ValueError("Process should contain info of instances when querying metrics")
 
     def gen_all_series_query(
         self,
-        resource_type: 'MetricsResourceType',
+        resource_type: MetricsResourceType,
         instance_name: str,
-        time_range: Optional['MetricSmartTimeRange'] = None,
-    ) -> Generator['MetricQuery', None, None]:
+        time_range: MetricSmartTimeRange,
+    ) -> Generator[MetricQuery, None, None]:
         """get all series type queries"""
 
         # not expose request series
@@ -76,20 +76,21 @@ class ResourceMetricManager:
         series_type: MetricsSeriesType,
         resource_type: MetricsResourceType,
         instance_name: str,
-        time_range: Optional['MetricSmartTimeRange'],
-    ) -> 'MetricQuery':
+        time_range: MetricSmartTimeRange,
+    ) -> MetricQuery:
         """get single metrics type query"""
         tmpl = self.metric_client.get_query_template(series_type=series_type, resource_type=resource_type)
-        query = tmpl.format(instance_name=instance_name, cluster_id=self.bcs_cluster_id)
+        # NOTE: 蓝鲸监控 promql 不支持 {{}}，需要使用 {} 导致字符串 format 会出错，因此使用 % 来格式化字符串
+        query = tmpl % (instance_name, self.bcs_cluster_id, self.bk_biz_id)
         return MetricQuery(type_name=series_type, query=query, time_range=time_range)
 
     def get_instance_metrics(
         self,
         instance_name: str,
-        resource_types: List['MetricsResourceType'],
-        series_type: 'MetricsSeriesType' = None,
-        time_range: 'MetricSmartTimeRange' = None,
-    ) -> List['MetricsResourceResult']:
+        resource_types: List[MetricsResourceType],
+        time_range: MetricSmartTimeRange,
+        series_type: MetricsSeriesType = None,
+    ) -> List[MetricsResourceResult]:
         """query metrics at Engine Application level"""
 
         resource_results = []
@@ -123,10 +124,10 @@ class ResourceMetricManager:
 
     def get_all_instances_metrics(
         self,
-        resource_types: List['MetricsResourceType'],
-        time_range: 'MetricSmartTimeRange',
-        series_type: 'MetricsSeriesType' = None,
-    ) -> List['MetricsInstanceResult']:
+        resource_types: List[MetricsResourceType],
+        time_range: MetricSmartTimeRange,
+        series_type: MetricsSeriesType = None,
+    ) -> List[MetricsInstanceResult]:
 
         all_instances_metrics = []
         for instance in self.process.instances:
@@ -136,8 +137,8 @@ class ResourceMetricManager:
                     results=self.get_instance_metrics(
                         resource_types=resource_types,
                         instance_name=instance.name,
-                        series_type=series_type,
                         time_range=time_range,
+                        series_type=series_type,
                     ),
                 )
             )

@@ -32,7 +32,7 @@ from rest_framework.viewsets import ModelViewSet, ViewSet
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
-from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
+from paas_wl.monitoring.metrics.clients import BkMonitorMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
 from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.platform.applications import models
@@ -461,7 +461,7 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         # fetch instances of process
         app = self.get_app()
 
-        if not settings.MONITOR_CONFIG:
+        if not settings.BKMONITOR_ENABLED:
             raise error_codes.EDITION_NOT_SUPPORT
 
         try:
@@ -472,6 +472,9 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         if not cluster.bcs_cluster_id:
             raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BCS 信息, 不支持该功能")
 
+        if not cluster.bk_biz_id:
+            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BKCC 业务信息, 不支持该功能")
+
         try:
             process = process_kmodel.get_by_type(app, process_type)
             process.instances = instance_kmodel.list_by_process_type(app, process_type)
@@ -481,13 +484,12 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         if not process.instances:
             raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("找不到进程实例")
 
-        # 这里默认只有 Prometheus，暂不支持用户选择数据来源 TODO 直接换成蓝鲸监控数据
-        metric_client = PrometheusMetricClient(**settings.MONITOR_CONFIG["metrics"]["prometheus"])
+        # 这里默认只有蓝鲸监控数据，暂不支持用户选择数据来源
         return ResourceMetricManager(
             process=process,
-            metric_client=metric_client,
+            metric_client=BkMonitorMetricClient(),
             bcs_cluster_id=cluster.bcs_cluster_id,
-            bkcc_biz_id=cluster.bkcc_biz_id,
+            bk_biz_id=cluster.bk_biz_id,
         )
 
     @swagger_auto_schema(

@@ -17,8 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from .base import MetricClient, MetricQuery, MetricSeriesResult
-from .promethues import PrometheusMetricClient
+from .bkmonitor import BkMonitorMetricClient
 
-__all__ = ['PrometheusMetricClient', 'MetricClient', 'MetricQuery', 'MetricSeriesResult']
-
-# TODO 考虑移除 clients 模块
+__all__ = ['BkMonitorMetricClient', 'MetricClient', 'MetricQuery', 'MetricSeriesResult']

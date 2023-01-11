@@ -199,14 +199,17 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
         # 记录操作记录
-        application = self.get_application()
-        Operation.objects.create(
-            region=application.region,
-            application=application,
-            type=operation_type,
-            user=request.user,
-            extra_values={"gateway_name": data['gateway_name']},
-        )
+        try:
+            application = self.get_application()
+            Operation.objects.create(
+                region=application.region,
+                application=application,
+                type=operation_type,
+                user=request.user,
+                extra_values={"gateway_name": data['gateway_name']},
+            )
+        except Exception:
+            logger.exception("An exception occurred in the operation record of adding cloud API permissions")
 
         return Response(result)
 

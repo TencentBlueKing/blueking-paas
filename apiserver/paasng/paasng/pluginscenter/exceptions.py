@@ -24,6 +24,7 @@ class ErrorCodes:
     CREATE_REPO_ERROR = ErrorCode(_("创建插件项目(源码)失败, 请联系管理员"))
     INITIAL_REPO_ERROR = ErrorCode(_("初始化项目代码失败, 请联系管理员"))
     THIRD_PARTY_API_ERROR = ErrorCode(_("插件后台系统异常, 请联系管理员"))
+    DELETE_REPO_ERROR = ErrorCode(_("删除插件项目(源码)失败, 请联系管理员"))
 
     CANNOT_RELEASE_ONGOING_EXISTS = ErrorCode(_("已有发布任务进行中，请刷新查看"))
     CANNOT_RERUN_ONGOING_STEPS = ErrorCode(_("重试步骤失败, 当前步骤不支持重试。"))

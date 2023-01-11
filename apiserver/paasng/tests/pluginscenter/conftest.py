@@ -24,7 +24,7 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.pluginscenter.constants import MarketInfoStorageType
+from paasng.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod
 from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
@@ -78,6 +78,7 @@ def pd():
     pd.basic_info_definition = G(
         PluginBasicInfoDefinition,
         pd=pd,
+        release_method=PluginReleaseMethod.CODE,
         id_schema={
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",

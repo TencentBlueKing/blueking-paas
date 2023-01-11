@@ -22,6 +22,6 @@ set -e
 
 python manage.py migrate
 
-if [ "${ENABLE_LOAD_DATA}" ]; then
+if [ "${ENABLE_LOAD_DATA}" == "true" ]; then
     python manage.py loaddata data/fixtures/plans.json data/fixtures/service.json
 fi

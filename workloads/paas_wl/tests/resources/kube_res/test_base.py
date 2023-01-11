@@ -102,6 +102,7 @@ class TestDummyManager:
     def test_create(self, app, resource_name):
         res = DummyObj(app=app, name=resource_name)
         dummy_kmodel.create(res)
+        dummy_kmodel.delete(res)
 
 
 def test_version_incompatible(app):

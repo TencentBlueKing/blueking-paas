@@ -240,7 +240,8 @@ class Cluster(UuidAuditedModel):
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""
-        return self.feature_flags.get(ff) is True
+        default_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster_type=ClusterType(self.type))
+        return self.feature_flags.get(ff, default_flags[ff])
 
 
 class APIServer(UuidAuditedModel):

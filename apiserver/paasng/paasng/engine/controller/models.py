@@ -90,8 +90,9 @@ class IngressConfig:
 
 @define
 class ClusterFeatureFlags:
-    enable_egress_ip: bool = False
-    enable_mount_log_to_host: bool = False
+    ENABLE_EGRESS_IP: bool = False
+    ENABLE_MOUNT_LOG_TO_HOST: bool = False
+    INGRESS_USE_REGEX: bool = False
 
 
 @define

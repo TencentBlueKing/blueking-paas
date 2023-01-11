@@ -65,7 +65,8 @@
                 detail: {},
                 deployLoading: false,
                 screenIsLoading: true,
-                isFetch: false
+                isFetch: false,
+                manifestExt: {}
             };
         },
         computed: {
@@ -94,10 +95,8 @@
                         env: this.env,
                         deployId: this.deployId
                     });
-                    this.$nextTick(() => {
-                        this.detail = res.manifest;
-                        this.$refs.editorRef.setValue(this.detail);
-                    });
+                    this.detail = res.manifest;
+                    this.getManifestExt();
                 } catch (e) {
                     if (e.code !== 'GET_DEPLOYMENT_FAILED') {
                         this.$paasMessage({
@@ -108,6 +107,26 @@
                 } finally {
                     this.isFetch = false;
                     this.screenIsLoading = false;
+                }
+            },
+            async getManifestExt () {
+                try {
+                    const res = await this.$store.dispatch('deploy/getManifestExt', {
+                        appCode: this.appCode,
+                        moduleId: this.curModuleId,
+                        env: 'prod'
+                    });
+                    this.manifestExt = res;
+                    const ext = Object.assign({}, this.detail.metadata.annotations, res.metadata.annotations);
+                    this.$set(this.detail.metadata, 'annotations', ext);
+                    this.$nextTick(() => {
+                        this.$refs.editorRef.setValue(this.detail);
+                    });
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.message || e.detail || this.$t('接口异常')
+                    });
                 }
             },
             async handleDeploy () {

@@ -106,7 +106,7 @@
               v-else
               :class="['point', row.status]"
             />
-            <span v-bk-tooltips="pluginStatus[row.status]">{{ pluginStatus[row.status] || '--' }}</span>
+            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column

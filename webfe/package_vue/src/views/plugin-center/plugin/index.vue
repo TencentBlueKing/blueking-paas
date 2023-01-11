@@ -5,7 +5,7 @@
         <div class="overview">
           <div
             class="overview-main"
-            :style="{ 'min-height': $route.name === 'pluginVersionRelease' ? '0px' : `${minHeight}px` }"
+            :style="{ 'min-height': routeNameMap.includes($route.name) ? '0px' : `${minHeight}px` }"
           >
             <div class="overview-fleft overview-fleft-plugin">
               <plugin-quick-nav ref="quickNav" />
@@ -89,6 +89,9 @@
     import appBaseMixin from '@/mixins/app-base-mixin.js';
     import store from '@/store';
 
+    // 当前路由页面不需要指定的min-height
+    const ROUTE_NAME = ['pluginVersionRelease', 'marketInfoEdit'];
+
     export default {
         components: {
             paasPluginNav,
@@ -120,7 +123,8 @@
                 parentNavIds: [8, 10],
                 // 非应用引擎 应用 时所要显示的子级导航
                 subNavIds: [10, 12, 13, 14],
-                type: 'default'
+                type: 'default',
+                routeNameMap: ROUTE_NAME
             };
         },
         computed: {

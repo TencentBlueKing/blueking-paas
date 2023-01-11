@@ -20,9 +20,7 @@ import pytest
 
 from paas_wl.networking.ingress.managers.subpath import SubPathAppIngressMgr, assign_subpaths
 from paas_wl.networking.ingress.models import AppSubpath
-from paas_wl.resources.base.kres import KNamespace
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.resources.utils.basic import get_client_by_app
 from tests.conftest import override_cluster_ingress_attrs
 from tests.utils.app import create_app
 
@@ -65,14 +63,14 @@ class TestAssignSubpaths:
         assert len(ingress.domains) == 1
         assert ingress.domains[0].path_prefix_list == ['/foo/', '/bar/']
 
-    def test_subpath_transfer_partally(self, app):
+    def test_subpath_transfer_partally(self, app, namespace_maker):
         paths = ['/foo/', '/bar/']
         assign_subpaths(app, paths, 'foo-service')
         app_2 = create_app()
 
         # Transfer "/bar/" to app_2
         paths_app2 = ['/bar/', '/foobar/']
-        KNamespace(get_client_by_app(app_2)).get_or_create(app_2.namespace)
+        namespace_maker.make(app_2.namespace)
         assign_subpaths(app_2, paths_app2, 'foo-service')
 
         ingress = SubPathAppIngressMgr(app).get()
@@ -83,13 +81,13 @@ class TestAssignSubpaths:
         assert len(ingress.domains) == 1
         assert ingress.domains[0].path_prefix_list == ['/bar/', '/foobar/']
 
-    def test_subpath_transfer_fully(self, app):
+    def test_subpath_transfer_fully(self, app, namespace_maker):
         paths = ['/foo/']
         assign_subpaths(app, paths, 'foo-service')
 
         # Transfer all paths to app2
         app_2 = create_app()
-        KNamespace(get_client_by_app(app_2)).get_or_create(app_2.namespace)
+        namespace_maker.make(app_2.namespace)
         assign_subpaths(app_2, paths, 'foo-service')
 
         with pytest.raises(AppEntityNotFound):

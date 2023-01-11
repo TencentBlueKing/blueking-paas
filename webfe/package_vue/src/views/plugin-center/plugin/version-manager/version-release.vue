@@ -1,5 +1,5 @@
 <template>
-  <div class="container visible-range-release">
+  <div class="container visible-range-release right-main-release">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-inner-loading"
@@ -38,71 +38,71 @@
               </div>
             </div>
           </div>
-          <!-- 部署状态 -->
-          <div
-            v-if="stageId === 'deploy'"
-            class="wrapper primary
+        </div>
+      </div>
+      <!-- 内容 -->
+      <div class="plugin-container">
+        <!-- 部署状态 -->
+        <div
+          v-if="stageId === 'deploy'"
+          class="wrapper primary
                                 release-info-box
                                 flex-row
                                 justify-content-between
                                 align-items-center"
-            :class="[{ 'failed': status === 'failed' }, { 'success': status === 'successful' }]"
+          :class="[{ 'failed': status === 'failed' }, { 'success': status === 'successful' }]"
+        >
+          <div
+            v-if="status === 'pending'"
+            class="info-left-warp flex-row"
           >
-            <div
-              v-if="status === 'pending'"
-              class="info-left-warp flex-row"
+            <round-loading
+              size="small"
+              ext-cls="deploy-round-loading"
+            />
+            <span class="info-time pl10">
+              <span class="info-pending-text"> {{ $t('正在部署中...') }} </span>
+              <!-- <span class="time-text"> {{ $t('耗时：') }} 13秒</span> -->
+            </span>
+          </div>
+          <div
+            v-else-if="status === 'failed'"
+            class="error-left-warp flex-row align-items-center"
+          >
+            <i class="error-icon paasng-icon paasng-close-circle-shape" />
+            <span class="info-time pl10">
+              <span class="info-pending-text"> {{ $t('构建失败') }} </span>
+              <span class="time-text">{{ failedMessage }}</span>
+            </span>
+          </div>
+          <div
+            v-else-if="status === 'successful'"
+            class="info-left-warp flex-row"
+          >
+            <span class="success-check-wrapper">
+              <i class="paasng-icon paasng-correct" />
+            </span>
+            <span class="info-time pl10">
+              <span class="info-pending-text"> {{ $t('部署成功') }} </span>
+            </span>
+          </div>
+          <div
+            v-if="!isNext"
+            class="info-right-warp"
+          >
+            <bk-button
+              v-if="status !== 'pending'"
+              size="small"
+              theme="primary"
+              :outline="true"
+              :class="[{ 'failed': status === 'failed' }]"
+              class="ext-cls-btn"
+              @click="rightClick(status)"
             >
-              <round-loading
-                size="small"
-                ext-cls="deploy-round-loading"
-              />
-              <span class="info-time pl10">
-                <span class="info-pending-text"> {{ $t('正在部署中...') }} </span>
-                <!-- <span class="time-text"> {{ $t('耗时：') }} 13秒</span> -->
-              </span>
-            </div>
-            <div
-              v-else-if="status === 'failed'"
-              class="error-left-warp flex-row align-items-center"
-            >
-              <i class="error-icon paasng-icon paasng-close-circle-shape" />
-              <span class="info-time pl10">
-                <span class="info-pending-text"> {{ $t('构建失败') }} </span>
-                <span class="time-text">{{ failedMessage }}</span>
-              </span>
-            </div>
-            <div
-              v-else-if="status === 'successful'"
-              class="info-left-warp flex-row"
-            >
-              <span class="success-check-wrapper">
-                <i class="paasng-icon paasng-correct" />
-              </span>
-              <span class="info-time pl10">
-                <span class="info-pending-text"> {{ $t('部署成功') }} </span>
-              </span>
-            </div>
-            <div
-              v-if="!isNext"
-              class="info-right-warp"
-            >
-              <bk-button
-                v-if="status !== 'pending'"
-                size="small"
-                theme="primary"
-                :outline="true"
-                :class="[{ 'failed': status === 'failed' }]"
-                class="ext-cls-btn"
-                @click="rightClick(status)"
-              >
-                {{ status === 'pending' ? $t('停止部署') : $t('重新部署') }}
-              </bk-button>
-            </div>
+              {{ status === 'pending' ? $t('停止部署') : $t('重新部署') }}
+            </bk-button>
           </div>
         </div>
-      </div>
-      <!-- 内容 -->
-      <div class="app-container plugin-container">
         <div
           id="release-box"
           class="release-warp"
@@ -144,7 +144,10 @@
           </template>
 
           <!-- 完善市场信息模块 -->
-          <div v-if="stageId === 'market'">
+          <div
+            v-if="stageId === 'market'"
+            class="info-mt"
+          >
             <bk-form
               ref="visitForm"
               :model="form"
@@ -349,7 +352,7 @@
                 return this.$store.state.plugin.pluginFeatureFlags;
             },
             releaseTopHeight () {
-                let topHeight = this.stageId === 'deploy' ? 173 : 173 - 56;
+                let topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
                 // 是否展示steps
                 return this.isNotStep ? topHeight : topHeight - 44;
             }
@@ -848,8 +851,12 @@
     };
 </script>
 <style lang="scss" scoped>
+.deploy-action-box {
+    max-width: calc(100% - 100px);
+    margin: 0 auto;
+}
 .plugin-release-top {
-    height: 173px;
+    height: 117px;
     margin: 0 auto;
     .father-wrapper {
         position: fixed;
@@ -872,12 +879,12 @@
                 }
             }
         }
-        .release-info-box {
-            max-width: calc(100% - 100px);
-            min-width: 1243px;
-            margin: 0 50px;
-            margin-top: 16px;
-        }
+        // .release-info-box {
+        //     max-width: calc(100% - 100px);
+        //     // min-width: 1243px;
+        //     margin: 0 50px;
+        //     margin-top: 16px;
+        // }
     }
 }
 #release-timeline-box {
@@ -906,6 +913,7 @@
     height: 40px;
     background: #E1ECFF;
     border-radius: 2px;
+    margin-bottom: 16px;
     .time-text{
         font-size: 12px;
         color: #63656E;
@@ -953,10 +961,7 @@
     box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
 }
 .edit-form-item{
-    height: 272px;
-    .editor{
-        height: 200px;
-    }
+    margin-bottom: 20px;
 }
 .time-cls{
     color: #C4C6CC;
@@ -1021,9 +1026,17 @@
     margin-top: 0;
     padding-top: 0;
 }
+.release-warp .info-mt {
+    margin-top: 72px;
+}
 </style>
 <style>
     .visible-range-release .editor .ql-snow .ql-formats {
         line-height: 24px;
+    }
+    .visible-range-release .editor {
+        display: flex;
+        flex-direction: column;
+        height: 300px;
     }
 </style>

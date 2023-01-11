@@ -137,6 +137,10 @@
                     });
                     this.pluginList = res.results;
                     this.viewPluinList = res.results;
+                    // 根据id排序
+                    this.viewPluinList.sort((a, b) => {
+                        return ('' + a.id).localeCompare(b.id);
+                    });
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -156,8 +160,11 @@
                     name: v === 'list' ? 'plugin' : 'createPlugin'
                 });
             },
-            changePlugin (data) {
+            async changePlugin (data) {
                 this.curPluginData = this.pluginList.find(e => e.id === data.id);
+                // 重新获取菜单FeatureFlags
+                const res = await this.$store.dispatch('plugin/getPluginFeatureFlags', { pluginId: data.id, pdId: data.pd_id });
+                this.$store.commit('plugin/updatePluginFeatureFlags', res);
                 this.$router.push({
                     name: 'pluginVersionManager',
                     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识

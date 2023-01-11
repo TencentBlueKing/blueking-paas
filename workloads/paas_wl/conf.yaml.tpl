@@ -249,17 +249,15 @@
 ## ingress extensions/v1beta1 资源路径是否保留末尾斜杠，默认值为 true
 # APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH: true
 
-## 是否开启“现代” Ingress 资源序列化与反序列化逻辑，将产生以下影响：
-##
-## - 使用基于正则模式的 Ingress 路径与 Rewrite 规则
-## - （**重要**）因为 rewrite 规则变更，不支持 <0.22.0 版本的 ingress-nginx
-## - 增加 networking.k8s.io/v1beta1 和 networking.k8s.io/v1 版本的 Ingress 资源支持，当集群版本
-##   支持对应 apiVersion 时启用
+## 是否开启“现代” Ingress 资源的支持，将产生以下影响
+## - 支持使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须开启该选项。因为这些集群只能使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须使用 >1.0.0 版本的 ingress-nginx
 ##
 ## 假如关闭此配置，可能有以下风险：
-##
-##  - 只能处理 extensions/v1beta1 版本的 Ingress 资源，如果未来的 Kubernetes 集群版本删除了对该
+##  - 只能处理 extensions/v1beta1 和 networking.k8s.io/v1beta1 版本的 Ingress 资源, 如果未来的 Kubernetes 集群版本删除了对该
 ##    apiVersion 的支持，服务会报错
+##  - 只能使用 <1.0 版本的 ingress-nginx
 # ENABLE_MODERN_INGRESS_SUPPORT: true
 
 ## 应用独立域名相关配置

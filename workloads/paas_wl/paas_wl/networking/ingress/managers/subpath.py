@@ -29,7 +29,6 @@ from paas_wl.networking.ingress.models import AppSubpath
 from paas_wl.platform.applications.models import App
 
 from .base import AppIngressMgr
-from .common import SubpathCompatPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +77,6 @@ class SubPathAppIngressMgr(AppIngressMgr):
 
     More details: https://kubernetes.github.io/ingress-nginx/how-it-works/#building-the-nginx-model
     """
-
-    plugins = [SubpathCompatPlugin]
 
     def make_ingress_name(self) -> str:
         return f'{self.app.region}-{self.app.scheduler_safe_name}--subpath'

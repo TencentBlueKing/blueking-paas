@@ -76,9 +76,9 @@ LEVEL_PARAM_DICT = {
 }
 
 
-class AppEnvironment(ChoicesEnum):
-    STAGING = "stag"
-    PRODUCTION = "prod"
+class AppEnvironment(str, StructuredEnum):
+    STAGING = EnumField("stag", label="预发布环境")
+    PRODUCTION = EnumField("prod", label="生产环境")
 
 
 class AppResourceType(ChoicesEnum):

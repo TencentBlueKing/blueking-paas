@@ -94,6 +94,7 @@ from paasng.platform.applications.utils import (
     create_market_config,
     create_third_app,
     delete_all_modules,
+    get_app_overview,
 )
 from paasng.platform.core.storages.s3 import app_logo_storage
 from paasng.platform.core.storages.sqlalchemy import legacy_db
@@ -335,6 +336,16 @@ class ApplicationViewSet(viewsets.ViewSet):
 
     def check_manage_permissions(self, request, application):
         check_application_perm(request.user, application, AppAction.BASIC_DEVELOP)
+
+    @swagger_auto_schema(tags=["普通应用概览数据"])
+    def get_overview(self, request, code):
+        """普通应用、云原生应用概览页面数据"""
+        application = get_object_or_404(Application, code=code)
+        check_application_perm(request.user, application, AppAction.VIEW_BASIC_INFO)
+
+        data = get_app_overview(application)
+
+        return Response(data)
 
 
 class ApplicationCreateViewSet(viewsets.ViewSet):

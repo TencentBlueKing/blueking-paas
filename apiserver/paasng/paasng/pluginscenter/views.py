@@ -308,6 +308,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             data = repo_accessor.get_submit_info(_data['begin_time'], _data['end_time'])
         except APIError:
             # 工蜂 API 异常时，记录日志，并给前端返回空数组，避免页面展示异常
+            # 查询同一天的代码提交记录 API 会报错，看工蜂自己的统计页面是直接返回空数据，没有限制用户的时间选择，我们也使用同样的处理逻辑
             data = []
         return Response(data=data)
 

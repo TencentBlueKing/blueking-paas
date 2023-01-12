@@ -21,7 +21,7 @@ from typing import Dict, Type
 
 from attrs import define, field, validators
 from blue_krill.data_types.enum import EnumField, StructuredEnum
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 from iam.exceptions import AuthAPIError
 
 from paasng.accessories.iam.constants import ResourceType

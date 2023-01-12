@@ -159,7 +159,7 @@ class PluginInstanceMixin:
 
 
 class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
-    queryset = PluginInstance.objects.exclude(status__in=constants.PluginStatus.archive_status())
+    queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
     filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]

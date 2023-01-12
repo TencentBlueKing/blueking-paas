@@ -1938,7 +1938,7 @@ export default {
   '输入插件标识、插件名称，按Enter搜索': 'Enter the plug-in ID and name, and press Enter to search',
   '确定删除插件': 'OK to delete plugin',
   '初始化模板': 'Init template',
-  '将自动创建该开源仓库，并将模板代码初始化到仓库中': 'The open source repository will be created automatically and the template code will be initialized to the repository',
+  '将自动创建该开源仓库，将模板代码初始化到仓库中，并将创建者初始化为仓库管理员': 'The open source repository will be created automatically, the template code will be initialised into the repository and the creator will be initialised as the repository administrator',
   '由小写字母、数字、连字符(-)组成，长度小于 16 个字符': 'It consists of lowercase letters, numbers, hyphens (-), and is less than 16 characters in length',
   '插件概览': 'Plugin overview',
   '配置管理': 'Configuration management',

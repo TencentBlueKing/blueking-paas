@@ -31,6 +31,7 @@ class PluginFeatureFlag(FeatureFlag):
     APP_SECRETS = FeatureFlagField(label="应用密钥管理", default=False)
     PLUGIN_DISTRIBUTER = FeatureFlagField(label="插件使用方", default=False)
     CANCEL_RELEASE = FeatureFlagField(label="终止发布版本", default=True)
+    SHOW_ENTRANCES_ADDRESS = FeatureFlagField(label="显示访问入口地址", default=False)
 
 
 class PluginFeatureFlagsManager:

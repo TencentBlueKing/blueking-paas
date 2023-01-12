@@ -34,6 +34,7 @@ def update_release_status_when_stage_status_change(sender, instance: PluginRelea
     # 发布中断或失败
     if instance.status in PluginReleaseStatus.abnormal_status():
         release.status = instance.status
+        release.complete_time = datetime.datetime.now()
         release.save()
     # 最后一个步骤成功, 即发布成功
     elif instance.status == PluginReleaseStatus.SUCCESSFUL and instance.next_stage is None:

@@ -67,7 +67,6 @@ from paasng.pluginscenter.sourcectl import (
     get_plugin_repo_member_maintainer,
     remove_repo_member,
 )
-from paasng.pluginscenter.sourcectl.exceptions import APIError
 from paasng.pluginscenter.thirdparty import instance as instance_api
 from paasng.pluginscenter.thirdparty import market as market_api
 from paasng.pluginscenter.thirdparty.configuration import sync_config
@@ -304,13 +303,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         plugin = self.get_plugin_instance()
         repo_accessor = get_plugin_repo_accessor(plugin)
-        try:
-            data = repo_accessor.get_submit_info(_data['begin_time'], _data['end_time'])
-        except APIError:
-            # 工蜂 API 异常时，记录日志，并给前端返回空数组，避免页面展示异常
-            # 查询同一天的代码提交记录 API 会报错，看工蜂自己的统计页面是直接返回空数据，没有限制用户的时间选择，我们也使用同样的处理逻辑
-            data = []
-        return Response(data=data)
+        return Response(data=repo_accessor.get_submit_info(_data['begin_time'], _data['end_time']))
 
     def get_feature_flags(self, request, pd_id, plugin_id):
         """获取插件支持的功能特性"""

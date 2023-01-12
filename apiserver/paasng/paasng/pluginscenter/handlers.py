@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import datetime
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -36,6 +38,7 @@ def update_release_status_when_stage_status_change(sender, instance: PluginRelea
     # 最后一个步骤成功, 即发布成功
     elif instance.status == PluginReleaseStatus.SUCCESSFUL and instance.next_stage is None:
         release.status = instance.status
+        release.complete_time = datetime.datetime.now()
         release.save()
 
         plugin = release.plugin

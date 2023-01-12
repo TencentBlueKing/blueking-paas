@@ -143,8 +143,8 @@ class SysBkPluginTagsViewSet(viewsets.ViewSet):
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request):
-        """View all plugin tags in the system, the default is based on "created time (from old to new)"""
-        tags = BkPluginTag.objects.all().order_by('created')
+        """View all plugin tags in the system"""
+        tags = BkPluginTag.objects.all()
         return Response(serializers.BkPluginTagSLZ(tags, many=True).data)
 
 
@@ -199,8 +199,8 @@ class BkPluginTagsViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(tags=["bk_plugin"], responses={200: serializers.BkPluginTagSLZ(many=True)})
     def list(self, request):
-        """查看系统中所有的“插件分类（Plugin-Tag）”，默认按照“创建时间（从旧到新）排序”"""
-        tags = BkPluginTag.objects.all().order_by('created')
+        """查看系统中所有的“插件分类（Plugin-Tag）”"""
+        tags = BkPluginTag.objects.all()
         return Response(serializers.BkPluginTagSLZ(tags, many=True).data)
 
 

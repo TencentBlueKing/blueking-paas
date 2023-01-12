@@ -158,6 +158,12 @@ class PluginRelease(AuditedModel):
 
     objects = PluginReleaseVersionManager()
 
+    @property
+    def complete_time(self):
+        if self.status not in PluginReleaseStatus.running_status():
+            return self.updated
+        return None
+
     def initial_stage_set(self, force_refresh: bool = False):
         pd = self.plugin.pd
         if not pd.release_stages:

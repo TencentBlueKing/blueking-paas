@@ -80,6 +80,7 @@ def validate_response(resp: Response) -> Response:
         logging.warning(f"get url `{resp.url}` but {resp.status_code}, raw resp: {resp}")
         raise APIError(_("工蜂接口请求异常"))
     elif not resp.ok:
+        logging.warning(f"get url `{resp.url}` but resp is not ok, raw resp: {resp}")
         raise APIError(resp.json()["message"])
     return resp
 

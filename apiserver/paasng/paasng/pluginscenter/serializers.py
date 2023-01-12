@@ -90,6 +90,7 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
+    complete_time = serializers.ReadOnlyField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

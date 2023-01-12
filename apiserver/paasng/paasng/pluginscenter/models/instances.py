@@ -154,11 +154,15 @@ class PluginRelease(AuditedModel):
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
 
-    complete_time = models.DateTimeField(default=None, null=True, help_text="发布完成时间, 执行完最后一个发布阶段后赋值")
-
     creator = BkUserField()
 
     objects = PluginReleaseVersionManager()
+
+    @property
+    def complete_time(self):
+        if self.status not in PluginReleaseStatus.running_status():
+            return self.updated
+        return None
 
     def initial_stage_set(self, force_refresh: bool = False):
         pd = self.plugin.pd

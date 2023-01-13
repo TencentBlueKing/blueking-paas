@@ -21,11 +21,11 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Any, Dict, List, Optional
 
-import requests
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
 from requests.status_codes import codes
 
+from paasng.utils.basic import get_requests_session
 from paasng.utils.local import local
 
 from .exceptions import BadResponse
@@ -422,7 +422,7 @@ class ControllerClient:
         kwargs['headers'] = {settings.REQUEST_ID_HEADER_KEY: local.request_id}
         kwargs['auth'] = self.auth_instance
         logger.debug(f"Controller client sending request to [{method}]{url}, kwargs={kwargs}.")
-        resp = requests.request(method, url, **kwargs)
+        resp = get_requests_session().request(method, url, **kwargs)
 
         if resp.status_code == desired_code:
             try:

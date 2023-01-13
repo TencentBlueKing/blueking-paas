@@ -29,6 +29,8 @@ from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
 from requests.exceptions import RequestException
 
+from paas_wl.utils.basic import get_requests_session
+
 from .exceptions import PlatClientRequestError, PlatResponseError
 
 logger = logging.getLogger(__name__)
@@ -85,6 +87,7 @@ class PlatformSvcClient:
         self.config = config
         config.jwt_auth_conf.role = self._jwt_role
         self.auth = ClientJWTAuth(config.jwt_auth_conf)
+        self._session = get_requests_session()
 
     @staticmethod
     def validate_resp(resp: requests.Response) -> requests.Response:
@@ -116,7 +119,7 @@ class PlatformSvcClient:
         """
         with wrap_request_exc(self):
             self._request(
-                requests.post,
+                self._session.post,
                 url=self.config.operations_url,
                 json={
                     'application': application_id,
@@ -155,7 +158,7 @@ class PlatformSvcClient:
         elif engine_app_id:
             params['engine_app_id'] = str(engine_app_id)
         with wrap_request_exc(self):
-            resp = self._request(requests.get, url=self.config.query_applications_url, params=params)
+            resp = self._request(self._session.get, url=self.config.query_applications_url, params=params)
             return resp.json()
 
     def get_market_entrance(self, code: str):
@@ -165,13 +168,13 @@ class PlatformSvcClient:
         :raises: PlatClientRequestError
         """
         with wrap_request_exc(self):
-            resp = self._request(requests.get, url=self.config.market_entrance_url.format(code=code))
+            resp = self._request(self._session.get, url=self.config.market_entrance_url.format(code=code))
             return resp.json()
 
     def finish_release(self, deployment_id: str, status: str, error_detail: str):
         with wrap_request_exc(self):
             self._request(
-                requests.post,
+                self._session.post,
                 url=self.config.finish_release_url,
                 json={"deployment_id": deployment_id, "status": status, "error_detail": error_detail},
             )
@@ -179,14 +182,14 @@ class PlatformSvcClient:
     def finish_archive(self, operation_id: str, status: str, error_detail: str):
         with wrap_request_exc(self):
             self._request(
-                requests.post,
+                self._session.post,
                 url=self.config.finish_archive_url,
                 json={"operation_id": operation_id, "status": status, "error_detail": error_detail},
             )
 
     def retrieve_deployment(self, deployment_id: str):
         with wrap_request_exc(self):
-            resp = self._request(requests.get, url=self.config.retrieve_deployment.format(pk=deployment_id))
+            resp = self._request(self._session.get, url=self.config.retrieve_deployment.format(pk=deployment_id))
             return resp.json()
 
     def get_addresses(self, code: str, environment: str):
@@ -198,7 +201,7 @@ class PlatformSvcClient:
         """
         with wrap_request_exc(self):
             resp = self._request(
-                requests.get, url=self.config.get_addresses_url.format(code=code, environment=environment)
+                self._session.get, url=self.config.get_addresses_url.format(code=code, environment=environment)
             )
             return resp.json()
 
@@ -210,7 +213,7 @@ class PlatformSvcClient:
         """
         with wrap_request_exc(self):
             resp = self._request(
-                requests.get, url=self.config.list_builtin_envs.format(code=code, environment=environment)
+                self._session.get, url=self.config.list_builtin_envs.format(code=code, environment=environment)
             )
             return resp.json()["data"]
 
@@ -218,7 +221,7 @@ class PlatformSvcClient:
         """获取增强服务启用/实例分配信息"""
         with wrap_request_exc(self):
             resp = self._request(
-                requests.get,
+                self._session.get,
                 url=self.config.list_addons_url.format(code=code, module_name=module_name, environment=environment),
             )
             return resp.json()

@@ -146,7 +146,7 @@ class PluginInstanceMixin:
     IF request.user DOES NOT have object permissions, will raise PermissionDeny exception
     """
 
-    def get_plugin_instance(self, allow_archive: bool = False) -> PluginInstance:
+    def get_plugin_instance(self, allow_archive: bool = True) -> PluginInstance:
         queryset = PluginInstance.objects.all()
         filter_kwargs = {"pd__identifier": self.kwargs["pd_id"], "id": self.kwargs["plugin_id"]}  # type: ignore
         obj = get_object_or_404(queryset, **filter_kwargs)

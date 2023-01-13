@@ -170,10 +170,22 @@ le<template lang="html">
                   />
                 </bk-tab-panel>
                 <bk-tab-panel
+                  key="event"
+                  name="event"
+                  v-bind="tabData[1]"
+                >
+                  <process-event
+                    v-if="active === 'event'"
+                    :app-code="appCode"
+                    :environment="panelItem.env"
+                    :events="eventList"
+                  />
+                </bk-tab-panel>
+                <bk-tab-panel
                   ref="yamlRef"
                   key="yaml"
                   name="yaml"
-                  v-bind="tabData[1]"
+                  v-bind="tabData[2]"
                 >
                   <process-yaml
                     v-if="active === 'yaml'"
@@ -186,7 +198,7 @@ le<template lang="html">
                 <bk-tab-panel
                   key="version"
                   name="version"
-                  v-bind="tabData[2]"
+                  v-bind="tabData[3]"
                 >
                   <process-version
                     v-if="active === 'version'"
@@ -207,6 +219,7 @@ le<template lang="html">
     import processOperation from './comps/process-operation';
     import processYaml from './comps/process-yaml';
     import processVersion from './comps/process-version';
+    import processEvent from './comps/process-event.vue';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import moment from 'moment';
     import i18n from '@/language/i18n.js';
@@ -215,7 +228,8 @@ le<template lang="html">
         components: {
             processOperation,
             processYaml,
-            processVersion
+            processVersion,
+            processEvent
         },
         mixins: [appBaseMixin],
         data () {
@@ -226,6 +240,7 @@ le<template lang="html">
                 panels: [{ env: 'stag', label: '预发布环境' }, { env: 'prod', label: '生产环境' }],
                 tabData: [
                     { name: 'status', label: i18n.t('进程状态'), count: 10 },
+                    { name: 'event', label: i18n.t('事件'), count: 10 },
                     { name: 'yaml', label: 'YAML', count: 20 },
                     { name: 'version', label: i18n.t('版本'), count: 30 }
                 ],
@@ -240,7 +255,8 @@ le<template lang="html">
                 intervalTimer: null,
                 yamlKey: 0,
                 versionKey: 0,
-                activeIndex: 0
+                activeIndex: 0,
+                eventList: []
             };
         },
         computed: {
@@ -273,6 +289,7 @@ le<template lang="html">
                         env: this.environment
 
                     });
+                    this.eventList = res.events;
                     this.statusData = res;
                     this.deployId = this.statusData.deployment.deploy_id;
                     this.deploymentCreatedTime = moment(res.deployment.created).format('YYYY-MM-DD HH:mm:ss');
@@ -303,6 +320,7 @@ le<template lang="html">
                     ingress: {}
                 };
                 this.deploymentCreatedTime = '';
+                this.eventList = [];
             },
             async init () {
                 this.getCloudAppInfo();

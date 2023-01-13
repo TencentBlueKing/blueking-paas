@@ -2004,5 +2004,9 @@ export default {
   '开发中': 'Developing',
   '已发布': 'Published',
   '更多信息': 'More information',
-  '下一步': 'Next'
+  '下一步': 'Next',
+  '最近出现时间': 'Last occurrence time',
+  '级别': 'Level',
+  '事件内容': 'Event content',
+  '累计出现次数': 'Cumulative occurrences'
 };

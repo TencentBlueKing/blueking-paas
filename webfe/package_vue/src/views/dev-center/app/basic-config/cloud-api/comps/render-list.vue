@@ -185,7 +185,10 @@
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                  <span
+                    style="color: #C4C6CC;margin-top:1px;"
+                    class="paasng-icon paasng-info-line"
+                  /> {{ $t('未申请') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'expired'">
                   <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}

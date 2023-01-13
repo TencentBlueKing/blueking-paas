@@ -545,9 +545,6 @@ IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get('IS_ALLOW_CREATE_CLOU
 # 云原生应用的默认集群名称
 CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
 
-# 是否允许创建蓝鲸插件应用
-IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
-
 # ---------------
 # HealthZ 配置
 # ---------------
@@ -791,9 +788,11 @@ CLI_AUTH_SECRET = settings.get('CLI_AUTH_SECRET', '')
 
 
 # === 插件应用相关
-#
+# 是否允许创建蓝鲸插件应用
+IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
+
 # [region-aware] 是否允许用户创建插件应用
-BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': False})
+BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': IS_ALLOW_CREATE_BK_PLUGIN_APP})
 
 # 管理插件应用的 API 网关时所使用的配置：
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get('BK_PLUGIN_APIGW_SERVICE_STAGE', 'prod')  # 环境（stage）

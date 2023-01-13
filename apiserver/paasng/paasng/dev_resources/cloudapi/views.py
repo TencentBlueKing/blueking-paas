@@ -31,6 +31,8 @@ from paasng.dev_resources.cloudapi import serializers
 from paasng.dev_resources.cloudapi.components.apigw_dashboard import apigw_dashboard_component
 from paasng.dev_resources.cloudapi.utils import get_user_auth_type
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.operations.constant import OperationType
+from paasng.platform.operations.models import Operation
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = serializers.APIGWPermissionApplySLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        return self._post(request, app_code, *args, **kwargs)
+        operation_type = OperationType.APPLY_PERM_FOR_CLOUD_API.value
+        return self._post(request, operation_type, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         request_body=serializers.APIGWPermissionRenewSLZ,
@@ -72,7 +75,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = serializers.APIGWPermissionRenewSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        return self._post(request, app_code, *args, **kwargs)
+        operation_type = OperationType.RENEW_PERM_FOR_CLOUD_API.value
+        return self._post(request, operation_type, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWAllowApplyByAPISLZ,
@@ -125,7 +129,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = serializers.ESBPermissionApplySLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        return self._post(request, app_code, *args, **kwargs)
+        operation_type = OperationType.APPLY_PERM_FOR_CLOUD_API.value
+        return self._post(request, operation_type, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         request_body=serializers.ESBPermissionRenewSLZ,
@@ -135,7 +140,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = serializers.ESBPermissionRenewSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        return self._post(request, app_code, *args, **kwargs)
+        operation_type = OperationType.RENEW_PERM_FOR_CLOUD_API.value
+        return self._post(request, operation_type, app_code, *args, **kwargs)
 
     @swagger_auto_schema(
         response_serializer=serializers.APIGWPermissionSLZ(many=True),
@@ -176,7 +182,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
         return Response(result)
 
-    def _post(self, request, app_code: str, *args, **kwargs):
+    def _post(self, request, operation_type: int, app_code: str, *args, **kwargs):
         logger.debug("[cloudapi] posting %s", self._get_apigw_dashboard_path(request.path, app_code))
         data = copy.copy(request.data)
         data.update(
@@ -191,6 +197,20 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             json=data,
             bk_username=request.user.username,
         )
+
+        # 记录操作记录
+        try:
+            application = self.get_application()
+            Operation.objects.create(
+                region=application.region,
+                application=application,
+                type=operation_type,
+                user=request.user,
+                extra_values={"gateway_name": data['gateway_name']},
+            )
+        except Exception:
+            logger.exception("An exception occurred in the operation record of adding cloud API permissions")
+
         return Response(result)
 
     def _get_apigw_dashboard_path(self, path: str, app_code: str) -> str:

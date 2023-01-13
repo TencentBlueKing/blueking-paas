@@ -119,7 +119,8 @@
                             resource_ids: [],
                             reason: this.formData.reason,
                             expire_days: this.formData.expired * 30,
-                            grant_dimension: 'api'
+                            grant_dimension: 'api',
+                            gateway_name: this.apiName
                         },
                         appCode: this.appCode,
                         apiId: this.apiId

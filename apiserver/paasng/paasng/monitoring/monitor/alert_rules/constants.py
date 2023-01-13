@@ -20,7 +20,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.applications.constants import AppEnvironment
 
-RUN_ENVS = [AppEnvironment.STAGING.value, AppEnvironment.PRODUCTION.value]
+RUN_ENVS = AppEnvironment.get_values()
 
 DEFAULT_RULE_CONFIGS = {
     'module_scoped': {

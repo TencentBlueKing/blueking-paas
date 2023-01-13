@@ -225,7 +225,8 @@
                     const params = {
                         data: {
                             reason: this.formData.reason,
-                            expire_days: this.formData.expired * 30
+                            expire_days: this.formData.expired * 30,
+                            gateway_name: this.apiName
                         },
                         appCode: this.appCode
                     };

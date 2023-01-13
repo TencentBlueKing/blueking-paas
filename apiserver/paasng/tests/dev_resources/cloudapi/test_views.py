@@ -22,6 +22,7 @@ import pytest
 from blue_krill.web.std_error import APIError
 
 from paasng.dev_resources.cloudapi import views
+from paasng.platform.operations.constant import OperationType
 from tests.utils.testing import get_response_json
 
 pytestmark = pytest.mark.django_db
@@ -64,16 +65,17 @@ class TestCloudAPIViewSet:
         assert result == mocked_result
 
     @pytest.mark.parametrize(
-        'app_code, path, mocked_result',
+        'app_code, operation_type, path, mocked_result',
         [
             (
                 'test',
+                OperationType.APPLY_PERM_FOR_CLOUD_API.value,
                 '/api/cloudapi/apps/test/apis/',
                 {'code': 0},
             ),
         ],
     )
-    def test_post(self, request_factory, mocker, app_code, path, mocked_result):
+    def test_post(self, request_factory, mocker, app_code, operation_type, path, mocked_result):
         mocker.patch(
             'paasng.dev_resources.cloudapi.views.CloudAPIViewSet.permission_classes',
             new_callback=mock.PropertyMock(return_value=None),
@@ -94,7 +96,7 @@ class TestCloudAPIViewSet:
         request = request_factory.post(path, params={'test': 1})
 
         view = views.CloudAPIViewSet.as_view({'post': '_post'})
-        response = view(request, app_code=app_code)
+        response = view(request, app_code=app_code, operation_type=operation_type)
         result = get_response_json(response)
         assert result == mocked_result
 

@@ -75,6 +75,11 @@ urlpatterns = [
         name='api.applications',
     ),
     url(
+        r'^api/bkapps/applications/(?P<code>[^/]+)/overview/$',
+        views.ApplicationViewSet.as_view({'get': 'get_overview'}),
+        name='api.applications.overview',
+    ),
+    url(
         r'^api/bkapps/applications/(?P<code>[^/]+)/members/$',
         views.ApplicationMembersViewSet.as_view({'get': 'list', 'post': 'create'}),
         name='api.applications.members',

@@ -249,6 +249,19 @@ class CreateModuleOperationObj(OperationObj):
         return _('创建 {module_name} 模块').format(module_name=self.operation.module_name)
 
 
+class ApplyCloudApiOperationObj(OperationObj):
+    """Operation object: apply for or renew ApiGateway API permissions"""
+
+    _text_tmpls = {
+        OP.APPLY_PERM_FOR_CLOUD_API: _('申请 {gateway_name} 网关的 API 权限'),
+        OP.RENEW_PERM_FOR_CLOUD_API: _('续期 {gateway_name} 网关的 API 权限'),
+    }
+
+    def get_text_display(self):
+        gateway_name = self.operation.extra_values.get('gateway_name', '')
+        return self._text_tmpls[self.op_type].format(gateway_name=gateway_name)
+
+
 _operation_cls_map = {
     OP.DEPLOY_APPLICATION: AppDeploymentOperationObj,
     OP.PROCESS_START: ProcessOperationObj,

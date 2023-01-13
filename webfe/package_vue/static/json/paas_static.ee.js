@@ -124,7 +124,7 @@ export const PLATFORM_CONFIG = {
         BK_PLUGIN: '',
 
         //BKtemplate
-        BK_PLUGIN_TEMPLATE: '',
+        BK_PLUGIN_TEMPLATE: 'https://github.com/TencentBlueKing/bk-plugin-framework-python/tree/master/template',
 
         // 产品文档
         BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',

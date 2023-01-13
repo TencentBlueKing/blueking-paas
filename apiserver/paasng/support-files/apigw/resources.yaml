@@ -786,6 +786,56 @@ paths:
           userVerifiedRequired: true
         disabledStages: []
         descriptionEn:
+  /cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/deployments/:
+    post:
+      operationId: deploy_cnative_app
+      description: 部署云原生应用
+      tags:
+      - 部署相关接口
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/deployments/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+        disabledStages: []
+        descriptionEn: Deploy cloud-native applications
+  /cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/:
+    get:
+      operationId: get_cnative_app_status
+      description: 获取云原生应用当前状态
+      tags:
+      - 部署相关接口
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+        disabledStages: []
+        descriptionEn: Get cloud-native application current status
   /streams/{channel_id}/history_events:
     get:
       operationId: streams_history_events
@@ -811,6 +861,255 @@ paths:
           userVerifiedRequired: true
         disabledStages: []
         descriptionEn:
+  /sys/shim/plugins_center/bk_plugins/:
+    post:
+      operationId: shim_plugins_centers_create_plugin
+      description: 创建插件
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/plugins_center/bk_plugins/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: create_plugin
+  /sys/shim/plugins_center/bk_plugins/market/category/:
+    get:
+      operationId: shim_plugins_center_list_category
+      description: 查询平台支持的插件分类列表
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/plugins_center/bk_plugins/market/category/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: list plugin category
+  /sys/shim/plugins_center/bk_plugins/{code}/:
+    delete:
+      operationId: shim_plugins_center_archive_plugin
+      description: 下架插件
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: delete
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: archive_plugin
+    put:
+      operationId: shim_plugins_center_update_plugin
+      description: 更新插件
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: put
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: update_plugin
+  /sys/shim/plugins_center/bk_plugins/{code}/configuration/:
+    post:
+      operationId: shim_plugins_center_sync_configurations
+      description: 插件应用同步环境变量
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/configuration/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: sync configurations for plugin applicaiton
+  /sys/shim/plugins_center/bk_plugins/{code}/deploy/:
+    post:
+      operationId: shim_plugins_centers_deploy_plugin
+      description: 部署插件
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/deploy/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: deploy_plugin
+  /sys/shim/plugins_center/bk_plugins/{code}/deploy/{deploy_id}/logs/:
+    get:
+      operationId: shim_plugins_center_get_deploy_logs
+      description: 查询部署过程日志
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/deploy/{deploy_id}/logs/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: get_deploy_logs
+  /sys/shim/plugins_center/bk_plugins/{code}/deploy/{deploy_id}/status/:
+    get:
+      operationId: shim_plugins_center_check_deploy_status
+      description: 检查部署状态
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/deploy/{deploy_id}/status/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: check_deploy_status
+  /sys/shim/plugins_center/bk_plugins/{code}/market/:
+    post:
+      operationId: shim_plugins_center_upsert_market_info
+      description: 更新插件市场信息
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/market/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: upsert_plugin_market_info
+  /sys/shim/plugins_center/bk_plugins/{code}/members/:
+    post:
+      operationId: shim_plugins_center_sync_members
+      description: 插件应用同步成员
+      tags:
+      - 插件开发中心
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/plugins_center/bk_plugins/{code}/members/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: sync members for plugin applicaiton
   /system/applications/{code}/modules/{module_name}/log/structured/list/:
     get:
       operationId: search_structured_log
@@ -836,6 +1135,53 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
+  /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/addons/{service_name}/:
+    get:
+      operationId: get_addon_instance_info
+      description: 查询增强服务实例信息
+      tags: []
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/addons/{service_name}/
+          matchSubpath: false
+          timeout: 30
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: get addon instance info
+    post:
+      operationId: provision_addon_instance
+      description: 分配增强服务实例
+      tags: []
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/addons/{service_name}/
+          matchSubpath: false
+          timeout: 30
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn: provision addon instance
   /system/bkapps/applications/{app_code}/modules/{module}/envs/{env}/lesscode/query_db_credentials:
     get:
       operationId: sys__api__lesscode__query_db_credentials
@@ -876,6 +1222,31 @@ paths:
           type: HTTP
           method: post
           path: /backend/sys/api/bkapps/applications/{app_code}/modules/{module}/lesscode/bind_db_service
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn:
+  /system/bkapps/xycd/third_app/:
+    post:
+      operationId: create_xy_cd_app
+      description: 给行云提供的创建外链应用的API
+      tags:
+      - 私有化版未提供
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/sys/api/bkapps/xycd/third_app/
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -994,6 +1365,31 @@ paths:
           userVerifiedRequired: false
           appVerifiedRequired: false
           resourcePermissionRequired: false
+        disabledStages: []
+        descriptionEn:
+  /system/bk_plugin_tags:
+    get:
+      operationId: list_bk_plugin_tags
+      description: 查询蓝鲸插件的分类列表
+      tags:
+      - 应用/模块信息查询
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/sys/api/bk_plugin_tags/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
   /system/light-applications:

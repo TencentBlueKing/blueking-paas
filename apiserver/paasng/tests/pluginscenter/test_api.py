@@ -57,7 +57,8 @@ class TestArchived:
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.post(url)
         assert resp.status_code == 400
-        assert resp.json()["detail"] == error_codes.PLUGIN_ARCHIVED.message
+        # 已经下架的操作还可以操作
+        assert resp.json()["detail"] != error_codes.PLUGIN_ARCHIVED.message
 
 
 class TestSysApis:

@@ -22,7 +22,7 @@ leaderElection:
 # after the manager stops then its usage might be unsafe.
 # leaderElectionReleaseOnCancel: true
 platformConfig:
-  bkAppCode: ""
+  bkAppCode: "bk_paas3"
   bkAppSecret: ""
   bkAPIGatewayURL: ""
   sentryDSN: ""

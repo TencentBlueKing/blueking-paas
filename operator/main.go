@@ -19,10 +19,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -30,10 +32,14 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -106,19 +112,24 @@ func main() {
 
 	initIngressPlugins()
 
+	rootCtx := context.Background()
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
 	mgrCli := client.New(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
-	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).SetupWithManager(mgr); err != nil {
+
+	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf)
+	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
+		SetupWithManager(rootCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
 		os.Exit(1)
 	}
-	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).SetupWithManager(mgr); err != nil {
+	dgmappingMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindDomainGroupMapping, projConf)
+	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).
+		SetupWithManager(rootCtx, mgr, dgmappingMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}
@@ -176,5 +187,18 @@ func initIngressPlugins() {
 		resources.RegistryPlugin(&resources.AccessControlPlugin{Config: pluginConfig.AccessControlConfig})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
+	}
+}
+
+// 生成某类组资源管理器配置
+func genGroupKindMgrOpts(groupKind schema.GroupKind, projConf *paasv1alpha1.ProjectConfig) controller.Options {
+	return controller.Options{
+		MaxConcurrentReconciles: projConf.Controller.GroupKindConcurrency[groupKind.String()],
+		RateLimiter: workqueue.NewMaxOfRateLimiter(
+			// 首次重试延迟 1s，后续指数级翻倍，最高延迟 300s
+			workqueue.NewItemExponentialFailureRateLimiter(time.Second, 5*time.Minute),
+			// 10 qps, 100 bucket size.  This is only for retry speed and its only the overall factor (not per item)
+			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+		),
 	}
 }

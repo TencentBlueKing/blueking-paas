@@ -75,7 +75,16 @@ type ProjectConfig struct {
 // NewProjectConfig create project config
 func NewProjectConfig() *ProjectConfig {
 	conf := ProjectConfig{}
-	// 预设默认值
+
+	// worker 数量默认为 5
+	conf.Controller = &cfg.ControllerConfigurationSpec{
+		GroupKindConcurrency: map[string]int{
+			GroupKindBkApp.String():              5,
+			GroupKindDomainGroupMapping.String(): 5,
+		},
+	}
+
+	// 资源预设默认值
 	conf.ResLimitConfig.ProcDefaultCPULimits = "4"
 	conf.ResLimitConfig.ProcDefaultMemLimits = "1Gi"
 	conf.ResLimitConfig.MaxReplicas = 5

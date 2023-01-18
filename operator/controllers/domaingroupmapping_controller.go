@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -260,22 +261,13 @@ func (r *DomainGroupMappingReconciler) syncProcessedStatus(
 const BkAppIndexField = ".Spec.Ref.BkAppName"
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DomainGroupMappingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DomainGroupMappingReconciler) SetupWithManager(
+	ctx context.Context, mgr ctrl.Manager, opts controller.Options,
+) error {
 	// Build an index to query DomainGroupMappings by BkApp later
-	err := mgr.GetFieldIndexer().
-		IndexField(
-			context.Background(),
-			&paasv1alpha1.DomainGroupMapping{},
-			BkAppIndexField,
-			func(rawObj client.Object) []string {
-				dgmapping := rawObj.(*paasv1alpha1.DomainGroupMapping)
-				if dgmapping.Spec.Ref.Kind == paasv1alpha1.KindBkApp && dgmapping.Spec.Ref.Name != "" {
-					return []string{dgmapping.Spec.Ref.Name}
-				}
-				return nil
-			},
-		)
-	if err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx, &paasv1alpha1.DomainGroupMapping{}, BkAppIndexField, getDGMappingOwnerNames,
+	); err != nil {
 		return err
 	}
 
@@ -288,7 +280,7 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			FieldSelector: fields.OneTermEqualSelector(BkAppIndexField, bkapp.GetName()),
 			Namespace:     bkapp.GetNamespace(),
 		}
-		if err = r.client.List(context.TODO(), dgmappings, listOps); err != nil {
+		if err := r.client.List(ctx, dgmappings, listOps); err != nil {
 			return []reconcile.Request{}
 		}
 
@@ -306,10 +298,19 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&paasv1alpha1.DomainGroupMapping{}).
+		WithOptions(opts).
 		Watches(&source.Kind{
 			Type: &paasv1alpha1.BkApp{},
 		}, handler.EnqueueRequestsFromMapFunc(handleEnqueueBkApp)).
 		Complete(r)
+}
+
+func getDGMappingOwnerNames(rawObj client.Object) []string {
+	dgmapping := rawObj.(*paasv1alpha1.DomainGroupMapping)
+	if dgmapping.Spec.Ref.Kind == paasv1alpha1.KindBkApp && dgmapping.Spec.Ref.Name != "" {
+		return []string{dgmapping.Spec.Ref.Name}
+	}
+	return nil
 }
 
 // ToAddressableStatus receives a list of DomainGroups, turns them into

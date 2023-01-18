@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -124,21 +125,22 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *BkAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := mgr.GetFieldIndexer().
-		IndexField(context.Background(), &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
-	if err != nil {
+func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opts controller.Options) error {
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx, &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames,
+	); err != nil {
 		return err
 	}
 
-	err = mgr.GetFieldIndexer().
-		IndexField(context.Background(), &corev1.Pod{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
-	if err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx, &corev1.Pod{}, v1alpha1.WorkloadOwnerKey, getOwnerNames,
+	); err != nil {
 		return err
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.BkApp{}).
+		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Pod{}).
 		Complete(r)

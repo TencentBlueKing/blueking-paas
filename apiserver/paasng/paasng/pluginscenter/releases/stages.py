@@ -88,7 +88,9 @@ class DeployAPIStage(BaseStageController):
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
-        if self.stage.status == constants.PluginReleaseStatus.INITIAL:
+        if not self.stage.api_detail:
+            # 部署步骤执行失败
+            basic_info["status"] = constants.PluginReleaseStatus.FAILED
             return {
                 **basic_info,
                 "detail": {

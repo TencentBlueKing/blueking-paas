@@ -275,7 +275,7 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import { formatTime } from '@/common/tools';
 
@@ -283,7 +283,7 @@
         components: {
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 isLoading: false,
@@ -337,12 +337,6 @@
             };
         },
         computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
             isPending () {
                 return this.$route.query.isPending;
             }
@@ -501,7 +495,6 @@
                 this.$router.push({
                     name: 'pluginVersionRelease',
                     query: {
-                        stage_id: data.current_stage.stage_id,
                         release_id: data.id
                     }
                 });

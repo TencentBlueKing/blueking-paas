@@ -385,13 +385,13 @@
     </paas-content-loader>
 
     <bk-dialog
-      v-model="delAppDialog.visiable"
+      v-model="delPluginDialog.visiable"
       width="540"
       :title="`确认下架插件【${pluginInfo.id}】？`"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
-      :loading="delAppDialog.isLoading"
+      :loading="delPluginDialog.isLoading"
       @after-leave="hookAfterClose"
     >
       <div class="ps-form">
@@ -419,7 +419,7 @@
         </bk-button>
         <bk-button
           theme="default"
-          @click="delAppDialog.visiable = false"
+          @click="delPluginDialog.visiable = false"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -430,7 +430,7 @@
 
 <script>
     // import moment from 'moment';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import user from '@/components/user';
     import authenticationInfo from '@/components/authentication-info.vue';
@@ -454,7 +454,7 @@
             user,
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 // 插件开发
@@ -488,26 +488,7 @@
                     contact: []
                 },
                 isUnfold: false,
-                rules: {
-                    appName: [
-                        {
-                            required: true,
-                            message: this.$t('请输入20个字符以内的应用名称'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 20,
-                            message: this.$t('应用名称不可超过20个字符'),
-                            trigger: 'blur'
-                        },
-                        {
-                            required: /[a-zA-Z\d\u4e00-\u9fa5]+/,
-                            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                delAppDialog: {
+                delPluginDialog: {
                     visiable: false,
                     isLoading: false
                 },
@@ -540,16 +521,6 @@
             localLanguage () {
                 return this.$store.state.localLanguage;
             },
-            // 插件
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
-            pluginFeatureFlags () {
-                return this.$store.state.plugin.pluginFeatureFlags;
-            },
             infoHeight () {
                 return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
             }
@@ -565,6 +536,9 @@
                     this.getPluginAll();
                     this.getAuthorizedUse();
                     this.getProfile();
+                }
+                if (this.pluginFeatureFlags.APP_SECRETS) {
+                    this.store.dispatch('plugin/getPluginAppInfo', { pluginId: this.pluginId, pdId: this.pdId });
                 }
             },
 
@@ -681,7 +655,7 @@
                 try {
                     const res = await this.$store.dispatch('market/uploadAppLogo', params);
                     this.localeAppInfo.logo = res.logo_url;
-                    this.$emit('current-app-info-updated');
+                    this.$emit('current-plugin-info-updated');
                     this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
 
                     this.$paasMessage({
@@ -747,11 +721,11 @@
             },
 
             showRemovePlugin () {
-                this.delAppDialog.visiable = true;
+                this.delPluginDialog.visiable = true;
             },
 
             hookAfterClose () {
-                this.delAppDialog.visiable = false;
+                this.delPluginDialog.visiable = false;
                 this.formRemovePluginId = '';
             },
 

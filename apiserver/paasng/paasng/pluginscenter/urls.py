@@ -34,7 +34,7 @@ urlpatterns = [
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logo/",
-        views.PluginInstanceViewSet.as_view({"post": "update_logo"}),
+        views.PluginInstanceViewSet.as_view({"put": "update_logo"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/overview/",

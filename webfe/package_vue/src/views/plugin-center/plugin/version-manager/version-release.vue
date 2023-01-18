@@ -27,7 +27,7 @@
                 </bk-button>
               </div>
               <div
-                v-if="isSingleStage"
+                v-if="!isSingleStage"
                 class="steps-warp mt20"
               >
                 <!-- 只有一个阶段的发布, 不展示发布步骤 -->
@@ -59,10 +59,11 @@
 
       <div class="footer-btn-warp">
         <bk-button
-          v-if="isAllowPrev"
+          v-if="!isFirstStage"
           theme="default"
           class="ml5"
           style="width: 120px"
+          :disabled="!isAllowPrev"
           @click="handlerPrev"
         >
           {{ $t('上一步') }}
@@ -70,10 +71,11 @@
         <!-- 构建完成可以进入下一步 -->
         <bk-button
           theme="primary"
+          v-if="!isFinalStage"
           class="ml5"
           style="width: 120px"
           :disabled="!isAllowNext"
-          @click="handlerNext(stageId)"
+          @click="handlerNext()"
         >
           <template v-if="stageId !== 'market'">
             {{ $t('下一步') }}
@@ -87,7 +89,6 @@
   </div>
 </template>
 <script>
-    import { bus } from '@/common/bus';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import deployStage from './release-stages/deploy';
@@ -103,15 +104,14 @@
         },
         mixins: [pluginBaseMixin],
         data () {
+            console.log('this', this);
             return {
                 stagesIndex: 0,
                 curStep: 1,
                 isLoading: true,
                 stageData: {},
                 failedMessage: '',
-                isStopDeploy: false,
-                stepsStatus: '',
-                stpeMap: {}
+                stepsStatus: ''
             };
         },
         computed: {
@@ -134,7 +134,7 @@
             releaseTopHeight () {
                 let topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
                 // 是否展示steps
-                return this.isNotStep ? topHeight : topHeight - 44;
+                return this.isSingleStage ? topHeight : topHeight - 44;
             },
             curFirstStep () {
                 return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
@@ -148,12 +148,18 @@
             isSingleStage () {
               return this.curAllStages.length === 1;
             },
+            isFirstStage () {
+                return this.calStageOrder(this.stageData) === 1;
+            },
+            isFinalStage () {
+                return this.curAllStages.length === this.calStageOrder(this.stageData);
+            },
             isAllowPrev () {
               let isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
               return !isRunningDeploy;
             },
             isAllowNext () {
-              return this.stageData.status === 'successful';
+              return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
             }
         },
         watch: {
@@ -164,29 +170,33 @@
             }
         },
         created () {
-            bus.$on('stop-deploy', () => {
-                this.isStopDeploy = true;
-            });
             this.getReleaseStageDetail();
         },
         async mounted () {
             await this.getReleaseDetail();
         },
-        beforeDestroy () {
-            bus.$emit('stop-deploy', true);
-        },
         methods: {
-            setTimeoutGetReleaseStageDetail () {
-                this.deployStepData.timer = setTimeout(() => {
-                    this.getReleaseStageDetail();
-                }, 2000);
+            async pollingReleaseStageDetail () {
+                const ctx = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: this.releaseId,
+                    stageId: this.stageId
+                };
+                await new Promise(resolve => {
+                    setTimeout(resolve, 2000);
+                });
+                const currentCtx = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: this.releaseId,
+                    stageId: this.stageId
+                };
+                // 页面状态改变, 停止轮询
+                if (ctx === currentCtx) this.getReleaseStageDetail();
             },
             // 获取发布步骤详情
             async getReleaseStageDetail () {
-                // 点击返回，停止部署接口轮询
-                if (this.isStopDeploy) {
-                    return;
-                }
                 try {
                     const params = {
                         pdId: this.pdId,
@@ -198,22 +208,19 @@
                         return;
                     }
                     const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
-                    this.stageData = stageData;
+                    this.$set('stageData', stageData);
                     switch (this.stageId) {
                         case 'market':
                             break;
                         case 'deploy':
                             if (this.status === 'pending') {
-                                this.setTimeoutGetReleaseStageDetail();
+                                this.pollingReleaseStageDetail();
                             } else if (this.status === 'failed') {
                                 // 改变状态
                                 this.stepsStatus = 'error';
                                 this.failedMessage = stageData.fail_message;
                             } else {
                                 this.stepsStatus = '';
-                                if (this.timer) {
-                                    clearTimeout(this.timer);
-                                }
                             }
                             break;
                         default:
@@ -247,8 +254,8 @@
                 try {
                     const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
                     this.$store.commit('plugin/updateCurRelease', releaseData);
-                    // 获取对应step
-                    this.curStep = this.stpeMap[releaseData.current_stage.stage_id];
+                    // 获取 stage 对应的序号
+                    this.curStep = this.calStageOrder(releaseData.current_stage);
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -307,9 +314,9 @@
                 }
             },
             // 下一步
-            async handlerNext (status) {
-                // 根据当前状态更改
-                if (status !== 'successful') {
+            async handlerNext () {
+                console.log('handlerNext', this);
+                if (!this.isAllowNext) {
                   return;
                 }
                 this.isLoading = true;
@@ -401,6 +408,16 @@
                 this.$router.push({
                     name: 'pluginVersionManager'
                 });
+            },
+
+            calStageOrder (stage) {
+                const defaultOrder = 1;
+                if (!this.curAllStages) return defaultOrder;
+                for (let index = 0; index < this.curAllStages.length; index++) {
+                    const element = this.curAllStages[index];
+                    if (element.stage_id === stage.stage_id) return index + 1;
+                }
+                return defaultOrder;
             }
         }
     };

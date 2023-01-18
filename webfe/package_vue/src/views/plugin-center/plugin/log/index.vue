@@ -1,6 +1,6 @@
 <template lang="html">
   <div
-    :key="curPluginId"
+    :key="pluginId"
     class="right-main"
   >
     <paas-content-loader

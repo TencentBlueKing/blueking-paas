@@ -92,7 +92,7 @@
   </div>
 </template>
 <script>
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin.js';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import _ from 'lodash';
     export default {
         components: {

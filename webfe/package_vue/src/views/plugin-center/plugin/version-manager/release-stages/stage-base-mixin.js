@@ -26,7 +26,7 @@ export default {
       winHeight: 300
     };
   },
-  method: {
+  methods: {
     async nextStage (resolve) {
       await resolve();
     }

@@ -10,7 +10,7 @@
         <bk-button
           theme="primary"
           icon="plus"
-          :disabled="canManageMembers"
+          :disabled="!canManageMembers"
           @click="createMember"
         >
           {{ $t('新增成员') }}

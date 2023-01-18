@@ -130,7 +130,7 @@
             };
         },
         async mounted () {
-            await Promise.all(this.fetchCategoryList(), this.fetchMarketInfo());
+            await Promise.all([this.fetchCategoryList(), this.fetchMarketInfo()]);
         },
         methods: {
             // 获取市场信息

@@ -297,7 +297,6 @@
                     count: 0,
                     limit: 10
                 },
-                isAppOffline: false,
                 curVersion: {
                     // 仓库地址
                     repository: '',

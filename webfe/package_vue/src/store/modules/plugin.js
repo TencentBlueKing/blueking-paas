@@ -212,6 +212,17 @@ export default {
     },
 
     /**
+         * 上传插件logo
+         *
+         * @param {Object} params 请求参数：pdId, pluginId
+         * @param {Object} config ajax配置
+         */
+    uploadPluginLogo ({ commit, state }, { pdId, pluginId, data }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logo/`;
+      return http.put(url, data, config);
+    },
+
+    /**
          * 获取基本信息
          * @param {Object} params 请求参数：pdId, pluginId
          */
@@ -488,11 +499,13 @@ export default {
          * 目前仅蓝鲸插件类型的插件有关联蓝鲸应用
          * @param {Object} params 请求参数：
          */
-    getPluginAppInfo ({ commit, dispatch }, { pdId, pluginId }, config = {}) {
+    async getPluginAppInfo ({ commit, dispatch }, { pdId, pluginId }, config = {}) {
       // plugin 默认为 default
       const moduleId = 'default';
-      dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true});
-      dispatch('getAppFeature', { appCode: pluginId }, {root: true});
+      await Promise.all([
+        dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true}),
+        dispatch('getAppFeature', { appCode: pluginId }, {root: true})
+      ]);
       commit('updateCurAppByCode', { appCode: pluginId, moduleId }, {root: true});
     }
   }

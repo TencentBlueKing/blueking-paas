@@ -20,6 +20,44 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
+                <label class="title-label logo"> {{ $t('应用logo') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);">
+                <div class="logo-uploader item-logn-content">
+                  <div class="preview">
+                    <img :src="curPluginInfo.logo || '/static/images/default_logo.png'">
+                  </div>
+                  <div
+                    v-if="canEditPluginBasicInfo"
+                    class="preview-btn pl20"
+                  >
+                    <template>
+                      <div>
+                        <bk-button
+                          :theme="'default'"
+                          class="upload-btn mt5"
+                        >
+                          {{ $t('更换图片') }}
+                          <input
+                            type="file"
+                            accept="image/jpeg, image/png"
+                            value=""
+                            name="logo"
+                            @change="handlerUploadFile"
+                          >
+                        </bk-button>
+                        <p
+                          class="tip"
+                          style="line-height: 1;"
+                        >
+                          {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
+                        </p>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </bk-form-item>
+              <bk-form-item style="width: 180px;">
                 <label class="title-label"> {{ $t('插件标识') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
@@ -481,12 +519,6 @@
                 // 市场信息只读
                 isMarketInfo: true,
                 formRemovePluginId: '',
-                localeAppInfo: {
-                    name: '',
-                    logo: '',
-                    introduction: '',
-                    contact: []
-                },
                 isUnfold: false,
                 delPluginDialog: {
                     visiable: false,
@@ -523,22 +555,25 @@
             },
             infoHeight () {
                 return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
+            },
+            canEditPluginBasicInfo () {
+                // administrator 的角色id 是 2
+                return this.curPluginInfo.role && [2].indexOf(this.curPluginInfo.role.id) !== -1;
             }
         },
-        created () {
-            this.init();
+        async created () {
+            await this.init();
         },
         methods: {
-            init () {
-                this.getPluginBaseInfo();
-                this.getMarketInfo();
+            async init () {
+                await Promise.all([this.getPluginBaseInfo(), this.getMarketInfo()]);
                 if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
                     this.getPluginAll();
                     this.getAuthorizedUse();
                     this.getProfile();
                 }
                 if (this.pluginFeatureFlags.APP_SECRETS) {
-                    this.store.dispatch('plugin/getPluginAppInfo', { pluginId: this.pluginId, pdId: this.pdId });
+                    await this.$store.dispatch('plugin/getPluginAppInfo', { pluginId: this.pluginId, pdId: this.pdId });
                 }
             },
 
@@ -648,16 +683,14 @@
 
                 data.append('logo', files[0]);
                 const params = {
-                    appCode: this.appCode,
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
                     data: data
                 };
 
                 try {
-                    const res = await this.$store.dispatch('market/uploadAppLogo', params);
-                    this.localeAppInfo.logo = res.logo_url;
+                    await this.$store.dispatch('plugin/uploadPluginLogo', params);
                     this.$emit('current-plugin-info-updated');
-                    this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
-
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('logo上传成功！')
@@ -673,7 +706,6 @@
             // 插件开发
             showEdit (key) {
                 this.isFormEdited[key] = true;
-                this.localeAppInfoNameTemp = this.localeAppInfo.name;
                 if (key === 'contactsInput') {
                     this.$nextTick(() => {
                         this.$refs.contactsInput.$refs.member_selector.handleClick();
@@ -696,7 +728,6 @@
                     this.resetData(ref);
                 }
                 this.isFormEdited[ref] = false;
-                this.localeAppInfo.name = this.localeAppInfoNameTemp;
             },
 
             resetData (ref) {
@@ -791,8 +822,6 @@
             async getProfile () {
                 try {
                     const res = await this.$store.dispatch('plugin/getProfileData', { pluginId: this.pluginId });
-                    this.localeAppInfo.introduction = res.introduction;
-                    this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
                     this.apiGwName = res.api_gw_name;
                 } catch (e) {
                     this.$paasMessage({

@@ -73,7 +73,7 @@
     import paasPluginNav from '@/components/paas-plugin-nav';
     import pluginQuickNav from '@/components/plugin-quick-nav';
     import { bus } from '@/common/bus';
-    import pluginBaseMixin from '@/mixins/plugin-base-mixin.js';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import store from '@/store';
 
     // 当前路由页面不需要指定的min-height
@@ -120,9 +120,6 @@
                     this.errorMessage = '';
                     this.checkPermission();
                 }
-            },
-            '$store.state.plugin.curPluginId' () {
-                this.initNavInfo();
             }
         },
         /**
@@ -203,7 +200,7 @@
                 this.userVisitEnable = false;
                 this.errorMessage = error.detail || this.$t('平台功能异常: 请联系平台负责人检查服务配置');
             });
-            this.initNavInfo();
+            await this.initNavInfo();
         },
         mounted () {
             const HEADER_HEIGHT = 50;
@@ -219,13 +216,11 @@
             document.body.className = '';
         },
         methods: {
-            initNavInfo () {
+            async initNavInfo () {
+              await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pdId });
             },
-            updateBaseInfo () {
-                return this.initNavInfo();
-            },
-            pluginInfoUpdatedCallback () {
-                return this.initNavInfo();
+            async pluginInfoUpdatedCallback () {
+                return await this.initNavInfo();
             },
             // 检查当前路由权限
             checkPermission () {

@@ -135,7 +135,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     latest_release = PluginReleaseVersionSLZ(
         source="all_versions.get_latest_release", help_text="最新的版本", allow_null=True
     )
-    logo = serializers.CharField(source="pd.logo", help_text="插件logo", allow_null=True)
+    logo = serializers.CharField(source="get_logo_url", help_text="插件logo", allow_null=True)
     itsm_detail = ItsmDetailSLZ()
     role = PluginRoleSLZ(required=False)
 
@@ -149,6 +149,14 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     class Meta:
         model = PluginInstance
         exclude = ("pd", "uuid")
+
+
+class PluginInstanceLogoSLZ(serializers.ModelSerializer):
+    logo = serializers.ImageField(write_only=True)
+
+    class Meta(object):
+        model = PluginInstance
+        fields = ["logo"]
 
 
 class PluginMarketInfoSLZ(serializers.ModelSerializer):

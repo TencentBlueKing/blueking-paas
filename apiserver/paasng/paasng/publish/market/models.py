@@ -33,7 +33,7 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.core.storages.s3 import app_logo_storage
+from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.modules.models import Module
 from paasng.publish.market import constant
 from paasng.utils.models import OwnerTimestampedModel, ProcessedImageField, TimestampedModel, WithOwnerManager

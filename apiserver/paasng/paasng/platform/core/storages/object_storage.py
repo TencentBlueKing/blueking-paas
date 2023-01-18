@@ -16,25 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework.permissions import BasePermission
+from django.conf import settings
+from django.utils.functional import LazyObject
+
+from paasng.utils.blobstore import get_storage_by_bucket
 
 
-class IsPluginCreator(BasePermission):
-    """判断是否为插件创建者"""
+class LazyStorage(LazyObject):
+    def __init__(self, bucket: str):
+        super().__init__()
+        self.__dict__["__bucket__"] = bucket
 
-    def has_permission(self, request, view):
-        return True
-
-    def has_object_permission(self, request, view, obj):
-        return obj.creator == request.user.pk
+    def _setup(self):
+        self._wrapped = get_storage_by_bucket(self.__bucket__)
 
 
-class PluginCenterFeaturePermission(BasePermission):
-    """是否允许用户访问插件开发者中心"""
-
-    def has_permission(self, request, view):
-        # 原则上不希望引用开发者中心的资源
-        from paasng.accounts.constants import AccountFeatureFlag as AFF
-        from paasng.accounts.models import AccountFeatureFlag
-
-        return AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_PLUGIN_CENTER)
+service_logo_storage = LazyStorage(bucket=settings.SERVICE_LOGO_BUCKET)
+app_logo_storage = LazyStorage(bucket=settings.APP_LOGO_BUCKET)
+plugin_logo_storage = LazyStorage(bucket=settings.PLUGIN_LOGO_BUCKET)

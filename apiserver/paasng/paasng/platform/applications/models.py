@@ -34,7 +34,7 @@ from paasng.accessories.iam.helpers import fetch_role_members
 from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
 from paasng.engine.models import Deployment, EngineApp
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
-from paasng.platform.core.storages.s3 import app_logo_storage
+from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.region.models import get_region
 from paasng.utils.basic import get_username_by_bkpaas_user_id

@@ -31,7 +31,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
@@ -59,7 +59,7 @@ from paasng.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
 )
-from paasng.pluginscenter.permissions import IsPluginCreator
+from paasng.pluginscenter.permissions import IsPluginCreator, PluginCenterFeaturePermission
 from paasng.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
 from paasng.pluginscenter.sourcectl import (
     build_master_placeholder,
@@ -77,17 +77,6 @@ from paasng.utils.i18n import to_translated_field
 from paasng.utils.views import permission_classes as _permission_classes
 
 logger = logging.getLogger(__name__)
-
-
-class PluginCenterFeaturePermission(BasePermission):
-    """是否允许用户访问插件开发者中心"""
-
-    def has_permission(self, request, view):
-        # 原则上不希望引用开发者中心的资源
-        from paasng.accounts.constants import AccountFeatureFlag as AFF
-        from paasng.accounts.models import AccountFeatureFlag
-
-        return AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_PLUGIN_CENTER)
 
 
 class SchemaViewSet(ViewSet):
@@ -273,6 +262,33 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.BASIC_INFO,
+        )
+        return Response(data=self.get_serializer(plugin).data)
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.PluginInstanceLogoSLZ)
+    @_permission_classes(
+        [
+            IsAuthenticated,
+            PluginCenterFeaturePermission,
+            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
+        ]
+    )
+    def update_logo(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        slz = serializers.PluginInstanceLogoSLZ(data=request.data, instance=plugin)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+        if pd.basic_info_definition.api.update:
+            update_instance(pd, plugin, operator=request.user.pk)
+
+        # 操作记录: 修改 logo
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.LOGO,
         )
         return Response(data=self.get_serializer(plugin).data)
 

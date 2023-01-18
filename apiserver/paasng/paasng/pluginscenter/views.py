@@ -468,6 +468,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         return Response(data=self.get_serializer(release).data)
 
     @atomic
+    @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def back_to_previous_stage(self, request, pd_id, plugin_id, release_id):
         """返回上一发布步骤, 重置当前步骤和上一步骤的执行状态, 并重新执行上一步。"""
         plugin = self.get_plugin_instance()
@@ -685,10 +686,14 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
 
     @swagger_auto_schema(responses={201: openapi_empty_schema}, request_body=serializers.PluginMemberSLZ(many=True))
     def create(self, request, pd_id, plugin_id):
+        """新增插件成员"""
         plugin = self.get_plugin_instance()
         slz = self.get_serializer(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+
+        cur_users = {member.username for member in members_api.fetch_plugin_members(plugin)}
+        to_add_users = set()
 
         grouped: Dict[constants.PluginRole, List[str]] = {
             constants.PluginRole.ADMINISTRATOR: [],
@@ -696,6 +701,11 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
         }
         for item in data:
             grouped[item["role"]["id"]].append(item["username"])
+            to_add_users.add(item["username"])
+
+        # 检测用户是否已存在, 存在则报错
+        if conflict_users := cur_users & to_add_users:
+            raise error_codes.MEMBERSHIP_ADD_FAILED.f(_("用户 {} 已存在").format(sorted(conflict_users)))
 
         repo_member_maintainer = get_plugin_repo_member_maintainer(plugin)
         if usernames := grouped[constants.PluginRole.DEVELOPER]:
@@ -711,6 +721,37 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
             members_api.delete_role_members(plugin, role=constants.PluginRole.DEVELOPER, usernames=usernames)
         sync_members(pd=plugin.pd, instance=plugin)
         return Response(status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(responses={201: openapi_empty_schema}, request_body=serializers.PluginRoleSLZ)
+    def update_role(self, request, pd_id, plugin_id, username: str):
+        """更换角色"""
+        plugin = self.get_plugin_instance()
+        slz = serializers.PluginRoleSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        to_role_id = constants.PluginRole(data["id"])
+        user_roles = members_api.fetch_user_roles(plugin, username)
+        if len(user_roles) == 0:
+            raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(_("插件成员 {} 不存在".format(username)))
+
+        if to_role_id != constants.PluginRole.ADMINISTRATOR:
+            self._check_admin_count(plugin, [username])
+
+        # 由于权限中心的特性, 用户可以同时在多个用户组.
+        # 因此更换角色的流程分为 2 步:
+        # 1. 添加角色至用户组
+        repo_member_maintainer = get_plugin_repo_member_maintainer(plugin)
+        repo_member_maintainer.add_member(username, to_role_id)
+        members_api.add_role_members(plugin, role=to_role_id, usernames=[username])
+
+        # 2. 删除角色的其他用户组
+        for role_id in user_roles:
+            if role_id == to_role_id:
+                continue
+            members_api.delete_role_members(plugin, role=role_id, usernames=[username])
+        sync_members(pd=plugin.pd, instance=plugin)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(responses={204: openapi_empty_schema})
     def destroy(self, request, pd_id, plugin_id, username: str):

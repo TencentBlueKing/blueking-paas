@@ -88,6 +88,15 @@ class DeployAPIStage(BaseStageController):
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
+        if self.stage.status == constants.PluginReleaseStatus.INITIAL:
+            return {
+                **basic_info,
+                "detail": {
+                    "steps": [],
+                    "finished": False,
+                    "logs": [],
+                },
+            }
         # TODO: 在异步任务轮询查询部署结果
         check_deploy_result(self.pd, self.plugin, self.release)
         self.stage.refresh_from_db()

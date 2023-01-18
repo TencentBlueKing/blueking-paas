@@ -123,7 +123,7 @@ urlpatterns = [
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/<str:username>/",
-        views.PluginMembersViewSet.as_view({"delete": "destroy"}),
+        views.PluginMembersViewSet.as_view({"delete": "destroy", "put": "update_role"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/configurations/",

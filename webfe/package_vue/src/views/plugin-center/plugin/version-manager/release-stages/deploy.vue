@@ -99,23 +99,26 @@
         },
         data: function () {
           return {
-            winHeight: 300
+            winHeight: 300,
+            logs: [],
+            steps: [],
+            status: '',
           };
+        },
+        watch: {
+            stageData: {
+                handler () {
+                    this.logs = this.stageData.detail.logs;
+                    this.steps = this.modifyDeployStepsData(this.stageData.detail.steps);
+                    this.status = this.stageData.status;
+                },
+                deep: true,
+                immediate: true 
+            }
         },
         computed: {
             releaseId () {
                 return this.$route.query.release_id;
-            },
-            // 部署步骤
-            steps () {
-                return this.modifyDeployStepsData(this.stageData.detail.steps);
-            },
-            // 部署日志
-            logs () {
-                return this.stageData.logs;
-            },
-            status () {
-              return this.stageData.status;
             }
         },
         methods: {

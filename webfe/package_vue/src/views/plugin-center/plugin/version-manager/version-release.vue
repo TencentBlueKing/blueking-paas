@@ -169,7 +169,8 @@
                     this.isFirstStage = this.calStageOrder(this.stageData) === 1;
                     this.isFinalStage = this.curAllStages.length === this.calStageOrder(this.stageData);
                 },
-                deep: true
+                deep: true,
+                immediate: true 
             }
         },
         created () {

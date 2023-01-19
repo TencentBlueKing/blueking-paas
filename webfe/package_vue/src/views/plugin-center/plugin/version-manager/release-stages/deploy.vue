@@ -109,7 +109,7 @@
             stageData: {
                 handler () {
                     this.logs = this.stageData.detail.logs;
-                    this.steps = this.modifyDeployStepsData(this.stageData.detail.steps);
+                    this.steps.splice(0, this.steps.length, ...this.modifyDeployStepsData(this.stageData.detail.steps));
                     this.status = this.stageData.status;
                 },
                 deep: true,

@@ -111,7 +111,9 @@
                 isLoading: true,
                 stageData: {},
                 failedMessage: '',
-                stepsStatus: ''
+                stepsStatus: '',
+                isFirstStage: false,
+                isFinalStage: false
             };
         },
         computed: {
@@ -148,12 +150,6 @@
             isSingleStage () {
               return this.curAllStages.length === 1;
             },
-            isFirstStage () {
-                return this.calStageOrder(this.stageData) === 1;
-            },
-            isFinalStage () {
-                return this.curAllStages.length === this.calStageOrder(this.stageData);
-            },
             isAllowPrev () {
               let isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
               return !isRunningDeploy;
@@ -167,6 +163,13 @@
                 handler () {
                     this.getReleaseStageDetail();
                 }
+            },
+            stageData: {
+                handler () {
+                    this.isFirstStage = this.calStageOrder(this.stageData) === 1;
+                    this.isFinalStage = this.curAllStages.length === this.calStageOrder(this.stageData);
+                },
+                deep: true
             }
         },
         created () {
@@ -208,7 +211,7 @@
                         return;
                     }
                     const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
-                    this.$set('stageData', stageData);
+                    this.stageData = stageData;
                     switch (this.stageId) {
                         case 'market':
                             break;

@@ -112,7 +112,7 @@ func main() {
 
 	initIngressPlugins()
 
-	rootCtx := context.Background()
+	setupCtx := context.Background()
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -123,13 +123,13 @@ func main() {
 
 	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf)
 	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
-		SetupWithManager(rootCtx, mgr, bkappMgrOpts); err != nil {
+		SetupWithManager(setupCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
 		os.Exit(1)
 	}
 	dgmappingMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindDomainGroupMapping, projConf)
 	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).
-		SetupWithManager(rootCtx, mgr, dgmappingMgrOpts); err != nil {
+		SetupWithManager(setupCtx, mgr, dgmappingMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}

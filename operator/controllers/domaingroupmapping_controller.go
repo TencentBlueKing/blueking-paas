@@ -280,7 +280,8 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(
 			FieldSelector: fields.OneTermEqualSelector(BkAppIndexField, bkapp.GetName()),
 			Namespace:     bkapp.GetNamespace(),
 		}
-		if err := r.client.List(ctx, dgmappings, listOps); err != nil {
+		// 不复用 ctx 讨论：https://github.com/TencentBlueKing/blueking-paas/pull/154/files#r1080770867
+		if err := r.client.List(context.TODO(), dgmappings, listOps); err != nil {
 			return []reconcile.Request{}
 		}
 

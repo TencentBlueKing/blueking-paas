@@ -43,7 +43,12 @@ from paas_wl.resources.kube_res.base import (
 from paas_wl.resources.kube_res.envs import decode_envs, encode_envs
 from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations
 from paas_wl.utils.constants import CommandType
-from paas_wl.utils.kubestatus import check_pod_health_status, parse_pod
+from paas_wl.utils.kubestatus import (
+    check_pod_health_status,
+    get_container_fail_message,
+    parse_container_status,
+    parse_pod,
+)
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 from paas_wl.workloads.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
 from paas_wl.workloads.resource_templates.utils import AddonManager
@@ -80,6 +85,14 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
             )
             start_time = None
 
+        mc_exit_code = None
+        mc_fail_message = None
+        if mc_status := self._get_main_container_status(kube_data):
+            main_container_status = parse_container_status(mc_status)
+            mc_fail_message = get_container_fail_message(main_container_status)
+            if main_container_status.state.terminated:
+                mc_exit_code = main_container_status.state.terminated.exit_code
+
         return Command(
             # Pod 描述性信息
             app=app,
@@ -105,17 +118,29 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
             start_time=start_time,
             status=status.phase,
             status_message=health_status.message,
+            main_container_exit_code=mc_exit_code,
+            main_container_fail_message=mc_fail_message,
         )
 
     @staticmethod
     def _get_main_container(pod_info: ResourceInstance) -> ResourceField:
-        """获取 Pod 中声明的主容器信息.
-        Note: 根据约定, 与 Pod 命名一致的容器为主容器"""
-        pod_name = pod_info.metadata.name
+        """获取 Pod 中声明的主容器信息."""
+        # Note: 根据约定, 与 Pod 命名一致的容器为主容器
+        main_container_name = pod_info.metadata.name
         for c in pod_info.spec.containers:
-            if c.name == pod_name:
+            if c.name == main_container_name:
                 return c
         raise RuntimeError("container not found.")
+
+    @staticmethod
+    def _get_main_container_status(pod_info: ResourceInstance) -> Optional[ResourceField]:
+        """获取 Pod 中声明的主容器的状态"""
+        # Note: 根据约定, 与 Pod 命名一致的容器为主容器
+        main_container_name = pod_info.metadata.name
+        for c in pod_info.status.get("containerStatuses", []):
+            if c.name == main_container_name:
+                return c
+        return None
 
 
 class CommandSerializer(AppEntitySerializer['Command']):
@@ -186,6 +211,8 @@ class Command(AppEntity):
     start_time: Optional[datetime.datetime]
     status: Literal["Pending", "Running", "Succeeded", "Failed", "Unknown"] = "Unknown"
     status_message: Optional[str] = None
+    main_container_exit_code: Optional[int] = None
+    main_container_fail_message: Optional[str] = None
 
     class Meta:
         kres_class = kres.KPod

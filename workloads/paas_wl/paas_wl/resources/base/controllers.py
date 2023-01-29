@@ -203,7 +203,8 @@ class PodScheduleHandler(ResourceHandlerBase):
 
         :param namespace: 应用命名空间
         :param pod_name: Pod name
-        :raises: PodNotSucceededError when Pod does not succeed in given timeout seconds
+        :raises: PodNotSucceededAbsentError when Pod is not found
+        :raises: PodNotSucceededTimeoutError when Pod does not succeed in given timeout seconds
         """
         time_started = time.time()
         while timeout is None or time.time() - time_started < timeout:
@@ -453,12 +454,47 @@ class CommandHandler(PodScheduleHandler):
         return True
 
     def wait_for_succeeded(self, command: Command, timeout: Optional[float] = None, check_period: float = 0.5):
-        return self._wait_pod_succeeded(
-            namespace=command.app.namespace,
-            pod_name=command.name,
-            timeout=timeout,
-            check_period=check_period,
-        )
+        """Calling this function will block until the main container exited
+
+        :raises: PodNotSucceededAbsentError when Pod is not found
+        :raises: PodNotSucceededTimeoutError when Pod does not succeed in given timeout seconds
+        """
+        namespace = command.app.namespace
+        pod_name = command.name
+        time_started = time.time()
+        while timeout is None or time.time() - time_started < timeout:
+            try:
+                _, health_status = self._get_pod_status(namespace, pod_name)
+            except ResourceMissing as e:
+                raise PodNotSucceededAbsentError(f"Pod<{namespace}/{pod_name}> not found") from e
+
+            # command 的 restart policy == Never, 仅所有 Pod 正常结束时才会是 Healthy
+            if health_status.status == HealthStatusType.HEALTHY:
+                return True
+            elif health_status.status == HealthStatusType.UNHEALTHY:
+                exit_code = extract_exit_code(health_status) or -1
+                raise PodNotSucceededError(
+                    f"Pod<{namespace}/{pod_name}> ends unsuccessfully",
+                    reason=health_status.reason,
+                    message=health_status.message,
+                    exit_code=exit_code,
+                )
+            else:
+                command_in_k8s = command_kmodel.get(command.app, command.name)
+                if command_in_k8s.main_container_exit_code is not None:
+                    # 主容器正常退出, 视为成功
+                    if command_in_k8s.main_container_exit_code == 0:
+                        return True
+                    # 主容器执行失败, 同样视为失败
+                    raise PodNotSucceededError(
+                        f"Pod<{namespace}/{pod_name}> ends unsuccessfully",
+                        reason="Unknown",
+                        message=command_in_k8s.main_container_fail_message or "Unknown",
+                        exit_code=command_in_k8s.main_container_exit_code,
+                    )
+                time.sleep(check_period)
+                continue
+        raise PodNotSucceededTimeoutError(f"Pod<{namespace}/{pod_name}> didn't succeeded in {timeout} seconds.")
 
     def wait_for_logs_readiness(self, command: Command, timeout: int):
         """Waits for command Pod to become ready for retrieving logs

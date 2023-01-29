@@ -87,6 +87,7 @@
 </template>
 <script>
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import user from '@/components/user';
     import { quillEditor } from 'vue-quill-editor';
     import 'quill/dist/quill.core.css';
@@ -99,6 +100,7 @@
             quillEditor,
             user
         },
+        mixins: [pluginBaseMixin],
         data () {
             return {
               form: {
@@ -144,14 +146,6 @@
                   ]
               }
             };
-        },
-        computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            }
         },
         mounted () {
             this.fetchMarketInfo();
@@ -248,14 +242,6 @@
         margin-bottom: 20px;
         margin-left: 100px;
     }
-    .edit-form-item{
-        // height: 300px;
-        .editor{
-            height: 100%;
-            max-height: 898px;
-            padding-bottom: 20px;
-        }
-    }
 
     .app-container {
         max-width: calc(100% - 50px) !important;
@@ -266,7 +252,12 @@
     .visible-range .editor .ql-snow .ql-formats {
         line-height: 24px;
     }
-    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content {
-        height: calc(100vh - 365px);
+    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
+        height: calc(100vh - 350px);
+        display: flex;
+        flex-direction: column;
+    }
+    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor .ql-container {
+        flex: 1;
     }
 </style>

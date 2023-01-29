@@ -14,6 +14,7 @@ Use Bearer method for authentication. Please apply to the administrator for spec
 | order_by              |  string   | no | Sorting, default is "encrypted," and supports "encrypted,""code" and "encrypted code"                |
 | has_deployed          |  boolean  |no   | Filter by "has plug-in been deployed" and do not filter by default                                    |
 | distributor_code_name | string   | no | Filter by "authorized user code," such as "bksops," which is not filtered by default                    |
+| tag                   | integer  | 否   |  Filter by plugin tag and do not filter by default                    |
 | limit                 |  integer  |no   | Paging parameter, total, default is 100                                             |
 | offset                |  integer  | no       | Paging parameter, deviation number, default is 0                                             |
 
@@ -34,7 +35,12 @@ Use Bearer method for authentication. Please apply to the administrator for spec
       "has_deployed": false,
       "creator": "username",
       "created": "2021-08-17 19:35:25",
-      "updated": "2021-08-17 19:35:25"
+      "updated": "2021-08-17 19:35:25",
+      "tag_info": {
+        "id": 1,
+        "name": "tag-1",
+        "code_name": "tag1"
+      }     
     }
   ]
 }

@@ -10,14 +10,17 @@ resources:
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-- patches/webhook_in_bkapps.yaml
+# NOTE: conversion webhook work for convert k8s resource to another version，such as v1alpha1 -> v2beta2
+# https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#customresourceconversion-v1-apiextensions-k8s-io
+#- patches/webhook_in_bkapps.yaml
 #- patches/webhook_in_domaingroupmappings.yaml
 #- patches/webhook_in_projectconfigs.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
-- patches/cainjection_in_bkapps.yaml
+# NOTE: ca inject here is only work for conversion webhook，not affect the working of the Validating & Mutating webhook
+#- patches/cainjection_in_bkapps.yaml
 #- patches/cainjection_in_domaingroupmappings.yaml
 #- patches/cainjection_in_projectconfigs.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch

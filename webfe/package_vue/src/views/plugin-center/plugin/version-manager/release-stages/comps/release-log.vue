@@ -62,7 +62,7 @@
 <style scoped lang="scss">
     .release-log-warp{
         padding: 17px 30px;
-        width: calc(100% - 230px);
+        flex: 1;
         height: calc(100vh - 272px);
         // height: 720px;
         background: #313238;

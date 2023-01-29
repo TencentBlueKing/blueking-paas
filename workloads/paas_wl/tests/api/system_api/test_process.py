@@ -28,6 +28,7 @@ pytestmark = pytest.mark.django_db
 
 class TestProcessViewSet:
     @pytest.mark.mock_get_structured_app
+    @pytest.mark.auto_create_ns
     def test_list_processes_statuses(self, api_client, scale_url, create_release):
         assert create_release().status_code == 201
         response = api_client.get(scale_url)

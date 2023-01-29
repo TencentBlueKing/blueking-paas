@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
+from django.conf import settings
 
 
 class PlatformFeatureFlag(FeatureFlag):
@@ -31,4 +32,7 @@ class PlatformFeatureFlag(FeatureFlag):
     # 只有打开平台级别的 ENABLE_WEB_CONSOLE, 前端才会线上 "打开控制台" 的入口
     ENABLE_WEB_CONSOLE = FeatureFlagField(label="开放 WebConsole", default=True)
     SUPPORT_HTTPS = FeatureFlagField(label="默认所有集群均支持 HTTPS", default=True)
-    BK_PLUGIN_TYPED_APPLICATION = FeatureFlagField(label='创建与使用“蓝鲸插件”类型应用', default=False)
+    # 是否允许创建插件
+    BK_PLUGIN_TYPED_APPLICATION = FeatureFlagField(
+        label='创建与使用“蓝鲸插件”类型应用', default=settings.IS_ALLOW_CREATE_BK_PLUGIN_APP
+    )

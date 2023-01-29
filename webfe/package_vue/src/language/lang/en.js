@@ -44,7 +44,7 @@ export default {
   '管理员': 'Administrator',
   '开发者': 'Developers',
   '运营者': 'Operator',
-  '应用开发': 'App Development',
+  '应用开发': 'Application',
   '上线审核': 'Online review',
   '应用推广': 'App Markets',
   '成员管理': 'Member',
@@ -1925,7 +1925,7 @@ export default {
   '目标环境的部分进程的副本数量与当前模型不一致，将使用当前模型中的数据进行覆盖目标环境。': 'The number of copies of some processes in the target environment is inconsistent with the current model, and the data in the current model will be used to overwrite the target environment.',
   '副本数将发生以下变化：': 'The number of replicas will change as follows:',
   '（当前模型）': '(current model)',
-  '插件开发': 'Plugin Development',
+  '插件开发': 'Plugin Center',
   '我的插件': 'My Plugins',
   '创建插件': 'Create plugin',
   '插件标识': 'Plugin ID',
@@ -1938,7 +1938,7 @@ export default {
   '输入插件标识、插件名称，按Enter搜索': 'Enter the plug-in ID and name, and press Enter to search',
   '确定删除插件': 'OK to delete plugin',
   '初始化模板': 'Init template',
-  '将自动创建该开源仓库，并将模板代码初始化到仓库中': 'The open source repository will be created automatically and the template code will be initialized to the repository',
+  '将自动创建该开源仓库，将模板代码初始化到仓库中，并将创建者初始化为仓库管理员': 'The open source repository will be created automatically, the template code will be initialised into the repository and the creator will be initialised as the repository administrator',
   '由小写字母、数字、连字符(-)组成，长度小于 16 个字符': 'It consists of lowercase letters, numbers, hyphens (-), and is less than 16 characters in length',
   '插件概览': 'Plugin overview',
   '配置管理': 'Configuration management',
@@ -2003,5 +2003,6 @@ export default {
   '创建审批失败': 'Failed to create approval',
   '开发中': 'Developing',
   '已发布': 'Published',
-  '更多信息': 'More information'
+  '更多信息': 'More information',
+  '下一步': 'Next'
 };

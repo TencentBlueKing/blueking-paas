@@ -90,6 +90,7 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
+    complete_time = serializers.ReadOnlyField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -112,6 +113,7 @@ class ItsmDetailSLZ(serializers.Serializer):
 class PluginInstanceSLZ(serializers.ModelSerializer):
     pd_id = serializers.CharField(source="pd.identifier", help_text="插件类型标识")
     pd_name = serializers.CharField(source="pd.name", help_text="插件类型名称")
+    pd_administrator = serializers.JSONField(source="pd.administrator", help_text="插件管理员")
     ongoing_release = PluginReleaseVersionSLZ(
         source="all_versions.get_ongoing_release", help_text="当前正在发布的版本", allow_null=True
     )

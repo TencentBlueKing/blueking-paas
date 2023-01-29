@@ -63,7 +63,7 @@ class PluginStatus(str, StructuredEnum):
     DEVELOPING = EnumField("developing", label="开发中")
     RELEASING = EnumField("releasing", label="发布中")
     RELEASED = EnumField("released", label="已发布")
-    # 后台轮询下架进度, 进入「下架」相关的状态后, 插件不可进行任何操作
+    # 后台轮询下架进度, 进入「下架」相关的状态后, 插件还可以进行相关操作
     ARCHIVED = EnumField("archived", label="已下架")
 
     @classmethod

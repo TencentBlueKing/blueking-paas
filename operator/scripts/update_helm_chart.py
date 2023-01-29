@@ -18,7 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import argparse
 import difflib
+import os
 import shutil
+from collections import namedtuple
 from os import path, walk
 from pathlib import Path
 from textwrap import dedent, indent
@@ -33,28 +35,30 @@ def wrap_multiline_str(space_num: int, m_string: str) -> str:
     return indent(dedent(m_string), ' ' * space_num)
 
 
-# 新 chart 中的模板文件是平铺的，但是到实际的 chart 中是分目录的，
-# 这里即文件的目标目录 & 文件的映射关系，后续可按照需求添加
+# 目标文件 与 原始文件集合的映射关系，如果存在多个原始文件，则进行合并
 filepath_conf = {
-    '_helpers.tpl': '_helpers.tpl',
+    '_helpers.tpl': ['_helpers.tpl'],
     # crd
-    'bkapp-crd.yaml': 'crds/paas.bk.tencent.com_bkapps.yaml',
-    'domaingroupmapping-crd.yaml': 'crds/paas.bk.tencent.com_domaingroupmappings.yaml',
-    'projectconfig-crd.yaml': 'crds/paas.bk.tencent.com_projectconfigs.yaml',
+    'crds/paas.bk.tencent.com_bkapps.yaml': ['bkapp-crd.yaml'],
+    'crds/paas.bk.tencent.com_domaingroupmappings.yaml': ['domaingroupmapping-crd.yaml'],
+    'crds/paas.bk.tencent.com_projectconfigs.yaml': ['projectconfig-crd.yaml'],
     # controller
-    'deployment.yaml': 'controller/deployment.yaml',
-    'manager-config.yaml': 'controller/config.yaml',
-    'metrics-service.yaml': 'controller/service.yaml',
-    'leader-election-rbac.yaml': 'controller/leader-election-rbac.yaml',
-    'manager-rbac.yaml': 'controller/manager-rbac.yaml',
-    'metrics-reader-rbac.yaml': 'controller/metrics-reader-rbac.yaml',
-    'proxy-rbac.yaml': 'controller/proxy-rbac.yaml',
+    'controller/deployment.yaml': ['deployment.yaml'],
+    'controller/config.yaml': ['manager-config.yaml'],
+    'controller/service.yaml': ['metrics-service.yaml'],
+    'controller/leader-election-rbac.yaml': ['leader-election-rbac.yaml'],
+    'controller/manager-rbac.yaml': ['manager-rbac.yaml'],
+    'controller/metrics-reader-rbac.yaml': ['metrics-reader-rbac.yaml'],
+    'controller/proxy-rbac.yaml': ['proxy-rbac.yaml'],
     # webhooks
-    'selfsigned-issuer.yaml': 'webhooks/selfsigned-issuer.yaml',
-    'serving-cert.yaml': 'webhooks/serving-cert.yaml',
-    'mutating-webhook-configuration.yaml': 'webhooks/mutating-webhook-configuration.yaml',
-    'validating-webhook-configuration.yaml': 'webhooks/validating-webhook-configuration.yaml',
-    'webhook-service.yaml': 'webhooks/webhook-service.yaml',
+    'webhooks/selfsigned-issuer.yaml': ['selfsigned-issuer.yaml'],
+    'webhooks/serving-cert.yaml': ['serving-cert.yaml'],
+    'webhooks/webhook-configuration.yaml': [
+        'webhook-cert-secret.yaml',
+        'mutating-webhook-configuration.yaml',
+        'validating-webhook-configuration.yaml',
+    ],
+    'webhooks/webhook-service.yaml': ['webhook-service.yaml'],
 }
 
 # 格式：文件路径: [(src_str1, dst_str1), (src_str2, dst_str2)]
@@ -65,15 +69,15 @@ content_patch_conf = {
             wrap_multiline_str(
                 8,
                 """
-        image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
-            """,
+                image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
+                """,
             ),
             wrap_multiline_str(
                 8,
                 """
-        image: {{ include "bkpaas-app-operator.proxyImage" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-            """,
+                image: {{ include "bkpaas-app-operator.proxyImage" . }}
+                imagePullPolicy: {{ .Values.image.pullPolicy }}
+                """,
             ),
         ),
         # 替换 operator 镜像
@@ -81,15 +85,15 @@ content_patch_conf = {
             wrap_multiline_str(
                 8,
                 """
-        image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag | default .Chart.AppVersion }}
-            """,
+                image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag | default .Chart.AppVersion }}
+                """,
             ),
             wrap_multiline_str(
                 8,
                 """
-        image: {{ include "bkpaas-app-operator.image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-            """,
+                image: {{ include "bkpaas-app-operator.image" . }}
+                imagePullPolicy: {{ .Values.image.pullPolicy }}
+                """,
             ),
         ),
         # 替换 rbac-proxy resources 为固定值
@@ -97,20 +101,20 @@ content_patch_conf = {
             wrap_multiline_str(
                 8,
                 """
-        resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent 10 }}
-            """,
+                resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent 10 }}
+                """,
             ),
             wrap_multiline_str(
                 8,
                 """
-        resources:
-          limits:
-            cpu: 500m
-            memory: 512Mi
-          requests:
-            cpu: 5m
-            memory: 64Mi
-            """,
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 512Mi
+                  requests:
+                    cpu: 5m
+                    memory: 64Mi
+                """,
             ),
         ),
         # 替换 operator 资源配额
@@ -123,18 +127,18 @@ content_patch_conf = {
             wrap_multiline_str(
                 6,
                 """
-      imagePullSecrets:
-      - name: {{ include "bkpaas-app-operator.fullname" . }}-docker-registry
-            """,
+                imagePullSecrets:
+                - name: {{ include "bkpaas-app-operator.fullname" . }}-docker-registry
+                """,
             ),
             wrap_multiline_str(
                 6,
                 """
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-            """,
+                {{- with .Values.imagePullSecrets }}
+                imagePullSecrets:
+                  {{- toYaml . | nindent 8 }}
+                {{- end }}
+                """,
             ),
         ),
         # 替换副本数量引用
@@ -142,6 +146,27 @@ content_patch_conf = {
             '.Values.controllerManager.replicas',
             '.Values.replicaCount',
         ),
+        # webhook secret 添加前缀
+        (
+            'secretName: webhook-server-cert',
+            'secretName: bkpaas-webhook-server-cert',
+        ),
+    ],
+    'serving-cert.yaml': [
+        # webhook secret 添加前缀
+        (
+            'secretName: webhook-server-cert',
+            'secretName: bkpaas-webhook-server-cert',
+        ),
+        # 移除 fullname 渲染
+        (
+            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc',
+            'bkpaas-app-operator-webhook-service.{{ .Release.Namespace }}.svc'
+        ),
+        (
+            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.{{ .Values.kubernetesClusterDomain }}',
+            'bkpaas-app-operator-webhook-service.{{ .Release.Namespace }}.svc.{{ .Values.kubernetesClusterDomain }}'
+        )
     ],
     'manager-config.yaml': [
         ('.Values.managerConfig.controllerManagerConfigYaml', '.Values.controllerConfig'),
@@ -150,22 +175,22 @@ content_patch_conf = {
             wrap_multiline_str(
                 4,
                 """
-      ingressPluginConfig:
-        accessControlConfig:
-          redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
-            """,
+                ingressPluginConfig:
+                  accessControlConfig:
+                    redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
+                """,
             ),
             wrap_multiline_str(
                 4,
                 """
-      {{ if .Values.accessControl.enabled -}}
-      ingressPluginConfig:
-        accessControlConfig:
-          redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
-      {{- else -}}
-      ingressPluginConfig: {}
-      {{- end }}
-            """,
+                {{ if .Values.accessControl.enabled -}}
+                ingressPluginConfig:
+                  accessControlConfig:
+                    redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
+                {{- else -}}
+                ingressPluginConfig: {}
+                {{- end }}
+                """,
             ),
         ),
         (
@@ -174,10 +199,103 @@ content_patch_conf = {
             '.Values.platformConfig',
         ),
     ],
+    'validating-webhook-configuration.yaml': [
+        (
+            wrap_multiline_str(
+                2,
+                """
+                annotations:
+                  cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
+                """,
+            ),
+            wrap_multiline_str(
+                2,
+                """
+                {{- if .Values.cert.managerEnabled }}
+                annotations:
+                  cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
+                {{- end }}
+                """,
+            ),
+        ),
+        (
+            wrap_multiline_str(
+                2,
+                """
+                clientConfig:
+                """,
+            ),
+            wrap_multiline_str(
+                2,
+                """
+                clientConfig:
+                  {{- if not .Values.cert.managerEnabled }}
+                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" $ca) }}
+                  {{- end }}
+                """,
+            ),
+        ),
+        (
+            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
+            'bkpaas-app-operator-webhook-service'
+        )
+    ],
+    'mutating-webhook-configuration.yaml': [
+        (
+            wrap_multiline_str(
+                2,
+                """
+                annotations:
+                  cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
+                """,
+            ),
+            wrap_multiline_str(
+                2,
+                """
+                {{- if .Values.cert.managerEnabled }}
+                annotations:
+                  cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "bkpaas-app-operator.fullname" . }}-serving-cert
+                {{- end }}
+                """,
+            ),
+        ),
+        (
+            wrap_multiline_str(
+                2,
+                """
+                clientConfig:
+                """,
+            ),
+            wrap_multiline_str(
+                2,
+                """
+                clientConfig:
+                  {{- if not .Values.cert.managerEnabled }}
+                  caBundle: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" $ca) }}
+                  {{- end }}
+                """,
+            ),
+        ),
+        (
+            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
+            'bkpaas-app-operator-webhook-service'
+        )
+    ],
+    'webhook-service.yaml': [
+        (
+            '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
+            'bkpaas-app-operator-webhook-service'
+        )
+    ]
 }
 
-content_append_conf = {
-    '_helpers.tpl': """
+# 对模板内容的包装，front 即需要添加到文件头的内容，back 即文件尾需要添加的内容
+WrapContent = namedtuple('WrapContent', 'front, back')
+
+content_wrap_conf = {
+    '_helpers.tpl': WrapContent(
+        '',
+        """
 {{/*
 Image Tag
 */}}
@@ -191,11 +309,68 @@ Proxy Image Tag
 {{- define "bkpaas-app-operator.proxyImage" -}}
 {{ include "common.images.image" (dict "imageRoot" .Values.proxyImage "global" .Values.global) }}
 {{- end -}}
-"""
+
+{{/*
+Webhook Cert
+*/}}
+{{- define "bkpaas-app-operator.webhookCert" -}}
+{{- if .cert.autoGenerate }}
+{{- .genCert.Cert | b64enc | quote }}
+{{- else }}
+{{- .cert.webhookCert | required "cert.webhookCert is required" }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Webhook Key
+*/}}
+{{- define "bkpaas-app-operator.webhookKey" -}}
+{{- if .cert.autoGenerate }}
+{{- .genCert.Key | b64enc | quote }}
+{{- else }}
+{{- .cert.webhookKey | required "cert.webhookKey is required" }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Webhook CaBundle
+*/}}
+{{- define "bkpaas-app-operator.webhookCaBundle" -}}
+{{- if .cert.autoGenerate }}
+{{- .genCa.Cert | b64enc | quote }}
+{{- else }}
+{{- .cert.webhookCaBundle | required "cert.webhookCaBundle is required" }}
+{{- end }}
+{{- end -}}
+""",
+    ),
+    'selfsigned-issuer.yaml': WrapContent('{{- if .Values.cert.managerEnabled }}\n', '{{- end }}\n'),
+    'serving-cert.yaml': WrapContent('{{- if .Values.cert.managerEnabled }}\n', '{{- end }}\n'),
+    'webhook-cert-secret.yaml': WrapContent(
+        '',
+        """
+{{- $dnsNames := list ( printf "bkpaas-app-operator-webhook-service.%s.svc" .Release.Namespace ) ( printf "bkpaas-app-operator-webhook-service.%s.svc.%s" .Release.Namespace .Values.kubernetesClusterDomain ) -}}
+{{- $ca := genCA "bkpaas-app-operator-ca" 3650 -}}
+{{- $cert := genSignedCert "bkpaas-app-operator-ca" nil $dnsNames 3650 $ca -}}
+---
+{{- if not .Values.cert.managerEnabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bkpaas-webhook-server-cert
+  namespace: {{ .Release.Namespace }}
+type: kubernetes.io/tls
+data:
+  ca.crt: {{ include "bkpaas-app-operator.webhookCaBundle" (dict "cert" .Values.cert "genCa" $ca) }}
+  tls.crt: {{ include "bkpaas-app-operator.webhookCert" (dict "cert" .Values.cert "genCert" $cert) }}
+  tls.key: {{ include "bkpaas-app-operator.webhookKey" (dict "cert" .Values.cert "genCert" $cert) }}
+{{- end }}
+""".lstrip(),
+    ),
 }
 
 
-class HelmChartUpdator:
+class HelmChartUpdater:
     def __init__(self, chart_target_dir: str):
         self.chart_target_dir = Path(chart_target_dir)
         self.chart_source_dir = Path(__file__).resolve().parents[1] / 'bkpaas-app-operator'
@@ -211,7 +386,7 @@ class HelmChartUpdator:
         # 2.2 patch 部分 chart 文件内容
         self._patch_chart_file_contents()
         # 2.3 部分 chart 文件追加内容
-        self._append_chart_file_contents()
+        self._wrap_chart_file_contents()
         # 2.4 使用处理完的 chart 文件替换原 chart 的
         self._replace_chart_yaml_files()
         # 2.5 检查是否存在未处理的文件
@@ -255,40 +430,56 @@ class HelmChartUpdator:
 
             fp.write_text(contents)
 
-    def _append_chart_file_contents(self):
-        """对部分文件追加内容"""
-        for filepath, contents in content_append_conf.items():
-            with open(path.join(self.chart_source_dir, TMPL_DIR, filepath), 'a') as fw:
-                fw.write(contents)
+    def _wrap_chart_file_contents(self):
+        """对部分文件追加/填充内容"""
+        for filepath, wrap_contents in content_wrap_conf.items():
+            fp = self.chart_source_dir / TMPL_DIR / filepath
+            file_contents = fp.read_text()
+            contents = wrap_contents.front + file_contents + wrap_contents.back
+            fp.write_text(contents)
 
     def _remove_useless_newline(self):
         """去除 go-yaml unmarshal 中不需要的换行"""
-        for filepath in filepath_conf:
-            if not filepath.endswith('yaml'):
-                continue
+        for src_files in filepath_conf.values():
+            for src in src_files:
+                if not src.endswith('yaml'):
+                    continue
 
-            fp = self.chart_source_dir / TMPL_DIR / filepath
-            contents = fp.read_text().splitlines()
+                fp = self.chart_source_dir / TMPL_DIR / src
+                try:
+                    contents = fp.read_text().splitlines()
+                except FileNotFoundError:
+                    print(f'file {src} not exists, auto create...')
+                    fp.touch()
+                    continue
 
-            for idx in range(len(contents)):
-                # 忽略第一行，因为首行不会是被强制换行的
-                if (
-                    idx
-                    and contents[idx].count('}}')
-                    and contents[idx - 1].count('{{') - contents[idx - 1].count('}}') == 1
-                ):
-                    # 去掉上一行原来的换行符，拼接上当前行，把当前行设置为空字符串
-                    contents[idx - 1] = contents[idx - 1].rstrip() + ' '
-                    contents[idx - 1] += contents[idx].lstrip()
-                    contents[idx] = ''
+                for idx in range(len(contents)):
+                    # 忽略第一行，因为首行不会是被强制换行的
+                    if (
+                        idx
+                        and contents[idx].count('}}')
+                        and contents[idx - 1].count('{{') - contents[idx - 1].count('}}') == 1
+                    ):
+                        # 去掉上一行原来的换行符，拼接上当前行，把当前行设置为空字符串
+                        contents[idx - 1] = contents[idx - 1].rstrip() + ' '
+                        contents[idx - 1] += contents[idx].lstrip()
+                        contents[idx] = ''
 
-            fp.write_text('\n'.join([line for line in contents if line]))
+                # 使用换行符号拼接每行的内容，并且在最后添加新空行
+                fp.write_text('\n'.join([line for line in contents if line]) + '\n')
 
     def _replace_chart_yaml_files(self):
         """使用新的 Charts 中的文件，替换原有的文件"""
-        for src, dst in filepath_conf.items():
-            print(f'replace [{dst}] with [{src}]...')
-            shutil.move(self.chart_source_dir / TMPL_DIR / src, self.chart_target_dir / TMPL_DIR / dst)
+        for dst, src_files in filepath_conf.items():
+            print(f'replace [{dst}] with merged [{src_files}]')
+            contents = []
+            for src in src_files:
+                src_fp = self.chart_source_dir / TMPL_DIR / src
+                contents.append(src_fp.read_text())
+                os.remove(src_fp)
+
+            dst_fp = self.chart_target_dir / TMPL_DIR / dst
+            dst_fp.write_text('---\n'.join(contents))
 
         print(f'successfully replace {len(filepath_conf)} chart files!')
 
@@ -346,6 +537,15 @@ class HelmChartUpdator:
         values['platformConfig'] = values['controllerConfig']['platformConfig']
         del values['controllerConfig']['platformConfig']
 
+        # 证书管理相关
+        values['cert'] = {
+            'managerEnabled': False,
+            'autoGenerate': True,
+            'webhookCert': '',
+            'webhookKey': '',
+            'webhookCaBundle': '',
+        }
+
         fp.write_text(yaml.dump(values))
 
     def _diff_values(self):
@@ -384,4 +584,4 @@ if __name__ == "__main__":
     parser.add_argument('-d', type=str, default='/tmp/bkpaas-app-operator')
     args = parser.parse_args()
 
-    HelmChartUpdator(args.d).update()
+    HelmChartUpdater(args.d).update()

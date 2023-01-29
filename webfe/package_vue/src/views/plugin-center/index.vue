@@ -106,7 +106,7 @@
               v-else
               :class="['point', row.status]"
             />
-            <span v-bk-tooltips="pluginStatus[row.status]">{{ pluginStatus[row.status] || '--' }}</span>
+            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -185,7 +185,7 @@
       @confirm="handlerDeletePlugin"
     >
       <div>
-        {{ $t('是否确定删除') }} {{ curPluginData.id }}
+        {{ $t('是否确定删除') }} {{ removePluginDialog.selectedPlugin.id }}
       </div>
     </bk-dialog>
   </div>
@@ -216,9 +216,9 @@
                 pluginTypeFilters: [],
                 removePluginDialog: {
                     visiable: false,
-                    isLoading: false
+                    isLoading: false,
+                    selectedPlugin: {}
                 },
-                curPluginData: {},
                 releaseStatusMap: {
                     'pending': 'pending',
                     'initial': 'initial'
@@ -347,15 +347,15 @@
 
             deletePlugin (row) {
                 this.removePluginDialog.visiable = true;
-                this.curPluginData = row;
+                this.removePluginDialog.selectedPlugin = row;
             },
 
             async handlerDeletePlugin () {
                 try {
                     this.removePluginDialog.isLoading = true;
                     await this.$store.dispatch('plugin/deletePlugin', {
-                        pdId: this.curPluginData.pd_id,
-                        pluginId: this.curPluginData.id
+                        pdId: this.removePluginDialog.selectedPlugin.pd_id,
+                        pluginId: this.removePluginDialog.selectedPlugin.id
                     });
                     this.$bkMessage({
                         theme: 'success',
@@ -428,17 +428,10 @@
 
             toNewVersion (data) {
                 if (data.ongoing_release && this.releaseStatusMap[data.ongoing_release.status]) {
-                    const stagesData = data.ongoing_release.all_stages.map((e, i) => {
-                        e.icon = i + 1;
-                        e.title = e.name;
-                        return e;
-                    });
-                    this.$store.commit('plugin/updateStagesData', stagesData);
                     this.$router.push({
                         name: 'pluginVersionRelease',
                         params: { pluginTypeId: data.pd_id, id: data.id },
                         query: {
-                            stage_id: data.ongoing_release.current_stage.stage_id,
                             release_id: data.ongoing_release.id
                         }
                     });

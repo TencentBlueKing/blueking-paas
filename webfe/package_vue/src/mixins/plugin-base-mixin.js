@@ -22,6 +22,7 @@
 
 function BKStepsAdaptor (allStages) {
   return allStages.map((e, i) => {
+    e.stage_id = e.id;
     e.icon = i + 1;
     e.title = e.name;
     return e;

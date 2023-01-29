@@ -136,7 +136,7 @@
             releaseTopHeight () {
                 let topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
                 // 是否展示steps
-                return this.isSingleStage ? topHeight : topHeight - 44;
+                return !this.isSingleStage ? topHeight : topHeight - 44;
             },
             curFirstStep () {
                 return this.curAllStages.length > 0 ? this.curAllStages[0] : {};

@@ -166,18 +166,19 @@
             },
             stageData: {
                 handler () {
-                    this.isFirstStage = this.calStageOrder(this.stageData) === 1;
-                    this.isFinalStage = this.curAllStages.length === this.calStageOrder(this.stageData);
+                    // 获取 stage 对应的序号
+                    const curStep = this.calStageOrder(this.stageData);
+                    this.isFirstStage = curStep === 1;
+                    this.isFinalStage = this.curAllStages.length === curStep;
+                    this.curStep = curStep;
                 },
                 deep: true,
                 immediate: true 
             }
         },
-        created () {
-            this.getReleaseStageDetail();
-        },
-        async mounted () {
+        async created () {
             await this.getReleaseDetail();
+            this.getReleaseStageDetail();
         },
         methods: {
             async pollingReleaseStageDetail () {
@@ -270,10 +271,9 @@
                 };
                 this.stepsStatus = '';
                 try {
-                    const releaseData = await this.$store.dispatch('plugin/rerunStage', {
-                        ...params
-                    });
+                    const releaseData = await this.$store.dispatch('plugin/rerunStage', params);
                     this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -294,10 +294,9 @@
                     releaseId: this.$route.query.release_id
                 };
                 try {
-                    const releaseData = await this.$store.dispatch('plugin/republishRelease', {
-                        ...params
-                    });
+                    const releaseData = await this.$store.dispatch('plugin/republishRelease', params);
                     this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -311,7 +310,6 @@
             },
             // 下一步
             async handlerNext () {
-                console.log('handlerNext', this);
                 if (!this.isAllowNext) {
                   return;
                 }
@@ -325,6 +323,7 @@
                     };
                     const releaseData = await this.$store.dispatch('plugin/nextStage', params);
                     this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
                   } catch (e) {
                       this.$bkMessage({
                           theme: 'error',
@@ -386,7 +385,7 @@
                     };
                     const releaseData = await this.$store.dispatch('plugin/backRelease', params);
                     this.$store.commit('plugin/updateCurRelease', releaseData);
-                    this.$router.push({ name: 'pluginVersionRelease', query: { release_id: this.releaseId } });
+                    await this.getReleaseStageDetail();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

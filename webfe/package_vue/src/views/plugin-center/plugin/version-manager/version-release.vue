@@ -213,13 +213,13 @@
                     }
                     const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
                     this.stageData = stageData;
-                    switch (this.stageId) {
+                    switch (this.stageData.stage_id) {
                         case 'market':
                             break;
                         case 'deploy':
-                            if (this.status === 'pending') {
+                            if (this.stageData.status === 'pending') {
                                 this.pollingReleaseStageDetail();
-                            } else if (this.status === 'failed') {
+                            } else if (this.stageData.status === 'failed') {
                                 // 改变状态
                                 this.stepsStatus = 'error';
                                 this.failedMessage = stageData.fail_message;
@@ -227,15 +227,7 @@
                                 this.stepsStatus = '';
                             }
                             break;
-                        default:
-                            this.curStep = 1;
-                            break;
                     }
-                    // if (stageData.status === 'successful') {
-                    //     this.stagesIndex = this.stagesIndex + 1;
-                    //     this.curStep = this.stagesIndex + 1;
-                    //     this.getReleaseStageDetail();
-                    // }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

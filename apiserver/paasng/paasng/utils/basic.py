@@ -207,7 +207,7 @@ def re_path(route, view, kwargs=None, name=None):
         raise TypeError('view must be a callable or a list/tuple in the case of include().')
 
 
-# Make a global session object to turn on connection polling
+# Make a global session object to turn on connection pooling
 _requests_session = requests.Session()
 _adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
 _requests_session.mount('http://', _adapter)
@@ -215,5 +215,5 @@ _requests_session.mount('https://', _adapter)
 
 
 def get_requests_session() -> requests.Session:
-    """Return the global requests session object which supports connection polling"""
+    """Return the global requests session object which supports connection pooling"""
     return _requests_session

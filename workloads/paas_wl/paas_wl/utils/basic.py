@@ -191,7 +191,7 @@ class HumanizeURL:
         return f"{self.protocol}://{self.hostname}{port_s}{self.path}{query_s}"
 
 
-# Make a global session object to turn on connection polling
+# Make a global session object to turn on connection pooling
 _requests_session = requests.Session()
 _adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
 _requests_session.mount('http://', _adapter)
@@ -199,5 +199,5 @@ _requests_session.mount('https://', _adapter)
 
 
 def get_requests_session() -> requests.Session:
-    """Return the global requests session object which supports connection polling"""
+    """Return the global requests session object which supports connection pooling"""
     return _requests_session

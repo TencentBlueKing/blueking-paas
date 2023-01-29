@@ -422,7 +422,8 @@
         },
         computed: {
             curPluginInfo () {
-                return this.form.pd_id ? this.curPluginItem : this.pluginTypeList[0];
+                const curPluginData = this.pluginTypeList.filter(item => item.plugin_type.id === this.form.pd_id);
+                return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
             }
         },
         watch: {
@@ -434,6 +435,8 @@
             'form.pd_id' (value) {
                 const selected = this.pluginTypeList.filter(item => item.plugin_type.id === value);
                 this.curPluginItem = selected[0];
+                this.addRules();
+                this.changePlaceholder();
             }
         },
         mounted () {
@@ -444,14 +447,12 @@
             async fetchPluginTypeList () {
                 try {
                     const res = await this.$store.dispatch('plugin/getPluginsTypeList');
-                    console.log('res', res);
                     this.pluginTypeList = res && res.map(e => {
                         e.name = e.plugin_type.name;
                         return e;
                     });
                     this.addRules();
-                    this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
-                    this.namePlaceholder = this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
+                    this.changePlaceholder();
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -470,26 +471,41 @@
                     this.pdIdMaxLength = this.curPluginInfo.schema.id.maxlength || 16;
                     this.nameMaxLength = this.curPluginInfo.schema.name.maxlength || 20;
                 }
-                this.rules.plugin_id.push({
-                    regex: new RegExp(this.curPluginInfo.schema.id.pattern) || new RegExp('^[a-z0-9-]{1,16}$'),
-                    message: this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符'),
+                const baseRule = {
+                    required: true,
+                    message: this.$t('该字段是必填项'),
+                    trigger: 'blur'
+                };
+                const rulesPluginId = [baseRule];
+                const rulesName = [baseRule];
+                // 插件ID
+                rulesPluginId.push({
+                    regex: new RegExp(this.curPluginInfo.schema.id.pattern),
+                    message: this.$t(this.curPluginInfo.schema.id.description),
                     trigger: 'blur change'
                 });
-                this.rules.plugin_id.push({
+                rulesPluginId.push({
                     max: this.curPluginInfo.schema.id.maxlength || 16,
                     message: this.$t(`不能多于{maxLength}个字符`, { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
                     trigger: 'blur change'
                 });
-                this.rules.name.push({
-                    regex: new RegExp(this.curPluginInfo.schema.name.pattern) || new RegExp('^[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}$'),
-                    message: this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
+                // 插件名称
+                rulesName.push({
+                    regex: new RegExp(this.curPluginInfo.schema.name.pattern),
+                    message: this.$t(this.curPluginInfo.schema.name.description),
                     trigger: 'blur change'
                 });
-                this.rules.name.push({
+                rulesName.push({
                     max: this.curPluginInfo.schema.name.maxlength || 20,
                     message: this.$t(`不能多于{maxLength}个字符`, { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
                     trigger: 'blur change'
                 });
+                this.rules.plugin_id = rulesPluginId;
+                this.rules.name = rulesName;
+            },
+            changePlaceholder () {
+                this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
+                this.namePlaceholder = this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
             },
             // 选中具体插件类型
             changePluginType (value) {

@@ -2067,5 +2067,6 @@ export default {
   '下标': 'subscript',
   '上标': 'superscript',
   '向右缩进': 'indent right',
-  '向左缩进': 'indent left'
+  '向左缩进': 'indent left',
+  '由汉字、英文字母、数字、连字符和下划线组成，长度小于 20 个字符': 'Composed of Chinese characters, English letters, numbers, hyphens and underscores, the length is less than 20 characters'
 };

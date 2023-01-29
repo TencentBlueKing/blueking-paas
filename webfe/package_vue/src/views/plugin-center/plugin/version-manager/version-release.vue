@@ -152,7 +152,7 @@
             },
             isAllowPrev () {
               let isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
-              return !isRunningDeploy;
+              return !isRunningDeploy && this.status !== 'successful';
             },
             isAllowNext () {
               return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
@@ -197,7 +197,7 @@
                     stageId: this.stageId
                 };
                 // 页面状态改变, 停止轮询
-                if (ctx === currentCtx) this.getReleaseStageDetail();
+                if (ctx !== currentCtx) this.getReleaseStageDetail();
             },
             // 获取发布步骤详情
             async getReleaseStageDetail () {

@@ -70,8 +70,8 @@
         </bk-button>
         <!-- 构建完成可以进入下一步 -->
         <bk-button
-          theme="primary"
           v-if="!isFinalStage"
+          theme="primary"
           class="ml5"
           style="width: 120px"
           :disabled="!isAllowNext"
@@ -173,7 +173,7 @@
                     this.curStep = curStep;
                 },
                 deep: true,
-                immediate: true 
+                immediate: true
             }
         },
         async created () {

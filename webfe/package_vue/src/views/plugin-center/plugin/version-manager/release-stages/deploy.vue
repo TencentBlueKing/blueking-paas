@@ -102,8 +102,13 @@
             winHeight: 300,
             logs: [],
             steps: [],
-            status: '',
+            status: ''
           };
+        },
+        computed: {
+            releaseId () {
+                return this.$route.query.release_id;
+            }
         },
         watch: {
             stageData: {
@@ -113,12 +118,7 @@
                     this.status = this.stageData.status;
                 },
                 deep: true,
-                immediate: true 
-            }
-        },
-        computed: {
-            releaseId () {
-                return this.$route.query.release_id;
+                immediate: true
             }
         },
         methods: {

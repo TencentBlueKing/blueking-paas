@@ -44,7 +44,7 @@ import docuManagement from './modules/docu-management';
 import cloudApi from './modules/cloud-api';
 import voucher from './modules/voucher';
 import plugin from './modules/plugin';
-import cloudMembers from './modules/cloud-members';
+import pluginMembers from './modules/plugin-members';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -67,7 +67,7 @@ const state = {
   curAppModuleList: [],
   appInfo: {},
   pluginInfo: {},
-  curPluginInfo: {},
+
   isAppLoading: true,
   canCreateModule: true,
   loadingConf: {
@@ -163,12 +163,6 @@ const mutations = {
     } else if (data.application.modules.length) {
       state.curAppModule = state.curAppDefaultModule;
     }
-  },
-
-  updatePluginInfo (state, { pluginId, pluginTypeId, data }) {
-    state.curPluginInfo = data;
-    state.curPluginId = pluginId;
-    state.curPluginTypeId = pluginTypeId;
   },
   addAppModule (state, data) {
     // state.curAppModuleList.push(data)
@@ -304,22 +298,6 @@ const actions = {
   },
 
   /**
-     * 获取插件信息
-     *
-     * @param {Number} appCode 应用code
-     */
-  getPluginInfo ({ commit, state }, { pluginId, pluginTypeId }) {
-    const url = `${BACKEND_URL}/api/bkplugins/${pluginTypeId}/plugins/${pluginId}/`;
-    commit('updateAppLoading', true);
-    return http.get(url).then(response => {
-      commit('updatePluginInfo', { pluginId, pluginTypeId, data: response });
-      return response;
-    }).finally(() => {
-      commit('updateAppLoading', false);
-    });
-  },
-
-  /**
      * 获取应用列表
      *
      * @param {Object} params 参数配置
@@ -421,8 +399,9 @@ export default new Vuex.Store({
     docuManagement,
     cloudApi,
     voucher,
+    // 插件开发者中心的状态
     plugin,
-    cloudMembers
+    pluginMembers
   },
   state,
   getters,

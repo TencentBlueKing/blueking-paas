@@ -87,6 +87,7 @@
 </template>
 <script>
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import user from '@/components/user';
     import { quillEditor } from 'vue-quill-editor';
     import 'quill/dist/quill.core.css';
@@ -99,6 +100,7 @@
             quillEditor,
             user
         },
+        mixins: [pluginBaseMixin],
         data () {
             return {
               form: {
@@ -144,14 +146,6 @@
                   ]
               }
             };
-        },
-        computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            }
         },
         mounted () {
             this.fetchMarketInfo();

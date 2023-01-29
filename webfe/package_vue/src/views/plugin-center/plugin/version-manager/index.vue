@@ -265,8 +265,8 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import { PLUGIN_VERSION_STATUS } from '@/common/constants';
     import i18n from '@/language/i18n.js';
 
@@ -281,7 +281,7 @@
         components: {
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             // 是否根据version判断
             this.versionTypeMap = {
@@ -312,15 +312,6 @@
             };
         },
         computed: {
-            curPluginData () {
-                return this.$store.state.plugin.pluginData;
-            },
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
             statusFilters () {
                 const statusList = [];
                 for (const key in this.statusFilter) {
@@ -425,14 +416,14 @@
             },
 
             // 获取版本详情
-            async getVersionDetail (curData) {
+            async getReleaseDetail (curData) {
                 const data = {
                     pdId: this.pdId,
                     pluginId: this.pluginId,
                     releaseId: curData.id
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/getVersionDetail', data);
+                    const res = await this.$store.dispatch('plugin/getReleaseDetail', data);
                     this.versionDetail = res;
                 } catch (e) {
                     this.$bkMessage({
@@ -484,27 +475,17 @@
             handleDetail (row) {
                 this.versionDetailConfig.isShow = true;
                 this.versionDetailLoading = true;
-                this.getVersionDetail(row);
+                this.getReleaseDetail(row);
             },
 
             // 发布
             handleRelease (data, isReset) {
-                const stagesData = data.all_stages.map((e, i) => {
-                    e.icon = i + 1;
-                    e.title = e.name;
-                    return e;
-                });
-                this.$store.commit('plugin/updateStagesData', stagesData);
                 if (isReset) {
-                  this.republish(data, isReset);
+                  this.republish(data);
                 } else {
                   this.$router.push({
                       name: 'pluginVersionRelease',
-                      params: {
-                          isReset
-                      },
                       query: {
-                          stage_id: data.current_stage.stage_id,
                           release_id: data.id
                       }
                   });
@@ -512,25 +493,18 @@
             },
 
             // 重新发布前状态
-            async republish (data, isReset) {
+            async republish (data) {
                 const params = {
                     pdId: this.pdId,
                     pluginId: this.pluginId,
                     releaseId: data.id
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/republishRelease', {
-                        ...params
-                    });
+                    await this.$store.dispatch('plugin/republishRelease', params);
                     this.$router.push({
                       name: 'pluginVersionRelease',
-                      params: {
-                          isReset
-                      },
                       query: {
-                          stage_id: res.current_stage && res.current_stage.stage_id,
-                          release_id: data.id,
-                          status: res.status
+                          release_id: data.id
                       }
                   });
                 } catch (e) {

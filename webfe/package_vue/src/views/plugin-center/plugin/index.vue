@@ -22,6 +22,7 @@
             >
               <router-view
                 v-if="userVisitEnable && pluginVisitEnable"
+                :key="$route.path"
                 class="right-main-plugin"
                 @current-plugin-info-updated="pluginInfoUpdatedCallback"
               />

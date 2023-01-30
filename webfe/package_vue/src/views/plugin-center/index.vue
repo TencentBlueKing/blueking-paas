@@ -40,7 +40,10 @@
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
-        <div slot="empty">
+        <div
+          v-if="pluginList.length"
+          slot="empty"
+        >
           <bk-exception
             class="exception-wrap-item exception-part"
             type="search-empty"

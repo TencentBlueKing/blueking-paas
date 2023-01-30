@@ -80,3 +80,21 @@ export const PLUGIN_VERSION_STATUS = {
   'initial': '发布中',
   'interrupted': '已中断'
 };
+
+/**
+ * 自定义工具栏
+ */
+export const TOOLBAR_OPTIONS = [
+  ['bold', 'italic', 'underline', 'strike',
+    { color: [] },
+    { background: [] },
+    { align: ['', 'center', 'right', 'justify'] },
+    'blockquote',
+    { indent: '-1' }, { indent: '+1' },
+    { list: 'ordered' },
+    { list: 'bullet' },
+    'link',
+    'image',
+    'code-block'
+  ]
+];

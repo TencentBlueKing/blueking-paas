@@ -50,7 +50,11 @@
           @page-change="pageChange"
           @filter-change="handleFilterChange"
         >
-          <div slot="empty">
+          <!-- 如果存在数据展示默认Exception -->
+          <div
+            v-if="versionList.length"
+            slot="empty"
+          >
             <bk-exception
               class="exception-wrap-item exception-part"
               type="search-empty"

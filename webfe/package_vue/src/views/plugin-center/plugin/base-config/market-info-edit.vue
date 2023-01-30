@@ -1,11 +1,11 @@
 <template>
-  <div class="container visible-range">
+  <div :class="`container visible-range ${isEditorHeight ? 'beyond-container' : ''}`">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-market-info-loading"
       class="app-container middle"
     >
-      <div class="app-container middle">
+      <div :class="`app-container middle ${isEditorHeight ? 'beyond' : ''}`">
         <paas-plugin-title />
         <div class="market-Info plugin-base-info">
           <bk-form
@@ -90,6 +90,8 @@
     import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import user from '@/components/user';
     import { quillEditor } from 'vue-quill-editor';
+    import { addQuillTitle } from '@/common/quill-title.js';
+    import { TOOLBAR_OPTIONS } from '@/common/constants';
     import 'quill/dist/quill.core.css';
     import 'quill/dist/quill.snow.css';
     import 'quill/dist/quill.bubble.css';
@@ -113,8 +115,12 @@
               cateLoading: true,
               isLoading: true,
               editorOption: {
-                  placeholder: this.$t('开始编辑...')
+                  placeholder: this.$t('开始编辑...'),
+                  modules: {
+                      toolbar: TOOLBAR_OPTIONS
+                  }
               },
+              isEditorHeight: false,
               rules: {
                   category: [
                       {
@@ -150,6 +156,9 @@
         mounted () {
             this.fetchMarketInfo();
             this.fetchCategoryList();
+            this.$nextTick(() => {
+                addQuillTitle();
+            });
         },
         methods: {
             // 应用分类
@@ -239,13 +248,33 @@
     .btn-warp{
         position: fixed;
         bottom: 0;
-        margin-bottom: 20px;
-        margin-left: 100px;
+        left: 0;
+        padding-top: 8px;
+        padding-bottom: 20px;
+        margin-left: 240px;
+        padding-left: 150px;
+        background: #fff;
+        width: 100%;
+        z-index: 99;
     }
 
     .app-container {
         max-width: calc(100% - 50px) !important;
         margin: 0 auto;
+        border: none;
+    }
+
+    .visible-range .editor {
+        min-height: 300px;
+    }
+
+    @media screen and (max-width: 1366px) {
+        .visible-range .editor {
+            height: calc(100vh - 362px) !important;
+        }
+        .visible-range.beyond-container .editor {
+            height: calc(100vh - 408px) !important;
+        }
     }
 </style>
 <style>
@@ -256,6 +285,9 @@
         height: calc(100vh - 350px);
         display: flex;
         flex-direction: column;
+    }
+    .app-container.beyond .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
+        height: calc(100vh - 392px);
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor .ql-container {
         flex: 1;

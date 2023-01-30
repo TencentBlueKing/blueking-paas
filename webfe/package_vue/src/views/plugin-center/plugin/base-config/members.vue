@@ -43,7 +43,10 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <div slot="empty">
+          <div
+            v-if="memberListShow.length"
+            slot="empty"
+          >
             <bk-exception
               class="exception-wrap-item exception-part"
               type="search-empty"

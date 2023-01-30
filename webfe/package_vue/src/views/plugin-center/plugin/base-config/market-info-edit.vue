@@ -127,7 +127,7 @@
                   }
               },
               isEditorHeight: false,
-              curPluginInfo: {},
+              curPluginData: {},
               rules: {
                   category: [
                       {
@@ -159,6 +159,12 @@
                   ]
               }
             };
+        },
+        computed: {
+            administratorStr () {
+                const administrators = this.curPluginData.pd_administrator || [];
+                return administrators.join(';');
+            }
         },
         watch: {
             'form.description' () {
@@ -252,7 +258,7 @@
                 };
                 try {
                     const res = await this.$store.dispatch('plugin/getPluginBaseInfo', data);
-                    this.curPluginInfo = res;
+                    this.curPluginData = res;
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -301,7 +307,7 @@
 
     @media screen and (max-width: 1366px) {
         .visible-range .editor {
-            height: calc(100vh - 362px) !important;
+            height: calc(100vh - 392px) !important;
         }
         .visible-range.beyond-container .editor {
             height: calc(100vh - 408px) !important;
@@ -330,7 +336,6 @@
         line-height: 24px;
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
-        height: calc(100vh - 350px);
         display: flex;
         flex-direction: column;
     }

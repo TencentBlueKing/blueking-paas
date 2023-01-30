@@ -20,7 +20,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label logo"> {{ $t('应用logo') }} </label>
+                <label class="title-label logo no-border-bottom"> {{ $t('应用logo') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
                 <div class="logo-uploader item-logn-content">
@@ -58,9 +58,9 @@
                 </div>
               </bk-form-item>
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('插件标识') }} </label>
+                <label class="title-label no-border-bottom"> {{ $t('插件标识') }} </label>
               </bk-form-item>
-              <bk-form-item style="width: calc(100% - 180px);">
+              <bk-form-item style="width: calc(100% - 180px);transform: translateX(-1px);">
                 <div class="item-content first-item-content">
                   {{ pluginInfo.pd_id || '--' }}
                 </div>
@@ -983,6 +983,10 @@
             .logo{
                 height: 105px;
                 line-height: 105px;
+            }
+
+            .no-border-bottom {
+                border-bottom: none;
             }
 
             .plugin-info {

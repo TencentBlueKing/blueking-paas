@@ -126,15 +126,13 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opts controller.Options) error {
-	if err := mgr.GetFieldIndexer().IndexField(
-		ctx, &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames,
-	); err != nil {
+	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
+	if err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(
-		ctx, &corev1.Pod{}, v1alpha1.WorkloadOwnerKey, getOwnerNames,
-	); err != nil {
+	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
+	if err != nil {
 		return err
 	}
 

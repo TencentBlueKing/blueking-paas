@@ -39,6 +39,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	cfg "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -121,13 +122,13 @@ func main() {
 	mgrCli := client.New(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
 
-	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf)
+	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf.Controller)
 	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
 		os.Exit(1)
 	}
-	dgmappingMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindDomainGroupMapping, projConf)
+	dgmappingMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindDomainGroupMapping, projConf.Controller)
 	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, dgmappingMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
@@ -191,13 +192,13 @@ func initIngressPlugins() {
 }
 
 // 生成某类组资源管理器配置
-func genGroupKindMgrOpts(groupKind schema.GroupKind, projConf *paasv1alpha1.ProjectConfig) controller.Options {
+func genGroupKindMgrOpts(groupKind schema.GroupKind, ctrlConf *cfg.ControllerConfigurationSpec) controller.Options {
 	return controller.Options{
-		MaxConcurrentReconciles: projConf.Controller.GroupKindConcurrency[groupKind.String()],
+		MaxConcurrentReconciles: ctrlConf.GroupKindConcurrency[groupKind.String()],
 		RateLimiter: workqueue.NewMaxOfRateLimiter(
 			// 首次重试延迟 1s，后续指数级翻倍，最高延迟 300s
 			workqueue.NewItemExponentialFailureRateLimiter(time.Second, 5*time.Minute),
-			// 10 qps, 100 bucket size.  This is only for retry speed and its only the overall factor (not per item)
+			// 10 qps, 100 bucket size.  This is only for retry speed, and it's only the overall factor (not per item)
 			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
 	}

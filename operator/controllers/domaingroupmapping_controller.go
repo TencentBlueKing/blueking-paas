@@ -265,9 +265,9 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(
 	ctx context.Context, mgr ctrl.Manager, opts controller.Options,
 ) error {
 	// Build an index to query DomainGroupMappings by BkApp later
-	if err := mgr.GetFieldIndexer().IndexField(
-		ctx, &paasv1alpha1.DomainGroupMapping{}, BkAppIndexField, getDGMappingOwnerNames,
-	); err != nil {
+	err := mgr.GetFieldIndexer().
+		IndexField(ctx, &paasv1alpha1.DomainGroupMapping{}, BkAppIndexField, getDGMappingOwnerNames)
+	if err != nil {
 		return err
 	}
 

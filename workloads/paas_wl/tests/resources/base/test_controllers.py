@@ -24,7 +24,7 @@ from django_dynamic_fixture import G
 from paas_wl.release_controller.hooks.entities import Command, command_kmodel
 from paas_wl.release_controller.hooks.models import Command as CommandModel
 from paas_wl.resources.base.controllers import CommandHandler
-from paas_wl.resources.base.exceptions import PodNotSucceededTimeoutError
+from paas_wl.resources.base.exceptions import PodTimeoutError
 from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
@@ -35,6 +35,12 @@ pytestmark = pytest.mark.django_db
 
 @pytest.mark.auto_create_ns
 class TestCommand:
+    @pytest.fixture(autouse=True)
+    def skip_if(self, k8s_version):
+        # 测试用例需要真实的 k8s 集群
+        if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 8):
+            pytest.skip("dummy cluster can't run e2e test")
+
     @pytest.fixture
     def command_model(self, app):
         config = app.latest_config
@@ -70,7 +76,7 @@ class TestCommand:
         handler.run_command(command)
         handler._wait_pod_succeeded(namespace=command.app.namespace, pod_name=command.name, timeout=60)
         command_in_k8s = command_kmodel.get(command.app, command.name)
-        assert command_in_k8s.status == "Succeeded"
+        assert command_in_k8s.phase == "Succeeded"
 
     @pytest.fixture
     def sidecar(self, app):
@@ -93,9 +99,9 @@ class TestCommand:
     def test_run_with_sidecar(self, handler, command, sidecar):
         handler.run_command(command)
         handler.wait_for_succeeded(command, timeout=60)
-        with pytest.raises(PodNotSucceededTimeoutError):
+        with pytest.raises(PodTimeoutError):
             handler._wait_pod_succeeded(namespace=command.app.namespace, pod_name=command.name, timeout=1)
         command_in_k8s = command_kmodel.get(command.app, command.name)
         # 虽然 Pod 仍在运行, 但是主容器已退出
-        assert command_in_k8s.status == "Running"
+        assert command_in_k8s.phase == "Running"
         assert command_in_k8s.main_container_exit_code == 0

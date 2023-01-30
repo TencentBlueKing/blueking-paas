@@ -16,10 +16,16 @@
           >
             <bk-form-item
               class="w600"
-              :label="$t('应用分类')"
               :required="true"
               :property="'category'"
             >
+              <div
+                slot="tip"
+                v-bk-tooltips.top="`${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${administratorStr}`"
+                class="lable-wrapper"
+              >
+                {{ $t('应用分类') }}
+              </div>
               <bk-select
                 v-model="form.category"
                 :loading="cateLoading"
@@ -121,6 +127,7 @@
                   }
               },
               isEditorHeight: false,
+              curPluginInfo: {},
               rules: {
                   category: [
                       {
@@ -153,9 +160,18 @@
               }
             };
         },
+        watch: {
+            'form.description' () {
+                this.$nextTick(() => {
+                    const editor = document.querySelector('.ql-container .ql-editor').offsetHeight;
+                    editor > 904 ? this.isEditorHeight = true : this.isEditorHeight = false;
+                });
+            }
+        },
         mounted () {
             this.fetchMarketInfo();
             this.fetchCategoryList();
+            this.getPluginBaseInfo();
             this.$nextTick(() => {
                 addQuillTitle();
             });
@@ -229,6 +245,21 @@
                     }
                 });
             },
+            async getPluginBaseInfo () {
+                const data = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId
+                };
+                try {
+                    const res = await this.$store.dispatch('plugin/getPluginBaseInfo', data);
+                    this.curPluginInfo = res;
+                } catch (e) {
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                }
+            },
             goBack () {
                 this.$router.go(-1);
             },
@@ -274,6 +305,23 @@
         }
         .visible-range.beyond-container .editor {
             height: calc(100vh - 408px) !important;
+        }
+    }
+    .lable-wrapper {
+        position: absolute;
+        top: 0;
+        left: -80px;
+        &::after {
+            content: '*';
+            position: absolute;
+            top: 50%;
+            height: 8px;
+            line-height: 1;
+            color: #EA3636;
+            font-size: 12px;
+            display: inline-block;
+            vertical-align: middle;
+            transform: translate(3px, -50%);
         }
     }
 </style>

@@ -46,8 +46,9 @@ class ClusterType(str, StructuredEnum):
 class ClusterFeatureFlag(str, StructuredEnum):
     """集群特性标志"""
 
-    ENABLE_EGRESS_IP = EnumField('enable_egress_ip', label=_('支持提供出口 IP'))
-    ENABLE_MOUNT_LOG_TO_HOST = EnumField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
+    ENABLE_EGRESS_IP = EnumField('ENABLE_EGRESS_IP', label=_('支持提供出口 IP'))
+    ENABLE_MOUNT_LOG_TO_HOST = EnumField('ENABLE_MOUNT_LOG_TO_HOST', label=_('允许挂载日志到主机'))
+    INGRESS_USE_REGEX = EnumField('INGRESS_USE_REGEX', label=_('Ingress路径是否使用正则表达式'))
 
 
 class AppEnvName(str, StructuredEnum):

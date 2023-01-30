@@ -595,7 +595,7 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             offline_operation = OfflineOperation.objects.get(id=uuid, app_environment__module=module)
         except OfflineOperation.DoesNotExist:
-            raise error_codes.CANNOT_GET_OFFLINE.f(f"{code} 没有id为 {uuid} 的下架记录")
+            raise error_codes.CANNOT_GET_OFFLINE.f(_(f"{code} 没有id为 {uuid} 的下架记录"))
         else:
             data = OfflineOperationSLZ(instance=offline_operation).data
             return JsonResponse(data)

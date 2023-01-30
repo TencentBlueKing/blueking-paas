@@ -284,7 +284,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         if isinstance(exc, PackageAlreadyExists):
             raise error_codes.PACKAGE_ALREADY_EXISTS
         if isinstance(exc, UploadFailedError):
-            raise error_codes.OBJECT_STORE_EXCEPTION.f("请联系管理员") from exc
+            raise error_codes.OBJECT_STORE_EXCEPTION.f(_("请联系管理员")) from exc
         return super().handle_exception(exc)
 
     @swagger_auto_schema(
@@ -478,7 +478,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except AccessTokenForbidden:
             raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
         except Exception as e:
-            raise error_codes.CANNOT_GET_REPO.f(f"仓库信息查询异常: {e}")
+            raise error_codes.CANNOT_GET_REPO.f(_(f"仓库信息查询异常: {e}"))
         return Response({"result": compare_url})
 
 

@@ -80,6 +80,7 @@ def validate_response(resp: Response) -> Response:
         logging.warning(f"get url `{resp.url}` but {resp.status_code}, raw resp: {resp}")
         raise APIError(_("工蜂接口请求异常"))
     elif not resp.ok:
+        logging.warning(f"get url `{resp.url}` but resp is not ok, raw resp: {resp}")
         raise APIError(resp.json()["message"])
     return resp
 
@@ -130,7 +131,14 @@ class PluginRepoAccessor:
         time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
 
         params = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
-        resp = self._session.get(urljoin(self._api_url, _url), params=params)
+
+        try:
+            resp = self._session.get(urljoin(self._api_url, _url), params=params)
+        except APIError:
+            # 工蜂 API 异常时，记录日志，并给前端返回空数组，避免页面展示异常
+            # 查询同一天的代码提交记录 API 会报错，看工蜂自己的统计页面是直接返回空数据，没有限制用户的时间选择，我们也使用同样的处理逻辑
+            return []
+
         return validate_response(resp).json()
 
     def list_branches(self, project: GitProject, **kwargs) -> List[dict]:

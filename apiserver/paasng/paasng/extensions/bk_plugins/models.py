@@ -140,12 +140,16 @@ class BkPluginTag(AuditedModel):
 
     name = models.CharField('分类名称', help_text='插件使用方名称', max_length=32, unique=True)
     code_name = models.CharField('分类英文名称', help_text='分类英文名称，可替代主键使用', max_length=32, unique=True)
+    priority = models.IntegerField("优先级", default=0, help_text='数字越大，优先级越高')
 
     def __str__(self) -> str:
         return f"{self.name} - [{self.code_name}]"
 
     def to_dict(self) -> dict:
-        return {'id': self.id, 'name': self.name, 'code_name': self.code_name}
+        return {'id': self.id, 'name': self.name, 'code_name': self.code_name, 'priority': self.priority}
+
+    class Meta:
+        ordering = ['-priority', 'name']
 
 
 # Database models end

@@ -71,17 +71,16 @@
           />
         </div>
       </section>
-      <section class="search-item set-ml">
+      <section class="search-item set-ml auto">
         <bk-input
           v-model="searchValue"
           :placeholder="`${$t('输入')}${isComponentApi ? $t('系统名称') : $t('网关名称，按Enter搜索')}`"
           clearable
-          style="width: 195px;"
           right-icon="paasng-icon paasng-search"
           @enter="handleSearch"
         />
       </section>
-      <section class="search-item">
+      <section class="search-item search-btn">
         <bk-button
           theme="primary"
           @click="handlePageSearch"
@@ -693,10 +692,27 @@
 
 <style lang="scss" scoped>
     .search-wrapper {
+        display: flex;
+        flex-wrap: wrap;
         margin-bottom: 16px;
         .search-item {
             display: inline-block;
             vertical-align: middle;
+            .label {
+                margin-right: 6px;
+            }
+        }
+        .search-item.auto {
+            flex: 1;
+            .bk-form-control {
+                width: 100%;
+                max-width: 360px;
+                min-width: 185px;
+                margin-left: auto;
+            }
+        }
+        .search-btn {
+            margin-left: 5px;
         }
         .label,
         .member-wrapper,
@@ -712,7 +728,7 @@
             width: 80px;
         }
         .set-ml {
-            margin-left: 3px;
+            margin-left: 18px;
         }
     }
 

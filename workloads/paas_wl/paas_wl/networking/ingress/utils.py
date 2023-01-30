@@ -30,6 +30,20 @@ def make_service_name(app: EngineApp, process_type: str) -> str:
     return f"{app.region}-{app.scheduler_safe_name}-{process_type}"
 
 
+def parse_process_type(app: EngineApp, service_name: str) -> str:
+    """Parse process type from service name
+
+    :param app: EngineApp object
+    :param service_name: Name of Service resource.
+    :raise ValueError: When given service_name is not parsable.
+    """
+    parts = service_name.split(app.scheduler_safe_name)
+    if len(parts) == 1:
+        raise ValueError(f'Service name "{service_name}" invalid')
+    # Remove leading "-" char
+    return parts[-1][1:]
+
+
 def get_service_dns_name(app: EngineApp, process_type: str) -> str:
     """Return process's DNS name, can be used for communications across processes.
 

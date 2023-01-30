@@ -81,6 +81,10 @@ class App(UuidAuditedModel):
 
         return {item.name: item.computed_replicas for item in ProcessSpec.objects.filter(engine_app_id=self.uuid)}
 
+    def has_proc_type(self, proc_type: str) -> bool:
+        """Check if current app has a process type, e.g. "web" """
+        return proc_type in self.get_structure()
+
     def __str__(self) -> str:
         return f'<{self.name}, region: {self.region}, type: {self.type}>'
 

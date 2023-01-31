@@ -132,11 +132,11 @@ class PluginTagValidationCondition(DeployCondition):
     action_name = DeployConditions.FILL_PLUGIN_TAG_INFO.value
 
     def validate(self):
-        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
-            return
-
         application = self.env.module.application
         if application.type != ApplicationType.BK_PLUGIN:
+            return
+
+        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
             return
 
         try:

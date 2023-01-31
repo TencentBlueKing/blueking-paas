@@ -352,7 +352,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """
 
     serializer_class = CreateDeploymentSLZ
-    # permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @property
     def paginator(self):

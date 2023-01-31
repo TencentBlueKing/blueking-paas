@@ -427,7 +427,7 @@ class CommandHandler(PodScheduleHandler):
             logger.info("Command Pod<%s/%s> does not exist, skip delete" % (namespace, command.name))
             return
 
-        if existed.phase == "Running":
+        if existed.phase == "Running" and existed.main_container_exit_code is None:
             logger.warning(f"trying to clean Pod<{namespace}/{command.name}>, but it's still running.")
             return
 

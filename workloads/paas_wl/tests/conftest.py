@@ -374,6 +374,8 @@ def default_process_spec_plan():
 
 @pytest.fixture
 def set_structure(default_process_spec_plan):
+    """A factory fixture, returns a function which updates app structure"""
+
     def handler(app, procfile: Dict, plan: ProcessSpecPlan = default_process_spec_plan):
         ProcessSpec.objects.filter(engine_app_id=app.uuid).delete()
         for proc, replicas in procfile.items():

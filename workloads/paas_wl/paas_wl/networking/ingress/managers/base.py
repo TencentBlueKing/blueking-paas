@@ -23,10 +23,12 @@ from typing import Dict, List, Optional, Sequence, Type
 from django.conf import settings
 
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress, ingress_kmodel
+from paas_wl.networking.ingress.entities.service import service_kmodel
 from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
 from paas_wl.networking.ingress.plugins import get_default_plugins
 from paas_wl.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.networking.ingress.plugins.ingress import IngressPlugin
+from paas_wl.networking.ingress.utils import parse_process_type
 from paas_wl.platform.applications.models import App
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
@@ -165,6 +167,7 @@ class IngressUpdater:
         annotations: Optional[Dict] = None,
         rewrite_to_root: bool = True,
         set_header_x_script_name: bool = True,
+        restore_default_when_invalid: bool = True,
     ):
         """Sync current ingress resource with kubernetes apiserver
 
@@ -177,6 +180,8 @@ class IngressUpdater:
         :param rewrite_to_root: whether to remove matched path prefix, which means rewrite path to "/(.*)"
         :param set_header_x_script_name: whether to set http header `X-Script-Name`,
             which means the sub-path provided by platform or custom domain
+        :param restore_default_when_invalid: If the ingress resource exists and it's using an invalid
+            service, restore the service name to default, enabled by default.
         :raises: DefaultServiceNameRequired when no default service name is given
         :raises: EmptyAppIngressError no domains are found
         """
@@ -204,6 +209,17 @@ class IngressUpdater:
             )
             ingress_kmodel.save(desired_ingress)
         else:
+            if restore_default_when_invalid and default_service_name:
+                # Restore service name to default if it's invalid
+                if not self._service_name_valid(ingress.service_name):
+                    logger.info(
+                        'Restore service name to default, ingress: %s, current name: %s, new name: %s',
+                        ingress.name,
+                        ingress.service_name,
+                        default_service_name,
+                    )
+                    ingress.service_name = default_service_name
+
             logger.info('Updating existed ingress<%s>', ingress.name)
             ingress.domains = domains
             ingress.server_snippet = server_snippet
@@ -223,3 +239,20 @@ class IngressUpdater:
         ingress.service_name = service_name
         ingress.service_port_name = service_port_name
         ingress_kmodel.save(ingress)
+
+    def _service_name_valid(self, name: str) -> bool:
+        """Check that a service name is valid."""
+        try:
+            proc_type = parse_process_type(self.app, name)
+        except ValueError:
+            return True
+
+        svc_names = [s.name for s in service_kmodel.list_by_app(self.app)]
+        # A service name was considered invalid if it pointed to a non-existent service
+        # and the process type(parsed from the name itself) didn't exist.
+        #
+        # Why check both conditions? An ingress could be created before the service object,
+        # so the process type was also checked to avoid an unintended result.
+        if name not in svc_names and not self.app.has_proc_type(proc_type):
+            return False
+        return True

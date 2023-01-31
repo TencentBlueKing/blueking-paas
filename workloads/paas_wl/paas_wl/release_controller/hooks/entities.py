@@ -43,7 +43,12 @@ from paas_wl.resources.kube_res.base import (
 from paas_wl.resources.kube_res.envs import decode_envs, encode_envs
 from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations
 from paas_wl.utils.constants import CommandType
-from paas_wl.utils.kubestatus import check_pod_health_status, parse_pod
+from paas_wl.utils.kubestatus import (
+    check_pod_health_status,
+    get_container_fail_message,
+    parse_container_status,
+    parse_pod,
+)
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 from paas_wl.workloads.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
 from paas_wl.workloads.resource_templates.utils import AddonManager
@@ -69,16 +74,24 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
         main_container = self._get_main_container(kube_data)
         annotations = kube_data.metadata.get('annotations', {})
 
-        status = kube_data.status
+        pod_status = kube_data.status
         health_status = check_pod_health_status(parse_pod(kube_data))
 
-        if hasattr(status, "startTime"):
-            start_time = arrow.get(status.startTime)
+        if hasattr(pod_status, "startTime"):
+            start_time = arrow.get(pod_status.startTime)
         else:
             logger.warning(
                 "Pod<%s/%s> missing start_time field!", kube_data.metadata.namespace, kube_data.metadata.name
             )
             start_time = None
+
+        main_container_exit_code = None
+        main_container_fail_message = None
+        if raw_main_container_status := self._get_main_container_status(kube_data):
+            main_container_status = parse_container_status(raw_main_container_status)
+            main_container_fail_message = get_container_fail_message(main_container_status)
+            if main_container_status.state.terminated:
+                main_container_exit_code = main_container_status.state.terminated.exit_code
 
         return Command(
             # Pod 描述性信息
@@ -103,19 +116,31 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
             version=int(annotations["version"]),
             # 运行时信息
             start_time=start_time,
-            status=status.phase,
-            status_message=health_status.message,
+            phase=pod_status.phase,
+            phase_message=health_status.message,
+            main_container_exit_code=main_container_exit_code,
+            main_container_fail_message=main_container_fail_message,
         )
 
     @staticmethod
     def _get_main_container(pod_info: ResourceInstance) -> ResourceField:
-        """获取 Pod 中声明的主容器信息.
-        Note: 根据约定, 与 Pod 命名一致的容器为主容器"""
-        pod_name = pod_info.metadata.name
+        """获取 Pod 中声明的主容器信息."""
+        # Note: 根据约定, 与 Pod 命名一致的容器为主容器
+        main_container_name = pod_info.metadata.name
         for c in pod_info.spec.containers:
-            if c.name == pod_name:
+            if c.name == main_container_name:
                 return c
         raise RuntimeError("container not found.")
+
+    @staticmethod
+    def _get_main_container_status(pod_info: ResourceInstance) -> Optional[ResourceField]:
+        """获取 Pod 中声明的主容器的状态"""
+        # Note: 根据约定, 与 Pod 命名一致的容器为主容器
+        main_container_name = pod_info.metadata.name
+        for c in pod_info.status.get("containerStatuses", []):
+            if c.name == main_container_name:
+                return c
+        return None
 
 
 class CommandSerializer(AppEntitySerializer['Command']):
@@ -175,6 +200,22 @@ class CommandSerializer(AppEntitySerializer['Command']):
 
 @dataclass
 class Command(AppEntity):
+    """副本实例定义
+
+    肩负着内部程序流转和 K8S 交互的重任
+
+    :param runtime: Command(Pod) 运行相关配置, 例如主容器使用的镜像, 启动参数等
+    :param schedule: Command(Pod) 调度相关的配置
+    :param pk: 关联的数据库模型主键
+    :param type_: 命令的类型, 目前仅支持 pre-release-hook
+    :param version: 当前实例的版本号, 每次部署递增
+    :param start_time: Command(Pod) 启动时间
+    :param phase: Command(Pod) 的 phase
+    :param phase_message: Command(Pod) 处于 phase 的原因
+    :param main_container_exit_code: 主容器退出的状态码
+    :param main_container_fail_message: 主容器执行失败的原因
+    """
+
     runtime: Runtime
     schedule: Schedule
     # 持久化字段(annotations)
@@ -184,8 +225,10 @@ class Command(AppEntity):
 
     # 运行时状态
     start_time: Optional[datetime.datetime]
-    status: Literal["Pending", "Running", "Succeeded", "Failed", "Unknown"] = "Unknown"
-    status_message: Optional[str] = None
+    phase: Literal["Pending", "Running", "Succeeded", "Failed", "Unknown"] = "Unknown"
+    phase_message: Optional[str] = None
+    main_container_exit_code: Optional[int] = None
+    main_container_fail_message: Optional[str] = None
 
     class Meta:
         kres_class = kres.KPod

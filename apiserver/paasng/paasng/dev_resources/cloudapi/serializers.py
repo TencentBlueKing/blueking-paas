@@ -59,6 +59,7 @@ class APIGWPermissionApplySLZ(serializers.Serializer):
     grant_dimension = serializers.ChoiceField(
         choices=constants.GrantDimensionEnum.get_django_choices(),
     )
+    gateway_name = serializers.CharField(help_text="网关名称，用于记录操作记录")
 
 
 class APIGWPermissionRenewSLZ(serializers.Serializer):
@@ -135,6 +136,7 @@ class ESBPermissionApplySLZ(serializers.Serializer):
     expire_days = serializers.ChoiceField(
         choices=constants.PermissionApplyExpireDaysEnum.get_django_choices(),
     )
+    gateway_name = serializers.CharField(help_text="网关名称，用于记录操作记录")
 
 
 class ESBPermissionRenewSLZ(serializers.Serializer):

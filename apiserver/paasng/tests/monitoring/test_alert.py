@@ -20,7 +20,7 @@ from functools import partial
 
 import pytest
 
-from paasng.monitoring.monitor.alert import QueryAlertsParams
+from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
 SEARCH_KEYWORD = generate_random_string(6)

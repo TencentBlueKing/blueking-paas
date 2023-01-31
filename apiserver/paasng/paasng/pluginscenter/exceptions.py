@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.web.std_error import ErrorCode
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 
 class ErrorCodes:

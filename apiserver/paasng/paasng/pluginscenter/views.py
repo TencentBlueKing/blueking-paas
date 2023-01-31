@@ -146,7 +146,7 @@ class PluginInstanceMixin:
     IF request.user DOES NOT have object permissions, will raise PermissionDeny exception
     """
 
-    def get_plugin_instance(self, allow_archive: bool = False) -> PluginInstance:
+    def get_plugin_instance(self, allow_archive: bool = True) -> PluginInstance:
         queryset = PluginInstance.objects.all()
         filter_kwargs = {"pd__identifier": self.kwargs["pd_id"], "id": self.kwargs["plugin_id"]}  # type: ignore
         obj = get_object_or_404(queryset, **filter_kwargs)
@@ -159,7 +159,7 @@ class PluginInstanceMixin:
 
 
 class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
-    queryset = PluginInstance.objects.exclude(status__in=constants.PluginStatus.archive_status())
+    queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
     filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
@@ -852,6 +852,8 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance(allow_archive=True)
         data = [{"__id__": config.unique_key, **config.row} for config in plugin.configs.all()]
+        # 根据 key 按字母序排序
+        data = sorted(data, key=lambda item: item['key'])
         return Response(data=serializers.make_config_slz_class(pd)(data, many=True).data)
 
     @swagger_auto_schema(request_body=serializers.StubConfigSLZ)

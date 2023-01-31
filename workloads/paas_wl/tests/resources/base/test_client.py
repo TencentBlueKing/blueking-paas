@@ -323,7 +323,7 @@ class TestClientBuildNew:
     )
     def test_wait_for_succeeded(self, phase, exc_context, app, scheduler_client, k8s_client):
         pod_name = BuildHandler.normalize_builder_name(generate_builder_name(app))
-        body = construct_foo_pod(pod_name)
+        body = construct_foo_pod(pod_name, restart_policy="Never")
 
         KPod(k8s_client).create_or_update(pod_name, namespace=app.namespace, body=body)
 

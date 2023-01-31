@@ -11,15 +11,15 @@
       >
         <div class="flex-row align-items-center">
           <img
-            :src="curPluginData.logo"
+            :src="curPluginInfo.logo"
             onerror="this.src='/static/images/plugin-default.svg'"
           >
           <div class="pl10">
             <div class="plugin-name">
-              {{ curPluginData.name_zh_cn }}
+              {{ curPluginInfo.name_zh_cn }}
             </div>
             <div class="guide-plugin-desc">
-              {{ curPluginData.id }}
+              {{ curPluginInfo.id }}
             </div>
           </div>
         </div>
@@ -92,27 +92,23 @@
   </div>
 </template>
 <script>
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import _ from 'lodash';
     export default {
         components: {
         },
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 showSelectData: false,
                 searchValue: '',
                 pluginList: [],
                 viewPluinList: [],
-                curPluginData: {},
                 isHover: false,
                 isLoading: false
             };
         },
         watch: {
-            pluginList: {
-                handler (val) {
-                    this.curPluginData = val.find(e => e.id === this.$route.params.id);
-                }
-            },
             searchValue (newVal, oldVal) {
                 this.searchPlugin();
             },
@@ -137,6 +133,10 @@
                     });
                     this.pluginList = res.results;
                     this.viewPluinList = res.results;
+                    // 根据id排序
+                    this.viewPluinList.sort((a, b) => {
+                        return ('' + a.id).localeCompare(b.id);
+                    });
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -156,8 +156,7 @@
                     name: v === 'list' ? 'plugin' : 'createPlugin'
                 });
             },
-            changePlugin (data) {
-                this.curPluginData = this.pluginList.find(e => e.id === data.id);
+            async changePlugin (data) {
                 this.$router.push({
                     name: 'pluginVersionManager',
                     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识

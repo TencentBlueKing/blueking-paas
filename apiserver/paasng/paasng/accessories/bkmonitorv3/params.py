@@ -15,18 +15,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from attrs import define
-from bkapi_client_core.exceptions import BKAPIError
 from django.conf import settings
-
-from .client import make_bkmonitor_client
-from .exceptions import BKMonitorGatewayServiceError
-
-logger = logging.getLogger(__name__)
 
 
 @define(kw_only=True)
@@ -87,20 +80,3 @@ class QueryAlertsParams:
         if self.keyword:
             query_string = f'{query_string} AND alert_name:*{self.keyword}*'
         return query_string
-
-
-def query_alerts(query_params: QueryAlertsParams) -> List:
-    """查询告警
-
-    :param query_params: 查询告警的条件参数
-    """
-    try:
-        resp = make_bkmonitor_client().api.search_alert(json=query_params.to_dict())
-    except BKAPIError:
-        # 详细错误信息 bkapi_client_core 会自动记录
-        raise BKMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
-
-    if not resp.get('result'):
-        raise BKMonitorGatewayServiceError(resp['message'])
-
-    return resp.get('data', {}).get('alerts', [])

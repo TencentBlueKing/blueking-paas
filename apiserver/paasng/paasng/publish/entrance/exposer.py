@@ -183,7 +183,10 @@ def list_custom_addresses(env: ModuleEnvironment) -> 'List[Address]':
     """List all custom addresses of given environment object, items will be
     returned even if the environment isn't running.
     """
-    live_addrs = get_live_addresses(env.module)
+    # when user updates custom domain in "workloads" service, "apiserver" won't
+    # be notified and cache won't be refreshed automatically, disable cache to
+    # always get fresh data.
+    live_addrs = get_live_addresses(env.module, no_cache=True)
     return live_addrs.get_addresses(env.environment, addr_type='custom')
 
 
@@ -284,13 +287,20 @@ class ModuleLiveAddrs:
         return {'is_running': False, 'addresses': []}
 
 
-def get_live_addresses(module: Module) -> ModuleLiveAddrs:
-    """Get addresses and is_running status for module's environments.
+def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddrs:
+    """Get addresses and is_running status for module's environments, result was
+    cached for 1 minute by default.
 
     This is a low-level function, don't use it directly, use `get_addresses`
     instead.
+
+    :param no_cache: Whether to disable cache, useful when caller requires fresh
+        data, default to false.
     """
-    return _wrapped_get_live_addresses(module.application.code, module.name)
+    if no_cache:
+        return _wrapped_get_live_addresses.original(module.application.code, module.name)
+    else:
+        return _wrapped_get_live_addresses(module.application.code, module.name)
 
 
 # Add cache to decrease calls to workloads service because many function such as

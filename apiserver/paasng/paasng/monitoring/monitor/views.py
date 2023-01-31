@@ -27,6 +27,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
+from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.monitoring.monitor.alert_rules.constants import DEFAULT_RULE_CONFIGS
@@ -35,7 +36,6 @@ from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
-from .alert import query_alerts
 from .exceptions import BKMonitorGatewayServiceError
 from .models import AppAlertRule
 from .phalanx import Client
@@ -233,7 +233,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         try:
-            alerts = query_alerts(serializer.validated_data)
+            alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
         except BKMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 

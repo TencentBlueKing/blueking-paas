@@ -20,7 +20,6 @@ from typing import Dict
 
 from django.conf import settings
 from django.http.request import HttpRequest
-from paas_service.auth import sign_instance_token
 from paas_service.models import InstanceDataRepresenter, ServiceInstance
 
 
@@ -33,8 +32,11 @@ def render_instance_data(request: HttpRequest, instance: ServiceInstance) -> Dic
 
     if settings.ENABLE_ADMIN:
         # NOTE: 签发管理页面的访问链接, 如果不提供管理入口, 去掉 `admin_url` 即可
-        token = sign_instance_token(request.client.name, str(instance.uuid))
-        admin_url = request.build_absolute_uri(f"/authenticate?token={token}")
-        config["admin_url"] = admin_url
+        # 没有空间 ID 则不显示详情页面
+        if bk_monitor_space_id := config.get('bk_monitor_space_id'):
+            admin_url = "{}/?space_uid={}#/apm/application?filter-app_name={}".format(
+                settings.BK_MONITORV3_URL, bk_monitor_space_id, config['app_name']
+            )
+            config["admin_url"] = admin_url
 
     return data

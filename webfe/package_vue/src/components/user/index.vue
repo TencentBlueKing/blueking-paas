@@ -75,7 +75,11 @@
         },
         methods: {
             focus () {
-                this.$refs.userSelector.focus();
+                if (this.$refs.userSelector) {
+                    this.$refs.userSelector.focus();
+                } else if (this.$refs.member_selector) {
+                    this.$refs.member_selector.$el.click();
+                }
             },
             async fuzzySearchMethod (keyword, page = 1) {
                 const users = await this.$http.get(`${window.API_HOST}user/list`, {

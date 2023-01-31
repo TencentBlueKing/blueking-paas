@@ -145,6 +145,12 @@
 #   bkmonitor: example-metric-client-token
 ## 是否默认允许创建 Smart 应用
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
+## 是否默认允许创建云原生应用
+# IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT: false
+## 云原生应用的默认集群名称
+# CLOUD_NATIVE_APP_DEFAULT_CLUSTER: ""
+## 是否允许创建蓝鲸插件应用
+# IS_ALLOW_CREATE_BK_PLUGIN_APP: false
 
 
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
@@ -603,6 +609,17 @@
 
 ## 是否在开发者中心应用列表中展示插件应用
 # DISPLAY_BK_PLUGIN_APPS: true
+
+
+## ------------------------------------ 蓝鲸监控配置 ------------------------------------
+
+## 蓝鲸监控的API是否已经注册在 APIGW
+# ENABLE_BK_MONITOR_APIGW: true
+
+## 同步告警策略到监控的配置
+# MONITOR_AS_CODE_CONF: {}
+## 蓝鲸监控网关的环境
+# BK_MONITOR_APIGW_SERVICE_STAGE: prod
 
 # ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 

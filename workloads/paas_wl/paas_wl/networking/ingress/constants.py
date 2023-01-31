@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from enum import Enum
-
 from blue_krill.data_types.enum import StructuredEnum
 
 
@@ -31,19 +29,6 @@ class AppDomainSource(int, StructuredEnum):
 
 class AppSubpathSource(int, StructuredEnum):
     DEFAULT = 1
-
-
-class DomainsStructureType(int, Enum):
-    """The data structure type of given `domains`"""
-
-    # There are 1 or many domains, all uses the default '/' as path prefix
-    ALL_DIRECT_ACCESS = 1
-    # There are 1 or many domains which contain multiple non-default subpaths, all domains share
-    # same subpaths.
-    CUSTOMIZED_SUBPATH = 2
-
-    # A deprecated structure type, some plugins may broken when processing NON_STANDARD structure
-    NON_STANDARD = -1
 
 
 class AddressType(str, StructuredEnum):

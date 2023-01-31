@@ -788,9 +788,11 @@ CLI_AUTH_SECRET = settings.get('CLI_AUTH_SECRET', '')
 
 
 # === 插件应用相关
-#
+# 是否允许创建蓝鲸插件应用
+IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
+
 # [region-aware] 是否允许用户创建插件应用
-BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': False})
+BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': IS_ALLOW_CREATE_BK_PLUGIN_APP})
 
 # 管理插件应用的 API 网关时所使用的配置：
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get('BK_PLUGIN_APIGW_SERVICE_STAGE', 'prod')  # 环境（stage）
@@ -1102,6 +1104,15 @@ IAM_PLUGINS_CENTER_SYSTEM_ID = settings.get('IAM_PLUGINS_CENTER_SYSTEM_ID', defa
 # 是否在开发者中心应用列表中展示插件应用
 DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 
+# -----------------
+# 蓝鲸监控配置项
+# -----------------
+# 蓝鲸监控的API是否已经注册在 APIGW
+ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
+# 同步告警策略到监控的配置
+MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})
+# 蓝鲸监控网关的环境
+BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 'stage')
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
@@ -1145,5 +1156,3 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
-
-MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})

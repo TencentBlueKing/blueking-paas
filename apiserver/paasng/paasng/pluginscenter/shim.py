@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from django.utils.translation import gettext_lazy as _
+
 from paasng.dev_resources.sourcectl.git.client import GitCommandExecutionError
 from paasng.pluginscenter import constants
 from paasng.pluginscenter.exceptions import error_codes
@@ -69,7 +71,7 @@ def init_plugin_repository(plugin: PluginInstance, operator: str):
         initializer.create_project(plugin)
     except APIError as e:
         if e.message == '400 bad request for {:path=>["Path has already been taken"]}':
-            raise error_codes.CREATE_REPO_ERROR.f("同名仓库已存在")
+            raise error_codes.CREATE_REPO_ERROR.f(_("同名仓库已存在"))
         logger.exception("创建仓库返回异常, 异常信息: %s", e.message)
         raise error_codes.CREATE_REPO_ERROR
 

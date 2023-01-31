@@ -50,7 +50,7 @@ class TestCommand:
         return G(
             CommandModel,
             app=app,
-            command="echo 'finished'",
+            command=r"echo\ 'finished'",
             config=config,
         )
 
@@ -75,6 +75,7 @@ class TestCommand:
 
         handler.run_command(command)
         handler._wait_pod_succeeded(namespace=command.app.namespace, pod_name=command.name, timeout=60)
+        assert handler.get_command_logs(command, timeout=60).read() == b"finished\n"
         command_in_k8s = command_kmodel.get(command.app, command.name)
         assert command_in_k8s.phase == "Succeeded"
 
@@ -99,9 +100,23 @@ class TestCommand:
     def test_run_with_sidecar(self, handler, command, sidecar):
         handler.run_command(command)
         handler.wait_for_succeeded(command, timeout=60)
+        assert handler.get_command_logs(command, timeout=60).read() == b"finished\n"
         with pytest.raises(PodTimeoutError):
             handler._wait_pod_succeeded(namespace=command.app.namespace, pod_name=command.name, timeout=1)
         command_in_k8s = command_kmodel.get(command.app, command.name)
         # 虽然 Pod 仍在运行, 但是主容器已退出
         assert command_in_k8s.phase == "Running"
         assert command_in_k8s.main_container_exit_code == 0
+
+    def test_delete_with_sidecar(self, handler, command, sidecar):
+        handler.run_command(command)
+        handler.wait_for_succeeded(command, timeout=60)
+
+        command_in_k8s = command_kmodel.get(command.app, command.name)
+        assert command_in_k8s.phase == "Running"
+
+        waitable = handler.delete_command(command)
+        assert waitable is not None
+        waitable.wait(60)
+        with pytest.raises(AppEntityNotFound):
+            command_kmodel.get(command.app, command.name)

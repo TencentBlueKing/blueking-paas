@@ -514,6 +514,7 @@
 }
 .btn-warp{
     margin-left: 100px;
+    margin-top: 50px;
 }
 .footer-btn-warp {
     position: fixed;

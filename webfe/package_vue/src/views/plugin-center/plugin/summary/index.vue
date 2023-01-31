@@ -211,14 +211,6 @@
                 viewInfo: {},
                 shortcuts: [
                     {
-                        text: this.$t('今天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            return [start, end];
-                        }
-                    },
-                    {
                         text: this.$t('最近7天'),
                         value () {
                             const end = new Date();
@@ -233,6 +225,15 @@
                             const end = new Date();
                             const start = new Date();
                             start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+                            return [start, end];
+                        }
+                    },
+                    {
+                        text: this.$t('最近半年'),
+                        value () {
+                            const end = new Date();
+                            const start = new Date();
+                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 180);
                             return [start, end];
                         }
                     }

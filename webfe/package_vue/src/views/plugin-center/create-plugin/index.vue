@@ -91,7 +91,7 @@
           </div>
         </bk-form-item>
         <bk-form-item
-          :label="$t('插件标识')"
+          :label="$t('插件 ID')"
           :required="true"
           :icon-offset="105"
           :property="'plugin_id'"

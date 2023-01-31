@@ -20,7 +20,7 @@
         <bk-input
           v-model="filterKey"
           class="paas-plugin-input"
-          :placeholder="$t('输入插件标识、插件名称，按Enter搜索')"
+          :placeholder="$t('输入插件ID、插件名称，按Enter搜索')"
           :clearable="true"
           :right-icon="'paasng-icon paasng-search'"
           @enter="handleSearch"
@@ -54,7 +54,7 @@
             >{{ $t('清空搜索条件') }}</span>
           </div>
         </div>
-        <bk-table-column :label="$t('插件标识')">
+        <bk-table-column :label="$t('插件 ID')">
           <template slot-scope="{ row }">
             <img
               :src="row.logo"
@@ -93,23 +93,6 @@
           :filters="languageFilters"
           :filter-multiple="true"
         />
-        <!-- 状态 -->
-        <bk-table-column
-          :label="$t('状态')"
-          prop="status"
-          column-key="status"
-          :filters="statusFilters"
-          :filter-multiple="true"
-        >
-          <template slot-scope="{ row }">
-            <round-loading v-if="row.status === 'releasing'" />
-            <div
-              v-else
-              :class="['point', row.status]"
-            />
-            {{ $t(pluginStatus[row.status]) || '--' }}
-          </template>
-        </bk-table-column>
         <bk-table-column
           :label="$t('版本')"
         >
@@ -131,18 +114,24 @@
             </template>
           </template>
         </bk-table-column>
+        <!-- 状态 -->
         <bk-table-column
-          :label="$t('创建时间')"
-          prop="created"
+          :label="$t('状态')"
+          prop="status"
+          column-key="status"
+          :filters="statusFilters"
+          :filter-multiple="true"
         >
           <template slot-scope="{ row }">
-            {{ row.created || '--' }}
+            <round-loading v-if="row.status === 'releasing'" />
+            <div
+              v-else
+              :class="['point', row.status]"
+            />
+            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
           </template>
         </bk-table-column>
-        <bk-table-column
-          :label="$t('操作')"
-          :min-width="localLanguage === 'en' ? 200 : 120"
-        >
+        <bk-table-column :label="$t('操作')">
           <template slot-scope="{ row }">
             <div class="table-operate-buttons">
               <bk-button

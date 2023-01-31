@@ -258,6 +258,14 @@
               </div>
             </div>
           </li>
+          <li class="item-info">
+            <div class="describe">
+              {{ $t('发布完成时间') }}
+            </div>
+            <div class="content">
+              {{ versionDetail.complete_time ? formatDate(versionDetail.complete_time) : '--' }}
+            </div>
+          </li>
         </ul>
       </div>
     </bk-sideslider>
@@ -269,6 +277,7 @@
     import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import { PLUGIN_VERSION_STATUS } from '@/common/constants';
     import i18n from '@/language/i18n.js';
+    import { formatDate } from '@/common/tools';
 
     const PLUGIN_VERSION_STATUS_FILTER = {
         'successful': i18n.t('已上线'),
@@ -308,7 +317,8 @@
                 filterCreator: '',
                 filterStatus: '',
                 curIsPending: '',
-                statusFilter: PLUGIN_VERSION_STATUS_FILTER
+                statusFilter: PLUGIN_VERSION_STATUS_FILTER,
+                formatDate
             };
         },
         computed: {

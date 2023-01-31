@@ -69,8 +69,8 @@
           <span
             v-if="isShowDate"
             class="mr10"
-            style="min-width: 140px;"
-          >{{ log.timestamp }}</span>
+            style="min-width: 160px;"
+          >{{ formatTime(log.timestamp) }}</span>
           <!-- <div>
                         <span v-if="log.process_id.length < 5" class="mouseStyle">{{log.process_id}}</span>
                         <span v-else style="cursor: pointer;" v-bk-tooltips.right="{ theme: 'light', content: log.process_id }">{{processIdSlice(log.process_id)}}</span>
@@ -120,6 +120,7 @@
     import xss from 'xss';
     import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -170,7 +171,8 @@
                     levelname: '',
                     time_range: '1h'
                 },
-                isFilter: false
+                isFilter: false,
+                formatDate
             };
         },
         watch: {
@@ -533,6 +535,10 @@
 
             processIdSlice (str) {
                 return str.slice(0, 4) + '.';
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

@@ -514,7 +514,9 @@ class CommandHandler(PodScheduleHandler):
         :param namespace: namespace where run the command.
         :param command: Command to run.
         """
-        return self._get_pod_logs(namespace=command.app.namespace, pod_name=command.name, timeout=timeout, **kwargs)
+        return self._get_pod_logs(
+            namespace=command.app.namespace, pod_name=command.name, timeout=timeout, container=command.name, **kwargs
+        )
 
     def check_pod_timeout(self, pod: Command) -> bool:
         """Check A Pod whether running too long"""

@@ -189,7 +189,7 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
 
 def check_source_package(engine_app: EngineApp, package_path: Path, stream: DeployStream):
     """Check module source package, produce warning infos"""
-    # Check source pakcage size
+    # Check source package size
     warning_threshold = settings.ENGINE_APP_SOURCE_SIZE_WARNING_THRESHOLD_MB
     size = package_path.stat().st_size
     if size > warning_threshold * 1024 * 1024:

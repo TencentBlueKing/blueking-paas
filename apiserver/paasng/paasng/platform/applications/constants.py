@@ -32,6 +32,13 @@ class ApplicationType(str, StructuredEnum):
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
     CLOUD_NATIVE = EnumField('cloud_native')
 
+    @classmethod
+    def normal_app_type(cls):
+        """普通应用类型
+        插件应用也属于普通应用
+        """
+        return [cls.DEFAULT, cls.BK_PLUGIN]
+
 
 class ApplicationRole(int, StructuredEnum):
     NOBODY = EnumField(-1, label='无身份用户')
@@ -76,9 +83,9 @@ LEVEL_PARAM_DICT = {
 }
 
 
-class AppEnvironment(ChoicesEnum):
-    STAGING = "stag"
-    PRODUCTION = "prod"
+class AppEnvironment(str, StructuredEnum):
+    STAGING = EnumField("stag", label="预发布环境")
+    PRODUCTION = EnumField("prod", label="生产环境")
 
 
 class AppResourceType(ChoicesEnum):

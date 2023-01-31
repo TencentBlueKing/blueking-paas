@@ -20,6 +20,7 @@
 
 <script>
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import processOperation from '@/views/dev-center/app/engine/processes/comps/process-operation.vue';
 
     export default {
@@ -27,18 +28,11 @@
             paasPluginTitle,
             processOperation
         },
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 isProdLoading: true
             };
-        },
-        computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            }
         },
         methods: {
             handlerDataReady (env) {

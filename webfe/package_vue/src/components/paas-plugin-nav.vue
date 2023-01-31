@@ -103,7 +103,7 @@
                 return this.$route.name;
             },
             curPluginInfo () {
-                return this.$store.state.curPluginInfo;
+                return this.$store.state.plugin.curPluginInfo;
             },
             pluginFeatureFlags () {
                 return this.$store.state.plugin.pluginFeatureFlags;

@@ -7,9 +7,10 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.0.8
-  title: "generate sdks"
-  comment: "generate sdks"
+  version: 1.0.9
+  title: "add cnative app deploy api"
+  comment: "add cnative app deploy api"
+
 
 stage:
   name: "prod"

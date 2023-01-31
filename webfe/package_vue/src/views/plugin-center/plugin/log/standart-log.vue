@@ -118,7 +118,7 @@
 <script>
     import moment from 'moment';
     import xss from 'xss';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import logFilter from './comps/log-filter.vue';
 
     const xssOptions = {
@@ -134,7 +134,7 @@
         components: {
             logFilter
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 tabActive: 'standartLog',
@@ -172,15 +172,6 @@
                 },
                 isFilter: false
             };
-        },
-        computed: {
-            // 插件
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            }
         },
         watch: {
             'logParams.keyword' (newVal, oldVal) {
@@ -353,9 +344,6 @@
                 this.$refs.standartLogFilter.setAutoLoad();
                 // 插件标准化输出
                 this.getPluginLogList(isMaskLayer);
-                // 标准化输出
-                // this.getStreamLogList(isMaskLayer);
-                // isLoadFilter && this.getFilterData();
             },
 
             /**
@@ -480,44 +468,6 @@
                         this.isScrollLoading = false;
                         this.isLoading = false;
                     }, 500);
-                }
-            },
-
-            async getFilterData () {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
-                const params = this.getParams();
-
-                try {
-                    const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
-                    const data = res.data;
-                    data.forEach(item => {
-                        const condition = {
-                            id: item.key,
-                            name: item.name,
-                            text: item.chinese_name || item.name,
-                            list: []
-                        };
-                        item.options.forEach(option => {
-                            condition.list.push({
-                                id: option[0],
-                                text: option[0]
-                            });
-                        });
-                        if (condition.id === 'environment') {
-                            this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
-                            this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
-                            this.streamList = condition.list;
-                        }
-                    });
-                    this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
                 }
             },
 

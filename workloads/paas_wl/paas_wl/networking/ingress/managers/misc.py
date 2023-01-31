@@ -109,6 +109,11 @@ class AppDefaultIngresses:
 class LegacyAppIngressMgr(AppIngressMgr):
     """manage the default legacy default ingress resource"""
 
+    # CAN NOT set header `X-Script-Name` to all request for LegacyAppIngressMgr.
+    # Because the legacy ingress will be proxy by another nginx frontend,
+    # and `X-Script-Name` should and must be set by the frontend nginx
+    set_header_x_script_name: bool = False
+
     def make_ingress_name(self) -> str:
         return f'{self.app.region}-{self.app.scheduler_safe_name}'
 

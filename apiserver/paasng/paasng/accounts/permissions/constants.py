@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 # 由于权限中心的用户组授权为异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
 # 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用

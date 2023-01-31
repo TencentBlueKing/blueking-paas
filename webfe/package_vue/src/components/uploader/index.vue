@@ -100,7 +100,7 @@
             // mime类型
             accept: {
                 type: String,
-                default: 'application/x-tar,application/x-gzip'
+                default: 'application/x-tar,application/x-gzip,application/gzip'
             },
             // 接受类型提示信息
             acceptTips: {

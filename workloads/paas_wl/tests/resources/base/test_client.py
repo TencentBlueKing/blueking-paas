@@ -32,9 +32,9 @@ from paas_wl.release_controller.entities import Runtime
 from paas_wl.resources.base.client import K8sScheduler
 from paas_wl.resources.base.controllers import BuildHandler
 from paas_wl.resources.base.exceptions import (
-    PodNotSucceededAbsentError,
+    PodAbsentError,
     PodNotSucceededError,
-    PodNotSucceededTimeoutError,
+    PodTimeoutError,
     ResourceDuplicate,
     ResourceMissing,
 )
@@ -308,14 +308,14 @@ class TestClientBuildNew:
         assert scheduler_client.interrupt_builder(namespace=app.namespace, name=generate_builder_name(app)) is False
 
     def test_wait_for_succeeded_no_pod(self, app, scheduler_client):
-        with pytest.raises(PodNotSucceededAbsentError):
+        with pytest.raises(PodAbsentError):
             scheduler_client.wait_build_succeeded(app.namespace, generate_builder_name(app), timeout=1)
 
     @pytest.mark.parametrize(
         'phase, exc_context',
         [
-            ('Pending', pytest.raises(PodNotSucceededTimeoutError)),
-            ('Running', pytest.raises(PodNotSucceededTimeoutError)),
+            ('Pending', pytest.raises(PodTimeoutError)),
+            ('Running', pytest.raises(PodTimeoutError)),
             ('Failed', pytest.raises(PodNotSucceededError)),
             ('Unknown', pytest.raises(PodNotSucceededError)),
             ('Succeeded', does_not_raise()),

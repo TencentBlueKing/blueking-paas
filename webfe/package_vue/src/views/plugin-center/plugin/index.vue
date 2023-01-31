@@ -99,7 +99,6 @@
                 errorMessage: '',
                 deniedMessageType: 'default',
                 showMarketMenus: true,
-
                 // 非应用引擎 应用 时所要显示的父级导航
                 parentNavIds: [8, 10],
                 // 非应用引擎 应用 时所要显示的子级导航
@@ -127,6 +126,7 @@
          * 进入当前组件时请求应用信息
          */
         async beforeRouteEnter (to, from, next) {
+            console.log('to', to);
             const pluginId = to.params.id; // 插件id
             const pluginTypeId = to.params.pluginTypeId; // 插件类型id
 

@@ -104,7 +104,6 @@
         },
         mixins: [pluginBaseMixin],
         data () {
-            console.log('this', this);
             return {
                 stagesIndex: 0,
                 curStep: 1,
@@ -121,7 +120,7 @@
                 return this.$route.query.release_id;
             },
             stageId () {
-                return this.$store.state.plugin.curRelease.current_stage !== undefined ? this.$store.state.plugin.curRelease.current_stage.stage_id : undefined;
+                return this.$store.state.plugin.curRelease.current_stage !== undefined ? this.$store.state.plugin.curRelease.current_stage.stage_id : this.$route.query.stage_id;
             },
             curVersion () {
                 return this.$route.query.version || this.titleVersion;

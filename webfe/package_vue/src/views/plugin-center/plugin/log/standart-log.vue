@@ -476,7 +476,6 @@
             handleLogSearch (params) {
                 this.logParams = params;
                 this.resetStreamLog();
-                console.log('params.isDateChange', params.isDateChange);
                 // 改为获取插件日志
                 this.loadData(params.isDateChange);
 

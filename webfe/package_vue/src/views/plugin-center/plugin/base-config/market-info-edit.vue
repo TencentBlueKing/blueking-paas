@@ -1,5 +1,5 @@
 <template>
-  <div :class="`container visible-range ${isEditorHeight ? 'beyond-container' : ''}`">
+  <div class="market-info-wrapper">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-market-info-loading"
@@ -24,7 +24,7 @@
                 v-bk-tooltips.top="`${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${administratorStr}`"
                 class="lable-wrapper"
               >
-                {{ $t('应用分类') }}
+                <span class="label">{{ $t('应用分类') }}</span>
               </div>
               <bk-select
                 v-model="form.category"
@@ -301,22 +301,24 @@
         border: none;
     }
 
-    .visible-range .editor {
+    .market-info-wrapper .editor {
         min-height: 300px;
-    }
-
-    @media screen and (max-width: 1366px) {
-        .visible-range .editor {
-            height: calc(100vh - 392px) !important;
-        }
-        .visible-range.beyond-container .editor {
-            height: calc(100vh - 408px) !important;
-        }
     }
     .lable-wrapper {
         position: absolute;
         top: 0;
-        left: -80px;
+        left: -100px;
+        width: 100px;
+        min-height: 32px;
+        text-align: right;
+        vertical-align: middle;
+        line-height: 32px;
+        float: left;
+        font-size: 14px;
+        font-weight: normal;
+        color: #63656E;
+        box-sizing: border-box;
+        padding: 0 24px 0 0;
         &::after {
             content: '*';
             position: absolute;
@@ -329,10 +331,14 @@
             vertical-align: middle;
             transform: translate(3px, -50%);
         }
+        .label {
+            display: inline-block;
+            line-height: 20px;
+        }
     }
 </style>
 <style>
-    .visible-range .editor .ql-snow .ql-formats {
+    .market-info-wrapper .editor .ql-snow .ql-formats {
         line-height: 24px;
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
@@ -340,7 +346,7 @@
         flex-direction: column;
     }
     .app-container.beyond .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
-        height: calc(100vh - 392px);
+        height: calc(100vh - 406px);
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor .ql-container {
         flex: 1;

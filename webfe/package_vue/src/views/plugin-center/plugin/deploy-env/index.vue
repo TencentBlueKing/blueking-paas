@@ -342,11 +342,8 @@
 
             editingRowToggle (rowItem = {}, rowIndex, type = '') {
                 if (type === 'cancel') {
-                    const currentItem = this.envVarListBackup.find(envItem => envItem.key === rowItem.key);
-                    rowItem.key = currentItem.key;
-                    rowItem.value = currentItem.value;
-                    rowItem.description = currentItem.description;
-                    rowItem.environment_name = currentItem.environment_name;
+                    const currentItem = this.envVarListBackup.find(envItem => envItem.__id__ === rowItem.__id__);
+                    rowItem = currentItem;
                     if (this.$refs[`${rowItem.key}`] && this.$refs[`${rowItem.key}`].length) {
                         this.$refs[`${rowItem.key}`][0].formItems.forEach(item => {
                             item.validator.content = '';

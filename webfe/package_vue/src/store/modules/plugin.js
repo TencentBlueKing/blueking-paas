@@ -507,6 +507,15 @@ export default {
         dispatch('getAppFeature', { appCode: pluginId }, {root: true})
       ]);
       commit('updateCurAppByCode', { appCode: pluginId, moduleId }, {root: true});
+    },
+
+    /**
+         * 插件部署信息
+         * @param {Object} params 请求参数：pluginId
+         */
+    getPluginAccessEntry ({ commit, state }, { pluginId }, config) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${pluginId}/modules/default/envs/prod/released_state/`;
+      return http.get(url, config);
     }
   }
 };

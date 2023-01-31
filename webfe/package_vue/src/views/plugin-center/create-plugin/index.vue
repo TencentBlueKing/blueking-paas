@@ -41,7 +41,6 @@
                   id="guide-wrap"
                   class="guide-container"
                 >
-                  <!-- <bk-input :left-icon="'bk-icon icon-search'" class="guide-input mb10" v-model="form.type" :placeholder="$t('输入关键字')"></bk-input> -->
                   <div class="guide-list">
                     <div class="flex-row align-items-center guide-item">
                       <img

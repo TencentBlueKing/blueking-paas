@@ -7,14 +7,16 @@
     >
       <paas-plugin-title />
       <div class="header mt10 header-flex">
-        <bk-button
-          theme="primary"
-          icon="plus"
-          :disabled="!canManageMembers"
-          @click="createMember"
-        >
-          {{ $t('新增成员') }}
-        </bk-button>
+        <span v-bk-tooltips.top="{ content: $t('仅管理员可添加成员'), disabled: canManageMembers }">
+          <bk-button
+            theme="primary"
+            icon="plus"
+            :disabled="!canManageMembers"
+            @click="createMember"
+          >
+            {{ $t('新增成员') }}
+          </bk-button>
+        </span>
         <bk-input
           v-model="keyword"
           class="search-input"
@@ -24,14 +26,6 @@
           @enter="handleSearch"
         />
       </div>
-      <!-- <bk-alert type="warning" :show-icon="true">
-                <div slot="title">
-                    <span class="dev-name">carrielu</span>、
-                    <span class="dev-name">v_wmhawang</span>
-                    {{ $t('申请成为开发者，前往') }}
-                    <span class="detail-doc"> {{ $t('审批') }}</span>
-                </div>
-            </bk-alert> -->
       <div class="content-wrapper">
         <bk-table
           v-bkloading="{ isLoading: isTableLoading }"
@@ -95,6 +89,7 @@
                   <bk-button
                     text
                     class="mr5"
+                    :disabled="signoutDisabled"
                     @click="showLeavePluginDialog(props.row.role.id, props.row.username)"
                   >
                     {{ $t('退出插件') }}
@@ -239,9 +234,6 @@
             {
                 '上线审核': true
             },
-            // {
-            //     '插件推广': true
-            // },
             {
                 '成员管理': true
             }
@@ -253,9 +245,6 @@
             {
                 '上线审核': false
             },
-            // {
-            //     '插件推广': true
-            // },
             {
                 '成员管理': false
             }
@@ -304,8 +293,10 @@
             };
         },
         computed: {
+            // 当前用户是否为当前插件的管理员
             canManageMembers () {
-                return this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS['administrator'];
+                const curUserData = this.memberListShow.find(item => item.username === this.currentUser) || {};
+                return curUserData.role && curUserData.role.id === ROLE_BACKEND_IDS['administrator'];
             },
             signoutDisabled () {
                 const adminUsers = this.memberListShow.filter(user => user.role.roleName === 'administrator');

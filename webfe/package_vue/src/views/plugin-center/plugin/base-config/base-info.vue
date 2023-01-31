@@ -58,7 +58,7 @@
                 </div>
               </bk-form-item>
               <bk-form-item style="width: 180px;">
-                <label class="title-label no-border-bottom"> {{ $t('插件标识') }} </label>
+                <label class="title-label no-border-bottom"> {{ $t('插件 ID') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);transform: translateX(-1px);">
                 <div class="item-content first-item-content">
@@ -443,7 +443,7 @@
             class="ps-form-control"
           >
           <div class="mt10 f13">
-            {{ $t('注意：插件标识和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件。') }}
+            {{ $t('注意：插件ID和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件。') }}
           </div>
         </div>
       </div>
@@ -1189,6 +1189,7 @@
         .unfold {
             overflow: auto;
             min-height: 200px;
+            overflow-x: hidden;
         }
         .up {
             height: 200px;

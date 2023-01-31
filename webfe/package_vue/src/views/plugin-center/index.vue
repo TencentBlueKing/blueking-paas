@@ -201,7 +201,6 @@
         data () {
             return {
                 loading: true,
-                loaderPlaceholder: 'apps-loading',
                 filterKey: '',
                 pluginList: [],
                 pluginStatus: PLUGIN_STATUS,

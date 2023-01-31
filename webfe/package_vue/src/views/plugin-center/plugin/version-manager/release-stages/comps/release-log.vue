@@ -1,5 +1,8 @@
 <template>
-  <div class="release-log-warp">
+  <div
+    ref="logWarp"
+    class="release-log-warp"
+  >
     <template v-if="logs.length">
       <pre
         v-for="(item, index) in logs"
@@ -46,6 +49,14 @@
             }
         },
         watch: {
+            log: {
+                handler () {
+                    setTimeout(() => {
+                        this.$refs.logWarp.scrollTop = this.$refs.logWarp.scrollHeight;
+                    }, 0);
+                },
+                deep: true
+            }
         },
         mounted () {
             // 初始化日志彩色组件
@@ -53,8 +64,6 @@
             const AU = require('ansi_up')
             // eslint-disable-next-line
             this.ansiUp = new AU.default
-        },
-        methods: {
         }
     };
 </script>

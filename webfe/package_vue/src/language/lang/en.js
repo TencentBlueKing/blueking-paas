@@ -2009,7 +2009,7 @@ export default {
   '级别': 'Level',
   '事件内容': 'Event content',
   '累计出现次数': 'Cumulative occurrences',
-  '注意：插件标识和名称在下架后': 'Note: The plug-in identification and name are after being removed from the shelf',
+  '注意：插件ID和名称在下架后': 'Note: The plug-in ID and name will be removed from the shelf',
   '不能继续创建同名插件。': 'You cannot continue to create plug-ins with the same name.',
   '不能多于{maxLength}个字符': 'No more than {maxLength} characters',
   '插件列表': 'Plugin list',
@@ -2069,5 +2069,10 @@ export default {
   '向右缩进': 'indent right',
   '向左缩进': 'indent left',
   '由汉字、英文字母、数字、连字符和下划线组成，长度小于 20 个字符': 'Composed of Chinese characters, English letters, numbers, hyphens and underscores, the length is less than 20 characters',
-  '分类由插件管理员定义，如分类不满足需求可联系插件管理员：': 'The classification is defined by the plug-in administrator. If the classification does not meet the requirements, you can contact the plug-in administrator: '
+  '分类由插件管理员定义，如分类不满足需求可联系插件管理员：': 'The classification is defined by the plug-in administrator. If the classification does not meet the requirements, you can contact the plug-in administrator: ',
+  '请选择版本类型': 'Please select version type',
+  '上一步': 'Back',
+  '插件访问入口': 'Plugin access entry',
+  '已下架': 'Has been removed',
+  '仅管理员可添加成员': 'Only administrators can add members'
 };

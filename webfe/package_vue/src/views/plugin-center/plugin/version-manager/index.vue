@@ -19,14 +19,18 @@
               :disabled="curIsPending ? true : false"
               @click="handleCreateVersion('formal')"
             >
-              <!-- <i class="paasng-icon paasng-plus"></i> -->
               {{ $t('新建版本') }}
             </bk-button>
           </div>
-          <!-- <bk-button theme="default" @click="handleCreateVersion('test')">
-                        <i class="paasng-icon paasng-plus"></i>
-                        {{ $t('测试版本') }}
-                    </bk-button> -->
+          <bk-button
+            v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS && isPluginAccessEntry"
+            text
+            theme="primary"
+            @click="handleOpenLink"
+          >
+            {{ $t('插件访问入口') }}
+            <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
+          </bk-button>
           <bk-input
             v-model="keyword"
             class="fr"
@@ -127,14 +131,9 @@
                 v-else
                 :class="['dot', row.status]"
               />
-              <span v-bk-tooltips="$t(versionStatus[row.status])">{{ $t(versionStatus[row.status]) || '--' }}</span>
+              <span>{{ $t(versionStatus[row.status]) || '--' }}</span>
             </template>
           </bk-table-column>
-          <!-- <bk-table-column :label="$t('标签')">
-                        <template slot-scope="{ row }">
-                            <span :class="['tag', { 'success': row.tag === 'stable' }, { 'danger': row.tag === 'beta' }]">{{ row.tag || '--' }}</span>
-                        </template>
-                    </bk-table-column> -->
           <bk-table-column
             :label="$t('操作')"
             width="220"
@@ -230,14 +229,6 @@
               <p>{{ versionDetail.comment }}</p>
             </div>
           </li>
-          <!-- <li class="item-info">
-                        <div class="describe">{{ $t('自定义前端') }}</div>
-                        <div class="content">--</div>
-                    </li>
-                    <li class="item-info">
-                        <div class="describe">{{ $t('适用Job类型') }}</div>
-                        <div class="content">--</div>
-                    </li> -->
           <li class="item-info">
             <div class="describe">
               {{ $t('发布状态') }}
@@ -322,7 +313,11 @@
                 filterStatus: '',
                 curIsPending: '',
                 statusFilter: PLUGIN_VERSION_STATUS_FILTER,
-                formatDate
+                formatDate,
+                isPluginAccessEntry: true,
+                pluginDefaultInfo: {
+                    exposed_link: ''
+                }
             };
         },
         computed: {
@@ -359,6 +354,7 @@
         methods: {
             init () {
                 this.getVersionList();
+                this.getPluginAccessEntry();
             },
 
             // 切换表格每页显示条数
@@ -464,10 +460,6 @@
             handleCreateVersion (difference) {
                 // 正式版 / 测试版
                 // formal / test
-                // this.$router.push({
-                //     name: 'pluginVersionManager',
-                //     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
-                // });
                 this.$router.push({
                     name: 'pluginVersionEditor',
                     params: {
@@ -480,8 +472,8 @@
                 });
             },
 
+            // 根据关键字搜索
             handleSearch () {
-                // 根据关键字搜索
                 this.pagination.count = 0;
                 this.getVersionList();
             },
@@ -494,12 +486,19 @@
 
             // 发布
             handleRelease (data, isReset) {
+                const stagesData = data.all_stages.map((e, i) => {
+                    e.icon = i + 1;
+                    e.title = e.name;
+                    return e;
+                });
+                this.$store.commit('plugin/updateStagesData', stagesData);
                 if (isReset) {
                   this.republish(data);
                 } else {
                   this.$router.push({
                       name: 'pluginVersionRelease',
                       query: {
+                          stage_id: data.current_stage.stage_id,
                           release_id: data.id
                       }
                   });
@@ -514,10 +513,11 @@
                     releaseId: data.id
                 };
                 try {
-                    await this.$store.dispatch('plugin/republishRelease', params);
+                    const res = await this.$store.dispatch('plugin/republishRelease', params);
                     this.$router.push({
                       name: 'pluginVersionRelease',
                       query: {
+                          stage_id: res.current_stage && res.current_stage.stage_id,
                           release_id: data.id
                       }
                   });
@@ -535,6 +535,25 @@
             clearFilterKey () {
                 this.keyword = '';
                 this.$refs.versionTable.clearFilter();
+            },
+            async getPluginAccessEntry () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
+                        pluginId: this.pluginId
+                    });
+                    this.pluginDefaultInfo = res;
+                } catch (e) {
+                    this.isPluginAccessEntry = false;
+                    this.$bkMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                }
+            },
+            handleOpenLink () {
+                if (this.isPluginAccessEntry) {
+                    window.open(this.pluginDefaultInfo.exposed_link.url, '_blank');
+                }
             }
         }
     };

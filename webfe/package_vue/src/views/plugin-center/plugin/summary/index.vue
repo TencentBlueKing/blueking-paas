@@ -352,6 +352,14 @@
                         params
                     });
                     this.chartDataCache = res;
+                    // 由于API不能同一天的数据，使用默认值
+                    if (!res.length) {
+                        this.chartDataCache = [{
+                            'commit_count': 0,
+                            'commit_user_count': 0,
+                            'day': params['begin_time']
+                        }];
+                    }
                     this.renderChart();
                 } catch (e) {
                     const chartRef = this.$refs.chart;

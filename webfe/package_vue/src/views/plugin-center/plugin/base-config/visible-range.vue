@@ -3,30 +3,30 @@
     <div class="app-container middle">
       <paas-plugin-title />
       <div class="desc mb20 mt10">
-        仅可见范围内的组织、用户可在研发商店查看并使用该插件
+        {{ $t('仅可见范围内的组织、用户可在研发商店查看并使用该插件') }}
       </div>
       <div class="group-warp mb20">
-        <bk-button>选择组织/人员</bk-button>
+        <bk-button>{{ $t('选择组织/人员') }}</bk-button>
         <div class="user-warp mt20">
           <div class="mb10">
-            用户
+            {{ $t('用户') }}
           </div>
           <bk-tag
             closable
             @close="close"
           >
-            企业邮箱
+            {{ $t('企业邮箱') }}
           </bk-tag>
         </div>
         <div class="organize-warp mt20">
           <div class="mb10">
-            组织
+            {{ $t('组织') }}
           </div>
           <bk-tag
             closable
             @close="close"
           >
-            企业邮箱
+            {{ $t('企业邮箱') }}
           </bk-tag>
         </div>
       </div>

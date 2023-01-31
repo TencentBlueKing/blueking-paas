@@ -255,19 +255,19 @@
       v-model="newVersionConfig.visible"
       theme="primary"
       :mask-close="false"
-      :title="`确认新建版本：${curVersion.version}`"
+      :title="`${$t('确认新建版本')}：${curVersion.version}`"
       @confirm="handlerConfirm"
       @cancel="handlerCancel"
     >
       <template v-if="curVersionData.source_versions">
         <div class="version-tips-item">
-          <span>代码分支：{{ curVersionData.source_versions[0].name }}</span>
+          <span>{{ $t('代码分支：') }}{{ curVersionData.source_versions[0].name }}</span>
         </div>
         <div class="version-tips-item">
-          <span>代码更新时间：{{ formatTime(curVersionData.source_versions[0].last_update) }}</span>
+          <span>{{ $t('代码更新时间：') }}{{ formatTime(curVersionData.source_versions[0].last_update) }}</span>
         </div>
         <div class="version-tips-item">
-          <span>代码提交日志：{{ curVersionData.source_versions[0].message }}</span>
+          <span>Commit Message: {{ curVersionData.source_versions[0].message }}</span>
         </div>
       </template>
     </bk-dialog>
@@ -410,16 +410,14 @@
 
             submitVersionForm () {
                 this.$refs.versionForm.validate().then(validator => {
-                    this.isSubmitLoading = true;
                     this.newVersionConfig.visible = true;
                     // this.createVersion();
-                }).catch(() => {
-                    this.isSubmitLoading = false;
                 });
             },
 
             // 新建版本并发布
             async createVersion () {
+                this.isSubmitLoading = true;
                 // 当前选中分支的数据
                 const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
 

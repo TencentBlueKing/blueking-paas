@@ -219,13 +219,13 @@
                 :key="'数据源接入'"
                 :value="1"
               >
-                数据源接入
+                {{ $t('数据源接入') }}
               </bk-radio>
               <bk-radio
                 :key="'数据入库'"
                 :value="2"
               >
-                数据入库
+                {{ $t('数据入库') }}
               </bk-radio>
             </bk-radio-group>
           </bk-form-item>
@@ -410,7 +410,7 @@
                 extraFields: {},
                 buttonLoading: false,
                 editorOption: {
-                    placeholder: '@通知他人，ctrl+enter快速提交'
+                    placeholder: this.$t('@通知他人，ctrl+enter快速提交')
                 },
                 curPluginItem: {},
                 pdIdPlaceholder: '',
@@ -472,22 +472,22 @@
                 }
                 this.rules.plugin_id.push({
                     regex: new RegExp(this.curPluginInfo.schema.id.pattern) || new RegExp('^[a-z0-9-]{1,16}$'),
-                    message: this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连接符(-)组成，长度小于16个字符'),
+                    message: this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符'),
                     trigger: 'blur change'
                 });
                 this.rules.plugin_id.push({
                     max: this.curPluginInfo.schema.id.maxlength || 16,
-                    message: `不能多于${this.curPluginInfo.schema.id.maxlength || 16}个字符`,
+                    message: this.$t(`不能多于{maxLength}个字符`, { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
                     trigger: 'blur change'
                 });
                 this.rules.name.push({
                     regex: new RegExp(this.curPluginInfo.schema.name.pattern) || new RegExp('^[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}$'),
-                    message: this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
+                    message: this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符'),
                     trigger: 'blur change'
                 });
                 this.rules.name.push({
                     max: this.curPluginInfo.schema.name.maxlength || 20,
-                    message: `不能多于${this.curPluginInfo.schema.id.maxlength || 20}个字符`,
+                    message: this.$t(`不能多于{maxLength}个字符`, { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
                     trigger: 'blur change'
                 });
             },
@@ -610,6 +610,7 @@
             height: 48px;
         }
         .guide-plugin-name{
+            font-size: 14px;
             color: #313238;
         }
         .guide-plugin-desc{

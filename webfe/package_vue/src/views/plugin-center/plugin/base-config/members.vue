@@ -80,22 +80,24 @@
                 v-for="(perm, permIndex) in roleSpec[props.row.role.roleName]"
                 v-if="perm[Object.keys(perm)[0]]"
                 :key="permIndex"
-                class="ps-pr"
               >
-                {{ $t(Object.keys(perm)[0]) }}
+                {{ $t(Object.keys(perm)[0]) }}<span v-if="props.row.role.roleName === 'administrator' && permIndex !== 2">{{ localLanguage === 'en' ? ', ' : '、' }}</span>
               </span>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('操作')">
             <template slot-scope="props">
-              <bk-button
-                v-if="isCurrentUser(props.row)"
-                text
-                class="mr5"
-                @click="showLeavePluginDialog(props.row.role.id, props.row.username)"
-              >
-                {{ $t('退出插件') }}
-              </bk-button>
+              <template v-if="isCurrentUser(props.row)">
+                <span v-bk-tooltips.top="{ content: $t('插件至少有一个管理员'), disabled: !signoutDisabled }">
+                  <bk-button
+                    text
+                    class="mr5"
+                    @click="showLeavePluginDialog(props.row.role.id, props.row.username)"
+                  >
+                    {{ $t('退出插件') }}
+                  </bk-button>
+                </span>
+              </template>
               <bk-button
                 v-if="canManageMembers"
                 text
@@ -111,6 +113,10 @@
                 @click="delMember(props.row.username, props.row.role.id)"
               >
                 {{ $t('删除成员') }}
+                <round-loading
+                  v-if="isDelLoading && selectedMember.name === props.row.username"
+                  class="loading-transform"
+                />
               </bk-button>
             </template>
           </bk-table-column>
@@ -173,7 +179,7 @@
           </bk-form-item>
           <bk-form-item label="">
             <div class="ps-rights-list">
-              <span :class="['pointer-icon', { 'developer': roleName === 'developer' }]" />
+              <span :class="`pointer-icon ${developerClass}`" />
               <!-- roleName 当前权限 -->
               <span class="ps-rights-title">{{ $t('权限列表') }}</span>
               <span
@@ -230,9 +236,9 @@
             {
                 '上线审核': true
             },
-            {
-                '插件推广': true
-            },
+            // {
+            //     '插件推广': true
+            // },
             {
                 '成员管理': true
             }
@@ -244,9 +250,9 @@
             {
                 '上线审核': false
             },
-            {
-                '插件推广': true
-            },
+            // {
+            //     '插件推广': true
+            // },
             {
                 '成员管理': false
             }
@@ -290,12 +296,26 @@
                 enableToAddRole: false,
                 keyword: '',
                 memberListClone: [],
-                isTableLoading: false
+                isTableLoading: false,
+                isDelLoading: false
             };
         },
         computed: {
             canManageMembers () {
                 return this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS['administrator'];
+            },
+            signoutDisabled () {
+                const adminUsers = this.memberListShow.filter(user => user.role.roleName === 'administrator');
+                return adminUsers.length <= 1;
+            },
+            localLanguage () {
+                return this.$store.state.localLanguage;
+            },
+            developerClass () {
+                if (this.roleName === 'developer') {
+                    return this.localLanguage === 'en' ? 'en-developer-left' : 'developer';
+                }
+                return this.localLanguage === 'en' ? 'en-icon-left' : '';
             }
         },
         watch: {
@@ -437,7 +457,7 @@
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
                 this.$bkInfo({
-                    title: `确认退出并放弃此插件的权限？`,
+                    title: this.$t(`确认退出并放弃此插件的权限？`),
                     width: 480,
                     maskClose: true,
                     confirmFn: () => {
@@ -515,6 +535,9 @@
             },
 
             delMember (delMemberName, delMemberID) {
+                if (this.isDelLoading && this.selectedMember.name === delMemberName) {
+                    return;
+                }
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
                 this.$bkInfo({
@@ -528,6 +551,7 @@
             },
 
             async delSave () {
+                this.isDelLoading = true;
                 try {
                     await this.$store.dispatch('pluginMembers/deleteRole', {
                         pdId: this.pdId,
@@ -544,6 +568,8 @@
                         theme: 'error',
                         message: `${this.$t('删除成员失败：')} ${e.detail}`
                     });
+                } finally {
+                    this.isDelLoading = false;
                 }
             },
 
@@ -631,6 +657,7 @@
         border-radius: 2px;
 
         .ps-rights-title {
+            user-select: none;
             font-size: 14px;
             margin-right: 16px;
             color: #63656E;
@@ -696,9 +723,16 @@
         top: -5px;
         left: 30px;
     }
+    .en-icon-left {
+        left: 50px !important;
+    }
 
     .developer {
         left: 110px;
+    }
+
+    .en-developer-left {
+        left: 168px !important;
     }
 
     .empty-tips {
@@ -708,6 +742,10 @@
             cursor: pointer;
             color: #3a84ff;
         }
+    }
+
+    .loading-transform {
+        transform: translateY(-2px);
     }
 </style>
 

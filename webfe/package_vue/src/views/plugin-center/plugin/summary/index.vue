@@ -21,7 +21,7 @@
                   <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore || '--' }}</h3>
                   <span class="text">{{ $t('代码质量') }}</span>
                   <i
-                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考')"
+                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。')"
                     style="color: #C4C6CC;margin-top:1px;"
                     class="paasng-icon paasng-info-line"
                   />
@@ -109,6 +109,10 @@
                 </p>
                 <p class="repos">
                   <span>{{ $t('代码仓库：') }}</span>
+                  <span
+                    v-bk-tooltips.top-end="curPluginInfo.repository"
+                    class="repository-tooltips"
+                  />
                   <span>{{ curPluginInfo.repository }}</span>
                   <!-- 复制 -->
                   <span
@@ -659,6 +663,11 @@
               .repos {
                   position: relative;
                   padding-right: 30px;
+                  .repository-tooltips {
+                      position: absolute;
+                      width: 140px;
+                      height: 100%;
+                  }
               }
           }
           .copy-url {

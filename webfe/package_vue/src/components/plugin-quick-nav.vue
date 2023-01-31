@@ -50,6 +50,7 @@
               v-for="item in viewPluinList"
               :key="item.id"
               class="item flex-row align-items-center"
+              :class="{ 'plugin-active': pluginId === item.id }"
               @click="changePlugin(item)"
             >
               <img
@@ -107,6 +108,11 @@
                 isHover: false,
                 isLoading: false
             };
+        },
+        computed: {
+            pluginId () {
+                return this.$route.params.id;
+            }
         },
         watch: {
             searchValue (newVal, oldVal) {
@@ -172,7 +178,23 @@
                 setTimeout(() => {
                     this.isLoading = false;
                 }, 200);
-            }, 100)
+            }, 100),
+
+            getTarget (pluginId, pdId) {
+                const target = {
+                    name: this.$route.name,
+                    params: {
+                        ...this.$route.params,
+                        id: pluginId,
+                        pluginTypeId: pdId
+                    },
+                    query: {
+                        ...this.$route.query
+                    }
+                };
+
+                return target;
+            }
         }
     };
 </script>
@@ -212,6 +234,7 @@
             box-shadow: 0 2px 6px 0 rgba(0,0,0,0.10);
             border-radius: 2px;
             z-index: 1000;
+            user-select: none;
             .plugin-list{
                 padding-top: 5px;
                 max-height: 200px;
@@ -279,6 +302,9 @@
     justify-content: center;
     align-items: center;
     color: #666;
+}
+.plugin-active {
+    background: #F5F7FA;
 }
 </style>
 <style>

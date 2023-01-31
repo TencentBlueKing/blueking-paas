@@ -69,11 +69,12 @@ export const PLUGIN_STATUS = {
   'approval-failed': '创建审批失败',
   'developing': '开发中',
   'releasing': '发布中',
-  'released': '已发布'
+  'released': '已发布',
+  'archived': '已下架'
 };
 
 export const PLUGIN_VERSION_STATUS = {
-  'successful': '已上线',
+  'successful': '成功',
   'failed': '失败',
   'pending': '发布中',
   'initial': '发布中',

@@ -43,7 +43,7 @@ export default {
           if (val === '0.00') {
             val = 0;
           }
-          ret += `<div>${item.seriesName}：${val}${i18n.t('次')}</div>`;
+          ret += `<div>${item.seriesName}：${val}${i18n.t('人')}</div>`;
         });
         return ret;
       }

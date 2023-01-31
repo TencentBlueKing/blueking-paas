@@ -210,7 +210,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('分类') }} </label>
+                <label class="title-label"> {{ $t('应用分类') }} </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
@@ -230,7 +230,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('简介') }} </label>
+                <label class="title-label"> {{ $t('应用简介') }} </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
@@ -250,7 +250,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('联系人') }} </label>
+                <label class="title-label"> {{ $t('应用联系人') }} </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
@@ -425,7 +425,7 @@
     <bk-dialog
       v-model="delPluginDialog.visiable"
       width="540"
-      :title="`确认下架插件【${pluginInfo.id}】？`"
+      :title="`${'确认下架插件'}【${pluginInfo.id}】？`"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -443,7 +443,7 @@
             class="ps-form-control"
           >
           <div class="mt10 f13">
-            {{ $t('注意：插件标识和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件') }}
+            {{ $t('注意：插件标识和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件。') }}
           </div>
         </div>
       </div>

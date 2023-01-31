@@ -35,6 +35,7 @@
         :pagination="pagination"
         :outer-border="false"
         :header-border="false"
+        :show-overflow-tooltip="true"
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
@@ -82,7 +83,7 @@
           :filter-multiple="true"
         >
           <template slot-scope="{ row }">
-            <span v-bk-tooltips="row.pd_name">{{ row.pd_name || '--' }}</span>
+            {{ row.pd_name || '--' }}
           </template>
         </bk-table-column>
         <bk-table-column
@@ -106,7 +107,7 @@
               v-else
               :class="['point', row.status]"
             />
-            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
+            {{ $t(pluginStatus[row.status]) || '--' }}
           </template>
         </bk-table-column>
         <bk-table-column
@@ -130,7 +131,18 @@
             </template>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('操作')">
+        <bk-table-column
+          :label="$t('创建时间')"
+          prop="created"
+        >
+          <template slot-scope="{ row }">
+            {{ row.created || '--' }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('操作')"
+          :min-width="localLanguage === 'en' ? 200 : 120"
+        >
           <template slot-scope="{ row }">
             <div class="table-operate-buttons">
               <bk-button
@@ -149,7 +161,7 @@
                   text
                   @click="toNewVersion(row)"
                 >
-                  {{ $t('发布') }}
+                  {{ row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布') }}
                 </bk-button>
                 <bk-button
                   theme="primary"
@@ -235,6 +247,9 @@
                     });
                 }
                 return statusList;
+            },
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -489,6 +504,7 @@
                 display: inline-block;
                 border-radius: 50%;
                 margin-right: 3px;
+                border: 1px solid #FF9C01;
             }
             .waiting-approval{
                 background: #FFE8C3;

@@ -221,12 +221,12 @@
                         {
                             max: 64,
                             message: this.$t('不能超过64个字符'),
-                            trigger: 'blur'
+                            trigger: 'blur change'
                         },
                         {
                             regex: /^[A-Z][A-Z0-9_]*$/,
                             message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
-                            trigger: 'blur'
+                            trigger: 'blur change'
                         }
                     ],
                     value: [
@@ -238,7 +238,7 @@
                         {
                             max: 2048,
                             message: this.$t('不能超过2048个字符'),
-                            trigger: 'blur'
+                            trigger: 'blur change'
                         }
                     ],
                     description: [
@@ -342,7 +342,7 @@
 
             editingRowToggle (rowItem = {}, rowIndex, type = '') {
                 if (type === 'cancel') {
-                    const currentItem = this.envVarListBackup.find(envItem => envItem.id === rowItem.id);
+                    const currentItem = this.envVarListBackup.find(envItem => envItem.key === rowItem.key);
                     rowItem.key = currentItem.key;
                     rowItem.value = currentItem.value;
                     rowItem.description = currentItem.description;

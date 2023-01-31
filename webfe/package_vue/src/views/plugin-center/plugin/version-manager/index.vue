@@ -10,7 +10,7 @@
         <div class="ag-top-header">
           <!-- 有发布任务，禁用 -->
           <div
-            v-bk-tooltips.top="{ content: '已有发布任务进行中', disabled: !curIsPending }"
+            v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !curIsPending }"
             style="display: inline-block;"
           >
             <bk-button
@@ -133,7 +133,7 @@
                     </bk-table-column> -->
           <bk-table-column
             :label="$t('操作')"
-            width="150"
+            width="220"
           >
             <template slot-scope="{ row }">
               <bk-button
@@ -145,9 +145,9 @@
                 {{ $t('详情') }}
               </bk-button>
               <bk-button
-                v-if="row.status === 'pending' || row.status === 'initial'"
                 theme="primary"
                 text
+                class="mr10"
                 @click="handleRelease(row)"
               >
                 {{ $t('发布进度') }}

@@ -34,6 +34,6 @@ ingressPluginConfig:
 ## groupKindConcurrency defines how many workers each kind of
 ## resource has to handle resource change events, default value is 5
 # controller:
-#  groupKindConcurrency:
-#    BkApp.paas.bk.tencent.com: 5
-#    DomainGroupMapping.paas.bk.tencent.com: 5
+#   groupKindConcurrency:
+#     bkApp: 5
+#     domainGroupMapping: 5

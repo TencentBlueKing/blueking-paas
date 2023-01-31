@@ -31,6 +31,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -193,8 +194,13 @@ func initIngressPlugins() {
 
 // 生成某类组资源管理器配置
 func genGroupKindMgrOpts(groupKind schema.GroupKind, ctrlConf *cfg.ControllerConfigurationSpec) controller.Options {
+	// 支持配置短路径，如 bkApp，若不存在，则获取 groupKind.String() 的值，如 BkApp.paas.bk.tencent.com
+	concurrency, ok := ctrlConf.GroupKindConcurrency[strcase.ToLowerCamel(groupKind.Kind)]
+	if !ok {
+		concurrency = ctrlConf.GroupKindConcurrency[groupKind.String()]
+	}
 	return controller.Options{
-		MaxConcurrentReconciles: ctrlConf.GroupKindConcurrency[groupKind.String()],
+		MaxConcurrentReconciles: concurrency,
 		RateLimiter: workqueue.NewMaxOfRateLimiter(
 			// 首次重试延迟 1s，后续指数级翻倍，最高延迟 300s
 			workqueue.NewItemExponentialFailureRateLimiter(time.Second, 5*time.Minute),

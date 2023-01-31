@@ -546,13 +546,6 @@ class HelmChartUpdater:
             'webhookCaBundle': '',
         }
 
-        # group kind 信息会被强制转换成驼峰，这里调整回去
-        if 'controller' in values['controllerConfig'] \
-                and 'groupKindConcurrency' in values['controllerConfig']['controller']:
-            conc = values['controllerConfig']['controller']['groupKindConcurrency']
-            conc['BkApp.paas.bk.tencent.com'] = conc.pop('bkAppPaasBkTencentCom')
-            conc['DomainGroupMapping.paas.bk.tencent.com'] = conc.pop('domainGroupMappingPaasBkTencentCom')
-
         fp.write_text(yaml.dump(values))
 
     def _diff_values(self):

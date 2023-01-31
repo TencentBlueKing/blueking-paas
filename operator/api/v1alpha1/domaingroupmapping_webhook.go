@@ -24,7 +24,6 @@ import (
 	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -82,9 +81,7 @@ func (r *DomainGroupMapping) validateDomainGroupMapping() error {
 	if len(allErrs) == 0 {
 		return nil
 	}
-	return apierrors.NewInvalid(
-		schema.GroupKind{Group: GroupVersion.Group, Kind: KindBkApp}, r.Name, allErrs,
-	)
+	return apierrors.NewInvalid(GroupKindDomainGroupMapping, r.Name, allErrs)
 }
 
 func (r *DomainGroupMapping) validateSpecRef() *field.Error {

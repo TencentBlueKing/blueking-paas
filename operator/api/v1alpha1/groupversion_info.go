@@ -27,21 +27,32 @@ import (
 )
 
 const (
+	// Group is current api group name
+	Group = "paas.bk.tencent.com"
+
+	// Version is current api version
+	Version = "v1alpha1"
+
 	// KindBkApp is the string value of BkApp resource kind
 	KindBkApp = "BkApp"
 
-	// KindDomainGroupMapping is the string value of DomainGroupMapping resource
-	// kind
+	// KindDomainGroupMapping is the string value of DomainGroupMapping resource kind
 	KindDomainGroupMapping = "DomainGroupMapping"
 )
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "paas.bk.tencent.com", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: Group, Version: Version}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
+
+	// GroupKindBkApp ...
+	GroupKindBkApp = schema.GroupKind{Group: Group, Kind: KindBkApp}
+
+	// GroupKindDomainGroupMapping ...
+	GroupKindDomainGroupMapping = schema.GroupKind{Group: Group, Kind: KindDomainGroupMapping}
 )

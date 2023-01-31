@@ -40,7 +40,7 @@ def parse_process_type(app: EngineApp, service_name: str) -> str:
     parts = service_name.split(app.scheduler_safe_name)
     if len(parts) == 1:
         raise ValueError(f'Service name "{service_name}" invalid')
-    # Remove leading "-" char
+    # Remove leading "-" char, ["bkapp-", "-web"] -> "web"
     return parts[-1][1:]
 
 

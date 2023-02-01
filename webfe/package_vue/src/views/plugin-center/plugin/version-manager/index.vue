@@ -543,11 +543,8 @@
                     });
                     this.pluginDefaultInfo = res;
                 } catch (e) {
+                    // 接口error不展示插件访问入口
                     this.isPluginAccessEntry = false;
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
                 }
             },
             handleOpenLink () {

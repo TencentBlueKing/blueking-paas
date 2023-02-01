@@ -200,8 +200,7 @@ export const pluginRouter = [
         name: 'pluginBaseInfo',
         meta: {
           pathName: i18n.t('基本信息'),
-          capture403Error: false,
-          isGetAppInfo: true
+          capture403Error: false
         }
       },
       {

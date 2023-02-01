@@ -7,10 +7,10 @@
     >
       <paas-plugin-title />
       <div class="header mt10 header-flex">
-        <!-- v-if="enableToAddRole" -->
         <bk-button
           theme="primary"
           icon="plus"
+          :disabled="!canManageMembers"
           @click="createMember"
         >
           {{ $t('新增成员') }}
@@ -88,17 +88,16 @@
           </bk-table-column>
           <bk-table-column :label="$t('操作')">
             <template slot-scope="props">
-              <template v-if="canManageMe(props.row)">
-                <bk-button
-                  text
-                  class="mr5"
-                  @click="leaveApp(props.row.role.id, props.row.username)"
-                >
-                  {{ $t('退出插件') }}
-                </bk-button>
-              </template>
               <bk-button
-                v-if="isChangingRoles(props.row.role)"
+                v-if="isCurrentUser(props.row)"
+                text
+                class="mr5"
+                @click="showLeavePluginDialog(props.row.role.id, props.row.username)"
+              >
+                {{ $t('退出插件') }}
+              </bk-button>
+              <bk-button
+                v-if="canManageMembers"
                 text
                 class="mr5"
                 @click="updateMember(props.row.role.id, props.row.username, props.row.role.roleName)"
@@ -106,7 +105,7 @@
                 {{ $t('更换角色') }}
               </bk-button>
               <bk-button
-                v-if="canManageMembers(props.row)"
+                v-if="canManageMembers && !isCurrentUser(props.row)"
                 text
                 class="mr5"
                 @click="delMember(props.row.username, props.row.role.id)"
@@ -199,35 +198,13 @@
         </bk-form>
       </div>
     </bk-dialog>
-
-    <bk-dialog
-      v-model="permissionNoticeDialog.visiable"
-      width="540"
-      :title="$t('权限须知')"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="leaveAppDialog.isLoading"
-    >
-      <div class="tc">
-        {{ $t('由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作') }}
-      </div>
-      <template slot="footer">
-        <bk-button
-          theme="primary"
-          @click="iKnow"
-        >
-          {{ $t('我知道了') }}
-        </bk-button>
-      </template>
-    </bk-dialog>
   </div>
 </template>
 
 <script>
     import auth from '@/auth';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import user from '@/components/user';
-    import i18n from '@/language/i18n.js';
     import paasPluginTitle from '@/components/pass-plugin-title';
 
     const ROLE_BACKEND_IDS = {
@@ -235,12 +212,12 @@
         'developer': 3
     };
 
-    const ROLE_SPEC_PLUGIN_ZH = {
-        '管理员': 'administrator',
-        '开发者': 'developer'
+    const ROLE_ID_TO_NAME = {
+        2: 'administrator',
+        3: 'developer'
     };
 
-    const APP_ROLE_NAMES = {
+    const PLUGIN_ROLE_NAMES = {
         'administrator': '管理员',
         'developer': '开发者'
     };
@@ -276,26 +253,20 @@
         ]
     };
 
-    const ROLE_DESC_MAP = {
-        'administrator': i18n.t('该角色仅影响用户在“开发者中心”管理该应用的权限，不涉及应用内部权限，请勿混淆')
-    };
-
     export default {
         components: {
             user,
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 currentUser: auth.getCurrentUser().username,
-                hasPerm: false,
                 loading: true,
                 memberList: [],
                 memberListShow: [],
-                roleNames: APP_ROLE_NAMES,
+                roleNames: PLUGIN_ROLE_NAMES,
                 roleSpec: ROLE_SPEC_PLUGIN,
-                roleKeyZH: ROLE_SPEC_PLUGIN_ZH,
                 roleName: 'administrator',
                 selectedMember: {
                     id: 0,
@@ -310,14 +281,6 @@
                     title: this.$t('新增成员'),
                     showForm: false
                 },
-                leaveAppDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                permissionNoticeDialog: {
-                    visiable: false
-                },
-
                 pagination: {
                     current: 1,
                     count: 0,
@@ -331,20 +294,8 @@
             };
         },
         computed: {
-            currentRoleDesc () {
-                return ROLE_DESC_MAP[this.roleName] || '';
-            },
-            curPluginInfo () {
-                return this.$store.state.curPluginInfo;
-            },
-            pluginInfo () {
-                return this.$store.state.pluginInfo;
-            },
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
+            canManageMembers () {
+                return this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS['administrator'];
             }
         },
         watch: {
@@ -387,45 +338,28 @@
                 // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
             },
 
-            iKnow () {
-                this.permissionNoticeDialog.visiable = false;
-                !localStorage.getItem('membersNoticeDialogHasShow') && localStorage.setItem('membersNoticeDialogHasShow', true);
-            },
-
             updateValue (curVal) {
                 curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
             },
 
             init () {
-                this.enableToAddRole = this.curAppInfo && this.curAppInfo.role && this.curAppInfo.role.name === 'administrator';
+                this.enableToAddRole = this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS['administrator'];
                 this.fetchMemberList();
-                this.$nextTick(() => {
-                    // 如果使用git
-                    if (this.curAppDefaultModule.repo && this.curAppDefaultModule.repo.type.indexOf('git') > -1) {
-                        if (!localStorage.getItem('membersNoticeDialogHasShow')) {
-                            this.permissionNoticeDialog.visiable = true;
-                        }
-                    }
-                });
             },
 
             async fetchMemberList () {
                 this.isTableLoading = true;
                 try {
-                    const res = await this.$store.dispatch('cloudMembers/getMemberList', { pdId: this.pdId, pluginId: this.pluginId });
+                    const res = await this.$store.dispatch('pluginMembers/getMemberList', { pdId: this.pdId, pluginId: this.pluginId });
                     this.pagination.count = res.length;
                     res.forEach(element => {
-                        this.$set(element.role, 'roleName', this.roleKeyZH[element.role.name]);
+                        this.$set(element.role, 'roleName', ROLE_ID_TO_NAME[element.role.id]);
                     });
                     const start = this.pagination.limit * (this.pagination.current - 1);
                     const end = start + this.pagination.limit;
-
-                    this.hasPerm = true;
-
                     this.memberList.splice(0, this.memberList.length, ...(res || []));
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
                 } catch (e) {
-                    this.hasPerm = false;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -478,7 +412,7 @@
                     createSuc.push(createParam);
                 }
                 try {
-                    await this.$store.dispatch('cloudMembers/addMember', {
+                    await this.$store.dispatch('pluginMembers/addMember', {
                         pdId: this.pdId,
                         pluginId: this.pluginId,
                         postParams: createSuc
@@ -499,7 +433,7 @@
                 }
             },
 
-            leaveApp (delMemberID, delMemberName) {
+            showLeavePluginDialog (delMemberID, delMemberName) {
                 this.selectedMember.id = delMemberID;
                 this.selectedMember.name = delMemberName;
                 this.$bkInfo({
@@ -507,15 +441,15 @@
                     width: 480,
                     maskClose: true,
                     confirmFn: () => {
-                        this.leaveSave();
+                        this.doLeavePlugin();
                     }
                 });
             },
 
             // 退出插件
-            async leaveSave () {
+            async doLeavePlugin () {
                 try {
-                    await this.$store.dispatch('cloudMembers/quitApplication', { pdId: this.pdId, pluginId: this.pluginId });
+                    await this.$store.dispatch('pluginMembers/leavePlugin', { pdId: this.pdId, pluginId: this.pluginId });
                     // 退出插件跳转
                     this.$router.push({
                         path: '/'
@@ -525,8 +459,6 @@
                         theme: 'error',
                         message: `${this.$t('退出插件失败：')} ${e.detail}`
                     });
-                } finally {
-                    this.leaveAppDialog.isLoading = false;
                 }
             },
 
@@ -555,21 +487,16 @@
 
             // 是否更新接口
             async updateSave () {
-                const updateParam = [
-                    {
-                        'username': this.selectedMember.name,
-                        'role': {
-                            'id': ROLE_BACKEND_IDS[this.roleName]
-                        }
-                    }
-                ];
+                const roleInfo = {
+                    'id': ROLE_BACKEND_IDS[this.roleName]
+                };
                 this.memberMgrConfig.isLoading = true;
                 try {
-                    // 复用新建接口
-                    await this.$store.dispatch('cloudMembers/addMember', {
+                    await this.$store.dispatch('pluginMembers/updateRole', {
                         pdId: this.pdId,
                         pluginId: this.pluginId,
-                        postParams: updateParam
+                        username: this.selectedMember.name,
+                        params: roleInfo
                     });
                     this.closeMemberMgrModal();
                     this.fetchMemberList();
@@ -577,9 +504,6 @@
                         theme: 'success',
                         message: this.$t('角色更新成功！')
                     });
-                    // if (this.selectedMember.name === this.currentUser && this.roleName !== 'administrator') {
-                    //     this.enableToAddRole = false;
-                    // }
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -605,7 +529,7 @@
 
             async delSave () {
                 try {
-                    await this.$store.dispatch('cloudMembers/deleteRole', {
+                    await this.$store.dispatch('pluginMembers/deleteRole', {
                         pdId: this.pdId,
                         pluginId: this.pluginId,
                         username: this.selectedMember.name
@@ -627,38 +551,11 @@
                 this.memberMgrConfig.visiable = false;
             },
 
-            // 是否显示退出插件
-            canManageMe (roleInfo) {
-                if (roleInfo.username !== this.currentUser) {
-                    return false;
-                }
-                // if (roleInfo.user.id === this.curAppInfo.applicatio && this.curAppInfo.application.owner) {
-                //     return false;
-                // }
-                return true;
+            // 判断给定的 memberInfo 是否当前登录用户, 控制是否展示退出插件
+            isCurrentUser (memberInfo) {
+                return memberInfo.username === this.currentUser;
             },
 
-            isChangingRoles (roleInfo) {
-                if (roleInfo.roleName === 'developer') {
-                    return false;
-                }
-                return true;
-            },
-
-            canManageMembers (roleInfo) {
-                if (roleInfo.username === this.currentUser || !this.enableToAddRole) {
-                    // 不能操作自身角色 || 非管理员不能操作角色管理
-                    return false;
-                }
-                return true;
-            },
-
-            canChangeMembers () {
-                if (!this.enableToAddRole) {
-                    return false;
-                }
-                return true;
-            },
             handleSearch () {
                 if (this.keyword) {
                     this.memberListShow = this.memberList.filter(apigw => {

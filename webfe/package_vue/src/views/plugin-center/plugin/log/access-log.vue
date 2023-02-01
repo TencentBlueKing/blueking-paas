@@ -174,7 +174,7 @@
 <script>
     import moment from 'moment';
     import xss from 'xss';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import logFilter from './comps/log-filter.vue';
 
     const xssOptions = {
@@ -190,7 +190,7 @@
         components: {
             logFilter
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 name: 'log-component',
@@ -296,12 +296,6 @@
                     return true;
                 }
                 return false;
-            },
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
             }
         },
         watch: {

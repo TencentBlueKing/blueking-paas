@@ -16,27 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.utils.translation import gettext_lazy as _
+from collections import OrderedDict
 
-from paasng.platform.applications.constants import AppEnvironment
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 
-RUN_ENVS = AppEnvironment.get_values()
 
-DEFAULT_RULE_CONFIGS = {
-    'module_scoped': {
-        'high_cpu_usage': {
-            'display_name': _('CPU 使用率过高'),
-            'threshold_expr': '>= 0.8',  # 使用率 80%
-        },
-        'high_mem_usage': {
-            'display_name': _('内存使用率过高'),
-            'threshold_expr': '>= 0.95',  # 使用率 95%
-        },
-    },
-    'app_scoped': {
-        'page_50x': {
-            'display_name': _('应用首页访问异常'),
-            'threshold_expr': '>= 500',
-        }
-    },
-}
+class ApplicationListPagination(LimitOffsetPagination):
+    """应用列表分页器，用于添加各种应用类型数量等参数"""
+
+    default_limit = 12
+
+    def get_paginated_response(self, data, extra_data):
+        return Response(
+            OrderedDict(
+                [
+                    ('count', self.count),
+                    ('next', self.get_next_link()),
+                    ('previous', self.get_previous_link()),
+                    ('extra_data', extra_data),
+                    ('results', data),
+                ]
+            )
+        )

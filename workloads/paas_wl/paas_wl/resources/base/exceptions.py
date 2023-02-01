@@ -46,11 +46,11 @@ class PodNotSucceededError(KubeException):
         self.exit_code = kwargs.get("exit_code", -1)
 
 
-class PodNotSucceededAbsentError(PodNotSucceededError):
+class PodAbsentError(PodNotSucceededError):
     """pod not succeeded triggered by pod's absence"""
 
 
-class PodNotSucceededTimeoutError(PodNotSucceededError):
+class PodTimeoutError(PodNotSucceededError):
     """pod not succeeded triggered by timeout"""
 
 

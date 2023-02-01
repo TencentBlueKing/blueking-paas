@@ -115,7 +115,7 @@
         },
         computed: {
             canViewSecret () {
-                return this.curAppInfo.role.name !== 'operator';
+                return this.curAppInfo.role && this.curAppInfo.role.name !== 'operator';
             },
             platformFeature () {
                 console.warn(this.$store.state.platformFeature);
@@ -130,13 +130,7 @@
             },
             userFeature () {
                 return this.$store.state.userFeature;
-            },
-            curPluginInfo () {
-                return this.$store.state.curPluginInfo;
             }
-        },
-        mounted () {
-            console.log('curPluginInfo', this.curPluginInfo);
         },
         methods: {
             onSecretToggle () {

@@ -27,3 +27,14 @@ class IsPluginCreator(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return obj.creator == request.user.pk
+
+
+class PluginCenterFeaturePermission(BasePermission):
+    """是否允许用户访问插件开发者中心"""
+
+    def has_permission(self, request, view):
+        # 原则上不希望引用开发者中心的资源
+        from paasng.accounts.constants import AccountFeatureFlag as AFF
+        from paasng.accounts.models import AccountFeatureFlag
+
+        return AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_PLUGIN_CENTER)

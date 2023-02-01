@@ -25,7 +25,7 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
-from paasng.platform.core.storages.s3 import service_logo_storage
+from paasng.platform.core.storages.object_storage import service_logo_storage
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:

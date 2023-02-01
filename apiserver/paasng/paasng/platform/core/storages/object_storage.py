@@ -16,17 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf import settings
+from django.utils.functional import LazyObject
+
+from paasng.utils.blobstore import get_storage_by_bucket
 
 
-class APIError(Exception):
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
+class LazyStorage(LazyObject):
+    def __init__(self, bucket: str):
+        super().__init__()
+        self.__dict__["__bucket__"] = bucket
+
+    def _setup(self):
+        self._wrapped = get_storage_by_bucket(self.__bucket__)
 
 
-class AuthTokenMissingError(Exception):
-    """缺少鉴权凭证错误"""
-
-
-class PluginRepoNameConflict(APIError):
-    """仓库名称冲突, 同名仓库已存在"""
+service_logo_storage = LazyStorage(bucket=settings.SERVICE_LOGO_BUCKET)
+app_logo_storage = LazyStorage(bucket=settings.APP_LOGO_BUCKET)
+plugin_logo_storage = LazyStorage(bucket=settings.PLUGIN_LOGO_BUCKET)

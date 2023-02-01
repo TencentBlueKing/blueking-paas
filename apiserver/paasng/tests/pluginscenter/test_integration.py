@@ -32,6 +32,11 @@ pytestmark = pytest.mark.django_db
 class TestReleaseStages:
     """Release 状态扭转的集成测试"""
 
+    @pytest.fixture(autouse=True)
+    def mock_refresh_source_hash(self):
+        with mock.patch("paasng.pluginscenter.releases.stages.DeployAPIStage._refresh_source_hash"):
+            yield
+
     @pytest.fixture
     def setup_release_stages(self, pd):
         pd.release_stages = [
@@ -54,7 +59,9 @@ class TestReleaseStages:
         pd.save()
         pd.refresh_from_db()
 
-    def test_release_version(self, thirdparty_client, pd, plugin, setup_release_stages, api_client, iam_policy_client):
+    def test_release_version(
+        self, thirdparty_client, pd, plugin, setup_release_stages, api_client, iam_policy_client, setup_bk_user
+    ):
         assert PluginRelease.objects.count() == 0
         with mock.patch("paasng.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"

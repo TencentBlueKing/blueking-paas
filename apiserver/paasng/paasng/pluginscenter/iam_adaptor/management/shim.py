@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 # IAM management API shim
 import functools
 from operator import attrgetter
-from typing import List
+from typing import List, Optional
 
 import cattr
 from attrs import define
@@ -141,6 +141,15 @@ def fetch_user_roles(plugin: PluginInstance, username: str) -> List[PluginRole]:
             user_roles.append(PluginRole(group.role))
 
     return sorted(user_roles)
+
+
+def fetch_user_main_role(plugin: PluginInstance, username: str) -> Optional[Role]:
+    """获取用户在插件中的主要角色"""
+    roles = fetch_user_roles(plugin, username)
+    if len(roles) > 0:
+        role = roles[0]
+        return cattr.structure({"id": PluginRole(role), "name": PluginRole.get_choice_label(role)}, Role)
+    return None
 
 
 @transform_api_error

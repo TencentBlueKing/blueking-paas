@@ -67,6 +67,7 @@ class PluginReleaseExecutor:
 
     def execute_current_stage(self, operator: str):
         """执行当前发布阶段: 仅执行 release.current_stage, 不修改 release 状态"""
+        self.release.refresh_from_db()
         current_stage = self.release.current_stage
         if current_stage.status != constants.PluginReleaseStatus.INITIAL:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段已被执行, 不能重复触发已执行的阶段"))

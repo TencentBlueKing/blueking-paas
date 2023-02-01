@@ -38,7 +38,7 @@ from paasng.pluginscenter.constants import PluginRole
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
-from paasng.pluginscenter.sourcectl.exceptions import APIError, AuthTokenMissingError
+from paasng.pluginscenter.sourcectl.exceptions import APIError, AuthTokenMissingError, PluginRepoNameConflict
 from paasng.pluginscenter.sourcectl.git import GitTemplateDownloader
 from paasng.utils.text import remove_prefix, remove_suffix
 
@@ -80,8 +80,11 @@ def validate_response(resp: Response) -> Response:
         logging.warning(f"get url `{resp.url}` but {resp.status_code}, raw resp: {resp}")
         raise APIError(_("工蜂接口请求异常"))
     elif not resp.ok:
+        message = resp.json()["message"]
+        if message == '400 bad request for {:path=>["Path has already been taken"]}':
+            raise PluginRepoNameConflict(message)
         logging.warning(f"get url `{resp.url}` but resp is not ok, raw resp: {resp}")
-        raise APIError(resp.json()["message"])
+        raise APIError(message)
     return resp
 
 
@@ -265,6 +268,12 @@ class PluginRepoInitializer:
         plugin.save(update_fields=["repository", "updated"])
         self._enable_ci(project_info["id"])
         return project_info
+
+    def delete_project(self, plugin: PluginInstance):
+        """删除插件在 VCS 上的源码项目"""
+        _url = f"api/v3/projects/{plugin.repository}"
+        resp = self._session.delete(urljoin(self._api_url, _url))
+        validate_response(resp)
 
     def initial_repo(self, plugin: PluginInstance):
         """初始化插件代码"""

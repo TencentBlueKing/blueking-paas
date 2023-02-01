@@ -97,7 +97,7 @@ from paasng.platform.applications.utils import (
     delete_all_modules,
     get_app_overview,
 )
-from paasng.platform.core.storages.s3 import app_logo_storage
+from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState

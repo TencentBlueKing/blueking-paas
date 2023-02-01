@@ -64,7 +64,10 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
     assert thirdparty_client.call.called is True
     data = thirdparty_client.call.call_args.kwargs["data"]
     # 验证国际化字段存在
-    assert data.keys() ^ {"id", "name_zh_cn", "name_en", "template", "extra_fields", "repository", "operator"} == set()
+    assert (
+        data.keys() ^ {"id", "name_zh_cn", "name_en", "template", "extra_fields", "repository", "operator", "logo_url"}
+        == set()
+    )
     assert data["template"] == {
         "id": "foo",
         "name": "bar",

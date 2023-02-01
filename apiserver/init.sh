@@ -118,15 +118,15 @@ ensure-python-buildpack() {
     # 默认使用 bkrepo 源
     pip_index_url="${PAAS_BUILDPACK_PYTHON_PIP_INDEX_URL:-${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/}"
     pip_index_host="$(echo "${bkrepo_endpoint}" | awk -F/ '{print $3}') ${PAAS_PIP_INDEX_HOST:-}"
-    python_buildpack_version=v154
+    python_buildpack_version=v213
     
     python manage.py manage_buildpack \
     --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Python" \
     --display_name_en "Python" \
-    --description_zh_cn "默认 Python 版本为3.6.8" \
-    --description_en "The default Python version is 3.6.8" \
+    --description_zh_cn "默认 Python 版本为3.10.5" \
+    --description_en "The default Python version is 3.10.5" \
     --tag "${python_buildpack_version}" \
     --language Python \
     --type tar \

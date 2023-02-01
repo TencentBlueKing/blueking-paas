@@ -50,6 +50,12 @@ def _atomic_create_plugin_repository(func):
                 # 如果插件仓库已创建, 则删除插件仓库
                 initializer = get_plugin_repo_initializer(plugin.pd)
                 try:
+                    logger.warning(
+                        "即将删除插件<%s/%s>的源码仓库<%s>",
+                        plugin.pd.identifier,
+                        plugin.id,
+                        plugin.repository,
+                    )
                     initializer.delete_project(plugin)
                 except APIError as e:
                     logger.exception("删除插件仓库<%s>失败!", plugin.repository)

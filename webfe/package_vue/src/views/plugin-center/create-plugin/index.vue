@@ -423,6 +423,9 @@
             curPluginInfo () {
                 const curPluginData = this.pluginTypeList.filter(item => item.plugin_type.id === this.form.pd_id);
                 return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
+            },
+            defaultPluginType () {
+                return this.$route.query.type;
             }
         },
         watch: {
@@ -446,10 +449,17 @@
             async fetchPluginTypeList () {
                 try {
                     const res = await this.$store.dispatch('plugin/getPluginsTypeList');
+                    // 当前是否存在该插件类型
+                    let isQuery = false;
                     this.pluginTypeList = res && res.map(e => {
+                        if (e.plugin_type.id === this.defaultPluginType) {
+                            isQuery = true;
+                        }
                         e.name = e.plugin_type.name;
                         return e;
                     });
+                    // 参数指定插件类型，没有指定默认为第一项
+                    this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
                     this.addRules();
                     this.changePlaceholder();
                 } catch (e) {

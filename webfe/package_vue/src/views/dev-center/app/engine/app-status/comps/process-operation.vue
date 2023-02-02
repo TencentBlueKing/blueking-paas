@@ -179,7 +179,7 @@
                         </td>
                         <td class="time">
                           <template v-if="instance.date_time !== 'Invalid date'">
-                            {{ $t('创建于') }} {{ timeFormat(timeN[instance.display_name], instance.date_time) }}
+                            {{ $t('创建于') }} {{ instance.date_time }}
                           </template>
                           <template v-else>
                             --
@@ -786,7 +786,6 @@
                 dateShortCut: dateShortCut,
                 initDateTimeRange: [initStartDate, initEndDate],
                 isDatePickerOpen: false,
-                timeN: {},
                 placeholderLoading: true
             };
         },
@@ -1412,9 +1411,7 @@
 
                     // 日期转换
                     process.instances.forEach(item => {
-                        const time = moment(item.start_time).startOf('minute').fromNow().replace(this.$t('后'), this.$t('前'));
-                        this.$set(this.timeN, item.display_name, time.split(' ')[0]);
-                        item.date_time = this.$t(time.split(' ')[1]);
+                        item.date_time = moment(item.start_time).startOf('minute').fromNow();
                     });
 
                     // 如果有当前展开项
@@ -1533,8 +1530,7 @@
                 const instanceData = data.object || {};
                 this.prevInstanceVersion = data.resource_version || 0;
 
-                const timeStr = moment(instanceData.start_time).startOf('minute').fromNow();
-                instanceData.date_time = timeStr.split(' ')[1];
+                instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
                 this.allProcesses.forEach(process => {
                     if (process.type === instanceData.process_type) {
                         // 新增
@@ -1912,11 +1908,6 @@
             keyLight (item) {
                 const text = '<span style="color: #4491e1">[' + item.ts + ']</span>' + ' <span style="color: #ffa65f">' + item.process_name + '</span>: ' + item.message;
                 return text;
-            },
-
-            timeFormat (time, instanceTime) {
-                if (time === '几秒前') return time;
-                return time + ' ' + instanceTime;
             },
 
             // 获取进程状态 tooltips 展示内容

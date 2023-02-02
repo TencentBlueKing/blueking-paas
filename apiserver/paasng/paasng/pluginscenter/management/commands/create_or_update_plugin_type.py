@@ -27,7 +27,7 @@ from paasng.pluginscenter import definitions, models
 
 
 class Command(BaseCommand):
-    help = "创建或者更新插件类型，若更新插件发布步骤会导致已发布的版本无法查看发布进度"
+    help = "创建或者更新插件类型"
 
     def add_arguments(self, parser):
         parser.add_argument(

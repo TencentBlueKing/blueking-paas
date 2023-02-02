@@ -16,20 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf import settings
-from django.utils.functional import LazyObject
-
-from paasng.utils.blobstore import get_storage_by_bucket
-
-
-class S3Storage(LazyObject):
-    def __init__(self, bucket: str):
-        super().__init__()
-        self.__dict__["__bucket__"] = bucket
-
-    def _setup(self):
-        self._wrapped = get_storage_by_bucket(self.__bucket__)
-
-
-service_logo_storage = S3Storage(bucket=settings.SERVICE_LOGO_BUCKET)
-app_logo_storage = S3Storage(bucket=settings.APP_LOGO_BUCKET)

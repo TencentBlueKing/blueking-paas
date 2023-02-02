@@ -18,15 +18,17 @@ to the current version of the project delivered to anyone in the future.
 """
 import abc
 import logging
-from typing import Dict, List, Optional, Sequence, Type, cast
+from typing import Dict, List, Optional, Sequence, Type
 
 from django.conf import settings
 
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress, ingress_kmodel
+from paas_wl.networking.ingress.entities.service import service_kmodel
 from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
 from paas_wl.networking.ingress.plugins import get_default_plugins
 from paas_wl.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.networking.ingress.plugins.ingress import IngressPlugin
+from paas_wl.networking.ingress.utils import parse_process_type
 from paas_wl.platform.applications.models import App
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
@@ -43,6 +45,9 @@ class AppIngressMgr(abc.ABC):
     # more details, enabled by default.
     rewrite_ingress_path_to_root: bool = True
 
+    # Whether to set header `X-Script-Name` to all request
+    set_header_x_script_name: bool = True
+
     def __init__(self, app: 'App'):
         self.app = app
         self.ingress_name = self.make_ingress_name()
@@ -50,8 +55,7 @@ class AppIngressMgr(abc.ABC):
 
     def get(self) -> ProcessIngress:
         """Return the default ingress object"""
-        ret = ingress_kmodel.get(self.app, self.ingress_name)
-        return cast(ProcessIngress, ret)
+        return ingress_kmodel.get(self.app, self.ingress_name)
 
     def delete(self):
         """Delete the default ingress rule"""
@@ -77,6 +81,7 @@ class AppIngressMgr(abc.ABC):
             configuration_snippet=self.construct_configuration_snippet(domains),
             annotations=self.get_annotations(),
             rewrite_to_root=self.rewrite_ingress_path_to_root,
+            set_header_x_script_name=self.set_header_x_script_name,
         )
 
     def update_target(self, service_name: str, service_port_name: str):
@@ -161,6 +166,8 @@ class IngressUpdater:
         configuration_snippet: str = '',
         annotations: Optional[Dict] = None,
         rewrite_to_root: bool = True,
+        set_header_x_script_name: bool = True,
+        restore_default_when_invalid: bool = True,
     ):
         """Sync current ingress resource with kubernetes apiserver
 
@@ -171,6 +178,10 @@ class IngressUpdater:
         :param configuration_snippet: configuration snippet
         :param annotations: ingress annotations
         :param rewrite_to_root: whether to remove matched path prefix, which means rewrite path to "/(.*)"
+        :param set_header_x_script_name: whether to set http header `X-Script-Name`,
+            which means the sub-path provided by platform or custom domain
+        :param restore_default_when_invalid: If the ingress resource exists and it's using an invalid
+            service, restore the service name to default, enabled by default.
         :raises: DefaultServiceNameRequired when no default service name is given
         :raises: EmptyAppIngressError no domains are found
         """
@@ -178,7 +189,7 @@ class IngressUpdater:
             raise EmptyAppIngressError("no domains(rules) found for current ingress")
 
         try:
-            ingress: ProcessIngress = ingress_kmodel.get(self.app, self.ingress_name)
+            ingress = ingress_kmodel.get(self.app, self.ingress_name)
         except AppEntityNotFound:
             if not default_service_name:
                 raise DefaultServiceNameRequired('no existed ingress found, default_server_name is required')
@@ -194,21 +205,33 @@ class IngressUpdater:
                 configuration_snippet=configuration_snippet,
                 annotations=annotations or {},
                 rewrite_to_root=rewrite_to_root,
+                set_header_x_script_name=set_header_x_script_name,
             )
             ingress_kmodel.save(desired_ingress)
         else:
+            if restore_default_when_invalid and default_service_name:
+                # Restore service name to default if it's invalid
+                if not self._service_name_valid(ingress.service_name):
+                    logger.info(
+                        'Restore service name to default, ingress: %s, current name: %s, new name: %s',
+                        ingress.name,
+                        ingress.service_name,
+                        default_service_name,
+                    )
+                    ingress.service_name = default_service_name
+
             logger.info('Updating existed ingress<%s>', ingress.name)
             ingress.domains = domains
             ingress.server_snippet = server_snippet
             ingress.configuration_snippet = configuration_snippet
             ingress.annotations = annotations or {}
             ingress.rewrite_to_root = rewrite_to_root
+            ingress.set_header_x_script_name = set_header_x_script_name
             ingress_kmodel.save(ingress)
 
     def update_target(self, service_name: str, service_port_name: str):
         """Update target service and port_name for current ingress resource"""
-        _ingress = ingress_kmodel.get(self.app, self.ingress_name)
-        ingress = cast(ProcessIngress, _ingress)
+        ingress = ingress_kmodel.get(self.app, self.ingress_name)
         logger.info(
             f'updating existed ingress<{ingress.name}>, set service_name={service_name} '
             f'port_name={service_port_name}'
@@ -216,3 +239,20 @@ class IngressUpdater:
         ingress.service_name = service_name
         ingress.service_port_name = service_port_name
         ingress_kmodel.save(ingress)
+
+    def _service_name_valid(self, name: str) -> bool:
+        """Check that a service name is valid."""
+        try:
+            proc_type = parse_process_type(self.app, name)
+        except ValueError:
+            return True
+
+        svc_names = [s.name for s in service_kmodel.list_by_app(self.app)]
+        # A service name was considered invalid if it pointed to a non-existent service
+        # and the process type(parsed from the name itself) didn't exist.
+        #
+        # Why check both conditions? An ingress could be created before the service object,
+        # so the process type was also checked to avoid an unintended result.
+        if name not in svc_names and not self.app.has_proc_type(proc_type):
+            return False
+        return True

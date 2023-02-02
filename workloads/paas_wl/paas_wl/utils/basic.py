@@ -23,6 +23,8 @@ from typing import ClassVar, Collection, Dict, Tuple
 from uuid import UUID
 
 import cattr
+import requests
+import requests.adapters
 from attrs import define
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_bytes
@@ -187,3 +189,15 @@ class HumanizeURL:
         if self._default_port_map[self.protocol] == self.port:
             port_s = ''
         return f"{self.protocol}://{self.hostname}{port_s}{self.path}{query_s}"
+
+
+# Make a global session object to turn on connection pooling
+_requests_session = requests.Session()
+_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
+_requests_session.mount('http://', _adapter)
+_requests_session.mount('https://', _adapter)
+
+
+def get_requests_session() -> requests.Session:
+    """Return the global requests session object which supports connection pooling"""
+    return _requests_session

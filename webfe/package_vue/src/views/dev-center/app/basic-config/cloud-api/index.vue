@@ -1,6 +1,6 @@
 <template lang="html">
   <div
-    :class="['right-main', { 'plugin-cloud-box': isPlugin }]"
+    :class="[{ 'plugin-cloud-box': isPlugin }]"
   >
     <div class="ps-top-bar">
       <div class="header-title">

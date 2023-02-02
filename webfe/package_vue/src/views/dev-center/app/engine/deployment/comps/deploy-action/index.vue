@@ -2262,6 +2262,13 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                             }
                         });
                         break;
+
+                    // 未设置插件分类
+                    case 'FILL_PLUGIN_TAG_INFO':
+                        this.$router.push({
+                            name: 'appConfigs',
+                        });
+                        break;
                 }
             },
 

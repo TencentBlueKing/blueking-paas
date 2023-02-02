@@ -33,6 +33,10 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logo/",
+        views.PluginInstanceViewSet.as_view({"put": "update_logo"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/overview/",
         views.PluginInstanceViewSet.as_view({"get": "get_repo_overview"}),
     ),
@@ -123,7 +127,7 @@ urlpatterns = [
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/members/<str:username>/",
-        views.PluginMembersViewSet.as_view({"delete": "destroy"}),
+        views.PluginMembersViewSet.as_view({"delete": "destroy", "put": "update_role"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/configurations/",

@@ -63,7 +63,7 @@ class PluginStatus(str, StructuredEnum):
     DEVELOPING = EnumField("developing", label="开发中")
     RELEASING = EnumField("releasing", label="发布中")
     RELEASED = EnumField("released", label="已发布")
-    # 后台轮询下架进度, 进入「下架」相关的状态后, 插件不可进行任何操作
+    # 后台轮询下架进度, 进入「下架」相关的状态后, 插件还可以进行相关操作
     ARCHIVED = EnumField("archived", label="已下架")
 
     @classmethod
@@ -141,6 +141,7 @@ class SubjectTypes(str, StructuredEnum):
     PLUGIN = EnumField("plugin", label=_("插件"))
     VERSION = EnumField("version", label=_("版本"))
     BASIC_INFO = EnumField("basic_info", label=_("基本信息"))
+    LOGO = EnumField("logo", label=_("logo"))
     MARKET_INFO = EnumField("market_info", label=_("市场信息"))
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))

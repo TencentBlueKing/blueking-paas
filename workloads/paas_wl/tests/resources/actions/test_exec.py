@@ -26,6 +26,7 @@ from django.test.utils import override_settings
 from paas_wl.platform.applications.models.config import Config
 from paas_wl.release_controller.hooks.models import Command
 from paas_wl.resources.actions.exec import AppCommandExecutor
+from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType
 from paas_wl.utils.stream import ConsoleStream
@@ -60,15 +61,9 @@ class TestAppCommandExecutor:
         hook = hook_maker('echo 1;echo 2;')
 
         executor = AppCommandExecutor(command=hook, stream=stream)
-        with mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.wait_for_logs_readiness", mock.MagicMock()
-        ), mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.get_command_logs",
-            mock.MagicMock(return_value=["1", "2"]),
-        ), mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.wait_for_succeeded",
-            mock.MagicMock(return_value=None),
-        ):
+        with mock.patch("paas_wl.resources.base.controllers.CommandHandler.wait_for_logs_readiness",), mock.patch(
+            "paas_wl.resources.base.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
+        ), mock.patch("paas_wl.resources.base.controllers.CommandHandler.wait_for_succeeded", return_value=None):
             executor.perform()
 
         out, err = capsys.readouterr()
@@ -99,19 +94,16 @@ class TestAppCommandExecutor:
         hook = hook_maker('echo 1;echo 2;')
 
         executor = AppCommandExecutor(command=hook, stream=stream)
-        with mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.wait_for_logs_readiness", mock.MagicMock()
+        with mock.patch("paas_wl.resources.base.controllers.CommandHandler.wait_for_logs_readiness",), mock.patch(
+            "paas_wl.resources.base.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
         ), mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.get_command_logs",
-            mock.MagicMock(return_value=["1", "2"]),
+            "paas_wl.resources.base.controllers.command_kmodel.get",
+            side_effect=[mock.MagicMock(phase="Pending"), AppEntityNotFound],
         ), mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler._get_pod_status",
-            mock.MagicMock(
-                return_value=(
-                    "Failed",
-                    HealthStatus(reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY),
-                )
-            ),
+            "paas_wl.resources.base.controllers.parse_pod",
+        ), mock.patch(
+            "paas_wl.resources.base.controllers.check_pod_health_status",
+            return_value=HealthStatus(reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY),
         ):
             executor.perform()
 
@@ -132,18 +124,18 @@ class TestAppCommandExecutor:
         def interrupt(*args, **kwargs):
             hook.int_requested_at = datetime.datetime.now()
             hook.save(update_fields=["int_requested_at", "updated"])
-            return "Unknown", HealthStatus(
-                reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY
-            )
+            return HealthStatus(reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY)
 
-        with mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.wait_for_logs_readiness", mock.MagicMock()
+        with mock.patch("paas_wl.resources.base.controllers.CommandHandler.wait_for_logs_readiness"), mock.patch(
+            "paas_wl.resources.base.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
         ), mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler.get_command_logs",
-            mock.MagicMock(return_value=["1", "2"]),
+            "paas_wl.resources.base.controllers.command_kmodel.get",
+            side_effect=[mock.MagicMock(phase="Pending"), AppEntityNotFound],
         ), mock.patch(
-            "paas_wl.resources.base.controllers.CommandHandler._get_pod_status",
-            mock.MagicMock(side_effect=interrupt),
+            "paas_wl.resources.base.controllers.parse_pod",
+        ), mock.patch(
+            "paas_wl.resources.base.controllers.check_pod_health_status",
+            side_effect=interrupt,
         ):
             executor.perform()
 

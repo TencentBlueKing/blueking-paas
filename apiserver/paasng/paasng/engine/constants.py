@@ -46,8 +46,9 @@ class ClusterType(str, StructuredEnum):
 class ClusterFeatureFlag(str, StructuredEnum):
     """集群特性标志"""
 
-    ENABLE_EGRESS_IP = EnumField('enable_egress_ip', label=_('支持提供出口 IP'))
-    ENABLE_MOUNT_LOG_TO_HOST = EnumField('enable_mount_log_to_host', label=_('允许挂载日志到主机'))
+    ENABLE_EGRESS_IP = EnumField('ENABLE_EGRESS_IP', label=_('支持提供出口 IP'))
+    ENABLE_MOUNT_LOG_TO_HOST = EnumField('ENABLE_MOUNT_LOG_TO_HOST', label=_('允许挂载日志到主机'))
+    INGRESS_USE_REGEX = EnumField('INGRESS_USE_REGEX', label=_('Ingress路径是否使用正则表达式'))
 
 
 class AppEnvName(str, StructuredEnum):
@@ -145,6 +146,7 @@ class DeployConditions(ChoicesEnum):
     NEED_TO_CORRECT_REPO_INFO = "NEED_TO_CORRECT_REPO_INFO"
     NEED_TO_COMPLETE_PROCFILE = "NEED_TO_COMPLETE_PROCFILE"
     CHECK_CI_GIT_TOKEN = "CHECK_CI_GIT_TOKEN"
+    FILL_PLUGIN_TAG_INFO = "FILL_PLUGIN_TAG_INFO"
 
     _choices_labels = (
         (FILL_PRODUCT_INFO, _("未完善应用基本信息")),
@@ -154,6 +156,7 @@ class DeployConditions(ChoicesEnum):
         (NEED_TO_CORRECT_REPO_INFO, _("当前源码仓库信息异常")),
         (NEED_TO_COMPLETE_PROCFILE, _("未完善进程启动命令")),
         (CHECK_CI_GIT_TOKEN, _("当前用户未授权 CI 组件访问仓库的权限")),
+        (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
     )
 
 

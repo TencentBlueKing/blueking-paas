@@ -1067,6 +1067,13 @@ span.ellipsis {
     .app-container {
         max-width: 1080px;
     }
+
+    // .right-main-plugin{
+    //     width: 85vw !important;
+    // }
+    .right-main-release {
+        width: 85vw !important;
+    }
 }
 
 @media screen and (max-width: 1440px) {
@@ -1079,6 +1086,16 @@ span.ellipsis {
     .ps-container,
     .app-container {
         max-width: 980px;
+    }
+}
+
+@media screen and (max-width: 1100px) {
+    .right-main-release {
+        width: calc(100% - 200px) !important;
+    }
+    .container {
+        margin: 0 !important;
+        padding: 0 !important;
     }
 }
 

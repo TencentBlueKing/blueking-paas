@@ -25,6 +25,8 @@ from paas_wl.networking.ingress.utils import (
     get_main_process_service_name,
     get_service_dns_name,
     guess_default_service_name,
+    make_service_name,
+    parse_process_type,
 )
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
@@ -73,3 +75,8 @@ def test_get_service_dns_name(app):
     name = get_service_dns_name(app, 'web')
     _, ns = name.split('.')
     assert ns == app.namespace
+
+
+def test_parse_process_type(app):
+    svc_name = make_service_name(app, 'web')
+    assert parse_process_type(app, svc_name) == 'web'

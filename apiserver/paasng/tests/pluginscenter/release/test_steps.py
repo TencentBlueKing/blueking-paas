@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paasng.pluginscenter.constants import PluginReleaseStatus, ReleaseStageInvokeMethod
@@ -79,7 +81,9 @@ class TestDeployAPIStage:
 
     @pytest.fixture
     def stage_executor(self, stage):
-        return stages.DeployAPIStage(stage)
+        executor = stages.DeployAPIStage(stage)
+        with mock.patch.object(executor, "_refresh_source_hash"):
+            yield executor
 
     def test_execute(self, thirdparty_client, stage, stage_executor):
         thirdparty_client.call.return_value = {

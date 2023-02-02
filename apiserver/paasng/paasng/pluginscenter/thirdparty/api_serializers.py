@@ -43,6 +43,7 @@ class PluginRequestSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(allow_null=True, help_text="第三方系统声明的额外字段")
     repository = serializers.CharField(help_text="源码仓库")
     operator = serializers.SerializerMethodField()
+    logo_url = serializers.CharField(source="get_logo_url", required=False)
 
     def get_operator(self, obj) -> str:
         return self.context["operator"]

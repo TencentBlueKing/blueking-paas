@@ -15,6 +15,7 @@
 | order_by              | string   | 否   | 排序，默认为 "-created"，支持 "created"、 "code"、"-code"、"name"、"-name" |
 | has_deployed          | boolean  | 否   | 按“插件是否部署过”过滤，默认不过滤                                    |
 | distributor_code_name | string   | 否   | 按“已授权使用方代号”过滤，比如 "bksops"，默认不过滤                    |
+| tag                   | integer  | 否   |  按插件分类过滤，默认不过滤                    |
 | limit                 | integer  | 否   | 分页参数，总数，默认为 100                                             |
 | offset                | integer  | 否   | 分页参数，偏差数，默认为 0                                             |
 
@@ -37,6 +38,11 @@
         "creator": "username",
         "created": "2021-08-13 10:37:29",
         "updated": "2021-08-13 10:37:29"
+        "tag_info": {
+          "id": 1,
+          "name": "分类1",
+          "code_name": "tag1"
+        }
       },
       "deployed_statuses": {
         "stag": {

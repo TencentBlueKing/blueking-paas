@@ -28,6 +28,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
+from paasng.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
@@ -39,6 +40,20 @@ from paasng.pluginscenter.models import (
     PluginReleaseStage,
 )
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+
+
+class PluginRoleSLZ(serializers.Serializer):
+    name = serializers.CharField(read_only=True, help_text="角色名称")
+    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
+
+
+class PluginMemberSLZ(serializers.Serializer):
+    username = serializers.CharField(help_text="用户名")
+    role = PluginRoleSLZ(help_text="角色")
+    avatar = serializers.SerializerMethodField()
+
+    def get_avatar(self, obj):
+        return get_user_avatar(obj.username)
 
 
 class ApprovalConfigSLZ(serializers.Serializer):
@@ -90,6 +105,7 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
+    complete_time = serializers.ReadOnlyField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -112,18 +128,35 @@ class ItsmDetailSLZ(serializers.Serializer):
 class PluginInstanceSLZ(serializers.ModelSerializer):
     pd_id = serializers.CharField(source="pd.identifier", help_text="插件类型标识")
     pd_name = serializers.CharField(source="pd.name", help_text="插件类型名称")
+    pd_administrator = serializers.JSONField(source="pd.administrator", help_text="插件管理员")
     ongoing_release = PluginReleaseVersionSLZ(
         source="all_versions.get_ongoing_release", help_text="当前正在发布的版本", allow_null=True
     )
     latest_release = PluginReleaseVersionSLZ(
         source="all_versions.get_latest_release", help_text="最新的版本", allow_null=True
     )
-    logo = serializers.CharField(source="pd.logo", help_text="插件logo", allow_null=True)
+    logo = serializers.CharField(source="get_logo_url", help_text="插件logo", allow_null=True)
     itsm_detail = ItsmDetailSLZ()
+    role = PluginRoleSLZ(required=False)
+
+    def to_representation(self, instance):
+        # 注入当前用户的角色信息
+        if request := self.context.get("request"):
+            if request.user.is_authenticated:
+                setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
+        return super().to_representation(instance)
 
     class Meta:
         model = PluginInstance
         exclude = ("pd", "uuid")
+
+
+class PluginInstanceLogoSLZ(serializers.ModelSerializer):
+    logo = serializers.ImageField(write_only=True)
+
+    class Meta(object):
+        model = PluginInstance
+        fields = ["logo"]
 
 
 class PluginMarketInfoSLZ(serializers.ModelSerializer):
@@ -422,20 +455,6 @@ class LogFieldFilterSLZ(serializers.Serializer):
     key = serializers.CharField(help_text="传递给参数中的key")
     options = serializers.ListField(help_text="该字段的选项和分布频率")
     total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频次")
-
-
-class PluginRoleSLZ(serializers.Serializer):
-    name = serializers.CharField(read_only=True, help_text="角色名称")
-    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
-
-
-class PluginMemberSLZ(serializers.Serializer):
-    username = serializers.CharField(help_text="用户名")
-    role = PluginRoleSLZ(help_text="角色")
-    avatar = serializers.SerializerMethodField()
-
-    def get_avatar(self, obj):
-        return get_user_avatar(obj.username)
 
 
 class ItsmTicketInfoSlz(serializers.Serializer):

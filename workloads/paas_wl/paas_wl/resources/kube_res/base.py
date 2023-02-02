@@ -137,8 +137,13 @@ class BaseTransformer(Generic[AET]):
         for different cluster versions
     """
 
-    # Specify an 'api_version',this property will be read by get_apiversion() method
+    # Specify an 'api_version', this property will be read by get_apiversion() method
     api_version = ''
+
+    @staticmethod
+    def get_api_version_from_gvk(gvk_config: GVKConfig) -> str:
+        """dynamic api_version detected from gvk_config"""
+        return ''
 
     def __init__(self, entity_type: Type[AET], gvk_config: GVKConfig):
         self.entity_type = entity_type
@@ -151,7 +156,8 @@ class BaseTransformer(Generic[AET]):
 
     def get_apiversion(self) -> str:
         """Get the exact apiVersion current transformer works with, if not defined, use the "preferred" apiVersion."""
-        return self.api_version or self.gvk_config.preferred_apiversion
+        api_version = self.api_version or self.get_api_version_from_gvk(self.gvk_config)
+        return api_version or self.gvk_config.preferred_apiversion
 
 
 class AppEntityDeserializer(BaseTransformer, Generic[AET], metaclass=ABCMeta):
@@ -175,7 +181,7 @@ class AppEntitySerializer(BaseTransformer, Generic[AET], metaclass=ABCMeta):
         return obj.name
 
 
-T = TypeVar('T', AppEntitySerializer, AppEntityDeserializer)
+T = TypeVar('T', bound=BaseTransformer)
 
 
 class EntityTransformerPicker(Generic[T]):
@@ -189,25 +195,10 @@ class EntityTransformerPicker(Generic[T]):
     - IGNORES: defined "api_version" and it's value does not occurred in "available_apiversions"
     """
 
+    transformer_mappings: Dict[str, Type[T]]
+
     def __init__(self, children_types: List[Type[T]]):
-        self.transformer_mappings: Dict[str, Type[T]] = OrderedDict((i.api_version, i) for i in children_types)
-
-    def _iter_transformer_type(self, gvk_config: GVKConfig) -> Iterator[Type[T]]:
-        available_apiversions = set(gvk_config.available_apiversions)
-        available_apiversions.add(gvk_config.preferred_apiversion)
-
-        # 为什么定义的优先级优于 preferred_apiversion？
-        # api version 仅仅是某种资源声明规范，其行为受限于具体实现，而具体实现版本不容易获取和适配。
-        # 另外 api version 本身并不一定稳定，可能会有新的特性加入，因此不同 k8s 版本的相同 api version 规范不一定相容。
-        # 因此在实现中，应该优先适配稳定的 api version 的规范，以减轻开发成本。
-        for api_version, transformer in self.transformer_mappings.items():
-            if api_version in available_apiversions:
-                yield transformer
-
-        # 没有声明 api version 的看做通用实现，尽可能完成目标
-        default_transformer_type = self.transformer_mappings.get("")
-        if default_transformer_type:
-            yield default_transformer_type
+        self.children_types = children_types
 
     def get_transformer(self, entity_type: Type['AppEntity'], gvk_config: GVKConfig) -> T:
         """Try finding the proper transformer"""
@@ -223,6 +214,36 @@ class EntityTransformerPicker(Generic[T]):
             f"api versions: {str(self.transformer_mappings.keys())}, "
             f"gvk_config: {gvk_config}"
         )
+
+    def _build_transformer_mappings(self, gvk_config: GVKConfig) -> Dict[str, Type[T]]:
+        transformer_mappings = OrderedDict()
+        for type_ in self.children_types:
+            if api_version := type_.api_version:
+                transformer_mappings[api_version] = type_
+            elif get_api_version_from_gvk := getattr(type_, "get_api_version_from_gvk"):
+                transformer_mappings[get_api_version_from_gvk(gvk_config)] = type_
+            else:
+                transformer_mappings[""] = type_
+        return transformer_mappings
+
+    def _iter_transformer_type(self, gvk_config: GVKConfig) -> Iterator[Type[T]]:
+        self.transformer_mappings = self._build_transformer_mappings(gvk_config)
+        available_apiversions = set(gvk_config.available_apiversions)
+        available_apiversions.add(gvk_config.preferred_apiversion)
+
+        # 为什么定义的优先级优于 preferred_apiversion？
+        # api version 仅仅是某种资源声明规范，其行为受限于具体实现，而具体实现版本不容易获取和适配。
+        # 另外 api version 本身并不一定稳定，可能会有新的特性加入，因此不同 k8s 版本的相同 api version 规范不一定相容。
+        # 因此在实现中，应该优先适配稳定的 api version 的规范，以减轻开发成本。
+
+        for api_version, transformer in self.transformer_mappings.items():
+            if api_version in available_apiversions:
+                yield transformer
+
+        # 没有声明 api version 的看做通用实现，尽可能完成目标
+        default_transformer_type = self.transformer_mappings.get("")
+        if default_transformer_type:
+            yield default_transformer_type
 
 
 class EntityDeserializerPicker(EntityTransformerPicker[AppEntityDeserializer]):

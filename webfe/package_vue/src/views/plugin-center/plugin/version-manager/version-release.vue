@@ -1,5 +1,5 @@
 <template>
-  <div class="container visible-range-release">
+  <div class="container visible-range-release right-main-release">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-inner-loading"
@@ -7,6 +7,7 @@
       :offset-left="20"
       class="deploy-action-box"
     >
+      <!-- 部署信息概览 -->
       <div
         class="plugin-release-top"
         :style="`height: ${ releaseTopHeight }px;`"
@@ -26,478 +27,208 @@
                 </bk-button>
               </div>
               <div
-                v-if="isNotStep"
+                v-if="!isSingleStage"
                 class="steps-warp mt20"
               >
+                <!-- 只有一个阶段的发布, 不展示发布步骤 -->
                 <bk-steps
                   ext-cls="custom-icon"
                   :status="stepsStatus"
-                  :steps="allStages"
+                  :steps="curAllStages"
                   :cur-step.sync="curStep"
                 />
               </div>
             </div>
           </div>
-          <!-- 部署状态 -->
-          <div
-            v-if="stageId === 'deploy'"
-            class="wrapper primary
-                                release-info-box
-                                flex-row
-                                justify-content-between
-                                align-items-center"
-            :class="[{ 'failed': status === 'failed' }, { 'success': status === 'successful' }]"
-          >
-            <div
-              v-if="status === 'pending'"
-              class="info-left-warp flex-row"
-            >
-              <round-loading
-                size="small"
-                ext-cls="deploy-round-loading"
-              />
-              <span class="info-time pl10">
-                <span class="info-pending-text"> {{ $t('正在部署中...') }} </span>
-                <!-- <span class="time-text"> {{ $t('耗时：') }} 13秒</span> -->
-              </span>
-            </div>
-            <div
-              v-else-if="status === 'failed'"
-              class="error-left-warp flex-row align-items-center"
-            >
-              <i class="error-icon paasng-icon paasng-close-circle-shape" />
-              <span class="info-time pl10">
-                <span class="info-pending-text"> {{ $t('构建失败') }} </span>
-                <span class="time-text">{{ failedMessage }}</span>
-              </span>
-            </div>
-            <div
-              v-else-if="status === 'successful'"
-              class="info-left-warp flex-row"
-            >
-              <span class="success-check-wrapper">
-                <i class="paasng-icon paasng-correct" />
-              </span>
-              <span class="info-time pl10">
-                <span class="info-pending-text"> {{ $t('部署成功') }} </span>
-              </span>
-            </div>
-            <div
-              v-if="!isNext"
-              class="info-right-warp"
-            >
-              <bk-button
-                v-if="status !== 'pending'"
-                size="small"
-                theme="primary"
-                :outline="true"
-                :class="[{ 'failed': status === 'failed' }]"
-                class="ext-cls-btn"
-                @click="rightClick(status)"
-              >
-                {{ status === 'pending' ? $t('停止部署') : $t('重新部署') }}
-              </bk-button>
-            </div>
-          </div>
         </div>
       </div>
       <!-- 内容 -->
-      <div class="app-container plugin-container">
-        <div
-          id="release-box"
-          class="release-warp"
-        >
-          <template>
-            <div
-              v-if="stageId === 'online'"
-              class="successful-container"
-            >
-              <i class="bk-icon icon-check-1 icon-finish success-cls" />
-              <h3 class="title">
-                {{ $t('插件已发布成功') }}
-              </h3>
-              <span
-                class="tips-link"
-                @click="goVersionManager"
-              >
-                {{ $t('返回插件版本列表') }}
-              </span>
-            </div>
-            <template v-if="stageId === 'deploy'">
-              <!-- 部署模块 -->
-              <div class="release-log-warp flex-row">
-                <div
-                  id="release-timeline-box"
-                  style="width: 230px;padding-left: 8px;"
-                >
-                  <release-timeline
-                    ref="deployTimelineRef"
-                    :list="stepsData"
-                  />
-                </div>
-                <release-log
-                  ref="deployLogRef"
-                  :log="logs"
-                />
-              </div>
-            </template>
-          </template>
+      <component
+        :is="curStageComponmentType"
+        v-if="stageData"
+        ref="curStageComponment"
+        :stage-data="stageData"
+        @rerunStage="rerunStage"
+      />
+      <template v-else-if="!finalStageIsOnline">
+        <online
+          :stage-data="stageData"
+          @rerunStage="rerunStage"
+        />
+      </template>
 
-          <!-- 完善市场信息模块 -->
-          <div v-if="stageId === 'market'">
-            <bk-form
-              ref="visitForm"
-              :model="form"
-              :rules="rules"
-              :label-width="100"
-            >
-              <bk-form-item
-                class="w600"
-                :label="$t('应用分类')"
-                :required="true"
-                :property="'category'"
-              >
-                <bk-select
-                  v-model="form.category"
-                  :loading="cateLoading"
-                  :clearable="false"
-                  :placeholder="$t('应用分类')"
-                >
-                  <bk-option
-                    v-for="(option, index) in categoryList"
-                    :id="option.value"
-                    :key="index"
-                    :name="option.name"
-                  />
-                </bk-select>
-              </bk-form-item>
-              <bk-form-item
-                :label="$t('应用简介')"
-                :required="true"
-                :property="'introduction'"
-              >
-                <bk-input v-model="form.introduction" />
-              </bk-form-item>
-              <bk-form-item
-                :label="$t('应用联系人')"
-                :required="true"
-                property="contact"
-              >
-                <user v-model="form.contact" />
-              </bk-form-item>
-              <bk-form-item
-                class="edit-form-item"
-                :label="$t('详细描述')"
-                :required="true"
-                :property="'description'"
-              >
-                <quill-editor
-                  v-model="form.description"
-                  class="editor"
-                  :options="editorOption"
-                  @change="onEditorChange($event)"
-                />
-              </bk-form-item>
-            </bk-form>
-          </div>
-
-          <div
-            v-if="stageId === 'market'"
-            class="btn-warp"
-          >
-            <!-- <bk-button>上一步</bk-button> -->
-            <bk-button
-              theme="primary"
-              @click="handlerSave"
-            >
-              {{ $t('保存') }}
-            </bk-button>
-            <!-- 根据步骤来， 当前步骤的下一步 -->
-            <!-- <bk-button
-              theme="primary"
-              :disabled="!isNext"
-              @click="handlerNext"
-            >
-              {{ $t('下一步') }}
-            </bk-button> -->
-          </div>
-        </div>
-      </div>
-      <div
-        v-if="stageId === 'deploy' && isNotStep"
-        class="footer-btn-warp"
-      >
+      <div class="footer-btn-warp">
         <bk-button
-          v-if="curFirstStep.id !== 'deploy'"
+          v-if="!isFirstStage"
           theme="default"
+          class="ml5"
+          style="width: 120px"
+          :disabled="!isAllowPrev"
           @click="handlerPrev"
         >
           {{ $t('上一步') }}
         </bk-button>
         <!-- 构建完成可以进入下一步 -->
         <bk-button
+          v-if="!isFinalStage"
           theme="primary"
           class="ml5"
           style="width: 120px"
-          :disabled="!isNext"
-          @click="handlerNext(stageId)"
+          :disabled="!isAllowNext"
+          @click="handlerNext()"
         >
-          {{ $t('下一步') }}
+          <template v-if="stageId !== 'market'">
+            {{ $t('下一步') }}
+          </template>
+          <template v-else>
+            {{ $t('保存') }}
+          </template>
         </bk-button>
       </div>
     </paas-content-loader>
   </div>
 </template>
 <script>
-    import { bus } from '@/common/bus';
-    import user from '@/components/user';
     import paasPluginTitle from '@/components/pass-plugin-title';
-    import releaseTimeline from './release-timeline';
-    import releaseLog from './release-log.vue';
-    import { quillEditor } from 'vue-quill-editor';
-    import _ from 'lodash';
-    import 'quill/dist/quill.core.css';
-    import 'quill/dist/quill.snow.css';
-    import 'quill/dist/quill.bubble.css';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+    import deployStage from './release-stages/deploy';
+    import marketStage from './release-stages/market';
+    import onlineStage from './release-stages/online';
+
     export default {
         components: {
             paasPluginTitle,
-            releaseTimeline,
-            releaseLog,
-            quillEditor,
-            user
+            deploy: deployStage,
+            market: marketStage,
+            online: onlineStage
         },
+        mixins: [pluginBaseMixin],
         data () {
+            console.log('this', this);
             return {
-                allStages: [],
                 stagesIndex: 0,
                 curStep: 1,
-                stageId: '',
-                form: {
-                    category: '',
-                    introduction: '',
-                    description: '',
-                    contact: []
-                },
-                categoryList: [],
-                cateLoading: true,
                 isLoading: true,
-                editorOption: {
-                    placeholder: '开始编辑...'
-                },
-                isNext: false,
-                status: '',
-                stepsData: [],
-                timer: null,
-                logs: [],
+                stageData: {},
                 failedMessage: '',
-                titleVersion: '',
-                isStopDeploy: false,
                 stepsStatus: '',
-                curFirstStep: {},
-                stpeMap: {},
-                isNotStep: true,
-                rules: {
-                    category: [
-                        {
-                            required: true,
-                            message: this.$t('该字段为必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    introduction: [
-                        {
-                            required: true,
-                            message: this.$t('该字段为必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    description: [
-                        {
-                            required: true,
-                            message: this.$t('请输入'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    contact: [
-                        {
-                            required: true,
-                            message: this.$t('该字段为必填项'),
-                            trigger: 'blur'
-                        }
-                    ]
-                }
+                isFirstStage: false,
+                isFinalStage: false
             };
         },
         computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
+            releaseId () {
+                return this.$route.query.release_id;
             },
-            pluginId () {
-                return this.$route.params.id;
+            stageId () {
+                return this.$store.state.plugin.curRelease.current_stage !== undefined ? this.$store.state.plugin.curRelease.current_stage.stage_id : undefined;
             },
             curVersion () {
                 return this.$route.query.version || this.titleVersion;
             },
-            stagesData () {
-                return this.$store.state.plugin.stagesData;
+            titleVersion () {
+                let releaseData = this.$store.state.plugin.curRelease;
+                return `${releaseData.version} (${releaseData.source_version_name})`;
             },
-            curStatus () {
-                return this.$route.params.status;
-            },
-            pluginFeatureFlags () {
-                return this.$store.state.plugin.pluginFeatureFlags;
+            status () {
+                return this.$store.state.plugin.curRelease.status;
             },
             releaseTopHeight () {
-                let topHeight = this.stageId === 'deploy' ? 173 : 173 - 56;
+                let topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
                 // 是否展示steps
-                return this.isNotStep ? topHeight : topHeight - 44;
+                return !this.isSingleStage ? topHeight : topHeight - 44;
+            },
+            curFirstStep () {
+                return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
+            },
+            curStageComponmentType () {
+              return this.stageData.stage_id;
+            },
+            finalStageIsOnline () {
+              return this.curAllStages.length > 0 && this.curAllStages[this.curAllStages.length - 1].name === 'online';
+            },
+            isSingleStage () {
+              return this.curAllStages.length === 1;
+            },
+            isAllowPrev () {
+              let isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
+              return !isRunningDeploy && this.status !== 'successful';
+            },
+            isAllowNext () {
+              return this.stageData.status === 'successful' || this.stageData.stage_id === 'market';
             }
         },
         watch: {
-            allStages (newStages) {
-                this.curFirstStep = newStages[0];
-                // 创建step map映射
-                newStages.forEach(item => {
-                    this.$set(this.stpeMap, item.id, item.icon);
-                });
+            curRelease: {
+                handler () {
+                    this.getReleaseStageDetail();
+                }
+            },
+            stageData: {
+                handler () {
+                    // 获取 stage 对应的序号
+                    const curStep = this.calStageOrder(this.stageData);
+                    this.isFirstStage = curStep === 1;
+                    this.isFinalStage = this.curAllStages.length === curStep;
+                    this.curStep = curStep;
+                },
+                deep: true,
+                immediate: true
             }
         },
-        created () {
-            bus.$on('stop-deploy', () => {
-                this.isStopDeploy = true;
-            });
-        },
-        async mounted () {
-            this.stageId = this.$route.query.stage_id;
-            this.status = this.$route.query.status;
-            await this.getVersionDetail();
-            // if (this.status === 'interrupted' || this.status === 'failed') {
-            //     // 重新发布
-            //     this.republish();
-            // } else {
-                if (this.stageId === 'market') {
-                    this.fetchCategoryList();
-                    this.fetchMarketInfo();
-                } else {
-                    this.fetchPluginRelease();
-                }
-            // }
-        },
-        beforeDestroy () {
-            bus.$emit('stop-deploy', true);
+        async created () {
+            await this.getReleaseDetail();
+            this.getReleaseStageDetail();
         },
         methods: {
-            setTimeFetchPluginRelease () {
-                this.timer = setTimeout(() => {
-                    this.fetchPluginRelease();
-                }, 2000);
+            async pollingReleaseStageDetail () {
+                const ctx = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: this.releaseId,
+                    stageId: this.stageId
+                };
+                await new Promise(resolve => {
+                    setTimeout(resolve, 2000);
+                });
+                const currentCtx = {
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
+                    releaseId: this.releaseId,
+                    stageId: this.stageId
+                };
+                // 页面状态改变, 停止轮询
+                if (ctx !== currentCtx) this.getReleaseStageDetail();
             },
-            rightClick (status) {
-                if (status === 'pending') {
-                    console.log(status);
-                } else {
-                    this.pluginDeploy();
-                    // this.fetchPluginRelease();
-                }
-            },
-
-            // 获取市场信息
-            async fetchMarketInfo () {
-                try {
-                    const params = {
-                        pdId: this.pdId,
-                        pluginId: this.pluginId
-                    };
-                    const res = await this.$store.dispatch('plugin/getMarketInfo', params);
-                    this.form = res;
-                    this.form.contact = res.contact && res.contact.split(',') || [];
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            // 应用分类
-            async fetchCategoryList () {
-                try {
-                    const params = {
-                        pdId: this.pdId
-                    };
-                    const res = await this.$store.dispatch('plugin/getCategoryList', params);
-                    this.categoryList = res.category;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    this.cateLoading = false;
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            // 获取部署详情
-            async fetchPluginRelease () {
-                // 点击返回，停止部署接口轮询
-                if (this.isStopDeploy) {
-                    return;
-                }
+            // 获取发布步骤详情
+            async getReleaseStageDetail () {
                 try {
                     const params = {
                         pdId: this.pdId,
                         pluginId: this.pluginId,
-                        releaseId: this.$route.query.release_id,
+                        releaseId: this.releaseId,
                         stageId: this.stageId
                     };
                     if (Object.values(params).some(value => value === undefined)) {
                         return;
                     }
-                    const res = await this.$store.dispatch('plugin/getPluginRelease', params);
-                    this.stageId = res.stage_id;
-                    this.isNext = res.status === 'successful';
-                    if (!this.isNotStep && res.status === 'successful') {
-                        // 当步骤只有一步一时，部署成功后直接展示成功提示界面
-                        this.stageId = 'online';
-                    }
-                    this.status = res.status;
-                    switch (this.stageId) {
+                    const stageData = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
+                    this.stageData = stageData;
+                    switch (this.stageData.stage_id) {
                         case 'market':
-                            // 根据接口数据而定
-                            // this.curStep = 1;
                             break;
                         case 'deploy':
-                            this.stepsData = this.modifyStepsData(res.detail.steps);
-                            this.logs = res.detail.logs;
-                            // this.curStep = 2;
-                            if (this.status === 'pending') {
-                                this.setTimeFetchPluginRelease();
-                            } else if (this.status === 'failed') {
+                            if (this.stageData.status === 'pending') {
+                                this.pollingReleaseStageDetail();
+                            } else if (this.stageData.status === 'failed') {
                                 // 改变状态
                                 this.stepsStatus = 'error';
-                                this.failedMessage = res.fail_message;
+                                this.failedMessage = stageData.fail_message;
                             } else {
                                 this.stepsStatus = '';
-                                if (this.timer) {
-                                    clearTimeout(this.timer);
-                                }
                             }
                             break;
-                        default:
-                            this.curStep = 1;
-                            break;
                     }
-                    // if (res.status === 'successful') {
-                    //     this.stagesIndex = this.stagesIndex + 1;
-                    //     this.curStep = this.stagesIndex + 1;
-                    //     this.fetchPluginRelease();
-                    // }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -511,24 +242,17 @@
             },
 
             // 获取版本详情
-            async getVersionDetail () {
+            async getReleaseDetail () {
                 const data = {
                     pdId: this.pdId,
                     pluginId: this.pluginId,
-                    releaseId: this.$route.query.release_id
+                    releaseId: this.releaseId
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/getVersionDetail', data);
-                    const stagesData = this.allStagesMap(res.all_stages);
-                    this.titleVersion = `${res.version} (${res.source_version_name})`;
-                    this.allStages = stagesData;
-                    this.status = res.status;
-                    // 获取对应step
-                    this.curStep = this.stpeMap[res.current_stage.stage_id];
-                    if (this.allStages.length === 1) {
-                        // 当步骤只存在一步时，不展示step与下一步
-                        this.isNotStep = false;
-                    }
+                    const releaseData = await this.$store.dispatch('plugin/getReleaseDetail', data);
+                    this.$store.commit('plugin/updateCurRelease', releaseData);
+                    // 获取 stage 对应的序号
+                    this.curStep = this.calStageOrder(releaseData.current_stage);
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -537,27 +261,19 @@
                 }
             },
 
-            // 重新部署
-            async pluginDeploy () {
+            // 重新执行发布步骤
+            async rerunStage () {
                 const params = {
                     pdId: this.pdId,
                     pluginId: this.pluginId,
-                    releaseId: this.$route.query.release_id,
+                    releaseId: this.releaseId,
                     stageId: this.stageId
                 };
-                const data = {};
                 this.stepsStatus = '';
                 try {
-                    const res = await this.$store.dispatch('plugin/pluginDeploy', {
-                        ...params,
-                        data
-                    });
-                    this.stageId = res.stage_id;
-                    this.status = res.status;
-                    const query = JSON.parse(JSON.stringify(this.$route.query));
-                    query.stage_id = this.stageId;
-                    this.$router.push({ name: 'pluginVersionRelease', query });
-                    this.fetchPluginRelease();
+                    const releaseData = await this.$store.dispatch('plugin/rerunStage', params);
+                    this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -578,12 +294,9 @@
                     releaseId: this.$route.query.release_id
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/republishRelease', {
-                        ...params
-                    });
-                    this.stageId = res.current_stage && res.current_stage.stage_id;
-                    this.status = res.status;
-                    this.fetchPluginRelease();
+                    const releaseData = await this.$store.dispatch('plugin/republishRelease', params);
+                    this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -595,160 +308,33 @@
                     }, 200);
                 }
             },
-
-            modifyStepsData (data) {
-                return data.map(item => {
-                    // da根据 steps[i].status 来决定当前部署的状态
-                    item.time = this.computedDeployTime(item.start_time, item.complete_time);
-                    if (item.status === 'successful' || item.status === 'failed') {
-                        item.tag = `
-                        <div style="width: 185px" class="flex-row justify-content-between">
-                            <div>${item.name}</div>
-                            <div style="color: #C4C6CC" class="time-cls">${item.time}</div>
-                        </div>
-                        `;
-                    } else {
-                        item.tag = `
-                        <div style="width: 185px" class="flex-row justify-content-between">
-                            <div>${item.name}</div>
-                        </div>
-                        `;
-                    }
-                    switch (item.status) {
-                        case 'successful':
-                            item.type = 'success';
-                            break;
-                        case 'failed':
-                            item.type = 'danger';
-                            break;
-                        case 'pending':
-                            item.type = 'primary';
-                            item.icon = <round-loading size="small" ext-cls="deploy-round-loading" />;
-                            break;
-                    }
-                    return item;
-                });
-            },
-
-            getDisplayTime (payload) {
-                let theTime = payload;
-                if (theTime < 1) {
-                    return `< 1${this.$t('秒')}`;
-                }
-                let middle = 0;
-                let hour = 0;
-
-                if (theTime > 60) {
-                    middle = parseInt(theTime / 60, 10);
-                    theTime = parseInt(theTime % 60, 10);
-                    if (middle > 60) {
-                        hour = parseInt(middle / 60, 10);
-                        middle = parseInt(middle % 60, 10);
-                    }
-                }
-
-                let result = '';
-
-                if (theTime > 0) {
-                    result = `${theTime}${this.$t('秒')}`;
-                }
-                if (middle > 0) {
-                    result = `${middle}${this.$t('分')}${result}`;
-                }
-                if (hour > 0) {
-                    result = `${hour}${this.$t('时')}${result}`;
-                }
-
-                return result;
-            },
-
-            /**
-             * 计算部署进程间的所花时间
-             */
-            computedDeployTime (startTime, endTime) {
-                const start = new Date(startTime).getTime();
-                const end = new Date(endTime).getTime();
-                const interval = (end - start) / 1000;
-
-                if (!interval) {
-                    return `< 1${this.$t('秒')}`;
-                }
-
-                return this.getDisplayTime(interval);
-            },
-
-            // 保存
-            async handlerSave () {
-                this.$refs.visitForm.validate().then(async () => {
-                    try {
-                        const data = _.cloneDeep(this.form);
-                        data.contact = data.contact.join(',');
-                        const params = {
-                            pdId: this.pdId,
-                            pluginId: this.pluginId,
-                            data
-                        };
-                        await this.$store.dispatch('plugin/saveMarketInfo', params);
-                        this.$bkMessage({
-                            theme: 'success',
-                            message: this.$t('保存成功!')
-                        });
-                        await this.handlerNext();
-                    } catch (e) {
-                        this.$bkMessage({
-                            theme: 'error',
-                            message: e.detail || e.message || this.$t('接口异常')
-                        });
-                    } finally {
-                        this.cateLoading = false;
-                    }
-                });
-            },
-
             // 下一步
-            async handlerNext (status) {
-                // 根据当前状态更改
+            async handlerNext () {
+                if (!this.isAllowNext) {
+                  return;
+                }
                 this.isLoading = true;
-                try {
+                await this.$refs.curStageComponment.nextStage(async () => {
+                  try {
                     const params = {
                         pdId: this.pdId,
                         pluginId: this.pluginId,
                         releaseId: this.$route.query.release_id
                     };
-                    const res = await this.$store.dispatch('plugin/nextRelease', params);
-                    this.stageId = res.current_stage.stage_id;
-                    this.getVersionDetail();
-                    if (this.stageId === 'market') {
-                        const query = JSON.parse(JSON.stringify(this.$route.query));
-                        query.stage_id = this.stageId;
-                        this.$router.push({ name: 'pluginVersionRelease', query });
-                        this.fetchCategoryList();
-                        this.fetchMarketInfo();
-                    } else if (this.stageId === 'deploy') {
-                        const query = JSON.parse(JSON.stringify(this.$route.query));
-                        query.stage_id = this.stageId;
-                        this.fetchPluginRelease();
-                        this.$router.push({ name: 'pluginVersionRelease', query });
-                    } else {
-                        this.stepsStatus = '';
-                    }
-                    // 更新对应 step
-                    this.curStep = this.stpeMap[res.current_stage.stage_id];
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-
-            // 富文本编辑
-            onEditorChange (e) {
-                this.$set(this.form, 'description', e.html);
+                    const releaseData = await this.$store.dispatch('plugin/nextStage', params);
+                    this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
+                  } catch (e) {
+                      this.$bkMessage({
+                          theme: 'error',
+                          message: e.detail || e.message || this.$t('接口异常')
+                      });
+                  } finally {
+                      setTimeout(() => {
+                          this.isLoading = false;
+                      }, 200);
+                  }
+                });
             },
 
             showInfoCancelRelease () {
@@ -797,15 +383,9 @@
                         pluginId: this.pluginId,
                         releaseId: this.$route.query.release_id
                     };
-                    const res = await this.$store.dispatch('plugin/backRelease', params);
-                    const stagesData = this.allStagesMap(res.all_stages);
-                    this.allStages = stagesData;
-                    this.stageId = res.current_stage.stage_id;
-                    this.changeStep(res.current_stage.stage_id);
-                    this.$store.commit('plugin/updateStagesData', stagesData);
-                    const query = JSON.parse(JSON.stringify(this.$route.query));
-                    query.stage_id = res.current_stage.stage_id;
-                    this.$router.push({ name: 'pluginVersionRelease', query });
+                    const releaseData = await this.$store.dispatch('plugin/backRelease', params);
+                    this.$store.commit('plugin/updateCurRelease', releaseData);
+                    await this.getReleaseStageDetail();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -819,37 +399,31 @@
                 }
             },
 
-            changeStep (curStageId) {
-                switch (curStageId) {
-                    case 'market':
-                        // this.curStep = 1;
-                        this.fetchCategoryList();
-                        this.fetchMarketInfo();
-                        break;
-                    default:
-                        break;
-                }
-            },
-
-            allStagesMap (allStages) {
-                return allStages.map((e, i) => {
-                    e.icon = i + 1;
-                    e.title = e.name;
-                    return e;
-                });
-            },
-
             goVersionManager () {
                 this.$router.push({
                     name: 'pluginVersionManager'
                 });
+            },
+
+            calStageOrder (stage) {
+                const defaultOrder = 1;
+                if (!this.curAllStages) return defaultOrder;
+                for (let index = 0; index < this.curAllStages.length; index++) {
+                    const element = this.curAllStages[index];
+                    if (element.stage_id === stage.stage_id) return index + 1;
+                }
+                return defaultOrder;
             }
         }
     };
 </script>
-<style lang="scss" scoped>
+<style lang="scss">
+.deploy-action-box {
+    max-width: calc(100% - 100px);
+    margin: 0 auto;
+}
 .plugin-release-top {
-    height: 173px;
+    height: 117px;
     margin: 0 auto;
     .father-wrapper {
         position: fixed;
@@ -872,12 +446,12 @@
                 }
             }
         }
-        .release-info-box {
-            max-width: calc(100% - 100px);
-            min-width: 1243px;
-            margin: 0 50px;
-            margin-top: 16px;
-        }
+        // .release-info-box {
+        //     max-width: calc(100% - 100px);
+        //     // min-width: 1243px;
+        //     margin: 0 50px;
+        //     margin-top: 16px;
+        // }
     }
 }
 #release-timeline-box {
@@ -906,6 +480,7 @@
     height: 40px;
     background: #E1ECFF;
     border-radius: 2px;
+    margin-bottom: 16px;
     .time-text{
         font-size: 12px;
         color: #63656E;
@@ -953,10 +528,7 @@
     box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
 }
 .edit-form-item{
-    height: 272px;
-    .editor{
-        height: 200px;
-    }
+    margin-bottom: 20px;
 }
 .time-cls{
     color: #C4C6CC;
@@ -1021,9 +593,17 @@
     margin-top: 0;
     padding-top: 0;
 }
+.release-warp .info-mt {
+    margin-top: 72px;
+}
 </style>
 <style>
     .visible-range-release .editor .ql-snow .ql-formats {
         line-height: 24px;
+    }
+    .visible-range-release .editor {
+        display: flex;
+        flex-direction: column;
+        height: 300px;
     }
 </style>

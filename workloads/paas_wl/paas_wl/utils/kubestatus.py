@@ -17,14 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
-from typing import List, Optional
+from typing import List, Optional, Type, TypeVar, Union
 
 import kubernetes.client.models as kmodels
 from attrs import define
 from blue_krill.data_types.enum import StructuredEnum
 from blue_krill.text import remove_prefix
 from kubernetes.client import ApiClient
-from kubernetes.dynamic.resource import ResourceInstance
+from kubernetes.dynamic.resource import ResourceField, ResourceInstance
 
 
 class HealthStatusType(StructuredEnum):
@@ -49,14 +49,42 @@ class HealthStatus:
 
 class FakeResponse:
     def __init__(self, instance):
-        self.data = json.dumps(instance.to_dict())
+        self.data = json.dumps(self.__serialize(instance))
+
+    @classmethod
+    def __serialize(cls, field):
+        if isinstance(field, ResourceField):
+            return {k: cls.__serialize(v) for k, v in field.__dict__.items()}
+        elif isinstance(field, (list, tuple)):
+            return [cls.__serialize(item) for item in field]
+        elif isinstance(field, ResourceInstance):
+            return field.to_dict()
+        else:
+            return field
 
 
-def parse_pod(instance: ResourceInstance) -> kmodels.V1Pod:
+T = TypeVar("T")
+
+
+def parse_dynamic_instance(instance: Union[ResourceInstance, ResourceField], type_: Type[T]) -> T:
+    """parse a dynamic instance to T
+    :raise: ValueError if instance is an invalid T
+    """
+    return ApiClient().deserialize(FakeResponse(instance), type_)
+
+
+def parse_pod(instance: Union[ResourceInstance, ResourceField]) -> kmodels.V1Pod:
     """parse a dynamic instance to V1Pod
     :raise: ValueError if instance is an invalid V1Pod
     """
-    return ApiClient().deserialize(FakeResponse(instance), kmodels.V1Pod)
+    return parse_dynamic_instance(instance, kmodels.V1Pod)
+
+
+def parse_container_status(instance: Union[ResourceInstance, ResourceField]) -> kmodels.V1ContainerStatus:
+    """parse a dynamic instance to V1Pod
+    :raise: ValueError if instance is an invalid V1Pod
+    """
+    return parse_dynamic_instance(instance, kmodels.V1ContainerStatus)
 
 
 def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
@@ -94,7 +122,11 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
         return unhealthy.with_message("unknown")
     elif pod_status.phase == "Pending":
         if fail_message := get_any_container_fail_message(pod):
-            return unhealthy.with_message(fail_message)
+            # ContainerCreating: 无 init containers 的 Pod 的默认状态
+            # PodInitializing: 有 init containers 的 Pod 的默认状态
+            # 处于这两个状态的 Pod 仍然在 Pending
+            if fail_message not in ["ContainerCreating", "PodInitializing"]:
+                return unhealthy.with_message(fail_message)
         # PodScheduled represents status of the scheduling process for this pod.
         scheduled_cond = find_pod_status_condition(pod_status.conditions or [], cond_type="PodScheduled")
         if scheduled_cond and scheduled_cond.status == "False":

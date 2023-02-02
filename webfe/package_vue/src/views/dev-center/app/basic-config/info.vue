@@ -239,11 +239,28 @@
                 <label class="title-label"> {{ $t('联系人员') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <bk-member-selector
+                <!-- <bk-member-selector
+                  v-if="GLOBAL.APP_VERSION === 'te'"
                   ref="member_selector"
                   v-model="localeAppInfo.contact"
                   ext-cls="member-cls"
                   :disabled="isDisabled"
+                  @change="updateContact"
+                />
+                <blueking-user-selector
+                  v-else
+                  ref="member_selector"
+                  v-model="localeAppInfo.contact"
+                  ext-cls="member-cls"
+                  display-list-tips
+                  :disabled="isDisabled"
+                  @change="updateContact"
+                /> -->
+                <user
+                  ref="member_selector"
+                  v-model="localeAppInfo.contact"
+                  :disabled="isDisabled"
+                  class="info-member-cls"
                   @change="updateContact"
                 />
                 <div class="action-box">
@@ -578,15 +595,19 @@
 <script>
     import moment from 'moment';
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import User from '@/components/user';
+    // import BluekingUserSelector from '@blueking/user-selector';
     import authenticationInfo from '@/components/authentication-info.vue';
-    import 'BKSelectMinCss';
+    // import 'BKSelectMinCss';
 
     export default {
         components: {
-            authenticationInfo,
-            'bk-member-selector': () => {
-                return import('@/components/user/member-selector/member-selector.vue');
-            }
+          authenticationInfo,
+          User
+          // BluekingUserSelector,
+          //   'bk-member-selector': () => {
+          //       return import('@/components/user/member-selector/member-selector.vue');
+          //   }
         },
         mixins: [appBaseMixin],
         data () {
@@ -782,7 +803,7 @@
             showPluginContactEdit () {
                 this.isDisabled = false;
                 this.$nextTick(() => {
-                    this.$refs.member_selector.$el.click();
+                    this.$refs.member_selector.focus();
                 });
             },
 
@@ -1612,7 +1633,8 @@
     .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-angle {
         top: 4px;
     }
-    .member-cls{
+    .info-member-cls{
+        height: 41px;
         .bk-tag-selector{
             min-height: 41px;
             .bk-tag-input{
@@ -1637,5 +1659,17 @@
                 border-radius: 0 2px 2px 0;
             }
         }
+        .user-selector-layout{
+            height: 42px !important;
+            .user-selector-container{
+              height: 41px !important;
+              .user-selector-selected{
+                margin-top: 10px;
+              }
+              .user-selector-input{
+                margin-top: 10px;
+              }
+            }
+          }
     }
 </style>

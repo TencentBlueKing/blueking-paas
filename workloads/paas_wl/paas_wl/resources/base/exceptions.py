@@ -46,11 +46,11 @@ class PodNotSucceededError(KubeException):
         self.exit_code = kwargs.get("exit_code", -1)
 
 
-class PodNotSucceededAbsentError(PodNotSucceededError):
+class PodAbsentError(PodNotSucceededError):
     """pod not succeeded triggered by pod's absence"""
 
 
-class PodNotSucceededTimeoutError(PodNotSucceededError):
+class PodTimeoutError(PodNotSucceededError):
     """pod not succeeded triggered by timeout"""
 
 
@@ -68,7 +68,10 @@ class ResourceMissing(KubeException):
 
 class ResourceDeleteTimeout(KubeException):
     def __init__(self, resource_type, namespace, name, *args, **kwargs):
-        msg = f"{resource_type}<{namespace}/{name}> delete timeout"
+        if name != '':
+            msg = f"{resource_type}<{namespace}/{name}> delete timeout"
+        else:
+            msg = f"{resource_type}<{namespace}> delete timeout"
         super().__init__(msg, *args, **kwargs)
 
 

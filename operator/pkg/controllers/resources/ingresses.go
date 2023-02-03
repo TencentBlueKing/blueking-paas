@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
@@ -168,7 +169,7 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 	// TODO: The resource name might conflict if multiple DomainGroupMappings uses
 	// same sourceTypes.
 	name := fmt.Sprintf("%s-%s", bkapp.Name, builder.sourceType)
-	val := networkingv1.Ingress{
+	ingress := networkingv1.Ingress{
 		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Ingress"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -185,7 +186,11 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 			TLS:   makeTLS(domains),
 		},
 	}
-	results = append(results, &val)
+	// 如果已配置 ingressClassName，则使用
+	if config.Global.IngressPluginConfig.IngressClassName != "" {
+		ingress.Annotations[paasv1alpha1.IngressClassAnnoKey] = config.Global.IngressPluginConfig.IngressClassName
+	}
+	results = append(results, &ingress)
 	return results, nil
 }
 

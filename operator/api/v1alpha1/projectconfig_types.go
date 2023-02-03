@@ -36,6 +36,8 @@ type PlatformConfig struct {
 
 // IngressPluginConfig contains the config for controlling ingress config
 type IngressPluginConfig struct {
+	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
+	IngressClassName    string               `json:"ingressClassName,omitempty"`
 	AccessControlConfig *AccessControlConfig `json:"accessControlConfig,omitempty"`
 }
 

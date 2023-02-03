@@ -20,6 +20,11 @@ resLimitConfig:
   procDefaultCPULimits: "4"
   procDefaultMemLimits: "1Gi"
   maxReplicas: 5
+ingressPluginConfig:
+  ## when there are multiple ingress controllers in your cluster, setting the ingressClassName is necessary.
+  ingressClassName: ""
+#  accessControlConfig:
+#    redisConfigKey: ""
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume
 ## when the Manager ends. This requires the binary to immediately end when the

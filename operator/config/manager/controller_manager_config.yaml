@@ -17,6 +17,7 @@ platformConfig:
   bkAPIGatewayURL: ""
   sentryDSN: ""
 ingressPluginConfig:
+  ingressClassName: ""
   accessControlConfig:
     redisConfigKey: ""
 

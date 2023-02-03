@@ -91,6 +91,10 @@ spec:
                 required:
                 - redisConfigKey
                 type: object
+              ingressClassName:
+                description: if ingressClassName configured, kubernetes.io/ingress.class=$value
+                  will be added to ingress's annotations
+                type: string
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this

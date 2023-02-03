@@ -502,10 +502,8 @@ export default {
     async getPluginAppInfo ({ commit, dispatch }, { pdId, pluginId }, config = {}) {
       // plugin 默认为 default
       const moduleId = 'default';
-      await Promise.all([
-        dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true}),
-        dispatch('getAppFeature', { appCode: pluginId }, {root: true})
-      ]);
+      await dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true});
+      await dispatch('getAppFeature', { appCode: pluginId }, {root: true});
       commit('updateCurAppByCode', { appCode: pluginId, moduleId }, {root: true});
     },
 

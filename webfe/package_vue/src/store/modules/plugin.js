@@ -27,7 +27,6 @@ import moment from 'moment';
 export default {
   namespaced: true,
   state: {
-    stagesData: [],
     pluginFeatureFlags: {},
     chartData: bartOptions,
     // 当前插件的基础信息
@@ -47,9 +46,6 @@ export default {
          */
     updateCurRelease (stage, release) {
       stage.curRelease = release;
-    },
-    updateStagesData (state, data) {
-      state.stagesData = data;
     },
     updatePluginFeatureFlags (state, data) {
       state.pluginFeatureFlags = data;

@@ -21,7 +21,7 @@
             >
               <div
                 slot="tip"
-                v-bk-tooltips.top="`${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${administratorStr}`"
+                v-bk-tooltips.top="{ content: `${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${administratorStr}`, disabled: !administratorStr }"
                 class="lable-wrapper"
               >
                 <span class="label">{{ $t('应用分类') }}</span>
@@ -61,10 +61,10 @@
               :property="'description'"
             >
               <quill-editor
+                ref="editor"
                 v-model="form.description"
                 class="editor"
                 :options="editorOption"
-                @change="onEditorChange($event)"
               />
             </bk-form-item>
           </bk-form>
@@ -167,7 +167,10 @@
             }
         },
         watch: {
-            'form.description' () {
+            'form.description' (newDescription) {
+                if (newDescription) {
+                    this.$refs.editor.options.placeholder = '';
+                }
                 this.$nextTick(() => {
                     const editor = document.querySelector('.ql-container .ql-editor').offsetHeight;
                     editor > 904 ? this.isEditorHeight = true : this.isEditorHeight = false;
@@ -268,9 +271,6 @@
             },
             goBack () {
                 this.$router.go(-1);
-            },
-            onEditorChange (e) {
-                this.$set(this.form, 'description', e.html);
             }
         }
     };
@@ -342,13 +342,6 @@
         line-height: 24px;
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
-        display: flex;
-        flex-direction: column;
-    }
-    .app-container.beyond .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
         height: calc(100vh - 406px);
-    }
-    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor .ql-container {
-        flex: 1;
     }
 </style>

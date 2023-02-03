@@ -486,19 +486,12 @@
 
             // 发布
             handleRelease (data, isReset) {
-                const stagesData = data.all_stages.map((e, i) => {
-                    e.icon = i + 1;
-                    e.title = e.name;
-                    return e;
-                });
-                this.$store.commit('plugin/updateStagesData', stagesData);
                 if (isReset) {
                   this.republish(data);
                 } else {
                   this.$router.push({
                       name: 'pluginVersionRelease',
                       query: {
-                          stage_id: data.current_stage.stage_id,
                           release_id: data.id
                       }
                   });

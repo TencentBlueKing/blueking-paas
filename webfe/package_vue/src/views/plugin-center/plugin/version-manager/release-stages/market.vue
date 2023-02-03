@@ -19,7 +19,7 @@
           >
             <div
               slot="tip"
-              v-bk-tooltips.top="`${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${adminStr}`"
+              v-bk-tooltips.top="{ content: `${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${adminStr}`, disabled: !adminStr }"
               class="lable-wrapper"
             >
               <span class="label">{{ $t('应用分类') }}</span>
@@ -59,10 +59,10 @@
             :property="'description'"
           >
             <quill-editor
+              ref="editor"
               v-model="form.description"
               class="editor"
               :options="editorOption"
-              @change="onEditorChange($event)"
             />
           </bk-form-item>
         </bk-form>
@@ -102,8 +102,8 @@
                 },
                 curPluginData: {},
                 editorOption: {
-                        placeholder: '开始编辑...'
-                    },
+                    placeholder: '开始编辑...'
+                },
                 rules: {
                     category: [
                         {
@@ -140,6 +140,13 @@
             adminStr () {
                 const pluginAdministrator = this.curPluginData.pd_administrator || [];
                 return pluginAdministrator.join(';');
+            }
+        },
+        watch: {
+            'form.description' (newDescription) {
+                if (newDescription) {
+                    this.$refs.editor.options.placeholder = '';
+                }
             }
         },
         async mounted () {
@@ -207,10 +214,6 @@
                         message: e.detail || e.message || this.$t('接口异常')
                     });
                 }
-            },
-            // 富文本编辑
-            onEditorChange (e) {
-                this.$set(this.form, 'description', e.html);
             },
             // 保存
             async nextStage (resolve) {

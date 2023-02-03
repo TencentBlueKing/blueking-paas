@@ -178,18 +178,18 @@ content_patch_conf = {
                 ingressPluginConfig:
                   accessControlConfig:
                     redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
-                  ingressClassName: {{ .Values.controllerConfig.ingressPluginConfig.ingressClassName | quote }}
                 """,
             ),
             wrap_multiline_str(
                 4,
                 """
+                {{ if .Values.accessControl.enabled -}}
                 ingressPluginConfig:
-                  {{ if .Values.accessControl.enabled -}}
                   accessControlConfig:
                     redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
-                  {{- end }}
-                  ingressClassName: {{ .Values.ingressClassName | quote }}
+                {{- else -}}
+                ingressPluginConfig: {}
+                {{- end }}
                 """,
             ),
         ),
@@ -529,9 +529,8 @@ class HelmChartUpdater:
         values['controllerConfig'] = values['managerConfig']['controllerManagerConfigYaml']
         del values['managerConfig']
 
-        # 白名单控制 & ingress 配置挪到顶层
+        # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
-        values['ingressClassName'] = values['controllerConfig']['ingressPluginConfig']['ingressClassName']
         del values['controllerConfig']['ingressPluginConfig']
 
         # 平台配置挪到顶层

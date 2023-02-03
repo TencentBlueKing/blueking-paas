@@ -48,6 +48,8 @@ platformConfig:
   bkAppCode: "foo"
   bkAppSecret: "bar"
   bkAPIGatewayURL: "https://example.com"
+  sentryDSN: "https://sentry.example.com"
+  ingressClassName: nginx
 `
 		file, err := ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -71,5 +73,7 @@ platformConfig:
 		Expect(projectConfig.PlatformConfig.BkAppCode).To(Equal("foo"))
 		Expect(projectConfig.PlatformConfig.BkAppSecret).To(Equal("bar"))
 		Expect(projectConfig.PlatformConfig.BkAPIGatewayURL).To(Equal("https://example.com"))
+		Expect(projectConfig.PlatformConfig.SentryDSN).To(Equal("https://sentry.example.com"))
+		Expect(projectConfig.PlatformConfig.IngressClassName).To(Equal("nginx"))
 	})
 })

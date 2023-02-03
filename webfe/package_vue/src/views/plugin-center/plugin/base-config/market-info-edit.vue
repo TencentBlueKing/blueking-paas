@@ -5,7 +5,7 @@
       placeholder="plugin-market-info-loading"
       class="app-container middle"
     >
-      <div :class="`app-container middle ${isEditorHeight ? 'beyond' : ''}`">
+      <div class="app-container middle">
         <paas-plugin-title />
         <div class="market-Info plugin-base-info">
           <bk-form
@@ -126,8 +126,6 @@
                       toolbar: TOOLBAR_OPTIONS
                   }
               },
-              isEditorHeight: false,
-              curPluginData: {},
               rules: {
                   category: [
                       {
@@ -162,7 +160,7 @@
         },
         computed: {
             administratorStr () {
-                const administrators = this.curPluginData.pd_administrator || [];
+                const administrators = this.curPluginInfo.pd_administrator || [];
                 return administrators.join(';');
             }
         },
@@ -171,16 +169,11 @@
                 if (newDescription) {
                     this.$refs.editor.options.placeholder = '';
                 }
-                this.$nextTick(() => {
-                    const editor = document.querySelector('.ql-container .ql-editor').offsetHeight;
-                    editor > 904 ? this.isEditorHeight = true : this.isEditorHeight = false;
-                });
             }
         },
         mounted () {
             this.fetchMarketInfo();
             this.fetchCategoryList();
-            this.getPluginBaseInfo();
             this.$nextTick(() => {
                 addQuillTitle();
             });
@@ -253,21 +246,6 @@
                         this.cateLoading = false;
                     }
                 });
-            },
-            async getPluginBaseInfo () {
-                const data = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId
-                };
-                try {
-                    const res = await this.$store.dispatch('plugin/getPluginBaseInfo', data);
-                    this.curPluginData = res;
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
-                }
             },
             goBack () {
                 this.$router.go(-1);

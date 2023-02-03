@@ -51,9 +51,9 @@
         watch: {
             log: {
                 handler () {
-                    setTimeout(() => {
+                    this.$nextTick(() => {
                         this.$refs.logWarp.scrollTop = this.$refs.logWarp.scrollHeight;
-                    }, 0);
+                    });
                 },
                 deep: true
             }

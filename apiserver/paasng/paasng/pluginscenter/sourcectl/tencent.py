@@ -271,7 +271,9 @@ class PluginRepoInitializer:
 
     def delete_project(self, plugin: PluginInstance):
         """删除插件在 VCS 上的源码项目"""
-        _url = f"api/v3/projects/{plugin.repository}"
+        git_project = GitProject.parse_from_repo_url(plugin.repository, "tc_git")
+        _id = quote(git_project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}"
         resp = self._session.delete(urljoin(self._api_url, _url))
         validate_response(resp)
 

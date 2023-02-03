@@ -66,7 +66,7 @@ class PluginBackendAPIResource(BaseModel):
 
     apiName: str = Field(description="网关名称")
     path: str = Field(description="接口路径")
-    method: Literal["GET", "POST", "GET", "DELETE"]
+    method: Literal["GET", "POST", "PUT", "DELETE"]
 
     class Config:
         frozen = True

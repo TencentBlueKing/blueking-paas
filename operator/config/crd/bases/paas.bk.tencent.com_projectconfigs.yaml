@@ -171,6 +171,10 @@ spec:
                 type: string
               bkAppSecret:
                 type: string
+              ingressClassName:
+                description: if ingressClassName configured, kubernetes.io/ingress.class=$value
+                  will be added to ingress's annotations
+                type: string
               sentryDSN:
                 description: sentry server dsn, all events waiting for report will
                   be dropped if unset
@@ -179,6 +183,7 @@ spec:
             - bkAPIGatewayURL
             - bkAppCode
             - bkAppSecret
+            - ingressClassName
             - sentryDSN
             type: object
           resLimitConfig:

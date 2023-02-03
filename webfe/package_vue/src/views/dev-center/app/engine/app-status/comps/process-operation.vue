@@ -589,7 +589,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '5m';
-                        timeShortCutText = i18n.$t('最近5分钟');
+                        timeShortCutText = i18n.t('最近5分钟');
                     }
                 },
                 {
@@ -602,7 +602,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '1h';
-                        timeShortCutText = i18n.$t('最近1小时');
+                        timeShortCutText = i18n.t('最近1小时');
                     }
                 },
                 {
@@ -615,7 +615,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '3h';
-                        timeShortCutText = i18n.$t('最近3小时');
+                        timeShortCutText = i18n.t('最近3小时');
                     }
                 },
                 {
@@ -628,7 +628,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '12h';
-                        timeShortCutText = i18n.$t('最近12小时');
+                        timeShortCutText = i18n.t('最近12小时');
                     }
                 },
                 {
@@ -641,7 +641,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '1d';
-                        timeShortCutText = i18n.$t('最近1天');
+                        timeShortCutText = i18n.t('最近1天');
                     }
                 }
             ];
@@ -657,7 +657,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '7d';
-                        timeShortCutText = i18n.$t('最近7天');
+                        timeShortCutText = i18n.t('最近7天');
                     }
                 });
             }

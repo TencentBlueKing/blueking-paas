@@ -1547,8 +1547,8 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                         moduleId: this.curModuleId
                     });
 
-                    //  Smart 应用(预发布)显示最新分支
-                    if (this.isSmartApp && this.environment === 'stag') {
+                    //  Smart 应用(预发布/生产)显示最新分支
+                    if (this.isSmartApp) {
                         const sortList = res.results.sort(this.sortData);
                         this.branchSelection = `${sortList[0].type}:${sortList[0].name}`;
                     }
@@ -2266,7 +2266,11 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                     // 未设置插件分类
                     case 'FILL_PLUGIN_TAG_INFO':
                         this.$router.push({
-                            name: 'appConfigs'
+                            name: 'appBaseInfo',
+                            params: {
+                                id: this.appCode,
+                                pluginTypeActive: true
+                            }
                         });
                         break;
                 }

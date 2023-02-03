@@ -717,7 +717,11 @@ export const PAAS_STATIC_CONFIG = {
                         "name": staticI18n.$t("基本信息"),
                         "destRoute": {
                           "name": "pluginBaseInfo"
-                        }
+                        },
+                        "matchRouters": [
+                            "pluginBaseInfo",
+                            "marketInfoEdit"
+                        ]
                     },
                     {
                         "name": staticI18n.$t("成员管理"),

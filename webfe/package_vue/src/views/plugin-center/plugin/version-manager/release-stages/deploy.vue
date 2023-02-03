@@ -29,7 +29,7 @@
         <i class="error-icon paasng-icon paasng-close-circle-shape" />
         <span class="info-time pl10">
           <span class="info-pending-text"> {{ $t('构建失败') }} </span>
-          <span class="time-text">{{ failedMessage }}</span>
+          <span class="time-text">{{ stageData.failedMessage }}</span>
         </span>
       </div>
       <div
@@ -56,7 +56,7 @@
           class="ext-cls-btn"
           @click="clickRerun(status)"
         >
-          {{ status === 'pending' ? $t('停止部署') : $t('重新部署') }}
+          {{ $t('重新部署') }}
         </bk-button>
       </div>
     </div>
@@ -95,7 +95,10 @@
         },
         mixins: [stageBaseMixin, pluginBaseMixin],
         props: {
-            stageData: Object
+            stageData: {
+                type: Object,
+                default: () => {}
+            }
         },
         data: function () {
           return {
@@ -112,10 +115,10 @@
         },
         watch: {
             stageData: {
-                handler () {
-                    this.logs = this.stageData.detail.logs;
-                    this.steps.splice(0, this.steps.length, ...this.modifyDeployStepsData(this.stageData.detail.steps));
-                    this.status = this.stageData.status;
+                handler (newStageData) {
+                    this.logs = newStageData.detail.logs;
+                    this.steps = this.modifyDeployStepsData(newStageData.detail.steps);
+                    this.status = newStageData.status;
                 },
                 deep: true,
                 immediate: true
@@ -203,10 +206,8 @@
                 });
             },
             clickRerun (status) {
-                if (status === 'pending') {
-                    console.log(status);
-                } else {
-                  this.$emit('rerunStage');
+                if (status !== 'pending') {
+                    this.$emit('rerunStage');
                 }
             }
         }

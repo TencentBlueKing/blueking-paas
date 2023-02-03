@@ -707,7 +707,7 @@
             .bk-form-control {
                 width: 100%;
                 max-width: 360px;
-                min-width: 185px;
+                min-width: 120px;
                 margin-left: auto;
             }
         }
@@ -725,7 +725,7 @@
             line-height: 32px;
         }
         .select-wrapper {
-            width: 80px;
+            width: 85px;
         }
         .set-ml {
             margin-left: 18px;

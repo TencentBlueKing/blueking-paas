@@ -138,7 +138,7 @@
         },
         computed: {
             adminStr () {
-                const pluginAdministrator = this.curPluginData.pd_administrator || [];
+                const pluginAdministrator = this.curPluginInfo.pd_administrator || [];
                 return pluginAdministrator.join(';');
             }
         },
@@ -149,9 +149,9 @@
                 }
             }
         },
-        async mounted () {
-            await Promise.all([this.fetchCategoryList(), this.fetchMarketInfo()]);
-            this.getPluginBaseInfo();
+        created () {
+            this.fetchCategoryList();
+            this.fetchMarketInfo();
         },
         methods: {
             // 获取市场信息
@@ -193,26 +193,6 @@
                     setTimeout(() => {
                         this.isLoading = false;
                     }, 200);
-                }
-            },
-            // 插件基本信息
-            async getPluginBaseInfo () {
-                const data = {
-                    pdId: this.pdId,
-                    pluginId: this.pluginId
-                };
-                try {
-                    const pluginBaseInfo = await this.$store.dispatch('plugin/getPluginBaseInfo', data);
-                    this.curPluginData = pluginBaseInfo;
-                    // 当前版本应用联系人为空，默认创建人为应用联系人
-                    if (!this.form.contact.length) {
-                        this.form.contact = pluginBaseInfo.latest_release.creator.split();
-                    }
-                } catch (e) {
-                    this.$bkMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('接口异常')
-                    });
                 }
             },
             // 保存

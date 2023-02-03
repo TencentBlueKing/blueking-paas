@@ -136,7 +136,14 @@
               >
             </p>
             <p class="whole-item-tips">
-              {{ $t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest') }}&nbsp;
+              {{ $t('示例镜像：') }}
+              <span v-if="['ce', 'ee'].includes(GLOBAL.APP_VERSION)">
+                nginx:latest
+              </span>
+              <span v-else>
+                mirrors.tencent.com/bkpaas/django-helloworld:latest
+              </span>
+              &nbsp;
               <span
                 class="whole-item-tips-text"
                 @click="useExample"
@@ -204,6 +211,7 @@
           <div class="form-group-flex">
             <p>
               <input
+                ref="targetPort"
                 type="text"
                 autocomplete="off"
                 name="target_port"
@@ -478,9 +486,17 @@
 
             // 使用示例参数
             useExample () {
-                this.$refs.imageUrl.value = 'mirrors.tencent.com/bkpaas/django-helloworld:latest';
+              if (['ce', 'ee'].includes(this.GLOBAL.APP_VERSION)) {
+                this.$refs.imageUrl.value = 'nginx:latest';
                 this.command = [];
-                this.command.push(...['bash', '/app/start_web.sh']);
+                this.args = [];
+                this.$refs.targetPort.value = 80;
+                return;
+              }
+              this.$refs.imageUrl.value = 'mirrors.tencent.com/bkpaas/django-helloworld:latest';
+              this.command = ['bash', '/app/start_web.sh'];
+              this.args = [];
+              this.$refs.targetPort.value = 5000;
             }
         }
     };

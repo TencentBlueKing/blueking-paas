@@ -274,13 +274,13 @@
         }
     }
 }
-@media screen and(min-width: 1680px) {
+@media screen and (min-width: 1680px) {
 
 }
-@media screen and(min-width: 1920px) {
+@media screen and (min-width: 1920px) {
 
 }
-@media screen and(min-width: 2450px) {
+@media screen and (min-width: 2450px) {
     .right-main-plugin .paas-loading-content .loading-placeholder {
       width: auto;
       svg {

@@ -1861,7 +1861,7 @@ export default {
   '副本数量有效值范围0-5': '副本数量有效值范围0-5',
   '粘贴内容不能为空': '粘贴内容不能为空',
   'VALUE不能超过2048个字符': 'VALUE不能超过2048个字符',
-  '示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest': '示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest',
+  '示例镜像：': '示例镜像：',
   '使用示例镜像': '使用示例镜像',
   '镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务': '镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务',
   '帮助：如何构建镜像': '帮助：如何构建镜像',

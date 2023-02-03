@@ -2266,7 +2266,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                     // 未设置插件分类
                     case 'FILL_PLUGIN_TAG_INFO':
                         this.$router.push({
-                            name: 'appConfigs',
+                            name: 'appConfigs'
                         });
                         break;
                 }

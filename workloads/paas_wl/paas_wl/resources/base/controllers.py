@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -30,9 +31,9 @@ from kubernetes.client.rest import ApiException
 from paas_wl.release_controller.hooks.entities import Command, command_kmodel
 from paas_wl.resources.base.exceptions import (
     CreateServiceAccountTimeout,
-    PodNotSucceededAbsentError,
+    PodAbsentError,
     PodNotSucceededError,
-    PodNotSucceededTimeoutError,
+    PodTimeoutError,
     ResourceDeleteTimeout,
     ResourceDuplicate,
     ResourceMissing,
@@ -203,14 +204,15 @@ class PodScheduleHandler(ResourceHandlerBase):
 
         :param namespace: 应用命名空间
         :param pod_name: Pod name
-        :raises: PodNotSucceededError when Pod does not succeed in given timeout seconds
+        :raises: PodAbsentError when Pod is not found
+        :raises: PodTimeoutError when Pod does not succeed in given timeout seconds
         """
         time_started = time.time()
         while timeout is None or time.time() - time_started < timeout:
             try:
                 _, health_status = self._get_pod_status(namespace, pod_name)
             except ResourceMissing as e:
-                raise PodNotSucceededAbsentError(f"Pod<{namespace}/{pod_name}> not found") from e
+                raise PodAbsentError(f"Pod<{namespace}/{pod_name}> not found") from e
 
             if health_status.status == HealthStatusType.UNHEALTHY:
                 exit_code = extract_exit_code(health_status) or -1
@@ -225,7 +227,7 @@ class PodScheduleHandler(ResourceHandlerBase):
             else:
                 time.sleep(check_period)
                 continue
-        raise PodNotSucceededTimeoutError(f"Pod<{namespace}/{pod_name}> didn't succeeded in {timeout} seconds.")
+        raise PodTimeoutError(f"Pod<{namespace}/{pod_name}> didn't succeeded in {timeout} seconds.")
 
     def _get_pod_logs(self, namespace: str, pod_name: str, timeout: int, **kwargs):
         """Get logs of running pod.
@@ -393,13 +395,13 @@ class CommandHandler(PodScheduleHandler):
         pod_name = command.name
 
         try:
-            existed: Command = command_kmodel.get(command.app, command.name)
+            existed = command_kmodel.get(command.app, command.name)
         except AppEntityNotFound:
             logger.info("Command Pod<%s/%s> does not exist, will create one" % (namespace, pod_name))
             command_kmodel.save(command)
             return command.name
 
-        if existed.status == "Running":
+        if existed.phase == "Running":
             # 如果 slug 超过了最长执行时间，尝试删除并重新创建，否则取消本次创建
             if not self.check_pod_timeout(existed):
                 raise ResourceDuplicate(
@@ -425,7 +427,7 @@ class CommandHandler(PodScheduleHandler):
             logger.info("Command Pod<%s/%s> does not exist, skip delete" % (namespace, command.name))
             return
 
-        if existed.status == "Running":
+        if existed.phase == "Running" and existed.main_container_exit_code is None:
             logger.warning(f"trying to clean Pod<{namespace}/{command.name}>, but it's still running.")
             return
 
@@ -442,7 +444,7 @@ class CommandHandler(PodScheduleHandler):
         """
         logger.debug(f"interrupting command pod:{command.name}...")
         try:
-            existed: Command = command_kmodel.get(command.app, command.name)
+            existed = command_kmodel.get(command.app, command.name)
             command_kmodel.delete(existed)
         except AppEntityNotFound:
             logger.warning("Try to interrupt command pod, but the pod have gone!")
@@ -453,12 +455,43 @@ class CommandHandler(PodScheduleHandler):
         return True
 
     def wait_for_succeeded(self, command: Command, timeout: Optional[float] = None, check_period: float = 0.5):
-        return self._wait_pod_succeeded(
-            namespace=command.app.namespace,
-            pod_name=command.name,
-            timeout=timeout,
-            check_period=check_period,
-        )
+        """Calling this function will block until the main container exited
+
+        :raises: PodAbsentError when Pod is not found
+        :raises: PodTimeoutError when Pod does not succeed in given timeout seconds
+        """
+        namespace = command.app.namespace
+        pod_name = command.name
+        time_started = time.time()
+        while timeout is None or time.time() - time_started < timeout:
+            try:
+                command_in_k8s = command_kmodel.get(command.app, command.name)
+            except AppEntityNotFound as e:
+                raise PodAbsentError(f"Pod<{namespace}/{pod_name}> not found") from e
+
+            # Pod 执行成功或主容器正常退出, 视为成功
+            if command_in_k8s.phase == "Succeeded" or command_in_k8s.main_container_exit_code == os.EX_OK:
+                return True
+            elif command_in_k8s.phase == "Running":
+                time.sleep(check_period)
+                continue
+
+            # 执行可能出现异常, 需要从 pod 中查询更多详情
+            v1pod = parse_pod(command_in_k8s._kube_data)
+            health_status = check_pod_health_status(v1pod)
+            if health_status.status == HealthStatusType.PROGRESSING:
+                # PROGRESSING 意味着 Pod 处于 Pending 且无异常事件(例如拉取镜像异常; 无节点可调度等), 继续等待
+                time.sleep(check_period)
+                continue
+
+            exit_code = extract_exit_code(health_status) or command_in_k8s.main_container_exit_code
+            raise PodNotSucceededError(
+                f"Pod<{namespace}/{pod_name}> ends unsuccessfully",
+                reason=health_status.reason,
+                message=health_status.message,
+                exit_code=exit_code,
+            )
+        raise PodTimeoutError(f"Pod<{namespace}/{pod_name}> didn't succeeded in {timeout} seconds.")
 
     def wait_for_logs_readiness(self, command: Command, timeout: int):
         """Waits for command Pod to become ready for retrieving logs
@@ -481,7 +514,9 @@ class CommandHandler(PodScheduleHandler):
         :param namespace: namespace where run the command.
         :param command: Command to run.
         """
-        return self._get_pod_logs(namespace=command.app.namespace, pod_name=command.name, timeout=timeout, **kwargs)
+        return self._get_pod_logs(
+            namespace=command.app.namespace, pod_name=command.name, timeout=timeout, container=command.name, **kwargs
+        )
 
     def check_pod_timeout(self, pod: Command) -> bool:
         """Check A Pod whether running too long"""

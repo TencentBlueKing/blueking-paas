@@ -23,6 +23,8 @@ from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
 from paas_wl.networking.ingress.models import AppDomain
+from paas_wl.networking.ingress.utils import make_service_name
+from paas_wl.workloads.processes.models import ProcessSpecManager
 
 pytestmark = [pytest.mark.django_db]
 
@@ -96,3 +98,24 @@ class TestAppDefaultIngresses:
                 in ingress._kube_data["metadata"]["annotations"]["nginx.ingress.kubernetes.io/configuration-snippet"]
             )
             assert "X-Script-Name" not in ingress.configuration_snippet
+
+    def test_restore_default_service(self, bk_stag_engine_app):
+        mgr = AppDefaultIngresses(bk_stag_engine_app)
+        svc_name_default = make_service_name(bk_stag_engine_app, 'web')
+        mgr.sync_ignore_empty(default_service_name=svc_name_default)
+
+        # Update service name to "worker" and check
+        svc_name_worker = make_service_name(bk_stag_engine_app, 'worker')
+        mgr.safe_update_target(svc_name_worker, 'http')
+        assert ingress_kmodel.list_by_app(bk_stag_engine_app)[0].service_name == svc_name_worker
+
+        # Set the app's process, add a process called "worker", sync ingresses, service name field
+        # should remain intact because the process is there.
+        ProcessSpecManager(bk_stag_engine_app).sync([{"name": "worker", "command": "foo"}])
+        mgr.sync_ignore_empty(default_service_name=svc_name_default)
+        assert ingress_kmodel.list_by_app(bk_stag_engine_app)[0].service_name == svc_name_worker
+
+        # Remove "worker" process and do another sync, the service name should be restored to default
+        ProcessSpecManager(bk_stag_engine_app).sync([])
+        mgr.sync_ignore_empty(default_service_name=svc_name_default)
+        assert ingress_kmodel.list_by_app(bk_stag_engine_app)[0].service_name == svc_name_default

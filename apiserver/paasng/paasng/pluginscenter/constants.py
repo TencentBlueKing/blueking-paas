@@ -141,6 +141,7 @@ class SubjectTypes(str, StructuredEnum):
     PLUGIN = EnumField("plugin", label=_("插件"))
     VERSION = EnumField("version", label=_("版本"))
     BASIC_INFO = EnumField("basic_info", label=_("基本信息"))
+    LOGO = EnumField("logo", label=_("logo"))
     MARKET_INFO = EnumField("market_info", label=_("市场信息"))
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))

@@ -48,10 +48,12 @@ from paasng.engine.deploy.preparations import (
 from paasng.engine.deploy.protections import (
     EnvProtectionCondition,
     ModuleEnvDeployInspector,
+    PluginTagValidationCondition,
     ProductInfoCondition,
     RepoAccessCondition,
 )
 from paasng.engine.models import Deployment
+from paasng.extensions.bk_plugins.models import BkPluginTag
 from paasng.extensions.declarative.constants import CELERY_BEAT_PROCESS, CELERY_PROCESS, WEB_PROCESS
 from paasng.extensions.declarative.deployment.controller import DeploymentDescription
 from paasng.extensions.declarative.handlers import get_desc_handler
@@ -450,6 +452,28 @@ class TestProductInfoCondition:
                 ProductInfoCondition(bk_user, env).validate()
 
             assert exc_info.value.action_name == DeployConditions.FILL_PRODUCT_INFO.value
+
+
+class TestPluginTagCondition:
+    @pytest.mark.parametrize(
+        "env, create_tag, ok",
+        [("prod", False, False), ('prod', True, True), ("stag", False, True), ('stag', True, True)],
+    )
+    def test_validate(self, bk_user, bk_plugin_app, env, create_tag, ok):
+        bk_plugin_profile = bk_plugin_app.bk_plugin_profile
+
+        if create_tag:
+            tag_1 = G(BkPluginTag, code_name='sample-tag-code-1', name='sample-tag-1')
+            bk_plugin_profile.tag = tag_1
+
+        env = bk_plugin_app.get_default_module().envs.get(environment=env)
+        if ok:
+            PluginTagValidationCondition(bk_user, env).validate
+        else:
+            with pytest.raises(ConditionNotMatched) as exc_info:
+                PluginTagValidationCondition(bk_user, env).validate()
+
+            assert exc_info.value.action_name == DeployConditions.FILL_PLUGIN_TAG_INFO.value
 
 
 class TestEnvProtectionCondition:

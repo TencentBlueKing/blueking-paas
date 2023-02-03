@@ -48,12 +48,12 @@ class TestArchived:
         plugin.save()
         return plugin
 
-    def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client):
+    def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client, setup_bk_user):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.get(url)
         assert resp.status_code == 200
 
-    def test_update_api(self, api_client, pd, plugin, release, iam_policy_client):
+    def test_update_api(self, api_client, pd, plugin, release, iam_policy_client, setup_bk_user):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.post(url)
         assert resp.status_code == 400

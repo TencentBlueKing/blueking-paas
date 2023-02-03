@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import TYPE_CHECKING
 
+from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.iam.helpers import fetch_user_roles
@@ -29,7 +30,7 @@ from paasng.dev_resources.sourcectl.exceptions import (
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import DeployConditions, RuntimeType
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.platform.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -125,6 +126,30 @@ class ProcfileCondition(DeployCondition):
             raise ConditionNotMatched(_('未完善进程启动命令'), self.action_name)
 
 
+class PluginTagValidationCondition(DeployCondition):
+    """检查插件应用是否设置了分类"""
+
+    action_name = DeployConditions.FILL_PLUGIN_TAG_INFO.value
+
+    def validate(self):
+        application = self.env.module.application
+        if application.type != ApplicationType.BK_PLUGIN:
+            return
+
+        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
+            return
+
+        try:
+            bk_plugin_profile = application.bk_plugin_profile
+        except ObjectDoesNotExist:
+            tag_info = None
+        else:
+            tag_info = bk_plugin_profile.get_tag_info()
+
+        if not tag_info:
+            raise ConditionNotMatched(_('未设置插件分类'), self.action_name)
+
+
 class ModuleEnvDeployInspector(BaseConditionChecker):
     """Prepare to deploy a ModuleEnvironment"""
 
@@ -133,6 +158,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         EnvProtectionCondition,
         RepoAccessCondition,
         ProcfileCondition,
+        PluginTagValidationCondition,
     ]
 
     def __init__(self, user: 'User', env: 'ModuleEnvironment'):

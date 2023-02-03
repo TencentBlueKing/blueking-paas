@@ -79,6 +79,7 @@ from paasng.platform.applications.models import (
     UserApplicationFilter,
     UserMarkedApplication,
 )
+from paasng.platform.applications.pagination import ApplicationListPagination
 from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
 from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import (
@@ -94,8 +95,9 @@ from paasng.platform.applications.utils import (
     create_market_config,
     create_third_app,
     delete_all_modules,
+    get_app_overview,
 )
-from paasng.platform.core.storages.s3 import app_logo_storage
+from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
@@ -126,15 +128,6 @@ logger = logging.getLogger(__name__)
 class ApplicationViewSet(viewsets.ViewSet):
     """View class for applications"""
 
-    @property
-    def paginator(self):
-        if not hasattr(self, '_paginator'):
-            from rest_framework.pagination import LimitOffsetPagination
-
-            self._paginator = LimitOffsetPagination()
-            self._paginator.default_limit = 12
-        return self._paginator
-
     @swagger_auto_schema(query_serializer=slzs.ApplicationListDetailedSLZ)
     def list_detailed(self, request):
         """[API] 查询应用列表详情"""
@@ -162,29 +155,43 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
 
+        paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下
         if params.get('prefer_marked'):
             applications_ids = applications.values_list('id', flat=True)
             applications_ids = sorted(applications_ids, key=lambda x: x in marked_application_ids, reverse=True)
 
-            # Paginator
-            page = self.paginator.paginate_queryset(applications_ids, self.request, view=self)
+            page = paginator.paginate_queryset(applications_ids, self.request, view=self)
             page_applications = list(Application.objects.filter(id__in=page).select_related('product'))
             page_applications = sorted(page_applications, key=lambda x: applications_ids.index(x.id))
         else:
-            page_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
+            page_applications = paginator.paginate_queryset(applications, self.request, view=self)
 
         data = [
             {
                 'application': application,
                 'product': application.product if hasattr(application, "product") else None,
                 'marked': application.id in marked_application_ids,
+                # 应用市场访问地址信息
+                'market_config': application.market_config,
             }
             for application in page_applications
         ]
 
+        # 统计普通应用、云原生应用、外链应用的数量
+        default_app_count = applications.filter(type__in=ApplicationType.normal_app_type()).count()
+        engineless_app_count = applications.filter(type=ApplicationType.ENGINELESS_APP).count()
+        cloud_native_app_count = applications.filter(type=ApplicationType.CLOUD_NATIVE).count()
+
         serializer = slzs.ApplicationWithMarketSLZ(data, many=True)
-        return self.paginator.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(
+            serializer.data,
+            extra_data={
+                'default_app_count': default_app_count,
+                'engineless_app_count': engineless_app_count,
+                'cloud_native_app_count': cloud_native_app_count,
+            },
+        )
 
     @swagger_auto_schema(query_serializer=slzs.ApplicationListMinimalSLZ)
     def list_minimal(self, request):
@@ -335,6 +342,16 @@ class ApplicationViewSet(viewsets.ViewSet):
 
     def check_manage_permissions(self, request, application):
         check_application_perm(request.user, application, AppAction.BASIC_DEVELOP)
+
+    @swagger_auto_schema(tags=["普通应用概览数据"])
+    def get_overview(self, request, code):
+        """普通应用、云原生应用概览页面数据"""
+        application = get_object_or_404(Application, code=code)
+        check_application_perm(request.user, application, AppAction.VIEW_BASIC_INFO)
+
+        data = get_app_overview(application)
+
+        return Response(data)
 
 
 class ApplicationCreateViewSet(viewsets.ViewSet):

@@ -26,3 +26,7 @@ class APIError(Exception):
 
 class AuthTokenMissingError(Exception):
     """缺少鉴权凭证错误"""
+
+
+class PluginRepoNameConflict(APIError):
+    """仓库名称冲突, 同名仓库已存在"""

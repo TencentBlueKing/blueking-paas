@@ -16,20 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf import settings
-from django.utils.functional import LazyObject
+from collections import OrderedDict
 
-from paasng.utils.blobstore import get_storage_by_bucket
-
-
-class S3Storage(LazyObject):
-    def __init__(self, bucket: str):
-        super().__init__()
-        self.__dict__["__bucket__"] = bucket
-
-    def _setup(self):
-        self._wrapped = get_storage_by_bucket(self.__bucket__)
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 
 
-service_logo_storage = S3Storage(bucket=settings.SERVICE_LOGO_BUCKET)
-app_logo_storage = S3Storage(bucket=settings.APP_LOGO_BUCKET)
+class ApplicationListPagination(LimitOffsetPagination):
+    """应用列表分页器，用于添加各种应用类型数量等参数"""
+
+    default_limit = 12
+
+    def get_paginated_response(self, data, extra_data):
+        return Response(
+            OrderedDict(
+                [
+                    ('count', self.count),
+                    ('next', self.get_next_link()),
+                    ('previous', self.get_previous_link()),
+                    ('extra_data', extra_data),
+                    ('results', data),
+                ]
+            )
+        )

@@ -24,7 +24,9 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.pluginscenter.constants import MarketInfoStorageType
+from paasng.accounts.constants import AccountFeatureFlag as AFF
+from paasng.accounts.models import AccountFeatureFlag
+from paasng.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod
 from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
@@ -78,6 +80,7 @@ def pd():
     pd.basic_info_definition = G(
         PluginBasicInfoDefinition,
         pd=pd,
+        release_method=PluginReleaseMethod.CODE,
         id_schema={
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
@@ -191,3 +194,8 @@ def iam_policy_client():
         iam_policy_client.is_action_allowed.return_value = True
         iam_policy_client.is_actions_allowed.return_value = {"": True}
         yield iam_policy_client
+
+
+@pytest.fixture()
+def setup_bk_user(bk_user):
+    AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_PLUGIN_CENTER, True)

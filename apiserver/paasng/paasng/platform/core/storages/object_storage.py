@@ -16,27 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.utils.translation import gettext_lazy as _
+from django.conf import settings
+from django.utils.functional import LazyObject
 
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.utils.blobstore import get_storage_by_bucket
 
-RUN_ENVS = AppEnvironment.get_values()
 
-DEFAULT_RULE_CONFIGS = {
-    'module_scoped': {
-        'high_cpu_usage': {
-            'display_name': _('CPU 使用率过高'),
-            'threshold_expr': '>= 0.8',  # 使用率 80%
-        },
-        'high_mem_usage': {
-            'display_name': _('内存使用率过高'),
-            'threshold_expr': '>= 0.95',  # 使用率 95%
-        },
-    },
-    'app_scoped': {
-        'page_50x': {
-            'display_name': _('应用首页访问异常'),
-            'threshold_expr': '>= 500',
-        }
-    },
-}
+class LazyStorage(LazyObject):
+    def __init__(self, bucket: str):
+        super().__init__()
+        self.__dict__["__bucket__"] = bucket
+
+    def _setup(self):
+        self._wrapped = get_storage_by_bucket(self.__bucket__)
+
+
+service_logo_storage = LazyStorage(bucket=settings.SERVICE_LOGO_BUCKET)
+app_logo_storage = LazyStorage(bucket=settings.APP_LOGO_BUCKET)
+plugin_logo_storage = LazyStorage(bucket=settings.PLUGIN_LOGO_BUCKET)

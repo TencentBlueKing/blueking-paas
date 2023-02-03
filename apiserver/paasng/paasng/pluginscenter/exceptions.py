@@ -24,6 +24,7 @@ class ErrorCodes:
     CREATE_REPO_ERROR = ErrorCode(_("创建插件项目(源码)失败, 请联系管理员"))
     INITIAL_REPO_ERROR = ErrorCode(_("初始化项目代码失败, 请联系管理员"))
     THIRD_PARTY_API_ERROR = ErrorCode(_("插件后台系统异常, 请联系管理员"))
+    DELETE_REPO_ERROR = ErrorCode(_("删除插件项目(源码)失败, 请联系管理员"))
 
     CANNOT_RELEASE_ONGOING_EXISTS = ErrorCode(_("已有发布任务进行中，请刷新查看"))
     CANNOT_RERUN_ONGOING_STEPS = ErrorCode(_("重试步骤失败, 当前步骤不支持重试。"))
@@ -36,6 +37,8 @@ class ErrorCodes:
     CONFIGURATION_CONFLICT = ErrorCode(_("该插件 {conflict_fields} 的配置项已存在, 不能重复添加"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_('插件应该至少拥有一个管理员'))
+    MEMBERSHIP_ADD_FAILED = ErrorCode(_("添加插件成员失败"))
+    MEMBERSHIP_UPDATE_FAILED = ErrorCode(_("修改插件成员角色失败"))
     # 下架或删除插件相关
     CANNOT_BE_DELETED = ErrorCode(_('不允许删除'))
     PLUGIN_ARCHIVED = ErrorCode(_("插件已下架, 无法进行该操作"))

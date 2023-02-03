@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pprint
 from pathlib import Path
 
 import cattr
@@ -55,11 +56,13 @@ class Command(BaseCommand):
         if models.PluginDefinition.objects.filter(identifier=identifier).exists():
             self.stdout.write(self.style.WARNING(f"ID 为 {identifier} 的插件类型已经存在，将进行更新"))
 
+        pd_data = cattr.structure(data, definitions.PluginDefinition)
+
         if dry_run:
-            self.stdout.write(self.style.SUCCESS(f"DRY-RUN: ID 为 {identifier} 的插件类型已更新"))
+            self.stdout.write(self.style.SUCCESS(f"DRY-RUN: 创建或者更新 ID 为 {identifier} 的插件类型"))
+            pprint.pp(pd_data, stream=self.stdout)
             return
 
-        pd_data = cattr.structure(data, definitions.PluginDefinition)
         # 插件类型定义
         pd, _ = models.PluginDefinition.objects.update_or_create(
             identifier=pd_data.identifier,

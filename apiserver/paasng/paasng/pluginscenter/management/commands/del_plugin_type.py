@@ -33,9 +33,9 @@ class Command(BaseCommand):
             type=str,
             help=("插件类型ID"),
         )
-        parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
+        parser.add_argument('--no-dry-run', dest="dry_run", help="dry run", action="store_false")
 
-    def handle(self, identifier, dry_run, *args, **options):
+    def handle(self, identifier, dry_run=True, *args, **options):
         if not PluginDefinition.objects.filter(identifier=identifier).exists():
             self.stdout.write(self.style.WARNING(f"ID 为 {identifier} 的插件类型不存在"))
             return

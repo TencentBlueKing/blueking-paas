@@ -22,6 +22,7 @@
             >
               <router-view
                 v-if="userVisitEnable && pluginVisitEnable"
+                :key="$route.path"
                 class="right-main-plugin"
                 @current-plugin-info-updated="pluginInfoUpdatedCallback"
               />
@@ -98,7 +99,6 @@
                 errorMessage: '',
                 deniedMessageType: 'default',
                 showMarketMenus: true,
-
                 // 非应用引擎 应用 时所要显示的父级导航
                 parentNavIds: [8, 10],
                 // 非应用引擎 应用 时所要显示的子级导航

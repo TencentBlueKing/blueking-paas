@@ -486,7 +486,6 @@
 
                 this.$emit('change', this.logParams);
             }, { deep: true });
-            console.log('this.logParams', this.logParams);
         },
         methods: {
             handleInput (payload) {

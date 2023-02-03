@@ -20,7 +20,7 @@
         <bk-input
           v-model="filterKey"
           class="paas-plugin-input"
-          :placeholder="$t('输入插件标识、插件名称，按Enter搜索')"
+          :placeholder="$t('输入插件ID、插件名称，按Enter搜索')"
           :clearable="true"
           :right-icon="'paasng-icon paasng-search'"
           @enter="handleSearch"
@@ -35,11 +35,15 @@
         :pagination="pagination"
         :outer-border="false"
         :header-border="false"
+        :show-overflow-tooltip="true"
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
-        <div slot="empty">
+        <div
+          v-if="pluginList.length"
+          slot="empty"
+        >
           <bk-exception
             class="exception-wrap-item exception-part"
             type="search-empty"
@@ -53,7 +57,7 @@
             >{{ $t('清空搜索条件') }}</span>
           </div>
         </div>
-        <bk-table-column :label="$t('插件标识')">
+        <bk-table-column :label="$t('插件 ID')">
           <template slot-scope="{ row }">
             <img
               :src="row.logo"
@@ -82,7 +86,7 @@
           :filter-multiple="true"
         >
           <template slot-scope="{ row }">
-            <span v-bk-tooltips="row.pd_name">{{ row.pd_name || '--' }}</span>
+            {{ row.pd_name || '--' }}
           </template>
         </bk-table-column>
         <bk-table-column
@@ -92,23 +96,6 @@
           :filters="languageFilters"
           :filter-multiple="true"
         />
-        <!-- 状态 -->
-        <bk-table-column
-          :label="$t('状态')"
-          prop="status"
-          column-key="status"
-          :filters="statusFilters"
-          :filter-multiple="true"
-        >
-          <template slot-scope="{ row }">
-            <round-loading v-if="row.status === 'releasing'" />
-            <div
-              v-else
-              :class="['point', row.status]"
-            />
-            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
-          </template>
-        </bk-table-column>
         <bk-table-column
           :label="$t('版本')"
         >
@@ -130,6 +117,23 @@
             </template>
           </template>
         </bk-table-column>
+        <!-- 状态 -->
+        <bk-table-column
+          :label="$t('状态')"
+          prop="status"
+          column-key="status"
+          :filters="statusFilters"
+          :filter-multiple="true"
+        >
+          <template slot-scope="{ row }">
+            <round-loading v-if="row.status === 'releasing'" />
+            <div
+              v-else
+              :class="['point', row.status]"
+            />
+            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
+          </template>
+        </bk-table-column>
         <bk-table-column :label="$t('操作')">
           <template slot-scope="{ row }">
             <div class="table-operate-buttons">
@@ -149,7 +153,7 @@
                   text
                   @click="toNewVersion(row)"
                 >
-                  {{ $t('发布') }}
+                  {{ row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布') }}
                 </bk-button>
                 <bk-button
                   theme="primary"
@@ -197,7 +201,6 @@
         data () {
             return {
                 loading: true,
-                loaderPlaceholder: 'apps-loading',
                 filterKey: '',
                 pluginList: [],
                 pluginStatus: PLUGIN_STATUS,
@@ -489,6 +492,7 @@
                 display: inline-block;
                 border-radius: 50%;
                 margin-right: 3px;
+                border: 1px solid #FF9C01;
             }
             .waiting-approval{
                 background: #FFE8C3;

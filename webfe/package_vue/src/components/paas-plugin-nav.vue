@@ -256,23 +256,24 @@
                     console.warn('error', e);
                     if (!e) {
                         this.$router.push({
-                            name: 'appBaseInfo',
+                            name: 'pluginBaseInfo',
                             params: {
+                                pluginTypeId: this.curPluginInfo.pd_id,
                                 id: this.curPluginInfo.id
                             }
                         });
                     } else {
                         this.$router.push({
-                            name: 'appSummary',
+                            name: 'pluginSummary',
                             params: {
-                                id: this.curPluginInfo.id,
-                                moduleId: 'default'
+                                pluginTypeId: this.curPluginInfo.pd_id,
+                                id: this.curPluginInfo.id
                             }
                         });
                         if (e.name) {
                             this.$bkNotify({
                                 theme: 'error',
-                                message: `【${e.name}】${this.$t('没有访问权限！')}`,
+                                message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
                                 offsetY: 80
                             });
                         }
@@ -358,14 +359,14 @@
                     this.$router.push({
                         name: 'pluginSummary',
                         params: {
-                            id: this.curPluginInfo.id,
-                            moduleId: 'default'
+                            pluginTypeId: this.curPluginInfo.pd_id,
+                            id: this.curPluginInfo.id
                         }
                     });
                     if (e.name) {
                         this.$bkNotify({
                             theme: 'error',
-                            message: `【${e.name}】没有访问权限！`,
+                            message: `【${e.label || e.name}】没有访问权限！`,
                             offsetY: 80
                         });
                     }

@@ -1,242 +1,244 @@
 <template>
-  <paas-content-loader
-    :is-loading="isLoading"
-    placeholder="deploy-inner-history-loading"
-    :offset-top="0"
-    :offset-left="-8"
-    class="deploy-history pb20 pl20 pr20"
-  >
-    <!-- <bk-form form-type="inline">
-            <bk-form-item :label="$t('环境')" style="vertical-align: top;">
-                <bk-select
-                    v-model="choosedEnv"
-                    style="width: 150px;"
-                    :clearable="false">
-                    <bk-option
-                        v-for="(option, index) in envList"
-                        :key="index"
-                        :id="option.id"
-                        :name="option.text">
-                    </bk-option>
-                </bk-select>
-            </bk-form-item>
-            <bk-form-item :label="$t('操作人')" style="vertical-align: top;">
-                <user
-                    style="width: 350px;"
-                    :placeholder="$t('请选择')"
-                    :max-data="1"
-                    v-model="personnelSelectorList">
-                </user>
-            </bk-form-item>
-            <bk-form-item label="" style="vertical-align: top;">
-                <bk-button theme="primary" type="button" @click.stop.prevent="getDeployHistory(1)"> {{ $t('查询') }} </bk-button>
-            </bk-form-item>
-        </bk-form> -->
-    <bk-table
-      v-bkloading="{ isLoading: isPageLoading }"
-      class="mt15 ps-history-list"
-      :data="historyList"
-      :outer-border="false"
-      :size="'small'"
-      :pagination="pagination"
-      :height="historyList.length ? '' : '520px'"
-      @row-click="handleShowLog"
-      @page-limit-change="handlePageLimitChange"
-      @page-change="handlePageChange"
+  <div class="version-container">
+    <paas-content-loader
+      :is-loading="isLoading"
+      placeholder="event-list-loading"
+      :offset-top="0"
+      :offset-left="-8"
+      class="deploy-history"
     >
-      <bk-table-column
-        :label="$t('版本')"
-        prop="name"
-        :show-overflow-tooltip="true"
-      />
-      <bk-table-column
-        :label="$t('部署环境')"
-        prop="environment_name"
+      <!-- <bk-form form-type="inline">
+              <bk-form-item :label="$t('环境')" style="vertical-align: top;">
+                  <bk-select
+                      v-model="choosedEnv"
+                      style="width: 150px;"
+                      :clearable="false">
+                      <bk-option
+                          v-for="(option, index) in envList"
+                          :key="index"
+                          :id="option.id"
+                          :name="option.text">
+                      </bk-option>
+                  </bk-select>
+              </bk-form-item>
+              <bk-form-item :label="$t('操作人')" style="vertical-align: top;">
+                  <user
+                      style="width: 350px;"
+                      :placeholder="$t('请选择')"
+                      :max-data="1"
+                      v-model="personnelSelectorList">
+                  </user>
+              </bk-form-item>
+              <bk-form-item label="" style="vertical-align: top;">
+                  <bk-button theme="primary" type="button" @click.stop.prevent="getDeployHistory(1)"> {{ $t('查询') }} </bk-button>
+              </bk-form-item>
+          </bk-form> -->
+      <bk-table
+        v-bkloading="{ isLoading: isPageLoading }"
+        class="mt15 ps-history-list"
+        :data="historyList"
+        :outer-border="false"
+        :size="'small'"
+        :pagination="pagination"
+        :height="historyList.length ? '' : '520px'"
+        @row-click="handleShowLog"
+        @page-limit-change="handlePageLimitChange"
+        @page-change="handlePageChange"
       >
-        <template slot-scope="props">
-          <span v-if="props.row.environment_name === 'stag'"> {{ $t('预发布环境') }} </span>
-          <span v-else> {{ $t('生产环境') }} </span>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        :label="$t('操作人')"
-        prop="operator"
-      />
-      <bk-table-column :label="$t('耗时')">
-        <template slot-scope="{ row }">
-          {{ computedDeployTime(row) }}
-        </template>
-      </bk-table-column>
-      <bk-table-column :label="$t('结果')">
-        <template slot-scope="props">
-          <div v-if="props.row.status === 'ready'">
-            <span class="dot success" /> {{ $t('成功') }}
-          </div>
-          <div v-if="props.row.status === 'error'">
-            <span class="dot danger" /> {{ $t('失败') }}
-          </div>
-          <div v-if="props.row.status === 'progressing' || props.row.status === 'pending'">
-            <span class="dot warning" /> {{ $t('部署中') }}
-          </div>
-        </template>
-      </bk-table-column>
-      <bk-table-column
-        width="180"
-        :label="$t('操作时间')"
-      >
-        <template slot-scope="{ row }">
-          {{ formatDeployCreateTime(row) }}
-        </template>
-      </bk-table-column>
-    </bk-table>
-
-    <bk-sideslider
-      :title="historySideslider.title"
-      :width="820"
-      :is-show.sync="historySideslider.isShow"
-      :quick-close="true"
-      @hidden="errorTips = {}"
-    >
-      <div
-        slot="content"
-        v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
-        class="deploy-detail"
-      >
-        <bk-tab
-          type="unborder-card"
-          :active.sync="active"
-          ext-cls="version-tab-cls"
+        <bk-table-column
+          :label="$t('版本')"
+          prop="name"
+          :show-overflow-tooltip="true"
+        />
+        <bk-table-column
+          :label="$t('部署环境')"
+          prop="environment_name"
         >
-          <bk-tab-panel
-            key="processes"
-            name="processes"
-            v-bind="tabData[0]"
+          <template slot-scope="props">
+            <span v-if="props.row.environment_name === 'stag'"> {{ $t('预发布环境') }} </span>
+            <span v-else> {{ $t('生产环境') }} </span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('操作人')"
+          prop="operator"
+        />
+        <bk-table-column :label="$t('耗时')">
+          <template slot-scope="{ row }">
+            {{ computedDeployTime(row) }}
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('结果')">
+          <template slot-scope="props">
+            <div v-if="props.row.status === 'ready'">
+              <span class="dot success" /> {{ $t('成功') }}
+            </div>
+            <div v-if="props.row.status === 'error'">
+              <span class="dot danger" /> {{ $t('失败') }}
+            </div>
+            <div v-if="props.row.status === 'progressing' || props.row.status === 'pending'">
+              <span class="dot warning" /> {{ $t('部署中') }}
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          width="180"
+          :label="$t('操作时间')"
+        >
+          <template slot-scope="{ row }">
+            {{ formatDeployCreateTime(row) }}
+          </template>
+        </bk-table-column>
+      </bk-table>
+
+      <bk-sideslider
+        :title="historySideslider.title"
+        :width="820"
+        :is-show.sync="historySideslider.isShow"
+        :quick-close="true"
+        @hidden="errorTips = {}"
+      >
+        <div
+          slot="content"
+          v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
+          class="deploy-detail"
+        >
+          <bk-tab
+            type="unborder-card"
+            :active.sync="active"
+            ext-cls="version-tab-cls"
           >
-            <div class="process-container">
-              <div
-                v-for="(item, index) in processData"
-                :key="index"
-                class="process-item"
-              >
-                <div class="process-url">
-                  容器镜像地址: <span>{{ item.image }}</span>
-                </div>
-                <div class="pt20 pl20">
-                  镜像凭证: {{ voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
-                </div>
-                <div class="pt20 pl20">
-                  启动命令: {{ item.command && item.command.length ? item.command.join(',') : '无' }}
-                </div>
-                <div class="pt20 pl20">
-                  命令参数: {{ item.args && item.args.length ? item.args.join(',') : '无' }}
-                </div>
-                <div class="pt20 pl20">
-                  副本数量: {{ item.replicas }}
-                </div>
-                <div class="pt20 pl20 pb20">
-                  资源: {{ item.memory }} / {{ item.cpu }}
+            <bk-tab-panel
+              key="processes"
+              name="processes"
+              v-bind="tabData[0]"
+            >
+              <div class="process-container">
+                <div
+                  v-for="(item, index) in processData"
+                  :key="index"
+                  class="process-item"
+                >
+                  <div class="process-url">
+                    容器镜像地址: <span>{{ item.image }}</span>
+                  </div>
+                  <div class="pt20 pl20">
+                    镜像凭证: {{ voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
+                  </div>
+                  <div class="pt20 pl20">
+                    启动命令: {{ item.command && item.command.length ? item.command.join(',') : '无' }}
+                  </div>
+                  <div class="pt20 pl20">
+                    命令参数: {{ item.args && item.args.length ? item.args.join(',') : '无' }}
+                  </div>
+                  <div class="pt20 pl20">
+                    副本数量: {{ item.replicas }}
+                  </div>
+                  <div class="pt20 pl20 pb20">
+                    资源: {{ item.memory }} / {{ item.cpu }}
+                  </div>
                 </div>
               </div>
-            </div>
-          </bk-tab-panel>
-          <bk-tab-panel
-            key="env"
-            name="env"
-            v-bind="tabData[1]"
-          >
-            <div
-              v-if="envData.length"
-              class="env-container"
+            </bk-tab-panel>
+            <bk-tab-panel
+              key="env"
+              name="env"
+              v-bind="tabData[1]"
             >
               <div
-                v-for="(item, index) in envData"
-                :key="index"
-                class="env-item pb20"
+                v-if="envData.length"
+                class="env-container"
               >
-                NAME: {{ item.name }}
-                <span class="pl20">VALUE: {{ item.value }}</span>
+                <div
+                  v-for="(item, index) in envData"
+                  :key="index"
+                  class="env-item pb20"
+                >
+                  NAME: {{ item.name }}
+                  <span class="pl20">VALUE: {{ item.value }}</span>
+                </div>
               </div>
-            </div>
-            <div
-              v-else
-              class="exception-wrapper"
+              <div
+                v-else
+                class="exception-wrapper"
+              >
+                <img
+                  class="img-exception"
+                  src="/static/images/empty.png"
+                  alt=""
+                >
+                <p class="text-exception">
+                  {{ $t('暂无数据') }}
+                </p>
+              </div>
+            </bk-tab-panel>
+            <bk-tab-panel
+              key="resource"
+              name="resource"
+              v-bind="tabData[2]"
             >
-              <img
-                class="img-exception"
-                src="/static/images/empty.png"
-                alt=""
-              >
-              <p class="text-exception">
-                {{ $t('暂无数据') }}
-              </p>
-            </div>
-          </bk-tab-panel>
-          <bk-tab-panel
-            key="resource"
-            name="resource"
-            v-bind="tabData[2]"
-          >
-            <div class="resource-contanier">
-              <div class="resource-item mb20">
-                <div class="pb10">
-                  <span class="item-title">{{ $t('增强服务') }}</span>
-                  <router-link
-                    :to="{ path: `/developer-center/apps/${appCode}/default/service/1` }"
-                    class="link pl20"
-                  >
-                    {{ $t('管理增强服务') }}
-                  </router-link>
+              <div class="resource-contanier">
+                <div class="resource-item mb20">
+                  <div class="pb10">
+                    <span class="item-title">{{ $t('增强服务') }}</span>
+                    <router-link
+                      :to="{ path: `/developer-center/apps/${appCode}/default/service/1` }"
+                      class="link pl20"
+                    >
+                      {{ $t('管理增强服务') }}
+                    </router-link>
+                  </div>
+                  <div class="item-data">
+                    {{ $t('启用未创建') }}: {{ notCreated || '无' }}
+                  </div>
+                  <div class="item-data">
+                    {{ $t('已创建实例') }}: {{ created || '无' }}
+                  </div>
                 </div>
-                <div class="item-data">
-                  {{ $t('启用未创建') }}: {{ notCreated || '无' }}
-                </div>
-                <div class="item-data">
-                  {{ $t('已创建实例') }}: {{ created || '无' }}
-                </div>
-              </div>
-              <div class="resource-item no-border">
-                <div class="item-title-content">
-                  <span class="item-title pb10">
-                    {{ $t('服务发现') }}
-                  </span>
-                  <span>{{ $t('（其他 SaaS）') }}</span>
-                </div>
-                <div class="item-data">
-                  {{ $t('通过环境变量获取其他Saas应用的访问地址') }}
-                  <a
-                    target="_blank"
-                    :href="GLOBAL.DOC.SERVE_DISCOVERY"
-                    style="color: #3a84ff"
-                  >{{ $t('查看使用帮助') }}</a>
+                <div class="resource-item no-border">
+                  <div class="item-title-content">
+                    <span class="item-title pb10">
+                      {{ $t('服务发现') }}
+                    </span>
+                    <span>{{ $t('（其他 SaaS）') }}</span>
+                  </div>
+                  <div class="item-data">
+                    {{ $t('通过环境变量获取其他Saas应用的访问地址') }}
+                    <a
+                      target="_blank"
+                      :href="GLOBAL.DOC.SERVE_DISCOVERY"
+                      style="color: #3a84ff"
+                    >{{ $t('查看使用帮助') }}</a>
+                  </div>
                 </div>
               </div>
-            </div>
-          </bk-tab-panel>
-          <bk-tab-panel
-            key="yaml"
-            name="yaml"
-            v-bind="tabData[3]"
-          >
-            <div class="process-container">
-              <resource-editor
-                ref="versionEditorRef"
-                key="editor"
-                v-model="yamlData"
-                v-bkloading="{ isLoading, opacity: 1, color: '#1a1a1a' }"
-                :height="600"
-                @error="handleEditorErr"
-              />
-              <EditorStatus
-                v-show="!!editorErr.message"
-                class="status-wrapper"
-                :message="editorErr.message"
-              />
-            </div>
-          </bk-tab-panel>
-        </bk-tab>
-      </div>
-    </bk-sideslider>
-  </paas-content-loader>
+            </bk-tab-panel>
+            <bk-tab-panel
+              key="yaml"
+              name="yaml"
+              v-bind="tabData[3]"
+            >
+              <div class="process-container">
+                <resource-editor
+                  ref="versionEditorRef"
+                  key="editor"
+                  v-model="yamlData"
+                  v-bkloading="{ isLoading, opacity: 1, color: '#1a1a1a' }"
+                  :height="600"
+                  @error="handleEditorErr"
+                />
+                <EditorStatus
+                  v-show="!!editorErr.message"
+                  class="status-wrapper"
+                  :message="editorErr.message"
+                />
+              </div>
+            </bk-tab-panel>
+          </bk-tab>
+        </div>
+      </bk-sideslider>
+    </paas-content-loader>
+  </div>
 </template>
 
 <script>
@@ -559,6 +561,9 @@
 </script>
 
 <style lang="scss" scoped>
+    .version-container {
+        padding: 0 20px 20px;
+    }
     .deploy-history {
         min-height: 500px !important;
     }

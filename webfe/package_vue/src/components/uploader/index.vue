@@ -214,7 +214,6 @@
                     validate.message = `${this.$t('文件不能超过')}${this.maxSize} MB`;
                 }
                 if (!this.accept.split(',').includes(file.type)) {
-                  console.log('file.type', file.type);
                     validate.success = false;
                     validate.message = this.acceptTips;
                 }

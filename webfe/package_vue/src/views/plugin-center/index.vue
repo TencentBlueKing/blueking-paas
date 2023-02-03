@@ -238,9 +238,6 @@
                     });
                 }
                 return statusList;
-            },
-            localLanguage () {
-                return this.$store.state.localLanguage;
             }
         },
         watch: {

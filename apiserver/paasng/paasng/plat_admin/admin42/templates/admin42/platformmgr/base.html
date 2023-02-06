@@ -94,7 +94,12 @@
             name: "代码库配置",
             icon: 'icon-tree-module-shape',
             url: "{% url 'admin.sourcectl.source_type_spec.manage' %}"
-        }
+        },
+        {
+            name: "PaaS Operator",
+            icon: 'icon-tree-module-shape',
+            url: "{% url 'admin.operators.manage' %}",
+        },
     ]
 </script>
 {% endblock %}

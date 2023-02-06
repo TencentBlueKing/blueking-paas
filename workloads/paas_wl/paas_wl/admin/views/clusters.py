@@ -25,6 +25,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, mixins
 
+from paas_wl.admin.helpers import detect_operator_status, fetch_paas_cobj_info
 from paas_wl.admin.serializers.clusters import (
     APIServerSLZ,
     ClusterRegisterRequestSLZ,
@@ -96,3 +97,16 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
                 sched_client.sync_state_to_nodes(state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def list_operator_infos(self, requests, *args, **kwargs):
+        """获取各集群 Operator 相关信息"""
+        resp_data = []
+        for cluster in self.queryset:
+            info = {'cluster_name': cluster.name, 'cluster_id': cluster.bcs_cluster_id}
+            # Operator 部署状态
+            info.update(detect_operator_status(cluster.name))
+            # PaaS 平台自定义资源信息
+            info.update(fetch_paas_cobj_info(cluster.name, info['crds']))
+            resp_data.append(info)
+
+        return Response(data=resp_data)

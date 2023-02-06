@@ -163,6 +163,7 @@ class BaseKresource(object):
     # based operations) for convenience.
     get_preferred_version = NameBasedMethodProxy()
     get_available_versions = NameBasedMethodProxy()
+    list = NameBasedMethodProxy()
     get = NameBasedMethodProxy()
     patch = NameBasedMethodProxy()
     replace_or_patch = NameBasedMethodProxy()
@@ -221,6 +222,13 @@ class BaseOperations(object):
 
 class NameBasedOperations(BaseOperations):
     """All operations in this class are based on resource name"""
+
+    def list(self, namespace: Namespace = None) -> ResourceInstance:
+        """Get resources by namespace
+
+        :param namespace: Resource namespace, only used when fetch namespace scope resource
+        """
+        return self.resource.get(namespace=namespace, **self.default_kwargs)
 
     def get(self, name: str, namespace: Namespace = None) -> ResourceInstance:
         """Get a resource by name

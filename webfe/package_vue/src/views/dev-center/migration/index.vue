@@ -344,15 +344,8 @@
                   :key="appItemIndex"
                 >
                   <td class="pl30">
-                    <router-link
-                      v-slot="{ navigate, href, route }"
-                      :to="{ name: `appSummary`, params: { id: appItem.code }}"
-                      custom
-                    >
-                      <a
-                        :href="href"
-                        class="ps-table-app"
-                      >
+                    <router-link :to="{ name: `appSummary`, params: { id: appItem.code }}">
+                      <a class="ps-table-app">
                         <fallback-image
                           :url="appItem.logo"
                           :url-fallback="defaultLogo"

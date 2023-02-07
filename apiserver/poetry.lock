@@ -3305,7 +3305,7 @@ bkapi-bk-apigateway = [
     {file = "bkapi-bk-apigateway-1.0.9.tar.gz", hash = "md5:d1e907906376cc502d677e4311045493"},
 ]
 bkapi-client-core = [
-    {file = "bkapi_client_core-1.1.8-py2.py3-none-any.whl", hash = "md5:219e351260fde025291d506310c836d2"},
+    {file = "bkapi_client_core-1.1.8-py2.py3-none-any.whl", hash = "sha256:59937769f5aeb95c8737b37f516b1f6d641151c629c414267613993011cc8bcd"},
 ]
 bkapi-component-open = [
     {file = "bkapi-component-open-1.1.0.tar.gz", hash = "md5:7e3ca24196f7c2cff9cdf4e3b4a86a06"},

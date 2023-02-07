@@ -62,7 +62,7 @@
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);transform: translateX(-1px);">
                 <div class="item-content first-item-content">
-                  {{ pluginInfo.pd_id || '--' }}
+                  {{ pluginInfo.id || '--' }}
                 </div>
               </bk-form-item>
             </bk-form>

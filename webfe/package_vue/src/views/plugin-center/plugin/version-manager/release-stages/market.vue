@@ -156,7 +156,7 @@
                     const res = await this.$store.dispatch('plugin/getMarketInfo', params);
                     this.form = res;
                     if (res.contact) {
-                        this.form.contact = res.contact && res.contact.split(',') || [];
+                        this.form.contact = res.contact.split(',') || [];
                     } else {
                         const founder = this.curPluginInfo.latest_release.creator;
                         this.form.contact = founder.split(',') || [];

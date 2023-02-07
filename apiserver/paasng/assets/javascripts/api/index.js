@@ -26,6 +26,7 @@ import cookie from 'cookie'
 import CachedPromise from './cached-promise'
 import RequestQueue from './request-queue'
 import { bus } from 'Lib/common/bus'
+import i18n from '@/language/i18n.js';
 
 // axios 实例
 const axiosInstance = axios.create({
@@ -214,7 +215,7 @@ function handleReject (error, config) {
             })
             return Promise.resolve({ data: {} })
         } else if (status >= 500) {
-            nextError.message = '系统出现异常'
+            nextError.message = i18n.t('系统出现异常')
         } else if (data && data.message) {
             nextError.message = data.message
         } else if (data && data.detail) {
@@ -234,7 +235,7 @@ function handleReject (error, config) {
             }
         }
 
-        let message = error.message || '系统出现异常'
+        let message = error.message || i18n.t('系统出现异常')
         if (Object.prototype.toString.call(message) === '[object Object]') {
             const msg = []
             for (const key in message) {

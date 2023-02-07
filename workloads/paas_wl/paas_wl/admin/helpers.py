@@ -39,7 +39,7 @@ def detect_operator_status(cluster_name: str) -> Dict:
     client = get_client_by_cluster_name(cluster_name)
 
     # 检查集群中是否存在 Operator 需要的 CRD 定义
-    for crd in KCustomResourceDefinition(client).list().to_dict()['items']:
+    for crd in KCustomResourceDefinition(client).ops_label.list(labels={}).items:
         crd_kind = crd['spec']['names']['kind']
         if crd_kind in [BkApp.kind, DomainGroupMapping.kind]:
             result['crds'][crd_kind] = True  # type: ignore
@@ -52,17 +52,21 @@ def detect_operator_status(cluster_name: str) -> Dict:
     else:
         result['namespace'] = True
 
-    # 由于 controller 名称前缀可能随 release 名称改变，因此取第一个后缀为 `controller-manager` 的 Deployment
-    deployments = KDeployment(client).list(namespace=BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE).to_dict()['items']
+    deployments = (
+        KDeployment(client)
+        .ops_label.list(
+            labels={'control-plane': 'controller-manager'},
+            namespace=BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE,
+        )
+        .items
+    )
+    if not deployments:
+        return result
 
-    for d in deployments:
-        if d['metadata']['name'].endswith('-controller-manager'):
-            result['controller'] = {
-                'replicas': d['spec']['replicas'],
-                'readyReplicas': d.get('status', {}).get('readyReplicas', 0),
-            }
-            break
-
+    result['controller'] = {
+        'replicas': deployments[0]['spec']['replicas'],
+        'readyReplicas': deployments[0].get('status', {}).get('readyReplicas', 0),
+    }
     return result
 
 
@@ -72,7 +76,7 @@ def fetch_paas_cobj_info(cluster_name: str, crd_exists: Dict[str, bool]) -> Dict
 
     # 统计 BkApp 异常 / 正常数量
     if crd_exists[BkApp.kind]:
-        bkapps = BkApp(client).list().to_dict()['items']
+        bkapps = BkApp(client).ops_label.list(labels={}).items
         ready_cnt = 0
         not_ready_bkapps = []
         for bkapp in bkapps:
@@ -95,7 +99,7 @@ def fetch_paas_cobj_info(cluster_name: str, crd_exists: Dict[str, bool]) -> Dict
 
     # 统计 DomainGroupMapping 数量
     if crd_exists[DomainGroupMapping.kind]:
-        domain_group_mappings = DomainGroupMapping(client).list().to_dict()['items']
+        domain_group_mappings = DomainGroupMapping(client).ops_label.list(labels={}).items
         result[DomainGroupMapping.kind]['total_cnt'] = len(domain_group_mappings)
 
     return result

@@ -44,7 +44,7 @@
         <bk-table-column label="BkApp (ready / total)" align="center">
             <template slot-scope="props">
                 <span
-                  v-if="props.row.crds.BkApp"
+                  v-if="props.row.crds && props.row.crds.BkApp"
                   v-bk-tooltips="{content: 'Not Ready BkApps: ' + props.row.BkApp.not_ready_bkapps }"
                 >$[ props.row.BkApp.ready_cnt ] / $[ props.row.BkApp.total_cnt ]</span>
                 <span v-else>--</span>
@@ -52,7 +52,8 @@
         </bk-table-column>
         <bk-table-column label="DomainGroupMapping" align="center">
             <template slot-scope="props">
-                <span v-if="props.row.crds.DomainGroupMapping">$[ props.row.DomainGroupMapping.total_cnt ]</span>
+                <span v-if="props.row.crds && props.row.crds.DomainGroupMapping">
+                    $[ props.row.DomainGroupMapping.total_cnt ]</span>
                 <span v-else>--</span>
             </template>
         </bk-table-column>
@@ -67,7 +68,8 @@
     const cnativeDefaultCluster = {{ cnative_default_cluster | to_json }}
 
     const URLRouter = {
-        list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/operator/' %}"),
+        listClusters: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
+        getOperatorInfo: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/operator_info/' %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -82,7 +84,7 @@
                 }
             },
             mounted: function () {
-                this.fetchOperatorInfo()
+                this.list()
             },
             methods: {
                 processData: function(data) {
@@ -90,14 +92,26 @@
                         resolve(data)
                     })
                 },
-                fetchOperatorInfo: async function () {
+                list: async function () {
                     const el = this.$bkLoading({title: '加载中'})
                     try {
-                        await this.$http.get(URLRouter['list']).then(res => {
-                            this.data = res
-                        })
+                        // 先获取集群信息占位
+                        let clusters = await this.$http.get(URLRouter.listClusters)
+                        for (let i = 0; i < clusters.length; i++) {
+                            this.data.push({
+                                cluster_name: clusters[i].name,
+                                cluster_id: clusters[i].annotations.bcs_cluster_id
+                            })
+                        }
                     } finally {
                         el.hide = true
+                    }
+                    // 再逐个更新集群的 Operator 信息
+                    for (let i = 0; i < this.data.length; i ++) {
+                        let url = URLRouter.getOperatorInfo.replace("${cluster_name}", this.data[i].cluster_name)
+                        await this.$http.get(url).then(ret => {
+                            this.$set(this.data, i, {...this.data[i], ...ret})
+                        })
                     }
                 },
                 handleRequestError: function (res) {

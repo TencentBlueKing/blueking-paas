@@ -79,8 +79,8 @@ urlpatterns = [
         clusters.ClusterViewSet.as_view({'post': 'gen_state'}),
     ),
     path(
-        'admin42/platform/clusters/operator/',
-        clusters.ClusterViewSet.as_view({'get': 'list_operator_infos'}),
+        'admin42/platform/clusters/<str:pk>/operator_info/',
+        clusters.ClusterViewSet.as_view({'get': 'get_operator_info'}),
     ),
     path(
         'admin42/platform/clusters/<str:pk>/',

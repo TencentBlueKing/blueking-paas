@@ -163,7 +163,6 @@ class BaseKresource(object):
     # based operations) for convenience.
     get_preferred_version = NameBasedMethodProxy()
     get_available_versions = NameBasedMethodProxy()
-    list = NameBasedMethodProxy()
     get = NameBasedMethodProxy()
     patch = NameBasedMethodProxy()
     replace_or_patch = NameBasedMethodProxy()

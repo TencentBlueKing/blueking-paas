@@ -63,6 +63,7 @@ def detect_operator_status(cluster_name: str) -> Dict:
     if not deployments:
         return result
 
+    # 获取 controller 副本状态
     result['controller'] = {
         'replicas': deployments[0]['spec']['replicas'],
         'readyReplicas': deployments[0].get('status', {}).get('readyReplicas', 0),
@@ -74,7 +75,7 @@ def fetch_paas_cobj_info(cluster_name: str, crd_exists: Dict[str, bool]) -> Dict
     result: Dict[str, Dict] = {BkApp.kind: {}, DomainGroupMapping.kind: {}}
     client = get_client_by_cluster_name(cluster_name)
 
-    # 统计 BkApp 异常 / 正常数量
+    # 统计 BkApp NotReady & 总数量
     if crd_exists[BkApp.kind]:
         bkapps = BkApp(client).ops_label.list(labels={}).items
         ready_cnt = 0

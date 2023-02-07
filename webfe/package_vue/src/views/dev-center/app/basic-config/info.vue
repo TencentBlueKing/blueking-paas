@@ -709,6 +709,9 @@
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            isPluginTypeActive () {
+                return this.$route.params.pluginTypeActive;
             }
         },
         watch: {
@@ -747,6 +750,12 @@
             setTimeout(() => {
                 this.isLoading = false;
             }, 300);
+            this.$nextTick(() => {
+                // 是否active插件分类
+                if (this.isPluginTypeActive) {
+                    this.showPluginSelected();
+                }
+            });
         },
         beforeDestroy () {
             window.removeEventListener('click', this.isCustomActive);

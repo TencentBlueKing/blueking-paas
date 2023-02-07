@@ -4,7 +4,7 @@
 
 ## 部署说明
 
-K8S 集群版本要求: **>=1.17**
+K8S 集群版本要求: **>=1.19**
 
 ### 部署步骤
 1. (可选) 安装 cert-manager
@@ -22,10 +22,6 @@ kubectl create ns bkpaas-app-operator-system
 ```bash
 helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operator-system -f values.yaml
 ```
-
-其中: 
-- paasv3/bkpaas-app-operator 维护在仓库 [helm-deploy] 项目
-- values.yaml 维护在仓库 [helm-values] 项目
 
 ## 开发指南
 

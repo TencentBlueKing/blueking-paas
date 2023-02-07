@@ -26,7 +26,30 @@ import cookie from 'cookie'
 import CachedPromise from './cached-promise'
 import RequestQueue from './request-queue'
 import { bus } from 'Lib/common/bus'
-import i18n from '../i18n'
+
+
+const i18n = {
+    get locale () {
+            let localLanguage = cookie.parse(document.cookie).blueking_language || 'zh-cn';
+            if (['zh-cn', 'zh-CN', 'None', 'none', ''].includes(localLanguage)) {
+              localLanguage = 'zh-cn';
+            }
+            return localLanguage;
+    },
+    messages: {
+        // 中文语言包
+        'zh-cn': {
+        '系统出现异常': '系统出现异常'
+        },
+        // 英文语言包
+        en: {
+        '系统出现异常': 'System exception'
+        }
+    },
+    t: function (message) {
+        return this.messages[this.locale][message] || message
+    }
+}
 
 
 // axios 实例

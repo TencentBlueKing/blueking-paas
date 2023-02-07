@@ -26,7 +26,6 @@ from rest_framework.exceptions import ErrorDetail
 
 from paasng.pluginscenter import serializers
 from paasng.pluginscenter.definitions import PluginCodeTemplate
-from paasng.pluginscenter.models import PluginInstance
 from paasng.utils.i18n import to_translated_field
 
 pytestmark = pytest.mark.django_db
@@ -106,22 +105,28 @@ def test_make_create_plugin_validator(pd, data, is_valid, expected):
         assert slz.errors == expected
 
 
-def test_makr_create_plugin_validator_conflict(pd):
-    data = {"id": 1, "name": "2", "template": "foo", "extra_fields": {"email": "foo@example.com"}}
-    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
-    slz.is_valid(raise_exception=True)
-    validated_data = slz.validated_data
-
-    plugin = PluginInstance(
-        pd=pd,
-        language=validated_data["template"].language,
-        **validated_data,
-    )
+@pytest.mark.parametrize(
+    "field, value, expected",
+    [
+        ("id", 1, {'non_field_errors': [ErrorDetail(string='插件ID 为 1 的插件已存在', code='unique')]}),
+        ("name_en", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
+        ("name_zh_cn", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
+    ],
+)
+def test_make_create_plugin_validator_conflict(pd, plugin, field, value, expected):
+    setattr(plugin, field, value)
     plugin.save()
-
+    data = {
+        "id": 1,
+        "name_en": "FLAG",
+        "name_zh_cn": "FLAG",
+        "name": "FLAG",
+        "template": plugin.template.name,
+        "extra_fields": {"email": "foo@example.com"},
+    }
     slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
     assert not slz.is_valid()
-    assert slz.errors == {'non_field_errors': [ErrorDetail(string='插件ID 为 1 的插件已存在', code='unique')]}
+    assert slz.errors == expected
 
 
 COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comment": "..."}

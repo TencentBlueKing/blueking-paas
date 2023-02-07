@@ -82,6 +82,7 @@ def pd():
         pd=pd,
         release_method=PluginReleaseMethod.CODE,
         id_schema={
+            "title": "插件ID",
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
             "maxlength": 10,

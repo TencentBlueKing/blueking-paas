@@ -24,6 +24,7 @@ from bkpaas_auth import get_user_by_user_id
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import qs_exists, qs_filter
 
 from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
@@ -40,6 +41,47 @@ from paasng.pluginscenter.models import (
     PluginReleaseStage,
 )
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+
+
+class PluginUniqueValidator:
+    requires_context = True
+
+    def __init__(self, field_label: str):
+        self.field_label = field_label
+        self.queryset = PluginInstance.objects.all()
+
+    def __call__(self, attrs, serializer):
+        # Determine the existing instance, if this is an update operation.
+        if "pd" not in serializer.context:
+            raise ValidationError(_("context `pd` is required"), code="required")
+        if "id" not in attrs:
+            raise ValidationError(_("attrs `id` is required"), code="required")
+        pd = serializer.context["pd"]
+
+        queryset = self.queryset
+        queryset = self.filter_queryset(queryset, pd_id=pd.identifier, plugin_id=attrs["id"])
+        queryset = self.exclude_current_instance(attrs, queryset, serializer.instance)
+
+        # Ignore validation if any field is None
+        if qs_exists(queryset):
+            raise ValidationError(self.get_message(attrs["id"]), code="unique")
+
+    def filter_queryset(self, queryset, pd_id, plugin_id):
+        """Filter the queryset to all instances matching the given attributes."""
+        return qs_filter(queryset, **{"pd__identifier": pd_id, "id": plugin_id})
+
+    def exclude_current_instance(self, attrs, queryset, instance):
+        """
+        If an instance is being updated, then do not include
+        that instance itself as a uniqueness conflict.
+        """
+        if instance is not None:
+            return queryset.exclude(pk=instance.pk)
+        return queryset
+
+    def get_message(self, value) -> str:
+        """Get user-friendly error message"""
+        return _('{} 为 {} 的插件已存在').format(self.field_label, value)
 
 
 class PluginRoleSLZ(serializers.Serializer):
@@ -211,6 +253,9 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
     fields = {
         "name": I18NExtend(make_string_field(pd.basic_info_definition.name_schema)),
         "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
+        "Meta": type(
+            "Meta", (), {"validators": [PluginUniqueValidator(field_label=pd.basic_info_definition.id_schema.title)]}
+        ),
     }
     if creation:
         fields["id"] = make_string_field(pd.basic_info_definition.id_schema)

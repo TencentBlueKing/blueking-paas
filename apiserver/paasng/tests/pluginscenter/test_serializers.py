@@ -26,6 +26,7 @@ from rest_framework.exceptions import ErrorDetail
 
 from paasng.pluginscenter import serializers
 from paasng.pluginscenter.definitions import PluginCodeTemplate
+from paasng.pluginscenter.models import PluginInstance
 from paasng.utils.i18n import to_translated_field
 
 pytestmark = pytest.mark.django_db
@@ -96,13 +97,31 @@ def make_translate_fields(field, value) -> Dict:
     ],
 )
 def test_make_create_plugin_validator(pd, data, is_valid, expected):
-    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data)
+    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
     if is_valid:
         slz.is_valid(raise_exception=True)
         assert expected == slz.validated_data
     else:
         assert not slz.is_valid()
         assert slz.errors == expected
+
+
+def test_makr_create_plugin_validator_conflict(pd):
+    data = {"id": 1, "name": "2", "template": "foo", "extra_fields": {"email": "foo@example.com"}}
+    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
+    slz.is_valid(raise_exception=True)
+    validated_data = slz.validated_data
+
+    plugin = PluginInstance(
+        pd=pd,
+        language=validated_data["template"].language,
+        **validated_data,
+    )
+    plugin.save()
+
+    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
+    assert not slz.is_valid()
+    assert slz.errors == {'non_field_errors': [ErrorDetail(string='插件ID 为 1 的插件已存在', code='unique')]}
 
 
 COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comment": "..."}

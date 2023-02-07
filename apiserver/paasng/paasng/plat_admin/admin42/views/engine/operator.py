@@ -32,5 +32,8 @@ class OperatorManageView(GenericTemplateView):
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
+        if 'view' not in kwargs:
+            kwargs['view'] = self
+
         kwargs['cnative_default_cluster'] = settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER
         return kwargs

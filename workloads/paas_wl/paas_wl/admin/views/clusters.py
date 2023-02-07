@@ -98,11 +98,11 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_operator_info(self, requests, pk, *args, **kwargs):
+    def get_operator_info(self, requests, cluster_name, *args, **kwargs):
         """获取各集群 Operator 相关信息"""
-        resp_data = {'cluster_name': pk}
+        resp_data = {'cluster_name': cluster_name}
         # Operator 部署状态
-        resp_data.update(detect_operator_status(pk))
+        resp_data.update(detect_operator_status(cluster_name))
         # PaaS 平台自定义资源信息
-        resp_data.update(fetch_paas_cobj_info(pk, resp_data['crds']))
+        resp_data.update(fetch_paas_cobj_info(cluster_name, resp_data['crds']))
         return Response(data=resp_data)

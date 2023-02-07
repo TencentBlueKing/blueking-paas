@@ -472,7 +472,6 @@
               handler (val) {
                 if (!val.ALLOW_PLUGIN_CENTER) {
                   this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
-                  console.log('this.headerStaticInfo.list.nav', this.headerStaticInfo.list.nav);
                 }
               },
               deep: true

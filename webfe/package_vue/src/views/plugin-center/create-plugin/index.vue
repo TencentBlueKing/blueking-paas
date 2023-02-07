@@ -568,9 +568,8 @@
                     });
                 } catch (e) {
                     this.$paasMessage({
-                        limit: 1,
                         theme: 'error',
-                        message: e.message
+                        message: e.message || e.detail || this.$t('接口异常')
                     });
                 } finally {
                     this.buttonLoading = false;

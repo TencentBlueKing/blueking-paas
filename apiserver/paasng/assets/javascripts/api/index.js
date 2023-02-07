@@ -20,13 +20,14 @@
  * @file axios 封装
  */
 
-import Vue from 'vue'
+import Vue from 'vue';
 import axios from 'axios'
 import cookie from 'cookie'
 import CachedPromise from './cached-promise'
 import RequestQueue from './request-queue'
 import { bus } from 'Lib/common/bus'
-import i18n from '@/language/i18n.js';
+import i18n from '../i18n'
+
 
 // axios 实例
 const axiosInstance = axios.create({

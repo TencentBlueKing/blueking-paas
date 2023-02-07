@@ -67,6 +67,12 @@ class BaseStageController:
         }
         return basic_info
 
+    def async_check_status(self) -> bool:
+        """异步检查执行状态, 用于 celery 任务
+        :returns: return True if checker done, False to keep polling
+        """
+        return True
+
 
 class DeployAPIStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.DEPLOY_API
@@ -106,6 +112,11 @@ class DeployAPIStage(BaseStageController):
             **basic_info,
             "detail": {"steps": self.stage.api_detail["steps"], **get_deploy_logs(self.pd, self.plugin, self.release)},
         }
+
+    def async_check_status(self):
+        check_deploy_result(self.pd, self.plugin, self.release)
+        self.stage.refresh_from_db()
+        return self.stage.status not in constants.PluginReleaseStatus.running_status()
 
     def _refresh_source_hash(self):
         """刷新 source_hash 字段, 因为实际上部署以线上最新代码为准"""

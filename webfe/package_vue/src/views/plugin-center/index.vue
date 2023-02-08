@@ -41,7 +41,7 @@
         @filter-change="handleFilterChange"
       >
         <div
-          v-if="pluginList.length"
+          v-if="isSearchClear || pluginList.length || filterKey"
           slot="empty"
         >
           <bk-exception
@@ -234,7 +234,8 @@
                 releaseStatusMap: {
                     'pending': 'pending',
                     'initial': 'initial'
-                }
+                },
+                isSearchClear: false
             };
         },
         computed: {
@@ -327,6 +328,7 @@
                 } finally {
                     this.isDataLoading = false;
                     this.loading = false;
+                    this.isSearchClear = false;
                 }
             },
 
@@ -463,6 +465,8 @@
             },
 
             clearFilterKey () {
+                // 防止清空搜索条件时提示抖动
+                this.isSearchClear = true;
                 this.filterKey = '';
                 this.$refs.pluginTable.clearFilter();
             }

@@ -534,14 +534,15 @@
                 border-radius: 50%;
                 margin-right: 3px;
             }
-            .dot.successful{
-                background: #3FC06D;
+            .dot.successful {
+                background: #E5F6EA;
+                border: 1px solid #3FC06D;
             }
-            .dot.failed{
-                background: #EA3636;
-            }
-            .dot.interrupted{
-                background: #EA3636;
+
+            .dot.failed,
+            .dot.interrupted {
+                background: #FFE6E6;
+                border: 1px solid #EA3636;
             }
         }
 

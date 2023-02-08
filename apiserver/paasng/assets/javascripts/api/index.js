@@ -39,11 +39,11 @@ const i18n = {
     messages: {
         // 中文语言包
         'zh-cn': {
-        '系统出现异常': '系统出现异常'
+            '系统出现异常': '系统出现异常'
         },
         // 英文语言包
         en: {
-        '系统出现异常': 'System exception'
+            '系统出现异常': 'System exception'
         }
     },
     t: function (message) {

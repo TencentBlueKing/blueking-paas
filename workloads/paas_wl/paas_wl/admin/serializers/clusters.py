@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import base64
+from typing import List
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -24,6 +25,7 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.cluster.constants import ClusterTokenType
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.serializers import IngressConfigSLZ
+from paas_wl.networking.egress.models import RegionClusterState
 
 
 def ensure_base64_encoded(content):
@@ -48,6 +50,7 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
     default_node_selector = serializers.JSONField(read_only=True)
     default_tolerations = serializers.JSONField(read_only=True)
     feature_flags = serializers.JSONField(read_only=True)
+    nodes = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Cluster
@@ -69,7 +72,15 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
             'default_node_selector',
             'default_tolerations',
             'feature_flags',
+            'nodes',
         ]
+
+    def get_nodes(self, obj: Cluster) -> List[str]:
+        """获取集群拥有的 Node 信息（根据 RegionClusterState 表查询，若有新增节点需要先更新状态）"""
+        state = RegionClusterState.objects.filter(region=obj.region, cluster_name=obj.name).first()
+        if not state:
+            return []
+        return state.nodes_name
 
 
 class ClusterRegisterRequestSLZ(serializers.Serializer):
@@ -102,16 +113,7 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
 class GenRegionClusterStateSLZ(serializers.Serializer):
     """生成 RegionClusterState 用序列化器"""
 
-    region = serializers.CharField(
-        required=False,
-        default="",
-        help_text="specify a region name, by default this command will process all regions defined in settings",
-    )
-    cluster_name = serializers.CharField(
-        required=False,
-        default="",
-        help_text="specify a cluster name, by default this command will process all clusters",
-    )
+    region = serializers.CharField(required=True, help_text="specify a region name")
     ignore_labels = serializers.ListField(
         child=serializers.CharField(),
         required=False,
@@ -125,14 +127,10 @@ class GenRegionClusterStateSLZ(serializers.Serializer):
 
     def validate(self, attrs):
         cluster_regions = set(Cluster.objects.values_list('region', flat=True))
-        region = attrs.pop('region')
 
         # 若指定 region，则必须有对应 region 的集群
-        if region and region not in cluster_regions:
-            raise ValidationError(f'region: [{region}] is not a valid region name')
-
-        # 若不指定具体 region，则为所有集群的 region
-        attrs['regions'] = [region] if region else list(cluster_regions)
+        if attrs['region'] not in cluster_regions:
+            raise ValidationError(f"region: [{attrs['region']}] is not a valid region name")
 
         ignore_labels = [value.split('=') for value in attrs['ignore_labels']]
         if any(len(label) != 2 for label in ignore_labels):

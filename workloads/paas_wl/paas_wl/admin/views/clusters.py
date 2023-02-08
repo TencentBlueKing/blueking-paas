@@ -73,26 +73,22 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         APIServer.objects.filter(cluster=cluster, uuid=api_server_id).delete()
         return Response()
 
-    def gen_state(self, request, *args, **kwargs):
+    def gen_node_state(self, request, cluster_name, *args, **kwargs):
         slz = GenRegionClusterStateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+        region = data['region']
 
-        cluster_name = data['cluster_name']
-        for region in data['regions']:
-            clusters = Cluster.objects.filter(region=region)
-            # 若已指定集群名称，则只更新对应的集群
-            if cluster_name:
-                clusters = clusters.filter(name=cluster_name)
+        if not Cluster.objects.filter(region=region, name=cluster_name).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-            for cluster in clusters:
-                logger.info(f'will generate state for [{region}/{cluster.name}]...')
-                sched_client = get_scheduler_client(cluster_name=cluster.name)
+        logger.info(f'will generate state for [{region}/{cluster_name}]...')
+        sched_client = get_scheduler_client(cluster_name=cluster_name)
 
-                logger.info(f'generating state for [{region}/{cluster.name}]...')
-                state = generate_state(region, cluster.name, sched_client, data['ignore_labels'])
+        logger.info(f'generating state for [{region}/{cluster_name}]...')
+        state = generate_state(region, cluster_name, sched_client, data['ignore_labels'])
 
-                logger.info('syncing the state to nodes...')
-                sched_client.sync_state_to_nodes(state)
+        logger.info('syncing the state to nodes...')
+        sched_client.sync_state_to_nodes(state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -2074,5 +2074,8 @@ export default {
   '上一步': 'Back',
   '插件访问入口': 'Plugin access entry',
   '已下架': 'Has been removed',
-  '仅管理员可添加成员': 'Only administrators can add members'
+  '仅管理员可添加成员': 'Only administrators can add members',
+  '插件创建成功！': 'Plugin created successfully!',
+  '提交者': 'submitter',
+  '请选择代码分支': 'Please select a code branch'
 };

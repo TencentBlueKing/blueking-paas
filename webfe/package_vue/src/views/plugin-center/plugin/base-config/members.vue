@@ -38,7 +38,7 @@
           @page-limit-change="limitChange"
         >
           <div
-            v-if="memberListShow.length"
+            v-if="memberList.length"
             slot="empty"
           >
             <bk-exception

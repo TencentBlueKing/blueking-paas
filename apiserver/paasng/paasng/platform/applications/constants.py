@@ -99,7 +99,7 @@ class AppFeatureFlag(FeatureFlag):
     PA_INGRESS_ANALYTICS = FeatureFlagField(label="访问日志统计功能")
     PA_USER_DIMENSION_SHOW_DEPT = FeatureFlagField(label="按用户维度拆分展示部门字段")
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
-    MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=False)
+    MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
 
 
 class LightApplicationViewSetErrorCode(str, StructuredEnum):

@@ -26,8 +26,6 @@ import cookie from 'cookie'
 import CachedPromise from './cached-promise'
 import RequestQueue from './request-queue'
 import { bus } from 'Lib/common/bus'
-import i18n from '@/language/i18n.js';
-
 
 const i18n = {
     get locale () {

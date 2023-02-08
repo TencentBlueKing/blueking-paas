@@ -90,6 +90,15 @@
           </template>
         </bk-table-column>
         <bk-table-column
+          :label="$t('创建时间')"
+          prop="created"
+          sortable
+        >
+          <template slot-scope="{ row }">
+            {{ row.created || '--' }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
           :label="$t('开发语言')"
           prop="language"
           column-key="language"

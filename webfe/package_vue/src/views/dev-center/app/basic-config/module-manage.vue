@@ -452,7 +452,7 @@
                     {{ nodeIp.internal_ip_address }}
                   </div>
                 </template>
-                <template v-else-if="!curAppModule.clusters.stag.feature_flags.enable_egress_ip">
+                <template v-else-if="!curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP">
                   <div class="no-ip">
                     <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
                   </div>
@@ -504,7 +504,7 @@
                     {{ nodeIp.internal_ip_address }}
                   </div>
                 </template>
-                <template v-else-if="!curAppModule.clusters.prod.feature_flags.enable_egress_ip">
+                <template v-else-if="!curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP">
                   <div class="no-ip">
                     <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
                   </div>
@@ -947,10 +947,10 @@
                 return !this.displaySwitchDisabled;
             },
             curStagDisabled () {
-                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.stag.feature_flags.enable_egress_ip;
+                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
             },
             curProdDisabled () {
-                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.prod.feature_flags.enable_egress_ip;
+                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
             },
             entranceConfig () {
                 return this.$store.state.region.entrance_config;

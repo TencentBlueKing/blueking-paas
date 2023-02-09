@@ -74,7 +74,14 @@
                 :placeholder="$t('请输入带标签的镜像地址')"
               />
               <p class="whole-item-tips">
-                {{ $t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld:latest') }}&nbsp;
+                {{ $t('示例镜像：') }}
+                <span v-if="['ce', 'ee'].includes(GLOBAL.APP_VERSION)">
+                  nginx:latest
+                </span>
+                <span v-else>
+                  mirrors.tencent.com/bkpaas/django-helloworld:latest
+                </span>
+                &nbsp;
                 <span
                   class="whole-item-tips-text"
                   @click.stop="useExample"
@@ -733,9 +740,17 @@
             },
 
             useExample () {
+                if (['ce', 'ee'].includes(this.GLOBAL.APP_VERSION)) {
+                    this.formData.image = 'nginx:latest';
+                    this.formData.command = [];
+                    this.formData.args = [];
+                    this.formData.targetPort = 80;
+                    return;
+                }
                 this.formData.image = 'mirrors.tencent.com/bkpaas/django-helloworld:latest';
-                this.formData.command = [];
-                this.formData.command.push(...['bash', '/app/start_web.sh']);
+                this.formData.command = ['bash', '/app/start_web.sh'];
+                this.formData.args = [];
+                this.formData.targetPort = 5000;
             },
 
             // 获取凭证列表

@@ -14,10 +14,16 @@
         >
           <bk-form-item
             class="w600"
-            :label="$t('应用分类')"
             :required="true"
             :property="'category'"
           >
+            <div
+              slot="tip"
+              v-bk-tooltips.top="{ content: `${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${adminStr}`, disabled: !adminStr }"
+              class="lable-wrapper"
+            >
+              <span class="label">{{ $t('应用分类') }}</span>
+            </div>
             <bk-select
               v-model="form.category"
               :loading="cateLoading"
@@ -49,14 +55,13 @@
           <bk-form-item
             class="edit-form-item"
             :label="$t('详细描述')"
-            :required="true"
             :property="'description'"
           >
             <quill-editor
+              ref="editor"
               v-model="form.description"
               class="editor"
               :options="editorOption"
-              @change="onEditorChange($event)"
             />
           </bk-form-item>
         </bk-form>
@@ -94,9 +99,10 @@
                     description: '',
                     contact: []
                 },
+                curPluginData: {},
                 editorOption: {
-                        placeholder: '开始编辑...'
-                    },
+                    placeholder: this.$t('开始编辑...')
+                },
                 rules: {
                     category: [
                         {
@@ -112,13 +118,6 @@
                             trigger: 'blur'
                         }
                     ],
-                    description: [
-                        {
-                            required: true,
-                            message: this.$t('请输入'),
-                            trigger: 'blur'
-                        }
-                    ],
                     contact: [
                         {
                             required: true,
@@ -129,8 +128,22 @@
                 }
             };
         },
-        async mounted () {
-            await Promise.all([this.fetchCategoryList(), this.fetchMarketInfo()]);
+        computed: {
+            adminStr () {
+                const pluginAdministrator = this.curPluginInfo.pd_administrator || [];
+                return pluginAdministrator.join(';');
+            }
+        },
+        watch: {
+            'form.description' (newDescription) {
+                if (newDescription) {
+                    this.$refs.editor.options.placeholder = '';
+                }
+            }
+        },
+        created () {
+            this.fetchCategoryList();
+            this.fetchMarketInfo();
         },
         methods: {
             // 获取市场信息
@@ -142,7 +155,12 @@
                     };
                     const res = await this.$store.dispatch('plugin/getMarketInfo', params);
                     this.form = res;
-                    this.form.contact = res.contact && res.contact.split(',') || [];
+                    if (res.contact) {
+                        this.form.contact = res.contact.split(',') || [];
+                    } else {
+                        const founder = this.curPluginInfo.latest_release.creator || '';
+                        this.form.contact = founder.split(',');
+                    }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -174,10 +192,6 @@
                     }, 200);
                 }
             },
-            // 富文本编辑
-            onEditorChange (e) {
-                this.$set(this.form, 'description', e.html);
-            },
             // 保存
             async nextStage (resolve) {
               await this.$refs.visitForm.validate().then(async () => {
@@ -208,3 +222,42 @@
         }
     };
 </script>
+
+<style lang="scss" scoped>
+  .lable-wrapper {
+        position: absolute;
+        top: 0;
+        left: -100px;
+        width: 100px;
+        min-height: 32px;
+        text-align: right;
+        vertical-align: middle;
+        line-height: 32px;
+        float: left;
+        font-size: 14px;
+        font-weight: normal;
+        color: #63656E;
+        box-sizing: border-box;
+        padding: 0 24px 0 0;
+        &::after {
+            content: '*';
+            position: absolute;
+            top: 50%;
+            height: 8px;
+            line-height: 1;
+            color: #EA3636;
+            font-size: 12px;
+            display: inline-block;
+            vertical-align: middle;
+            transform: translate(3px, -50%);
+        }
+        .label {
+            display: inline-block;
+            line-height: 20px;
+            background: linear-gradient(to left, transparent 0%, transparent 50%,#979ba5 50%,#979ba5 100%);
+            background-size: 10px 1px;
+            background-repeat: repeat-x;
+            background-position-y: 100%;
+        }
+    }
+</style>

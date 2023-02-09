@@ -30,7 +30,7 @@ from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_bytes
 
 # Register cattr custom hooks
-cattr.register_unstructure_hook(UUID, lambda val: str(val))
+cattr.register_unstructure_hook(UUID, lambda val: str(val))  # type: ignore
 cattr.register_structure_hook(UUID, lambda val, _: val if isinstance(val, UUID) else UUID(str(val)))
 # End register
 

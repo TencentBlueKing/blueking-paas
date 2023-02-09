@@ -26,6 +26,7 @@ import cookie from 'cookie';
 import CachedPromise from './cached-promise';
 import RequestQueue from './request-queue';
 import { bus } from '@/common/bus';
+import i18n from '@/language/i18n.js';
 
 // axios 实例
 const axiosInstance = axios.create({
@@ -213,10 +214,10 @@ function handleReject (error, config) {
       });
       return Promise.resolve({});
     } else if (status === 500) {
-      nextError.message = '系统出现异常';
+      nextError.message = i18n.t('系统出现异常');
     } else if (status === 502) {
       // 屏蔽 502
-      nextError.message = '系统出现异常';
+      nextError.message = i18n.t('系统出现异常');
       if (nextError.response.config.urlId === 'getClusterList') {
         return Promise.resolve({ data: {} });
       }
@@ -239,7 +240,7 @@ function handleReject (error, config) {
       }
     }
 
-    let message = error.message || '系统出现异常';
+    let message = error.message || i18n.t('系统出现异常');
     if (Object.prototype.toString.call(message) === '[object Object]') {
       const msg = [];
       for (const key in message) {

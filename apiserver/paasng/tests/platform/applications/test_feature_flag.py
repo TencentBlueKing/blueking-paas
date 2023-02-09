@@ -41,6 +41,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_INGRESS_ANALYTICS': False,
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
+                    'MODIFY_ENVIRONMENT_VARIABLE': True,
                 },
             ),
             (
@@ -56,6 +57,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_INGRESS_ANALYTICS': False,
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
+                    'MODIFY_ENVIRONMENT_VARIABLE': True,
                 },
             ),
             (
@@ -71,6 +73,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_INGRESS_ANALYTICS': True,
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
+                    'MODIFY_ENVIRONMENT_VARIABLE': True,
                 },
             ),
             (
@@ -86,6 +89,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_INGRESS_ANALYTICS': False,
                     'PA_USER_DIMENSION_SHOW_DEPT': False,
                     'APPLICATION_DESCRIPTION': True,
+                    'MODIFY_ENVIRONMENT_VARIABLE': True,
                 },
             ),
             (
@@ -110,6 +114,7 @@ class TestGetDefaultFeatureFlags:
                     'PA_INGRESS_ANALYTICS': False,
                     'PA_USER_DIMENSION_SHOW_DEPT': True,
                     'APPLICATION_DESCRIPTION': True,
+                    'MODIFY_ENVIRONMENT_VARIABLE': True,
                 },
             ),
         ],

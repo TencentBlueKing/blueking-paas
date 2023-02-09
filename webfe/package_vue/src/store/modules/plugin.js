@@ -27,7 +27,6 @@ import moment from 'moment';
 export default {
   namespaced: true,
   state: {
-    stagesData: [],
     pluginFeatureFlags: {},
     chartData: bartOptions,
     // 当前插件的基础信息
@@ -47,9 +46,6 @@ export default {
          */
     updateCurRelease (stage, release) {
       stage.curRelease = release;
-    },
-    updateStagesData (state, data) {
-      state.stagesData = data;
     },
     updatePluginFeatureFlags (state, data) {
       state.pluginFeatureFlags = data;
@@ -502,11 +498,18 @@ export default {
     async getPluginAppInfo ({ commit, dispatch }, { pdId, pluginId }, config = {}) {
       // plugin 默认为 default
       const moduleId = 'default';
-      await Promise.all([
-        dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true}),
-        dispatch('getAppFeature', { appCode: pluginId }, {root: true})
-      ]);
+      await dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true});
+      await dispatch('getAppFeature', { appCode: pluginId }, {root: true});
       commit('updateCurAppByCode', { appCode: pluginId, moduleId }, {root: true});
+    },
+
+    /**
+         * 插件部署信息
+         * @param {Object} params 请求参数：pluginId
+         */
+    getPluginAccessEntry ({ commit, state }, { pluginId }, config) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${pluginId}/modules/default/envs/prod/released_state/`;
+      return http.get(url, config);
     }
   }
 };

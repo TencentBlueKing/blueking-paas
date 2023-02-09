@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import string
 from unittest import mock
 
 import pytest
@@ -82,11 +83,13 @@ def pd():
         pd=pd,
         release_method=PluginReleaseMethod.CODE,
         id_schema={
+            "title": "插件ID",
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
             "maxlength": 10,
         },
         name_schema={
+            "title": "插件名称",
             "pattern": r"[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}",
             "description": "由汉字、英文字母、数字组成，长度小于 20 个字符",
         },
@@ -124,13 +127,13 @@ def pd():
 
 @pytest.fixture
 def plugin(pd, bk_user):
-    identifier = generate_random_string()
+    identifier = generate_random_string(length=10, chars=string.ascii_lowercase)
     plugin: PluginInstance = G(
         PluginInstance,
         **{
             "pd": pd,
             "id": identifier,
-            to_attribute("name"): generate_random_string(),
+            to_attribute("name"): generate_random_string(length=20, chars=string.ascii_lowercase),
             "template": {
                 "id": "foo",
                 "name": "bar",

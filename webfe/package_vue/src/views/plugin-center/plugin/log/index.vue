@@ -75,18 +75,6 @@
                 return this.$store.state.plugin.pluginFeatureFlags;
             }
         },
-        watch: {
-            tabActive () {
-                // this.$nextTick(() => {
-                //     if (this.tabActive === 'structured') {
-                //         this.$refs.customLog.initTableBox();
-                //     }
-                //     if (this.tabActive === 'access') {
-                //         this.$refs.accessLog.initTableBox();
-                //     }
-                // });
-            }
-        },
         mounted () {
             this.isLoading = true;
             if (this.$route.query.tab) {

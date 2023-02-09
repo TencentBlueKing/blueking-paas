@@ -22,7 +22,17 @@ from django.conf.urls import url
 
 from . import runtime_views, views
 from .views import accountmgr, applications, bk_plugins, runtimes, services, smart_advisor, sourcectl, templates
-from .views.engine import certs, clusters, config_vars, custom_domain, deployments, package, proc_spec, runtime
+from .views.engine import (
+    certs,
+    clusters,
+    config_vars,
+    custom_domain,
+    deployments,
+    operator,
+    package,
+    proc_spec,
+    runtime,
+)
 from .views.operation import deploy
 
 PART_MODULE = r'modules/(?P<module_name>[^/]+)'
@@ -188,6 +198,8 @@ urlpatterns = [
     ),
     # 平台管理-集群管理页
     url(r'^platform/clusters/manage/$', clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),
+    # 平台管理-集群 Operator 管理页
+    url(r'^platform/operators/manage/$', operator.OperatorManageView.as_view(), name="admin.operators.manage"),
     # 平台管理-共享证书管理
     url(r'^platform/certs/shared/manage/$', certs.SharedCertsManageView.as_view(), name="admin.shared.certs.manage"),
     # 平台管理-代码库配置

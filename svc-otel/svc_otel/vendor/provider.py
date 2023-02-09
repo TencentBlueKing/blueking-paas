@@ -53,7 +53,7 @@ class Provider(BaseProvider):
 
         # 将新申请的 data_token 存储到 DB 中
         apm_data, _c = ApmData.objects.update_or_create(
-            bk_app_code=bk_app_code, env=env, defaults={"data_token": data_token, "app_name": app_name}
+            bk_app_code=bk_app_code, env=env, defaults={"data_token": data_token, "app_name": unique_app_name}
         )
         return apm_data
 

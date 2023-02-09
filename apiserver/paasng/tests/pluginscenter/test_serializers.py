@@ -96,13 +96,37 @@ def make_translate_fields(field, value) -> Dict:
     ],
 )
 def test_make_create_plugin_validator(pd, data, is_valid, expected):
-    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data)
+    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
     if is_valid:
         slz.is_valid(raise_exception=True)
         assert expected == slz.validated_data
     else:
         assert not slz.is_valid()
         assert slz.errors == expected
+
+
+@pytest.mark.parametrize(
+    "field, value, expected",
+    [
+        ("id", 1, {'non_field_errors': [ErrorDetail(string='插件ID 为 1 的插件已存在', code='unique')]}),
+        ("name_en", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
+        ("name_zh_cn", "FLAG", {'non_field_errors': [ErrorDetail(string='插件名称 为 FLAG 的插件已存在', code='unique')]}),
+    ],
+)
+def test_make_create_plugin_validator_conflict(pd, plugin, field, value, expected):
+    setattr(plugin, field, value)
+    plugin.save()
+    data = {
+        "id": 1,
+        "name_en": "FLAG",
+        "name_zh_cn": "FLAG",
+        "name": "FLAG",
+        "template": plugin.template.name,
+        "extra_fields": {"email": "foo@example.com"},
+    }
+    slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
+    assert not slz.is_valid()
+    assert slz.errors == expected
 
 
 COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comment": "..."}

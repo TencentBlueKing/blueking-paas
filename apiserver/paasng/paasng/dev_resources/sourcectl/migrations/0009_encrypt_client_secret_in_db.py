@@ -26,17 +26,18 @@ logger = logging.getLogger(__name__)
 
 
 def encrypt_client_secret_in_db(apps, schema_editor):
-    """在变更 DjangoModel 字段前，先对 DB 中的数据进行转换（加密）"""
-    SourceTypeSpecConfig = apps.get_model('sourcectl', 'SourceTypeSpecConfig')
+    """encrypt client secret in database before change
+    client_secret field to EncryptField to avoid decode error"""
 
+    SourceTypeSpecConfig = apps.get_model('sourcectl', 'SourceTypeSpecConfig')
     encrypt_handler = EncryptHandler(secret_key=get_default_secret_key())
 
-    logger.info("对数据库中的 ClientSecret 进行加密")
+    logger.info("start encrypt client secret in database...")
     for cfg in SourceTypeSpecConfig.objects.all():
         cfg.client_secret = encrypt_handler.encrypt(cfg.client_secret)
         cfg.save(update_fields=['client_secret'])
 
-    logger.info("ClientSecret 加密完成")
+    logger.info("client secret encrypt done!")
 
 
 class Migration(migrations.Migration):

@@ -65,7 +65,7 @@
             <bk-form-item label="标签（英）">
                 <bk-input v-model="readOnlyDialog.form.label_en" disabled="true"></bk-input>
             </bk-form-item>
-            <bk-form-item label="是否默认开放" :desc="'设置为 False 后，用户将无法创建关联该源码类型仓库的新应用，可以通过 FeatureFlag 对某一用户单独开启'">
+            <bk-form-item label="是否默认开放" desc="设置为 False 后，用户将无法创建关联该源码类型仓库的新应用，可以通过 FeatureFlag 对某一用户单独开启">
                 <bk-switcher v-model="readOnlyDialog.form.enabled" disabled="true"></bk-switcher>
             </bk-form-item>
             <bk-form-item label="配置类">
@@ -145,7 +145,7 @@
         </div>
         <bk-form :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="服务名称" :property="name" :required="true" :desc="dialog.type !== 'create'?'创建后不可变更':''">
-                <bk-input v-model="dialog.form.name" disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
+                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
             </bk-form-item>
             <bk-form-item label="标签（中）" :required="true">
                 <bk-input v-model="dialog.form.label_zh_cn"></bk-input>
@@ -153,7 +153,7 @@
             <bk-form-item label="标签（英）" :required="true">
                 <bk-input v-model="dialog.form.label_en"></bk-input>
             </bk-form-item>
-            <bk-form-item label="是否默认开放" :desc="'设置为 False 后，用户将无法创建关联该源码类型仓库的新应用，可以通过 FeatureFlag 对某一用户单独开启'">
+            <bk-form-item label="是否默认开放" desc="设置为 False 后，用户将无法创建关联该源码类型仓库的新应用，可以通过 FeatureFlag 对某一用户单独开启">
                 <bk-switcher v-model="dialog.form.enabled"></bk-switcher>
             </bk-form-item>
             <bk-form-item label="配置类" :required="true">
@@ -168,10 +168,10 @@
             <bk-form-item label="服务配置">
                 <json-editor v-model="dialog.form.server_config"></json-editor>
             </bk-form-item>
-            <bk-form-item label="展示信息（中）" :desc="'若填写该项则必须包含字段：name，description'">
+            <bk-form-item label="展示信息（中）" desc="若填写该项则必须包含字段：name，description">
                 <json-editor v-model="dialog.form.display_info_zh_cn"></json-editor>
             </bk-form-item>
-            <bk-form-item label="展示信息（英）" :desc="'若填写该项则必须包含字段：name，description'">
+            <bk-form-item label="展示信息（英）" desc="若填写该项则必须包含字段：name，description">
                 <json-editor v-model="dialog.form.display_info_en"></json-editor>
             </bk-form-item>
             <bk-form-item label="OAuth 授权链接">
@@ -189,10 +189,10 @@
             <bk-form-item label="获取 Token 链接">
                 <bk-input v-model="dialog.form.token_base_url"></bk-input>
             </bk-form-item>
-            <bk-form-item label="OAuth 信息（中）" :desc="'可用字段：icon，display_name，address，description，auth_docs'">
+            <bk-form-item label="OAuth 信息（中）" desc="可用字段：icon，display_name，address，description，auth_docs">
                 <json-editor v-model="dialog.form.oauth_display_info_zh_cn"></json-editor>
             </bk-form-item>
-            <bk-form-item label="OAuth 信息（英）" :desc="'可用字段：icon，display_name，address，description，auth_docs'">
+            <bk-form-item label="OAuth 信息（英）" desc="可用字段：icon，display_name，address，description，auth_docs">
                 <json-editor v-model="dialog.form.oauth_display_info_en" ></json-editor>
             </bk-form-item>
         </bk-form>

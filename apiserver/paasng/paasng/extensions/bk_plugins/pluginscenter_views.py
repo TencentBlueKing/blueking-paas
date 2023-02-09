@@ -310,12 +310,16 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = slz.validated_data
 
         updated_data = {}
-        for field in ["introduction", "contact"]:
-            if data[field]:
-                updated_data[field] = data[field]
+
+        if data['contact']:
+            updated_data["contact"] = data["contact"]
+        if data['introduction']:
+            # introduction 为 lazy 对象直接放到 BkPluginProfileSLZ 中会报错
+            updated_data["introduction"] = str(data["introduction"])
+
         category = data["category"]
         if tag := BkPluginTag.objects.filter(name=category).first():
-            updated_data["tag"] = tag
+            updated_data["tag"] = tag.id
 
         serializer = serializers.BkPluginProfileSLZ(data=updated_data, instance=profile)
         serializer.is_valid(raise_exception=True)

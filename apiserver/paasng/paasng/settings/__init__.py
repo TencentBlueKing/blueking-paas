@@ -795,6 +795,9 @@ CLI_AUTH_SECRET = settings.get('CLI_AUTH_SECRET', '')
 # 是否允许创建蓝鲸插件应用
 IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
 
+# 是否开启插件开发功能
+IS_ALLOW_PLUGIN_CENTER = settings.get("IS_ALLOW_PLUGIN_CENTER", False)
+
 # [region-aware] 是否允许用户创建插件应用
 BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': IS_ALLOW_CREATE_BK_PLUGIN_APP})
 

@@ -566,7 +566,7 @@ class SourceTypeSpecConfig(AuditedModel):
     # OAuth Backend 配置
     authorization_base_url = models.CharField(verbose_name='OAuth 授权链接', default='', blank=True, max_length=256)
     client_id = models.CharField(verbose_name='OAuth App Client ID', default='', blank=True, max_length=256)
-    client_secret = models.CharField(verbose_name='OAuth App Client Secret', default='', blank=True, max_length=256)
+    client_secret = EncryptField(verbose_name='OAuth App Client Secret', default='', blank=True, max_length=256)
     redirect_uri = models.CharField(verbose_name='重定向（回调）地址', default='', blank=True, max_length=256)
     token_base_url = models.CharField(verbose_name='获取 Token 链接', default='', blank=True, max_length=256)
     oauth_display_info = TranslatedFieldWithFallback(

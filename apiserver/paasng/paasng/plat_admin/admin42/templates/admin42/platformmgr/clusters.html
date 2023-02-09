@@ -3,7 +3,7 @@
 {% block main_content %}
 <div id="platform-clusters-list" class="p20">
     <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群节点状态" class="mb15"></bk-alert>
-    <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
+    <bk-button theme="primary" class="mb20" @click="handleCreate">
         创建集群
     </bk-button>
     <bk-table :data="data" :cell-class-name="cellStyleCallback" class="mt20">
@@ -15,11 +15,11 @@
                     <bk-table-column prop="overridden_hostname" label="DNS覆写域名"></bk-table-column>
                     <bk-table-column label="操作">
                         <template slot-scope="subProps">
-                            <a class="bk-text-button mr10" style="color: red;" href="javascript:void(0);" @click="unbindApiServer(props.row, subProps.row)">删除</a>
+                            <bk-button class="ml5" theme="danger" text @click="unbindApiServer(props.row, subProps.row)">删除</bk-button>
                         </template>
                     </bk-table-column>
                     <div slot="empty">/*隐藏 empty block*/</div>
-                    <div slot="append" style="text-align: center;padding: 10px 0;" class="bk-table-append-block" @click="upsertApiServer(props.row)">
+                    <div slot="append" class="bk-table-append-block" @click="upsertApiServer(props.row)">
                         <div style="display: flex; flex-direction: column;">
                             <i class="bk-icon icon-plus-circle" style="font-size: 16px"></i>
                             <span>添加 APIServer</span>
@@ -88,13 +88,13 @@
         v-model="readOnlyDialog.visible"
         header-position="left"
         width="800"
-        :mask-close="false"
+        :mask-close="true"
         :show-footer="false"
     >
         <div slot="header">应用集群详情</div>
         <bk-form :label-width="140" :model="readOnlyDialog.form">
             <bk-form-item label="所属区域">
-                <bk-select v-model="readOnlyDialog.form.region" :disabled="true">
+                <bk-select v-model="readOnlyDialog.form.region" disabled="true">
                     <bk-option
                         v-for="region in regionList"
                         :key="region.value"
@@ -104,10 +104,10 @@
                 </bk-select>
             </bk-form-item>
             <bk-form-item label="集群名称">
-                <bk-input v-model="readOnlyDialog.form.name" :disabled="true"></bk-input>
+                <bk-input v-model="readOnlyDialog.form.name" disabled="true"></bk-input>
             </bk-form-item>
             <bk-form-item label="集群类型">
-                <bk-select v-model="readOnlyDialog.form.type" :disabled="true">
+                <bk-select v-model="readOnlyDialog.form.type" disabled="true">
                     <bk-option
                         v-for="type in clusterTypeList"
                         :key="type.value"
@@ -117,10 +117,10 @@
                 </bk-select>
             </bk-form-item>
             <bk-form-item label="默认集群">
-                <bk-switcher v-model="readOnlyDialog.form.is_default" :disabled="true"></bk-switcher>
+                <bk-switcher v-model="readOnlyDialog.form.is_default" disabled="true"></bk-switcher>
             </bk-form-item>
             <bk-form-item label="集群描述">
-                <bk-input v-model="readOnlyDialog.form.description" :disabled="true"></bk-input>
+                <bk-input v-model="readOnlyDialog.form.description" disabled="true"></bk-input>
             </bk-form-item>
             <bk-form-item label="子路径根域名">
                 <json-pretty
@@ -135,7 +135,7 @@
                 ></json-pretty>
             </bk-form-item>
             <bk-form-item label="集群出口 IP" desc="用于指引用户配置独立域名的解析, 如果集群使用云厂商的 clb 做流量控制, 那么这里应当填对应的 vip">
-                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip" :disabled="true"></bk-input>
+                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip" disabled="true"></bk-input>
             </bk-form-item>
             <bk-form-item label="注解" required>
                 <json-pretty
@@ -152,20 +152,20 @@
             <bk-form-item label="数字证书认证机构（cert-authority）">
                 <bk-input
                     v-if="readOnlyDialog.form.ca_data"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="readOnlyDialog.form.ca_data"
-                    :disabled="true"
+                    disabled="true"
                 ></bk-input>
                 <span v-else>--</span>
             </bk-form-item>
             <bk-form-item label="客户端证书（client-cert）">
                 <bk-input
                     v-if="readOnlyDialog.form.cert_data"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="readOnlyDialog.form.cert_data"
-                    :disabled="true"
+                    disabled="true"
                 >
                 </bk-input>
                 <span v-else>--</span>
@@ -173,10 +173,10 @@
             <bk-form-item label="客户端密钥（client-key）">
                 <bk-input
                     v-if="readOnlyDialog.form.key_data"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="readOnlyDialog.form.key_data"
-                    :disabled="true"
+                    disabled="true"
                 >
                 </bk-input>
                 <span v-else>--</span>
@@ -184,10 +184,10 @@
             <bk-form-item label="集群 Token" :required="false">
                 <bk-input
                     v-if="readOnlyDialog.form.token_value"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="readOnlyDialog.form.token_value"
-                    :disabled="true"
+                    disabled="true"
                 >
                 </bk-input>
                 <span v-else>--</span>
@@ -226,7 +226,7 @@
                 ></json-pretty>
             </bk-form-item>
             <bk-form-item label="默认 Ingress 域名模板（保留选项）">
-                <bk-input v-model="readOnlyDialog.form.ingress_config.default_ingress_domain_tmpl" :disabled="true"></bk-input>
+                <bk-input v-model="readOnlyDialog.form.ingress_config.default_ingress_domain_tmpl" disabled="true"></bk-input>
             </bk-form-item>
         </bk-form>
     </bk-dialog>
@@ -245,7 +245,7 @@
         </div>
         <bk-form :label-width="140" :model="dialog.form">
             <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
-                <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
+                <bk-select v-model="dialog.form.region" disabled="dialog.type !== 'create'">
                     <bk-option
                         v-for="region in regionList"
                         :key="region.value"
@@ -255,10 +255,10 @@
                 </bk-select>
             </bk-form-item>
             <bk-form-item label="集群名称" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
-                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'"></bk-input>
+                <bk-input v-model="dialog.form.name" disabled="dialog.type !== 'create'"></bk-input>
             </bk-form-item>
             <bk-form-item label="集群类型" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
-                <bk-select v-model="dialog.form.type" :disabled="dialog.type !== 'create'">
+                <bk-select v-model="dialog.form.type" disabled="dialog.type !== 'create'">
                     <bk-option
                         v-for="type in clusterTypeList"
                         :key="type.value"
@@ -268,7 +268,7 @@
                 </bk-select>
             </bk-form-item>
             <bk-form-item label="默认集群" required :desc="dialog.type !== 'create'?'不支持通过编辑切换默认集群':''">
-                <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type !== 'create'"></bk-switcher>
+                <bk-switcher v-model="dialog.form.is_default" disabled="dialog.type !== 'create'"></bk-switcher>
             </bk-form-item>
             <bk-form-item label="集群描述" required>
                 <bk-input v-model="dialog.form.description"></bk-input>
@@ -309,8 +309,8 @@
             <bk-form-item label="数字证书认证机构（cert-authority）">
                 <bk-input
                     placeholder="请输入 Base64 编码后的证书"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="dialog.form.ca_data"
                 >
                 </bk-input>
@@ -319,8 +319,8 @@
             <bk-form-item label="客户端证书（client-cert）">
                 <bk-input
                     placeholder="请输入 Base64 编码后的证书"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="dialog.form.cert_data"
                 >
                 </bk-input>
@@ -328,8 +328,8 @@
             <bk-form-item label="客户端密钥（client-key）">
                 <bk-input
                     placeholder="请输入 Base64 编码后的证书"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="dialog.form.key_data"
                 >
                 </bk-input>
@@ -337,8 +337,8 @@
             <bk-form-item label="集群 Token" :required="false">
                 <bk-input
                     placeholder="请输入可通过集群校验的 Token"
-                    :type="'textarea'"
-                    :rows="5"
+                    type="textarea"
+                    rows="5"
                     v-model="dialog.form.token_value"
                 >
                 </bk-input>
@@ -687,10 +687,9 @@
 </script>
 
 <style>
-    .bk-table-empty-block {
-        display: none;
-    }
     .bk-table-append-block {
+        text-align: center;
+        padding: 10px 0;
         margin-bottom: 10px;
     }
     .bk-table-append-block:hover {

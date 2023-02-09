@@ -1,12 +1,12 @@
 {% extends "admin42/platformmgr/base.html" %}
 {% load admin_utils %}
 {% block main_content %}
-<div id="platform-clusters-list" style="width: 100%;" class="p20">
-    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群状态" style="margin-bottom: 15px;"></bk-alert>
+<div id="platform-clusters-list" class="p20">
+    <bk-alert type="warning" title="集群信息变更后, 需要重启所有 workloads 进程才能生效；若执行集群扩缩容操作，请及时更新对应集群节点状态" class="mb15"></bk-alert>
     <bk-button :theme="'primary'" :title="'创建集群'" class="mr10" @click="handleCreate">
         创建集群
     </bk-button>
-    <bk-table :data="data" :cell-class-name="cellStyleCallback" style="margin-top: 20px;">
+    <bk-table :data="data" :cell-class-name="cellStyleCallback" class="mt20">
         <bk-table-column type="expand" width="30">
             <template slot-scope="props">
                 <bk-table :data="props.row.api_servers" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
@@ -28,52 +28,222 @@
                 </bk-table>
             </template>
         </bk-table-column>
-        <bk-table-column label="集群名称" prop="name"></bk-table-column>
-        <bk-table-column label="所属区域" prop="region"></bk-table-column>
-        <bk-table-column label="集群类型" prop="type">
+        <bk-table-column label="集群名称" prop="name" width="100"></bk-table-column>
+        <bk-table-column label="所属区域" prop="region" width="100"></bk-table-column>
+        <bk-table-column label="集群类型" prop="type" width="100">
             <template slot-scope="props">
                 <span v-if="props.row.type == 'normal'">普通</span>
                 <span v-if="props.row.type == 'virtual'">虚拟</span>
             </template>
         </bk-table-column>
-        <bk-table-column label="默认集群" prop="is_default">
+        <bk-table-column label="默认集群" width="100">
             <template slot-scope="props">
-                <span v-if="props.row.is_default">是</span>
-                <span v-else>否</span>
+                <span v-if="props.row.is_default">✅</span>
+                <span v-else>❌</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="集群 ID" width="150">
+            <template slot-scope="props">
+                <span v-if="props.row.annotations.bcs_cluster_id"> $[ props.row.annotations.bcs_cluster_id ] </span>
+                <span v-else>--</span>
             </template>
         </bk-table-column>
         <bk-table-column label="集群描述" prop="description"></bk-table-column>
-        <bk-table-column label="接入层配置" prop="ingress_config" width="300">
+        <bk-table-column label="特性标志" min-width="280">
             <template slot-scope="props">
-                <json-pretty :data="props.row.ingress_config" show-length highlight-mouseover-node :deep="2"></json-pretty>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="注解" prop="annotations" width="300">
-            <template slot-scope="props">
-                <json-pretty :data="props.row.annotations" show-length highlight-mouseover-node :deep="2"></json-pretty>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="特性标志" prop="feature_flags" width="400">
-            <template slot-scope="props">
-                <div v-for="ff in featureFlagList" style="display: flex">
-                    <bk-tag v-if="hasFeatureFlag(props.row, ff.value)" theme="success">✔ $[ ff.text ]</bk-tag>
-                    <bk-tag v-else theme="danger">✘ $[ ff.text ]</bk-tag>
+                <div class="mt15 mb15">
+                    <div v-for="ff in featureFlagList" style="display: flex">
+                        <bk-tag v-if="hasFeatureFlag(props.row, ff.value)" theme="success">✔ $[ ff.text ]</bk-tag>
+                        <bk-tag v-else theme="danger">✘ $[ ff.text ]</bk-tag>
+                    </div>
                 </div>
             </template>
         </bk-table-column>
-        <bk-table-column label="操作" width="130">
+        <bk-table-column label="节点" min-width="300">
             <template slot-scope="props">
-                <bk-button theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
-                <bk-button theme="primary" text @click="handleGenState(props.row.region, props.row.name)">更新状态</bk-button>
+                <div class="mt15 mb15">
+                    <div v-for="(node, idx) in props.row.nodes" style="display: flex">
+                        <bk-tag v-show="idx < 5">$[ node ]</bk-tag>
+                    </div>
+                    <span class="ml10">共计 $[ props.row.nodes.length ] 个节点</span>
+                    <bk-button
+                        theme="primary" text class="ml10"
+                        v-if="props.row.nodes.length > 5"
+                        v-bk-tooltips="{content: props.row.nodes.join('<br>'), allowHTML: true}"
+                    >查看更多</bk-button>
+                </div>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="180">
+            <template slot-scope="props">
+                <bk-button class="ml5" theme="primary" text @click="handleView(props.row)">查看详情</bk-button>
+                <bk-button class="ml5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button class="ml5" theme="primary" text @click="handleGenNodeState(props.row.region, props.row.name)">更新节点</bk-button>
             </template>
         </bk-table-column>
     </bk-table>
 
-    <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
+    <!-- 查看集群详情用弹窗 -->
+    <bk-dialog
+        v-model="readOnlyDialog.visible"
+        header-position="left"
+        width="800"
+        :mask-close="false"
+        :show-footer="false"
+    >
+        <div slot="header">应用集群详情</div>
+        <bk-form :label-width="140" :model="readOnlyDialog.form">
+            <bk-form-item label="所属区域">
+                <bk-select v-model="readOnlyDialog.form.region" :disabled="true">
+                    <bk-option
+                        v-for="region in regionList"
+                        :key="region.value"
+                        :id="region.value"
+                        :name="region.text">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="集群名称">
+                <bk-input v-model="readOnlyDialog.form.name" :disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="集群类型">
+                <bk-select v-model="readOnlyDialog.form.type" :disabled="true">
+                    <bk-option
+                        v-for="type in clusterTypeList"
+                        :key="type.value"
+                        :id="type.value"
+                        :name="type.text">
+                    </bk-option>
+                </bk-select>
+            </bk-form-item>
+            <bk-form-item label="默认集群">
+                <bk-switcher v-model="readOnlyDialog.form.is_default" :disabled="true"></bk-switcher>
+            </bk-form-item>
+            <bk-form-item label="集群描述">
+                <bk-input v-model="readOnlyDialog.form.description" :disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="子路径根域名">
+                <json-pretty
+                    :data="readOnlyDialog.form.ingress_config.sub_path_domains"
+                    show-length highlight-mouseover-node :deep="2"
+                ></json-pretty>
+            </bk-form-item>
+            <bk-form-item label="子域名根域名">
+                <json-pretty
+                    :data="readOnlyDialog.form.ingress_config.app_root_domains"
+                    show-length highlight-mouseover-node :deep="2"
+                ></json-pretty>
+            </bk-form-item>
+            <bk-form-item label="集群出口 IP" desc="用于指引用户配置独立域名的解析, 如果集群使用云厂商的 clb 做流量控制, 那么这里应当填对应的 vip">
+                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip" :disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="注解" required>
+                <json-pretty
+                    :data="readOnlyDialog.form.annotations"
+                    show-length highlight-mouseover-node :deep="2"
+                ></json-pretty>
+            </bk-form-item>
+            <bk-form-item label="特性标志">
+                <div v-for="ff in featureFlagList" style="display: flex">
+                    <bk-tag v-if="hasFeatureFlag(readOnlyDialog.form, ff.value)" theme="success">✔ $[ ff.text ]</bk-tag>
+                    <bk-tag v-else theme="danger">✘ $[ ff.text ]</bk-tag>
+                </div>
+            </bk-form-item>
+            <bk-form-item label="数字证书认证机构（cert-authority）">
+                <bk-input
+                    v-if="readOnlyDialog.form.ca_data"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="readOnlyDialog.form.ca_data"
+                    :disabled="true"
+                ></bk-input>
+                <span v-else>--</span>
+            </bk-form-item>
+            <bk-form-item label="客户端证书（client-cert）">
+                <bk-input
+                    v-if="readOnlyDialog.form.cert_data"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="readOnlyDialog.form.cert_data"
+                    :disabled="true"
+                >
+                </bk-input>
+                <span v-else>--</span>
+            </bk-form-item>
+            <bk-form-item label="客户端密钥（client-key）">
+                <bk-input
+                    v-if="readOnlyDialog.form.key_data"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="readOnlyDialog.form.key_data"
+                    :disabled="true"
+                >
+                </bk-input>
+                <span v-else>--</span>
+            </bk-form-item>
+            <bk-form-item label="集群 Token" :required="false">
+                <bk-input
+                    v-if="readOnlyDialog.form.token_value"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="readOnlyDialog.form.token_value"
+                    :disabled="true"
+                >
+                </bk-input>
+                <span v-else>--</span>
+            </bk-form-item>
+            <bk-form-item label="端口配置">
+                <bk-alert type="info" title="用于生成应用访问地址"></bk-alert>
+                <bk-input
+                    placeholder="使用 http 协议访问 SaaS 时, 使用的端口号"
+                    type="number"
+                    v-model="readOnlyDialog.form.ingress_config.port_map.http"
+                >
+                    <template slot="prepend">
+                        <div class="group-text">HTTP</div>
+                    </template>
+                </bk-input>
+                <bk-input
+                    placeholder="使用 https 协议访问 SaaS 时, 使用的端口号"
+                    type="number"
+                    v-model="readOnlyDialog.form.ingress_config.port_map.https"
+                >
+                    <template slot="prepend">
+                        <div class="group-text">HTTPS</div>
+                    </template>
+                </bk-input>
+            </bk-form-item>
+            <bk-form-item label="默认 nodeSelector" desc="限制应用的构建、运行均使用此 nodeSelector 来筛选节点">
+                <json-pretty
+                    :data="readOnlyDialog.form.default_node_selector"
+                    show-length highlight-mouseover-node :deep="0"
+                ></json-pretty>
+            </bk-form-item>
+            <bk-form-item label="默认 tolerations" desc="让应用的构建、运行使用此 tolerations 来容忍节点的污点（taints）">
+                <json-pretty
+                    :data="readOnlyDialog.form.default_tolerations"
+                    show-length highlight-mouseover-node :deep="0"
+                ></json-pretty>
+            </bk-form-item>
+            <bk-form-item label="默认 Ingress 域名模板（保留选项）">
+                <bk-input v-model="readOnlyDialog.form.ingress_config.default_ingress_domain_tmpl" :disabled="true"></bk-input>
+            </bk-form-item>
+        </bk-form>
+    </bk-dialog>
+
+    <!-- 编辑 / 创建集群用弹窗   -->
+    <bk-dialog
+        v-model="dialog.visible"
+        header-position="left"
+        width="800"
+        :confirm-fn="submitDialog"
+        @cancel="cancelDialog"
+        :mask-close="false"
+    >
         <div slot="header">
-            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]应用集群
+            $[ dialog.type === 'create'?'添加':'编辑' ]应用集群
         </div>
-        <bk-form :label-width="120" :model="dialog.form">
+        <bk-form :label-width="140" :model="dialog.form">
             <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
                     <bk-option
@@ -100,26 +270,26 @@
             <bk-form-item label="默认集群" required :desc="dialog.type !== 'create'?'不支持通过编辑切换默认集群':''">
                 <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type !== 'create'"></bk-switcher>
             </bk-form-item>
-            <bk-form-item label="集群信息" required>
-                <bk-input v-model="dialog.form.description" :disabled="dialog.type === 'delete'"></bk-input>
+            <bk-form-item label="集群描述" required>
+                <bk-input v-model="dialog.form.description"></bk-input>
             </bk-form-item>
             <bk-form-item label="子路径根域名" desc="在拼接应用子路径访问地址时遵循以下规则: 'http(s)://{子路径根域名}/{应用子路径}/'">
-                <json-editor v-model="dialog.form.ingress_config.sub_path_domains" :disabled="dialog.type === 'delete'" :schema="DomainSchema"></json-editor>
+                <json-editor ref='subPathDomainsEditor' v-model="dialog.form.ingress_config.sub_path_domains" :schema="DomainSchema"></json-editor>
                 <bk-alert type="info" title="支持填写多个域名，每个域名必须有 3 个属性: 域名(name,str)、开启HTTPS(https_enabled,bool)、保留域名(即不推荐再使用的域名,reserved,bool)。
                   如：[{&quot;name&quot;: &quot;example.com&quot;, &quot;https_enabled&quot;: false, &quot;reserved&quot;: false}]">
                 </bk-alert>
             </bk-form-item>
             <bk-form-item label="子域名根域名" desc="在拼接应用子域名访问地址时遵循以下规则: 'http(s)://{应用子域名}.{子域名根域名}/', 如果不配置该值, 默认与 子路径根域名 一致">
-                <json-editor v-model="dialog.form.ingress_config.app_root_domains" :disabled="dialog.type === 'delete'" :schema="DomainSchema"></json-editor>
+                <json-editor v-model="dialog.form.ingress_config.app_root_domains" :schema="DomainSchema"></json-editor>
                 <bk-alert type="info" title="支持填写多个域名，每个域名必须有 3 个属性: 域名(name,str)、开启HTTPS(https_enabled,bool)、保留域名(即不推荐再使用的域名,reserved,bool)。
                   如：[{&quot;name&quot;: &quot;example.com&quot;, &quot;https_enabled&quot;: false, &quot;reserved&quot;: false}]">
                 </bk-alert>
             </bk-form-item>
-            <bk-form-item label="集群出口IP" required desc="用于指引用户配置独立域名的解析, 如果集群使用云厂商的 clb 做流量控制, 那么这里应当填对应的 vip">
-                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip" :disabled="dialog.type === 'delete'"></bk-input>
+            <bk-form-item label="集群出口 IP" required desc="用于指引用户配置独立域名的解析, 如果集群使用云厂商的 clb 做流量控制, 那么这里应当填对应的 vip">
+                <bk-input v-model="dialog.form.ingress_config.frontend_ingress_ip"></bk-input>
             </bk-form-item>
             <bk-form-item label="注解" required>
-                <json-editor v-model="dialog.form.annotations" :disabled="dialog.type === 'delete'"></json-editor>
+                <json-editor v-model="dialog.form.annotations"></json-editor>
             </bk-form-item>
             <bk-form-item label="特性标志" desc="不同的集群可能拥有不同的特性，请根据实际需要编辑">
                 <bk-select
@@ -127,7 +297,6 @@
                     v-model="dialog.form.enabled_feature_flags"
                     display-tag
                     @change="updateFeatureFlags"
-                    :disabled="dialog.type === 'delete'"
                 >
                     <bk-option
                         v-for="type in featureFlagList"
@@ -139,82 +308,90 @@
             </bk-form-item>
             <bk-form-item label="数字证书认证机构（cert-authority）">
                 <bk-input
-                          placeholder="请输入 Base64 编码后的证书"
-                          :type="'textarea'"
-                          :rows="3"
-                          v-model="dialog.form.ca_data">
+                    placeholder="请输入 Base64 编码后的证书"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="dialog.form.ca_data"
+                >
                 </bk-input>
             </bk-form-item>
-            <div style="line-height: 28px; margin: 14px 0;">客户端证书秘钥与集群 Token 选择一项填写即可</div>
+            <div class="m15">客户端证书秘钥与集群 Token 选择一项填写即可</div>
             <bk-form-item label="客户端证书（client-cert）">
                 <bk-input
-                          placeholder="请输入 Base64 编码后的证书"
-                          :type="'textarea'"
-                          :rows="3"
-                          v-model="dialog.form.cert_data">
+                    placeholder="请输入 Base64 编码后的证书"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="dialog.form.cert_data"
+                >
                 </bk-input>
             </bk-form-item>
             <bk-form-item label="客户端密钥（client-key）">
                 <bk-input
-                          placeholder="请输入 Base64 编码后的证书"
-                          :type="'textarea'"
-                          :rows="3"
-                          v-model="dialog.form.key_data">
+                    placeholder="请输入 Base64 编码后的证书"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="dialog.form.key_data"
+                >
                 </bk-input>
             </bk-form-item>
             <bk-form-item label="集群 Token" :required="false">
                 <bk-input
-                          placeholder="请输入可通过集群校验的 Token"
-                          :type="'textarea'"
-                          :rows="2"
-                          v-model="dialog.form.token_value">
+                    placeholder="请输入可通过集群校验的 Token"
+                    :type="'textarea'"
+                    :rows="5"
+                    v-model="dialog.form.token_value"
+                >
                 </bk-input>
             </bk-form-item>
             <bk-form-item label="端口配置">
                 <bk-alert type="info" title="用于生成应用访问地址，当应用网关（BkIngressController）通过非标准端口号暴露时，修改本设置。"></bk-alert>
-
                 <bk-input
                     placeholder="使用 http 协议访问 SaaS 时, 使用的端口号"
                     type="number"
-                    v-model="dialog.form.ingress_config.port_map.http">
+                    v-model="dialog.form.ingress_config.port_map.http"
+                >
                     <template slot="prepend">
                         <div class="group-text">HTTP</div>
                     </template>
                 </bk-input>
-
                 <bk-input
                     placeholder="使用 https 协议访问 SaaS 时, 使用的端口号"
                     type="number"
-                    v-model="dialog.form.ingress_config.port_map.https">
+                    v-model="dialog.form.ingress_config.port_map.https"
+                >
                     <template slot="prepend">
                         <div class="group-text">HTTPS</div>
                     </template>
                 </bk-input>
             </bk-form-item>
-            <div style="line-height: 28px; margin: 14px 0;">
-                以下参数为集群与应用相关的默认参数，可控制应用调度策略等。修改这些值后，需重新部署应用方能生效。
-            </div>
+            <div class="m15">以下参数为集群与应用相关的默认参数，可控制应用调度策略等。修改这些值后，需重新部署应用方能生效。</div>
             <bk-form-item label="默认 nodeSelector" :required="false">
-                <json-editor v-model="dialog.form.default_node_selector" :disabled="dialog.type === 'delete'" nullable></json-editor>
+                <json-editor v-model="dialog.form.default_node_selector" nullable></json-editor>
                 <bk-alert type="info" title="限制应用的构建、运行均使用此 nodeSelector 来筛选节点。
                   格式：包含键值对的 JSON 对象，如：{&quot;key&quot;: &quot;value&quot;}"></bk-alert>
             </bk-form-item>
             <bk-form-item label="默认 tolerations" :required="false">
-                <json-editor v-model="dialog.form.default_tolerations" :disabled="dialog.type === 'delete'" nullable></json-editor>
+                <json-editor v-model="dialog.form.default_tolerations" nullable></json-editor>
                 <bk-alert type="info" title="让应用的构建、运行使用此 tolerations 来容忍节点的“污点（taints）”。
                   格式：元素为 toleration 对象的 JSON 列表，如：[{&quot;key&quot;: &quot;app&quot;, &quot;operator&quot;: &quot;Equal&quot;, &quot;value&quot;: &quot;value1&quot;, &quot;effect&quot;: &quot;NoSchedule&quot;}]"></bk-alert>
             </bk-form-item>
             <bk-form-item label="默认 Ingress 域名模板（保留选项）" desc="保留高级选项，默认留空即可">
-                <bk-input placeholder="保留高级选项，默认留空即可" v-model="dialog.form.ingress_config.default_ingress_domain_tmpl" :disabled="dialog.type === 'delete'"></bk-input>
+                <bk-input
+                    placeholder="保留高级选项，默认留空即可"
+                    v-model="dialog.form.ingress_config.default_ingress_domain_tmpl"
+                ></bk-input>
             </bk-form-item>
         </bk-form>
     </bk-dialog>
 
-    <bk-dialog v-model="subDialog.visible" width="800"
-               theme="primary"
-               :mask-close="false"
-               @confirm="submitSubDialog"
-               :title="subDialog.title">
+    <bk-dialog
+        v-model="subDialog.visible"
+        width="800"
+        theme="primary"
+        :mask-close="false"
+        @confirm="submitSubDialog"
+        :title="subDialog.title"
+    >
         <bk-form>
             <bk-form-item label="主机地址" required>
                 <bk-input type="url" placeholder="主机地址, 形如 scheme://host:port, 例如 https://127.0.0.1:6443" v-model="subDialog.form.host"></bk-input>
@@ -254,7 +431,7 @@
         create: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
         list: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/' %}"),
         detail: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/' %}"),
-        genState: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/gen_state/' %}"),
+        genNodeState: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_name}/node_state/' %}"),
         apiServer: {
             upsert: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers' %}"),
             delete: decodeURI("{% url 'workloads.proxy' 'admin42/platform/clusters/${cluster_id}/api_servers/${api_server_id}' %}"),
@@ -270,7 +447,7 @@
                 return {
                     data: [],
                     dialog: {
-                        fullscreen: false,
+                        visible: false,
                         form: {
                             uuid: '',
                             region: '',
@@ -279,9 +456,7 @@
                             is_default: false,
                             description: '',
                             ingress_config: {
-                                port_map: {
-
-                                },
+                                port_map: {},
                                 sub_path_domains: [],
                                 app_root_domains: [],
                                 default_ingress_domain_tmpl: ''
@@ -297,6 +472,22 @@
                             token_value: undefined,
                             default_node_selector: {},
                             default_tolerations: [],
+                        },
+                        row: undefined
+                    },
+                    readOnlyDialog: {
+                        visible: false,
+                        form: {
+                            ingress_config: {
+                                port_map: {},
+                                sub_path_domains: [],
+                                app_root_domains: [],
+                                default_ingress_domain_tmpl: ''
+                            },
+                            annotations: {},
+                            feature_flags: {},
+                            default_node_selector: {},
+                            default_tolerations: []
                         },
                         row: undefined
                     },
@@ -390,18 +581,17 @@
                     this.dialog.form = { ...row, ingress_config: {...row.ingress_config}, enabled_feature_flags: enabled_feature_flags }
                     this.dialog.visible = true
                 },
-                handleDelete: function(row) {
-                    this.dialog.type = "delete"
-                    this.dialog.row = row
-
-                    this.dialog.form = { ...row, ingress_config: {...row.ingress_config} }
-                    this.dialog.visible = true
+                handleView: function(row) {
+                    this.readOnlyDialog.row = row
+                    this.readOnlyDialog.form = { ...row, ingress_config: {...row.ingress_config} }
+                    this.readOnlyDialog.visible = true
+                    console.log(this.readOnlyDialog.form)
                 },
-                handleGenState: function (region, clusterName) {
-                    this.$http.post(
-                        URLRouter.genState, {region: region, cluster_name: clusterName}
-                    ).then(resp => {
-                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 状态成功`})
+                handleGenNodeState: function (region, clusterName) {
+                    let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)
+                    this.$http.post(url, {region: region}).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 节点成功`})
+                        this.fetchClusterList()
                     })
                 },
                 // 在多选框被修改时，根据选中的项目，同步更新 feature_flags 内容

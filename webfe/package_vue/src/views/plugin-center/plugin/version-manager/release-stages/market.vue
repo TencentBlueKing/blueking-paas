@@ -55,7 +55,6 @@
           <bk-form-item
             class="edit-form-item"
             :label="$t('详细描述')"
-            :required="true"
             :property="'description'"
           >
             <quill-editor
@@ -119,13 +118,6 @@
                             trigger: 'blur'
                         }
                     ],
-                    description: [
-                        {
-                            required: true,
-                            message: this.$t('请输入'),
-                            trigger: 'blur'
-                        }
-                    ],
                     contact: [
                         {
                             required: true,
@@ -163,7 +155,12 @@
                     };
                     const res = await this.$store.dispatch('plugin/getMarketInfo', params);
                     this.form = res;
-                    this.form.contact = res.contact && res.contact.split(',') || [];
+                    if (res.contact) {
+                        this.form.contact = res.contact.split(',') || [];
+                    } else {
+                        const founder = this.curPluginInfo.latest_release.creator || '';
+                        this.form.contact = founder.split(',');
+                    }
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',

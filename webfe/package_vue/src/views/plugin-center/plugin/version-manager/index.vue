@@ -56,7 +56,7 @@
         >
           <!-- 如果存在数据展示默认Exception -->
           <div
-            v-if="versionList.length"
+            v-if="isSearchClear || versionList.length || keyword"
             slot="empty"
           >
             <bk-exception
@@ -136,7 +136,7 @@
           </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
-            width="220"
+            :width="localLanguage === 'en' ? 280 : 200"
           >
             <template slot-scope="{ row }">
               <bk-button
@@ -317,7 +317,8 @@
                 isPluginAccessEntry: true,
                 pluginDefaultInfo: {
                     exposed_link: ''
-                }
+                },
+                isSearchClear: false
             };
         },
         computed: {
@@ -330,6 +331,9 @@
                     });
                 }
                 return statusList;
+            },
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -421,6 +425,7 @@
                     setTimeout(() => {
                         this.isTableLoading = false;
                         this.isLoading = false;
+                        this.isSearchClear = false;
                     }, 200);
                 }
             },
@@ -526,6 +531,7 @@
                 }
             },
             clearFilterKey () {
+                this.isSearchClear = true;
                 this.keyword = '';
                 this.$refs.versionTable.clearFilter();
             },

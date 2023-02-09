@@ -191,7 +191,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     @_permission_classes([IsAuthenticated, PluginCenterFeaturePermission])
     def create(self, request, pd_id, **kwargs):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
-        slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data)
+        slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 

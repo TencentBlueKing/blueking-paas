@@ -21,6 +21,7 @@ from typing import Dict, Optional, Type
 import arrow
 import semver
 from bkpaas_auth import get_user_by_user_id
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -39,7 +40,60 @@ from paasng.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
-from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
+
+
+class PluginUniqueValidator:
+    requires_context = True
+
+    def __init__(self, id_field_label: str, name_field_label: str):
+        self.id_field_label = id_field_label
+        self.name_field_label = name_field_label
+        self.queryset = PluginInstance.objects.all()
+
+    def __call__(self, attrs, serializer):
+        # Determine the existing instance, if this is an update operation.
+        if "pd" not in serializer.context:
+            raise ValidationError(_("context `pd` is required"), code="required")
+        pd = serializer.context["pd"]
+
+        queryset = self.queryset
+        queryset = self.exclude_current_instance(attrs, queryset, serializer.instance)
+        self.validate_queryset(queryset, pd_id=pd.identifier, attrs=attrs)
+
+    def validate_queryset(self, queryset, pd_id, attrs: Dict):
+        """validate the queryset to all instances matching the given attributes."""
+        queryset = queryset.filter(pd__identifier=pd_id)
+        fields = [
+            {"name": "id", "label": self.id_field_label},
+            *[
+                {
+                    "name": to_translated_field("name", language_code=lang[0]),
+                    "label": self.name_field_label,
+                }
+                for lang in settings.LANGUAGES
+            ],
+        ]
+        checked = False
+        for field in fields:
+            field_name = field["name"]
+            field_label = field["label"]
+            if field_name in attrs:
+                value = attrs[field_name]
+                if queryset.filter(**{field_name: value}).exists():
+                    raise ValidationError(_('{} 为 {} 的插件已存在').format(field_label, value), code="unique")
+                checked = True
+        if not checked:
+            raise ValidationError(_("attrs `{}` is required").format([f["name"] for f in fields]), code="required")
+
+    def exclude_current_instance(self, attrs, queryset, instance):
+        """
+        If an instance is being updated, then do not include
+        that instance itself as a uniqueness conflict.
+        """
+        if instance is not None:
+            return queryset.exclude(pk=instance.pk)
+        return queryset
 
 
 class PluginRoleSLZ(serializers.Serializer):
@@ -211,6 +265,18 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
     fields = {
         "name": I18NExtend(make_string_field(pd.basic_info_definition.name_schema)),
         "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
+        "Meta": type(
+            "Meta",
+            (),
+            {
+                "validators": [
+                    PluginUniqueValidator(
+                        id_field_label=pd.basic_info_definition.id_schema.title,
+                        name_field_label=pd.basic_info_definition.name_schema.title,
+                    )
+                ]
+            },
+        ),
     }
     if creation:
         fields["id"] = make_string_field(pd.basic_info_definition.id_schema)

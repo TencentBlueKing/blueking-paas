@@ -16,12 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.platform.region.models import get_all_regions
+from paasng.utils.configs import get_region_aware
 
 
 class OperatorManageView(GenericTemplateView):
@@ -35,5 +36,7 @@ class OperatorManageView(GenericTemplateView):
         if 'view' not in kwargs:
             kwargs['view'] = self
 
-        kwargs['cnative_default_cluster'] = settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER
+        kwargs['cnative_default_cluster'] = {
+            region: get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region) for region in get_all_regions().keys()
+        }
         return kwargs

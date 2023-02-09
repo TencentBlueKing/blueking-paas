@@ -21,7 +21,7 @@ import logging
 import re
 from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 from urllib.parse import urlparse
 
 from bkpaas_auth.models import User
@@ -38,11 +38,9 @@ from paasng.dev_resources.sourcectl.exceptions import PackageAlreadyExists
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_type
 from paasng.dev_resources.sourcectl.svn.admin import get_svn_authorization_manager_cls
 from paasng.dev_resources.sourcectl.svn.server_config import get_bksvn_config
+from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, BkUserField, OwnerTimestampedModel, TimestampedModel
 from paasng.utils.text import remove_prefix, remove_suffix
-
-if TYPE_CHECKING:
-    from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +190,7 @@ class SvnAccount(TimestampedModel):
 
     objects = SvnAccountManager()
 
-    class Meta(object):
+    class Meta:
         pass
 
 
@@ -380,7 +378,7 @@ class Repository:
 
 
 @dataclass
-class AlternativeVersion(object):
+class AlternativeVersion:
     name: str
     type: str
     revision: str
@@ -391,7 +389,7 @@ class AlternativeVersion(object):
 
 
 @dataclass
-class CommitLog(object):
+class CommitLog:
     message: str = ""
     revision: str = ""
     date: datetime.datetime = field(default_factory=datetime.datetime.now)

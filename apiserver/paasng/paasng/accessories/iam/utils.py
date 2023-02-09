@@ -94,7 +94,7 @@ def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
     """根据角色类型，获取他们拥有的 APP 权限"""
     # 管理者
     if role == ApplicationRole.ADMINISTRATOR:
-        return [action for action in AppAction.get_values()]
+        return list(AppAction.get_values())
     # 开发者
     elif role == ApplicationRole.DEVELOPER:
         return [

@@ -83,7 +83,7 @@ class Command(BaseCommand):
             raise Exception('the length of grade_manager_map and user_group_map not equal!')
 
         self.total_count = len(self.user_group_map)
-        self.app_codes = [k for k in self.user_group_map]
+        self.app_codes = list(self.user_group_map)
 
         print(f'{self.total_count} applications waiting for sync:')
 

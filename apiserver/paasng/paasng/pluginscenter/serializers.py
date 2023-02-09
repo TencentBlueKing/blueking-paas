@@ -208,7 +208,7 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
 class PluginInstanceLogoSLZ(serializers.ModelSerializer):
     logo = serializers.ImageField(write_only=True)
 
-    class Meta(object):
+    class Meta:
         model = PluginInstance
         fields = ["logo"]
 
@@ -308,7 +308,7 @@ class StubUpdatePluginSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(help_text="额外字段")
 
 
-def make_release_validator(version_rule: PluginReleaseVersionRule):
+def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C901
     """make a validator to validate ReleaseVersion object"""
 
     def validate_semver(version: str, previous_version_str: Optional[str], semver_type: SemverAutomaticType):

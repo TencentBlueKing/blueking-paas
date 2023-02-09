@@ -32,7 +32,7 @@ class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate_server_config(self, conf: Dict) -> Dict:
-        if type(conf) != dict:
+        if not isinstance(conf, dict):
             raise ValidationError(_('服务配置格式必须为 Dict'))
         return conf
 
@@ -82,7 +82,7 @@ class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):
 
     @staticmethod
     def _validate_display_info(display_info: Dict) -> Dict:
-        if type(display_info) != dict:
+        if not isinstance(display_info, dict):
             raise ValidationError(_('展示信息格式必须为 Dict'))
 
         # 如果填写 display_info，则必须包含键 name，description
@@ -97,7 +97,7 @@ class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):
 
     @staticmethod
     def _validate_oauth_display_info(display_info: Dict) -> Dict:
-        if type(display_info) != dict:
+        if not isinstance(display_info, dict):
             raise ValidationError(_('OAuth 展示信息格式必须为 Dict'))
 
         available_fields = {'icon', 'display_name', 'address', 'description', 'auth_docs'}

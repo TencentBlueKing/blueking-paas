@@ -29,7 +29,7 @@ from paasng.dev_resources.sourcectl.exceptions import DoesNotExistsOnGitServer
 from paasng.dev_resources.sourcectl.models import GitProject
 
 
-class GitLabApiClient(object):
+class GitLabApiClient:
     def __init__(self, api_url, username=None, password=None, **kwargs):
         self.gl = gitlab.Gitlab(
             api_url,

@@ -114,7 +114,7 @@ class TestFilterByEnvironmentName:
 
         qs = ConfigVar.objects.filter(module=bk_module).filter_by_environment_name(environment_name)
         assert qs.count() == length
-        assert set(x.key for x in qs) == keys
+        assert {x.key for x in qs} == keys
 
 
 @pytest.fixture

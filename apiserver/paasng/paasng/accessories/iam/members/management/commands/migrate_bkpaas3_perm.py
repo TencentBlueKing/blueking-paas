@@ -142,7 +142,7 @@ class Command(BaseCommand):
         print(f'---------------- migrate {self.total_count} applications role data finished! ----------------')
         print(f'-------------- success: {len(self.success_records)} failed: {len(self.failed_records)} --------------')
 
-    def _migrate_single(self, idx: int, app: Dict) -> List:
+    def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901
         """迁移单个应用权限数据"""
         app_code, app_name, creator = app['code'], app['name'], app['creator']
         migrate_logs = []

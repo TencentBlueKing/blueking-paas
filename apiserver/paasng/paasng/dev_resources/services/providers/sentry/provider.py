@@ -152,7 +152,7 @@ class SentryProvider(BaseProvider):
 
         # 3. remove use from team
         removable_members = [(member_id, username) for member_id, username in members if username not in developers]
-        for member_id, username in removable_members:
+        for member_id, __ in removable_members:
             try:
                 self.client.delete_team_member(team=team_slug, member_id=member_id)
             except Exception:

@@ -16,11 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 from dataclasses import asdict
 from itertools import groupby
-from operator import attrgetter, itemgetter
+from operator import attrgetter
 from typing import TYPE_CHECKING, Dict, List
 
 from django.utils.translation import gettext_lazy as _
@@ -52,7 +51,7 @@ class BaseEnvironmentVariableMigration(BaseMigration):
             var = asdict(v)
             for module in self.context.app.modules.all():
                 var.pop('environment_name', None)
-                kwargs = {"module": module, "is_global": True if environment is None else False, **var}
+                kwargs = {"module": module, "is_global": bool(environment is None), **var}
                 if environment is not None:
                     kwargs['environment'] = environment
                 else:
@@ -75,7 +74,7 @@ class BaseEnvironmentVariableMigration(BaseMigration):
         session = console_db.get_scoped_session()
         return AppEnvVarManger(session).list(self.legacy_app.code)
 
-    def transform_system_envs(self, evns: dict) -> List[EnvItem]:
+    def transform_system_envs(self, evns: Dict) -> List[EnvItem]:
         # 系统的环境变量都是内置环境变量
         return [EnvItem(key=k, value=v, description='', is_builtin=True) for k, v in evns.items()]
 

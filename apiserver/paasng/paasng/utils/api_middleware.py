@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 import time
-from builtins import object
 from typing import Dict
 
 import redis
@@ -34,7 +33,7 @@ from paasng.utils.basic import get_client_ip
 logger = logging.getLogger(__name__)
 
 
-class ApiLogMiddleware(object):
+class ApiLogMiddleware:
     project_code = 'bk-paas-ng'
     index_name = 'log-paas_ng-{date}'
 

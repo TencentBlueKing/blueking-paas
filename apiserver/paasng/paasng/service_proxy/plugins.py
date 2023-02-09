@@ -148,7 +148,7 @@ def list_application_permissions(user: User, obj: Application) -> Dict[str, bool
 
     return perm.resource_inst_multi_actions_allowed(
         username=perm_ctx.username,
-        action_ids=[action for action in AppAction],
+        action_ids=list(AppAction),
         resources=perm.make_res_request(perm_ctx).make_resources(perm_ctx.resource_id),
     )
 

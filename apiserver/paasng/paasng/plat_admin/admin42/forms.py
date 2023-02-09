@@ -36,7 +36,7 @@ class JSONEnvironmentFieldMixin:
 class AppSlugBuilderForm(ModelForm, JSONEnvironmentFieldMixin):
     region = ChoiceField(choices=RegionType.get_choices())
 
-    class Meta(object):
+    class Meta:
         model = AppSlugBuilder
         exclude = ('updated', 'created', 'modules', 'buildpacks')
 
@@ -44,7 +44,7 @@ class AppSlugBuilderForm(ModelForm, JSONEnvironmentFieldMixin):
 class AppSlugRunnerForm(ModelForm, JSONEnvironmentFieldMixin):
     region = ChoiceField(choices=RegionType.get_choices())
 
-    class Meta(object):
+    class Meta:
         model = AppSlugRunner
         exclude = ('updated', 'created', 'modules')
 
@@ -52,6 +52,6 @@ class AppSlugRunnerForm(ModelForm, JSONEnvironmentFieldMixin):
 class AppBuildPackForm(ModelForm, JSONEnvironmentFieldMixin):
     region = ChoiceField(choices=RegionType.get_choices())
 
-    class Meta(object):
+    class Meta:
         model = AppBuildPack
         exclude = ('updated', 'created', 'modules')

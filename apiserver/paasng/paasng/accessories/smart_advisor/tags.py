@@ -16,13 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
 from typing import List, Type
 
 from django.utils.encoding import force_text
 
 
-class Tag(object):
+class Tag:
     """Tag for recommendation
 
     :param str tag_type: tag type string
@@ -78,7 +77,7 @@ TAG_TYPES: List[Type[BaseFixedTypeTag]] = [
 TAG_TYPES_MAP = {t.tag_type: t for t in TAG_TYPES}
 
 
-class TagSet(object):
+class TagSet:
     """All tags set"""
 
     def __init__(self):

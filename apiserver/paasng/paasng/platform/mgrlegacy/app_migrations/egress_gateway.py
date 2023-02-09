@@ -38,7 +38,7 @@ class EgressGatewayMigration(BaseMigration):
         for env in module.get_envs():
             engine_app = env.engine_app
             try:
-                resp = controller_client.app_rcsbinding__create(engine_app.region, engine_app.name)
+                controller_client.app_rcsbinding__create(engine_app.region, engine_app.name)
             except BadResponse as e:
                 self.add_log(
                     _("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=e.get_error_message())

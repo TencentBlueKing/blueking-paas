@@ -20,8 +20,6 @@ from typing import Type
 
 from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, StructuredEnum
 
-from paasng.utils.basic import ChoicesEnum
-
 
 class ApplicationType(str, StructuredEnum):
     DEFAULT = EnumField('default')  # 默认类型：无任何定制逻辑
@@ -88,16 +86,6 @@ class AppEnvironment(str, StructuredEnum):
     PRODUCTION = EnumField("prod", label="生产环境")
 
 
-class AppResourceType(ChoicesEnum):
-    # deprecated
-    """app的资源类型"""
-
-    ONLINE_RESOURCE = 1
-    APP_RECORD = 2
-
-    _choices_labels = ((ONLINE_RESOURCE, u"线上资源"), (APP_RECORD, u'应用记录'))
-
-
 class AppFeatureFlag(FeatureFlag):
     """App feature 常量表"""
 
@@ -111,6 +99,7 @@ class AppFeatureFlag(FeatureFlag):
     PA_INGRESS_ANALYTICS = FeatureFlagField(label="访问日志统计功能")
     PA_USER_DIMENSION_SHOW_DEPT = FeatureFlagField(label="按用户维度拆分展示部门字段")
     APPLICATION_DESCRIPTION = FeatureFlagField(label="部署时使用应用描述文件", default=True)
+    MODIFY_ENVIRONMENT_VARIABLE = FeatureFlagField(label="修改环境变量", default=True)
 
 
 class LightApplicationViewSetErrorCode(str, StructuredEnum):

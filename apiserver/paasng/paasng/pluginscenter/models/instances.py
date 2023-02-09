@@ -111,7 +111,7 @@ class PluginMarketInfo(AuditedModel):
 
     plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
 
-    category = models.CharField(verbose_name="分类", max_length=16, db_index=True)
+    category = models.CharField(verbose_name="分类", max_length=64, db_index=True)
     introduction = TranslatedFieldWithFallback(models.CharField(max_length=255, verbose_name="简介"))
     description = TranslatedFieldWithFallback(models.TextField(verbose_name="详细描述", null=True))
     contact = models.TextField(verbose_name="联系人", help_text="以分号(;)分割")

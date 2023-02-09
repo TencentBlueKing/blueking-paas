@@ -312,6 +312,10 @@
         .label {
             display: inline-block;
             line-height: 20px;
+            background: linear-gradient(to left, transparent 0%, transparent 50%,#979ba5 50%,#979ba5 100%);
+            background-size: 10px 1px;
+            background-repeat: repeat-x;
+            background-position-y: 100%;
         }
     }
 </style>

@@ -176,6 +176,7 @@
     import xss from 'xss';
     import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -619,7 +620,7 @@
                     }
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
-                        item.timestamp = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
+                        item.timestamp = this.formatTime(item.timestamp);
                         if (item.detail) {
                             for (const key in item.detail) {
                                 item.detail[key] = this.highlight(logXss.process(item.detail[key]));
@@ -733,6 +734,10 @@
 
             handleHideFilter (field) {
                 this.fieldPopoverShow[field] = false;
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

@@ -110,7 +110,11 @@ def get_es_term(query_term: str, mappings: dict) -> str:
         # 去掉最后一个 "properties"
         # ["json", "levelname"] -> ["json", "properties", "levelname"]
         parts = list(chain.from_iterable(zip(parts, ["properties"] * len(parts))))[:-1]
-        target = reduce(operator.getitem, parts, mappings)
+        try:
+            target = reduce(operator.getitem, parts, mappings)
+        except KeyError:
+            logger.warning("can't parse %s from mappings, return what it is", query_term)
+            return query_term
 
     if target["type"] == "text":
         return f"{query_term}.keyword"

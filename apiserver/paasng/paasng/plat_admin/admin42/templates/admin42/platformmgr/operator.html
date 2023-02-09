@@ -2,7 +2,11 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-operator-list" style="width: 100%;" class="p20">
-    <b>云原生应用默认部署集群</b>: $[ cnativeDefaultCluster ]
+    <b>云原生应用默认部署集群</b>:
+    <span v-for="(cluster_name, region) in cnativeDefaultCluster">
+        <bk-tag theme="success" v-if="cluster_name"><b> $[ region ]: $[ cluster_name ] </b></bk-tag>
+        <bk-tag v-else><b> $[ region ]: -- </b></bk-tag>
+    </span>
     <bk-table :data="data" style="margin-top: 20px;">
         <bk-table-column label="集群名称" prop="cluster_name" align="center"></bk-table-column>
         <bk-table-column label="集群 ID" min-width="100" align="center">
@@ -41,11 +45,11 @@
                 </div>
             </template>
         </bk-table-column>
-        <bk-table-column label="BkApp (ready / total)" align="center">
+        <bk-table-column label="BkApp ( ready / total )" align="center">
             <template slot-scope="props">
                 <span
                   v-if="props.row.crds && props.row.crds.BkApp"
-                  v-bk-tooltips="{content: 'Not Ready BkApps: ' + props.row.BkApp.not_ready_bkapps }"
+                  v-bk-tooltips="genTooltipsConfig(props.row)"
                 >$[ props.row.BkApp.ready_cnt ] / $[ props.row.BkApp.total_cnt ]</span>
                 <span v-else>--</span>
             </template>
@@ -87,11 +91,6 @@
                 this.list()
             },
             methods: {
-                processData: function(data) {
-                    return new Promise(resolve => {
-                        resolve(data)
-                    })
-                },
                 list: async function () {
                     const el = this.$bkLoading({title: '加载中'})
                     try {
@@ -114,8 +113,12 @@
                         })
                     }
                 },
-                handleRequestError: function (res) {
-                    console.error(res)
+                genTooltipsConfig: function (row) {
+                    return {
+                        content: 'Not Ready:<br>' + row.BkApp.not_ready_bkapps.join('<br>'),
+                        disabled: !row.BkApp.not_ready_bkapps || row.BkApp.not_ready_bkapps.length === 0,
+                        allowHTML: true
+                    }
                 }
             },
         })

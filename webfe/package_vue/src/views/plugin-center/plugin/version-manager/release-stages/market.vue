@@ -101,7 +101,7 @@
                 },
                 curPluginData: {},
                 editorOption: {
-                    placeholder: '开始编辑...'
+                    placeholder: this.$t('开始编辑...')
                 },
                 rules: {
                     category: [

@@ -116,7 +116,7 @@ class PluginFeature(BaseModel):
 class PluginBasicInfoDefinition(BaseModel):
     """插件基础信息定义"""
 
-    id: FieldSchema = Field(description="插件标识")
+    id: FieldSchema = Field(description="插件 ID")
     name: FieldSchema = Field(description="插件名称")
     releaseMethod: Literal["code", "sourcePackage", "image"] = Field(description="插件发布方式")
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")

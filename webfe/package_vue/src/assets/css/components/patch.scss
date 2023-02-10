@@ -210,6 +210,10 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 
 .tippy-popper {
     max-width: 1000px !important;
+    // tooltips 小三角消失处理
+    .tippy-arrow {
+        height: auto;
+    }
 }
 
 .tippy-popper[x-placement^=top] [data-animation=slide-toggle][data-state=visible] {

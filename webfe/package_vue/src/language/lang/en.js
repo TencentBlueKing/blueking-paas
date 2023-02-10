@@ -117,7 +117,7 @@ export default {
   '权限管理功能目前只支持主模块': 'The permission management function only supports the default module',
   '新增模块': 'Add module',
   '应用目前不允许创建其它模块': 'The app is currently not allowed to create other modules',
-  '当前应用不允许新增模块': 'He current app does not allow new modules',
+  '当前应用不允许新增模块': 'The current app does not allow new modules',
   '帮助': 'Help',
   '访问入口': 'Network & Domains',
   '代码检查': 'Code Analysis',
@@ -2077,5 +2077,9 @@ export default {
   '仅管理员可添加成员': 'Only administrators can add members',
   '插件创建成功！': 'Plugin created successfully!',
   '提交者': 'submitter',
-  '请选择代码分支': 'Please select a code branch'
+  '请选择代码分支': 'Please select a code branch',
+  '应用已迁移到插件开发中心，本页面仅做展示用，如需操作请到': 'The app has been migrated to the Plugin Center, this page is for demonstration purposes only, if you need to operate  it please go to',
+  '插件开发- 配置管理页面': 'the Plugin-Center - Configurations',
+  '。': '.',
+  '当前应用不支持配置环境变量。': 'The current application does not support the configuration of environment variables.'
 };

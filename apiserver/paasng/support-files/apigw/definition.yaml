@@ -1,7 +1,7 @@
 apigateway:
   description: PaaS3.0 开发者中心 API 网关, 官方内置网关，请勿修改
   description_en: PaaS3.0 developer center, official built-in gateway, please do not modify
-  is_public: true:q
+  is_public: true
   maintainers:
     - "admin"
 

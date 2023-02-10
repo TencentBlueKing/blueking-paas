@@ -255,14 +255,18 @@ class GitClient:
             env=environment_variables,
             cwd=command.cwd,
         ) as proc:
+            timeout = False
             try:
                 stdout, _ = proc.communicate(timeout=self._default_timeout)
             except subprocess.TimeoutExpired:
                 proc.kill()
+                timeout = True
+
+            # 不能在 except 中抛异常, 否则 TimeoutExpired 会自动被 traceback 跟踪导致暴露明文的 command 指令
+            if timeout:
                 raise GitCommandExecutionError(
                     f"Command failed: cmd <{command}> execution timeout({self._default_timeout}s)"
                 )
-
             if proc.returncode != success_code:
                 raise GitCommandExecutionError(
                     f"Command failed with ({proc.returncode}):\n>>> {command}\n{stdout.decode()}"

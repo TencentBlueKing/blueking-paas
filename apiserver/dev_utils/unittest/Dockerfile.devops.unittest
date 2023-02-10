@@ -50,7 +50,6 @@ RUN poetry config virtualenvs.create false && poetry config experimental.new-ins
 
 WORKDIR /app
 ADD ./paasng ./paasng
-ADD ./mypy.ini .
 RUN mkdir -p ./public
 COPY --from=Admin42 /build/paasng/public ./public
 

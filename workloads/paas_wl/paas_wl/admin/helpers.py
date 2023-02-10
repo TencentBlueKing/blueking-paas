@@ -36,7 +36,11 @@ def detect_operator_status(cluster_name: str) -> Dict:
         'controller': {},
     }
 
-    client = get_client_by_cluster_name(cluster_name)
+    try:
+        client = get_client_by_cluster_name(cluster_name)
+    except ValueError:
+        # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
+        return result
 
     # 检查集群中是否存在 Operator 需要的 CRD 定义
     for crd in KCustomResourceDefinition(client).ops_label.list(labels={}).items:
@@ -73,7 +77,12 @@ def detect_operator_status(cluster_name: str) -> Dict:
 
 def fetch_paas_cobj_info(cluster_name: str, crd_exists: Dict[str, bool]) -> Dict:
     result: Dict[str, Dict] = {BkApp.kind: {}, DomainGroupMapping.kind: {}}
-    client = get_client_by_cluster_name(cluster_name)
+
+    try:
+        client = get_client_by_cluster_name(cluster_name)
+    except ValueError:
+        # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
+        return result
 
     # 统计 BkApp NotReady & 总数量
     if crd_exists[BkApp.kind]:

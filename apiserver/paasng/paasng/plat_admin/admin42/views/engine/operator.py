@@ -36,7 +36,13 @@ class OperatorManageView(GenericTemplateView):
         if 'view' not in kwargs:
             kwargs['view'] = self
 
-        kwargs['cnative_default_cluster'] = {
-            region: get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region) for region in get_all_regions().keys()
-        }
+        cnative_default_cluster = {}
+        for region in get_all_regions().keys():
+            try:
+                cluster_name = get_region_aware('CLOUD_NATIVE_APP_DEFAULT_CLUSTER', region)
+            except KeyError:
+                cluster_name = '--'
+            cnative_default_cluster[region] = cluster_name
+
+        kwargs['cnative_default_cluster'] = cnative_default_cluster
         return kwargs

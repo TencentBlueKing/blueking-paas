@@ -20,7 +20,7 @@ from typing import Dict
 
 from kubernetes.client import ApiException
 
-from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.resources.base.base import EnhancedApiClient
 from paas_wl.resources.base.crd import BkApp, DomainGroupMapping
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KDeployment, KNamespace
@@ -28,15 +28,13 @@ from paas_wl.resources.base.kres import KCustomResourceDefinition, KDeployment, 
 from .constants import BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE
 
 
-def detect_operator_status(cluster_name: str) -> Dict:
+def detect_operator_status(client: EnhancedApiClient) -> Dict:
     """获取指定集群中 Operator 的部署情况"""
     result = {
         'namespace': False,
         'crds': {BkApp.kind: False, DomainGroupMapping.kind: False},
         'controller': {},
     }
-
-    client = get_client_by_cluster_name(cluster_name)
 
     # 检查集群中是否存在 Operator 需要的 CRD 定义
     for crd in KCustomResourceDefinition(client).ops_label.list(labels={}).items:
@@ -71,9 +69,8 @@ def detect_operator_status(cluster_name: str) -> Dict:
     return result
 
 
-def fetch_paas_cobj_info(cluster_name: str, crd_exists: Dict[str, bool]) -> Dict:
+def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool]) -> Dict:
     result: Dict[str, Dict] = {BkApp.kind: {}, DomainGroupMapping.kind: {}}
-    client = get_client_by_cluster_name(cluster_name)
 
     # 统计 BkApp NotReady & 总数量
     if crd_exists[BkApp.kind]:

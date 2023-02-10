@@ -128,10 +128,10 @@
         </bk-table-column>
         <bk-table-column
           :label="$t('操作')"
-          :width="localLanguage === 'en' ? 280 : 200"
+          :width="localLanguage === 'en' ? 280 : 220"
         >
           <template slot-scope="{ row }">
-            <div class="table-operate-buttons">
+            <div :class="['table-operate-buttons', localLanguage === 'en' ? 'en-operate' : 'zh-operate']">
               <bk-button
                 v-if="row.status === 'waiting-approval' || row.status === 'approval-failed'"
                 theme="primary"
@@ -151,6 +151,7 @@
                   {{ row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布') }}
                 </bk-button>
                 <bk-button
+                  class="versions-btn"
                   theme="primary"
                   size="small"
                   text
@@ -161,6 +162,7 @@
               </template>
               <bk-button
                 v-if="row.status === 'approval-failed'"
+                class="del-btn"
                 theme="primary"
                 size="small"
                 text
@@ -535,11 +537,24 @@
     }
 </style>
 
-<style>
+<style lang="scss">
     .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
         height: 130px;
     }
     .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
         color: #3a84ff !important;
+    }
+    .bk-plugin-wrapper {
+        .table-operate-buttons .bk-button-text>div {
+            text-align: left;
+        }
+        .table-operate-buttons.en-operate .bk-button-text>div {
+            width: 92px !important;
+        }
+        .table-operate-buttons.zh-operate .bk-button-text>div,
+        .table-operate-buttons.en-operate .versions-btn>div,
+        .table-operate-buttons.en-operate .del-btn>div {
+            width: 50px !important;
+        }
     }
 </style>

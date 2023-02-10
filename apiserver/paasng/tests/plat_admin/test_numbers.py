@@ -82,10 +82,11 @@ class TestLegacyAppDataBuilder:
 
 @skip_if_legacy_not_configured()
 class TestCalculateUserContribution:
-    def test_exception(self):
+    def test_exception_not_mocked(self):
         create_app(owner_username='user1')
         user, _, apps = list(group_apps_by_developers(filter_developers=['user1']))[0]
-        with pytest.raises(RuntimeError):
+        # Svn file not found
+        with pytest.raises(FileNotFoundError):
             _ = calculate_user_contribution_in_app(user, apps[0])
 
     def test_with_mock(self):

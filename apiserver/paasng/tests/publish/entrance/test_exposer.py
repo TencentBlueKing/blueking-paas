@@ -396,8 +396,8 @@ def test_get_market_address(bk_app):
 
 
 def test_list_custom_addresses(bk_stag_env, bk_prod_env, setup_addrs):
-    assert list_custom_addresses(bk_stag_env) == []
-    assert list_custom_addresses(bk_prod_env) == [
+    assert list_custom_addresses(bk_prod_env) == []
+    assert list_custom_addresses(bk_stag_env) == [
         Address("custom", "http://custom.example.com/"),
     ]
 

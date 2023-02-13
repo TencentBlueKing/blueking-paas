@@ -428,8 +428,8 @@ class LogClient:
         except AttributeError as e:
             raise ScanError(scroll_id, "Can't not get next scroll_id from ES.") from e
 
-        result_type = result_type or StandardOutputLogScroll
-        return result_type(scroll_id=new_scroll_id, logs=logs, total=logs._search.count())
+        r_type = result_type or StandardOutputLogScroll
+        return r_type(scroll_id=new_scroll_id, logs=logs, total=logs._search.count())
 
 
 class SmartTimeRange:

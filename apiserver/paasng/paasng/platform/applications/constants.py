@@ -86,7 +86,7 @@ class AppEnvironment(str, StructuredEnum):
     PRODUCTION = EnumField("prod", label="生产环境")
 
 
-class AppFeatureFlag(FeatureFlag):
+class AppFeatureFlag(FeatureFlag):  # type: ignore
     """App feature 常量表"""
 
     RELEASE_TO_BLUEKING_MARKET = FeatureFlagField(label="发布 至蓝鲸应用市场")

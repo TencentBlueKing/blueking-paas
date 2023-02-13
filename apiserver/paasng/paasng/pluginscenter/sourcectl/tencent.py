@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Union
 from urllib.parse import quote, urljoin, urlparse
 
 import arrow
@@ -133,7 +133,7 @@ class PluginRepoAccessor:
         # 指定你的当前时区，默认是 0 时区，范围 (-11,11)
         time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
 
-        params = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
+        params: Dict[str, Union[str, int]] = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
         resp = self._session.get(urljoin(self._api_url, _url), params=params)
 
         try:

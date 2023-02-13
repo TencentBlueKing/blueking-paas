@@ -24,7 +24,7 @@ import tarfile
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import IO, List, Optional, Union
+from typing import IO, List, Literal, Optional, Union
 
 from paasng.dev_resources.sourcectl.models import SourcePackage
 from paasng.dev_resources.sourcectl.package.downloader import download_file_via_url
@@ -164,7 +164,7 @@ class ZipClient(BasePackageClient):
         self,
         file_path: Optional[str] = None,
         file_obj: Optional[IO[bytes]] = None,
-        mode: str = "r",
+        mode: Literal['r', 'w', 'x', 'a'] = "r",
         relative_path: str = "./",
     ):
         """从本地文件或 IO Stream 对象创建操作该 Zip 包的客户端

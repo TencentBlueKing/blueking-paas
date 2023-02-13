@@ -22,6 +22,12 @@ DOCKER_CONFIG_JSON ?= ""
 # 待自动更新的 helm chart 目标目录
 HELM_CHART_TARGET_DIR ?= "/tmp/bkpaas-app-operator"
 
+ifdef VERSION
+    VERSION=${VERSION}
+else
+    VERSION=$(shell git describe --always)
+endif
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -68,8 +74,8 @@ generate: controller-gen ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代�
 
 .PHONY: fmt
 fmt: ## 执行 golines，gofumpt ...
-	golines ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
-	gofumpt -l -w .
+	$(GOLINES) ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
+	$(GOFUMPT) -l -w .
 
 .PHONY: vet
 vet: ## 执行 go vet ./...
@@ -86,9 +92,13 @@ test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输�
 
 .PHONY: lint
 lint: ## 执行 golangci-lint run
-	# if you have a local vendor dir, uncomment the line below
-	# export GOFLAGS=-mod=vendor
-	golangci-lint run
+	$(GOCILINT) run
+
+.PHONY: update-helm-chart
+update-helm-chart: manifests  ## 根据 kustomize 渲染出的 manifest，更新 helm-charts
+	rm -rf ./bkpaas-app-operator
+	$(KUSTOMIZE) build config/default | $(HELMIFY) bkpaas-app-operator
+	python3 ./scripts/update_helm_chart.py -d ${HELM_CHART_TARGET_DIR}
 
 ##@ 构建命令
 
@@ -102,17 +112,15 @@ run: manifests generate fmt vet ## 本地运行 Controller（现阶段需要添�
 
 .PHONY: docker-build
 docker-build: ## 构建 Manager 镜像，需指定 IMG 参数
-	docker build -t ${IMG} .
+	docker build -t ${IMG} --no-cache .
 
 .PHONY: docker-push
 docker-push: ## 推送 Manager 镜像，需指定 IMG 参数
 	docker push ${IMG}
 
-.PHONY: update-helm-chart
-update-helm-chart: manifests  ## 根据 kustomize 渲染出的 manifest，更新 helm-charts
-	rm -rf ./bkpaas-app-operator
-	$(KUSTOMIZE) build config/default | $(HELMIFY) bkpaas-app-operator
-	python3 ./scripts/update_helm_chart.py -d ${HELM_CHART_TARGET_DIR}
+.PHONY: docker-dev
+docker-dev: ## 构建用于执行开发调试 / 单元测试的 docker 镜像
+	docker build -f ./Dockerfile-Dev -t bkpaas-app-operator-dev:$(VERSION) --no-cache .
 
 ##@ 部署命令
 
@@ -153,6 +161,9 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GINKGO ?= $(LOCALBIN)/ginkgo
+GOLINES ?= $(LOCALBIN)/golines
+GOFUMPT ?= $(LOCALBIN)/gofumpt
+GOCILINT ?= $(LOCALBIN)/golangci-lint
 HELMIFY ?= $(LOCALBIN)/helmify
 
 ## Tool Versions
@@ -179,6 +190,21 @@ $(ENVTEST): $(LOCALBIN)
 ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
+
+.PHONY: golines
+golines: $(GOLINES) ## Download golines locally if necessary
+$(GOLINES): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@latest
+
+.PHONY: gofumpt
+gofumpt: $(GOFUMPT) ## Download gofumpt locally if necessary
+$(GOFUMPT): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@latest
+
+.PHONY: golangci-lint
+golangci-lint: $(GOCILINT) ## Download golangci-lint locally if necessary
+$(GOCILINT): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
 
 .PHONY: helmify
 helmify: $(HELMIFY) ## Download helmify locally if necessary

@@ -134,9 +134,9 @@ class ServiceInstanceObj:
         uuid: str,
         credentials: Dict,
         config: Dict,
-        should_hidden_fields: List = None,
-        should_remove_fields: List = None,
-        create_time: 'datetime.datetime' = None,
+        should_hidden_fields: Optional[List] = None,
+        should_remove_fields: Optional[List] = None,
+        create_time: Optional['datetime.datetime'] = None,
     ):
         self.uuid = uuid
         self._credentials = credentials
@@ -253,18 +253,18 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def bind_service(self, service: ServiceObj, module: Module, specs: Dict[str, str] = None) -> str:
+    def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
         raise NotImplementedError
 
     @abstractmethod
     def list_unprovisioned_rels(
-        self, engine_app: EngineApp, service: ServiceObj = None
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[EngineAppInstanceRel, None, None]:
         raise NotImplementedError
 
     @abstractmethod
     def list_provisioned_rels(
-        self, engine_app: EngineApp, service: ServiceObj = None
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[EngineAppInstanceRel, None, None]:
         raise NotImplementedError
 
@@ -455,7 +455,6 @@ class ServiceSpecificationHelper:
 
 @dataclass
 class ModuleSpecificationsHelper:
-
     service: 'ServiceObj'
     module: 'Module'
     specs: Dict[str, str]

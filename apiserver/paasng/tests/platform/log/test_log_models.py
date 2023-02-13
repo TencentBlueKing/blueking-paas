@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Type
+from typing import List, Optional, Type
 
 import pytest
 from elasticsearch_dsl.response.hit import Hit
@@ -33,7 +33,7 @@ class TestLogLine:
     def make_fake_hit(self):
         """一个用于测试的日志返回结果"""
 
-        def _make_fake_hit(force_source: dict, deleting_field: List[str] = None):
+        def _make_fake_hit(force_source: dict, deleting_field: Optional[List[str]] = None):
             template = {
                 '_index': 'fake_index',
                 '_type': 'doc',
@@ -95,7 +95,6 @@ class TestLogLine:
     @pytest.fixture
     def make_fake_ingress_hit(self, make_fake_hit):
         def _make_fake_ingress_hit(force_source: dict, deleting_fields: List[str]):
-
             ingress_detail = {
                 "engine_app_name": "aaa",
                 "method": "aaa",

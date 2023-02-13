@@ -550,7 +550,7 @@ class RemoteServiceMgr(BaseServiceMgr):
                     continue
                 yield obj
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: Dict[str, str] = None) -> str:
+    def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
         """Bind a service to module"""
         helper = ModuleSpecificationsHelper(service=service, module=module, specs=specs or {})
         helper.fill_protected_specs()
@@ -564,7 +564,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         return binder.bind_without_plan(module).pk
 
     def list_all_rels(
-        self, engine_app: EngineApp, service_id: str = None
+        self, engine_app: EngineApp, service_id: Optional[str] = None
     ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
         """Return all attachments with engine_app"""
         qs = engine_app.remote_service_attachment.all()
@@ -582,7 +582,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         return attachment
 
     def list_unprovisioned_rels(
-        self, engine_app: EngineApp, service: ServiceObj = None
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
         """Return all unprovisioned engine_app <-> remote service instances"""
         qs = engine_app.remote_service_attachment.filter(service_instance_id__isnull=True)
@@ -592,7 +592,7 @@ class RemoteServiceMgr(BaseServiceMgr):
             yield self.transform_rel_db_obj(attachment)
 
     def list_provisioned_rels(
-        self, engine_app: EngineApp, service: ServiceObj = None
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[RemoteEngineAppInstanceRel, None, None]:
         """Return all provisioned engine_app <-> remote service instances"""
         qs = engine_app.remote_service_attachment.exclude(service_instance_id__isnull=True)
@@ -688,7 +688,7 @@ class RemoteServiceBinder:
         self.service = service
 
     @atomic()
-    def bind(self, module: Module, specs: Dict[str, str] = None):
+    def bind(self, module: Module, specs: Optional[Dict[str, str]] = None):
         """Create the binding relationship in local database"""
         specs_helper = ServiceSpecificationHelper(
             self.service.specifications,

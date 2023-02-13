@@ -20,7 +20,7 @@ import logging
 from dataclasses import asdict
 from itertools import groupby
 from operator import attrgetter
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 
@@ -45,7 +45,9 @@ class BaseEnvironmentVariableMigration(BaseMigration):
     def _get_environment(self, environment_name: str):
         return self.context.app.envs.get(environment=environment_name)
 
-    def _add_environment_variable(self, variables: List[EnvItem], environment: 'ApplicationEnvironment' = None):
+    def _add_environment_variable(
+        self, variables: List[EnvItem], environment: Optional['ApplicationEnvironment'] = None
+    ):
         data = []
         for v in variables:
             var = asdict(v)

@@ -70,7 +70,7 @@ class PlugableAppConfig(AppConfig):
 class ReplaceableFunction:
     """A dummy placeholder to register extra logic in other Edition"""
 
-    def __init__(self, default_factory: Callable = None):
+    def __init__(self, default_factory: Optional[Callable] = None):
         self.default_factory = default_factory
         self.handler: Optional[Callable] = None
 

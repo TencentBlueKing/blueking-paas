@@ -144,7 +144,6 @@ class RabbitMQProvider(BaseProvider):
         """
         return True, message
         """
-        pass
 
     def stats(self, resource):
         raise NotImplementedError

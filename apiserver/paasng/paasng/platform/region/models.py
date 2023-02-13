@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
@@ -84,7 +83,7 @@ class RegionList(list):
         return regions[0]
 
 
-class RegionBasicInfo(object):
+class RegionBasicInfo:
     """Basic info for region
 
     :param str description: description for this region
@@ -119,7 +118,7 @@ class RegionBasicInfo(object):
         return settings.APP_LOGO_BUCKET
 
 
-class RegionMobileConfig(object):
+class RegionMobileConfig:
     def __init__(self, enabled=False, etcd_servers=None, **kwargs):
         self.enabled = enabled
         self.etcd_servers = etcd_servers

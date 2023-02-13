@@ -92,7 +92,7 @@ class SvnAccountSLZ(serializers.ModelSerializer):
     verification_code = VerificationCodeField(write_only=True, required=False, default='NEVER-MATCH')
     synced_from_paas20 = serializers.ReadOnlyField(help_text="账户信息是否来自Paas2.0")
 
-    class Meta(object):
+    class Meta:
         model = SvnAccount
         fields = ('region', 'account', 'user', 'id', "verification_code", "synced_from_paas20")
         lookup_field = "id"
@@ -108,7 +108,7 @@ class SvnAccountCreateSLZ(serializers.ModelSerializer):
         )
     ]
 
-    class Meta(object):
+    class Meta:
         model = SvnAccount
         fields = ('region', 'account', 'user', 'id')
         lookup_field = "id"

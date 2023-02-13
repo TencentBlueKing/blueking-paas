@@ -32,28 +32,28 @@ class TemplateSLZ(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate_preset_services_config(self, conf: Dict) -> Dict:
-        if type(conf) != dict:
+        if not isinstance(conf, dict):
             raise ValidationError(_("预设增强服务配置必须为 Dict 格式"))
         return conf
 
     def validate_required_buildpacks(self, required_buildpacks: List) -> List:
-        if type(required_buildpacks) != list:
+        if not isinstance(required_buildpacks, list):
             raise ValidationError(_("必须的构建工具配置必须为 List 格式"))
         return required_buildpacks
 
     def validate_processes(self, processes: Dict) -> Dict:
-        if type(processes) != dict:
+        if not isinstance(processes, dict):
             raise ValidationError(_("进程配置必须为 Dict 格式"))
         return processes
 
     def validate_tags(self, tags: List) -> List:
-        if type(tags) != list:
+        if not isinstance(tags, list):
             raise ValidationError(_("标签必须为 List 格式"))
         return tags
 
     def validate(self, attrs: Dict) -> Dict:
         enabled_regions = attrs['enabled_regions']
-        if type(enabled_regions) != list:
+        if not isinstance(enabled_regions, list):
             raise ValidationError(_("允许被使用的版本必须为 List 格式"))
 
         available_regions = get_all_regions().keys()
@@ -61,7 +61,7 @@ class TemplateSLZ(serializers.ModelSerializer):
             raise ValidationError(_("Region {} 不受支持").format(unsupported_regions))
 
         blob_url_conf = attrs['blob_url']
-        if type(blob_url_conf) != dict:
+        if not isinstance(blob_url_conf, dict):
             raise ValidationError(_("二进制包存储配置必须为 Dict 格式"))
 
         if regions := set(enabled_regions) - blob_url_conf.keys():

@@ -40,7 +40,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
     created_humanized = HumanizeDateTimeField(source="created")
     updated_humanized = HumanizeDateTimeField(source="updated")
 
-    class Meta(object):
+    class Meta:
         model = Application
         fields = '__all__'
 

@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
 from typing import Any, Callable, Dict, List
 
 from django.http import Http404, HttpRequest
@@ -28,7 +27,7 @@ from paasng.platform.modules.models import Module
 from .models import Application, ModuleEnvironment
 
 
-class ApplicationCodeInPathMixin(object):
+class ApplicationCodeInPathMixin:
     """
     Provide a shortcut to get current application and do permission checks
     """

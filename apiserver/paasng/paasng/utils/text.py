@@ -40,7 +40,7 @@ def generate_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
 RE_TAG = re.compile('<.*?>')
 
 
-def strip_html_tags(s: str, reserved_tags: Collection[str] = []) -> str:
+def strip_html_tags(s: str, reserved_tags: Collection[str] = []) -> str:  # noqa: B006
     """Remove all HTML tags in string except those matching `reserved_tags`.
 
     :param reserved_tags: Tags were reserved from removing, default to []
@@ -116,7 +116,7 @@ def calculate_percentage(x: float, y: float, decimal_places: int = 2) -> str:
         raise ValueError("decimal cannot be negative")
     result = x / y
     # 最小精度
-    min_precision = 1 / 100 / 10 ** decimal_places
+    min_precision = 1 / 100 / 10**decimal_places
     # 如果结果小于最小精度，则返回 "<最小精度%"
     if result < min_precision:
         return "<{:.{decimal_places}%}".format(min_precision, decimal_places=decimal_places)

@@ -208,7 +208,7 @@ class ApplicationBuilder(DeployStep):
 
         # Find services which SHOULD have be bound but unbound yet
         preset_service_names = set(tmpl.preset_services_config.keys())
-        bound_service_names = set(service_obj.name for service_obj in mixed_service_mgr.list_binded(module))
+        bound_service_names = {service_obj.name for service_obj in mixed_service_mgr.list_binded(module)}
         unbound_service_names = preset_service_names - bound_service_names
         if unbound_service_names:
             message = _(

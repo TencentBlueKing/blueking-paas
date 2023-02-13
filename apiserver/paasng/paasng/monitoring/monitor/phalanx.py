@@ -142,7 +142,6 @@ class Client:
         labels: Optional[Dict[Text, Text]] = None,
         genre: Optional[Dict[Text, Any]] = None,
     ) -> Optional[EventRecordResult]:
-
         result = self.request(
             "post",
             "api/v1/paas/records/",

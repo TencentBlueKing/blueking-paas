@@ -223,7 +223,7 @@ class MigrationProcess(OwnerTimestampedModel):
         return "%s[%s]" % (self.__class__, self.id)
 
 
-class MigrationContext(object):
+class MigrationContext:
     """Migration context"""
 
     def __init__(self, legacy_app, session, app=None, owner=None, migration_process=None):

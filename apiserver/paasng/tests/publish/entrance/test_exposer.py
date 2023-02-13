@@ -396,13 +396,13 @@ def test_get_market_address(bk_app):
 
 
 def test_list_custom_addresses(bk_stag_env, bk_prod_env, setup_addrs):
-    list_custom_addresses(bk_stag_env) == []
-    list_custom_addresses(bk_prod_env) == [
+    assert list_custom_addresses(bk_prod_env) == []
+    assert list_custom_addresses(bk_stag_env) == [
         Address("custom", "http://custom.example.com/"),
     ]
 
 
 def test_list_module_custom_addresses(bk_module, setup_addrs):
-    list_module_custom_addresses(bk_module) == [
+    assert list_module_custom_addresses(bk_module) == [
         Address("custom", "http://custom.example.com/"),
     ]

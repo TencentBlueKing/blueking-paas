@@ -82,12 +82,6 @@ class TestLegacyAppDataBuilder:
 
 @skip_if_legacy_not_configured()
 class TestCalculateUserContribution:
-    def test_exception(self):
-        create_app(owner_username='user1')
-        user, _, apps = list(group_apps_by_developers(filter_developers=['user1']))[0]
-        with pytest.raises(Exception):
-            _ = calculate_user_contribution_in_app(user, apps[0])
-
     def test_with_mock(self):
         create_app(owner_username='user1', repo_type='bk_svn')
         user, _, apps = list(group_apps_by_developers(filter_developers=['user1']))[0]

@@ -153,15 +153,13 @@ def plugin(pd, bk_user):
 def release(plugin):
     release: PluginRelease = G(
         PluginRelease,
-        **{
-            "plugin": plugin,
-            "source_location": plugin.repository,
-            "type": "prod",
-            "source_version_type": "branch",
-            "source_version_name": "master",
-            "version": "0.0.1",
-            "comment": "",
-        },
+        plugin=plugin,
+        source_location=plugin.repository,
+        type="prod",
+        source_version_type="branch",
+        source_version_name="master",
+        version="0.0.1",
+        comment="",
     )
     release.initial_stage_set()
     return release
@@ -177,9 +175,7 @@ def itsm_online_stage(release):
 
 @pytest.fixture
 def online_approval_service():
-    svc: ApprovalService = G(
-        ApprovalService, **{"service_name": ApprovalServiceName.ONLINE_APPROVAL.value, "service_id": 1}
-    )
+    svc: ApprovalService = G(ApprovalService, service_name=ApprovalServiceName.ONLINE_APPROVAL.value, service_id=1)
     return svc
 
 

@@ -177,7 +177,7 @@ class RedisStore(StoreMixin):
     def get_service_keys(self) -> Set[str]:
         """Get all registered service key"""
         result = self.redis.smembers(self.registered_services_key)
-        return set(force_str(i, encoding=self.encoding) for i in result)
+        return {force_str(i, encoding=self.encoding) for i in result}
 
     def bulk_upsert(self, services: List[Dict], meta_info: Optional[Dict], source_config: RemoteSvcConfig):
         """Insert the service if identical uuid does not exists, otherwise update it.

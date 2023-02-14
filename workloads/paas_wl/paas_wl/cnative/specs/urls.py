@@ -24,6 +24,15 @@ from . import views
 
 urlpatterns = [
     re_path(
-        f'^regions/{text.PVAR_REGION}/app_model_resources/$', views.AppModelResourceViewSet.as_view({'post': 'create'})
+        f'^regions/{text.PVAR_REGION}/app_model_resources/$',
+        views.AppModelResourceViewSet.as_view({'post': 'create'}),
+    ),
+    re_path(
+        '^statistics/apps/(?P<code>[^/]+)/mres/deploy_info/$',
+        views.CNativeAppStatisticsViewSet.as_view({'get': 'get_app_deploy_info'}),
+    ),
+    re_path(
+        '^statistics/mres/deploy_info/(?P<the_date>[^/]+)/$',
+        views.CNativeAppStatisticsViewSet.as_view({'get': 'list_deploy_logs'}),
     ),
 ]

@@ -16,13 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import arrow
 from rest_framework import status
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.constants import DeployStatus
+from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, create_app_resource
+from paas_wl.cnative.specs.serializers import (
+    AppDeploymentStatus,
+    AppModelResourceSerializer,
+    CreateAppModelResourceSerializer,
+    MresDeploymentLogSLZ,
+)
+from paas_wl.platform.applications.struct_models import get_structured_app
 from paas_wl.platform.system_api.views import SysViewSet
-
-from .models import AppModelResource, create_app_resource
-from .serializers import AppModelResourceSerializer, CreateAppModelResourceSerializer
 
 
 class AppModelResourceViewSet(SysViewSet):
@@ -44,3 +51,27 @@ class AppModelResourceViewSet(SysViewSet):
             region, d['application_id'], d['module_id'], resource
         )
         return Response(AppModelResourceSerializer(model_resource).data, status=status.HTTP_201_CREATED)
+
+
+class CNativeAppStatisticsViewSet(SysViewSet):
+    def get_app_deploy_info(self, request, code):
+        """查询某个云原生应用最后一次发布成功的相关信息"""
+        app = get_structured_app(code=code)
+        deploy_info = {}
+        for module_env in app.module_envs:
+            try:
+                latest_dp: AppModelDeploy = (
+                    AppModelDeploy.objects.filter_by_env(module_env)
+                    .filter(status=DeployStatus.READY)
+                    .latest("created")
+                )
+            except AppModelDeploy.DoesNotExist:
+                continue
+            deploy_info[module_env.environment] = latest_dp
+        return Response(data=AppDeploymentStatus(deploy_info).data)
+
+    def list_deploy_logs(self, request, the_date):
+        """查询云原生应用在某天的所有部署记录"""
+        start, end = arrow.get(arrow.get(the_date)).span("day")
+        qs = AppModelDeploy.objects.filter(created__gte=start.datetime, created__lte=end.datetime)
+        return Response(data=MresDeploymentLogSLZ(qs, many=True).data)

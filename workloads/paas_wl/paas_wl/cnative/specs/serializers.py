@@ -141,3 +141,25 @@ class MresStatusSLZ(serializers.Serializer):
     ingress = MresIngressInfoSLZ()
     conditions = MresConditionSLZ(many=True)
     events = KubeEventSLZ(many=True)
+
+
+class AppDeploymentStatus(serializers.Serializer):
+    stag = MresDeploymentStatusSLZ(allow_null=True)
+    prod = MresDeploymentStatusSLZ(allow_null=True)
+
+
+class MresDeploymentLogSLZ(serializers.Serializer):
+    """云原生应用发布记录"""
+
+    application_id = serializers.CharField(help_text="Application.pk")
+    module_id = serializers.CharField(help_text="Module.pk")
+    environment_name = serializers.CharField(help_text="环境名称")
+
+    deploy_id = serializers.IntegerField(help_text="部署ID", source="pk")
+    status = serializers.ChoiceField(choices=DeployStatus.get_choices(), default=DeployStatus.UNKNOWN)
+    reason = serializers.CharField(allow_blank=True)
+    message = serializers.CharField(allow_blank=True)
+    last_transition_time = serializers.DateTimeField()
+
+    operator = serializers.CharField(source='operator.username', help_text="操作人")
+    created = serializers.DateTimeField(help_text="发布时间")

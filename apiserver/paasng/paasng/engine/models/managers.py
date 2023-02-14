@@ -115,7 +115,7 @@ class DeployOperationManager:
         self.module = module
         self.model_classes: List[Type[Model]] = [Deployment, OfflineOperation]
 
-    def has_pending(self, environment: str = None) -> bool:
+    def has_pending(self, environment: Optional[str] = None) -> bool:
         """是否存在正在进行的操作"""
         envs = self.module.envs.all()
         if environment:

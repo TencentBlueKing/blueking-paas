@@ -71,6 +71,14 @@ class ControllerClient:
         """
         return self.request('POST', f'/regions/{region}/app_model_resources/', desired_code=codes.created, json=data)
 
+    def retrieve_cnative_app_deploy_info(self, app_code: str) -> Dict:
+        """retrieve cloud-native app deploy info"""
+        return self.request('GET', f'/statistics/apps/{app_code}/mres/deploy_info/')
+
+    def list_cnative_app_deploy_logs(self, the_date: str) -> Dict:
+        """list all cloud-native app deploy logs at the_date"""
+        return self.request('GET', f'/statistics/mres/deploy_info/{the_date}/')
+
     def app__delete(self, region, app_name):
         """"""
         return self.request(

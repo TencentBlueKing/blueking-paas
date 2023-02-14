@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import string
 from unittest import mock
 
 import pytest
@@ -24,7 +25,9 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.pluginscenter.constants import MarketInfoStorageType
+from paasng.accounts.constants import AccountFeatureFlag as AFF
+from paasng.accounts.models import AccountFeatureFlag
+from paasng.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod
 from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
@@ -78,12 +81,15 @@ def pd():
     pd.basic_info_definition = G(
         PluginBasicInfoDefinition,
         pd=pd,
+        release_method=PluginReleaseMethod.CODE,
         id_schema={
+            "title": "插件ID",
             "pattern": "^[a-z0-9-]{1,16}$",
             "description": "由小写字母、数字、连字符(-)组成，长度小于 16 个字符",
             "maxlength": 10,
         },
         name_schema={
+            "title": "插件名称",
             "pattern": r"[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}",
             "description": "由汉字、英文字母、数字组成，长度小于 20 个字符",
         },
@@ -121,13 +127,13 @@ def pd():
 
 @pytest.fixture
 def plugin(pd, bk_user):
-    identifier = generate_random_string()
+    identifier = generate_random_string(length=10, chars=string.ascii_lowercase)
     plugin: PluginInstance = G(
         PluginInstance,
         **{
             "pd": pd,
             "id": identifier,
-            to_attribute("name"): generate_random_string(),
+            to_attribute("name"): generate_random_string(length=20, chars=string.ascii_lowercase),
             "template": {
                 "id": "foo",
                 "name": "bar",
@@ -147,15 +153,13 @@ def plugin(pd, bk_user):
 def release(plugin):
     release: PluginRelease = G(
         PluginRelease,
-        **{
-            "plugin": plugin,
-            "source_location": plugin.repository,
-            "type": "prod",
-            "source_version_type": "branch",
-            "source_version_name": "master",
-            "version": "0.0.1",
-            "comment": "",
-        },
+        plugin=plugin,
+        source_location=plugin.repository,
+        type="prod",
+        source_version_type="branch",
+        source_version_name="master",
+        version="0.0.1",
+        comment="",
     )
     release.initial_stage_set()
     return release
@@ -171,9 +175,7 @@ def itsm_online_stage(release):
 
 @pytest.fixture
 def online_approval_service():
-    svc: ApprovalService = G(
-        ApprovalService, **{"service_name": ApprovalServiceName.ONLINE_APPROVAL.value, "service_id": 1}
-    )
+    svc: ApprovalService = G(ApprovalService, service_name=ApprovalServiceName.ONLINE_APPROVAL.value, service_id=1)
     return svc
 
 
@@ -191,3 +193,8 @@ def iam_policy_client():
         iam_policy_client.is_action_allowed.return_value = True
         iam_policy_client.is_actions_allowed.return_value = {"": True}
         yield iam_policy_client
+
+
+@pytest.fixture()
+def setup_bk_user(bk_user):
+    AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_PLUGIN_CENTER, True)

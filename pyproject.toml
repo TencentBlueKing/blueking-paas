@@ -5,18 +5,20 @@ description = "Tencent Blueking PaaS platform(https://bk.tencent.com/)"
 authors = ["blueking <blueking@tencent.com>"]
 
 [tool.poetry.dependencies]
-python = ">=3.6.2,<3.9"
+python = ">=3.8.1,<3.9"
 
 [tool.poetry.dev-dependencies]
 # Essential tools to format source codes, required when using pre-commit
-black = "^22.3.0"
-isort = "^5.10.1"
-flake8 = "^4.0.1"
-pyproject-flake8 = "^0.0.1-alpha.2"
+black = "==23.1.0"
+isort = "==5.12.0"
+flake8 = "==6.0.0"
+flake8-bugbear = "==23.1.20"
+flake8-comprehensions = "==3.10.1"
+flake8-pie = "==0.16.0"
 
 [tool.black]
-line-length = 119
 skip-string-normalization = 'true'
+line-length = 119
 exclude = '''
 /(
   | .*/migrations
@@ -27,10 +29,7 @@ exclude = '''
 '''
 
 [tool.isort]
-multi_line_output = 3
-include_trailing_comma = 'true'
-force_grid_wrap = 0
-use_parentheses = 'true'
+profile = "black"
 line_length = 119
 skip_glob = ["*/migrations/**", "*/node_modules/**"]
 sections = "FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
@@ -39,21 +38,3 @@ known_first_party = [
   "tests",
   "paasng"
 ]
-
-[tool.flake8]
-ignore = "C901,F405,F403,W504,E741,E125,W503,F841,E203,E231,C408,C403,C407,C401,E402"
-max-line-length = 119
-max-complexity = 8
-format = "pylint"
-exclude = '''
-    *.pyc,
-    .git,
-    __pycache__,
-    *migrations*,
-    */node_modules/*,
-    */bin/*,
-    */templates_module*,
-'''
-show_source = "true"
-statistics = "true"
-count = "true"

@@ -32,6 +32,8 @@ type PlatformConfig struct {
 	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
 	// sentry server dsn, all events waiting for report will be dropped if unset
 	SentryDSN string `json:"sentryDSN"`
+	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
+	IngressClassName string `json:"ingressClassName"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config

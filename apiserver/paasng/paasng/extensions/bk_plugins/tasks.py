@@ -51,5 +51,5 @@ def archive_prod_env(app_code: str, operator: str):
         logger.warning("该插件<%s>未曾部署，跳过该环境的下架操作", str(application))
     except OfflineOperationExistError:
         logger.exception(_("存在正在进行的下架任务，请勿重复操作"), extra=log_extra)
-    except Exception as e:
+    except Exception:
         logger.exception("app offline error", extra=log_extra)

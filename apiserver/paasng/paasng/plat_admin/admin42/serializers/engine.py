@@ -35,7 +35,7 @@ class ModuleEnvironmentOperationsSLZ(BaseModuleEnvironmentOperationsSLZ):
     operator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
 
-    class Meta(object):
+    class Meta:
         model = ModuleEnvironmentOperations
         fields = [
             'id',

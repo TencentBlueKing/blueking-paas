@@ -185,7 +185,7 @@
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">
-                          {{ $t('创建于') }} {{ timeFormat(timeN[instance.display_name], instance.date_time) }}
+                          {{ $t('创建于') }} {{ instance.date_time }}
                         </template>
                         <template v-else>
                           --
@@ -585,7 +585,7 @@
         data () {
             const dateShortCut = [
                 {
-                    text: this.$t('最近5分钟'),
+                    text: i18n.t('最近5分钟'),
                     value () {
                         const end = new Date();
                         const start = new Date();
@@ -594,11 +594,11 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '5m';
-                        timeShortCutText = i18n.$t('最近5分钟');
+                        timeShortCutText = i18n.t('最近5分钟');
                     }
                 },
                 {
-                    text: this.$t('最近1小时'),
+                    text: i18n.t('最近1小时'),
                     value () {
                         const end = new Date();
                         const start = new Date();
@@ -607,11 +607,11 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '1h';
-                        timeShortCutText = i18n.$t('最近1小时');
+                        timeShortCutText = i18n.t('最近1小时');
                     }
                 },
                 {
-                    text: this.$t('最近3小时'),
+                    text: i18n.t('最近3小时'),
                     value () {
                         const end = new Date();
                         const start = new Date();
@@ -620,11 +620,11 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '3h';
-                        timeShortCutText = i18n.$t('最近3小时');
+                        timeShortCutText = i18n.t('最近3小时');
                     }
                 },
                 {
-                    text: this.$t('最近12小时'),
+                    text: i18n.t('最近12小时'),
                     value () {
                         const end = new Date();
                         const start = new Date();
@@ -633,11 +633,11 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '12h';
-                        timeShortCutText = i18n.$t('最近12小时');
+                        timeShortCutText = i18n.t('最近12小时');
                     }
                 },
                 {
-                    text: this.$t('最近1天'),
+                    text: i18n.t('最近1天'),
                     value () {
                         const end = new Date();
                         const start = new Date();
@@ -646,14 +646,14 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '1d';
-                        timeShortCutText = i18n.$t('最近1天');
+                        timeShortCutText = i18n.t('最近1天');
                     }
                 }
             ];
 
             if (this.type === 'customLog' || this.type === 'accessLog') {
                 dateShortCut.push({
-                    text: this.$t('最近7天'),
+                    text: i18n.t('最近7天'),
                     value () {
                         const end = new Date();
                         const start = new Date();
@@ -662,7 +662,7 @@
                     },
                     onClick (picker) {
                         timeRangeCache = '7d';
-                        timeShortCutText = i18n.$t('最近7天');
+                        timeShortCutText = i18n.t('最近7天');
                     }
                 });
             }
@@ -704,12 +704,12 @@
                     targetReplicas: [
                         {
                             required: true,
-                            message: this.$t('请填写实例数'),
+                            message: i18n.t('请填写实例数'),
                             trigger: 'blur'
                         },
                         {
                             regex: /^[1-9][0-9]*$/,
-                            message: this.$t('请填写大于0的整数'),
+                            message: i18n.t('请填写大于0的整数'),
                             trigger: 'blur'
                         },
                         {
@@ -753,19 +753,19 @@
                 chartRangeList: [
                     {
                         id: '1h',
-                        name: this.$t('最近1小时')
+                        name: i18n.t('最近1小时')
                     },
                     {
                         id: '6h',
-                        name: this.$t('最近6小时')
+                        name: i18n.t('最近6小时')
                     },
                     {
                         id: '12h',
-                        name: this.$t('最近12小时')
+                        name: i18n.t('最近12小时')
                     },
                     {
                         id: '1d',
-                        name: this.$t('最近24小时')
+                        name: i18n.t('最近24小时')
                     }
                 ],
                 currentClickObj: {
@@ -777,7 +777,7 @@
                 serverTimeout: 30,
                 serverEvent: null,
 
-                timerDisplay: this.$t('最近1小时'),
+                timerDisplay: i18n.t('最近1小时'),
                 datePickerOption: {
                     // 小于今天的都不能选
                     disabledDate (date) {
@@ -790,8 +790,7 @@
                 },
                 dateShortCut: dateShortCut,
                 initDateTimeRange: [initStartDate, initEndDate],
-                isDatePickerOpen: false,
-                timeN: {}
+                isDatePickerOpen: false
             };
         },
         computed: {
@@ -1412,9 +1411,7 @@
 
                     // 日期转换
                     process.instances.forEach(item => {
-                        const time = moment(item.start_time).startOf('minute').fromNow().replace(this.$t('后'), this.$t('前'));
-                        this.$set(this.timeN, item.display_name, time.split(' ')[0]);
-                        item.date_time = this.$t(time.split(' ')[1]);
+                        item.date_time = moment(item.start_time).startOf('minute').fromNow();
                     });
 
                     // 如果有当前展开项
@@ -1533,8 +1530,7 @@
                 const instanceData = data.object || {};
                 this.prevInstanceVersion = data.resource_version || 0;
 
-                const timeStr = moment(instanceData.start_time).startOf('minute').fromNow();
-                instanceData.date_time = timeStr.split(' ')[1];
+                instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
                 this.allProcesses.forEach(process => {
                     if (process.name === instanceData.process_type) {
                         // 新增

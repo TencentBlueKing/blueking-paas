@@ -20,7 +20,7 @@
         <bk-input
           v-model="filterKey"
           class="paas-plugin-input"
-          :placeholder="$t('输入插件标识、插件名称，按Enter搜索')"
+          :placeholder="$t('输入插件ID、插件名称，按Enter搜索')"
           :clearable="true"
           :right-icon="'paasng-icon paasng-search'"
           @enter="handleSearch"
@@ -35,11 +35,15 @@
         :pagination="pagination"
         :outer-border="false"
         :header-border="false"
+        :show-overflow-tooltip="true"
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
-        <div slot="empty">
+        <div
+          v-if="isSearchClear || pluginList.length || filterKey"
+          slot="empty"
+        >
           <bk-exception
             class="exception-wrap-item exception-part"
             type="search-empty"
@@ -53,7 +57,7 @@
             >{{ $t('清空搜索条件') }}</span>
           </div>
         </div>
-        <bk-table-column :label="$t('插件标识')">
+        <bk-table-column :label="$t('插件 ID')">
           <template slot-scope="{ row }">
             <img
               :src="row.logo"
@@ -82,7 +86,16 @@
           :filter-multiple="true"
         >
           <template slot-scope="{ row }">
-            <span v-bk-tooltips="row.pd_name">{{ row.pd_name || '--' }}</span>
+            {{ row.pd_name || '--' }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('创建时间')"
+          prop="created"
+          sortable
+        >
+          <template slot-scope="{ row }">
+            {{ row.created || '--' }}
           </template>
         </bk-table-column>
         <bk-table-column
@@ -92,23 +105,6 @@
           :filters="languageFilters"
           :filter-multiple="true"
         />
-        <!-- 状态 -->
-        <bk-table-column
-          :label="$t('状态')"
-          prop="status"
-          column-key="status"
-          :filters="statusFilters"
-          :filter-multiple="true"
-        >
-          <template slot-scope="{ row }">
-            <round-loading v-if="row.status === 'releasing'" />
-            <div
-              v-else
-              :class="['point', row.status]"
-            />
-            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
-          </template>
-        </bk-table-column>
         <bk-table-column
           :label="$t('版本')"
         >
@@ -130,9 +126,12 @@
             </template>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('操作')">
+        <bk-table-column
+          :label="$t('操作')"
+          :width="localLanguage === 'en' ? 280 : 220"
+        >
           <template slot-scope="{ row }">
-            <div class="table-operate-buttons">
+            <div :class="['table-operate-buttons', localLanguage === 'en' ? 'en-operate' : 'zh-operate']">
               <bk-button
                 v-if="row.status === 'waiting-approval' || row.status === 'approval-failed'"
                 theme="primary"
@@ -149,9 +148,10 @@
                   text
                   @click="toNewVersion(row)"
                 >
-                  {{ $t('发布') }}
+                  {{ row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布') }}
                 </bk-button>
                 <bk-button
+                  class="versions-btn"
                   theme="primary"
                   size="small"
                   text
@@ -162,6 +162,7 @@
               </template>
               <bk-button
                 v-if="row.status === 'approval-failed'"
+                class="del-btn"
                 theme="primary"
                 size="small"
                 text
@@ -197,7 +198,6 @@
         data () {
             return {
                 loading: true,
-                loaderPlaceholder: 'apps-loading',
                 filterKey: '',
                 pluginList: [],
                 pluginStatus: PLUGIN_STATUS,
@@ -209,7 +209,6 @@
                     count: 0
                 },
                 isFilter: false,
-                filterStatus: [],
                 filterLanguage: [],
                 filterPdName: [],
                 languageFilters: [],
@@ -222,19 +221,13 @@
                 releaseStatusMap: {
                     'pending': 'pending',
                     'initial': 'initial'
-                }
+                },
+                isSearchClear: false
             };
         },
         computed: {
-            statusFilters () {
-                const statusList = [];
-                for (const key in PLUGIN_STATUS) {
-                    statusList.push({
-                        value: key,
-                        text: this.$t(PLUGIN_STATUS[key])
-                    });
-                }
-                return statusList;
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -245,9 +238,6 @@
                         this.isFilter = false;
                     }
                 }
-            },
-            filterStatus () {
-                this.fetchPluginsList();
             },
             filterLanguage () {
                 this.fetchPluginsList();
@@ -273,14 +263,6 @@
                     let statusParams = '';
                     let languageParams = '';
                     let pdIdParams = '';
-                    if (this.filterStatus.length) {
-                        // pageParams.status = this.filterStatus;
-                        let paramsText = '';
-                        this.filterStatus.forEach(item => {
-                            paramsText += `status=${item}&`;
-                        });
-                        statusParams = paramsText.substring(0, paramsText.length - 1);
-                    }
                     if (this.filterLanguage.length) {
                         // pageParams.language = this.filterLanguage;
                         let paramsText = '';
@@ -315,6 +297,7 @@
                 } finally {
                     this.isDataLoading = false;
                     this.loading = false;
+                    this.isSearchClear = false;
                 }
             },
 
@@ -385,10 +368,6 @@
             },
 
             handleFilterChange (filters) {
-                if (filters.status) {
-                    this.filterStatus = filters.status.length ? filters.status : [];
-                }
-
                 if (filters.language) {
                     this.filterLanguage = filters.language.length ? filters.language : [];
                 }
@@ -451,6 +430,8 @@
             },
 
             clearFilterKey () {
+                // 防止清空搜索条件时提示抖动
+                this.isSearchClear = true;
                 this.filterKey = '';
                 this.$refs.pluginTable.clearFilter();
             }
@@ -489,6 +470,7 @@
                 display: inline-block;
                 border-radius: 50%;
                 margin-right: 3px;
+                border: 1px solid #FF9C01;
             }
             .waiting-approval{
                 background: #FFE8C3;
@@ -521,14 +503,15 @@
                 border-radius: 50%;
                 margin-right: 3px;
             }
-            .dot.successful{
-                background: #3FC06D;
+            .dot.successful {
+                background: #E5F6EA;
+                border: 1px solid #3FC06D;
             }
-            .dot.failed{
-                background: #EA3636;
-            }
-            .dot.interrupted{
-                background: #EA3636;
+
+            .dot.failed,
+            .dot.interrupted {
+                background: #FFE6E6;
+                border: 1px solid #EA3636;
             }
         }
 
@@ -554,11 +537,24 @@
     }
 </style>
 
-<style>
+<style lang="scss">
     .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
         height: 130px;
     }
     .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
         color: #3a84ff !important;
+    }
+    .bk-plugin-wrapper {
+        .table-operate-buttons .bk-button-text>div {
+            text-align: left;
+        }
+        .table-operate-buttons.en-operate .bk-button-text>div {
+            width: 92px !important;
+        }
+        .table-operate-buttons.zh-operate .bk-button-text>div,
+        .table-operate-buttons.en-operate .versions-btn>div,
+        .table-operate-buttons.en-operate .del-btn>div {
+            width: 50px !important;
+        }
     }
 </style>

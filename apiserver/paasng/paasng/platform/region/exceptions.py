@@ -23,12 +23,8 @@ class RegionDoesNotExists(Exception):
     Region Dost Not Exists
     """
 
-    pass
-
 
 class RegionDuplicated(Exception):
     """
     Region Dost Not Exists
     """
-
-    pass

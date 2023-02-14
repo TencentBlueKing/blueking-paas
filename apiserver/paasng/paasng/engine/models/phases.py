@@ -117,12 +117,9 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
     def get_sorted_steps(self) -> List['DeployStep']:
         from paasng.engine.models.steps import DeployStepPicker
 
-        names = [
-            name
-            for name in DeployStepPicker.pick(engine_app=self.engine_app).list_sorted_step_names(
-                DeployPhaseTypes(self.type)
-            )
-        ]
+        names = list(
+            DeployStepPicker.pick(engine_app=self.engine_app).list_sorted_step_names(DeployPhaseTypes(self.type))
+        )
         steps = list(self.steps.all())
 
         # 如果出现异常, 就直接返回未排序的步骤.

@@ -39,7 +39,7 @@ class ServiceModuleAttachment(OwnerTimestampedModel):
     module = models.ForeignKey('modules.Module', on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
 
-    class Meta(object):
+    class Meta:
         unique_together = ("service", "module")
 
     def __str__(self):
@@ -58,7 +58,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
         ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, related_name='service_attachment'
     )
 
-    class Meta(object):
+    class Meta:
         unique_together = ("service", "engine_app")
 
     def create_service_instance(self) -> ServiceInstance:

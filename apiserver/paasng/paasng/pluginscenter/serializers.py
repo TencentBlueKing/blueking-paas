@@ -21,6 +21,7 @@ from typing import Dict, Optional, Type
 import arrow
 import semver
 from bkpaas_auth import get_user_by_user_id
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -28,6 +29,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.accounts.utils import get_user_avatar
 from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionRule, PluginRole, SemverAutomaticType
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
+from paasng.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
@@ -38,7 +40,74 @@ from paasng.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
-from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
+
+
+class PluginUniqueValidator:
+    requires_context = True
+
+    def __init__(self, id_field_label: str, name_field_label: str):
+        self.id_field_label = id_field_label
+        self.name_field_label = name_field_label
+        self.queryset = PluginInstance.objects.all()
+
+    def __call__(self, attrs, serializer):
+        # Determine the existing instance, if this is an update operation.
+        if "pd" not in serializer.context:
+            raise ValidationError(_("context `pd` is required"), code="required")
+        pd = serializer.context["pd"]
+
+        queryset = self.queryset
+        queryset = self.exclude_current_instance(attrs, queryset, serializer.instance)
+        self.validate_queryset(queryset, pd_id=pd.identifier, attrs=attrs)
+
+    def validate_queryset(self, queryset, pd_id, attrs: Dict):
+        """validate the queryset to all instances matching the given attributes."""
+        queryset = queryset.filter(pd__identifier=pd_id)
+        fields = [
+            {"name": "id", "label": self.id_field_label},
+            *[
+                {
+                    "name": to_translated_field("name", language_code=lang[0]),
+                    "label": self.name_field_label,
+                }
+                for lang in settings.LANGUAGES
+            ],
+        ]
+        checked = False
+        for field in fields:
+            field_name = field["name"]
+            field_label = field["label"]
+            if field_name in attrs:
+                value = attrs[field_name]
+                if queryset.filter(**{field_name: value}).exists():
+                    raise ValidationError(_('{} 为 {} 的插件已存在').format(field_label, value), code="unique")
+                checked = True
+        if not checked:
+            raise ValidationError(_("attrs `{}` is required").format([f["name"] for f in fields]), code="required")
+
+    def exclude_current_instance(self, attrs, queryset, instance):
+        """
+        If an instance is being updated, then do not include
+        that instance itself as a uniqueness conflict.
+        """
+        if instance is not None:
+            return queryset.exclude(pk=instance.pk)
+        return queryset
+
+
+class PluginRoleSLZ(serializers.Serializer):
+    name = serializers.CharField(read_only=True, help_text="角色名称")
+    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
+
+
+class PluginMemberSLZ(serializers.Serializer):
+    username = serializers.CharField(help_text="用户名")
+    role = PluginRoleSLZ(help_text="角色")
+    avatar = serializers.SerializerMethodField()
+
+    def get_avatar(self, obj):
+        return get_user_avatar(obj.username)
 
 
 class ApprovalConfigSLZ(serializers.Serializer):
@@ -120,12 +189,28 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     latest_release = PluginReleaseVersionSLZ(
         source="all_versions.get_latest_release", help_text="最新的版本", allow_null=True
     )
-    logo = serializers.CharField(source="pd.logo", help_text="插件logo", allow_null=True)
+    logo = serializers.CharField(source="get_logo_url", help_text="插件logo", allow_null=True)
     itsm_detail = ItsmDetailSLZ()
+    role = PluginRoleSLZ(required=False)
+
+    def to_representation(self, instance):
+        # 注入当前用户的角色信息
+        if request := self.context.get("request"):
+            if request.user.is_authenticated:
+                setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
+        return super().to_representation(instance)
 
     class Meta:
         model = PluginInstance
         exclude = ("pd", "uuid")
+
+
+class PluginInstanceLogoSLZ(serializers.ModelSerializer):
+    logo = serializers.ImageField(write_only=True)
+
+    class Meta:
+        model = PluginInstance
+        fields = ["logo"]
 
 
 class PluginMarketInfoSLZ(serializers.ModelSerializer):
@@ -180,6 +265,18 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
     fields = {
         "name": I18NExtend(make_string_field(pd.basic_info_definition.name_schema)),
         "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
+        "Meta": type(
+            "Meta",
+            (),
+            {
+                "validators": [
+                    PluginUniqueValidator(
+                        id_field_label=pd.basic_info_definition.id_schema.title,
+                        name_field_label=pd.basic_info_definition.name_schema.title,
+                    )
+                ]
+            },
+        ),
     }
     if creation:
         fields["id"] = make_string_field(pd.basic_info_definition.id_schema)
@@ -211,7 +308,7 @@ class StubUpdatePluginSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(help_text="额外字段")
 
 
-def make_release_validator(version_rule: PluginReleaseVersionRule):
+def make_release_validator(version_rule: PluginReleaseVersionRule):  # noqa: C901
     """make a validator to validate ReleaseVersion object"""
 
     def validate_semver(version: str, previous_version_str: Optional[str], semver_type: SemverAutomaticType):
@@ -424,20 +521,6 @@ class LogFieldFilterSLZ(serializers.Serializer):
     key = serializers.CharField(help_text="传递给参数中的key")
     options = serializers.ListField(help_text="该字段的选项和分布频率")
     total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频次")
-
-
-class PluginRoleSLZ(serializers.Serializer):
-    name = serializers.CharField(read_only=True, help_text="角色名称")
-    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
-
-
-class PluginMemberSLZ(serializers.Serializer):
-    username = serializers.CharField(help_text="用户名")
-    role = PluginRoleSLZ(help_text="角色")
-    avatar = serializers.SerializerMethodField()
-
-    def get_avatar(self, obj):
-        return get_user_avatar(obj.username)
 
 
 class ItsmTicketInfoSlz(serializers.Serializer):

@@ -34,7 +34,7 @@ from paasng.accessories.iam.helpers import fetch_role_members
 from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
 from paasng.engine.models import Deployment, EngineApp
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
-from paasng.platform.core.storages.s3 import app_logo_storage
+from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.region.models import get_region
 from paasng.utils.basic import get_username_by_bkpaas_user_id
@@ -150,10 +150,12 @@ class BaseApplicationFilter:
         has_deployed: Optional[bool] = None,
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
-        order_by=[],
+        order_by: Optional[List] = None,
         market_enabled: bool = None,
     ):
         """Filter applications by given parameters"""
+        if order_by is None:
+            order_by = []
         if queryset.model is not Application:
             raise ValueError("BaseApplicationFilter only support to filter Application")
 
@@ -210,9 +212,11 @@ class UserApplicationFilter:
         search_term='',
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
-        order_by=[],
+        order_by: Optional[List] = None,
     ):
         """Filter applications by given parameters"""
+        if order_by is None:
+            order_by = []
         applications = Application.objects.filter_by_user(self.user.pk, exclude_collaborated=exclude_collaborated)
         return BaseApplicationFilter.filter_queryset(
             applications,
@@ -404,7 +408,7 @@ class ApplicationMembership(TimestampedModel):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     role = models.IntegerField(default=ApplicationRole.DEVELOPER.value)
 
-    class Meta(object):
+    class Meta:
         unique_together = ('user', 'application', 'role')
 
     def __str__(self):
@@ -422,7 +426,7 @@ class ApplicationEnvironment(TimestampedModel):
     environment = models.CharField(verbose_name=u'部署环境', max_length=16)
     is_offlined = models.BooleanField(default=False, help_text=u'是否已经下线，仅成功下线后变为False')
 
-    class Meta(object):
+    class Meta:
         unique_together = ('module', 'environment')
 
     def __str__(self):
@@ -549,7 +553,7 @@ class UserMarkedApplication(OwnerTimestampedModel):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     objects = WithOwnerManager()
 
-    class Meta(object):
+    class Meta:
         unique_together = ("application", "owner")
 
     def __str__(self):

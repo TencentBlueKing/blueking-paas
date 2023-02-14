@@ -97,7 +97,7 @@ from paasng.platform.applications.utils import (
     delete_all_modules,
     get_app_overview,
 )
-from paasng.platform.core.storages.s3 import app_logo_storage
+from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.feature_flags.constants import PlatformFeatureFlag
 from paasng.platform.mgrlegacy.constants import LegacyAppState
@@ -1121,7 +1121,7 @@ class LightAppViewSet(viewsets.ViewSet):
     @classmethod
     def get_available_light_app_code(cls, session, parent_code, max_times=10):
         app_manager = AppAdaptor(session=session)
-        for i in range(max_times):
+        for __ in range(max_times):
             app_code = cls.generate_app_maker_code(parent_code)
             if not app_manager.get(app_code):
                 return app_code

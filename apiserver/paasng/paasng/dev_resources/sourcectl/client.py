@@ -150,7 +150,7 @@ class BaseGitApiClient(abc.ABC):
             kwargs['params'] = params
 
         kwargs.setdefault('timeout', DEFAULT_TIMEOUT)
-        for idx in range(RETRY_TIME):
+        for __ in range(RETRY_TIME):
             raw_resp = self.session.get(target_url, **kwargs)
             try:
                 resp = self._validate_resp(raw_resp)

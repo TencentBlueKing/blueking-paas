@@ -90,14 +90,18 @@ def test_create_then_release(
 
     # 创建产品信息
     G(Product, application=application, type=1)
-    # 模拟部署成功, 触发信号
+
+    # 模拟部署结束, 触发信号
     deployment = G(Deployment, app_environment=application.get_default_module().get_envs("prod"))
     deployment.status = deployment_status
     deployment.save()
 
     market_config.refresh_from_db()
     assert market_config.enabled == released_state
-    assert (market_config.enabled and AppPublishPreparer(application).all_matched) == console_state
+
+    # 通过 mock 控制 Preparer 所依赖的“环境部署状态”，保持与部署结果同步
+    with patch('paasng.publish.market.protections.env_is_deployed', return_value=deployment_status):
+        assert (market_config.enabled and AppPublishPreparer(application).all_matched) == console_state
 
     if console_state:
         assert not market_config.auto_enable_when_deploy

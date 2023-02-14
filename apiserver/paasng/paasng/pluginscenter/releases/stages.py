@@ -26,6 +26,7 @@ from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
 from paasng.pluginscenter.models import PluginReleaseStage
 from paasng.pluginscenter.serializers import ItsmTicketInfoSlz, PluginMarketInfoSLZ
+from paasng.pluginscenter.sourcectl import get_plugin_repo_accessor
 from paasng.pluginscenter.thirdparty.deploy import check_deploy_result, deploy_version, get_deploy_logs
 from paasng.pluginscenter.thirdparty.market import read_market_info
 
@@ -66,6 +67,12 @@ class BaseStageController:
         }
         return basic_info
 
+    def async_check_status(self) -> bool:
+        """异步检查执行状态, 用于 celery 任务
+        :returns: return True if checker done, False to keep polling
+        """
+        return True
+
 
 class DeployAPIStage(BaseStageController):
     invoke_method = constants.ReleaseStageInvokeMethod.DEPLOY_API
@@ -73,6 +80,7 @@ class DeployAPIStage(BaseStageController):
     def execute(self, operator: str):
         if self.release.current_stage != self.stage:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("当前阶段并非部署阶段"))
+        self._refresh_source_hash()
 
         current_stage = self.stage
         try:
@@ -86,6 +94,17 @@ class DeployAPIStage(BaseStageController):
 
     def render_to_view(self) -> Dict:
         basic_info = super().render_to_view()
+        if not self.stage.api_detail:
+            # 部署步骤执行失败
+            basic_info["status"] = constants.PluginReleaseStatus.FAILED
+            return {
+                **basic_info,
+                "detail": {
+                    "steps": [],
+                    "finished": False,
+                    "logs": [],
+                },
+            }
         # TODO: 在异步任务轮询查询部署结果
         check_deploy_result(self.pd, self.plugin, self.release)
         self.stage.refresh_from_db()
@@ -93,6 +112,20 @@ class DeployAPIStage(BaseStageController):
             **basic_info,
             "detail": {"steps": self.stage.api_detail["steps"], **get_deploy_logs(self.pd, self.plugin, self.release)},
         }
+
+    def async_check_status(self):
+        check_deploy_result(self.pd, self.plugin, self.release)
+        self.stage.refresh_from_db()
+        return self.stage.status not in constants.PluginReleaseStatus.running_status()
+
+    def _refresh_source_hash(self):
+        """刷新 source_hash 字段, 因为实际上部署以线上最新代码为准"""
+        version_type = self.release.source_version_type
+        version_name = self.release.source_version_name
+        source_hash = get_plugin_repo_accessor(self.plugin).extract_smart_revision(f"{version_type}:{version_name}")
+        if source_hash != self.release.source_hash:
+            self.release.source_hash = source_hash
+            self.release.save(update_fields=["source_hash", "updated"])
 
 
 class ItsmStage(BaseStageController):

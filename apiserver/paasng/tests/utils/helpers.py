@@ -69,8 +69,10 @@ def initialize_application(application, *args, **kwargs):
     )
 
 
-def initialize_module(module, repo_type=None, repo_url='', additional_modules=[]):
+def initialize_module(module, repo_type=None, repo_url='', additional_modules=None):
     """Mocked function for initializing new module."""
+    if additional_modules is None:
+        additional_modules = []
 
     # Use a random sourcectl_type as default
     repo_type = repo_type or get_sourcectl_types().names.get_default()
@@ -135,7 +137,7 @@ class BaseTestCaseWithApp(TestCase):
 
 def create_app(
     owner_username: Optional[str] = None,
-    additional_modules=[],
+    additional_modules: Optional[List] = None,
     repo_type: str = '',
     region: Optional[str] = None,
     force_info: Optional[dict] = None,
@@ -145,6 +147,9 @@ def create_app(
     :param additional_modules: enable additional applications modules, choose from ['deploy_phases', 'sourcectl']
     :param owner_username: username of owner
     """
+    if additional_modules is None:
+        additional_modules = []
+
     if owner_username:
         user = create_user(username=owner_username)
     else:

@@ -16,17 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+import time
+from pathlib import PurePath
 from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
 from bkpaas_auth import get_user_by_user_id
+from bkstorages.backends.bkrepo import RequestError
+from django.core.exceptions import SuspiciousOperation
 from django.db import models
+from pilkit.processors import ResizeToFill
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.platform.core.storages.object_storage import plugin_logo_storage
 from paasng.pluginscenter.constants import ActionTypes, PluginReleaseStatus, PluginStatus, SubjectTypes
 from paasng.pluginscenter.definitions import PluginCodeTemplate
-from paasng.utils.models import AuditedModel, BkUserField, UuidAuditedModel, make_json_field
+from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
+
+logger = logging.getLogger(__name__)
 
 
 @define
@@ -45,6 +54,13 @@ class ItsmDetail:
 PluginCodeTemplateField = make_json_field("PluginCodeTemplateField", PluginCodeTemplate)
 StagesShortcutField = make_json_field("StagesShortcutField", List[PlainStageInfo])
 ItsmDetailField = make_json_field("ItsmDetailField", ItsmDetail)
+
+
+def generate_plugin_logo_filename(instance: 'PluginInstance', filename: str) -> str:
+    """Generate uploaded logo filename"""
+    suffix = PurePath(filename).suffix
+    name = f"{instance.pd.identifier}/{instance.id}_{time.time_ns()}{suffix}"
+    return name
 
 
 class PluginInstance(UuidAuditedModel):
@@ -66,6 +82,26 @@ class PluginInstance(UuidAuditedModel):
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")
 
+    logo = ProcessedImageField(
+        storage=plugin_logo_storage,
+        upload_to=generate_plugin_logo_filename,
+        processors=[ResizeToFill(144, 144)],
+        format='PNG',
+        options={'quality': 95},
+        default=None,
+    )
+
+    def get_logo_url(self) -> str:
+        default_url = self.pd.logo
+        if self.logo:
+            try:
+                return self.logo.url
+            except (SuspiciousOperation, RequestError):
+                # 在有问题的测试环境下，个别应用的 logo 地址可能会无法生成
+                logger.info("Unable to make logo url for plugin: %s/%s", self.pd.identifier, self.id)
+                return default_url
+        return default_url
+
     class Meta:
         unique_together = ("pd", "id")
 
@@ -75,7 +111,7 @@ class PluginMarketInfo(AuditedModel):
 
     plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
 
-    category = models.CharField(verbose_name="分类", max_length=16, db_index=True)
+    category = models.CharField(verbose_name="分类", max_length=64, db_index=True)
     introduction = TranslatedFieldWithFallback(models.CharField(max_length=255, verbose_name="简介"))
     description = TranslatedFieldWithFallback(models.TextField(verbose_name="详细描述", null=True))
     contact = models.TextField(verbose_name="联系人", help_text="以分号(;)分割")

@@ -113,8 +113,11 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
     return validate_procfile(proc_data)
 
 
+_current_path = Path('.')
+
+
 def get_app_description_handler(
-    module: Module, operator: str, version_info: VersionInfo, source_dir: Path = Path(".")
+    module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
 ) -> Optional[DescriptionHandler]:
     """Get App Description handler from app.yaml/app_desc.yaml"""
     try:

@@ -146,6 +146,7 @@ class DeployConditions(ChoicesEnum):
     NEED_TO_CORRECT_REPO_INFO = "NEED_TO_CORRECT_REPO_INFO"
     NEED_TO_COMPLETE_PROCFILE = "NEED_TO_COMPLETE_PROCFILE"
     CHECK_CI_GIT_TOKEN = "CHECK_CI_GIT_TOKEN"
+    FILL_PLUGIN_TAG_INFO = "FILL_PLUGIN_TAG_INFO"
 
     _choices_labels = (
         (FILL_PRODUCT_INFO, _("未完善应用基本信息")),
@@ -155,6 +156,7 @@ class DeployConditions(ChoicesEnum):
         (NEED_TO_CORRECT_REPO_INFO, _("当前源码仓库信息异常")),
         (NEED_TO_COMPLETE_PROCFILE, _("未完善进程启动命令")),
         (CHECK_CI_GIT_TOKEN, _("当前用户未授权 CI 组件访问仓库的权限")),
+        (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
     )
 
 

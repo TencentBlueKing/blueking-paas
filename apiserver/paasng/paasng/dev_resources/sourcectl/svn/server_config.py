@@ -25,7 +25,7 @@ from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
 
 
 @dataclass
-class BkSvnServerConfig(object):
+class BkSvnServerConfig:
     """Server config for Bk Svn"""
 
     base_url: str

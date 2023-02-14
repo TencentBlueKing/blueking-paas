@@ -344,19 +344,17 @@
                   :key="appItemIndex"
                 >
                   <td class="pl30">
-                    <a
-                      :href="GLOBAL.V3_APP_SUMMARY + appItem.code + '/'"
-                      class="ps-table-app"
-                    >
-                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
-                      <fallback-image
-                        :url="appItem.logo"
-                        :url-fallback="defaultLogo"
-                        class="fleft applogo"
-                      />
-                      <span class="app-name-text">{{ appItem.name }}</span>
-                      <span class="app-code-text">{{ appItem.code }}</span>
-                    </a>
+                    <router-link :to="{ name: `appSummary`, params: { id: appItem.code }}">
+                      <a class="ps-table-app">
+                        <fallback-image
+                          :url="appItem.logo"
+                          :url-fallback="defaultLogo"
+                          class="fleft applogo"
+                        />
+                        <span class="app-name-text">{{ appItem.name }}</span>
+                        <span class="app-code-text">{{ appItem.code }}</span>
+                      </a>
+                    </router-link>
                   </td>
                   <td>{{ appItem.language }}</td>
                   <td>{{ appItem.region }}</td>

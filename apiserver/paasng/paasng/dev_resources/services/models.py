@@ -25,7 +25,7 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
-from paasng.platform.core.storages.s3 import service_logo_storage
+from paasng.platform.core.storages.object_storage import service_logo_storage
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ class Service(UuidAuditedModel):
 
     objects = ServiceManager()
 
-    class Meta(object):
+    class Meta:
         unique_together = ("region", "name")
 
     def natural_key(self):
@@ -204,7 +204,7 @@ class Plan(UuidAuditedModel):
     config = EncryptField(verbose_name='方案配置', default="")
     is_active = models.BooleanField(verbose_name=u'是否可用', default=True)
 
-    class Meta(object):
+    class Meta:
         unique_together = ("service", "name")
 
     @property
@@ -227,7 +227,7 @@ class ResourceId(models.Model):
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
 
-    class Meta(object):
+    class Meta:
         unique_together = ('namespace', 'uid')
 
     def __str__(self):

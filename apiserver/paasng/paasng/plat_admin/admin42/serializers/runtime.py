@@ -32,7 +32,7 @@ class AppSlugBuilderSLZ(serializers.ModelSerializer):
     environments = serializers.JSONField()
     labels = serializers.JSONField()
 
-    class Meta(object):
+    class Meta:
         model = AppSlugBuilder
         fields = '__all__'
 
@@ -43,7 +43,7 @@ class AppSlugRunnerSLZ(serializers.ModelSerializer):
     environments = serializers.JSONField()
     labels = serializers.JSONField()
 
-    class Meta(object):
+    class Meta:
         model = AppSlugRunner
         fields = '__all__'
 
@@ -53,6 +53,6 @@ class AppBuildPackSLZ(serializers.ModelSerializer):
     description = TranslatedCharField()
     environments = serializers.JSONField()
 
-    class Meta(object):
+    class Meta:
         model = AppBuildPack
         fields = '__all__'

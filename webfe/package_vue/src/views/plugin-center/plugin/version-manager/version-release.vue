@@ -104,7 +104,6 @@
         },
         mixins: [pluginBaseMixin],
         data () {
-            console.log('this', this);
             return {
                 stagesIndex: 0,
                 curStep: 1,
@@ -121,7 +120,7 @@
                 return this.$route.query.release_id;
             },
             stageId () {
-                return this.$store.state.plugin.curRelease.current_stage !== undefined ? this.$store.state.plugin.curRelease.current_stage.stage_id : undefined;
+                return this.$store.state.plugin.curRelease.current_stage && this.$store.state.plugin.curRelease.current_stage.stage_id;
             },
             curVersion () {
                 return this.$route.query.version || this.titleVersion;
@@ -339,7 +338,7 @@
 
             showInfoCancelRelease () {
                 this.$bkInfo({
-                    title: `确认终止发布版本${this.curVersion} ？`,
+                    title: `${this.$t('确认终止发布版本')}${this.curVersion} ？`,
                     width: 480,
                     maskClose: true,
                     confirmFn: () => {
@@ -477,7 +476,7 @@
 }
 .release-info-box{
     padding: 0px 15px;
-    height: 40px;
+    min-height: 40px;
     background: #E1ECFF;
     border-radius: 2px;
     margin-bottom: 16px;
@@ -514,6 +513,7 @@
 }
 .btn-warp{
     margin-left: 100px;
+    margin-top: 50px;
 }
 .footer-btn-warp {
     position: fixed;

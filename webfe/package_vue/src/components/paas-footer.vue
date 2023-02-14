@@ -46,7 +46,7 @@
           {{ $t('产品官网') }}
         </bk-link>
       </div>
-      <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. V{{ paasVersion }}</div>
+      <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. {{ paasVersion }}</div>
     </template>
   </footer>
 </template>

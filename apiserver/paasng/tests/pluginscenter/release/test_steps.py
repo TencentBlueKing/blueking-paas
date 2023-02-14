@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paasng.pluginscenter.constants import PluginReleaseStatus, ReleaseStageInvokeMethod
@@ -61,7 +63,7 @@ def test_stage_types():
 
 
 def test_render_base_info(release):
-    for stage, expected in zip(release.all_stages.all(), [{}]):
+    for stage in release.all_stages.all():
         base_info = stages.BaseStageController(stage).render_to_view()
         assert base_info["stage_id"] == stage.stage_id
         assert base_info["stage_name"] == stage.stage_name
@@ -79,7 +81,9 @@ class TestDeployAPIStage:
 
     @pytest.fixture
     def stage_executor(self, stage):
-        return stages.DeployAPIStage(stage)
+        executor = stages.DeployAPIStage(stage)
+        with mock.patch.object(executor, "_refresh_source_hash"):
+            yield executor
 
     def test_execute(self, thirdparty_client, stage, stage_executor):
         thirdparty_client.call.return_value = {

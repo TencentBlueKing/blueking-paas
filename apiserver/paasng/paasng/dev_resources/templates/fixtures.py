@@ -22,7 +22,7 @@ from django.template import Context, Engine
 from unipath import Path
 
 
-class BaseFixture(object):
+class BaseFixture:
     """Base class for fixture"""
 
     fixtures_dirname: str = ''

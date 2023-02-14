@@ -85,7 +85,7 @@ class DeploymentSLZ(serializers.ModelSerializer):
     complete_time = serializers.DateTimeField(allow_null=True)
     finished_status = serializers.CharField(allow_null=True)
 
-    class Meta(object):
+    class Meta:
         model = Deployment
         fields = [
             'id',
@@ -359,7 +359,7 @@ class CreateOfflineOperationSLZ(serializers.Serializer):
 class OfflineOperationSLZ(serializers.ModelSerializer):
     operator = UserField(read_only=True)
 
-    class Meta(object):
+    class Meta:
         model = OfflineOperation
         fields = ['id', 'status', 'operator', 'created', 'log', 'err_detail']
 
@@ -396,7 +396,7 @@ class OperationSLZ(serializers.ModelSerializer):
     offline_operation = OfflineOperationSLZ(source='get_offline_obj')
     deployment = DeploymentSLZ(source='get_deployment_obj')
 
-    class Meta(object):
+    class Meta:
         model = ModuleEnvironmentOperations
         fields = ['id', 'status', 'operator', 'created', 'operation_type', 'offline_operation', 'deployment']
 

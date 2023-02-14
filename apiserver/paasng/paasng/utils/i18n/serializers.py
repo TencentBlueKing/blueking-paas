@@ -162,7 +162,6 @@ class TranslatedCharField(serializers.CharField):
         """Return a Dict, which take the language code as the key and the translation result as the value"""
         values = {}
         for language_code in self.languages:
-
             i18n_field_name = to_translated_field(self.field_name, language_code=language_code)
             values[i18n_field_name] = dictionary.get(
                 i18n_field_name, dictionary.get(self.field_name, serializers.empty)

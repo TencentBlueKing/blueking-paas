@@ -1,5 +1,5 @@
 <template>
-  <div class="container visible-range">
+  <div class="market-info-wrapper">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="plugin-market-info-loading"
@@ -12,14 +12,20 @@
             ref="visitForm"
             :model="form"
             :rules="rules"
-            :label-width="100"
+            :label-width="104"
           >
             <bk-form-item
               class="w600"
-              :label="$t('应用分类')"
               :required="true"
               :property="'category'"
             >
+              <div
+                slot="tip"
+                v-bk-tooltips.top="{ content: `${$t('分类由插件管理员定义，如分类不满足需求可联系插件管理员：')}${administratorStr}`, disabled: !administratorStr }"
+                class="lable-wrapper"
+              >
+                <span class="label">{{ $t('应用分类') }}</span>
+              </div>
               <bk-select
                 v-model="form.category"
                 :loading="cateLoading"
@@ -55,10 +61,10 @@
               :property="'description'"
             >
               <quill-editor
+                ref="editor"
                 v-model="form.description"
                 class="editor"
                 :options="editorOption"
-                @change="onEditorChange($event)"
               />
             </bk-form-item>
           </bk-form>
@@ -90,6 +96,8 @@
     import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import user from '@/components/user';
     import { quillEditor } from 'vue-quill-editor';
+    import { addQuillTitle } from '@/common/quill-title.js';
+    import { TOOLBAR_OPTIONS } from '@/common/constants';
     import 'quill/dist/quill.core.css';
     import 'quill/dist/quill.snow.css';
     import 'quill/dist/quill.bubble.css';
@@ -113,7 +121,10 @@
               cateLoading: true,
               isLoading: true,
               editorOption: {
-                  placeholder: '开始编辑...'
+                  placeholder: this.$t('开始编辑...'),
+                  modules: {
+                      toolbar: TOOLBAR_OPTIONS
+                  }
               },
               rules: {
                   category: [
@@ -147,9 +158,25 @@
               }
             };
         },
+        computed: {
+            administratorStr () {
+                const administrators = this.curPluginInfo.pd_administrator || [];
+                return administrators.join(';');
+            }
+        },
+        watch: {
+            'form.description' (newDescription) {
+                if (newDescription) {
+                    this.$refs.editor.options.placeholder = '';
+                }
+            }
+        },
         mounted () {
             this.fetchMarketInfo();
             this.fetchCategoryList();
+            this.$nextTick(() => {
+                addQuillTitle();
+            });
         },
         methods: {
             // 应用分类
@@ -222,9 +249,6 @@
             },
             goBack () {
                 this.$router.go(-1);
-            },
-            onEditorChange (e) {
-                this.$set(this.form, 'description', e.html);
             }
         }
     };
@@ -239,25 +263,67 @@
     .btn-warp{
         position: fixed;
         bottom: 0;
-        margin-bottom: 20px;
-        margin-left: 100px;
+        left: 0;
+        padding-top: 8px;
+        padding-bottom: 20px;
+        margin-left: 240px;
+        padding-left: 154px;
+        background: #fff;
+        width: 100%;
+        z-index: 99;
     }
 
     .app-container {
         max-width: calc(100% - 50px) !important;
         margin: 0 auto;
+        border: none;
+    }
+
+    .market-info-wrapper .editor {
+        min-height: 300px;
+    }
+    .lable-wrapper {
+        position: absolute;
+        top: 0;
+        left: -104px;
+        width: 104px;
+        min-height: 32px;
+        text-align: right;
+        vertical-align: middle;
+        line-height: 32px;
+        float: left;
+        font-size: 14px;
+        font-weight: normal;
+        color: #63656E;
+        box-sizing: border-box;
+        padding: 0 24px 0 0;
+        &::after {
+            content: '*';
+            position: absolute;
+            top: 50%;
+            height: 8px;
+            line-height: 1;
+            color: #EA3636;
+            font-size: 12px;
+            display: inline-block;
+            vertical-align: middle;
+            transform: translate(3px, -50%);
+        }
+        .label {
+            display: inline-block;
+            line-height: 20px;
+            background: linear-gradient(to left, transparent 0%, transparent 50%,#979ba5 50%,#979ba5 100%);
+            background-size: 10px 1px;
+            background-repeat: repeat-x;
+            background-position-y: 100%;
+        }
     }
 </style>
 <style>
-    .visible-range .editor .ql-snow .ql-formats {
+    .market-info-wrapper .editor .ql-snow .ql-formats {
         line-height: 24px;
     }
     .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor {
-        height: calc(100vh - 350px);
-        display: flex;
-        flex-direction: column;
-    }
-    .app-container .market-Info.plugin-base-info .edit-form-item .bk-form-content .editor .ql-container {
-        flex: 1;
+        height: calc(100vh - 406px);
     }
 </style>

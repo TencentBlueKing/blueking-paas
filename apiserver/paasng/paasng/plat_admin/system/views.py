@@ -224,7 +224,7 @@ class SysApplicationViewSet(viewsets.ViewSet):
     """System application view sets"""
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def query(self, request):
+    def query(self, request):  # noqa: C901
         """查询应用的模块、环境等信息"""
         serializer = QueryApplicationsSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)

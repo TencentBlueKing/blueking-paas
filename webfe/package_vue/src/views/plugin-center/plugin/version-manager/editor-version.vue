@@ -7,12 +7,6 @@
     >
       <div class="new-version">
         <paas-plugin-title />
-        <!-- <bk-alert type="info" :show-icon="true">
-            <div slot="title">
-                {{ $t('测试版本仅用于测试，不能发布到线上') }}，
-                <a href="" target="_blank" class="detail-doc">{{ $t('详见文档') }}</a>
-            </div>
-        </bk-alert> -->
         <div
           v-if="curVersion.current_release"
           class="summary-box status"
@@ -41,7 +35,6 @@
             :model="curVersion"
             :rules="rules"
           >
-            <!-- 拿去分支数组中的字段 -->
             <bk-form-item
               :label="$t('代码仓库')"
               class="code-warehouse"
@@ -58,8 +51,8 @@
                   style="color: #979BA5;"
                 ><i class="paasng-icon paasng-jump-link icon-cls-link mr5" /></a>
                 <i
+                  v-copy="curVersion.repository"
                   class="paasng-icon paasng-general-copy icon-cls-copy"
-                  @click="handleCopy(curVersion.repository)"
                 />
               </div>
             </bk-form-item>
@@ -90,28 +83,19 @@
                   <i class="paasng-icon paasng-diff-line" />
                   <span>{{ $t('代码差异') }}</span>
                 </div>
-                <!-- <div @click.stop="handleTestRecord">
-                                    <i class="paasng-icon paasng-debug-fill"></i>
-                                    <span>{{ $t('测试记录') }}</span>
-                                </div> -->
               </div>
             </bk-form-item>
-            <!-- <bk-form-item label="">
-                            <bk-alert type="error" :show-icon="true">
-                                <div slot="title">
-                                    {{ $t('代码分支不符合规范') }}，
-                                    <a href="" target="_blank" class="detail-doc">{{ $t('详见指引') }}</a>
-                                </div>
-                            </bk-alert>
-                        </bk-form-item> -->
-            <!-- automatic 自动生成 -->
             <bk-form-item
               v-if="curVersion.version_no === 'automatic'"
               :label="$t('版本类型')"
               :required="true"
               :property="'version'"
+              :error-display-type="'normal'"
             >
-              <bk-radio-group v-model="curVersion.version">
+              <bk-radio-group
+                v-model="curVersion.version"
+                @change="changeVersionType"
+              >
                 <bk-radio
                   v-bk-tooltips.top="$t('非兼容式升级时使用')"
                   :value="curVersion.semver_choices.major"
@@ -148,35 +132,12 @@
               :required="true"
               :property="'comment'"
             >
-              <!-- v-model="releaseParams.comment" -->
               <bk-input
                 v-model="curVersion.comment"
                 :rows="5"
                 type="textarea"
               />
             </bk-form-item>
-            <!-- extra_fields 后续添加功能 -->
-            <!-- <div class="line"></div> -->
-            <!-- 测试版 -->
-            <!-- <bk-form-item :label="$t('自定义前端')" :required="true" class="cls-test-env">
-                            <bk-radio-group>
-                                <bk-radio :value="'value1'">{{ $t('是') }}</bk-radio>
-                                <bk-radio :value="'value2'">{{ $t('否') }}</bk-radio>
-                            </bk-radio-group>
-                        </bk-form-item>
-                        <bk-form-item :label="$t('适用Job类型')" :required="true" class="cls-test-env">
-                            <bk-radio-group>
-                                <bk-radio :value="'value1'">{{ $t('编译环境') }}</bk-radio>
-                                <bk-radio :value="'value2'">{{ $t('无编译环境') }}</bk-radio>
-                            </bk-radio-group>
-                            <div class="environment-wrapper">
-                                <bk-checkbox-group>
-                                    <bk-checkbox :value="'value1'">Linux</bk-checkbox>
-                                    <bk-checkbox :value="'value2'">Windows</bk-checkbox>
-                                    <bk-checkbox :value="'value3'">macOS</bk-checkbox>
-                                </bk-checkbox-group>
-                            </div>
-                        </bk-form-item> -->
             <bk-form-item label="">
               <div
                 v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isPending }"
@@ -210,7 +171,6 @@
         slot="content"
         class="p20"
       >
-        <!-- 数据遍历，前端书写 -->
         <bk-table
           v-bkloading="{ isLoading: isLogLoading }"
           class="ps-version-list"
@@ -255,19 +215,19 @@
       v-model="newVersionConfig.visible"
       theme="primary"
       :mask-close="false"
-      :title="`确认新建版本：${curVersion.version}`"
+      :title="`${$t('确认新建版本')}：${curVersion.version}`"
       @confirm="handlerConfirm"
       @cancel="handlerCancel"
     >
       <template v-if="curVersionData.source_versions">
         <div class="version-tips-item">
-          <span>代码分支：{{ curVersionData.source_versions[0].name }}</span>
+          <span>{{ $t('代码分支：') }}{{ curVersionData.source_versions[0].name }}</span>
         </div>
         <div class="version-tips-item">
-          <span>代码更新时间：{{ formatTime(curVersionData.source_versions[0].last_update) }}</span>
+          <span>{{ $t('代码更新时间：') }}{{ formatTime(curVersionData.source_versions[0].last_update) }}</span>
         </div>
         <div class="version-tips-item">
-          <span>代码提交日志：{{ curVersionData.source_versions[0].message }}</span>
+          <span>Commit Message: {{ curVersionData.source_versions[0].message }}</span>
         </div>
       </template>
     </bk-dialog>
@@ -275,7 +235,7 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import { formatTime } from '@/common/tools';
 
@@ -283,11 +243,10 @@
         components: {
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 isLoading: false,
-                keyword: '',
                 versionDetail: {
                     isShow: false
                 },
@@ -297,7 +256,6 @@
                     count: 0,
                     limit: 10
                 },
-                isAppOffline: false,
                 curVersion: {
                     // 仓库地址
                     repository: '',
@@ -326,6 +284,13 @@
                             trigger: 'blur'
                         }
                     ],
+                    version: [
+                        {
+                            required: true,
+                            message: this.$t('请选择版本类型'),
+                            trigger: 'blur'
+                        }
+                    ],
                     comment: [
                         {
                             required: true,
@@ -337,12 +302,6 @@
             };
         },
         computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
             isPending () {
                 return this.$route.query.isPending;
             }
@@ -365,10 +324,6 @@
         methods: {
             init () {
                 this.getNewVersionFormat();
-            },
-
-            handleTestRecord () {
-                this.versionDetail.isShow = true;
             },
 
             // 获取新建版本表单格式
@@ -396,8 +351,8 @@
                         // 提交哈希一致(commit-hash)
                         this.curVersion.version = res.source_versions[0].revision;
                     } else if (res.version_no === 'automatic') {
-                        // 自动生成(automatic)
-                        this.curVersion.version = this.curVersion.semver_choices.patch;
+                        // 自动生成(automatic), 版本类型用户自行选择
+                        this.curVersion.version = '';
                     } else if (res.version_no === 'self-fill') {
                         // 用户自助填写(self-fill)
                         this.curVersion.version = '';
@@ -417,16 +372,14 @@
 
             submitVersionForm () {
                 this.$refs.versionForm.validate().then(validator => {
-                    this.isSubmitLoading = true;
                     this.newVersionConfig.visible = true;
                     // this.createVersion();
-                }).catch(() => {
-                    this.isSubmitLoading = false;
                 });
             },
 
             // 新建版本并发布
             async createVersion () {
+                this.isSubmitLoading = true;
                 // 当前选中分支的数据
                 const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
 
@@ -435,10 +388,6 @@
                     source_version_name: versionData[0].name,
                     version: this.curVersion.version,
                     comment: this.curVersion.comment
-                    // 'extra_fields": {
-                    //     "additionalProp1": "string"
-                    // },
-                    // 'semver_type': 'string'
                 };
 
                 // 仅 versionNo=automatic 需要传递
@@ -473,24 +422,6 @@
                 }
             },
 
-            handleCopy (url) {
-                const el = document.createElement('textarea');
-                el.value = url;
-                el.setAttribute('readonly', '');
-                el.style.position = 'absolute';
-                el.style.left = '-9999px';
-                document.body.appendChild(el);
-                const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                if (selected) {
-                    document.getSelection().removeAllRanges();
-                    document.getSelection().addRange(selected);
-                }
-                this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
-            },
-
             goBack () {
                 this.$router.push({
                     name: 'pluginVersionManager'
@@ -501,7 +432,6 @@
                 this.$router.push({
                     name: 'pluginVersionRelease',
                     query: {
-                        stage_id: data.current_stage.stage_id,
                         release_id: data.id
                     }
                 });
@@ -535,6 +465,10 @@
 
             handlerCancel () {
                 this.isSubmitLoading = false;
+            },
+
+            changeVersionType () {
+                this.$refs.versionForm.validate();
             }
         }
     };

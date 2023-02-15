@@ -40,6 +40,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
 import copy
+import os
 from pathlib import Path
 
 from bkpaas_auth.core.constants import ProviderType
@@ -351,7 +352,9 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
         'sentinel_kwargs': {'password': settings.get('CELERY_RESULT_BACKEND_SENTINEL_PASSWORD', SENTINEL_PASSWORD)},
     }
 
-CELERY_TASK_DEFAULT_QUEUE = settings.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
+# Celery 队列名称
+CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
+
 
 # ---------------
 # 资源限制配置

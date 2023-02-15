@@ -35,7 +35,7 @@ def get_default_healthz_token():
 
 
 def get_default_probes():
-    probe_modules = getattr(settings, 'HEALTHZ_PROBES')
+    probe_modules = settings.HEALTHZ_PROBES
     probes = []
     for probe_module in probe_modules:
         probes.append(import_string(probe_module))
@@ -48,7 +48,7 @@ class BKConsoleProbe(MySQLProbe):
 
     def __init__(self):
         super().__init__()
-        self.config = transfer_django_db_settings(getattr(settings, 'BK_CONSOLE_DBCONF'))
+        self.config = transfer_django_db_settings(settings.BK_CONSOLE_DBCONF)
 
 
 class PlatformMysqlProbe(MySQLProbe):

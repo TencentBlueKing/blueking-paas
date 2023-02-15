@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List, Optional
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from paasng.engine.constants import AppEnvName, EngineAppType
@@ -110,12 +111,12 @@ def get_default_cluster_name(region: str) -> str:
     try:
         default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
     except Exception as e:
-        raise error_codes.CANNOT_CREATE_APP.f("暂无可用集群, 请联系管理员") from e
+        raise error_codes.CANNOT_CREATE_APP.f(_("暂无可用集群, 请联系管理员")) from e
 
     cluster_helper = get_region_cluster_helper(region)
     for cluster in cluster_helper.list_clusters():
         if cluster.name == default_cluster_name:
             break
     else:
-        raise error_codes.CANNOT_CREATE_APP.f(f"集群 {default_cluster_name} 未就绪, 请联系管理员")
+        raise error_codes.CANNOT_CREATE_APP.f(_(f"集群 {default_cluster_name} 未就绪, 请联系管理员"))
     return default_cluster_name

@@ -85,7 +85,7 @@ class ConfigVar(TimestampedModel):
 
     objects = ConfigVarQuerySet.as_manager()
 
-    class Meta(object):
+    class Meta:
         unique_together = ('module', 'is_global', 'environment', 'key')
 
     def __str__(self):

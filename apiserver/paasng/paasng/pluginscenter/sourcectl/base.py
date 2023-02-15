@@ -55,6 +55,9 @@ class PluginRepoInitializer(Protocol):
     def create_project(self, plugin: PluginInstance):
         """为插件在 VCS 服务创建源码项目"""
 
+    def delete_project(self, plugin: PluginInstance):
+        """删除插件在 VCS 上的源码项目"""
+
     def initial_repo(self, plugin: PluginInstance):
         """初始化插件代码"""
 

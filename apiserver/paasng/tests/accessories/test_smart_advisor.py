@@ -119,6 +119,6 @@ class TestGetFailureHint:
         with mock.patch('paasng.accessories.smart_advisor.utils.DocumentaryLinkAdvisor') as mocked_advisor:
             mocked_advisor().search_by_tags.return_value = docs
             hint = get_failure_hint(deployment)
-            error_tips = asdict(hint)
+            _ = asdict(hint)
             assert hint.matched_solutions_found is True
             assert len(hint.helpers) == 2

@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 name: "运行时管理",
                                 url: "{% url 'admin.buildpack.list' %}",
                             },
-                          {
+                            {
                                 name: "应用集群管理",
                                 url: "{% url 'admin.clusters.manage' %}",
                             },
@@ -58,6 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             {
                                 name: "代码库配置",
                                 url: "{% url 'admin.sourcectl.source_type_spec.manage' %}"
+                            },
+                            {
+                                name: "PaaS Operator",
+                                url: "{% url 'admin.operators.manage' %}",
                             }
                         ]
                     },

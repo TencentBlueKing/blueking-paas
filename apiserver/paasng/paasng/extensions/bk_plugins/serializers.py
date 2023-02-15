@@ -106,4 +106,4 @@ class BkPluginTagSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = BkPluginTag
-        fields = ['code_name', 'name', 'id']
+        fields = ['code_name', 'name', 'id', 'priority']

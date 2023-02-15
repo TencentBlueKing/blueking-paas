@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 from collections import defaultdict
-from typing import List, Dict
+from typing import Dict, List
 
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.core.encoder import user_id_encoder
@@ -310,12 +310,16 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = slz.validated_data
 
         updated_data = {}
-        for field in ["introduction", "contact"]:
-            if data[field]:
-                updated_data[field] = data[field]
+
+        if data['contact']:
+            updated_data["contact"] = data["contact"]
+        if data['introduction']:
+            # introduction 为 lazy 对象直接放到 BkPluginProfileSLZ 中会报错
+            updated_data["introduction"] = str(data["introduction"])
+
         category = data["category"]
         if tag := BkPluginTag.objects.filter(name=category).first():
-            updated_data["tag"] = tag
+            updated_data["tag"] = tag.id
 
         serializer = serializers.BkPluginProfileSLZ(data=updated_data, instance=profile)
         serializer.is_valid(raise_exception=True)
@@ -324,8 +328,8 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.MarketCategorySLZ(many=True))
     def list_category(self, request):
-        """查看系统中所有的“插件分类（Plugin-Tag）”，默认按照“创建时间（从旧到新）排序”"""
-        tags = BkPluginTag.objects.all().order_by('created')
+        """查看系统中所有的“插件分类（Plugin-Tag）”"""
+        tags = BkPluginTag.objects.all()
         return Response(
             data=api_serializers.MarketCategorySLZ(
                 [

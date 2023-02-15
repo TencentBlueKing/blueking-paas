@@ -37,10 +37,8 @@ class BkDevopsClient:
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage="prod")
 
         client.update_bkapi_authorization(
-            **{
-                'bk_app_code': settings.BK_APP_CODE,
-                'bk_app_secret': settings.BK_APP_SECRET,
-            }
+            bk_app_code=settings.BK_APP_CODE,
+            bk_app_secret=settings.BK_APP_SECRET,
         )
         self.client: BkDevopsGroup = client.api
 

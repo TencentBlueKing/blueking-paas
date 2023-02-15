@@ -42,7 +42,7 @@ from paasng.dev_resources.sourcectl.utils import compress_directory, generate_te
 logger = logging.getLogger(__name__)
 
 
-class VersionType(object):
+class VersionType:
     """Version type for svn repository type"""
 
     def __init__(self, name, dirname, include_subdirs):
@@ -59,7 +59,7 @@ class VersionType(object):
             return self.dirname
 
 
-class SvnVersionTypes(object):
+class SvnVersionTypes:
     """All supported svn version types"""
 
     RE_SMART_REVISION = re.compile(r'^(\w+):(.+)$')
@@ -100,7 +100,7 @@ class SvnVersionTypes(object):
 svn_version_types = SvnVersionTypes()
 
 
-class RepoProvider(object):
+class RepoProvider:
     """Provider for svn repository"""
 
     default_init_repo_message = 'Init repo for name: %s'
@@ -182,7 +182,7 @@ def smart_repo_client(repo_url, username, password):
     return SvnRepositoryClient(repo_url=repo_url, username=username, password=password)
 
 
-class SvnRepositoryClient(object):
+class SvnRepositoryClient:
     """Client for SVN Repository"""
 
     default_ignores = [
@@ -471,7 +471,9 @@ class LocalClient(OrigLocalClient):
             if not silent:
                 raise
 
-    def commit(self, message: str, rel_filepaths=[]):
+    def commit(self, message: str, rel_filepaths=None):
+        if rel_filepaths is None:
+            rel_filepaths = []
         args = ['-m', message] + rel_filepaths
 
         self.run_command(

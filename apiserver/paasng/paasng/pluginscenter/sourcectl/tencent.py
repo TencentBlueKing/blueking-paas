@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Union
 from urllib.parse import quote, urljoin, urlparse
 
 import arrow
@@ -38,7 +38,7 @@ from paasng.pluginscenter.constants import PluginRole
 from paasng.pluginscenter.definitions import PluginCodeTemplate
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
-from paasng.pluginscenter.sourcectl.exceptions import APIError, AuthTokenMissingError
+from paasng.pluginscenter.sourcectl.exceptions import APIError, AuthTokenMissingError, PluginRepoNameConflict
 from paasng.pluginscenter.sourcectl.git import GitTemplateDownloader
 from paasng.utils.text import remove_prefix, remove_suffix
 
@@ -80,7 +80,11 @@ def validate_response(resp: Response) -> Response:
         logging.warning(f"get url `{resp.url}` but {resp.status_code}, raw resp: {resp}")
         raise APIError(_("工蜂接口请求异常"))
     elif not resp.ok:
-        raise APIError(resp.json()["message"])
+        message = resp.json()["message"]
+        if message == '400 bad request for {:path=>["Path has already been taken"]}':
+            raise PluginRepoNameConflict(message)
+        logging.warning(f"get url `{resp.url}` but resp is not ok, raw resp: {resp}")
+        raise APIError(message)
     return resp
 
 
@@ -129,9 +133,15 @@ class PluginRepoAccessor:
         # 指定你的当前时区，默认是 0 时区，范围 (-11,11)
         time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
 
-        params = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
+        params: Dict[str, Union[str, int]] = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
         resp = self._session.get(urljoin(self._api_url, _url), params=params)
-        return validate_response(resp).json()
+
+        try:
+            return validate_response(resp).json()
+        except APIError:
+            # 工蜂 API 异常时，记录日志，并给前端返回空数组，避免页面展示异常
+            # 查询同一天的代码提交记录 API 会报错，看工蜂自己的统计页面是直接返回空数据，没有限制用户的时间选择，我们也使用同样的处理逻辑
+            return []
 
     def list_branches(self, project: GitProject, **kwargs) -> List[dict]:
         """获取仓库的所有 branches
@@ -258,6 +268,14 @@ class PluginRepoInitializer:
         plugin.save(update_fields=["repository", "updated"])
         self._enable_ci(project_info["id"])
         return project_info
+
+    def delete_project(self, plugin: PluginInstance):
+        """删除插件在 VCS 上的源码项目"""
+        git_project = GitProject.parse_from_repo_url(plugin.repository, "tc_git")
+        _id = quote(git_project.path_with_namespace, safe="")
+        _url = f"api/v3/projects/{_id}"
+        resp = self._session.delete(urljoin(self._api_url, _url))
+        validate_response(resp)
 
     def initial_repo(self, plugin: PluginInstance):
         """初始化插件代码"""

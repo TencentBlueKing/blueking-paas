@@ -9,10 +9,10 @@
       <div class="plugin-deploy-wrapper">
         <div class="ps-top-card mb15">
           <p class="main-title">
-            {{ $t(envVarConfig.title) }}
+            {{ $t(configurationSchema.title) }}
           </p>
           <p class="desc">
-            {{ $t(envVarConfig.description) }}
+            {{ $t(configurationSchema.description) }}
           </p>
         </div>
         <table
@@ -188,7 +188,7 @@
 
 <script>
     import _ from 'lodash';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import tooltipConfirm from '@/components/ui/TooltipConfirm';
     import paasPluginTitle from '@/components/pass-plugin-title';
 
@@ -197,14 +197,14 @@
             tooltipConfirm,
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 loading: true,
                 isVarLoading: true,
                 envVarList: [],
                 envVarListBackup: [],
-                envVarConfig: {},
+                configurationSchema: {},
                 newVarConfig: {
                     key: '',
                     value: '',
@@ -221,12 +221,12 @@
                         {
                             max: 64,
                             message: this.$t('不能超过64个字符'),
-                            trigger: 'blur'
+                            trigger: 'blur change'
                         },
                         {
                             regex: /^[A-Z][A-Z0-9_]*$/,
                             message: this.$t('只能以大写字母开头，仅包含大写字母、数字与下划线'),
-                            trigger: 'blur'
+                            trigger: 'blur change'
                         }
                     ],
                     value: [
@@ -238,7 +238,7 @@
                         {
                             max: 2048,
                             message: this.$t('不能超过2048个字符'),
-                            trigger: 'blur'
+                            trigger: 'blur change'
                         }
                     ],
                     description: [
@@ -256,20 +256,6 @@
                 }
             };
         },
-        computed: {
-            curPluginInfo () {
-                return this.$store.state.curPluginInfo;
-            },
-            pluginInfo () {
-                return this.$store.state.pluginInfo;
-            },
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            }
-        },
         watch: {
             '$route' () {
                 this.init();
@@ -280,7 +266,7 @@
         },
         methods: {
             init () {
-                this.getConfiguration();
+                this.getConfigurationSchema();
                 this.getEnvVarList();
             },
 
@@ -288,11 +274,11 @@
                 return !_.includes(this.editRowList, rowIndex);
             },
 
-            async getConfiguration () {
+            async getConfigurationSchema () {
                 try {
                     const pdId = this.pdId;
-                    const res = await this.$store.dispatch('plugin/getConfiguration', { pdId });
-                    this.envVarConfig = res;
+                    const res = await this.$store.dispatch('plugin/getConfigurationSchema', { pdId });
+                    this.configurationSchema = res;
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -356,11 +342,8 @@
 
             editingRowToggle (rowItem = {}, rowIndex, type = '') {
                 if (type === 'cancel') {
-                    const currentItem = this.envVarListBackup.find(envItem => envItem.id === rowItem.id);
-                    rowItem.key = currentItem.key;
-                    rowItem.value = currentItem.value;
-                    rowItem.description = currentItem.description;
-                    rowItem.environment_name = currentItem.environment_name;
+                    const currentItem = this.envVarListBackup.find(envItem => envItem.__id__ === rowItem.__id__);
+                    rowItem = currentItem;
                     if (this.$refs[`${rowItem.key}`] && this.$refs[`${rowItem.key}`].length) {
                         this.$refs[`${rowItem.key}`][0].formItems.forEach(item => {
                             item.validator.content = '';

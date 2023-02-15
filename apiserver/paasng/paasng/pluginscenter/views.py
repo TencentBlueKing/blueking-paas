@@ -59,7 +59,7 @@ from paasng.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
 )
-from paasng.pluginscenter.permissions import IsPluginCreator
+from paasng.pluginscenter.permissions import IsPluginCreator, PluginCenterFeaturePermission
 from paasng.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
 from paasng.pluginscenter.sourcectl import (
     build_master_placeholder,
@@ -146,7 +146,7 @@ class PluginInstanceMixin:
     IF request.user DOES NOT have object permissions, will raise PermissionDeny exception
     """
 
-    def get_plugin_instance(self, allow_archive: bool = False) -> PluginInstance:
+    def get_plugin_instance(self, allow_archive: bool = True) -> PluginInstance:
         queryset = PluginInstance.objects.all()
         filter_kwargs = {"pd__identifier": self.kwargs["pd_id"], "id": self.kwargs["plugin_id"]}  # type: ignore
         obj = get_object_or_404(queryset, **filter_kwargs)
@@ -159,12 +159,16 @@ class PluginInstanceMixin:
 
 
 class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
-    queryset = PluginInstance.objects.exclude(status__in=constants.PluginStatus.archive_status())
+    queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
     filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
     search_fields = ["id", "name_zh_cn", "name_en"]
-    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -184,10 +188,10 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubCreatePluginSLZ)
-    @_permission_classes([IsAuthenticated])
+    @_permission_classes([IsAuthenticated, PluginCenterFeaturePermission])
     def create(self, request, pd_id, **kwargs):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
-        slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data)
+        slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
@@ -232,7 +236,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     @atomic
     @swagger_auto_schema(request_body=serializers.StubUpdatePluginSLZ)
     @_permission_classes(
-        [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN])]
+        [
+            IsAuthenticated,
+            PluginCenterFeaturePermission,
+            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
+        ]
     )
     def update(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
@@ -258,7 +266,34 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
-    @_permission_classes([IsAuthenticated, IsPluginCreator])
+    @swagger_auto_schema(request_body=serializers.PluginInstanceLogoSLZ)
+    @_permission_classes(
+        [
+            IsAuthenticated,
+            PluginCenterFeaturePermission,
+            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
+        ]
+    )
+    def update_logo(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        slz = serializers.PluginInstanceLogoSLZ(data=request.data, instance=plugin)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+        if pd.basic_info_definition.api.update:
+            update_instance(pd, plugin, operator=request.user.pk)
+
+        # 操作记录: 修改 logo
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.LOGO,
+        )
+        return Response(data=self.get_serializer(plugin).data)
+
+    @atomic
+    @_permission_classes([IsAuthenticated, PluginCenterFeaturePermission, IsPluginCreator])
     def destroy(self, request, pd_id, plugin_id):
         """仅创建审批失败的插件可删除"""
         plugin = self.get_plugin_instance()
@@ -270,7 +305,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         logger.error(f"plugin(id: {plugin_id}) is deleted by {request.user.username}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.DELETE_PLUGIN])])
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
+    )
     def archive(self, request, pd_id, plugin_id):
         """插件下架"""
         plugin = self.get_plugin_instance()
@@ -335,7 +372,11 @@ class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, Generic
     queryset = OperationRecord.objects.all().order_by('-created')
     serializer_class = serializers.OperationRecordSLZ
     pagination_class = LimitOffsetPagination
-    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
 
     def get_queryset(self):
         plugin = self.get_plugin_instance()
@@ -343,14 +384,20 @@ class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, Generic
 
 
 @method_decorator(
-    _permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]),
+    _permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    ),
     name="list",
 )
 class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     serializer_class = serializers.PluginReleaseVersionSLZ
     pagination_class = LimitOffsetPagination
     filter_backends = [OrderingFilter, SearchFilter]
-    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
     search_fields = ["version", "source_version_name"]
     ordering = ('-created',)
 
@@ -380,7 +427,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         responses={201: serializers.PluginReleaseVersionSLZ},
     )
     @_permission_classes(
-        [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.RELEASE_VERSION])]
+        [
+            IsAuthenticated,
+            PluginCenterFeaturePermission,
+            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.RELEASE_VERSION]),
+        ]
     )
     def create(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
@@ -433,6 +484,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         return Response(data=self.get_serializer(release).data)
 
     @atomic
+    @swagger_auto_schema(request_body=openapi_empty_schema, responses={200: serializers.PluginReleaseVersionSLZ})
     def back_to_previous_stage(self, request, pd_id, plugin_id, release_id):
         """返回上一发布步骤, 重置当前步骤和上一步骤的执行状态, 并重新执行上一步。"""
         plugin = self.get_plugin_instance()
@@ -542,6 +594,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
     permission_classes = [
         IsAuthenticated,
+        PluginCenterFeaturePermission,
         plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
     ]
 
@@ -565,7 +618,11 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
 
 
 class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
     serializer_class = serializers.PluginMarketInfoSLZ
 
     def retrieve(self, request, pd_id, plugin_id):
@@ -617,18 +674,23 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
 class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
     permission_classes = [
         IsAuthenticated,
+        PluginCenterFeaturePermission,
         plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.MANAGE_MEMBERS]),
     ]
     serializer_class = serializers.PluginMemberSLZ
 
-    @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])])
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    )
     def list(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance(allow_archive=True)
         members = members_api.fetch_plugin_members(plugin)
         return Response(data=self.get_serializer(members, many=True).data)
 
     @swagger_auto_schema(request_body=openapi_empty_schema)
-    @_permission_classes([IsAuthenticated, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])])
+    @_permission_classes(
+        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
+    )
     def leave(self, request, pd_id, plugin_id):
         """用户主动退出插件成员的API"""
         plugin = self.get_plugin_instance()
@@ -640,10 +702,14 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
 
     @swagger_auto_schema(responses={201: openapi_empty_schema}, request_body=serializers.PluginMemberSLZ(many=True))
     def create(self, request, pd_id, plugin_id):
+        """新增插件成员"""
         plugin = self.get_plugin_instance()
         slz = self.get_serializer(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+
+        cur_users = {member.username for member in members_api.fetch_plugin_members(plugin)}
+        to_add_users = set()
 
         grouped: Dict[constants.PluginRole, List[str]] = {
             constants.PluginRole.ADMINISTRATOR: [],
@@ -651,6 +717,11 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
         }
         for item in data:
             grouped[item["role"]["id"]].append(item["username"])
+            to_add_users.add(item["username"])
+
+        # 检测用户是否已存在, 存在则报错
+        if conflict_users := cur_users & to_add_users:
+            raise error_codes.MEMBERSHIP_ADD_FAILED.f(_("用户 {} 已存在").format(sorted(conflict_users)))
 
         repo_member_maintainer = get_plugin_repo_member_maintainer(plugin)
         if usernames := grouped[constants.PluginRole.DEVELOPER]:
@@ -666,6 +737,37 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
             members_api.delete_role_members(plugin, role=constants.PluginRole.DEVELOPER, usernames=usernames)
         sync_members(pd=plugin.pd, instance=plugin)
         return Response(status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(responses={201: openapi_empty_schema}, request_body=serializers.PluginRoleSLZ)
+    def update_role(self, request, pd_id, plugin_id, username: str):
+        """更换角色"""
+        plugin = self.get_plugin_instance()
+        slz = serializers.PluginRoleSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        to_role_id = constants.PluginRole(data["id"])
+        user_roles = members_api.fetch_user_roles(plugin, username)
+        if len(user_roles) == 0:
+            raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(_("插件成员 {} 不存在".format(username)))
+
+        if to_role_id != constants.PluginRole.ADMINISTRATOR:
+            self._check_admin_count(plugin, [username])
+
+        # 由于权限中心的特性, 用户可以同时在多个用户组.
+        # 因此更换角色的流程分为 2 步:
+        # 1. 添加角色至用户组
+        repo_member_maintainer = get_plugin_repo_member_maintainer(plugin)
+        repo_member_maintainer.add_member(username, to_role_id)
+        members_api.add_role_members(plugin, role=to_role_id, usernames=[username])
+
+        # 2. 删除角色的其他用户组
+        for role_id in user_roles:
+            if role_id == to_role_id:
+                continue
+            members_api.delete_role_members(plugin, role=role_id, usernames=[username])
+        sync_members(pd=plugin.pd, instance=plugin)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(responses={204: openapi_empty_schema})
     def destroy(self, request, pd_id, plugin_id, username: str):
@@ -690,6 +792,7 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
 class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
     permission_classes = [
         IsAuthenticated,
+        PluginCenterFeaturePermission,
         plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
     ]
 
@@ -843,6 +946,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
 class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
     permission_classes = [
         IsAuthenticated,
+        PluginCenterFeaturePermission,
         plugin_action_permission_class([Actions.MANAGE_CONFIGURATION]),
     ]
     pagination_class = None
@@ -852,6 +956,8 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance(allow_archive=True)
         data = [{"__id__": config.unique_key, **config.row} for config in plugin.configs.all()]
+        # 根据 key 按字母序排序
+        data = sorted(data, key=lambda item: item['key'])
         return Response(data=serializers.make_config_slz_class(pd)(data, many=True).data)
 
     @swagger_auto_schema(request_body=serializers.StubConfigSLZ)

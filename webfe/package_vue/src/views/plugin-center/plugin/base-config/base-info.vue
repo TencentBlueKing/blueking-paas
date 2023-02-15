@@ -20,11 +20,49 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('插件标识') }} </label>
+                <label class="title-label logo no-border-bottom"> {{ $t('应用logo') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
+                <div class="logo-uploader item-logn-content">
+                  <div class="preview">
+                    <img :src="curPluginInfo.logo || '/static/images/default_logo.png'">
+                  </div>
+                  <div
+                    v-if="canEditPluginBasicInfo"
+                    class="preview-btn pl20"
+                  >
+                    <template>
+                      <div>
+                        <bk-button
+                          :theme="'default'"
+                          class="upload-btn mt5"
+                        >
+                          {{ $t('更换图片') }}
+                          <input
+                            type="file"
+                            accept="image/jpeg, image/png"
+                            value=""
+                            name="logo"
+                            @change="handlerUploadFile"
+                          >
+                        </bk-button>
+                        <p
+                          class="tip"
+                          style="line-height: 1;"
+                        >
+                          {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
+                        </p>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </bk-form-item>
+              <bk-form-item style="width: 180px;">
+                <label class="title-label no-border-bottom"> {{ $t('插件 ID') }} </label>
+              </bk-form-item>
+              <bk-form-item style="width: calc(100% - 180px);transform: translateX(-1px);">
                 <div class="item-content first-item-content">
-                  {{ pluginInfo.pd_id || '--' }}
+                  {{ pluginInfo.id || '--' }}
                 </div>
               </bk-form-item>
             </bk-form>
@@ -172,7 +210,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('分类') }} </label>
+                <label class="title-label"> {{ $t('应用分类') }} </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
@@ -192,7 +230,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('简介') }} </label>
+                <label class="title-label"> {{ $t('应用简介') }} </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
@@ -212,7 +250,7 @@
               form-type="inline"
             >
               <bk-form-item style="width: 180px;">
-                <label class="title-label"> {{ $t('联系人') }} </label>
+                <label class="title-label"> {{ $t('应用联系人') }} </label>
               </bk-form-item>
               <bk-form-item
                 style="width: calc(100% - 180px);"
@@ -385,13 +423,13 @@
     </paas-content-loader>
 
     <bk-dialog
-      v-model="delAppDialog.visiable"
+      v-model="delPluginDialog.visiable"
       width="540"
-      :title="`确认下架插件【${pluginInfo.id}】？`"
+      :title="`${'确认下架插件'}【${pluginInfo.id}】？`"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
-      :loading="delAppDialog.isLoading"
+      :loading="delPluginDialog.isLoading"
       @after-leave="hookAfterClose"
     >
       <div class="ps-form">
@@ -405,7 +443,7 @@
             class="ps-form-control"
           >
           <div class="mt10 f13">
-            {{ $t('注意：插件标识和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件') }}
+            {{ $t('注意：插件ID和名称在下架后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名插件。') }}
           </div>
         </div>
       </div>
@@ -419,7 +457,7 @@
         </bk-button>
         <bk-button
           theme="default"
-          @click="delAppDialog.visiable = false"
+          @click="delPluginDialog.visiable = false"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -430,7 +468,7 @@
 
 <script>
     // import moment from 'moment';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
     import user from '@/components/user';
     import authenticationInfo from '@/components/authentication-info.vue';
@@ -454,7 +492,7 @@
             user,
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 // 插件开发
@@ -481,33 +519,8 @@
                 // 市场信息只读
                 isMarketInfo: true,
                 formRemovePluginId: '',
-                localeAppInfo: {
-                    name: '',
-                    logo: '',
-                    introduction: '',
-                    contact: []
-                },
                 isUnfold: false,
-                rules: {
-                    appName: [
-                        {
-                            required: true,
-                            message: this.$t('请输入20个字符以内的应用名称'),
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 20,
-                            message: this.$t('应用名称不可超过20个字符'),
-                            trigger: 'blur'
-                        },
-                        {
-                            required: /[a-zA-Z\d\u4e00-\u9fa5]+/,
-                            message: this.$t('格式不正确，只能包含：汉字、英文字母、数字'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                delAppDialog: {
+                delPluginDialog: {
                     visiable: false,
                     isLoading: false
                 },
@@ -540,31 +553,27 @@
             localLanguage () {
                 return this.$store.state.localLanguage;
             },
-            // 插件
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
-            pluginFeatureFlags () {
-                return this.$store.state.plugin.pluginFeatureFlags;
-            },
             infoHeight () {
                 return this.isUnfold ? Number(this.editorHeight) + 32 : 232;
+            },
+            canEditPluginBasicInfo () {
+                // administrator 的角色id 是 2
+                return this.curPluginInfo.role && [2].indexOf(this.curPluginInfo.role.id) !== -1;
             }
         },
-        created () {
-            this.init();
+        async created () {
+            await this.init();
         },
         methods: {
-            init () {
-                this.getPluginBaseInfo();
-                this.getMarketInfo();
+            async init () {
+                await Promise.all([this.getPluginBaseInfo(), this.getMarketInfo()]);
                 if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
                     this.getPluginAll();
                     this.getAuthorizedUse();
                     this.getProfile();
+                }
+                if (this.pluginFeatureFlags.APP_SECRETS) {
+                    await this.$store.dispatch('plugin/getPluginAppInfo', { pluginId: this.pluginId, pdId: this.pdId });
                 }
             },
 
@@ -674,16 +683,14 @@
 
                 data.append('logo', files[0]);
                 const params = {
-                    appCode: this.appCode,
+                    pdId: this.pdId,
+                    pluginId: this.pluginId,
                     data: data
                 };
 
                 try {
-                    const res = await this.$store.dispatch('market/uploadAppLogo', params);
-                    this.localeAppInfo.logo = res.logo_url;
-                    this.$emit('current-app-info-updated');
-                    this.$store.commit('updateCurAppProductLogo', this.localeAppInfo.logo);
-
+                    await this.$store.dispatch('plugin/uploadPluginLogo', params);
+                    this.$emit('current-plugin-info-updated');
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('logo上传成功！')
@@ -699,7 +706,6 @@
             // 插件开发
             showEdit (key) {
                 this.isFormEdited[key] = true;
-                this.localeAppInfoNameTemp = this.localeAppInfo.name;
                 if (key === 'contactsInput') {
                     this.$nextTick(() => {
                         this.$refs.contactsInput.$refs.member_selector.handleClick();
@@ -722,7 +728,6 @@
                     this.resetData(ref);
                 }
                 this.isFormEdited[ref] = false;
-                this.localeAppInfo.name = this.localeAppInfoNameTemp;
             },
 
             resetData (ref) {
@@ -747,11 +752,11 @@
             },
 
             showRemovePlugin () {
-                this.delAppDialog.visiable = true;
+                this.delPluginDialog.visiable = true;
             },
 
             hookAfterClose () {
-                this.delAppDialog.visiable = false;
+                this.delPluginDialog.visiable = false;
                 this.formRemovePluginId = '';
             },
 
@@ -817,8 +822,6 @@
             async getProfile () {
                 try {
                     const res = await this.$store.dispatch('plugin/getProfileData', { pluginId: this.pluginId });
-                    this.localeAppInfo.introduction = res.introduction;
-                    this.localeAppInfo.contact = res.contact ? res.contact.split(';') : [];
                     this.apiGwName = res.api_gw_name;
                 } catch (e) {
                     this.$paasMessage({
@@ -980,6 +983,10 @@
             .logo{
                 height: 105px;
                 line-height: 105px;
+            }
+
+            .no-border-bottom {
+                border-bottom: none;
             }
 
             .plugin-info {
@@ -1182,6 +1189,7 @@
         .unfold {
             overflow: auto;
             min-height: 200px;
+            overflow-x: hidden;
         }
         .up {
             height: 200px;

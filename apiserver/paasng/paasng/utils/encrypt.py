@@ -31,9 +31,11 @@ class EncryptHandler:
     """密码加解密类"""
 
     def __init__(self):
-        self.secret_key = getattr(settings, 'PAAS_LEGACY_DB_ENCRYPT_KEY', None)
-        if not self.secret_key:
+        _secret_key = getattr(settings, 'PAAS_LEGACY_DB_ENCRYPT_KEY', None)
+        if not _secret_key:
             raise ImproperlyConfigured('`PAAS_LEGACY_DB_ENCRYPT_KEY` must be configured to use EncryptHandler')
+
+        self.secret_key: str = _secret_key
 
     def encrypt(self, text: AnyStr) -> str:
         """加密数据

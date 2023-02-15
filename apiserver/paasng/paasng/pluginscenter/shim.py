@@ -17,6 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from functools import wraps
+
+from blue_krill.web.std_error import APIError as StdAPIError
+from django.utils.translation import gettext_lazy as _
 
 from paasng.dev_resources.sourcectl.git.client import GitCommandExecutionError
 from paasng.pluginscenter import constants
@@ -28,12 +32,42 @@ from paasng.pluginscenter.iam_adaptor.management.shim import (
 )
 from paasng.pluginscenter.models import PluginInstance, PluginMarketInfo
 from paasng.pluginscenter.sourcectl import add_repo_member, get_plugin_repo_initializer
-from paasng.pluginscenter.sourcectl.exceptions import APIError
+from paasng.pluginscenter.sourcectl.exceptions import APIError as SourceAPIError
+from paasng.pluginscenter.sourcectl.exceptions import PluginRepoNameConflict
 from paasng.pluginscenter.thirdparty.instance import create_instance
 
 logger = logging.getLogger(__name__)
 
 
+def _atomic_create_plugin_repository(func):
+    """保证初始化插件失败后会删除插件仓库(如果仓库已创建)"""
+
+    @wraps(func)
+    def wrapped_init_plugin_in_view(plugin: PluginInstance, operator: str):
+        try:
+            return func(plugin, operator)
+        except Exception:
+            plugin.refresh_from_db()
+            if plugin.repository:
+                # 如果插件仓库已创建, 则删除插件仓库
+                initializer = get_plugin_repo_initializer(plugin.pd)
+                try:
+                    logger.warning(
+                        "即将删除插件<%s/%s>的源码仓库<%s>",
+                        plugin.pd.identifier,
+                        plugin.id,
+                        plugin.repository,
+                    )
+                    initializer.delete_project(plugin)
+                except SourceAPIError as e:
+                    logger.exception("删除插件仓库<%s>失败!", plugin.repository)
+                    raise error_codes.DELETE_REPO_ERROR from e
+            raise
+
+    return wrapped_init_plugin_in_view
+
+
+@_atomic_create_plugin_repository
 def init_plugin_in_view(plugin: PluginInstance, operator: str):
     """初始化插件
 
@@ -48,6 +82,9 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     if plugin.pd.basic_info_definition.api.create:
         try:
             create_instance(plugin.pd, plugin, operator)
+        except StdAPIError:
+            logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
+            raise
         except Exception:
             logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
             raise error_codes.THIRD_PARTY_API_ERROR
@@ -67,9 +104,9 @@ def init_plugin_repository(plugin: PluginInstance, operator: str):
     initializer = get_plugin_repo_initializer(plugin.pd)
     try:
         initializer.create_project(plugin)
-    except APIError as e:
-        if e.message == '400 bad request for {:path=>["Path has already been taken"]}':
-            raise error_codes.CREATE_REPO_ERROR.f("同名仓库已存在")
+    except PluginRepoNameConflict:
+        raise error_codes.CREATE_REPO_ERROR.f(_("同名仓库已存在"))
+    except SourceAPIError as e:
         logger.exception("创建仓库返回异常, 异常信息: %s", e.message)
         raise error_codes.CREATE_REPO_ERROR
 

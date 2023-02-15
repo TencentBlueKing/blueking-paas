@@ -1,6 +1,6 @@
 <template lang="html">
   <div class="overview-content">
-    <template v-if="isAppFound">
+    <template v-if="isPluginFound">
       <div class="wrap">
         <div class="overview">
           <div
@@ -21,10 +21,10 @@
               @click="hideQuickNav"
             >
               <router-view
-                v-if="userVisitEnable && appVisitEnable"
-                :app-info="appInfo"
+                v-if="userVisitEnable && pluginVisitEnable"
+                :key="$route.path"
                 class="right-main-plugin"
-                @current-app-info-updated="updateAppInfo"
+                @current-plugin-info-updated="pluginInfoUpdatedCallback"
               />
 
               <div
@@ -40,28 +40,16 @@
                     v-else-if="deniedMessageType === 'default'"
                     class="exception-text"
                   >
-                    <template v-if="appPermissionMessage">
-                      {{ appPermissionMessage }}，
-                      {{ $t('如需开启请联系') }}
-                      <a
-                        v-if="GLOBAL.HELPER.href"
-                        :href="GLOBAL.HELPER.href"
-                      >{{ GLOBAL.HELPER.name }}</a>
-                      <span v-else> {{ $t('管理员') }} </span>
-                    </template>
-                    <div v-else>
+                    <div>
                       {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
                       <router-link
                         class="toRolePage"
-                        :to="{ name: 'appRoles', params: { id: appCode } }"
+                        :to="{ name: 'pluginRoles', params: { pluginTypeId: pdId, id: pluginId } }"
                       >
                         {{ $t('成员管理') }}
                       </router-link>
                       {{ $t('页面的应用管理员') }}
                     </div>
-                  </h2>
-                  <h2 v-else-if="deniedMessageType === 'noMarketingForBackendApp'">
-                    {{ $t('当前应用为后台应用，无法上线到应用市场') }}
                   </h2>
                 </div>
               </div>
@@ -86,7 +74,7 @@
     import paasPluginNav from '@/components/paas-plugin-nav';
     import pluginQuickNav from '@/components/plugin-quick-nav';
     import { bus } from '@/common/bus';
-    import appBaseMixin from '@/mixins/app-base-mixin.js';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import store from '@/store';
 
     // 当前路由页面不需要指定的min-height
@@ -97,28 +85,20 @@
             paasPluginNav,
             pluginQuickNav
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 minHeight: 700,
-                isAppFound: true,
-                appInfo: {
-                    userType: '',
-                    repo: {
-                        linked_to_internal_svn: true
-                    }
-                },
+                isPluginFound: true,
                 navCategories: [],
                 allNavItems: [],
                 navItems: [],
                 allowNavItems: [],
-                appVisitEnable: true,
+                pluginVisitEnable: true,
                 userVisitEnable: true,
                 errorMessage: '',
-                appPermissionMessage: '',
                 deniedMessageType: 'default',
                 showMarketMenus: true,
-
                 // 非应用引擎 应用 时所要显示的父级导航
                 parentNavIds: [8, 10],
                 // 非应用引擎 应用 时所要显示的子级导航
@@ -128,9 +108,6 @@
             };
         },
         computed: {
-            appRole () {
-                return this.appInfo.role;
-            },
             routeName () {
                 return this.$route.name;
             }
@@ -143,19 +120,6 @@
                     this.errorMessage = '';
                     this.checkPermission();
                 }
-            },
-            'curAppInfo.feature' (conf) {
-                this.checkPermission();
-            },
-            appCode () {
-                this.initNavInfo();
-            },
-            '$store.state.navType': {
-                async handler (newValue) {
-                    const { code: appCode, moduleId } = newValue;
-                    const curAppInfo = await store.dispatch('getAppInfo', { appCode, moduleId });
-                    this.type = curAppInfo.application.type;
-                }
             }
         },
         /**
@@ -164,18 +128,14 @@
         async beforeRouteEnter (to, from, next) {
             const pluginId = to.params.id; // 插件id
             const pluginTypeId = to.params.pluginTypeId; // 插件类型id
-            // plugin 默认为 default
-            const moduleId = 'default';
 
             try {
+                // 是否获取应用信息, 复用开发者中心的页面需要获取应用信息
+                if (to.meta.isGetAppInfo) {
+                    await store.dispatch('plugin/getPluginAppInfo', { pluginId: pluginId, pdId: pluginTypeId });
+                }
                 if (!store.state.pluginInfo[pluginId]) {
-                    await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });
-                    // 获取当前插件应用信息
-                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId });
-                    // // 获取对应控制开关
-                    await store.dispatch('getAppFeature', { appCode: pluginId });
-                } else {
-                    store.commit('updateCurAppByCode', { appCode: pluginId, moduleId });
+                    await store.dispatch('plugin/getPluginInfo', { pluginId, pluginTypeId });
                 }
                 if (pluginId && pluginTypeId) {
                     const res = await store.dispatch('plugin/getPluginFeatureFlags', { pluginId: pluginId, pdId: pluginTypeId });
@@ -197,18 +157,18 @@
         async beforeRouteUpdate (to, from, next) {
             const pluginId = to.params.id; // 插件id
             const pluginTypeId = to.params.pluginTypeId; // 插件类型id
-            const moduleId = 'default';
 
             try {
-                // 是否获取应用信息
+                // 是否获取应用信息, 复用开发者中心的页面需要获取应用信息
                 if (to.meta.isGetAppInfo) {
-                    await store.dispatch('getAppInfo', { appCode: pluginId, moduleId });
-                    await store.dispatch('getAppFeature', { appCode: pluginId });
+                    await store.dispatch('plugin/getPluginAppInfo', { pluginId: pluginId, pdId: pluginTypeId });
                 }
                 if (!store.state.pluginInfo[pluginId]) {
-                    await store.dispatch('getPluginInfo', { pluginId, pluginTypeId });
-                } else {
-                    store.commit('updateCurAppByCode', { appCode: pluginId, moduleId });
+                    await store.dispatch('plugin/getPluginInfo', { pluginId, pluginTypeId });
+                }
+                if (pluginId && pluginTypeId) {
+                    const res = await store.dispatch('plugin/getPluginFeatureFlags', { pluginId: pluginId, pdId: pluginTypeId });
+                    store.commit('plugin/updatePluginFeatureFlags', res);
                 }
                 next(true);
             } catch (e) {
@@ -240,13 +200,7 @@
                 this.userVisitEnable = false;
                 this.errorMessage = error.detail || this.$t('平台功能异常: 请联系平台负责人检查服务配置');
             });
-
-            // 监听切换应用时，刷新左侧导航(applogo\appname\appcode)事件
-            bus.$on('update-left-nav:base-info', (appCode) => {
-                this.appCode = appCode;
-                this.updateBaseInfo();
-            });
-            this.initNavInfo();
+            await this.initNavInfo();
         },
         mounted () {
             const HEADER_HEIGHT = 50;
@@ -262,48 +216,16 @@
             document.body.className = '';
         },
         methods: {
-            initNavInfo () {
-                this.retrieveAppInfo();
+            async initNavInfo () {
+              await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pdId });
             },
-            // Retrieve app informations
-            retrieveAppInfo () {
-                const curAppInfo = this.curAppInfo;
-
-                this.appInfo = {
-                    ...curAppInfo.application,
-                    logo: '',
-                    role: curAppInfo.role ? curAppInfo.role.name : 'nobody',
-                    userType: '',
-                    web_config: curAppInfo.web_config
-                };
-
-                this.isAppFound = true;
-                // this.showMarketMenus = curAppInfo.web_config.can_publish_to_market
-
-                // Use a default logo if error happens
-                if (curAppInfo.application && curAppInfo.application.logo_url) {
-                    this.appInfo.logo = curAppInfo.application.logo_url;
-                } else {
-                    this.appInfo.logo = '/static/images/default_logo.png';
-                }
-            },
-            updateBaseInfo () {
-                return this.initNavInfo();
-            },
-            updateAppInfo () {
-                return this.initNavInfo();
+            async pluginInfoUpdatedCallback () {
+                return await this.initNavInfo();
             },
             // 检查当前路由权限
             checkPermission () {
                 // 应用是否有访问权限
-                this.appVisitEnable = true;
-                this.appPermissionMessage = '';
-                if (this.$route.name === 'appPermissionPathExempt') {
-                    if (!this.curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE) {
-                        this.appVisitEnable = false;
-                        this.appPermissionMessage = this.$t('应用未开启“配置豁免路径”的功能');
-                    }
-                }
+                this.pluginVisitEnable = true;
             },
             hideQuickNav () {
                 this.$refs.quickNav.hideSelectData();

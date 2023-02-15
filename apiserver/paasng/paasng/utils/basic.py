@@ -19,8 +19,10 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import re
 import subprocess
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Tuple
+from typing import TYPE_CHECKING, Any, Iterable, Tuple
 
+import requests
+import requests.adapters
 from bkpaas_auth import get_user_by_user_id
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_text
@@ -39,14 +41,13 @@ MOSAIC_REG = re.compile(r"(?<=\d{3})(\d{4})(?=\d{4})")
 class ChoicesEnum(Enum):
     """Enum with choices"""
 
-    _choices_labels: ClassVar[Any]
-
     @classmethod
     def get_choices(cls):
         # 没有设置 skip
-        if isinstance(cls._choices_labels, cls):
-            return cls._choices_labels.value
-        return cls._choices_labels
+        labels = cls._choices_labels  # type: ignore
+        if isinstance(labels, cls):
+            return labels.value
+        return labels
 
     @classmethod
     def get_choice_label(cls, value):
@@ -203,3 +204,15 @@ def re_path(route, view, kwargs=None, name=None):
         return URLPattern(pattern, view, kwargs, name)
     else:
         raise TypeError('view must be a callable or a list/tuple in the case of include().')
+
+
+# Make a global session object to turn on connection pooling
+_requests_session = requests.Session()
+_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
+_requests_session.mount('http://', _adapter)
+_requests_session.mount('https://', _adapter)
+
+
+def get_requests_session() -> requests.Session:
+    """Return the global requests session object which supports connection pooling"""
+    return _requests_session

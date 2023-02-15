@@ -27,20 +27,25 @@ import moment from 'moment';
 export default {
   namespaced: true,
   state: {
-    pluginData: {},
-    stagesData: [],
     pluginFeatureFlags: {},
-    chartData: bartOptions
+    chartData: bartOptions,
+    // 当前插件的基础信息
+    curPluginInfo: {},
+    // curPluginId
+    // curPluginTypeId
+    // 当前插件的当前发布版本
+    curRelease: {}
   },
   getters: {
     chartData: state => state.chartData
   },
   mutations: {
-    updatePluginData (state, data) {
-      state.pluginData = data;
-    },
-    updateStagesData (state, data) {
-      state.stagesData = data;
+    /**
+         * 设置当前正在查看的发布版本
+         * @param {Object} params 请求参数：release
+         */
+    updateCurRelease (stage, release) {
+      stage.curRelease = release;
     },
     updatePluginFeatureFlags (state, data) {
       state.pluginFeatureFlags = data;
@@ -70,6 +75,11 @@ export default {
         }
       };
       state.chartData = chartOptions;
+    },
+    updatePluginInfo (state, { pluginId, pluginTypeId, data }) {
+      state.curPluginInfo = data;
+      state.curPluginId = pluginId;
+      state.curPluginTypeId = pluginTypeId;
     }
   },
   actions: {
@@ -151,7 +161,7 @@ export default {
          * 获取版本详情
          * @param {Object} params 请求参数：pdId, pluginId, releaseId
          */
-    getVersionDetail ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+    getReleaseDetail ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/`;
       return http.get(url, config);
     },
@@ -166,20 +176,46 @@ export default {
     },
 
     /**
-         * 获取部署详情信息
+         * 获取发布步骤详情
          * @param {Object} params 请求参数：pdId, pluginId, releaseId, stageId
          */
-    getPluginRelease ({ commit, state }, { pdId, pluginId, releaseId, stageId }, config = {}) {
+    getPluginReleaseStage ({ commit, state }, { pdId, pluginId, releaseId, stageId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/stages/${stageId}/`;
       return http.get(url, config);
     },
 
     /**
-         * 重新部署
+         * 重新执行发布步骤
          */
-    pluginDeploy ({ commit, state }, { pdId, pluginId, releaseId, stageId, data }, config = {}) {
+    rerunStage ({ commit, state }, { pdId, pluginId, releaseId, stageId, data = {} }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/stages/${stageId}/rerun/`;
       return http.post(url, data, config);
+    },
+
+    /**
+         * 获取插件信息
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    getPluginInfo ({ commit, state }, { pluginId, pluginTypeId }) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pluginTypeId}/plugins/${pluginId}/`;
+      commit('updateAppLoading', true, { root: true });
+      return http.get(url).then(response => {
+        commit('updatePluginInfo', { pluginId, pluginTypeId, data: response });
+        return response;
+      }).finally(() => {
+        commit('updateAppLoading', false, { root: true });
+      });
+    },
+
+    /**
+         * 上传插件logo
+         *
+         * @param {Object} params 请求参数：pdId, pluginId
+         * @param {Object} config ajax配置
+         */
+    uploadPluginLogo ({ commit, state }, { pdId, pluginId, data }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/logo/`;
+      return http.put(url, data, config);
     },
 
     /**
@@ -240,7 +276,7 @@ export default {
          * 下一步
          * @param {Object} params 请求参数：pdId, pluginId, releaseId
          */
-    nextRelease ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
+    nextStage ({ commit, state }, { pdId, pluginId, releaseId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/next/`;
       return http.post(url, {}, config);
     },
@@ -331,16 +367,16 @@ export default {
     },
 
     /**
-         * 获取配置管理
+         * 获取配置管理表单配置
          * @param {Object} params 请求参数：pdId
          */
-    getConfiguration ({ commit, state }, { pdId }, config = {}) {
+    getConfigurationSchema ({ commit, state }, { pdId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/plugin_definitions/${pdId}/configuration_schema/`;
       return http.get(url, {}, config);
     },
 
     /**
-         * 获取环境变量配置
+         * 获取配置项
          * @param {Object} params 请求参数：pdId, pluginId
          */
     getEnvVarList ({ commit, state }, { pdId, pluginId }, config = {}) {
@@ -349,7 +385,7 @@ export default {
     },
 
     /**
-         * 添加/更新环境变量
+         * 添加/更新配置项
          * @param {Object} params 请求参数：pdId, pluginId
          */
     editEnvVar ({ commit, state }, { pdId, pluginId, data }, config = {}) {
@@ -358,7 +394,7 @@ export default {
     },
 
     /**
-         * 删除环境变量
+         * 删除配置项
          * @param {Object} params 请求参数：pdId, pluginId
          */
     deleteEnvVar ({ commit, state }, { pdId, pluginId, configId }, config = {}) {
@@ -382,6 +418,14 @@ export default {
     lowerShelfPlugin ({ commit, state }, { pdId, pluginId, data }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/archive/`;
       return http.post(url, data, config);
+    },
+
+    /**
+         * 更新当前插件 logo
+         * @param {Object} params 请求参数：pdId, pluginId
+         */
+    updateCurPluginLogo ({ commit, state }, { logo }, config = {}) {
+      state.curPluginInfo.logo_url = logo;
     },
 
     /**
@@ -436,6 +480,7 @@ export default {
       const url = `${BACKEND_URL}/api/bk_plugins/${pluginId}/distributors/`;
       return http.get(url, {}, config);
     },
+
     /**
          * 插件代码仓库概览信息
          * @param {Object} params 请求参数：
@@ -443,6 +488,28 @@ export default {
     getStoreOverview ({ commit, state }, { pdId, pluginId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/overview/`;
       return http.get(url, {}, config);
+    },
+
+    /**
+         * 获取插件关联的蓝鲸应用信息
+         * 目前仅蓝鲸插件类型的插件有关联蓝鲸应用
+         * @param {Object} params 请求参数：
+         */
+    async getPluginAppInfo ({ commit, dispatch }, { pdId, pluginId }, config = {}) {
+      // plugin 默认为 default
+      const moduleId = 'default';
+      await dispatch('getAppInfo', { appCode: pluginId, moduleId }, {root: true});
+      await dispatch('getAppFeature', { appCode: pluginId }, {root: true});
+      commit('updateCurAppByCode', { appCode: pluginId, moduleId }, {root: true});
+    },
+
+    /**
+         * 插件部署信息
+         * @param {Object} params 请求参数：pluginId
+         */
+    getPluginAccessEntry ({ commit, state }, { pluginId }, config) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${pluginId}/modules/default/envs/prod/released_state/`;
+      return http.get(url, config);
     }
   }
 };

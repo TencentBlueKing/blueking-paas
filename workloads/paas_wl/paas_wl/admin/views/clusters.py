@@ -25,6 +25,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, mixins
 
+from paas_wl.admin.helpers import detect_operator_status, fetch_paas_cobj_info
 from paas_wl.admin.serializers.clusters import (
     APIServerSLZ,
     ClusterRegisterRequestSLZ,
@@ -34,6 +35,7 @@ from paas_wl.admin.serializers.clusters import (
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.networking.egress.models import generate_state
 from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
+from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.utils.app import get_scheduler_client
 
 logger = logging.getLogger(__name__)
@@ -73,26 +75,37 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         APIServer.objects.filter(cluster=cluster, uuid=api_server_id).delete()
         return Response()
 
-    def gen_state(self, request, *args, **kwargs):
+    def gen_node_state(self, request, cluster_name, *args, **kwargs):
         slz = GenRegionClusterStateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+        region = data['region']
 
-        cluster_name = data['cluster_name']
-        for region in data['regions']:
-            clusters = Cluster.objects.filter(region=region)
-            # 若已指定集群名称，则只更新对应的集群
-            if cluster_name:
-                clusters = clusters.filter(name=cluster_name)
+        if not Cluster.objects.filter(region=region, name=cluster_name).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-            for cluster in clusters:
-                logger.info(f'will generate state for [{region}/{cluster.name}]...')
-                sched_client = get_scheduler_client(cluster_name=cluster.name)
+        logger.info(f'will generate state for [{region}/{cluster_name}]...')
+        sched_client = get_scheduler_client(cluster_name=cluster_name)
 
-                logger.info(f'generating state for [{region}/{cluster.name}]...')
-                state = generate_state(region, cluster.name, sched_client, data['ignore_labels'])
+        logger.info(f'generating state for [{region}/{cluster_name}]...')
+        state = generate_state(region, cluster_name, sched_client, data['ignore_labels'])
 
-                logger.info('syncing the state to nodes...')
-                sched_client.sync_state_to_nodes(state)
+        logger.info('syncing the state to nodes...')
+        sched_client.sync_state_to_nodes(state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_operator_info(self, requests, cluster_name, *args, **kwargs):
+        """获取各集群 Operator 相关信息"""
+        resp_data = {'cluster_name': cluster_name}
+        try:
+            client = get_client_by_cluster_name(cluster_name)
+        except ValueError:
+            # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
+            return Response(resp_data)
+
+        # Operator 部署状态
+        resp_data.update(detect_operator_status(client))
+        # PaaS 平台自定义资源信息
+        resp_data.update(fetch_paas_cobj_info(client, resp_data['crds']))
+        return Response(resp_data)

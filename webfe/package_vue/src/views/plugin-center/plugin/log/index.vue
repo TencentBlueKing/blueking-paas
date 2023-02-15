@@ -1,6 +1,6 @@
 <template lang="html">
   <div
-    :key="appCode"
+    :key="pluginId"
     class="right-main"
   >
     <paas-content-loader
@@ -48,7 +48,7 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import standartLog from './standart-log.vue';
     import accessLog from './access-log.vue';
     import customLog from './custom-log.vue';
@@ -61,7 +61,7 @@
             customLog,
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 name: 'log-component',
@@ -73,18 +73,6 @@
         computed: {
             pluginFeatureFlags () {
                 return this.$store.state.plugin.pluginFeatureFlags;
-            }
-        },
-        watch: {
-            tabActive () {
-                // this.$nextTick(() => {
-                //     if (this.tabActive === 'structured') {
-                //         this.$refs.customLog.initTableBox();
-                //     }
-                //     if (this.tabActive === 'access') {
-                //         this.$refs.accessLog.initTableBox();
-                //     }
-                // });
             }
         },
         mounted () {

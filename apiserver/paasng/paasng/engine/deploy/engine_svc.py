@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 class EngineDeployClient:
     """A high level client for engine"""
 
-    def __init__(self, engine_app, controller_client: ControllerClient = None):
+    def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
         self.engine_app = engine_app
         self.ctl_client = controller_client or make_internal_client()
 

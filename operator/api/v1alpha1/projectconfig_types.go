@@ -32,6 +32,8 @@ type PlatformConfig struct {
 	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
 	// sentry server dsn, all events waiting for report will be dropped if unset
 	SentryDSN string `json:"sentryDSN"`
+	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
+	IngressClassName string `json:"ingressClassName"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config
@@ -75,7 +77,16 @@ type ProjectConfig struct {
 // NewProjectConfig create project config
 func NewProjectConfig() *ProjectConfig {
 	conf := ProjectConfig{}
-	// 预设默认值
+
+	// worker 数量默认为 5
+	conf.Controller = &cfg.ControllerConfigurationSpec{
+		GroupKindConcurrency: map[string]int{
+			GroupKindBkApp.String():              5,
+			GroupKindDomainGroupMapping.String(): 5,
+		},
+	}
+
+	// 资源预设默认值
 	conf.ResLimitConfig.ProcDefaultCPULimits = "4"
 	conf.ResLimitConfig.ProcDefaultMemLimits = "1Gi"
 	conf.ResLimitConfig.MaxReplicas = 5

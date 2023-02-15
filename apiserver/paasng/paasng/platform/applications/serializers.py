@@ -102,7 +102,6 @@ class AppUniqueValidator(UniqueValidator):
 
 
 class AppIDUniqueValidator(AppUniqueValidator):
-
     field_name = 'code'
     field_label = '应用 ID'
     signal = prepare_use_application_code
@@ -120,7 +119,6 @@ class AppIDUniqueValidator(AppUniqueValidator):
 
 
 class AppNameUniqueValidator(AppUniqueValidator):
-
     field_name = 'name'
     field_label = '应用名称'
     signal = prepare_use_application_name
@@ -336,7 +334,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
         modules = obj.modules.all().order_by('-is_default', '-created')
         return ModuleSLZ(modules, many=True).data
 
-    class Meta(object):
+    class Meta:
         model = Application
         exclude = ['logo']
 
@@ -374,7 +372,6 @@ class RoleField(serializers.Field):
 
 
 class ApplicationMemberSLZ(serializers.Serializer):
-
     user = UserField()
     roles = serializers.ListField(child=RoleField(), help_text='用户角色列表')
 
@@ -454,10 +451,16 @@ class ProductSLZ(serializers.Serializer):
     logo = serializers.CharField(source='get_logo_url')
 
 
+class MarketConfigSLZ(serializers.Serializer):
+    # 第三方应用直接打开应用地址，不需要打开应用市场的地址
+    source_tp_url = serializers.URLField(required=False, allow_blank=True, allow_null=True, help_text="第三方访问地址")
+
+
 class ApplicationWithMarketSLZ(serializers.Serializer):
     application = ApplicationWithDeployInfoSLZ(read_only=True)
     product = ProductSLZ(read_only=True)
     marked = serializers.BooleanField(read_only=True)
+    market_config = MarketConfigSLZ(read_only=True)
 
 
 # Minimal serializers
@@ -466,7 +469,7 @@ class ApplicationWithMarketSLZ(serializers.Serializer):
 class ApplicationMinimalSLZ(serializers.ModelSerializer):
     name = TranslatedCharField()
 
-    class Meta(object):
+    class Meta:
         model = Application
         fields = ['id', 'code', 'name']
 
@@ -491,7 +494,7 @@ class ApplicationSLZ4Record(serializers.ModelSerializer):
     logo_url = serializers.CharField(read_only=True, source='get_logo_url', help_text=u"应用的Logo地址")
     config_info = serializers.DictField(read_only=True, help_text='应用额外状态信息')
 
-    class Meta(object):
+    class Meta:
         model = Application
         fields = ['id', 'code', 'name', 'logo_url', 'config_info']
 
@@ -527,7 +530,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
                 raise serializers.ValidationError(u'您已经标记该应用')
         return attrs
 
-    class Meta(object):
+    class Meta:
         model = UserMarkedApplication
         fields = ['application_code', 'application_name', "application", "url"]
 
@@ -633,7 +636,7 @@ class ApplicationLogoSLZ(serializers.ModelSerializer):
     logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text=u"应用 Logo 访问地址")
     code = serializers.ReadOnlyField(help_text=u"应用 Code")
 
-    class Meta(object):
+    class Meta:
         model = Application
         fields = ['logo', 'logo_url', 'code']
 

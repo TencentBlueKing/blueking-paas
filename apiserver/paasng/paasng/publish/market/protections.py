@@ -19,11 +19,11 @@ to the current version of the project delivered to anyone in the future.
 """Preconditions for publish Application/Module"""
 from django.utils.translation import gettext as _
 
-from paasng.engine.models import Deployment
 from paasng.platform.applications.models import Application
 from paasng.platform.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.platform.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.modules.models import Module
+from paasng.publish.entrance.exposer import env_is_deployed
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig, Product
 
@@ -63,11 +63,7 @@ class ProdEnvReadinessCondition(PublishCondition):
             return
 
         app_env = market_config.source_module.envs.get(environment='prod')
-        try:
-            Deployment.objects.filter(app_environment=app_env).latest_succeeded()
-            if app_env.is_offlined:
-                raise ConditionNotMatched(_('应用已在生产环境下架'), self.action_name)
-        except Deployment.DoesNotExist:
+        if not env_is_deployed(app_env):
             raise ConditionNotMatched(_('应用未在生产环境成功部署'), self.action_name)
 
 
@@ -113,11 +109,7 @@ class ModuleProdEnvReadinessCondition(ModulePublishCondition):
 
     def validate(self):
         app_env = self.module.get_envs('prod')
-        try:
-            Deployment.objects.filter(app_environment=app_env).latest_succeeded()
-            if app_env.is_offlined:
-                raise ConditionNotMatched(_('模块已在生产环境下架'), self.action_name)
-        except Deployment.DoesNotExist:
+        if not env_is_deployed(app_env):
             raise ConditionNotMatched(_('模块未在生产环境成功部署'), self.action_name)
 
 

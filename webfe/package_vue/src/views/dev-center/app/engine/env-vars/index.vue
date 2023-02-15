@@ -156,6 +156,20 @@
                   @click="handleShoEnvDialog"
                 >{{ $t('查看内置环境变量') }}</span>
               </p>
+              <p v-if="!canModifyEnvVariable" class="desc" >
+                <bk-alert type="error">
+                  <div slot="title">
+                    <span v-if="curAppInfo.application.type === 'bk_plugin'">
+                      {{ $t('应用已迁移到插件开发中心，本页面仅做展示用，如需操作请到') }}
+                      <router-link :to="{ name: 'pluginDeployEnv', params: { id: curAppCode, pluginTypeId: 'bksaas' }}">{{ $t('插件开发- 配置管理页面') }}</router-link>
+                      {{  $t('。') }}
+                    </span>
+                    <span v-else>
+                      {{ $t('当前应用不支持配置环境变量。') }}
+                    </span>
+                  </div>
+                </bk-alert>
+              </p>
             </div>
 
             <div class="filter-list">
@@ -217,22 +231,23 @@
                     <a
                       href="javascript:;"
                       style="margin: 0;"
-                      :class="curModuleList.length < 1 ? 'is-disabled' : ''"
-                      @click="handleExport('module')"
+                      :class="(curModuleList.length < 1 || !canModifyEnvVariable) ? 'is-disabled' : ''"
+                      @click="handleCloneFromModule"
                     > {{ $t('从模块导入') }} </a>
                   </li>
                   <li>
                     <a
                       href="javascript:;"
                       style="margin: 0;"
-                      @click="handleExport('file')"
+                      :class="!canModifyEnvVariable ? 'is-disabled' : ''"
+                      @click="handleImportFromFile"
                     > {{ $t('从文件导入') }} </a>
                   </li>
                   <li>
                     <a
                       href="javascript:;"
                       style="margin: 0;"
-                      @click="handleExport('batch')"
+                      @click="handleExportToFile"
                     > {{ $t('批量导出') }} </a>
                   </li>
                 </ul>
@@ -384,7 +399,7 @@
                     />
                   </bk-select>
                 </bk-form-item>
-                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;">
+                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;" v-if="canModifyEnvVariable">
                   <template v-if="isReadOnlyRow(index)">
                     <a
                       class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
@@ -420,7 +435,7 @@
               </bk-form>
             </td>
           </tr>
-          <tr>
+          <tr v-if="canModifyEnvVariable">
             <td>
               <bk-form
                 ref="newVarForm"
@@ -600,13 +615,13 @@
     </bk-dialog>
 
     <bk-dialog
-      v-model="exportFileDialog.visiable"
-      :header-position="exportFileDialog.headerPosition"
-      :loading="exportFileDialog.loading"
-      :width="exportFileDialog.width"
+      v-model="importFileDialog.visiable"
+      :header-position="importFileDialog.headerPosition"
+      :loading="importFileDialog.loading"
+      :width="importFileDialog.width"
       :ok-text="$t('确定导入')"
       ext-cls="paas-env-var-upload-dialog"
-      @after-leave="handleExportFileLeave"
+      @after-leave="handleImportFileLeave"
     >
       <div
         slot="header"
@@ -669,13 +684,13 @@
       <div slot="footer">
         <bk-button
           theme="primary"
-          :loading="exportFileDialog.loading"
+          :loading="importFileDialog.loading"
           :disabled="!curFile.name"
-          @click="handleExportFileConfirm"
+          @click="handleImportFileConfirm"
         >
           {{ $t('确定导入') }}
         </bk-button>
-        <bk-button @click="handleExportFileCancel">
+        <bk-button @click="handleImportFileCancel">
           {{ $t('取消') }}
         </bk-button>
       </div>
@@ -859,7 +874,7 @@
                     isLoading: false,
                     count: 0
                 },
-                exportFileDialog: {
+                importFileDialog: {
                     visiable: false,
                     width: 540,
                     headerPosition: 'center',
@@ -946,6 +961,10 @@
             },
             envLoading () {
                 return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
+            },
+            canModifyEnvVariable () {
+                console.log(this);
+                return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
             }
         },
         watch: {
@@ -957,46 +976,29 @@
             this.init();
         },
         methods: {
-            handleExport (type) {
-                if (type === 'module' && this.curModuleList.length < 1) {
-                    return;
-                }
-                this.$refs.largeDropdown.hide();
-                switch (type) {
-                    case 'module':
-                        this.exportDialog.visiable = true;
-                        this.moduleValue = this.curModuleList[0].id;
-                        this.curSelectModuleName = this.curModuleList[0].name;
-                        this.handleModuleSelected('', { name: this.curSelectModuleName });
-                        break;
-                    case 'file':
-                        this.exportFileDialog.visiable = true;
-                        break;
-                    case 'batch':
-                        this.handleBatchExport();
-                        break;
-                    default:
-                        break;
-                }
+            handleImportFromFile () {
+              if (!this.canModifyEnvVariable) {
+                return;
+              }
+              this.importFileDialog.visiable = true;
             },
-
-            downloadYaml (content, type = 'download') {
-                const fileName = type === 'download' ? 'env_vars_import_template' : `${this.appCode}_${this.curModuleId}_env_vars`;
-                const elment = document.createElement('a');
-                const blob = new Blob([content], {
-                    type: 'text/plain'
-                });
-                elment.download = `bk_paas3_${fileName}.yaml`;
-                elment.href = URL.createObjectURL(blob);
-                elment.click();
-                URL.revokeObjectURL(blob);
+            handleCloneFromModule () {
+              if (!this.canModifyEnvVariable) {
+                return;
+              }
+              if (this.curModuleList.length <= 1) {
+                return;
+              }
+              this.exportDialog.visiable = true;
+              this.moduleValue = this.curModuleList[0].id;
+              this.curSelectModuleName = this.curModuleList[0].name;
+              this.handleModuleSelected('', { name: this.curSelectModuleName });
             },
-
-            handleBatchExport () {
-                this.exportLoading = true;
+            handleExportToFile () {
+              this.exportLoading = true;
                 const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/export/?order_by=${this.curSortKey}`;
                 this.$http.get(url).then((response) => {
-                    this.downloadYaml(response, 'export');
+                    this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
                 }, (errRes) => {
                     const errorMsg = errRes.detail;
                     this.$paasMessage({
@@ -1008,6 +1010,15 @@
                 });
             },
 
+            invokeBrowserDownload (content, filename) {
+              const a = document.createElement('a');
+              const blob = new Blob([content], { type: 'text/plain' });
+              a.download = filename;
+              a.href = URL.createObjectURL(blob);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(blob);
+            },
             handleTriggerUpload () {
                 this.$refs.upload.click();
             },
@@ -1025,8 +1036,8 @@
                 this.$refs.upload.value = '';
             },
 
-            handleExportFileConfirm () {
-                this.exportFileDialog.loading = true;
+            handleImportFileConfirm () {
+                this.importFileDialog.loading = true;
                 const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/import/`;
                 const params = new FormData();
                 params.append('file', this.curFile);
@@ -1079,15 +1090,15 @@
                         message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`
                     });
                 }).finally(() => {
-                    this.exportFileDialog.loading = false;
-                    this.exportFileDialog.visiable = false;
+                    this.importFileDialog.loading = false;
+                    this.importFileDialog.visiable = false;
                 });
             },
 
             handleDownloadTemplate () {
                 const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/template/`;
                 this.$http.get(url).then((response) => {
-                    this.downloadYaml(response);
+                    this.invokeBrowserDownload(response, `bk_paas3_env_vars_import_template.yaml`);
                 }, (errRes) => {
                     const errorMsg = errRes.detail;
                     this.$paasMessage({
@@ -1192,15 +1203,15 @@
             handleExportCancel () {
                 this.exportDialog.visiable = false;
             },
-            handleExportFileCancel () {
-                this.exportFileDialog.visiable = false;
+            handleImportFileCancel () {
+                this.importFileDialog.visiable = false;
             },
             handleAfterLeave () {
                 this.moduleValue = '';
                 this.curSelectModuleName = '';
                 this.exportDialog.count = 0;
             },
-            handleExportFileLeave () {
+            handleImportFileLeave () {
                 this.curFile = {};
                 this.isFileTypeError = false;
             },

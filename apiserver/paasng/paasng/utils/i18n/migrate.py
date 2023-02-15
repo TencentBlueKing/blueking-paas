@@ -57,7 +57,7 @@ def bulk_update_chunk_by_chunk(
         total_count = count_table(cursor, table_name)
         pks = fetchall_pks(cursor, table_name, pk_field, total_count, batch_size)
 
-        batches = list(pks[i : i + batch_size] for i in range(0, len(pks), batch_size))
+        batches = [pks[i : i + batch_size] for i in range(0, len(pks), batch_size)]
         total_step = len(batches)
         for step, chunk in enumerate(batches):
             logger.info("Chunk<%d/%d> is updating", step + 1, total_step)
@@ -86,7 +86,7 @@ def fetchall_pks(cursor: CursorWrapper, table_name: str, pk_field: str, total_si
     if len(pks) < batch_size:
         return pks
 
-    for i in range(batch_size, total_size, batch_size):
+    for _ in range(batch_size, total_size, batch_size):
         cursor.execute(next_query_sql, [pks[-1]])
         pks.extend(flatfetchall(cursor))
     return pks

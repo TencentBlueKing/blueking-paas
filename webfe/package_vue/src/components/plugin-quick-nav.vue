@@ -11,15 +11,15 @@
       >
         <div class="flex-row align-items-center">
           <img
-            :src="curPluginData.logo"
+            :src="curPluginInfo.logo"
             onerror="this.src='/static/images/plugin-default.svg'"
           >
           <div class="pl10">
             <div class="plugin-name">
-              {{ curPluginData.name_zh_cn }}
+              {{ curPluginInfo.name_zh_cn }}
             </div>
             <div class="guide-plugin-desc">
-              {{ curPluginData.id }}
+              {{ curPluginInfo.id }}
             </div>
           </div>
         </div>
@@ -45,30 +45,33 @@
         <div
           class="plugin-list"
         >
-          <template v-if="viewPluinList.length">
-            <div
-              v-for="item in viewPluinList"
-              :key="item.id"
-              class="item flex-row align-items-center"
-              @click="changePlugin(item)"
-            >
-              <img
-                :src="item.logo"
-                onerror="this.src='/static/images/plugin-default.svg'"
+          <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
+            <template v-if="viewPluinList.length">
+              <div
+                v-for="item in viewPluinList"
+                :key="item.id"
+                class="item flex-row align-items-center"
+                :class="{ 'plugin-active': pluginId === item.id }"
+                @click="changePlugin(item)"
               >
-              <div class="plugin-name ft12 pl10">
-                {{ item.name_zh_cn }}
+                <img
+                  :src="item.logo"
+                  onerror="this.src='/static/images/plugin-default.svg'"
+                >
+                <div class="plugin-name ft12 pl10">
+                  {{ item.name_zh_cn }}
+                </div>
+                <div class="plugin-desc ft12 pl10">
+                  ( {{ item.id }} )
+                </div>
               </div>
-              <div class="plugin-desc ft12 pl10">
-                ( {{ item.id }} )
-              </div>
+            </template>
+            <div
+              v-else
+              class="not-data-tips"
+            >
+              {{ pluginList.length ? $t('无匹配数据') : '' }}
             </div>
-          </template>
-          <div
-            v-else
-            class="not-data-tips"
-          >
-            {{ $t('无匹配数据') }}
           </div>
         </div>
         <div class="dropdown-footer flex-row align-items-center justify-content-around">
@@ -92,27 +95,28 @@
   </div>
 </template>
 <script>
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import _ from 'lodash';
     export default {
         components: {
         },
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 showSelectData: false,
                 searchValue: '',
                 pluginList: [],
                 viewPluinList: [],
-                curPluginData: {},
                 isHover: false,
-                isLoading: false
+                isLoading: true
             };
         },
+        computed: {
+            pluginId () {
+                return this.$route.params.id;
+            }
+        },
         watch: {
-            pluginList: {
-                handler (val) {
-                    this.curPluginData = val.find(e => e.id === this.$route.params.id);
-                }
-            },
             searchValue (newVal, oldVal) {
                 this.searchPlugin();
             },
@@ -147,6 +151,8 @@
                         theme: 'error',
                         message: e.message
                     });
+                } finally {
+                    this.isLoading = false;
                 }
             },
             hanlerCurPlugin () {
@@ -161,26 +167,33 @@
                 });
             },
             async changePlugin (data) {
-                this.curPluginData = this.pluginList.find(e => e.id === data.id);
-                // 重新获取菜单FeatureFlags
-                const res = await this.$store.dispatch('plugin/getPluginFeatureFlags', { pluginId: data.id, pdId: data.pd_id });
-                this.$store.commit('plugin/updatePluginFeatureFlags', res);
-                this.$router.push({
-                    name: 'pluginVersionManager',
-                    params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
-                });
+                // 如果去往当前的路由没有权限则去往概览页
+                const parmas = this.getTarget(data.id, data.pd_id);
                 this.hideSelectData();
+                this.$router.push(parmas);
             },
             searchPlugin: _.debounce(function () {
                 if (this.searchValue === '') {
                     this.viewPluinList = this.pluginList;
                 }
-                this.isLoading = true;
                 this.viewPluinList = this.pluginList.filter(item => item.name_zh_cn.indexOf(this.searchValue) !== -1 || item.id.indexOf(this.searchValue) !== -1);
-                setTimeout(() => {
-                    this.isLoading = false;
-                }, 200);
-            }, 100)
+            }, 100),
+
+            getTarget (pluginId, pdId) {
+                const target = {
+                    name: this.$route.name,
+                    params: {
+                        ...this.$route.params,
+                        id: pluginId,
+                        pluginTypeId: pdId
+                    },
+                    query: {
+                        ...this.$route.query
+                    }
+                };
+
+                return target;
+            }
         }
     };
 </script>
@@ -220,6 +233,7 @@
             box-shadow: 0 2px 6px 0 rgba(0,0,0,0.10);
             border-radius: 2px;
             z-index: 1000;
+            user-select: none;
             .plugin-list{
                 padding-top: 5px;
                 max-height: 200px;
@@ -287,6 +301,9 @@
     justify-content: center;
     align-items: center;
     color: #666;
+}
+.plugin-active {
+    background: #F5F7FA;
 }
 </style>
 <style>

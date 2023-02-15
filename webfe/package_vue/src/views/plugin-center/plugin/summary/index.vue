@@ -21,7 +21,7 @@
                   <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore || '--' }}</h3>
                   <span class="text">{{ $t('代码质量') }}</span>
                   <i
-                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考')"
+                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。')"
                     style="color: #C4C6CC;margin-top:1px;"
                     class="paasng-icon paasng-info-line"
                   />
@@ -102,21 +102,25 @@
               <h3>{{ $t('基本信息') }}</h3>
               <div class="base-info">
                 <p>
-                  {{ $t('插件类型：') }} <span>{{ curPluginData.pd_name }}</span>
+                  {{ $t('插件类型：') }} <span>{{ curPluginInfo.pd_name }}</span>
                 </p>
                 <p>
-                  {{ $t('开发语言：') }} <span>{{ curPluginData.language }}</span>
+                  {{ $t('开发语言：') }} <span>{{ curPluginInfo.language }}</span>
                 </p>
                 <p class="repos">
                   <span>{{ $t('代码仓库：') }}</span>
-                  <span>{{ curPluginData.repository }}</span>
+                  <span
+                    v-bk-tooltips.top-end="curPluginInfo.repository"
+                    class="repository-tooltips"
+                  />
+                  <span>{{ curPluginInfo.repository }}</span>
                   <!-- 复制 -->
                   <span
-                    v-copy="curPluginData.repository"
+                    v-copy="curPluginInfo.repository"
                     class="copy-text"
                   >
                     <a
-                      :href="curPluginData.repository"
+                      :href="curPluginInfo.repository"
                       target="_blank"
                       style="color: #979BA5;"
                     ><i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" /></a>
@@ -169,6 +173,7 @@
 </template>
 <script>
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import ECharts from 'vue-echarts/components/ECharts.vue';
     import 'echarts/lib/chart/line';
     import 'echarts/lib/component/tooltip';
@@ -180,6 +185,7 @@
             paasPluginTitle,
             'chart': ECharts
         },
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 isLoading: true,
@@ -205,14 +211,6 @@
                 viewInfo: {},
                 shortcuts: [
                     {
-                        text: this.$t('今天'),
-                        value () {
-                            const end = new Date();
-                            const start = new Date();
-                            return [start, end];
-                        }
-                    },
-                    {
                         text: this.$t('最近7天'),
                         value () {
                             const end = new Date();
@@ -229,20 +227,20 @@
                             start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
                             return [start, end];
                         }
+                    },
+                    {
+                        text: this.$t('最近半年'),
+                        value () {
+                            const end = new Date();
+                            const start = new Date();
+                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 180);
+                            return [start, end];
+                        }
                     }
                 ]
             };
         },
         computed: {
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
-            curPluginData () {
-                return this.$store.state.curPluginInfo;
-            },
             localLanguage () {
                 return this.$store.state.localLanguage;
             }
@@ -354,6 +352,14 @@
                         params
                     });
                     this.chartDataCache = res;
+                    // 由于API不能同一天的数据，使用默认值
+                    if (!res.length) {
+                        this.chartDataCache = [{
+                            'commit_count': 0,
+                            'commit_user_count': 0,
+                            'day': params['begin_time']
+                        }];
+                    }
                     this.renderChart();
                 } catch (e) {
                     const chartRef = this.$refs.chart;
@@ -666,6 +672,11 @@
               .repos {
                   position: relative;
                   padding-right: 30px;
+                  .repository-tooltips {
+                      position: absolute;
+                      width: 140px;
+                      height: 100%;
+                  }
               }
           }
           .copy-url {

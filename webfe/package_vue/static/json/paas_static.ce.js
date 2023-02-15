@@ -124,7 +124,7 @@ export const PLATFORM_CONFIG = {
         BK_PLUGIN: '',
 
         //BKtemplate
-        BK_PLUGIN_TEMPLATE: '',
+        BK_PLUGIN_TEMPLATE: 'https://github.com/TencentBlueKing/bk-plugin-framework-python/tree/master/template',
 
         // 产品文档
         BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',
@@ -708,7 +708,11 @@ export const PAAS_STATIC_CONFIG = {
                         "name": staticI18n.$t("基本信息"),
                         "destRoute": {
                           "name": "pluginBaseInfo"
-                        }
+                        },
+                        "matchRouters": [
+                            "pluginBaseInfo",
+                            "marketInfoEdit"
+                        ]
                     },
                     {
                         "name": staticI18n.$t("成员管理"),

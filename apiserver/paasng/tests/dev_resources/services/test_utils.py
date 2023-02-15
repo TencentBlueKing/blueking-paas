@@ -57,7 +57,7 @@ class TestWRR(TestCase):
     def test_weight_zero(self):
         wr_list = WRItemList.from_json([{"values": "foo", "weight": 0}, {"values": "bar", "weight": 1}])
         results = []
-        for i in range(1000):
+        for _ in range(1000):
             results.append(wr_list.get().values)
 
         assert all(r == "bar" for r in results)
@@ -71,7 +71,7 @@ class TestWRR(TestCase):
             ]
         )
         results = []
-        for i in range(1000):
+        for _ in range(1000):
             results.append(wr_list.get().values)
 
         # Below assertions is not 100% true because everything is based on random algorithm

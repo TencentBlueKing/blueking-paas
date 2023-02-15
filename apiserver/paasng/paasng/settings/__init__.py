@@ -378,7 +378,11 @@ LOGGING = {
 }
 
 if settings.get('LOGGING_ENABLE_SQL_QUERIES', False):
-    LOGGING['loggers']['django.db.backends'] = {'handlers': _default_handlers, 'level': LOG_LEVEL, 'propagate': True}
+    LOGGING['loggers']['django.db.backends'] = {  # type: ignore
+        'handlers': _default_handlers,
+        'level': LOG_LEVEL,
+        'propagate': True,
+    }
 
 
 # 通知插件
@@ -614,6 +618,10 @@ SERVICE_LOGO_BUCKET = settings.get('SERVICE_LOGO_BUCKET', 'bkpaas3-platform-asse
 APP_LOGO_BUCKET = settings.get('APP_LOGO_BUCKET', 'bkpaas3-apps-logo')
 # 应用 Logo 缓存时间设置
 APP_LOGO_MAX_AGE = str(30 * 24 * 3600)
+# 插件 Logo 存储 bucket 名称
+PLUGIN_LOGO_BUCKET = settings.get('PLUGIN_LOGO_BUCKET', 'bkpaas3-plugin-logo')
+# 插件 Logo 缓存时间设置
+PLUGIN_LOGO_MAX_AGE = str(30 * 24 * 3600)
 
 # 蓝鲸PaaS平台访问地址，用于平台访问链接拼接与内置环境变量的配置项
 BKPAAS_URL = settings.get('BKPAAS_URL', '')
@@ -788,9 +796,14 @@ CLI_AUTH_SECRET = settings.get('CLI_AUTH_SECRET', '')
 
 
 # === 插件应用相关
-#
+# 是否允许创建蓝鲸插件应用
+IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
+
+# 是否开启插件开发功能
+IS_ALLOW_PLUGIN_CENTER = settings.get("IS_ALLOW_PLUGIN_CENTER", False)
+
 # [region-aware] 是否允许用户创建插件应用
-BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': False})
+BK_PLUGIN_CONFIG = settings.get('BK_PLUGIN_CONFIG', {'allow_creation': IS_ALLOW_CREATE_BK_PLUGIN_APP})
 
 # 管理插件应用的 API 网关时所使用的配置：
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get('BK_PLUGIN_APIGW_SERVICE_STAGE', 'prod')  # 环境（stage）

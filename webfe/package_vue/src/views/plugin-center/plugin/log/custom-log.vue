@@ -203,7 +203,7 @@
                   >
                     <td class="log-time">
                       <i :class="['paasng-icon ps-toggle-btn', { 'paasng-right-shape': !log.isToggled, 'paasng-down-shape': log.isToggled }]" />
-                      {{ log.ts }}
+                      {{ formatTime(log.timestamp) }}
                     </td>
                     <td class="log-message">
                       <div v-html="log.message || '--'" />
@@ -299,8 +299,9 @@
 <script>
     import moment from 'moment';
     import xss from 'xss';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -315,7 +316,7 @@
         components: {
             logFilter
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 name: 'log-component',
@@ -433,12 +434,6 @@
                     return true;
                 }
                 return false;
-            },
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
             }
         },
         watch: {
@@ -757,7 +752,6 @@
                     const data = res.logs;
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
-                        item.timestamp = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
                         if (item.raw) {
                             for (const key in item.raw) {
                                 item.raw[key] = this.highlight(logXss.process(item.raw[key]));
@@ -929,6 +923,10 @@
 
             handleHideFilter (field) {
                 this.fieldPopoverShow[field] = false;
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

@@ -40,6 +40,10 @@ class OperationType(ChoicesEnum):
     OFFLINE_MARKET = 10
     RELEASE_TO_MARKET = 17
 
+    # 云 API 权限申请相关
+    APPLY_PERM_FOR_CLOUD_API = 21
+    RENEW_PERM_FOR_CLOUD_API = 22
+
     # Deprecated values
     # 以下事件类型已弃用，目前没有任何动作会产生这类事件
     DEPLOY_STAGE = 2
@@ -61,4 +65,6 @@ class OperationType(ChoicesEnum):
         (OFFLINE_APPLICATION_PROD_ENVIRONMENT_WITH_MARKET, _('下线生产环境及蓝鲸市场')),
         (CREATE_MODULE, _("创建模块")),
         (DELETE_MODULE, _("删除模块")),
+        (APPLY_PERM_FOR_CLOUD_API, _("申请网关 API 权限")),
+        (RENEW_PERM_FOR_CLOUD_API, _("续期网关 API 权限")),
     )

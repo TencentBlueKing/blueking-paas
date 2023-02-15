@@ -106,11 +106,6 @@
                 };
             }
         },
-        watch: {
-            list () {
-                console.log('list', this.list);
-            }
-        },
         created () {
             this.nodeStatus = NODE_STATUS;
         },

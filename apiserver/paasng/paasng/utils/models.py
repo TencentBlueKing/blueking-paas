@@ -187,7 +187,7 @@ class TimestampedModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-    class Meta(object):
+    class Meta:
         abstract = True
 
     def get_region_display(self):
@@ -199,7 +199,7 @@ class OwnerTimestampedModel(TimestampedModel):
 
     owner = BkUserField()
 
-    class Meta(object):
+    class Meta:
         abstract = True
 
 
@@ -222,7 +222,7 @@ class AuditedModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-    class Meta(object):
+    class Meta:
         abstract = True
 
 
@@ -233,7 +233,7 @@ class UuidAuditedModel(AuditedModel):
         'UUID', default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True
     )
 
-    class Meta(object):
+    class Meta:
         abstract = True
 
 

@@ -1,5 +1,6 @@
 apigateway:
-  description: PaaS3.0 developer center, official built-in gateway, please do not modify
+  description: PaaS3.0 开发者中心 API 网关, 官方内置网关，请勿修改
+  description_en: PaaS3.0 developer center, official built-in gateway, please do not modify
   is_public: true
   maintainers:
     - "admin"
@@ -7,9 +8,10 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.0.8
-  title: "generate sdks"
-  comment: "generate sdks"
+  version: 1.0.9
+  title: "add cnative app deploy api"
+  comment: "add cnative app deploy api"
+
 
 stage:
   name: "prod"

@@ -22,7 +22,8 @@ from typing import Optional
 
 from django.db import transaction
 
-from paasng.platform.applications.constants import ApplicationType
+from paasng.engine.models.processes import ProcessManager
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
@@ -31,6 +32,7 @@ from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
 from paasng.platform.oauth2.utils import create_oauth2_client
 from paasng.platform.region.models import get_region
+from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
 
@@ -148,9 +150,12 @@ def create_market_config(
 
 @transaction.atomic
 def create_third_app(
-    region: str, code: str, name: str, name_en: str, operator: str, market_params: dict = {}
+    region: str, code: str, name: str, name_en: str, operator: str, market_params: Optional[dict] = None
 ) -> Application:
     """创建第三方（外链）应用"""
+    if market_params is None:
+        market_params = {}
+
     application = create_application(
         region=region,
         code=code,
@@ -170,3 +175,59 @@ def create_third_app(
         source_tp_url=market_params.get("source_tp_url", ""),
     )
     return application
+
+
+def get_app_overview(application: Application) -> dict:
+    """普通应用、云原生应用的概览信息
+    包含：每个模块下各个环境的访问地址和进程信息
+
+    :returns: 示例 {
+            'module_name': {
+                'is_default': True,
+                'envs': {
+                    'stag': {
+                        "is_deployed": True, # 是否部署
+                        "exposed_link": {
+                            "url": "http://apps.example.com/appid--stag/"
+                        },
+                        "processes": [
+                            {
+                                "web": {
+                                    "name": "web",
+                                    "target_replicas": 5, # 进程数
+                                }
+                            },
+                        ]
+                    },
+                    'prod': {
+                        "is_deployed": False, # 未部署，则不需要展示该模块的访问地址等信息
+                        ....
+                    }
+                }
+            }
+        }
+    """
+    data = {}
+    # 查询所有的模块
+    modules = application.modules.all().order_by('-is_default', '-created')
+    for module in modules:
+        module_info = {'is_default': module.is_default, 'envs': {}}
+        # 查看模块下每个环境的访问地址和进程信息
+        for env in AppEnvironment.get_values():
+            module_env = module.get_envs(environment=env)
+            # 检查当前环境是否已部署
+            is_deployed = env_is_deployed(module_env)
+            exposed_link = get_exposed_url(module_env)
+
+            # 进程信息
+            _specs = ProcessManager(module_env.engine_app).list_processes_specs()
+            specs = [{spec['name']: spec} for spec in _specs]
+
+            module_info['envs'][env] = {
+                'is_deployed': is_deployed,
+                'exposed_link': {"url": exposed_link.address if exposed_link else None},
+                'processes': specs,
+            }
+
+        data[module.name] = module_info
+    return data

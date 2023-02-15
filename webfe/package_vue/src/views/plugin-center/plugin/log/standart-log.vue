@@ -69,8 +69,8 @@
           <span
             v-if="isShowDate"
             class="mr10"
-            style="min-width: 140px;"
-          >{{ log.timestamp }}</span>
+            style="min-width: 160px;"
+          >{{ formatTime(log.timestamp) }}</span>
           <!-- <div>
                         <span v-if="log.process_id.length < 5" class="mouseStyle">{{log.process_id}}</span>
                         <span v-else style="cursor: pointer;" v-bk-tooltips.right="{ theme: 'light', content: log.process_id }">{{processIdSlice(log.process_id)}}</span>
@@ -118,8 +118,9 @@
 <script>
     import moment from 'moment';
     import xss from 'xss';
-    import appBaseMixin from '@/mixins/app-base-mixin';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -134,7 +135,7 @@
         components: {
             logFilter
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             return {
                 tabActive: 'standartLog',
@@ -170,17 +171,9 @@
                     levelname: '',
                     time_range: '1h'
                 },
-                isFilter: false
+                isFilter: false,
+                formatDate
             };
-        },
-        computed: {
-            // 插件
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            }
         },
         watch: {
             'logParams.keyword' (newVal, oldVal) {
@@ -353,9 +346,6 @@
                 this.$refs.standartLogFilter.setAutoLoad();
                 // 插件标准化输出
                 this.getPluginLogList(isMaskLayer);
-                // 标准化输出
-                // this.getStreamLogList(isMaskLayer);
-                // isLoadFilter && this.getFilterData();
             },
 
             /**
@@ -483,48 +473,9 @@
                 }
             },
 
-            async getFilterData () {
-                const appCode = this.appCode;
-                const moduleId = this.curModuleId;
-                const params = this.getParams();
-
-                try {
-                    const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
-                    const data = res.data;
-                    data.forEach(item => {
-                        const condition = {
-                            id: item.key,
-                            name: item.name,
-                            text: item.chinese_name || item.name,
-                            list: []
-                        };
-                        item.options.forEach(option => {
-                            condition.list.push({
-                                id: option[0],
-                                text: option[0]
-                            });
-                        });
-                        if (condition.id === 'environment') {
-                            this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
-                            this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
-                            this.streamList = condition.list;
-                        }
-                    });
-                    this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
-                } catch (res) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
-                    });
-                }
-            },
-
             handleLogSearch (params) {
                 this.logParams = params;
                 this.resetStreamLog();
-                console.log('params.isDateChange', params.isDateChange);
                 // 改为获取插件日志
                 this.loadData(params.isDateChange);
 
@@ -583,6 +534,10 @@
 
             processIdSlice (str) {
                 return str.slice(0, 4) + '.';
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

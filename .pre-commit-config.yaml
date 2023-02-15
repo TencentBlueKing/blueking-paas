@@ -56,7 +56,7 @@ repos:
               | .*/paasng/platform/mgrlegacy/data/.*
               | .*/tests/platform/mgrlegacy/assets/.*
           )$
-        entry: poetry run pflake8 --config=pyproject.toml
+        entry: poetry run flake8 
 
       # mypy hooks for each Python project, the hooks must be separated because different
       # project might use their own configurations
@@ -65,7 +65,7 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        entry: bash -c "cd apiserver && poetry run mypy . --config-file=./mypy.ini"
+        entry: bash -c "cd apiserver && poetry run mypy . --config-file=./pyproject.toml"
         files: '^apiserver/'
       - id: mypy-workloads
         name: run mypy check for "workloads"

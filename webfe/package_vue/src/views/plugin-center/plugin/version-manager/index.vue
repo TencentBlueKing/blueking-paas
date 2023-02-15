@@ -10,7 +10,7 @@
         <div class="ag-top-header">
           <!-- 有发布任务，禁用 -->
           <div
-            v-bk-tooltips.top="{ content: '已有发布任务进行中', disabled: !curIsPending }"
+            v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !curIsPending }"
             style="display: inline-block;"
           >
             <bk-button
@@ -19,14 +19,18 @@
               :disabled="curIsPending ? true : false"
               @click="handleCreateVersion('formal')"
             >
-              <!-- <i class="paasng-icon paasng-plus"></i> -->
               {{ $t('新建版本') }}
             </bk-button>
           </div>
-          <!-- <bk-button theme="default" @click="handleCreateVersion('test')">
-                        <i class="paasng-icon paasng-plus"></i>
-                        {{ $t('测试版本') }}
-                    </bk-button> -->
+          <bk-button
+            v-if="pluginFeatureFlags.SHOW_ENTRANCES_ADDRESS && isPluginAccessEntry"
+            text
+            theme="primary"
+            @click="handleOpenLink"
+          >
+            {{ $t('插件访问入口') }}
+            <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
+          </bk-button>
           <bk-input
             v-model="keyword"
             class="fr"
@@ -50,7 +54,11 @@
           @page-change="pageChange"
           @filter-change="handleFilterChange"
         >
-          <div slot="empty">
+          <!-- 如果存在数据展示默认Exception -->
+          <div
+            v-if="isSearchClear || versionList.length || keyword"
+            slot="empty"
+          >
             <bk-exception
               class="exception-wrap-item exception-part"
               type="search-empty"
@@ -123,17 +131,12 @@
                 v-else
                 :class="['dot', row.status]"
               />
-              <span v-bk-tooltips="$t(versionStatus[row.status])">{{ $t(versionStatus[row.status]) || '--' }}</span>
+              <span>{{ $t(versionStatus[row.status]) || '--' }}</span>
             </template>
           </bk-table-column>
-          <!-- <bk-table-column :label="$t('标签')">
-                        <template slot-scope="{ row }">
-                            <span :class="['tag', { 'success': row.tag === 'stable' }, { 'danger': row.tag === 'beta' }]">{{ row.tag || '--' }}</span>
-                        </template>
-                    </bk-table-column> -->
           <bk-table-column
             :label="$t('操作')"
-            width="150"
+            :width="localLanguage === 'en' ? 280 : 200"
           >
             <template slot-scope="{ row }">
               <bk-button
@@ -145,9 +148,9 @@
                 {{ $t('详情') }}
               </bk-button>
               <bk-button
-                v-if="row.status === 'pending' || row.status === 'initial'"
                 theme="primary"
                 text
+                class="mr10"
                 @click="handleRelease(row)"
               >
                 {{ $t('发布进度') }}
@@ -226,14 +229,6 @@
               <p>{{ versionDetail.comment }}</p>
             </div>
           </li>
-          <!-- <li class="item-info">
-                        <div class="describe">{{ $t('自定义前端') }}</div>
-                        <div class="content">--</div>
-                    </li>
-                    <li class="item-info">
-                        <div class="describe">{{ $t('适用Job类型') }}</div>
-                        <div class="content">--</div>
-                    </li> -->
           <li class="item-info">
             <div class="describe">
               {{ $t('发布状态') }}
@@ -258,6 +253,14 @@
               </div>
             </div>
           </li>
+          <li class="item-info">
+            <div class="describe">
+              {{ $t('发布完成时间') }}
+            </div>
+            <div class="content">
+              {{ versionDetail.complete_time ? formatDate(versionDetail.complete_time) : '--' }}
+            </div>
+          </li>
         </ul>
       </div>
     </bk-sideslider>
@@ -265,10 +268,11 @@
 </template>
 
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
     import paasPluginTitle from '@/components/pass-plugin-title';
+    import pluginBaseMixin from '@/mixins/plugin-base-mixin';
     import { PLUGIN_VERSION_STATUS } from '@/common/constants';
     import i18n from '@/language/i18n.js';
+    import { formatDate } from '@/common/tools';
 
     const PLUGIN_VERSION_STATUS_FILTER = {
         'successful': i18n.t('已上线'),
@@ -281,7 +285,7 @@
         components: {
             paasPluginTitle
         },
-        mixins: [appBaseMixin],
+        mixins: [pluginBaseMixin],
         data () {
             // 是否根据version判断
             this.versionTypeMap = {
@@ -308,19 +312,16 @@
                 filterCreator: '',
                 filterStatus: '',
                 curIsPending: '',
-                statusFilter: PLUGIN_VERSION_STATUS_FILTER
+                statusFilter: PLUGIN_VERSION_STATUS_FILTER,
+                formatDate,
+                isPluginAccessEntry: true,
+                pluginDefaultInfo: {
+                    exposed_link: ''
+                },
+                isSearchClear: false
             };
         },
         computed: {
-            curPluginData () {
-                return this.$store.state.plugin.pluginData;
-            },
-            pdId () {
-                return this.$route.params.pluginTypeId;
-            },
-            pluginId () {
-                return this.$route.params.id;
-            },
             statusFilters () {
                 const statusList = [];
                 for (const key in this.statusFilter) {
@@ -330,6 +331,9 @@
                     });
                 }
                 return statusList;
+            },
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -354,6 +358,7 @@
         methods: {
             init () {
                 this.getVersionList();
+                this.getPluginAccessEntry();
             },
 
             // 切换表格每页显示条数
@@ -420,19 +425,20 @@
                     setTimeout(() => {
                         this.isTableLoading = false;
                         this.isLoading = false;
+                        this.isSearchClear = false;
                     }, 200);
                 }
             },
 
             // 获取版本详情
-            async getVersionDetail (curData) {
+            async getReleaseDetail (curData) {
                 const data = {
                     pdId: this.pdId,
                     pluginId: this.pluginId,
                     releaseId: curData.id
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/getVersionDetail', data);
+                    const res = await this.$store.dispatch('plugin/getReleaseDetail', data);
                     this.versionDetail = res;
                 } catch (e) {
                     this.$bkMessage({
@@ -459,10 +465,6 @@
             handleCreateVersion (difference) {
                 // 正式版 / 测试版
                 // formal / test
-                // this.$router.push({
-                //     name: 'pluginVersionManager',
-                //     params: { pluginTypeId: data.pd_id, id: data.id } // pluginTypeId插件类型标识 id插件标识
-                // });
                 this.$router.push({
                     name: 'pluginVersionEditor',
                     params: {
@@ -475,8 +477,8 @@
                 });
             },
 
+            // 根据关键字搜索
             handleSearch () {
-                // 根据关键字搜索
                 this.pagination.count = 0;
                 this.getVersionList();
             },
@@ -484,27 +486,17 @@
             handleDetail (row) {
                 this.versionDetailConfig.isShow = true;
                 this.versionDetailLoading = true;
-                this.getVersionDetail(row);
+                this.getReleaseDetail(row);
             },
 
             // 发布
             handleRelease (data, isReset) {
-                const stagesData = data.all_stages.map((e, i) => {
-                    e.icon = i + 1;
-                    e.title = e.name;
-                    return e;
-                });
-                this.$store.commit('plugin/updateStagesData', stagesData);
                 if (isReset) {
-                  this.republish(data, isReset);
+                  this.republish(data);
                 } else {
                   this.$router.push({
                       name: 'pluginVersionRelease',
-                      params: {
-                          isReset
-                      },
                       query: {
-                          stage_id: data.current_stage.stage_id,
                           release_id: data.id
                       }
                   });
@@ -512,25 +504,19 @@
             },
 
             // 重新发布前状态
-            async republish (data, isReset) {
+            async republish (data) {
                 const params = {
                     pdId: this.pdId,
                     pluginId: this.pluginId,
                     releaseId: data.id
                 };
                 try {
-                    const res = await this.$store.dispatch('plugin/republishRelease', {
-                        ...params
-                    });
+                    const res = await this.$store.dispatch('plugin/republishRelease', params);
                     this.$router.push({
                       name: 'pluginVersionRelease',
-                      params: {
-                          isReset
-                      },
                       query: {
                           stage_id: res.current_stage && res.current_stage.stage_id,
-                          release_id: data.id,
-                          status: res.status
+                          release_id: data.id
                       }
                   });
                 } catch (e) {
@@ -545,8 +531,25 @@
                 }
             },
             clearFilterKey () {
+                this.isSearchClear = true;
                 this.keyword = '';
                 this.$refs.versionTable.clearFilter();
+            },
+            async getPluginAccessEntry () {
+                try {
+                    const res = await this.$store.dispatch('plugin/getPluginAccessEntry', {
+                        pluginId: this.pluginId
+                    });
+                    this.pluginDefaultInfo = res;
+                } catch (e) {
+                    // 接口error不展示插件访问入口
+                    this.isPluginAccessEntry = false;
+                }
+            },
+            handleOpenLink () {
+                if (this.isPluginAccessEntry) {
+                    window.open(this.pluginDefaultInfo.exposed_link.url, '_blank');
+                }
             }
         }
     };

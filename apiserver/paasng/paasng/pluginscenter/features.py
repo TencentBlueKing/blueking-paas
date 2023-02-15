@@ -23,7 +23,7 @@ from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
 from paasng.pluginscenter.models import PluginInstance
 
 
-class PluginFeatureFlag(FeatureFlag):
+class PluginFeatureFlag(FeatureFlag):  # type: ignore
     RE_RELEASE_HISTORY_VERSION = FeatureFlagField(label="重新发布历史版本", default=True)
     API_GATEWAY = FeatureFlagField(label="云 API 管理", default=False)
     PROCESS_MANAGE = FeatureFlagField(label="进程管理", default=False)
@@ -31,6 +31,7 @@ class PluginFeatureFlag(FeatureFlag):
     APP_SECRETS = FeatureFlagField(label="应用密钥管理", default=False)
     PLUGIN_DISTRIBUTER = FeatureFlagField(label="插件使用方", default=False)
     CANCEL_RELEASE = FeatureFlagField(label="终止发布版本", default=True)
+    SHOW_ENTRANCES_ADDRESS = FeatureFlagField(label="显示访问入口地址", default=False)
 
 
 class PluginFeatureFlagsManager:

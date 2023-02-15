@@ -86,7 +86,7 @@ class GitHubRepoController(BaseGitRepoController):
             ZipFile(zip_file, 'r').extractall(local_path)
 
         # Github 下载的 zip 包比较特殊，外层有格式为 {username}-{proj_name}-{ref} 的目录，需要平铺开
-        for root, dirs, _ in walk(local_path):
+        for root, dirs, _ in walk(str(local_path)):
             for name in dirs:
                 if '.' in name or name.startswith('/'):
                     continue

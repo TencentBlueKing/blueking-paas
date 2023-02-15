@@ -76,6 +76,7 @@
     import CreatePluginLoading from './loading/create-plugin.vue';
     import PluginProcessLoading from './loading/plugin-process.vue';
     import PluginBaseInfoLoading from './loading/plugin-base-info.vue';
+    import EventListLoading from './loading/event-list.vue';
     export default {
         components: {
             ByUserLoading,
@@ -132,7 +133,8 @@
             PluinListLoading,
             CreatePluginLoading,
             PluginProcessLoading,
-            PluginBaseInfoLoading
+            PluginBaseInfoLoading,
+            EventListLoading
         },
         props: {
             isLoading: {
@@ -274,13 +276,13 @@
         }
     }
 }
-@media screen and(min-width: 1680px) {
+@media screen and (min-width: 1680px) {
 
 }
-@media screen and(min-width: 1920px) {
+@media screen and (min-width: 1920px) {
 
 }
-@media screen and(min-width: 2450px) {
+@media screen and (min-width: 2450px) {
     .right-main-plugin .paas-loading-content .loading-placeholder {
       width: auto;
       svg {

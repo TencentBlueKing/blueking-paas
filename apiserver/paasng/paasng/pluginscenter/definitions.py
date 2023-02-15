@@ -66,7 +66,7 @@ class PluginBackendAPIResource(BaseModel):
 
     apiName: str = Field(description="网关名称")
     path: str = Field(description="接口路径")
-    method: Literal["GET", "POST", "GET", "DELETE"]
+    method: Literal["GET", "POST", "PUT", "DELETE"]
 
     class Config:
         frozen = True
@@ -116,7 +116,7 @@ class PluginFeature(BaseModel):
 class PluginBasicInfoDefinition(BaseModel):
     """插件基础信息定义"""
 
-    id: FieldSchema = Field(description="插件标识")
+    id: FieldSchema = Field(description="插件 ID")
     name: FieldSchema = Field(description="插件名称")
     releaseMethod: Literal["code", "sourcePackage", "image"] = Field(description="插件发布方式")
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")

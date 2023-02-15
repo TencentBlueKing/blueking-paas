@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 
 import logging
-from builtins import object
 
 import requests
 
@@ -27,7 +26,7 @@ from .exceptions import RequestSentryAPIFail
 logger = logging.getLogger(__name__)
 
 
-class SentryClient(object):
+class SentryClient:
     def __init__(self, host, port, token):
         # default, just one organization
         self.organization = 'sentry'

@@ -19,8 +19,8 @@ platformConfig:
   ## when there are multiple ingress controllers in your cluster, setting the ingressClassName is necessary.
   ingressClassName: ""
 resLimitConfig:
-  procDefaultCPULimits: "4"
-  procDefaultMemLimits: "1Gi"
+  procDefaultCPULimits: "4000m"
+  procDefaultMemLimits: "1024Mi"
   maxReplicas: 5
 
 ## leaderElectionReleaseOnCancel defines if the leader should step down volume

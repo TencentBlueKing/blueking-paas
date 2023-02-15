@@ -51,7 +51,9 @@ class Command(BaseCommand):
             '-a', '--app', dest="apps", default=None, nargs="+", help="legacy app name which need to patch"
         )
 
-    def handle(self, apps, dry_run, pattern, process_type, with_create, app_created_after, *args, **options):
+    def handle(  # noqa: C901
+        self, apps, dry_run, pattern, process_type, with_create, app_created_after, *args, **options
+    ):
         qs = App.objects.all().order_by('created')
         if apps:
             qs = qs.filter(name__in=apps)
@@ -93,6 +95,6 @@ class Command(BaseCommand):
             if can_sync:
                 print(f"syncing ingress for app {app.name}")
                 try:
-                    mgr.sync(service_name)
+                    mgr.sync(service_name)  # type: ignore
                 except Exception as err:
                     logger.error("sync ingresses failed for app %s, err: %s", app.name, err)

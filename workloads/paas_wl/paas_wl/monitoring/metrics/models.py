@@ -64,11 +64,11 @@ class ResourceMetricManager:
         """get all series type queries"""
 
         # not expose request series
-        for single_series_type in [MetricsSeriesType.CURRENT, MetricsSeriesType.LIMIT]:
+        for series_type in [MetricsSeriesType.CURRENT.value, MetricsSeriesType.LIMIT.value]:
             try:
-                yield self.gen_series_query(single_series_type, resource_type, instance_name, time_range)
+                yield self.gen_series_query(series_type, resource_type, instance_name, time_range)  # type: ignore
             except KeyError:
-                logger.info("%s type not exist in query tmpl", single_series_type)
+                logger.info("%s type not exist in query tmpl", series_type)
                 continue
 
     def gen_series_query(
@@ -95,7 +95,7 @@ class ResourceMetricManager:
         instance_name: str,
         resource_types: List[MetricsResourceType],
         time_range: MetricSmartTimeRange,
-        series_type: MetricsSeriesType = None,
+        series_type: Optional[MetricsSeriesType] = None,
     ) -> List[MetricsResourceResult]:
         """query metrics at Engine Application level"""
 
@@ -132,7 +132,7 @@ class ResourceMetricManager:
         self,
         resource_types: List[MetricsResourceType],
         time_range: MetricSmartTimeRange,
-        series_type: MetricsSeriesType = None,
+        series_type: Optional[MetricsSeriesType] = None,
     ) -> List[MetricsInstanceResult]:
         all_instances_metrics = []
         for instance in self.process.instances:

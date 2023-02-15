@@ -66,6 +66,7 @@ class BkMonitorMetricClient:
     ) -> List:
         """范围请求API
 
+        :param bk_biz_id: 集群绑定的蓝鲸业务 ID
         :param promql: 具体请求QL
         :param start: 开始时间
         :param end: 结束时间

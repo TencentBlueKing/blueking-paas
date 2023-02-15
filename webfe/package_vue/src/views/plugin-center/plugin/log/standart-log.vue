@@ -97,18 +97,7 @@
           v-if="!isStreamLogListLoading"
           class="text"
         >
-          <p>
-            <i
-              class="paasng-icon paasng-empty"
-              style="font-size: 65px;"
-            />
-          </p>
-          <p
-            class="f12"
-            style="color: #c3cdd7;"
-          >
-            {{ $t('暂无数据') }}
-          </p>
+          <empty-dark />
         </div>
       </div>
     </div>

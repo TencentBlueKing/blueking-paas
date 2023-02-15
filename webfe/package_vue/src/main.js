@@ -52,6 +52,8 @@ import 'Extension/vex-js/sass/vex-theme-default.sass';
 import passLoading from '@/components/ui/LoadingSlot';
 
 import roundLoading from '@/components/round-loading';
+import tableEmpty from '@/components/ui/table-empty';
+import emptyDark from '@/components/ui/empty-dark';
 
 import i18n from '@/language/i18n';
 // 全量引入自定义图标
@@ -139,6 +141,8 @@ Vue.use(Directives);
 Vue.component('paas-content-loader', PaasContentLoader);
 Vue.component('paas-loading', passLoading);
 Vue.component('round-loading', roundLoading);
+Vue.component('table-empty', tableEmpty);
+Vue.component('empty-dark', emptyDark);
 
 Vue.prototype.$http = http;
 Vue.http = http;

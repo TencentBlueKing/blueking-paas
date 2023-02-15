@@ -1933,7 +1933,7 @@ export default {
   '插件类型': 'Plugin type',
   '版本管理': 'Versions',
   '审批详情': 'Approval Details',
-  '可以尝试调整关键词 或': 'Try adjusting keywords or',
+  '可以尝试 调整关键词 或': 'Try adjusting keywords or',
   '清空搜索条件': 'Clear search criteria',
   '输入插件ID、插件名称，按Enter搜索': 'Enter the plug-in ID and name, and press Enter to search',
   '确定删除插件': 'OK to delete plugin',

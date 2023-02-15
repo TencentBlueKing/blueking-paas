@@ -70,8 +70,7 @@
             style="margin-top: -40px;"
           >
             <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
+              <table-empty empty />
             </span>
           </div>
         </template>
@@ -111,6 +110,9 @@
             @page-change="pageChange"
             @page-limit-change="limitChange"
           >
+            <div slot="empty">
+              <table-empty empty />
+            </div>
             <bk-table-column
               type="expand"
               width="30"

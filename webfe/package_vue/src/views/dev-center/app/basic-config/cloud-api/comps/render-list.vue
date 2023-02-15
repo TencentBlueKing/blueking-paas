@@ -91,6 +91,7 @@
     >
       <div class="spacing-x2">
         <bk-table
+          ref="gatewayRef"
           :key="tableKey"
           :data="tableList"
           :size="'small'"
@@ -102,22 +103,18 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <div
-            v-if="tableList.length"
-            slot="empty"
-          >
-            <bk-exception
-              class="exception-wrap-item exception-part"
-              type="search-empty"
-              scene="part"
+          <div slot="empty">
+            <table-empty
+              v-if="!apiList.length && !searchValue"
+              empty
             />
-            <div class="empty-tips">
-              {{ $t('可以尝试调整关键词 或') }}
-              <span
-                class="clear-search"
-                @click="clearFilterKey"
-              >{{ $t('清空搜索条件') }}</span>
-            </div>
+            <table-empty
+              v-else
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="tableList"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
+            />
           </div>
           <bk-table-column
             label="id"
@@ -419,6 +416,10 @@
                 listFilter: {
                     isApply: false,
                     isRenew: false
+                },
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
                 }
             };
         },
@@ -711,6 +712,8 @@
                 const start = this.pagination.limit * (this.pagination.current - 1);
                 const end = start + this.pagination.limit;
                 this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+                // 前端过滤，需要将getDataCount更新
+                this.updateTableEmptyConfig();
             }, 350),
 
             /**
@@ -809,6 +812,7 @@
                     this.allData = this.apiList;
                     this.initPageConf();
                     this.tableList = this.getDataByPage();
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.catchErrorHandler(e);
                 } finally {
@@ -911,6 +915,12 @@
 
             clearFilterKey () {
                 this.searchValue = '';
+                this.$refs.gatewayRef.clearFilter();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.searchValue;
             }
         }
     };

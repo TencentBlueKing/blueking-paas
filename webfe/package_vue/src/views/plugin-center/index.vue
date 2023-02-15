@@ -40,22 +40,13 @@
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
-        <div
-          v-if="isSearchClear || pluginList.length || filterKey"
-          slot="empty"
-        >
-          <bk-exception
-            class="exception-wrap-item exception-part"
-            type="search-empty"
-            scene="part"
+        <div slot="empty">
+          <table-empty
+            :get-data-count="tableEmptyConf.getDataCount"
+            :data="pluginList"
+            :keyword="tableEmptyConf.keyword"
+            @clear-filter="clearFilterKey"
           />
-          <div class="empty-tips">
-            {{ $t('可以尝试调整关键词 或') }}
-            <span
-              class="clear-search"
-              @click="clearFilterKey"
-            >{{ $t('清空搜索条件') }}</span>
-          </div>
         </div>
         <bk-table-column :label="$t('插件 ID')">
           <template slot-scope="{ row }">
@@ -222,7 +213,10 @@
                     'pending': 'pending',
                     'initial': 'initial'
                 },
-                isSearchClear: false
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -288,6 +282,7 @@
                     });
                     this.pluginList = res.results;
                     this.pagination.count = res.count;
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -297,7 +292,6 @@
                 } finally {
                     this.isDataLoading = false;
                     this.loading = false;
-                    this.isSearchClear = false;
                 }
             },
 
@@ -431,9 +425,13 @@
 
             clearFilterKey () {
                 // 防止清空搜索条件时提示抖动
-                this.isSearchClear = true;
                 this.filterKey = '';
                 this.$refs.pluginTable.clearFilter();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.filterKey;
             }
         }
     };

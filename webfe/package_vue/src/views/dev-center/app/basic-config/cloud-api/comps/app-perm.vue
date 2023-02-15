@@ -78,6 +78,14 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="tableList"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
           <bk-table-column
             label="id"
             :render-header="renderHeader"
@@ -329,7 +337,11 @@
                 ],
                 is_up: true,
                 nameFilters: [],
-                tableKey: -1
+                tableKey: -1,
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -359,6 +371,9 @@
                     const end = start + this.pagination.limit;
                     this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
                     this.isFilter = false;
+                }
+                if (newVal === '') {
+                    this.updateTableEmptyConfig();
                 }
             },
             allData (value) {
@@ -647,6 +662,7 @@
                 const start = this.pagination.limit * (this.pagination.current - 1);
                 const end = start + this.pagination.limit;
                 this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+                this.updateTableEmptyConfig();
             },
 
             init () {
@@ -689,6 +705,7 @@
                     this.indeterminate = false;
                     this.allChecked = false;
                     this.tableKey = +new Date();
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.catchErrorHandler(e);
                 } finally {
@@ -727,6 +744,14 @@
                     return '--';
                 }
                 return description || '--';
+            },
+            clearFilterKey () {
+                this.searchValue = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.searchValue;
             }
         }
     };

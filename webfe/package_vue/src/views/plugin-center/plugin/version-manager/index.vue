@@ -55,22 +55,13 @@
           @filter-change="handleFilterChange"
         >
           <!-- 如果存在数据展示默认Exception -->
-          <div
-            v-if="isSearchClear || versionList.length || keyword"
-            slot="empty"
-          >
-            <bk-exception
-              class="exception-wrap-item exception-part"
-              type="search-empty"
-              scene="part"
+          <div slot="empty">
+            <table-empty
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="versionList"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
             />
-            <div class="empty-tips">
-              {{ $t('可以尝试调整关键词 或') }}
-              <span
-                class="clear-search"
-                @click="clearFilterKey"
-              >{{ $t('清空搜索条件') }}</span>
-            </div>
           </div>
           <bk-table-column
             :label="$t('版本')"
@@ -318,7 +309,10 @@
                 pluginDefaultInfo: {
                     exposed_link: ''
                 },
-                isSearchClear: false
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -416,6 +410,7 @@
                     this.pagination.count = res.count;
                     // 当前是否已有任务进行中
                     this.curIsPending = this.versionList.find(item => item.status === 'pending');
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -425,7 +420,6 @@
                     setTimeout(() => {
                         this.isTableLoading = false;
                         this.isLoading = false;
-                        this.isSearchClear = false;
                     }, 200);
                 }
             },
@@ -531,7 +525,6 @@
                 }
             },
             clearFilterKey () {
-                this.isSearchClear = true;
                 this.keyword = '';
                 this.$refs.versionTable.clearFilter();
             },
@@ -550,6 +543,11 @@
                 if (this.isPluginAccessEntry) {
                     window.open(this.pluginDefaultInfo.exposed_link.url, '_blank');
                 }
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };
@@ -715,9 +713,6 @@
 </style>
 
 <style>
-    .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
-        height: 130px;
-    }
     .biz-create-success .bk-table th .bk-table-column-filter-trigger.is-filtered {
         color: #3a84ff !important;
     }

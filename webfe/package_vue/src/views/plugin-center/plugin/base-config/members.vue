@@ -37,22 +37,13 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <div
-            v-if="memberList.length"
-            slot="empty"
-          >
-            <bk-exception
-              class="exception-wrap-item exception-part"
-              type="search-empty"
-              scene="part"
+          <div slot="empty">
+            <table-empty
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="memberListShow"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
             />
-            <div class="empty-tips">
-              {{ $t('可以尝试调整关键词 或') }}
-              <span
-                class="clear-search"
-                @click="clearFilterKey"
-              >{{ $t('清空搜索条件') }}</span>
-            </div>
           </div>
           <bk-table-column :label="$t('成员姓名')">
             <template slot-scope="props">
@@ -289,7 +280,11 @@
                 keyword: '',
                 memberListClone: [],
                 isTableLoading: false,
-                isDelLoading: false
+                isDelLoading: false,
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -373,6 +368,7 @@
                     const end = start + this.pagination.limit;
                     this.memberList.splice(0, this.memberList.length, ...(res || []));
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -588,12 +584,17 @@
                         const end = start + this.pagination.limit;
                         this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
                     }
+                    this.updateTableEmptyConfig();
                 } else {
                     this.fetchMemberList();
                 }
             },
             clearFilterKey () {
                 this.keyword = '';
+            },
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

@@ -106,6 +106,14 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="tableList"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
           <bk-table-column :label="$t('申请人')">
             <template slot-scope="props">
               {{ props.row.applied_by }}
@@ -489,7 +497,11 @@
                     startTime: '',
                     endTime: ''
                 },
-                searchValue: ''
+                searchValue: '',
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -664,6 +676,7 @@
                     });
                     this.pagination.count = res.data.count;
                     this.tableList = res.data.results;
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.catchErrorHandler(e);
                 } finally {
@@ -685,6 +698,15 @@
                 } finally {
                     this.detailLoading = false;
                 }
+            },
+
+            clearFilterKey () {
+                this.searchValue = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.searchValue;
             }
         }
     };

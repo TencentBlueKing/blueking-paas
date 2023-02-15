@@ -165,12 +165,7 @@
         </template>
         <template v-if="!isLoading && !curPageData.length">
           <div class="ps-no-result">
-            <div class="text">
-              <p>
-                <i class="paasng-icon paasng-empty" />
-              </p>
-              <p> {{ $t('暂无数据') }} </p>
-            </div>
+            <table-empty empty />
           </div>
         </template>
       </div>

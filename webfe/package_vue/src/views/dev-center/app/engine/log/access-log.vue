@@ -70,10 +70,7 @@
             class="bk-table-empty-block"
             style="margin-top: -40px;"
           >
-            <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
-            </span>
+            <table-empty empty />
           </div>
         </template>
       </div>
@@ -256,12 +253,7 @@
                 <tr>
                   <td :colspan="fieldSelectedList.length + 2">
                     <div class="ps-no-result">
-                      <div class="text">
-                        <p>
-                          <i class="paasng-icon paasng-empty" />
-                        </p>
-                        <p> {{ $t('暂无数据') }} </p>
-                      </div>
+                      <table-empty empty />
                     </div>
                   </td>
                 </tr>

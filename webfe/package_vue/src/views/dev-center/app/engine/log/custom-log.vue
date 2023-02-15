@@ -69,10 +69,7 @@
             class="bk-table-empty-block"
             style="margin-top: -40px;"
           >
-            <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
-            </span>
+            <table-empty empty />
           </div>
         </template>
       </div>
@@ -246,10 +243,7 @@
                   <td :colspan="fieldSelectedList.length + 2">
                     <div class="ps-no-result">
                       <div class="text">
-                        <p>
-                          <i class="paasng-icon paasng-empty" />
-                        </p>
-                        <p> {{ $t('暂无数据') }} </p>
+                        <table-empty empty />
                         <section class="search-tips">
                           <p style="color: #c4c6cc;">
                             {{ $t('您可以按照以下方式优化查询结果：') }}

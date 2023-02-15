@@ -162,14 +162,7 @@
                 v-else
                 class="exception-wrapper"
               >
-                <img
-                  class="img-exception"
-                  src="/static/images/empty.png"
-                  alt=""
-                >
-                <p class="text-exception">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </bk-tab-panel>
             <bk-tab-panel

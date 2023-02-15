@@ -182,18 +182,12 @@
             </template>
             <template v-else-if="!isShowMetrics && !metricsLoading">
               <div class="metrics-empty">
-                <p><i class="paasng-icon paasng-empty" /></p>
-                <p class="text">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </template>
             <template v-else>
               <div class="metrics-empty">
-                <p><i class="paasng-icon paasng-empty" /></p>
-                <p class="text">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </template>
           </div>

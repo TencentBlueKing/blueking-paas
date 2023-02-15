@@ -445,6 +445,9 @@ METRIC_CLIENT_TOKEN_DICT = settings.get('METRIC_CLIENT_TOKEN_DICT', {})
 # healthz: 将使用该 token 校验调用方身份
 HEALTHZ_TOKEN = settings.get('HEALTHZ_TOKEN')
 
+# 插件监控图表相关配置
+MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
+
 # ---------------
 # 多区域配置
 # ---------------

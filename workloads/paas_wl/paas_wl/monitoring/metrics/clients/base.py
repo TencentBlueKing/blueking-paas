@@ -19,13 +19,15 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import Generator, List, Optional, Protocol, Union
 
-from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
+from paas_wl.monitoring.metrics.constants import MetricsDataSource, MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 
 
 class MetricClient(Protocol):
+    data_source: MetricsDataSource
+
     def general_query(
-        self, queries: List['MetricQuery'], container_name: str
+        self, queries: List['MetricQuery'], container_name: str, bk_biz_id: Optional[str]
     ) -> Generator['MetricSeriesResult', None, None]:
         raise NotImplementedError
 

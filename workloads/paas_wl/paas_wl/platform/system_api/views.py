@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from typing import Optional
 
 from attrs import asdict
 from django.conf import settings
@@ -32,7 +33,7 @@ from rest_framework.viewsets import ModelViewSet, ViewSet
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
-from paas_wl.monitoring.metrics.clients import BkMonitorMetricClient
+from paas_wl.monitoring.metrics.clients import BkMonitorMetricClient, MetricClient, PrometheusMetricClient
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
 from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.platform.applications import models
@@ -455,42 +456,7 @@ class ArchiveViewSet(SysAppRelatedViewSet):
 
 
 class ResourceMetricsViewSet(SysAppRelatedViewSet):
-
-    # TODO 这里需要切换成 bk_monitor
-    def get_resource_metric_manager(self, process_type):
-        # fetch instances of process
-        app = self.get_app()
-
-        if not settings.BKMONITOR_ENABLED:
-            raise error_codes.EDITION_NOT_SUPPORT
-
-        try:
-            cluster = get_cluster_by_app(app)
-        except ObjectDoesNotExist:
-            raise RuntimeError('no cluster can be found, query aborted')
-
-        if not cluster.bcs_cluster_id:
-            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BCS 信息, 不支持该功能")
-
-        if not cluster.bk_biz_id:
-            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BKCC 业务信息, 不支持该功能")
-
-        try:
-            process = process_kmodel.get_by_type(app, process_type)
-            process.instances = instance_kmodel.list_by_process_type(app, process_type)
-        except Exception:
-            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("无法获取到进程相关信息")
-
-        if not process.instances:
-            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("找不到进程实例")
-
-        # 这里默认只有蓝鲸监控数据，暂不支持用户选择数据来源
-        return ResourceMetricManager(
-            process=process,
-            metric_client=BkMonitorMetricClient(),
-            bcs_cluster_id=cluster.bcs_cluster_id,
-            bk_biz_id=cluster.bk_biz_id,
-        )
+    """应用进程资源使用指标数据相关"""
 
     @swagger_auto_schema(
         query_serializer=serializers.ResourceMetricsSerializer,
@@ -502,7 +468,7 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        manager = self.get_resource_metric_manager(process_type=process_type)
+        manager = self._get_resource_metric_manager(process_type=process_type)
         try:
             # 请求某个特定 instance 的 metrics
             instance_result = manager.get_instance_metrics(
@@ -524,7 +490,7 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        manager = self.get_resource_metric_manager(process_type=process_type)
+        manager = self._get_resource_metric_manager(process_type=process_type)
         try:
             # 请求所有 instance
             metric_results = manager.get_all_instances_metrics(
@@ -533,6 +499,50 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
         except Exception as e:
             raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f(f"请求 Metric 后端失败: {e}")
         return Response(data=serializers.InstanceMetricsResultSerializer(instance=metric_results, many=True).data)
+
+    def _get_resource_metric_manager(self, process_type):
+        # fetch instances of process
+        app = self.get_app()
+
+        try:
+            cluster = get_cluster_by_app(app)
+        except ObjectDoesNotExist:
+            raise RuntimeError('no cluster can be found, query aborted')
+
+        if not cluster.bcs_cluster_id:
+            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BCS 信息, 不支持该功能")
+
+        metric_client: Optional[MetricClient] = None
+        # 不同的指标数据来源依赖配置不同，需要分别检查
+        if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_MONITOR):
+            if not settings.BKMONITOR_ENABLED:
+                raise error_codes.EDITION_NOT_SUPPORT
+            if not cluster.bk_biz_id:
+                raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BKCC 业务信息, 不支持该功能")
+            metric_client = BkMonitorMetricClient()
+
+        else:
+            if not settings.MONITOR_CONFIG:
+                raise error_codes.EDITION_NOT_SUPPORT
+            metric_client = PrometheusMetricClient(**settings.MONITOR_CONFIG["metrics"]["prometheus"])
+
+        # 获取 EngineApp 对应的进程实例
+        try:
+            process = process_kmodel.get_by_type(app, process_type)
+            process.instances = instance_kmodel.list_by_process_type(app, process_type)
+        except Exception:
+            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("无法获取到进程相关信息")
+
+        if not process.instances:
+            raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("找不到进程实例")
+
+        # 这里默认只有蓝鲸监控数据，暂不支持用户选择数据来源
+        return ResourceMetricManager(
+            process=process,
+            metric_client=metric_client,
+            bcs_cluster_id=cluster.bcs_cluster_id,
+            bk_biz_id=cluster.bk_biz_id,
+        )
 
 
 class EnvDeployedStatusViewSet(SysViewSet):

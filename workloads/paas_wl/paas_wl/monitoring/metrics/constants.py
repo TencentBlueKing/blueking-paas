@@ -36,6 +36,34 @@ class MetricsResourceType(str, StructuredEnum):
         return choices + [('__all__', '__ALL__')]
 
 
+class MetricsDataSource(str, StructuredEnum):
+    """指标数据来源"""
+
+    BKMONITOR = EnumField('bkmonitor', '蓝鲸监控')
+    PROMETHEUS = EnumField('prometheus', '普罗米修斯')
+
+
+RAW_PROMQL_TMPL = {
+    "mem": {
+        # 内存实际使用值
+        'current': 'sum by(container_name)(container_memory_working_set_bytes{{'
+        'pod_name="{instance_name}", container_name!="POD", cluster_id="{cluster_id}"}})',
+        # 内存预留值
+        'request': 'kube_pod_container_resource_requests_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
+        # 内存上限值
+        'limit': 'kube_pod_container_resource_limits_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
+    },
+    "cpu": {
+        # CPU 实际使用值
+        'current': 'sum by (container_name)(rate(container_cpu_usage_seconds_total{{'
+        'image!="",container_name!="POD",pod_name="{instance_name}", cluster_id="{cluster_id}"}}[1m]))',
+        # CPU 预留值
+        'request': 'kube_pod_container_resource_requests_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',  # noqa
+        # CPU 上限值
+        'limit': 'kube_pod_container_resource_limits_cpu_cores{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
+    },
+}
+
 BKMONITOR_PROMQL_TMPL = {
     'mem': {
         # 内存实际使用值

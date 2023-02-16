@@ -1985,7 +1985,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                             if (this.reConnectTimes >= this.reConnectLimit) {
                                 this.$paasMessage({
                                     theme: 'error',
-                                    message: '日志输出流异常，建议您刷新页面重试!'
+                                    message: this.$t('日志输出流异常，建议您刷新页面重试!')
                                 });
                             }
 

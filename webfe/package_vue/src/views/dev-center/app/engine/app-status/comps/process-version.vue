@@ -120,22 +120,22 @@
                   class="process-item"
                 >
                   <div class="process-url">
-                    容器镜像地址: <span>{{ item.image }}</span>
+                    {{ $t('容器镜像地址') }}: <span>{{ item.image }}</span>
                   </div>
                   <div class="pt20 pl20">
-                    镜像凭证: {{ voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
+                    {{ $t('镜像凭证') }}: {{ voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
                   </div>
                   <div class="pt20 pl20">
-                    启动命令: {{ item.command && item.command.length ? item.command.join(',') : '无' }}
+                    {{ $t('启动命令') }}: {{ item.command && item.command.length ? item.command.join(',') : '无' }}
                   </div>
                   <div class="pt20 pl20">
-                    命令参数: {{ item.args && item.args.length ? item.args.join(',') : '无' }}
+                    {{ $t('命令参数') }}: {{ item.args && item.args.length ? item.args.join(',') : '无' }}
                   </div>
                   <div class="pt20 pl20">
-                    副本数量: {{ item.replicas }}
+                    {{ $t('副本数量') }}: {{ item.replicas }}
                   </div>
                   <div class="pt20 pl20 pb20">
-                    资源: {{ item.memory }} / {{ item.cpu }}
+                    {{ $t('资源') }}: {{ item.memory }} / {{ item.cpu }}
                   </div>
                 </div>
               </div>
@@ -189,10 +189,10 @@
                     </router-link>
                   </div>
                   <div class="item-data">
-                    {{ $t('启用未创建') }}: {{ notCreated || '无' }}
+                    {{ $t('启用未创建') }}: {{ notCreated || $t('无') }}
                   </div>
                   <div class="item-data">
-                    {{ $t('已创建实例') }}: {{ created || '无' }}
+                    {{ $t('已创建实例') }}: {{ created || $t('无') }}
                   </div>
                 </div>
                 <div class="resource-item no-border">

@@ -194,12 +194,12 @@ $(GINKGO): $(LOCALBIN)
 .PHONY: golines
 golines: $(GOLINES) ## Download golines locally if necessary
 $(GOLINES): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@latest
+	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
 .PHONY: gofumpt
 gofumpt: $(GOFUMPT) ## Download gofumpt locally if necessary
 $(GOFUMPT): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@latest
+	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
 .PHONY: golangci-lint
 golangci-lint: $(GOCILINT) ## Download golangci-lint locally if necessary

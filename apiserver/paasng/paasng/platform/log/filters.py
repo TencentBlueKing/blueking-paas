@@ -85,11 +85,6 @@ class AppAccessLogFilter(BaseAppFilter):
             "query_term": "engine_app_name",
             "is_multiple": True,
         },
-        {
-            "title": "Region",
-            "chinese_name": "版本",
-            "query_term": "region",
-        },
     ]
 
     def get_field_engine_app_name_value(self) -> List[str]:

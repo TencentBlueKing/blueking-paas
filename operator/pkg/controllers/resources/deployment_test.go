@@ -198,8 +198,8 @@ var _ = Describe("DeploymentResources", func() {
 				Name:     "web",
 				Image:    "busybox:latest",
 				Replicas: &replicas,
-				CPU:      "1",
-				Memory:   "2Gi",
+				CPU:      "1000m",
+				Memory:   "2048Mi",
 			}
 			container := buildContainers(proc, []corev1.EnvVar{})[0]
 

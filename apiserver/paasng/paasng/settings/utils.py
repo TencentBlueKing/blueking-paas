@@ -91,7 +91,7 @@ def get_default_keepalive_options() -> Optional[Dict]:
     """Mac OS's socket module does not has below attrs, return empty options instead"""
     try:
         return {
-            socket.TCP_KEEPIDLE: 60,
+            socket.TCP_KEEPIDLE: 60,  # type: ignore
             socket.TCP_KEEPINTVL: 10,
             socket.TCP_KEEPCNT: 6,
         }

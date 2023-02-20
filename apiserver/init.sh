@@ -281,6 +281,7 @@ ensure-init-data() {
     # 之前是在 paasng/fixtures/accounts.yaml 通过 fixture 添加可调用系统 API 的应用，后续添加直接通过命令更方便
     python manage.py create_authed_app_user --bk_app_code=bk_dataweb  --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_bkdata  --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_paas3 --role=60
     python manage.py create_3rd_party_apps --source extra_fixtures/3rd_apps.yaml --app_codes "${PAAS_THIRD_APP_INIT_CODES}" --override=true
 }
 

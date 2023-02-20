@@ -145,6 +145,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module_env = self.get_env_via_path()
         serializer = self.serializer_class(request.query_params)
 
+        deployment_data = None
         offline_data = None
         default_access_entrance = get_preallocated_url(module_env)
 
@@ -156,13 +157,16 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             offline_data = OfflineOperationSLZ(offline_operation).data
 
         # Check if current env is running
-        if not env_is_deployed(module_env):
+        if env_is_deployed(module_env):
+            deployment_data = self.get_deployment_data(module_env)
+
+        if not any([deployment_data, offline_data]):
             raise error_codes.APP_NOT_RELEASED
 
         exposed_link = get_exposed_url(module_env)
         data = {
             "is_offlined": module_env.is_offlined,
-            'deployment': self.get_deployment_data(module_env),
+            'deployment': deployment_data,
             "offline": offline_data,
             'exposed_link': {"url": exposed_link.address if exposed_link else None},
             "default_access_entrance": {"url": default_access_entrance.address if default_access_entrance else None},

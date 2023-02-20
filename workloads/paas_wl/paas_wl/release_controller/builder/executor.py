@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from functools import partial
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
 
 from django.conf import settings
 from django.utils.encoding import force_text
@@ -60,7 +60,7 @@ class BuildProcessExecutor:
         self.procedure = partial(BuildProcedure, stream)
         self._builder_name = generate_builder_name(self.app)
 
-    def execute(self, metadata=None):
+    def execute(self, metadata: Optional[Dict] = None):
         """Execute the build process"""
         try:
             with self.procedure("准备构建环境"):
@@ -164,7 +164,7 @@ class BuildProcessExecutor:
         logger.debug('SlugBuilder created: %s', slug_builder_name)
         return slug_builder_name
 
-    def create_and_bind_build_instance(self, metadata: Dict = None) -> Build:
+    def create_and_bind_build_instance(self, metadata: Optional[Dict] = None) -> Build:
         """Create the Build instance and bind it to self.BuildProcess instance
 
         :param dict metadata: Metadata to be stored in Build instance, such as `procfile`

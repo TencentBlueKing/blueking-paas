@@ -116,7 +116,7 @@ def validate_cert(d):
 class AppDomainSharedCertSLZ(serializers.ModelSerializer):
     cert_data = serializers.CharField(validators=[validate_cert], required=True)
 
-    class Meta(object):
+    class Meta:
         model = AppDomainSharedCert
         exclude: List = []
 
@@ -126,7 +126,7 @@ class UpdateAppDomainSharedCertSLZ(serializers.ModelSerializer):
 
     cert_data = serializers.CharField(validators=[validate_cert], required=True)
 
-    class Meta(object):
+    class Meta:
         model = AppDomainSharedCert
         fields = ['cert_data', 'key_data', 'auto_match_cns']
 

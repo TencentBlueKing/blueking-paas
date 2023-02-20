@@ -71,4 +71,4 @@ def test_init_cluster(cluster_envs, https_enabled, expect):
     ]
     assert cluster.default_node_selector == {"dedicated": "bkSaas"}
     urls = APIServer.objects.filter(cluster=cluster).values_list("host", flat=True)
-    assert set(urls) == set(['https://kubernetes.default.svc.cluster.localroot', "https://10.0.0.1"])
+    assert set(urls) == {'https://kubernetes.default.svc.cluster.localroot', "https://10.0.0.1"}

@@ -102,4 +102,4 @@ class EnvAddresses:
     @staticmethod
     def _sort(addrs: List[Address]) -> List[Address]:
         """Sort address list, short and not reserved address first"""
-        return list(sorted(addrs, key=lambda addr: (addr.is_sys_reserved, len(addr.url))))
+        return sorted(addrs, key=lambda addr: (addr.is_sys_reserved, len(addr.url)))

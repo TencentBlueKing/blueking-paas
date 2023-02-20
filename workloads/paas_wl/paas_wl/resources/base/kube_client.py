@@ -33,7 +33,7 @@ class LazyDiscoverer(_LazyDiscoverer):
     Note: You cannot change the name `LazyDiscoverer`, otherwise the override will not work
     """
 
-    def __search(self, parts, resources, reqParams):
+    def __search(self, parts, resources, reqParams):  # noqa: C901
         part = parts[0]
         if part != '*':
             resourcePart = resources.get(part)

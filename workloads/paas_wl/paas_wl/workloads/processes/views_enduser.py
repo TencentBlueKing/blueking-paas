@@ -73,31 +73,19 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
             logger.warning("Unable to update process, environment %s has gone offline.", module_env)
             raise error_codes.CANNOT_OPERATE_PROCESS.f('环境已下架')
 
-        ctl = get_proc_mgr(module_env)
         engine_app = self.get_engine_app_via_path()
-
-        proc_type = data["process_type"]
+        process_type = data["process_type"]
+        operate_type = data["operate_type"]
+        target_replicas = data.get("target_replicas")
         try:
-            judge_operation_frequent(engine_app, proc_type, self._operation_interval)
+            judge_operation_frequent(engine_app, process_type, self._operation_interval)
         except ProcessOperationTooOften as e:
             raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
-        try:
-            if data['operate_type'] == ProcessUpdateType.SCALE:
-                ctl.scale(proc_type, data['target_replicas'])
-            elif data['operate_type'] == ProcessUpdateType.STOP:
-                ctl.stop(proc_type)
-            elif data['operate_type'] == ProcessUpdateType.START:
-                ctl.start(proc_type)
-            else:
-                raise error_codes.PROCESS_OPERATE_FAILED.f(f"Invalid operate type {data['operate_type']}")
-        except ProcessNotFound as e:
-            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{e}' 未定义")
-        except ScaleProcessError as e:
-            raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
+        self._perform_update(module_env, operate_type, process_type, target_replicas)
 
         # Create application operation log
-        op_type = self.get_logging_operate_type(data['operate_type'])
+        op_type = self.get_logging_operate_type(operate_type)
         if op_type:
             try:
                 module = self.get_module_via_path()
@@ -107,7 +95,7 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
                     operator=request.user.pk,
                     source_object_id=str(module_env.id),
                     module_name=module.name,
-                    extra_values={"process_type": data['process_type'], "env_name": module_env.environment},
+                    extra_values={"process_type": process_type, "env_name": module_env.environment},
                 )
             except PlatClientRequestError:
                 logger.exception('Error creating app operation log')
@@ -118,6 +106,23 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     def get_logging_operate_type(type_: str) -> Optional[int]:
         """Get the type of application operation"""
         return {'start': AppOperationType.PROCESS_START, 'stop': AppOperationType.PROCESS_STOP}.get(type_, None)
+
+    def _perform_update(self, module_env, operate_type: str, process_type: str, target_replicas: Optional[int] = None):
+        ctl = get_proc_mgr(module_env)
+        try:
+            if operate_type == ProcessUpdateType.SCALE:
+                assert target_replicas
+                ctl.scale(process_type, target_replicas)
+            elif operate_type == ProcessUpdateType.STOP:
+                ctl.stop(process_type)
+            elif operate_type == ProcessUpdateType.START:
+                ctl.start(process_type)
+            else:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"Invalid operate type {operate_type}")
+        except ProcessNotFound as e:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 未定义") from e
+        except ScaleProcessError as e:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
 
 class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):

@@ -23,7 +23,6 @@ ADD ./poetry.lock ./
 # Install dependecies in system
 # unittest 要安装 dev 依赖
 ARG POETRY_INSTALL_EXTRA_ARGS
-# Install dependecies in system
 # Disable "new installer" to fix https://github.com/python-poetry/poetry/issues/6301
 RUN poetry config virtualenvs.create false && poetry config experimental.new-installer false && poetry install ${POETRY_INSTALL_EXTRA_ARGS}
 

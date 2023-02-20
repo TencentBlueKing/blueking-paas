@@ -57,14 +57,14 @@ class TimestampedModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-    class Meta(object):
+    class Meta:
         abstract = True
 
 
 M = TypeVar("M")
 
 
-def make_json_field(
+def make_json_field(  # noqa: C901
     cls_name: str, py_model: Type[M], decoder: Callable[[M], Dict] = cattr.unstructure, module: Optional[str] = None
 ) -> Type[JSONField]:
     """生成会自动进行类型转换为 `py_model` 的 JSONField

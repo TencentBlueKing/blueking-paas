@@ -58,7 +58,7 @@ class Command(BaseCommand):
         d_apps = self.find_subdomain_apps(cert)
         p_apps = self.find_subpath_apps(cert)
         # Sort the app list to get a deterministic result
-        apps = sorted(list(set(d_apps) | set(p_apps)), key=lambda app: app.name)
+        apps = sorted(set(d_apps) | set(p_apps), key=lambda app: app.name)
         self.print(f'Found affected apps(sub-domain/sub-path): {len(d_apps)}/{len(p_apps)}')
         self.print(f'Deduplicated overall count: {len(apps)}')
 

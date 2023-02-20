@@ -33,7 +33,7 @@ class ClusterType(str, StructuredEnum):
     VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
 
 
-class ClusterFeatureFlag(FeatureFlag):
+class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     """集群特性标志"""
 
     ENABLE_EGRESS_IP = FeatureFlagField(label=_('支持提供出口 IP'))

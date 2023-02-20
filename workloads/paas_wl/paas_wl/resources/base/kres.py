@@ -128,7 +128,7 @@ class NameBasedMethodProxy:
         return getattr(instance.ops_name, self.method_name)
 
 
-class BaseKresource(object):
+class BaseKresource:
     """Base class for kubernetes resource utils
 
     :param client: Kubernetes client object
@@ -180,7 +180,7 @@ class BaseKresource(object):
         return cls(obj.client, obj.request_timeout)
 
 
-class BaseOperations(object):
+class BaseOperations:
     """Base operation class for kubernetes resources
 
     :param client: Kubernetes client instance

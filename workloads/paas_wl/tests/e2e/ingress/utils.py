@@ -137,7 +137,7 @@ class IngressNginxReloadChecker:
         self.retry_time = retry_time
 
     def check_keyword_from_logs(self, framework: E2EFramework, ingress: ProcessIngress):
-        for i in range(self.retry_time):
+        for _ in range(self.retry_time):
             logs_resp = KPod(framework.client).get_log(name=framework.pod.metadata.name, namespace=framework.namespace)
             for idx, line in enumerate(logs_resp.readlines()):
                 if b"reloaded" in line:

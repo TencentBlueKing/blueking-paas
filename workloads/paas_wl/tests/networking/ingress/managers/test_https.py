@@ -69,7 +69,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
         assert ingress.domains[0].tls_secret_name == ''
 
     def test_domain_with_shared_cert(self, app, shared_cert):
-        app_domain = AppDomain.objects.create(
+        AppDomain.objects.create(
             region=app.region,
             app=app,
             source=AppDomainSource.AUTO_GEN,
@@ -85,7 +85,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
         assert ingress.domains[0].tls_secret_name == 'eng-shared-cert-wildcard-foo.com'
 
     def test_domain_with_not_matched_shared_cert(self, app):
-        app_domain = AppDomain.objects.create(
+        AppDomain.objects.create(
             region=app.region,
             app=app,
             source=AppDomainSource.AUTO_GEN,
@@ -99,7 +99,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
         assert ingress.domains[0].tls_enabled is False, "HTTPS domain with no certs should be turned off"
 
     def test_domain_with_no_https(self, app):
-        app_domain = AppDomain.objects.create(
+        AppDomain.objects.create(
             region=app.region,
             app=app,
             source=AppDomainSource.AUTO_GEN,

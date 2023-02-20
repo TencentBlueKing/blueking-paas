@@ -55,7 +55,7 @@ def save_subdomains(app: App, domains: List[AutoGenDomain]) -> Set[App]:
     """
     hosts = [domain.host for domain in domains]
     existed_domains = AppDomain.objects.filter(region=app.region, host__in=hosts, source=AppDomainSource.AUTO_GEN)
-    affected_apps = set(obj.app for obj in existed_domains)
+    affected_apps = {obj.app for obj in existed_domains}
 
     for domain in domains:
         obj, _ = AppDomain.objects.update_or_create(

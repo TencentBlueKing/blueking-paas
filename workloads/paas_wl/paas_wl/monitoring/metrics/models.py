@@ -86,8 +86,8 @@ class ResourceMetricManager:
         self,
         instance_name: str,
         resource_types: List['MetricsResourceType'],
-        series_type: 'MetricsSeriesType' = None,
-        time_range: 'MetricSmartTimeRange' = None,
+        series_type: Optional[MetricsSeriesType] = None,
+        time_range: Optional[MetricSmartTimeRange] = None,
     ) -> List['MetricsResourceResult']:
         """query metrics at Engine Application level"""
 
@@ -124,7 +124,7 @@ class ResourceMetricManager:
         self,
         resource_types: List['MetricsResourceType'],
         time_range: 'MetricSmartTimeRange',
-        series_type: 'MetricsSeriesType' = None,
+        series_type: Optional[MetricsSeriesType] = None,
     ) -> List['MetricsInstanceResult']:
 
         all_instances_metrics = []

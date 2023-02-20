@@ -731,7 +731,7 @@ export default {
   '不能继续创建同名应用': 'Cannot continue to create an app with the same name',
   '应用名称不可超过20个字符': 'App name cannot exceed 20 characters',
   '格式不正确，只能包含：汉字、英文字母、数字': 'Incorrect format, can only contain: Chinese characters, English letters, numbers',
-  '无': '无',
+  '无': 'none',
   '可选的插件使用方': 'Optional plug-in user',
   '已授权给以下使用方': 'Licensed to the following users',
   '无数据': 'No data',
@@ -2081,5 +2081,13 @@ export default {
   '应用已迁移到插件开发中心，本页面仅做展示用，如需操作请到': 'The app has been migrated to the Plugin Center, this page is for demonstration purposes only, if you need to operate  it please go to',
   '插件开发- 配置管理页面': 'the Plugin-Center - Configurations',
   '。': '.',
-  '当前应用不支持配置环境变量。': 'The current application does not support the configuration of environment variables.'
+  '当前应用不支持配置环境变量。': 'The current application does not support the configuration of environment variables.',
+  '事件': 'Event',
+  '确认发布至{environment}环境': 'Confirm release to {environment} environment',
+  '确认要将应用（{code}）发布到{environment}环境': 'Confirm to publish the application ({code}) to the {environment} environment',
+  '操作成功': 'Successful operation',
+  '不允许添加同名进程': 'Adding processes with the same name is not allowed',
+  '命令{key}成功': 'Command {key} succeeded',
+  '{key}失败': '{key} failed',
+  '已终止当前的发布流程': 'The current publishing process has been terminated'
 };

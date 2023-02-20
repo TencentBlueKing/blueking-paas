@@ -633,7 +633,7 @@
                 if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
                     this.$paasMessage({
                         theme: 'error',
-                        message: '不允许添加同名进程'
+                        message: this.$t('不允许添加同名进程')
                     });
                     setTimeout(() => {
                         this.isBlur = true;

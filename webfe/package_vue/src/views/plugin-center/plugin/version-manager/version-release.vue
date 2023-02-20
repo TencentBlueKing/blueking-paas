@@ -358,7 +358,7 @@
                     await this.$store.dispatch('plugin/cancelRelease', params);
                     this.$bkMessage({
                         theme: 'success',
-                        message: '已终止当前的发布流程'
+                        message: this.$t('已终止当前的发布流程')
                     });
                     this.goVersionManager();
                 } catch (e) {

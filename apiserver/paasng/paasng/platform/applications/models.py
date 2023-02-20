@@ -151,7 +151,7 @@ class BaseApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
-        market_enabled: bool = None,
+        market_enabled: Optional[bool] = None,
     ):
         """Filter applications by given parameters"""
         if order_by is None:

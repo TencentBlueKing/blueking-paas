@@ -623,7 +623,7 @@ def uniq_apps(apps: Iterable[SimpleApp]) -> Generator[SimpleApp, None, None]:
 
 
 def group_apps_by_developers(
-    filter_developers: List[str] = None,
+    filter_developers: Optional[List[str]] = None,
 ) -> Generator[Tuple[str, Dict[str, Any], List[SimpleApp]], None, None]:
     """Return apps grouped by user, include both legacy and default apps
 
@@ -701,7 +701,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
         )
 
 
-def make_table_apps_grouped_by_developer(filter_developers: List[str] = None) -> Table:
+def make_table_apps_grouped_by_developer(filter_developers: Optional[List[str]] = None) -> Table:
     """导出特定开发者的应用详情信息，按开发者与应用总数降序排列
 
     :param filter_developers: 只展示指定开发者的相关数据
@@ -749,7 +749,7 @@ def make_table_apps_grouped_by_developer(filter_developers: List[str] = None) ->
     return table
 
 
-def make_table_apps_grouped_by_developer_simple(filter_developers: List[str] = None) -> Table:
+def make_table_apps_grouped_by_developer_simple(filter_developers: Optional[List[str]] = None) -> Table:
     """导出特定开发者的应用详情信息，按开发者与应用总数降序排列
 
     - 不包含应用源码与贡献度相关

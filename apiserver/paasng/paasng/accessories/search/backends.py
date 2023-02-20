@@ -116,10 +116,8 @@ class MixSearcher:
 
     def search(self, keyword: str) -> List[Dict]:
         search_results = [searcher.search(keyword).docs for searcher in self.searchers]
-        mixed_results = []
+        items = []
         for item in itertools.zip_longest(*search_results):
             # 按 1:1 混合各个 searcher 的结果
-            mixed_results.extend([i for i in item if i is not None])
-
-        mixed_results = [self.to_simple_payload(doc) for doc in mixed_results]
-        return mixed_results
+            items.extend([i for i in item if i is not None])
+        return [self.to_simple_payload(doc) for doc in items]

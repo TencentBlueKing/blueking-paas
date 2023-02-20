@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import base64
 import logging
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Optional
 from urllib.parse import urljoin
 
 import arrow
@@ -69,7 +69,7 @@ class GiteeApiClient(BaseGitApiClient):
         url = urljoin(self.api_url, f'repos/{project.path_with_namespace}/tags')
         return list(self._request_with_retry(url))
 
-    def repo_last_commit(self, project: GitProject, branch_or_hash: str = None) -> Dict:
+    def repo_last_commit(self, project: GitProject, branch_or_hash: Optional[str] = None) -> Dict:
         """获取最后一次 commit 信息
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoCommitsSha
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoCommits

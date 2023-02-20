@@ -378,7 +378,11 @@ LOGGING = {
 }
 
 if settings.get('LOGGING_ENABLE_SQL_QUERIES', False):
-    LOGGING['loggers']['django.db.backends'] = {'handlers': _default_handlers, 'level': LOG_LEVEL, 'propagate': True}
+    LOGGING['loggers']['django.db.backends'] = {  # type: ignore
+        'handlers': _default_handlers,
+        'level': LOG_LEVEL,
+        'propagate': True,
+    }
 
 
 # 通知插件

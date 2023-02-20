@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from typing import List
+from typing import List, Optional
 
 import yaml
 from django.conf import settings
@@ -150,7 +150,9 @@ RE_CONFIG_VAR_KEY = re.compile(r'^[A-Z][A-Z0-9_]*$')
 
 
 class ConfigVarReservedKeyValidator:
-    def __init__(self, protected_key_list: List[str] = None, protected_prefix_list: List[str] = None):
+    def __init__(
+        self, protected_key_list: Optional[List[str]] = None, protected_prefix_list: Optional[List[str]] = None
+    ):
         self.protected_key_set = set(protected_key_list or [])
         self.protected_prefix_list = protected_prefix_list or []
 

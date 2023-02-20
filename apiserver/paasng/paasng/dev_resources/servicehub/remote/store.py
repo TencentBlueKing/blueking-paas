@@ -64,7 +64,7 @@ class StoreMixin:
     get: Callable
     all: Callable
 
-    def filter(self, region: str, conditions: Dict = None) -> List[Dict]:
+    def filter(self, region: str, conditions: Optional[Dict] = None) -> List[Dict]:
         """Find a list of services by given conditions
 
         :param conditions: a dict of conditions, eg. {"category": 1}

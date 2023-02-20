@@ -261,7 +261,7 @@ def get_default_stream(deployment: Deployment):
 class DeploymentStateMgr:
     """Deployment state manager"""
 
-    def __init__(self, deployment: Deployment, phase_type: 'DeployPhaseTypes', stream: DeployStream = None):
+    def __init__(self, deployment: Deployment, phase_type: 'DeployPhaseTypes', stream: Optional[DeployStream] = None):
         self.deployment = deployment
         self.stream = stream or get_default_stream(deployment)
         self.phase_type = phase_type

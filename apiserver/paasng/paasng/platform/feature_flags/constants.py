@@ -20,7 +20,7 @@ from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
 from django.conf import settings
 
 
-class PlatformFeatureFlag(FeatureFlag):
+class PlatformFeatureFlag(FeatureFlag):  # type: ignore
     RESOURCE_METRICS = FeatureFlagField(label="应用资源使用率")
     PHALANX = FeatureFlagField(label="监控告警")
     ANALYTICS = FeatureFlagField(label="访问统计")

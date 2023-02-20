@@ -50,7 +50,12 @@ class Ref:
 
 class GitCommand:
     def __init__(
-        self, git_filepath: str, command: str, args: List[str] = None, cwd: str = "", envs: Optional[Dict] = None
+        self,
+        git_filepath: str,
+        command: str,
+        args: Optional[List[str]] = None,
+        cwd: str = "",
+        envs: Optional[Dict] = None,
     ):
         self.git_filepath = git_filepath
         self.command = command
@@ -71,7 +76,7 @@ class GitCloneCommand(GitCommand):
         git_filepath: str,
         repository: MutableURL,
         target_directory: str = ".",
-        args: List[str] = None,
+        args: Optional[List[str]] = None,
         cwd: str = "",
         envs: Optional[Dict] = None,
     ):

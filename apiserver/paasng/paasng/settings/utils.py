@@ -88,7 +88,7 @@ def get_paas_service_jwt_clients(settings: LazySettings) -> List:
 
 
 def get_default_keepalive_options() -> Optional[Dict]:
-    """Mac OS's socket module does not has below attrs, return empty options instead"""
+    """MacOS's socket module does not have below attrs, return empty options instead"""
     try:
         return {
             socket.TCP_KEEPIDLE: 60,  # type: ignore

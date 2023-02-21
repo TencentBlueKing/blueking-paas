@@ -30,6 +30,14 @@ class Group(OperationGroup):
         Operation, name="management_grade_managers", method="POST", path="/api/v1/open/management/grade_managers/"
     )
 
+    # 删除分级管理员
+    v2_management_delete_grade_manager = bind_property(
+        Operation,
+        name="v2_management_delete_grade_manager",
+        method="DELETE",
+        path="/api/v2/open/management/systems/{system_id}/grade_managers/{id}/",
+    )
+
     # 分级管理员成员列表
     management_grade_manager_members = bind_property(
         Operation,

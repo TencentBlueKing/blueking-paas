@@ -168,3 +168,13 @@ def delete_builtin_user_groups(app_code: str):
     user_groups = ApplicationUserGroup.objects.filter(app_code=app_code)
     IAM_CLI.delete_user_groups(user_groups.values_list('user_group_id', flat=True))
     user_groups.delete()
+
+
+def delete_grade_manager(app_code: str):
+    """删除应用的分级管理员"""
+    grade_manager = ApplicationGradeManager.objects.filter(app_code=app_code).first()
+    if not grade_manager:
+        return
+
+    IAM_CLI.delete_grade_manager(grade_manager.grade_manager_id)
+    grade_manager.delete()

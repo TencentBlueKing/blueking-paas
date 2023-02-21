@@ -125,18 +125,41 @@ class BKIAMClient:
 
         return resp['data']['id']
 
+    def delete_grade_manager(self, grade_manager_id: str):
+        """
+        删除注册到权限中心的分级管理员
+
+        :param grade_manager_id: 分级管理员 ID
+        """
+        path_params = {'system_id': settings.IAM_PAAS_V3_SYSTEM_ID, 'id': grade_manager_id}
+
+        try:
+            resp = self.client.v2_management_delete_grade_manager(
+                headers=self._prepare_headers(),
+                path_params=path_params,
+            )
+        except APIGatewayResponseError as e:
+            raise BKIAMGatewayServiceError(f'delete grade manager error, detail: {e}')
+
+        if resp.get('code') != 0:
+            logger.exception(
+                'delete grade manager error, message:{} grade_manager_id: {}'.format(resp['message'], grade_manager_id)
+            )
+            raise BKIAMApiError(resp['message'], resp['code'])
+
     def fetch_grade_manager(self, app_code: str) -> int:
         """
         根据名称查询分级管理员 ID
-        # TODO 权限中心 API 支持按名称过滤后，添加名称参数而不是拉回全量数据过滤
 
         :param app_code: 蓝鲸应用 ID
         :returns: 分级管理员 ID
         """
+        manager_name = utils.gen_grade_manager_name(app_code)
         try:
             resp = self.client.management_grade_managers_list(
                 headers=self._prepare_headers(),
                 params={
+                    'name': manager_name,
                     'system': settings.IAM_PAAS_V3_SYSTEM_ID,
                     'page': DEFAULT_PAGE,
                     'page_size': LIST_GRADE_MANAGERS_LIMIT,
@@ -149,7 +172,6 @@ class BKIAMClient:
             logger.exception(f"fetch iam grade managers error, message:{resp['message']}")
             raise BKIAMApiError(resp['message'], resp['code'])
 
-        manager_name = utils.gen_grade_manager_name(app_code)
         for manager in resp['data']['results']:
             if manager['name'] == manager_name:
                 return manager['id']

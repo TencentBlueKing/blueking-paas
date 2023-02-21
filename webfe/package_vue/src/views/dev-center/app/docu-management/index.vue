@@ -534,7 +534,7 @@
                     }
                     .children-td {
                         padding: 0;
-                        border-bottom: none;
+                        border-bottom: 1px solid #dcdee5;
                     }
                 }
                 .active {
@@ -569,7 +569,7 @@
                 }
                 tr:last-child {
                     td {
-                        border-bottom: none !important;
+                        border-bottom: 1px solid #dcdee5 !important;
                     }
                 }
                 .name {

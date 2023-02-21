@@ -135,7 +135,7 @@ class WaitPodDelete:
             time.sleep(self._check_interval)
             now = datetime.datetime.now()
             try:
-                pod = KPod(self.client).get(name=self.name, namespace=self.namespace)
+                KPod(self.client).get(name=self.name, namespace=self.namespace)
             except ResourceMissing:
                 return True
         if raise_timeout:
@@ -191,7 +191,7 @@ class PodScheduleHandler(ResourceHandlerBase):
         KPod(self.client).delete(
             pod_name,
             namespace=namespace,
-            non_grace_period=True if grace_period_seconds == 0 else False,
+            non_grace_period=grace_period_seconds == 0,
             raise_if_non_exists=raise_if_non_exists,
             grace_period_seconds=grace_period_seconds,
         )

@@ -67,7 +67,7 @@ class Tag(models.Model):
 
     objects = TagManager()
 
-    class Meta(object):
+    class Meta:
         ordering = ('index', 'id')
 
     def get_name_display(self):

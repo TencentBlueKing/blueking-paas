@@ -99,7 +99,7 @@ class LogClient:
         mapping = list(self.es_index.get_mapping().values())[0]
         return mapping["mappings"]["properties"]
 
-    def _make_base_query(self, order_by_time: str = None, enable_highlight: bool = True) -> Search:
+    def _make_base_query(self, order_by_time: Optional[str] = None, enable_highlight: bool = True) -> Search:
         """
         base query filter by:
         - app_info(powered by app_filter)
@@ -410,7 +410,9 @@ class LogClient:
         total = q.count()
         return page_class(page=dict(page=page, page_size=page_size, total=total), logs=resp)
 
-    def query_scrollable_logs(self, scroll_id: str = None, result_type: Optional[ScrollableLogsResult] = None):
+    def query_scrollable_logs(
+        self, scroll_id: Optional[str] = None, result_type: Optional[ScrollableLogsResult] = None
+    ):
         """Query scrollable logs, used by stdout/stderr logs and bk_plugin logs
 
         :param scroll_id: The identifier for scroll logs
@@ -426,12 +428,12 @@ class LogClient:
         except AttributeError as e:
             raise ScanError(scroll_id, "Can't not get next scroll_id from ES.") from e
 
-        result_type = result_type or StandardOutputLogScroll
-        return result_type(scroll_id=new_scroll_id, logs=logs, total=logs._search.count())
+        r_type = result_type or StandardOutputLogScroll
+        return r_type(scroll_id=new_scroll_id, logs=logs, total=logs._search.count())
 
 
 class SmartTimeRange:
-    def __init__(self, time_range: str, start_time: str = None, end_time: str = None):
+    def __init__(self, time_range: str, start_time: Optional[str] = None, end_time: Optional[str] = None):
         """A tool class for LogClient, transfer time_range[start_time, end_time] to ES format
 
         :param time_range: Dynamic or static time range. dynamic examples: 1s, 5m, 10h, static: customized

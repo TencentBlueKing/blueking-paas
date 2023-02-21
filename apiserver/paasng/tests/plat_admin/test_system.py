@@ -109,9 +109,7 @@ class TestGetContactInfo:
             )
 
         contact_info = get_contact_info(bk_app)
-        assert set(str_username(u) for u in contact_info.recent_deployment_operators) == set(
-            recent_deployment_operators
-        )
+        assert {str_username(u) for u in contact_info.recent_deployment_operators} == set(recent_deployment_operators)
 
 
 class TestLessCodeSystemAPIViewSet:

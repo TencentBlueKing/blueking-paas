@@ -37,6 +37,6 @@ class OneOffCommand(TimestampedModel):
     command = models.TextField()
     operator = BkUserField()
 
-    class Meta(object):
+    class Meta:
         get_latest_by = 'created'
         ordering = ['-created']

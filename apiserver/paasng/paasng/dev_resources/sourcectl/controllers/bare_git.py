@@ -97,7 +97,7 @@ class BareGitRepoController:
         with generate_temp_dir() as temp_dir:
             self.client.clone(self.repo_url, temp_dir)
             return sorted(
-                list(self.transfer_refs_to_versions(self.client.list_refs(temp_dir))),
+                self.transfer_refs_to_versions(self.client.list_refs(temp_dir)),
                 key=operator.attrgetter("last_update"),
                 reverse=True,
             )

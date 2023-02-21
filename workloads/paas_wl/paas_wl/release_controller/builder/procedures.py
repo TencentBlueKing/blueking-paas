@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import os
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
@@ -50,7 +50,7 @@ def generate_slug_path(bp: BuildProcess):
     return f'{app.region}/home/{slug_name}/push'
 
 
-def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
+def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
     """generate all env vars needed for building"""
     bucket = settings.BLOBSTORE_S3_BUCKET_NAME
     store = make_blob_store(bucket)
@@ -126,7 +126,7 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
         env_vars["REQUIRED_BUILDPACKS"] = buildpacks
 
 
-def prepare_slugbuilder_template(app: 'App', env_vars: Dict, metadata: Dict) -> SlugBuilderTemplate:
+def prepare_slugbuilder_template(app: 'App', env_vars: Dict, metadata: Optional[Dict]) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
     :param app: App to build, provide info about namespace, region and etc.

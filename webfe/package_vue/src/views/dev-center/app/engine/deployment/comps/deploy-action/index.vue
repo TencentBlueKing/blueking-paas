@@ -355,7 +355,7 @@
           </div>
           <div class="span fl" />
           <div class="fl">
-            {{ $t('由') }} {{ deploymentInfo.operator.username }} {{ $t(' 于 ') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
+            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t(' 于 ') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
           </div>
 
           <bk-dropdown-menu
@@ -439,7 +439,7 @@
                 />
               </bk-option-group>
               <div
-                v-if="curAppModule.repo.type === 'bk_svn'"
+                v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
                 slot="extension"
                 style="cursor: pointer;"
                 @click="handleCreateBranch"
@@ -625,7 +625,7 @@
               :key="index"
               class="card-item"
             >
-              <template v-if="metadata.type === 'key-value'">
+              <template v-if="metadata && metadata.type === 'key-value'">
                 <div class="card-key">
                   {{ item.text }}：
                 </div>
@@ -1333,7 +1333,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
             },
 
             branchEmptyText () {
-                const sourceType = this.overview.repo.source_type;
+                const sourceType = this.overview.repo && this.overview.repo.source_type;
                 if (['bare_svn', 'bare_git'].includes(sourceType)) {
                     if (this.branchList.length === 0) {
                         return sourceType === 'bare_svn' ? this.$t('请检查SVN账号是否正确') : this.$t('请检查Git账号是否正确');
@@ -1403,7 +1403,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
             },
 
             lastDeploymentInfo () {
-                if (this.lastDeploymentInfo) {
+                if (this.lastDeploymentInfo && this.lastDeploymentInfo.repo) {
                     this.$nextTick(() => {
                         this.branchSelection = `${this.lastDeploymentInfo.repo.type}:${this.lastDeploymentInfo.repo.name}`;
                     });
@@ -1647,11 +1647,15 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                             this.deploymentInfo = res.offline;
                             this.exposedLink = '';
                             this.isAppOffline = true;
-                        } else {
+                        } else if (res.deployment) {
                             res.deployment.repo.version = this.formatRevision(res.deployment.repo.revision);
                             this.deploymentInfo = res.deployment;
                             this.exposedLink = res.exposed_link.url;
                             this.isAppOffline = false;
+                        } else {
+                            this.deploymentInfo = {
+                                repo: {}
+                            };
                         }
 
                         // 是否第一次部署
@@ -1985,7 +1989,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                             if (this.reConnectTimes >= this.reConnectLimit) {
                                 this.$paasMessage({
                                     theme: 'error',
-                                    message: '日志输出流异常，建议您刷新页面重试!'
+                                    message: this.$t('日志输出流异常，建议您刷新页面重试!')
                                 });
                             }
 
@@ -2971,7 +2975,7 @@ v-for="(chagnItem, chagnItemIndex) in cItem.changelist"
                                 infos: [
                                     {
                                         text: this.$t('当前类型'),
-                                        value: displays[key].type === 'default_subdomain' ? this.$t('子域名') : this.$t('子路径')
+                                        value: displays[key] && displays[key].type === 'default_subdomain' ? this.$t('子域名') : this.$t('子路径')
                                     },
                                     {
                                         text: this.$t('访问地址'),

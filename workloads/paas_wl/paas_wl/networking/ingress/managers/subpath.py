@@ -55,7 +55,7 @@ def save_subpaths(app: App, subpaths: List[str]) -> Set[App]:
     existed_subpaths = AppSubpath.objects.filter(
         region=app.region, subpath__in=subpaths, source=AppSubpathSource.DEFAULT
     )
-    affected_apps = set(obj.app for obj in existed_subpaths)
+    affected_apps = {obj.app for obj in existed_subpaths}
 
     for subpath in subpaths:
         AppSubpath.objects.update_or_create(

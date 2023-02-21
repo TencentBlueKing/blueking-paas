@@ -33,7 +33,7 @@ ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
 RUN pip install --upgrade pip
-RUN pip install poetry==1.1.11
+RUN pip install poetry==1.3.2
 
 
 # Change security level of openssl to lower value in order to avoid "CA_MD_TOO_WEAK" error
@@ -46,7 +46,8 @@ ADD ./pyproject.toml .
 ADD ./poetry.lock .
 
 # Install dependecies in system
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+# Disable "new installer" to fix https://github.com/python-poetry/poetry/issues/6301
+RUN poetry config virtualenvs.create false && poetry config experimental.new-installer false && poetry install --no-dev
 
 RUN mkdir -p ./public
 

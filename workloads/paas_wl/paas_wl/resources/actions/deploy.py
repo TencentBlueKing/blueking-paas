@@ -127,7 +127,7 @@ class ZombieProcessesKiller:
 
         logger.debug("latest version: %s, last version: %s", self.release.version, self.last_release.version)
         logger.debug("latest procfile: %s, last procfile: %s", procfile, last_procfile)
-        for last_type, last_command in last_procfile.items():
+        for last_type, _ in last_procfile.items():
             last_process = AppProcessManager(app=self.release.app).assemble_process(
                 process_type=last_type, release=self.last_release
             )

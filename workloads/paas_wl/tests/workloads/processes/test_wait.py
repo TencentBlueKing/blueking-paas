@@ -110,8 +110,7 @@ class TestWaitForAllStopped:
 
         @receiver(processes_updated)
         def _on_updated(sender, events, extra_params, **kwargs):
-            for event in events:
-                received_events.extend(events)
+            received_events.extend(events)
 
         last_process = copy.deepcopy(process)
         last_process.replicas = process.replicas + 1

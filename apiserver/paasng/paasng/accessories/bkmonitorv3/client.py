@@ -147,10 +147,8 @@ def make_bk_monitor_client() -> BkMonitorClient:
     if settings.ENABLE_BK_MONITOR_APIGW:
         apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
         apigw_client.update_bkapi_authorization(
-            **{
-                'bk_app_code': settings.BK_APP_CODE,
-                'bk_app_secret': settings.BK_APP_SECRET,
-            }
+            bk_app_code=settings.BK_APP_CODE,
+            bk_app_secret=settings.BK_APP_SECRET,
         )
     return BkMonitorClient(apigw_client.api)
 

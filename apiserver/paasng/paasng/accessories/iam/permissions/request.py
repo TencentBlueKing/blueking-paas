@@ -31,6 +31,7 @@ class ResourceRequest(ABC):
     @classmethod
     def from_dict(cls, init_data: Dict) -> 'ResourceRequest':
         """从字典构建对象"""
+        raise NotImplementedError
 
     def make_resources(self, res_ids: Union[List[str], str]) -> List[Resource]:
         """

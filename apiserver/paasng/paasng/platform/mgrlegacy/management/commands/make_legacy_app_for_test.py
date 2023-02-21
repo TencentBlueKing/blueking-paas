@@ -119,7 +119,7 @@ class Command(BaseCommand):
         # 随机生成 secret key
         secret_key = get_random_secret_key()
 
-        app = self.get_or_create_legacy_app(
+        self.get_or_create_legacy_app(
             code,
             name,
             deploy_env,

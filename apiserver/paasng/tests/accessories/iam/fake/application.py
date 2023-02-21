@@ -84,9 +84,8 @@ class FakeApplicationPermission(Permission):
     def batch_resource_multi_actions_allowed(
         self, username: str, action_ids: List[str], resources: List[Resource]
     ) -> Dict[str, Dict[str, bool]]:
-
         perms = {}
-        for idx, r_id in enumerate([res.id for res in resources]):
+        for _, r_id in enumerate([res.id for res in resources]):
             perms[r_id] = {action_id: False for action_id in action_ids}
 
         return perms

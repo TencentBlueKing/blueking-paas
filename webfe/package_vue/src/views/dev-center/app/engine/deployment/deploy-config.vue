@@ -517,7 +517,7 @@ s<template>
                     if (res.procfile) {
                         this.$paasMessage({
                             theme: 'success',
-                            message: `命令${key}成功`
+                            message: this.$t(`命令{key}成功`, { key: key })
                         });
                         if (type === 'add') this.commandList.push(params['procfile'][0]);
                         this.newVarConfig.name = '';
@@ -525,7 +525,7 @@ s<template>
                     } else {
                         this.$paasMessage({
                             theme: 'error',
-                            message: `${key}失败`
+                            message: this.$t(`{key}失败`, { key: key })
                         });
                     }
                 });

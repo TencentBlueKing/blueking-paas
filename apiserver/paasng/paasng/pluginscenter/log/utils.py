@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import datetime
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from paasng.utils.datetime import calculate_gap_seconds_interval, calculate_interval
 
@@ -68,8 +68,8 @@ class SmartTimeRange:
     def __init__(
         self,
         time_range: str,
-        start_time: datetime.datetime = None,
-        end_time: datetime.datetime = None,
+        start_time: Optional[datetime.datetime] = None,
+        end_time: Optional[datetime.datetime] = None,
     ):
         self.time_range = time_range
 

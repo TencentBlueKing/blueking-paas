@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import base64
 import logging
 import pathlib
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Optional
 from urllib.parse import urljoin
 
 import arrow
@@ -84,7 +84,7 @@ class GitHubApiClient(BaseGitApiClient):
         local_path.write_bytes(resp.content)
         return local_path
 
-    def repo_last_commit(self, project: GitProject, branch_or_hash: str = None) -> Dict:
+    def repo_last_commit(self, project: GitProject, branch_or_hash: Optional[str] = None) -> Dict:
         """获取最后一次 commit 信息
         https://docs.github.com/en/rest/commits/commits#get-a-commit
         https://docs.github.com/en/rest/commits/commits#list-commits

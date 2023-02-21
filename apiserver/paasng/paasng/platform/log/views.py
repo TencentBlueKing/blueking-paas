@@ -214,7 +214,7 @@ class StructuredLogAPIView(LogBaseAPIView):
                 client.app_filter.module_name,
             )
             raise error_codes.QUERY_REQUEST_ERROR
-        return Response(ResponseWrapper(**{"code": 0, "data": data}).dict())
+        return Response(ResponseWrapper(code=0, data=data).dict())
 
     @swagger_auto_schema(query_serializer=serializers.AppLogListQuerySLZ(), tags=["日志搜索"])
     def get(self, request, code, module_name):
@@ -300,7 +300,7 @@ class IngressLogAPIView(LogBaseAPIView):
                 client.app_filter.module_name,
             )
             raise error_codes.QUERY_REQUEST_ERROR
-        return Response(ResponseWrapper(**{"code": 0, "data": data}).dict())
+        return Response(ResponseWrapper(code=0, data=data).dict())
 
     @swagger_auto_schema(query_serializer=serializers.AppLogListQuerySLZ(), tags=["日志搜索"])
     def get(self, request, code, module_name):

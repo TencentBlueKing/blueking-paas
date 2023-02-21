@@ -86,7 +86,7 @@ def detect_indexes(start_time: datetime.datetime, end_time: datetime.datetime, i
 def parse_simple_dsl_to_dsl(dsl: 'SimpleDomainSpecialLanguage', mappings: dict) -> Query:
     # use `MatchAll` as fallback
     query_string = (
-        Q("query_string", query=dsl.query.query_string, analyze_wildcard=True) if bool(dsl.query.query_string) else Q()
+        Q("query_string", query=dsl.query.query_string, analyze_wildcard=True) if dsl.query.query_string else Q()
     )
     # 空数组不进行过滤
     terms = [Q("terms", **{get_es_term(k, mappings): v}) for k, v in dsl.query.terms.items() if len(v) != 0]

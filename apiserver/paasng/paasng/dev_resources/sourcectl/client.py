@@ -96,7 +96,7 @@ class BaseGitApiClient(abc.ABC):
         """获取指定仓库所有 tags"""
 
     @abc.abstractmethod
-    def repo_last_commit(self, project: GitProject, branch_or_hash: str = None) -> Dict:
+    def repo_last_commit(self, project: GitProject, branch_or_hash: Optional[str] = None) -> Dict:
         """获取最后一次 commit 信息
 
         :param project: 项目对象
@@ -120,7 +120,7 @@ class BaseGitApiClient(abc.ABC):
     def calculate_user_contribution(self, **kwargs) -> Dict:
         """统计贡献"""
 
-    def _fetch_all_items(self, target_url: str, params: Dict = None) -> Generator[Dict, None, None]:
+    def _fetch_all_items(self, target_url: str, params: Optional[Dict] = None) -> Generator[Dict, None, None]:
         for cur_page in itertools.count(start=PAGE_START_AT):
             items = self._fetch_items(target_url, cur_page, params=params)
             if items:
@@ -129,7 +129,7 @@ class BaseGitApiClient(abc.ABC):
                 break
 
     def _fetch_items(
-        self, target_url: str, cur_page: int, per_page: int = DEFAULT_PER_PAGE, params: Dict = None
+        self, target_url: str, cur_page: int, per_page: int = DEFAULT_PER_PAGE, params: Optional[Dict] = None
     ) -> List[Dict]:
         params = params or {}
         params['page'] = cur_page
@@ -150,7 +150,7 @@ class BaseGitApiClient(abc.ABC):
             kwargs['params'] = params
 
         kwargs.setdefault('timeout', DEFAULT_TIMEOUT)
-        for idx in range(RETRY_TIME):
+        for __ in range(RETRY_TIME):
             raw_resp = self.session.get(target_url, **kwargs)
             try:
                 resp = self._validate_resp(raw_resp)

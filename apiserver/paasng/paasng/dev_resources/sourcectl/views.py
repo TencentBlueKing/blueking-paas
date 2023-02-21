@@ -101,7 +101,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         accounts = list(self.get_queryset())
         if not accounts:
             results = empty_svn_accounts_fetched.send(sender=self, username=request.user.username)
-            for receiver, response in results:
+            for __, response in results:
                 if isinstance(response, SvnAccount):
                     accounts = [response]
         list_serializer = slzs.SvnAccountSLZ(accounts, many=True, context=self.get_serializer_context())

@@ -360,8 +360,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1GiB',
-                    cpu: 4,
+                    memory: '1024Mi',
+                    cpu: '4000m',
                     replicas: 1,
                     targetPort: 8080
                 },
@@ -381,12 +381,12 @@
                 memoryData: [
                     { key: '256 Mi', value: '256Mi' },
                     { key: '512 Mi', value: '512Mi' },
-                    { key: '1Gi', value: '1Gi' }
+                    { key: '1024 Mi', value: '1024Mi' }
                 ],
                 cpuData: [
-                    { key: '1', value: '1' },
-                    { key: '2', value: '2' },
-                    { key: '4', value: '4' }
+                    { key: '1000m', value: '1000m' },
+                    { key: '2000m', value: '2000m' },
+                    { key: '4000m', value: '4000m' }
                 ],
                 hooks: null,
                 isLoading: true,
@@ -548,8 +548,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1Gi',
-                    cpu: 4,
+                    memory: '1024Mi',
+                    cpu: '4000m',
                     replicas: 1,
                     targetPort: null
                 };
@@ -633,7 +633,7 @@
                 if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
                     this.$paasMessage({
                         theme: 'error',
-                        message: '不允许添加同名进程'
+                        message: this.$t('不允许添加同名进程')
                     });
                     setTimeout(() => {
                         this.isBlur = true;
@@ -696,8 +696,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1Gi',
-                    cpu: 4,
+                    memory: '1024Mi',
+                    cpu: '4000m',
                     replicas: 1,
                     targetPort: 8080
                 };

@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
-
 from rest_framework import serializers
 
 from paasng.platform.mgrlegacy.models import MigrationProcess
@@ -59,7 +57,7 @@ class LegacyAppSLZ(serializers.Serializer):
     migration_finished_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", help_text='迁移完成时间')
     legacy_url = serializers.CharField(help_text="PaaS2.0上的访问地址")
 
-    class Meta(object):
+    class Meta:
         fields = (
             'legacy_app_id',
             'code',
@@ -87,7 +85,7 @@ class MigrationProcessCreateSLZ(serializers.ModelSerializer):
         default=serializers.CurrentUserDefault(),
     )
 
-    class Meta(object):
+    class Meta:
         model = MigrationProcess
         fields = ('legacy_app_id', 'owner')
 
@@ -101,7 +99,7 @@ class MigrationProcessDetailSLZ(serializers.ModelSerializer):
     is_v3_prod_available = serializers.BooleanField()
     is_v3_stag_available = serializers.BooleanField()
 
-    class Meta(object):
+    class Meta:
         model = MigrationProcess
         fields = '__all__'
 

@@ -469,7 +469,7 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
 
         try:
             bcs_cluster_id = cluster.annotations["bcs_cluster_id"]
-        except KeyError as e:
+        except KeyError:
             raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BCS 信息, 不支持该功能")
 
         try:

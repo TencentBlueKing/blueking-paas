@@ -274,7 +274,7 @@ class LocalServiceMgr(BaseServiceMgr):
         db_obj = Service.objects.get(pk=service.uuid)
         db_obj.delete()
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: 'Dict[str, str]' = None) -> str:
+    def bind_service(self, service: ServiceObj, module: Module, specs: Optional['Dict[str, str]'] = None) -> str:
         """Bind a service to module"""
         db_service = Service.objects.get(pk=service.uuid)
         return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind(module).pk
@@ -297,7 +297,7 @@ class LocalServiceMgr(BaseServiceMgr):
             yield obj
 
     def list_all_rels(
-        self, engine_app: EngineApp, service_id: str = None
+        self, engine_app: EngineApp, service_id: Optional[str] = None
     ) -> Generator[LocalEngineAppInstanceRel, None, None]:
         """return all service attachment with engine_app"""
         qs = engine_app.service_attachment.all()
@@ -315,7 +315,7 @@ class LocalServiceMgr(BaseServiceMgr):
         return attachment
 
     def list_unprovisioned_rels(
-        self, engine_app: EngineApp, service: ServiceObj = None
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[LocalEngineAppInstanceRel, None, None]:
         """Return all unprovisioned engine_app <-> local service instances by specified service (None for all)"""
         qs = engine_app.service_attachment.filter(service_instance__isnull=True)
@@ -325,7 +325,7 @@ class LocalServiceMgr(BaseServiceMgr):
             yield self.transform_rel_db_obj(attachment)
 
     def list_provisioned_rels(
-        self, engine_app: EngineApp, service: ServiceObj = None
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[LocalEngineAppInstanceRel, None, None]:
         """Return all provisioned engine_app <-> local service instances by specified service (None for all)"""
         qs = engine_app.service_attachment.exclude(service_instance__isnull=True)
@@ -460,7 +460,7 @@ class LocalServiceBinder:
         self.service = service
 
     @atomic()
-    def bind(self, module: Module, specs: Dict[str, str] = None):
+    def bind(self, module: Module, specs: Optional[Dict[str, str]] = None):
         """Create the binding relationship in local database"""
         specs_helper = ServiceSpecificationHelper(
             definitions=self.service.specifications, plans=self.service.get_plans(is_active=True)

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Cluster related utilities
 """
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from cattr import structure
 
@@ -60,7 +60,7 @@ class AbstractRegionClusterService(ABC):
 class RegionClusterService(AbstractRegionClusterService):
     """Helper class for region cluster"""
 
-    def __init__(self, region: str, client: ControllerClient = None):
+    def __init__(self, region: str, client: Optional[ControllerClient] = None):
         self.region = region
         self.client = client or make_internal_client()
 

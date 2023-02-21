@@ -236,7 +236,7 @@
             data-test-id="summary_content_source"
           >
             <h3> {{ $t('镜像信息') }} </h3>
-            <div>{{ $t('类型') }}: <span class="summary_text">{{ curAppModule.repo.display_name }}</span></div>
+            <div>{{ $t('类型') }}: <span class="summary_text">{{ curAppModule.repo && curAppModule.repo.display_name }}</span></div>
             <div style="display: flex;">
               <p :class="[localLanguage === 'en' ? 'address-en' : 'address-zh-cn']">
                 {{ $t('地址') }}:
@@ -246,7 +246,7 @@
                 placement="bottom"
                 class="urlText"
               >
-                <p>{{ curAppModule.repo.repo_url }}</p>
+                <p>{{ curAppModule.repo && curAppModule.repo.repo_url }}</p>
               </bk-popover>
             </div>
           </div>
@@ -311,7 +311,7 @@
                 @click="downloadTemplate"
               > {{ $t('下载初始化模板代码') }} </a>
               <dropdown
-                v-if="curAppModule.repo.linked_to_internal_svn"
+                v-if="curAppModule.repo && curAppModule.repo.linked_to_internal_svn"
                 :options="{ position: 'bottom right' }"
               >
                 <bk-button
@@ -572,7 +572,7 @@
         },
         computed: {
             sourceTypeDisplayName () {
-                return this.curAppModule.repo.display_name;
+                return this.curAppModule.repo && this.curAppModule.repo.display_name || '';
             },
             curEnv () {
                 if (!this.releaseStatusProd.isEnvOfflined) {
@@ -616,14 +616,13 @@
                 this.curProcessName = '';
                 this.releaseStatusStag = { ...DEFAULT_RELEASE_STATUS };
                 this.releaseStatusProd = { ...DEFAULT_RELEASE_STATUS };
-                console.log('curAppModule', this.curAppModule);
-                this.trunkUrl = this.curAppModule.repo.trunk_url;
                 this.appDevLang = this.curAppModule.language;
-
-                this.sourceType = this.curAppModule.repo.source_type;
-
                 this.fetchAllDeployedInfos();
                 this.getModuleOperations();
+                if (this.curAppModule && this.curAppModule.repo) {
+                    this.trunkUrl = this.curAppModule.repo.trunk_url || '';
+                    this.sourceType = this.curAppModule.repo.source_type || '';
+                }
             },
             dropdownShow () {
                 this.isCpuDropdownShow = true;
@@ -675,6 +674,7 @@
                     this.releaseStatusStag = await this.fetchDeployedInfo('stag');
                 } catch (e) {
                     this.releaseStatusStag.hasDeployed = false;
+                    this.loading = false;
                 }
 
                 try {

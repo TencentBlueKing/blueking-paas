@@ -33,7 +33,10 @@ from .auth import create_user
 
 
 def random_fake_app(
-    force_app_info: Dict = None, paas_app_code: str = None, environment: str = None, owner: Optional[User] = None
+    force_app_info: Optional[Dict] = None,
+    paas_app_code: Optional[str] = None,
+    environment: Optional[str] = None,
+    owner: Optional[User] = None,
 ) -> App:
     default_environment = random.choice(["stag", "prod"])
     default_app_name = 'app-' + get_random_string(length=12).lower()
@@ -61,7 +64,7 @@ def random_fake_app(
     return fake_app
 
 
-def random_fake_instance(app: App, force_instance_info: Dict = None) -> Instance:
+def random_fake_instance(app: App, force_instance_info: Optional[Dict] = None) -> Instance:
     app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
     instance_info = {
         "app": app,
@@ -81,7 +84,9 @@ def random_fake_instance(app: App, force_instance_info: Dict = None) -> Instance
     return Instance(**instance_info)
 
 
-def release_setup(fake_app: App, build_params: Dict = None, release_params: Dict = None) -> Release:
+def release_setup(
+    fake_app: App, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
+) -> Release:
     default_build_params = {
         "owner": create_user(username="somebody"),
         "app": fake_app,

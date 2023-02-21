@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 class IngressConfig(AppConfig):
     name = 'paas_wl.networking.ingress'
-    # Change label for backward compatibility
-    label = 'services'
+    label = 'ingress'
 
     def ready(self):
         from .plugins.ingress import register

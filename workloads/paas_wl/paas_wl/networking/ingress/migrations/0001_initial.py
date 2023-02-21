@@ -45,6 +45,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'db_table': 'services_appdomaincert',
             },
         ),
         migrations.CreateModel(
@@ -61,6 +62,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'db_table': 'services_appdomainsharedcert',
             },
         ),
         migrations.CreateModel(
@@ -75,11 +77,12 @@ class Migration(migrations.Migration):
                 ('https_auto_redirection', models.BooleanField(default=False)),
                 ('source', models.IntegerField(choices=[(1, 'BUILT_IN'), (2, 'CUSTOM'), (3, 'INDEPENDENT')])),
                 ('app', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.App')),
-                ('cert', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='services.AppDomainCert')),
-                ('shared_cert', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='services.AppDomainSharedCert')),
+                ('cert', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='ingress.AppDomainCert')),
+                ('shared_cert', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='ingress.AppDomainSharedCert')),
             ],
             options={
                 'unique_together': {('region', 'host')},
+                'db_table': 'services_appdomain',
             },
         ),
     ]

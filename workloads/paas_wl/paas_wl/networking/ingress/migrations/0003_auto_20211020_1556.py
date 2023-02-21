@@ -24,7 +24,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('services', '0002_appsubpath'),
+        ('ingress', '0002_appsubpath'),
     ]
 
     operations = [

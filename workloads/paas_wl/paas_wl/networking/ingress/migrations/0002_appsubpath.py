@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('api', '0001_initial'),
-        ('services', '0001_initial'),
+        ('ingress', '0001_initial'),
     ]
 
     operations = [
@@ -44,6 +44,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'unique_together': {('region', 'subpath')},
+                'db_table': 'services_appsubpath',
             },
         ),
     ]

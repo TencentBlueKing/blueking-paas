@@ -24,7 +24,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('services', '0003_auto_20211020_1556'),
+        ('ingress', '0003_auto_20211020_1556'),
     ]
 
     operations = [
@@ -49,6 +49,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'unique_together': {('name', 'path_prefix', 'module_id', 'environment_id')},
+                'db_table': 'services_domain',
             },
         ),
     ]

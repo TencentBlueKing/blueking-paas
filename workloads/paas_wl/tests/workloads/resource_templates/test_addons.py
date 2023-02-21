@@ -21,7 +21,7 @@ from typing import List
 import cattr
 import pytest
 
-from paas_wl.workloads.resource_templates.components.probe import default_readiness_probe
+from paas_wl.workloads.resource_templates.components.probe import get_default_readiness_probe
 from paas_wl.workloads.resource_templates.components.sidecar import Container
 from paas_wl.workloads.resource_templates.utils import AddonManager
 
@@ -44,12 +44,12 @@ class TestAppAddOns:
 
     def test_default_readiness_probe(self, app):
         readiness_probe = AddonManager(app).get_readiness_probe()
-        assert readiness_probe == default_readiness_probe
+        assert readiness_probe == get_default_readiness_probe()
 
     def test_user_readiness_probe(self, app, probe_addon_template):
         probe_addon_template.link_to_app(app)
         readiness_probe = AddonManager(app).get_readiness_probe()
-        assert readiness_probe != default_readiness_probe
+        assert readiness_probe != get_default_readiness_probe()
 
         assert readiness_probe.httpGet
         assert readiness_probe.httpGet.port == 5000

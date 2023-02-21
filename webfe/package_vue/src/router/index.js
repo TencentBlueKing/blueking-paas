@@ -269,7 +269,7 @@ const appCloudAPI = () => import(/* webpackChunkName: 'app-basic-config' */'@/vi
   window.showDeployTip(error);
 });
 
-const appVoucher = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/voucher').then(module => {
+const imageCredential = () => import(/* webpackChunkName: 'app-basic-config' */'@/views/dev-center/app/basic-config/image-credential').then(module => {
   return module;
 }).catch(error => {
   window.showDeployTip(error);
@@ -697,8 +697,8 @@ const router = new Router({
         },
         {
           path: ':id/ticket',
-          component: appVoucher,
-          name: 'appVoucher'
+          component: imageCredential,
+          name: 'imageCredential'
         },
         {
           path: ':id/access-portal',

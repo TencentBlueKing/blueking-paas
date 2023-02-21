@@ -535,7 +535,6 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("应用编排"),
                 "matchRouters": [
                     "cloudAppDeploy",
-                    "cloudAppDeployHistory",
                     "cloudAppDeployForProcess",
                     "cloudAppDeployForEnv",
                     "cloudAppDeployForYaml",
@@ -604,13 +603,13 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
             {
-                "name": "appVoucher",
+                "name": "imageCredential",
                 "label": staticI18n.$t("镜像凭证"),
-                "matchRouters": ["appVoucher"],
+                "matchRouters": ["imageCredential"],
                 "iconfontName": "key-2",
                 "supportModule": false,
                 "destRoute": {
-                  "name": "appVoucher"
+                  "name": "imageCredential"
                 },
                 "children": []
             },
@@ -633,6 +632,19 @@ export const PAAS_STATIC_CONFIG = {
                     }
                 ]
             },
+            {
+                "name": "docuManagement",
+                "label": staticI18n.$t("文档管理"),
+                "matchRouters": [
+                    "docuManagement"
+                ],
+                "iconfontName": "page-fill",
+                "supportModule": false,
+                "destRoute": {
+                    "name": "docuManagement"
+                },
+                "children": []
+            }
         ],
         "pluginList": [
             {

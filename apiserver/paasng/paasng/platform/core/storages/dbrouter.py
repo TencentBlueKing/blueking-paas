@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.apps import apps
+from django.conf import settings
 
 
 class WorkloadsDBRouter:
@@ -43,11 +45,16 @@ class WorkloadsDBRouter:
             return True
         return None
 
-    def allow_migrate(self, db, app_label, model, **hints):
-        """Migration is forbidden now"""
-        if self._should_handle_model(model):
-            return False
-        return None
+    def allow_migrate(self, db, app_label, **hints):
+        app_config = apps.get_app_config(app_label)
+        if not settings.RUNNING_TESTS:
+            # db migrations are forbidden except in unit tests
+            return not app_config.module.__name__.startswith("paas_wl")
+        # when running test, pass_wl migrations can only apply to workloads db
+        if app_config.module.__name__.startswith("paas_wl"):
+            return db == self._workloads_db_name
+        # other migrations can only apply to default db
+        return db != self._workloads_db_name
 
     def _should_handle_model(self, model):
         return model.__module__.startswith("paas_wl")

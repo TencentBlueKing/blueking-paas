@@ -14,7 +14,7 @@
 
 **PaaS服务核心服务开源项目**
 
-- PaaS 平台 - [开发者中心](https://github.com/tencentblueking/blueking-paas)
+- PaaS 平台 - [开发者中心](https://github.com/TencentBlueKing/blueking-paas)
 - PaaS 平台 - [统一登录](https://github.com/TencentBlueKing/bk-user)
 - PaaS 平台 - [桌面](https://github.com/TencentBlueKing/blueking-console)
 - PaaS 平台低代码开发服务 - [可视化开发平台](https://github.com/TencentBlueKing/bk-lesscode)
@@ -53,7 +53,7 @@
 ## 蓝鲸社区
 
 - [BK-CI](https://github.com/TencentBlueKing/bk-ci)：蓝鲸持续集成平台是一个开源的持续集成和持续交付系统，可以轻松将你的研发流程呈现到你面前。
-- [BK-BCS](https://github.com/TencentBlueking/bk-bcs)：蓝鲸容器管理平台是以容器技术为基础，为微服务业务提供编排管理的基础服务平台。
+- [BK-BCS](https://github.com/TencentBlueKing/bk-bcs)：蓝鲸容器管理平台是以容器技术为基础，为微服务业务提供编排管理的基础服务平台。
 - [BK-SOPS](https://github.com/Tencent/bk-sops)：标准运维（SOPS）是通过可视化的图形界面进行任务流程编排和执行的系统，是蓝鲸体系中一款轻量级的调度编排类 SaaS 产品。
 - [BK-CMDB](https://github.com/TencentBlueKing/bk-cmdb)：蓝鲸配置平台是一个面向资产及应用的企业级配置管理平台。
 - [BK-JOB](https://github.com/Tencent/bk-job)：蓝鲸作业平台（Job）是一套运维脚本管理系统，具备海量任务并发处理能力。

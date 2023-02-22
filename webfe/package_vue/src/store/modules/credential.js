@@ -27,35 +27,35 @@ export default {
   getters: {},
   mutations: {},
   actions: {
-    /**
-         * 获取凭证
-         */
-    getVoucherList ({ commit, state }, { appCode }, config = {}) {
+    /*
+      获取镜像凭证列表
+    */
+    getImageCredentialList ({ commit, state }, { appCode }, config = {}) {
       const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
       return http.get(url, config);
     },
 
-    /**
-         * 新增凭证
-         */
-    addVoucher ({ commit, state }, { appCode, data }, config = {}) {
+    /*
+      新增镜像凭证
+    */
+    addImageCredential ({ commit, state }, { appCode, data }, config = {}) {
       const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/`;
       return http.post(url, data, config);
     },
 
-    /**
-         * 更新凭证
-         */
-    updateVoucher ({ commit, state }, { appCode, voucherName, data }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${voucherName}`;
+    /*
+      更新镜像凭证
+    */
+    updateImageCredential ({ commit, state }, { appCode, crdlName, data }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${crdlName}`;
       return http.put(url, data, config);
     },
 
-    /**
-         * 删除模块
-         */
-    deleteVoucher ({ commit, state }, { appCode, voucherName }, config = {}) {
-      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${voucherName}`;
+    /*
+      删除单个镜像凭证
+    */
+    deleteImageCredential ({ commit, state }, { appCode, crdlName }, config = {}) {
+      const url = `${BACKEND_URL}/svc_workloads/api/credentials/applications/${appCode}/image_credentials/${crdlName}`;
       return http.delete(url, config);
     }
   }

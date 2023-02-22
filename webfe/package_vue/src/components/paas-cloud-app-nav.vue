@@ -66,7 +66,6 @@
             return {
                 navTree: [],
                 allowedRouterName: [
-                    'cloudAppDeployHistory',
                     'cloudAppDeployForEnv',
                     'cloudAppDeployForYaml',
                     'cloudAppDeployForHook',
@@ -76,72 +75,94 @@
                 region: 'ieod',
                 roleAllowRouters: {
                     administrator: [
-                        'appSummary', // 概览
-                        'appEngine', // 应用引擎
-                        'appServices', // 增强服务
-                        'appPermissions', // 权限管理
-                        'appMarketing', // 市场推广
-                        'appConfigs', // 基本设置
-                        'moduleManage', // 模块管理
-                        'appAnalysis', // 数据统计
-                        'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appCloudAPI', // 云 API 权限管理,
-                        'appVoucher', // 镜像凭证
-                        'appAccessPortal', // 访问入口
-                        'appStatus', // 云原生应用状态,
-                        'appLog', // 日志查询
+                        // 应用编排
                         'cloudAppDeploy',
-                        'cloudAppDeployForProcess', // 云原生部署编排
-                        'cloudAppDeployHistory',
-                        'cloudAppDeployForEnv',
-                        'cloudAppDeployForYaml',
+                        // 应用编排 - 进程配置
+                        'cloudAppDeployForProcess',
+                        // 应用编排 - 钩子命令
                         'cloudAppDeployForHook',
-                        'cloudAppDeployForResource'
+                        // 应用编排 - 环境变量
+                        'cloudAppDeployForEnv',
+                        // 应用编排 - 依赖资源
+                        'cloudAppDeployForResource',
+                        // 应用编排 - YAML
+                        'cloudAppDeployForYaml',
+                        // 部署状态
+                        'appStatus',
+                        // 日志查询
+                        'appLog',
+                        // 访问入口
+                        'appAccessPortal',
+                        // 增强服务
+                        'appServices',
+                        // 云 API 管理
+                        'appCloudAPI',
+                        // 镜像凭证
+                        'imageCredential',
+                        // 基本设置
+                        'appConfigs',
+                        // 文档管理
+                        'docuManagement'
                     ],
-
                     developer: [
-                        'appSummary', // 概览
-                        'appEngine', // 应用引擎
-                        'appServices', // 增强服务
-                        'appMarketing', // 市场推广
-                        'appConfigs', // 基本设置
-                        'moduleManage', // 模块管理
-                        'appAnalysis', // 数据统计
-                        'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appCloudAPI', // 云 API 权限管理
-                        'appVoucher', // 镜像凭证
-                        'appAccessPortal', // 访问入口
-                        'appStatus', // 云原生应用状态
-                        'appLog', // 日志查询
+                        // 应用编排
                         'cloudAppDeploy',
-                        'cloudAppDeployForProcess', // 云原生部署编排
-                        'cloudAppDeployHistory',
-                        'cloudAppDeployForEnv',
-                        'cloudAppDeployForYaml',
+                        // 应用编排 - 进程配置
+                        'cloudAppDeployForProcess',
+                        // 应用编排 - 钩子命令
                         'cloudAppDeployForHook',
-                        'cloudAppDeployForResource'
+                        // 应用编排 - 环境变量
+                        'cloudAppDeployForEnv',
+                        // 应用编排 - 依赖资源
+                        'cloudAppDeployForResource',
+                        // 应用编排 - YAML
+                        'cloudAppDeployForYaml',
+                        // 部署状态
+                        'appStatus',
+                        // 日志查询
+                        'appLog',
+                        // 访问入口
+                        'appAccessPortal',
+                        // 增强服务
+                        'appServices',
+                        // 云 API 管理
+                        'appCloudAPI',
+                        // 镜像凭证
+                        'imageCredential',
+                        // 基本设置
+                        'appConfigs',
+                        // 文档管理
+                        'docuManagement'
                     ],
-
                     operator: [
-                        'appPermissions', // 权限管理
-                        'appMarketing', // 市场推广
-                        'appConfigs', // 基本设置
-                        'appAnalysis', // 数据统计
-                        'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appVoucher', // 镜像凭证
-                        'appAccessPortal', // 访问入口
-                        'appStatus', // 云原生应用状态
-                        'appLog', // 日志查询
+                        // 应用编排
                         'cloudAppDeploy',
-                        'cloudAppDeployForProcess', // 云原生部署编排
-                        'cloudAppDeployHistory',
-                        'cloudAppDeployForEnv',
-                        'cloudAppDeployForYaml',
+                        // 应用编排 - 进程配置
+                        'cloudAppDeployForProcess',
+                        // 应用编排 - 钩子命令
                         'cloudAppDeployForHook',
-                        'cloudAppDeployForResource'
+                        // 应用编排 - 环境变量
+                        'cloudAppDeployForEnv',
+                        // 应用编排 - 依赖资源
+                        'cloudAppDeployForResource',
+                        // 应用编排 - YAML
+                        'cloudAppDeployForYaml',
+                        // 部署状态
+                        'appStatus',
+                        // 日志查询
+                        'appLog',
+                        // 访问入口
+                        'appAccessPortal',
+                        // 增强服务
+                        'appServices',
+                        // 云 API 管理
+                        'appCloudAPI',
+                        // 镜像凭证
+                        'imageCredential',
+                        // 基本设置
+                        'appConfigs',
+                        // 文档管理
+                        'docuManagement'
                     ]
                 }
             };
@@ -201,26 +222,12 @@
                 try {
                     const region = this.curAppInfo.application.region;
                     const res = await this.$store.dispatch('fetchRegionInfo', region);
-                    // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
                     this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
 
                     // 添加增强服务
                     res.services.categories.forEach(category => {
                         navTree = this.addServiceNavItem(navTree, category.id, category.name);
                     });
-
-                    // // 添加权限管理
-                    // if (res.access_control && res.access_control.module) {
-                    //     res.access_control.module.forEach(moduleType => {
-                    //         navTree = this.addPermissionNavItem(navTree, moduleType);
-                    //     });
-                    // }
-
-                    // // 添加访问入口
-                    // this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问入口'));
-
-                    // // 添加代码检查
-                    // this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
 
                     // 如果不开启引擎，仅仅显示应用推广和基本信息以及数据统计
                     if (!this.curAppInfo.web_config.engine_enabled) {
@@ -241,12 +248,12 @@
                         });
                     }
 
-                    // 当角色为开发者时，过滤部分功能入口
+                    // 当角色为开发者时，过滤部分功能入口（注：目前云原生应用所有角色导航是相同的）
                     if (this.curAppInfo.role.name === 'developer') {
                         navTree = navTree.filter(nav => this.roleAllowRouters['developer'].includes(nav.name));
                     }
 
-                    // 当角色运营者时，过滤部分功能入口
+                    // 当角色运营者时，过滤部分功能入口（注：目前云原生应用所有角色导航是相同的）
                     if (this.curAppInfo.role.name === 'operator') {
                         navTree = navTree.filter(nav => this.roleAllowRouters['operator'].includes(nav.name));
                     }
@@ -335,7 +342,6 @@
                 const allowRouters = this.roleAllowRouters[appRole.name] || [];
 
                 this.allowedRouterName = [
-                    'cloudAppDeployHistory',
                     'cloudAppDeployForEnv',
                     'cloudAppDeployForYaml',
                     'cloudAppDeployForHook',

@@ -94,8 +94,6 @@
                   :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
                 >{{ $t('帮助：如何构建镜像') }}</a>
               </p>
-              <!-- <p class="whole-item-tips"> {{ $t('示例镜像：mirrors.tencent.com/foo/bar') }} </p>
-                            <p class="whole-item-tips"> {{ $t('镜像应监听环境变量值$PORT端口，提供HTTP服务') }} </p> -->
             </bk-form-item>
 
             <!-- 镜像凭证 -->
@@ -106,7 +104,7 @@
               :property="'command'"
             >
               <bk-select
-                v-model="voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${panels[panelActive].name}`]"
+                v-model="bkappAnnotations[imageCrdlAnnoKey]"
                 :disabled="false"
                 style="width: 500px;"
                 ext-cls="select-custom"
@@ -114,7 +112,7 @@
                 searchable
               >
                 <bk-option
-                  v-for="option in voucherList"
+                  v-for="option in imageCredentialList"
                   :id="option.name"
                   :key="option.name"
                   :name="option.name"
@@ -122,7 +120,7 @@
                 <div
                   slot="extension"
                   style="cursor: pointer;"
-                  @click="handlerCreateVoucher"
+                  @click="handlerCreateImageCredential"
                 >
                   <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
                 </div>
@@ -224,7 +222,6 @@
               :label="$t('内存')"
               :property="'memory'"
             >
-              <!-- <bk-input style="width: 150px" v-model="formData.memory"></bk-input> -->
               <bk-select
                 v-model="formData.memory"
                 allow-create
@@ -245,7 +242,6 @@
               :label="$t('CPU(核数)')"
               :property="'cpu'"
             >
-              <!-- <bk-input style="width: 150px" v-model="formData.cpu"></bk-input> -->
               <bk-select
                 v-model="formData.cpu"
                 allow-create
@@ -264,74 +260,12 @@
             </bk-form-item>
           </bk-form>
         </div>
-
-        <!-- 部署前置命令 -->
-        <!-- <div class="form-pre" v-if="!panelActive">
-                    <div class="item-title">
-                        {{ $t('钩子命令') }}
-                    </div>
-                    <bk-form :model="preFormData" class="info-special-form form-pre-command" form-type="inline">
-                        <bk-form-item>
-                            <label class="title-label"> {{ $t('部署前置命令') }} </label>
-                        </bk-form-item>
-                        <div class="pt5">
-                            <div class="ps-switcher-wrapper" @click="togglePermission">
-                                <bk-switcher
-                                    v-model="preFormData.loaclEnabled">
-                                </bk-switcher>
-                            </div>
-                            <span class="pl5">{{preFormData.loaclEnabled ? $t('已启用') : $t('未启用')}}</span>
-                        </div>
-                        <bk-form-item v-if="preFormData.loaclEnabled" class="pt20" style="width: 510px; position:relative; margin-left: 15px">
-                            <bk-input
-                                :placeholder="$t('留空使用镜像的默认entrypoint')"
-                                ext-cls="paas-info-app-name-cls"
-                                :clearable="false"
-                                v-model="preFormData.command">
-                                <template slot="prepend">
-                                    <div class="group-text">启动命令</div>
-                                </template>
-                            </bk-input>
-                            <bk-tag-input
-                                style="width: 500px"
-                                ext-cls="tag-extra"
-                                v-model="preFormData.command"
-                                :placeholder="$t('请输入启动命令')"
-                                :allow-create="allowCreate"
-                                :allow-auto-match="true"
-                                :has-delete-icon="hasDeleteIcon">
-                            </bk-tag-input>
-                            <span class="whole-item-tips">{{ $t('该命令使用web进程的配置，在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，') }} ./bin/pre-task.sh</span>
-                        </bk-form-item>
-                        <bk-form-item v-if="preFormData.loaclEnabled" class="pt20" style="width: 510px; position:relative; margin-left: 100px;">
-                            <bk-input
-                                :placeholder="$t('留空使用镜像的默认entrypoint')"
-                                ext-cls="paas-info-app-name-cls"
-                                :clearable="false"
-                                v-model="preFormData.args">
-                                <template slot="prepend">
-                                    <div class="group-text">命令参数</div>
-                                </template>
-                            </bk-input>
-                            <bk-tag-input
-                                style="width: 500px"
-                                ext-cls="tag-extra"
-                                v-model="preFormData.args"
-                                :placeholder="$t('请输入命令参数')"
-                                :allow-create="allowCreate"
-                                :allow-auto-match="true"
-                                :has-delete-icon="hasDeleteIcon">
-                            </bk-tag-input>
-                        </bk-form-item>
-                    </bk-form>
-                </div> -->
       </div>
     </div>
   </paas-content-loader>
 </template>
 
 <script>
-    // import deployAction from './comps/deploy-action';
     import _ from 'lodash';
 
     export default {
@@ -365,7 +299,7 @@
                     replicas: 1,
                     targetPort: 8080
                 },
-                voucherData: {},
+                bkappAnnotations: {},
                 preFormData: {
                     loaclEnabled: false,
                     command: [],
@@ -422,8 +356,8 @@
                     ]
                 },
                 isBlur: true,
-                voucher: '',
-                voucherList: [],
+                imageCredential: '',
+                imageCredentialList: [],
                 targetPortErrTips: '',
                 isTargetPortErrTips: false
             };
@@ -435,7 +369,7 @@
             appCode () {
                 return this.$route.params.id;
             },
-            voucherDataKey () {
+            imageCrdlAnnoKey () {
                 return `bkapp.paas.bk.tencent.com/image-credentials.${this.panels[this.panelActive].name}`;
             }
         },
@@ -452,7 +386,7 @@
                             this.preFormData.args = (this.hooks && this.hooks.preRelease.args) || [];
                         }
                         this.formData = this.processData[this.panelActive];
-                        this.voucherData = this.localCloudAppData.metadata.annotations;
+                        this.bkappAnnotations = this.localCloudAppData.metadata.annotations;
                     }
                     this.setPanelsData();
                 },
@@ -497,13 +431,13 @@
                     this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
                 }
             },
-            voucherData: {
+            bkappAnnotations: {
                 handler (val) {
-                    if (val[this.voucherDataKey]) {
+                    if (val[this.imageCrdlAnnoKey]) {
                         this.$set(this.localCloudAppData.metadata, 'annotations', val);
                         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
                     } else {
-                        delete val[this.voucherDataKey];
+                        delete val[this.imageCrdlAnnoKey];
                     }
                 },
                 deep: true
@@ -529,7 +463,7 @@
             }
         },
         created () {
-            this.getVoucherList();
+            this.getImageCredentialList();
         },
         mounted () {
             this.$refs.mirrorUrl.focus();
@@ -754,11 +688,11 @@
             },
 
             // 获取凭证列表
-            async getVoucherList () {
+            async getImageCredentialList () {
                 try {
                     const appCode = this.appCode;
-                    const res = await this.$store.dispatch('voucher/getVoucherList', { appCode });
-                    this.voucherList = res;
+                    const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+                    this.imageCredentialList = res;
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -767,8 +701,9 @@
                 }
             },
 
-            handlerCreateVoucher () {
-                this.$router.push({ name: 'appVoucher' });
+            // 前往创建镜像凭证页面
+            handlerCreateImageCredential () {
+                this.$router.push({ name: 'imageCredential' });
             }
         }
     };

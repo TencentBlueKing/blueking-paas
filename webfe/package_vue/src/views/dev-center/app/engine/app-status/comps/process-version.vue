@@ -123,7 +123,7 @@
                     {{ $t('容器镜像地址') }}: <span>{{ item.image }}</span>
                   </div>
                   <div class="pt20 pl20">
-                    {{ $t('镜像凭证') }}: {{ voucherData[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
+                    {{ $t('镜像凭证') }}: {{ bkappAnnotations[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
                   </div>
                   <div class="pt20 pl20">
                     {{ $t('启动命令') }}: {{ item.command && item.command.length ? item.command.join(',') : '无' }}
@@ -293,7 +293,7 @@
                 ],
                 active: 'processes',
                 processData: [],
-                voucherData: {},
+                bkappAnnotations: {},
                 envData: [],
                 resourceData: {
                     notCreated: [],
@@ -490,7 +490,7 @@
                     this.$nextTick(() => {
                         this.yamlData = res.manifest;
                         this.processData = this.yamlData.spec.processes; // 进程配置
-                        this.voucherData = this.yamlData.metadata.annotations; // 凭证
+                        this.bkappAnnotations = this.yamlData.metadata.annotations; // 凭证
                         this.envData = this.yamlData.spec.configuration.env; // 环境变量
                         this.$nextTick(() => {
                             this.$refs.versionEditorRef.setValue(this.yamlData);

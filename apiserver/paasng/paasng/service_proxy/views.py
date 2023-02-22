@@ -25,6 +25,8 @@ from django.http import Http404
 from django.http.request import HttpRequest
 from django.http.response import JsonResponse
 from django.shortcuts import redirect
+from django.urls import Resolver404, include, re_path, resolve
+from django.views.generic import View
 from revproxy.views import ProxyView
 
 from paasng.utils.views import make_unauthorized_json
@@ -46,7 +48,30 @@ ALLOWED_PATH_PATTERNS = (
 )
 
 
-class SvcWorkloadsView(ProxyView):
+urlpatterns = [
+    # TODO: apiserver 重新实现的 workloads 的 enduser view, 并注册到这里
+    re_path("^api/cnative/specs/", include("paasng.paas_wl.cnative.specs.urls_enduser")),
+]
+
+
+def resolve_workloads_path(path: str):
+    return resolve("/" + path, urlconf=__name__)
+
+
+class SvcWorkloadsEndUserView(View):
+    def dispatch(self, request, *args, **kwargs):
+        if "path" not in kwargs:
+            raise Http404
+        path = kwargs["path"]
+        try:
+            match = resolve_workloads_path(path)
+        except Resolver404:
+            return SvcWorkloadsProxyView.as_view()(request, path)
+
+        return match.func(request, *match.args, **match.kwargs)
+
+
+class SvcWorkloadsProxyView(ProxyView):
     """Proxy requests for workloads service"""
 
     add_remote_user = True

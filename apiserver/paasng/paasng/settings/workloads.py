@@ -66,6 +66,32 @@ settings = LazySettings(
 
 
 # ---------------
+# 运行时默认配置
+# ---------------
+DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner')
+DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder')
+
+BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
+
+# 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
+PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
+
+# 从源码构建应用时，注入额外环境变量
+BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
+
+
+# ---------------
+# 服务导出配置
+# ---------------
+
+# 默认容器内监听地址
+CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
+
+# 服务相关插件配置
+SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
+
+
+# ---------------
 # 资源限制配置
 # ---------------
 DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 'prod': 2})

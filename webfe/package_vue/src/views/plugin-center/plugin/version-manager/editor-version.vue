@@ -179,6 +179,9 @@
           :size="'small'"
           :pagination="pagination"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column
             :label="$t('Commit ID')"
             prop="name"

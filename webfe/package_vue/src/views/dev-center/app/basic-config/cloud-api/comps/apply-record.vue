@@ -315,6 +315,9 @@
                 :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
                 ext-cls="paasng-expand-table"
               >
+                <div slot="empty">
+                  <table-empty empty />
+                </div>
                 <bk-table-column
                   prop="name"
                   :label="$t('API名称')"
@@ -356,6 +359,9 @@
                 :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
                 ext-cls="paasng-expand-table"
               >
+                <div slot="empty">
+                  <table-empty empty />
+                </div>
                 <bk-table-column
                   prop="name"
                   :label="$t('API名称')"

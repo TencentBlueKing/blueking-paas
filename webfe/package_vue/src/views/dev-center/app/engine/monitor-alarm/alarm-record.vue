@@ -98,6 +98,9 @@
       @page-change="pageChange"
       @page-limit-change="limitChange"
     >
+      <div slot="empty">
+        <table-empty empty />
+      </div>
       <bk-table-column
         :label="$t('告警开始时间')"
         prop="start"

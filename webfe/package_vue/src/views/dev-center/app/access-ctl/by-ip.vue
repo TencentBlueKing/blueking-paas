@@ -104,6 +104,14 @@
             @select="handlerChange"
             @select-all="handlerAllChange"
           >
+            <div slot="empty">
+              <table-empty
+                :get-data-count="tableEmptyConf.getDataCount"
+                :data="IPPermissionList"
+                :keyword="tableEmptyConf.keyword"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="selection"
               width="60"
@@ -628,7 +636,11 @@
                     loading: false
                 },
                 curFile: {},
-                isFileTypeError: false
+                isFileTypeError: false,
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -1197,6 +1209,7 @@
                     const res = await this.$store.dispatch('ip/getIpList', params);
                     this.pagination.count = res.count;
                     this.IPPermissionList.splice(0, this.IPPermissionList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -1448,6 +1461,15 @@
                 this.$refs.moduleRef && this.$refs.moduleRef.setCurModule(this.curModule);
                 this.checkIPPermissin();
                 this.fetchIpList(true);
+            },
+
+            clearFilterKey () {
+                this.keyword = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

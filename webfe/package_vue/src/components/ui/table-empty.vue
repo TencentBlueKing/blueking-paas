@@ -5,7 +5,9 @@
         class="exception-wrap-item exception-part"
         type="search-empty"
         scene="part"
-      />
+      >
+        <span class="search-empty-title">{{ $t('搜索结果为空') }}</span>
+      </bk-exception>
       <div class="search-empty-tips">
         {{ $t('可以尝试 调整关键词 或') }}
         <span
@@ -20,14 +22,20 @@
         type="empty"
         scene="part"
       >
-        <span class="empty-tips">{{ $t('暂无数据') }}</span>
+        <span
+          v-if="isEmptyTitle"
+          class="empty-tips"
+        >
+          {{ emptyTitle }}
+        </span>
+        <span v-else />
       </bk-exception>
     </template>
   </div>
 </template>
 
 <script>
-
+    import i18n from '@/language/i18n';
     export default {
         props: {
             getDataCount: {
@@ -46,6 +54,14 @@
             empty: {
                 type: Boolean,
                 default: false
+            },
+            emptyTitle: {
+                type: String,
+                default: i18n.t('暂无数据')
+            },
+            isEmptyTitle: {
+                type: Boolean,
+                default: true
             }
         },
         computed: {

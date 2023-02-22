@@ -227,10 +227,10 @@
               data-test-id="developer_list_empty"
             >
               <div class="ps-no-result">
-                <div class="text">
-                  <p><i class="paasng-icon paasng-empty" /></p>
-                  <p> {{ $t('暂无应用') }} </p>
-                </div>
+                <table-empty
+                  :empty-title="$t('暂无应用')"
+                  empty
+                />
               </div>
             </div>
             <router-link

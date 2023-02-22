@@ -68,6 +68,7 @@
           style="margin-bottom: 16px;width: 100%"
         />
         <bk-table
+          ref="permRef"
           :key="tableKey"
           :data="tableList"
           :size="'small'"
@@ -747,6 +748,7 @@
             },
             clearFilterKey () {
                 this.searchValue = '';
+                this.$refs.permRef.clearFilter();
             },
 
             updateTableEmptyConfig () {

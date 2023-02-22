@@ -16,6 +16,9 @@
         @page-change="handlePageChange"
         @page-limit-change="handlePageLimitChange"
       >
+        <div slot="empty">
+          <table-empty empty />
+        </div>
         <bk-table-column
           :label="$t('最近出现时间')"
           prop="last_seen"

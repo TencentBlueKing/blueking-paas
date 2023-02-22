@@ -40,6 +40,14 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="memberListShow"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
           <bk-table-column :label="$t('成员姓名')">
             <template slot-scope="props">
               <span
@@ -351,7 +359,11 @@
                 currentBackup: 1,
                 enableToAddRole: false,
                 keyword: '',
-                memberListClone: []
+                memberListClone: [],
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -434,6 +446,7 @@
                     this.memberList.splice(0, this.memberList.length, ...(res.results || []));
 
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.hasPerm = false;
                     this.$paasMessage({
@@ -655,6 +668,7 @@
                         const end = start + this.pagination.limit;
                         this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
                     }
+                    this.updateTableEmptyConfig();
                 } else {
                     this.fetchMemberList();
                 }
@@ -672,6 +686,13 @@
                     }
                 }
                 return userPerms;
+            },
+            clearFilterKey () {
+                this.keyword = '';
+            },
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

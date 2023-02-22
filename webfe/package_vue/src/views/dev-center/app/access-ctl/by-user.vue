@@ -121,6 +121,14 @@
             @select="handlerChange"
             @select-all="handlerAllChange"
           >
+            <div slot="empty">
+              <table-empty
+                :get-data-count="tableEmptyConf.getDataCount"
+                :data="userPermissionList"
+                :keyword="tableEmptyConf.keyword"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="selection"
               width="60"
@@ -600,7 +608,11 @@
                     loading: false
                 },
                 curFile: {},
-                isFileTypeError: false
+                isFileTypeError: false,
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -1155,6 +1167,7 @@
                     const res = await this.$store.dispatch('user/getUserPermissionList', params);
                     this.pagination.count = res.count;
                     this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.$paasMessage({
                         limit: 1,
@@ -1410,6 +1423,15 @@
                 await this.setUserType();
                 this.checkUserPermissin();
                 this.fetchUserPermissionList();
+            },
+
+            clearFilterKey () {
+                this.keyword = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount++;
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

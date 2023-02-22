@@ -500,15 +500,13 @@
                       </tr>
                     </template>
                     <template v-else>
-                      <tr>
+                      <tr class="module-tr-empty">
                         <td colspan="4">
                           <div class="ps-no-result">
-                            <div class="text">
-                              <p>
-                                <i class="paasng-icon paasng-empty" />
-                              </p>
-                              <p> {{ $t('暂无模块') }} </p>
-                            </div>
+                            <table-empty
+                              :empty-title="$t('暂无模块')"
+                              empty
+                            />
                           </div>
                         </td>
                       </tr>
@@ -549,12 +547,10 @@
         </template>
         <template v-if="!isLoading && !appList.length">
           <div class="ps-no-result">
-            <div class="text">
-              <p>
-                <i class="paasng-icon paasng-empty" />
-              </p>
-              <p> {{ $t('暂无应用') }} </p>
-            </div>
+            <table-empty
+              :empty-title="$t('暂无应用')"
+              empty
+            />
           </div>
         </template>
       </div>
@@ -1754,5 +1750,8 @@
     }
     .wrap {
         width: 1180px;
+    }
+    .module-tr-empty {
+      height: 280px;
     }
 </style>

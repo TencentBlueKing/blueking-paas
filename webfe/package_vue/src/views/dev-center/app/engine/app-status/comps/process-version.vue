@@ -45,6 +45,9 @@
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
       >
+        <div slot="empty">
+          <table-empty empty />
+        </div>
         <bk-table-column
           :label="$t('版本')"
           prop="name"

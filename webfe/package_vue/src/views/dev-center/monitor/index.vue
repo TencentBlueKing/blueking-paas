@@ -119,6 +119,9 @@
                   :outer-border="false"
                   :header-border="false"
                 >
+                  <div slot="empty">
+                    <table-empty empty />
+                  </div>
                   <bk-table-column
                     :label="$t('告警模块')"
                     width="180"
@@ -165,7 +168,12 @@
         </template>
         <template v-if="!isLoading && !curPageData.length">
           <div class="ps-no-result">
-            <table-empty empty />
+            <table-empty
+              :get-data-count="tableEmptyConf.getDataCount"
+              :data="curPageData"
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilterKey"
+            />
           </div>
         </template>
       </div>
@@ -310,7 +318,11 @@
                 },
                 timerDisplay: this.$t('最近1天'),
                 isDatePickerOpen: false,
-                curDateType: 'custom'
+                curDateType: 'custom',
+                tableEmptyConf: {
+                    getDataCount: 0,
+                    keyword: ''
+                }
             };
         },
         watch: {
@@ -504,6 +516,7 @@
                 }
 
                 this.curPageData = this.curSearchData.slice(startIndex, endIndex);
+                this.updateTableEmptyConfig();
             },
 
             async fetchMonitorList (page = 1) {
@@ -522,6 +535,7 @@
                     this.dataList.splice(0, this.dataList.length, ...(res.results || []));
                     this.initPageConf();
                     this.curPageData = this.getDataByPage(this.pageConf.current);
+                    this.updateTableEmptyConfig();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -530,6 +544,15 @@
                 } finally {
                     this.isLoading = false;
                 }
+            },
+
+            clearFilterKey () {
+                this.filterKey = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.getDataCount += 1;
+                this.tableEmptyConf.keyword = this.filterKey;
             }
         }
     };

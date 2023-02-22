@@ -56,6 +56,9 @@
               :class="{ 'set-border': tableLoading }"
               :ext-cls="'ps-permission-table'"
             >
+              <div slot="empty">
+                <table-empty empty />
+              </div>
               <bk-table-column :label="$t('环境')">
                 <template slot-scope="props">
                   <span>{{ props.row.environment_name || '--' }}</span>
@@ -132,6 +135,9 @@
               size="small"
               :ext-cls="'ps-permission-table'"
             >
+              <div slot="empty">
+                <table-empty empty />
+              </div>
               <bk-table-column
                 :label="$t('模块')"
               >

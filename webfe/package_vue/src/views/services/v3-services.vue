@@ -67,8 +67,10 @@
           style="height: 250px;"
         >
           <div class="ps-no-result text">
-            <p><i class="paasng-icon paasng-empty" /></p>
-            <p> {{ $t('暂无增强服务') }} </p>
+            <table-empty
+              :empty-title="$t('暂无增强服务')"
+              empty
+            />
           </div>
         </div>
       </paas-content-loader>

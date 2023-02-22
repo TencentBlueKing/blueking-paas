@@ -26,6 +26,9 @@ class Migration(migrations.Migration):
     dependencies = [
         ('ingress', '0003_auto_20211020_1556'),
     ]
+    replaces = [
+        ("services", "0004_auto_20220331_1058"),
+    ]
 
     operations = [
         migrations.AlterField(

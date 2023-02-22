@@ -28,6 +28,9 @@ class Migration(migrations.Migration):
         ('api', '0001_initial'),
         ('ingress', '0001_initial'),
     ]
+    replaces = [
+        ("services", "0002_appsubpath"),
+    ]
 
     operations = [
         migrations.CreateModel(

@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 class IngressConfig(AppConfig):
     name = 'paas_wl.networking.ingress'
+    # 模块原来的名字是 "services", 架构调整后重命名为 "ingress"
+    # 由于涉及 django App 名称修改, 会影响到 django_migrations 表记录的迁移执行情况, 需要配合 migrations.replaces 进行限制
     label = 'ingress'
 
     def ready(self):

@@ -26,9 +26,11 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     initial = True
-
     dependencies = [
         ('api', '0001_initial'),
+    ]
+    replaces = [
+        ("services", "0001_initial"),
     ]
 
     operations = [

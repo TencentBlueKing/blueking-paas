@@ -26,6 +26,9 @@ class Migration(migrations.Migration):
     dependencies = [
         ('ingress', '0002_appsubpath'),
     ]
+    replaces = [
+        ("services", "0003_auto_20211020_1556"),
+    ]
 
     operations = [
         migrations.AddField(

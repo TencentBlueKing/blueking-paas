@@ -9,6 +9,9 @@ class Migration(migrations.Migration):
     dependencies = [
         ('ingress', '0004_auto_20220331_1058'),
     ]
+    replaces = [
+        ("services", "0005_auto_20221212_1810"),
+    ]
 
     operations = [
         migrations.RemoveField(

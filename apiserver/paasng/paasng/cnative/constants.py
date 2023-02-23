@@ -19,3 +19,6 @@ to the current version of the project delivered to anyone in the future.
 
 # workloads 注入到 annotations 的增强服务信息字段
 BKPAAS_ADDONS_ANNO_KEY = "bkapp.paas.bk.tencent.com/addons"
+
+# 注解中存储当前应用是否启用白名单功能的键名
+ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"

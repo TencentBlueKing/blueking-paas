@@ -95,6 +95,8 @@
                         'appAccessPortal',
                         // 增强服务
                         'appServices',
+                        // 权限管理
+                        'appPermissions',
                         // 云 API 管理
                         'appCloudAPI',
                         // 镜像凭证
@@ -229,6 +231,13 @@
                         navTree = this.addServiceNavItem(navTree, category.id, category.name);
                     });
 
+                    // 添加权限管理
+                    if (res.access_control && res.access_control.module) {
+                        res.access_control.module.forEach(moduleType => {
+                            navTree = this.addPermissionNavItem(navTree, moduleType);
+                        });
+                    }
+
                     // 如果不开启引擎，仅仅显示应用推广和基本信息以及数据统计
                     if (!this.curAppInfo.web_config.engine_enabled) {
                         navTree = navTree.filter(nav => {
@@ -248,12 +257,12 @@
                         });
                     }
 
-                    // 当角色为开发者时，过滤部分功能入口（注：目前云原生应用所有角色导航是相同的）
+                    // 当角色为开发者时，过滤部分功能入口
                     if (this.curAppInfo.role.name === 'developer') {
                         navTree = navTree.filter(nav => this.roleAllowRouters['developer'].includes(nav.name));
                     }
 
-                    // 当角色运营者时，过滤部分功能入口（注：目前云原生应用所有角色导航是相同的）
+                    // 当角色运营者时，过滤部分功能入口
                     if (this.curAppInfo.role.name === 'operator') {
                         navTree = navTree.filter(nav => this.roleAllowRouters['operator'].includes(nav.name));
                     }

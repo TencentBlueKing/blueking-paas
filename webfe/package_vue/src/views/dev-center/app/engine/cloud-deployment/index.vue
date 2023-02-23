@@ -439,14 +439,6 @@
                         }
                     });
                 }
-                // 去除 manifeat_ext 属性
-                if (paramsData.metadata.annotations) {
-                    Object.keys(this.manifestExt.metadata.annotations).forEach(key => {
-                        if (paramsData.metadata.annotations[key]) {
-                            delete paramsData.metadata.annotations[key];
-                        }
-                    });
-                }
                 try {
                     this.buttonLoading = true;
                     await this.$store.dispatch('deploy/sumbitCloudApp', {

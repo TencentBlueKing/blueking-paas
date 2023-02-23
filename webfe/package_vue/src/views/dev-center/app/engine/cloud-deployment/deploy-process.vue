@@ -213,6 +213,7 @@
             >
               <bk-input
                 v-model="formData.replicas"
+                type="integer"
                 style="width: 150px"
               />
             </bk-form-item>

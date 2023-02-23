@@ -1,5 +1,7 @@
 # 平台部署相关
+
 ## 能不能在后台触发应用部署？
+
 平台提供了脚本指令可在后台直接部署应用, 使用方式如下:
 
 1. 使用 apiserver 的镜像启动容器或直接进入某一个运行中的 apiserver 容器
@@ -17,8 +19,8 @@
 python manage.py deploy_bkapp --app-code ${应用ID} --module ${模块名称} --env prod --revision ${源码包版本}
 ```
 
-
 ## S-Mart 包只能通过页面上传吗？
+
 平台提供了脚本指令可在后台直接上传 S-Mart 包, 使用方式如下:
 
 1. 使用 apiserver 的镜像启动容器或直接进入某一个运行中的 apiserver 容器
@@ -31,8 +33,8 @@ python manage.py deploy_bkapp --app-code ${应用ID} --module ${模块名称} --
 python manage.py smart_tool -f '${S-Mart包的路径}'
 ```
 
-
 ## Redis 资源池实例只能在页面上配置吗？
+
 平台提供了脚本指令可通过文件方式批量导入资源池的增强服务实例, 使用方式如下:
 
 1. 使用 apiserver 的镜像启动容器或直接进入某一个运行中的 apiserver 容器
@@ -47,20 +49,26 @@ python manage.py import_pre_created_instance --service "default:redis" -f ${实�
 ```
 
 ### 资源池实例配置文件格式
+
 资源池实例配置文件是一份 yaml 文件, 具有以下的字段:
+
 - `plan`: string, 实例所属的方案名称
 - `config`: string, 描述信息的附加信息的 JSON 字符串
 - `credentials`： string, 描述实例的配置信息的 JSON 字符串
 
 redis 资源池具有两个方案:
+
 - 0shared -> 共享实例
 - 1exclusive -> 独享实例
 
-> `共享实例`不是指平台会将这个实例重复分配, 而是指运维在规划 redis 实例时, 如果希望将一个 redis 实例重复给多个 SaaS 使用(例如为了节约成本), 那就可以将方案设置成 `0shared`, 表示这个资源池的实例不是独享的。如果 SaaS 声明使用共享实例的 redis, 那么由 SaaS 自行保证 redis key 不冲突   
+> `共享实例`不是指平台会将这个实例重复分配, 而是指运维在规划 redis 实例时, 如果希望将一个 redis 实例重复给多个 SaaS
+> 使用(例如为了节约成本), 那就可以将方案设置成 `0shared`, 表示这个资源池的实例不是独享的。如果 SaaS 声明使用共享实例的
+> redis, 那么由 SaaS 自行保证 redis key 不冲突   
 > 另一方面, `独享实例`不应当出现**重复的实例**, 否则将可能影响 SaaS 正常运行。
 
 
 以下是一份描述描述了 2 个 redis 资源池实例的样例, 其中每个样例以 `---` 为分隔符。
+
 ```yaml
 plan: "0shared"
 config: |
@@ -104,12 +112,13 @@ python manage.py query_related_applications --service "default:redis" --credenti
 ```
 
 如果提供的 `cretentials` 对应的资源池实例已被分配, 并且未被 SaaS 解除绑定关系, 那么执行上述指令后将会获得如下的输出:
+
 ```bash
 应用名称: xxx 应用ID: xxx 模块名称: xxx 环境: xxx
 ```
 
-
 ## 环境变量只能通过页面修改吗？
+
 平台提供了脚本指令可在后台直接导入环境变量, 使用方式如下:
 
 1. 使用 apiserver 的镜像启动容器或直接进入某一个运行中的 apiserver 容器
@@ -125,12 +134,14 @@ python manage.py import_configvars --app-code ${应用ID} --module ${模块名�
 ```
 
 ### 环境变量文件的格式
+
 环境变量配置文件是一份 yaml 文件, 样例如下:
+
 ```yaml
 env_variables:
-- key: 环境变量的名称, 仅支持大写字母、数字、下划线
-  value: 环境变量值
-  environment_name: [环境变量生效的环境, 可选值 stag/prod/_global_, 分别对应 预发布环境/生产环境/所有环境]
-  description: 描述文字
-- ...
+  - key: 环境变量的名称, 仅支持大写字母、数字、下划线
+    value: 环境变量值
+    environment_name: [ 环境变量生效的环境, 可选值 stag/prod/_global_, 分别对应 预发布环境/生产环境/所有环境 ]
+    description: 描述文字
+  - ...
 ```

@@ -12,7 +12,7 @@
         class="mt20 mb10"
         style="width: 540px;"
         :label-width="80"
-        :model="voucherParams"
+        :model="crdlParams"
         :rules="rules"
       >
         <bk-form-item
@@ -21,7 +21,7 @@
           :property="'name'"
         >
           <bk-input
-            v-model="voucherParams.name"
+            v-model="crdlParams.name"
             :placeholder="$t('以英文字母、数字或下划线(_)组成，不超过40个字')"
             :disabled="type === 'edit'"
           />
@@ -32,7 +32,7 @@
           :property="'username'"
         >
           <bk-input
-            v-model="voucherParams.username"
+            v-model="crdlParams.username"
             :placeholder="$t('请输入')"
           />
         </bk-form-item>
@@ -42,7 +42,7 @@
           :property="'password'"
         >
           <bk-input
-            v-model="voucherParams.password"
+            v-model="crdlParams.password"
             ext-cls="passwordEl"
             type="password"
             :placeholder="$t('请输入')"
@@ -55,7 +55,7 @@
           :property="'description'"
         >
           <bk-input
-            v-model="voucherParams.description"
+            v-model="crdlParams.description"
             type="textarea"
             :placeholder="$t('描述')"
           />
@@ -90,7 +90,7 @@
                 type: String,
                 default: 'new'
             },
-            voucherDetail: {
+            credentialDetail: {
                 type: Object,
                 default: () => {}
             }
@@ -98,7 +98,7 @@
         data () {
             return {
                 isDataLoading: false,
-                voucherParams: {
+                crdlParams: {
                     name: '',
                     username: '',
                     password: '',
@@ -151,9 +151,9 @@
             type (newVal) {
                 this.type = newVal;
             },
-            voucherDetail (newVal) {
+            credentialDetail (newVal) {
                 if (Object.keys(newVal).length) {
-                    this.voucherParams = newVal;
+                    this.crdlParams = newVal;
                 }
             }
         },
@@ -176,9 +176,9 @@
                 // 表单校验，通过传递数据
                 this.$refs.versionForm.validate().then(validator => {
                     if (this.type === 'new') {
-                        this.$emit('confirm', this.voucherParams);
+                        this.$emit('confirm', this.crdlParams);
                     } else {
-                        this.$emit('updata', this.voucherParams);
+                        this.$emit('updata', this.crdlParams);
                     }
                 }, err => {
                     return err;
@@ -186,7 +186,7 @@
             },
 
             handleCancel () {
-                this.voucherParams = {
+                this.crdlParams = {
                     name: '',
                     username: '',
                     password: '',
@@ -194,10 +194,6 @@
                 };
                 this.$refs.versionForm.clearError();
                 this.$emit('close', false);
-            },
-
-            handleSubmitVoucher () {
-                this.isShowPassword = !this.isShowPassword;
             },
 
             setAutocomplete () {

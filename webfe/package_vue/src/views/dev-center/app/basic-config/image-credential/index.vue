@@ -4,7 +4,6 @@
       <div class="header-title">
         <span class="app-code">{{ curAppCode }}</span>
         <i class="paasng-icon paasng-angle-down arrows" />
-        <!-- <span class="arrows">></span> -->
         {{ $t('镜像凭证') }}
       </div>
     </div>
@@ -17,13 +16,13 @@
         <bk-button
           theme="primary"
           class="mb15"
-          @click="handleVoucher"
+          @click="handleCreate"
         >
           <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增凭证') }}
         </bk-button>
         <bk-table
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
-          :data="voucherList"
+          :data="credentialList"
           size="small"
           :pagination="pagination"
           @page-change="pageChange"
@@ -73,14 +72,14 @@
         </bk-table>
       </div>
     </paas-content-loader>
-    <create-voucher
-      ref="voucherDialog"
+    <create-credential
+      ref="credentialDialog"
       :config="visiableDialogConfig"
       :type="type"
-      :voucher-detail="voucherDetail"
-      @updata="updateVoucher"
-      @confirm="addVoucher"
-      @close="isCreateVoucher"
+      :credential-detail="credentialDetail"
+      @updata="updateCredential"
+      @confirm="addCredential"
+      @close="isCreateCredential"
     />
   </div>
 </template>
@@ -88,14 +87,14 @@
 <script>
     import i18n from '@/language/i18n.js';
     import _ from 'lodash';
-    import CreateVoucher from './create-voucher.vue';
+    import CreateCredential from './create.vue';
     export default {
         components: {
-            CreateVoucher
+            CreateCredential
         },
         data () {
             return {
-                voucherList: [],
+                credentialList: [],
                 pagination: {
                     current: 1,
                     count: 0,
@@ -110,7 +109,7 @@
                 visiableDialog: false,
                 tableLoading: false,
                 type: 'new',
-                voucherDetail: {}
+                credentialDetail: {}
             };
         },
         computed: {
@@ -123,7 +122,7 @@
         },
         watch: {
             curAppCode () {
-                this.getVoucherList();
+                this.getCredentialList();
                 this.isLoading = true;
             }
         },
@@ -132,17 +131,17 @@
         },
         methods: {
             init () {
-                this.getVoucherList();
+                this.getCredentialList();
             },
 
             // 获取凭证列表
-            async getVoucherList () {
+            async getCredentialList () {
                 this.tableLoading = true;
                 try {
                     const appCode = this.appCode;
-                    const res = await this.$store.dispatch('voucher/getVoucherList', { appCode });
-                    this.voucherList = res;
-                    this.voucherList.forEach(item => {
+                    const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
+                    this.credentialList = res;
+                    this.credentialList.forEach(item => {
                         item.password = '';
                     });
                 } catch (e) {
@@ -158,18 +157,18 @@
                 }
             },
 
-            async addVoucher (formData) {
+            async addCredential (formData) {
                 this.visiableDialogConfig.loading = true;
                 const appCode = this.appCode;
                 const data = formData;
                 try {
-                    await this.$store.dispatch('voucher/addVoucher', { appCode, data });
+                    await this.$store.dispatch('credential/addImageCredential', { appCode, data });
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('添加成功')
                     });
-                    this.$refs.voucherDialog.handleCancel();
-                    this.getVoucherList();
+                    this.$refs.credentialDialog.handleCancel();
+                    this.getCredentialList();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -180,18 +179,18 @@
                 }
             },
 
-            async updateVoucher (formData) {
+            async updateCredential (formData) {
                 const appCode = this.appCode;
-                const voucherName = formData.name;
+                const crdlName = formData.name;
                 const data = formData;
                 try {
-                    await this.$store.dispatch('voucher/updateVoucher', { appCode, voucherName, data });
+                    await this.$store.dispatch('credential/updateImageCredential', { appCode, crdlName, data });
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('更新成功')
                     });
-                    this.$refs.voucherDialog.handleCancel();
-                    this.getVoucherList();
+                    this.$refs.credentialDialog.handleCancel();
+                    this.getCredentialList();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -200,17 +199,17 @@
                 }
             },
 
-            async deleteVoucher (name) {
+            async deleteImageCredential (name) {
                 const appCode = this.appCode;
-                const voucherName = name;
+                const crdlName = name;
                 try {
-                    await this.$store.dispatch('voucher/deleteVoucher', { appCode, voucherName });
+                    await this.$store.dispatch('credential/deleteImageCredential', { appCode, crdlName });
                     this.$paasMessage({
                         theme: 'success',
                         message: this.$t('删除成功')
                     });
                     this.visiableDialogConfig.visiable = false;
-                    this.getVoucherList();
+                    this.getCredentialList();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -220,11 +219,11 @@
             },
 
             // 新增凭证
-            handleVoucher () {
+            handleCreate () {
                 this.visiableDialogConfig.visiable = true;
                 this.visiableDialogConfig.title = this.$t('新增凭证');
                 this.type = 'new';
-                this.voucherDetail = {};
+                this.credentialDetail = {};
             },
 
             // 编辑凭证
@@ -232,7 +231,7 @@
                 this.visiableDialogConfig.visiable = true;
                 this.visiableDialogConfig.title = this.$t('编辑凭证');
                 this.type = 'edit';
-                this.voucherDetail = _.cloneDeep(data);
+                this.credentialDetail = _.cloneDeep(data);
             },
 
             pageChange (page) {
@@ -249,11 +248,11 @@
 
             handleDelete (data) {
                 this.$bkInfo({
-                    extCls: 'delete-voucher',
+                    extCls: 'delete-image-credential',
                     title: this.$t('确认删除镜像凭证：') + data.name,
                     subTitle: this.$t('删除凭证后，使用该凭证的镜像将无法部署'),
                     confirmFn: () => {
-                        this.deleteVoucher(data.name);
+                        this.deleteImageCredential(data.name);
                     }
                 });
                 this.$nextTick(() => {
@@ -261,13 +260,13 @@
                 });
             },
 
-            isCreateVoucher (data) {
+            isCreateCredential (data) {
                 this.visiableDialogConfig.visiable = false;
                 this.visiableDialog = false;
             },
 
             addTitle (name) {
-                document.querySelector('.delete-voucher .bk-dialog-header-inner').setAttribute('title', name);
+                document.querySelector('.delete-image-credential .bk-dialog-header-inner').setAttribute('title', name);
             }
         }
     };

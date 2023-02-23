@@ -87,7 +87,7 @@ def parse_container_status(instance: Union[ResourceInstance, ResourceField]) -> 
     return parse_dynamic_instance(instance, kmodels.V1ContainerStatus)
 
 
-def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:
+def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901
     """check if the pod is healthy
     For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
                unhealthy is meaning that the Pod is restarting or is Failed

@@ -88,7 +88,7 @@ class Command(BaseCommand):
             # 顺序入队
             bucket_dict[str(build.app.name)].append(build)
 
-        for app_name, bucket in bucket_dict.items():
+        for _, bucket in bucket_dict.items():
             # 按创建时间倒序查询, 并顺序入队后, 目前队列则是按时间顺序排列,
             # 因此这里只需要保留前 max_reserved_num_per_env 个.
             for build in bucket.builds[max_reserved_num_per_env:]:

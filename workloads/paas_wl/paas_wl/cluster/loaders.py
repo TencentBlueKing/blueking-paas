@@ -24,7 +24,7 @@ import yaml
 from django.db.models import QuerySet
 from kubernetes.config.kube_config import FileOrData, KubeConfigLoader
 
-from paas_wl.cluster.models import APIServer, Cluster, EnhancedConfiguration
+from paas_wl.cluster.models import Cluster, EnhancedConfiguration
 
 
 class DBConfigLoader:
@@ -56,7 +56,7 @@ class DBConfigLoader:
             cert_file = FileOrData(config, file_key_name=None, data_key_name="client-certificate-data").as_file()
             key_file = FileOrData(config, file_key_name=None, data_key_name="client-key-data").as_file()
 
-            for api_server in cluster.api_servers.order_by("created"):  # type: APIServer
+            for api_server in cluster.api_servers.order_by("created"):
                 self.configurations[cluster.name].append(
                     EnhancedConfiguration.create(
                         host=api_server.host,

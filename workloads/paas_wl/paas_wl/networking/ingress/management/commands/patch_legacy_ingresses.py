@@ -64,37 +64,40 @@ class Command(BaseCommand):
             qs = qs.filter(created__gte=app_created_after_dt)
 
         for app in qs:
-            # Only process released apps
-            if not Release.objects.filter(app=app, build__isnull=False).exists():
-                continue
+            self._patch_app_ingress(app, dry_run, pattern, process_type, with_create)
 
-            logger.info(f"checking ingress for app {app.name} with pattern {pattern}")
-            logger.info(f"app was created at {app.created}")
+    def _patch_app_ingress(self, app: App, dry_run, pattern, process_type, with_create):
+        # Only process released apps
+        if not Release.objects.filter(app=app, build__isnull=False).exists():
+            return False
 
-            mgr = LegacyAppIngressMgr(app)
-            service_name = None
-            can_sync = False
+        logger.info(f"checking ingress for app {app.name} with pattern {pattern}")
+        logger.info(f"app was created at {app.created}")
+
+        mgr = LegacyAppIngressMgr(app)
+        service_name = None
+        can_sync = False
+        try:
+            domains = mgr.list_desired_domains()
+        except Exception:
+            logger.exception("list domains failed for app %s", app.name)
+            return
+
+        for domain in domains:
+            if fnmatch(domain.host, pattern):
+                can_sync = not dry_run
+                print(f"domain {domain.host} match, ready to sync")
+            else:
+                print(f"domain {domain.host} mismatch, abort")
+                break
+
+        if with_create:
+            service_name = make_service_name(app, process_type)
+            print(f"will create ingress for process {process_type}: {service_name}")
+
+        if can_sync:
+            print(f"syncing ingress for app {app.name}")
             try:
-                domains = mgr.list_desired_domains()
-            except Exception:
-                logger.exception("list domains failed for app %s", app.name)
-                continue
-
-            for domain in domains:
-                if fnmatch(domain.host, pattern):
-                    can_sync = not dry_run
-                    print(f"domain {domain.host} match, ready to sync")
-                else:
-                    print(f"domain {domain.host} mismatch, abort")
-                    break
-
-            if with_create:
-                service_name = make_service_name(app, process_type)
-                print(f"will create ingress for process {process_type}: {service_name}")
-
-            if can_sync:
-                print(f"syncing ingress for app {app.name}")
-                try:
-                    mgr.sync(service_name)  # type: ignore
-                except Exception as err:
-                    logger.error("sync ingresses failed for app %s, err: %s", app.name, err)
+                mgr.sync(service_name)
+            except Exception as err:
+                logger.error("sync ingresses failed for app %s, err: %s", app.name, err)

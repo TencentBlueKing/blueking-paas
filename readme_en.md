@@ -40,11 +40,6 @@ The BlueKing Developer Center has launched a new version, which includes the fol
 
 - [Local Developing(In Chinese)](/docs/install/develop_guide.md)
 
-## Roadmap
-
-- [Changelog(In Chinese)](docs/release.md)
-
-
 ## Support
 
 - [FAQ(In Chinese)](https://bk.tencent.com/docs/markdown/PaaS平台/产品白皮书/常见问题/FAQ.md)

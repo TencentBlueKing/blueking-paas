@@ -146,12 +146,11 @@
                             <p><i class="paasng-icon paasng-empty" /></p>
                             <p> {{ $t('暂无增强服务配置信息') }} </p>
                             {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
-                            <router-link
-                              :to="{ name: 'appDeploy', params: { id: appCode }, query: { focus: 'stag' } }"
+                            <span
                               class="blue pl27"
-                            >
-                              {{ $t('部署应用') }}
-                            </router-link>
+                              style="cursor: pointer;"
+                              @click="toAppDeploy"
+                            >{{ $t('部署应用') }}</span>
                           </div>
                         </div>
                       </td>
@@ -661,6 +660,25 @@
                     document.getSelection().addRange(selected);
                 }
                 this.$bkMessage({ theme: 'success', message: this.$t('复制成功'), delay: 2000, dismissable: false });
+            },
+
+            toAppDeploy () {
+                const type = this.curAppInfo.application.type || '';
+                if (type === 'cloud_native') {
+                    this.$router.push({
+                        name: 'cloudAppDeployForProcess',
+                        params: {
+                          moduleId: this.curAppModule.name,
+                          id: this.appCode
+                        }
+                    });
+                    return;
+                }
+                this.$router.push({
+                    name: 'appDeploy',
+                    params: { id: this.appCode },
+                    query: { focus: 'stag' }
+                });
             }
         }
     };

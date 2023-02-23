@@ -298,9 +298,11 @@
             },
 
             async handleDeploy (env) {
+                const environment = env === 'stag' ? this.$t('预发布') : this.$t('生产');
                 this.$bkInfo({
-                    title: `确认发布至${env === 'stag' ? '预发布' : '生产'}环境`,
-                    subTitle: `确认要将应用（${this.appCode}）发布到${env === 'stag' ? '预发布' : '生产'}环境`,
+                    title: this.$t(`确认发布至{environment}环境`, { environment: environment }),
+                    subTitle: this.$t(`确认要将应用（{code}）发布到{environment}环境`, { code: this.appCode, environment: environment }),
+                    width: 520,
                     confirmLoading: true,
                     cancelFn: () => {
                         this.buttonLoading = false;
@@ -455,7 +457,7 @@
                     });
                     this.$paasMessage({
                         theme: 'success',
-                        message: '操作成功'
+                        message: this.$t('操作成功')
                     });
                     this.$router.push({
                         name: 'appStatus',

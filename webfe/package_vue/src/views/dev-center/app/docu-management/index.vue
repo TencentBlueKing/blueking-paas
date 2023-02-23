@@ -8,7 +8,7 @@
           class="link fr"
           :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
           target="_blank"
-        > {{ $t('蓝鲸SaaS研发管理参考规范') }} </a>
+        > {{ $t('蓝鲸 SaaS 研发管理参考规范') }} </a>
       </h2>
     </div>
     <paas-content-loader
@@ -91,13 +91,7 @@
                             <div slot="content">
                               {{ row.instance.url }}
                             </div>
-                            <span
-                              style="display: inline-block;
-                                                            max-width: 220px;
-                                                            overflow: hidden;
-                                                            text-overflow: ellipsis;
-                                                            white-space: nowrap;"
-                            >
+                            <span style="display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
                               {{ row.instance.url }}
                             </span>
                           </bk-popconfirm>
@@ -232,13 +226,7 @@
                                     <div slot="content">
                                       {{ subRow.instance.url }}
                                     </div>
-                                    <span
-                                      style="display: inline-block;
-                                                                            max-width: 220px;
-                                                                            overflow: hidden;
-                                                                            text-overflow: ellipsis;
-                                                                            white-space: nowrap;"
-                                    >
+                                    <span style="display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
                                       {{ subRow.instance.url }}
                                     </span>
                                   </bk-popconfirm>
@@ -335,7 +323,7 @@
         },
         computed: {
             curTitle () {
-                return `${this.$t('文档中有 ')}${this.notCompletedCount}${this.$t('项必填未填写，请继续完善。')}`;
+                return `${this.$t('文档中有')} ${this.notCompletedCount} ${this.$t('项必填未填写，请继续完善。')}`;
             }
         },
         watch: {
@@ -546,7 +534,7 @@
                     }
                     .children-td {
                         padding: 0;
-                        border-bottom: none;
+                        border-bottom: 1px solid #dcdee5;
                     }
                 }
                 .active {
@@ -581,7 +569,7 @@
                 }
                 tr:last-child {
                     td {
-                        border-bottom: none !important;
+                        border-bottom: 1px solid #dcdee5 !important;
                     }
                 }
                 .name {

@@ -145,7 +145,7 @@ class TestLabelBasedOps:
         assert obj.metadata.name == another_namespace
         assert created is True
 
-        for i in range(2):
+        for _ in range(2):
             pod_name = random_resource_name()
             KPod(k8s_client).create_or_update(
                 pod_name, namespace=another_namespace, body=construct_foo_pod(pod_name, labels={"app": app.name})
@@ -167,7 +167,7 @@ class TestLabelBasedOps:
         )
         assert len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items) == 1
         KPod(k8s_client).ops_label.delete_collection({"app": app.name}, namespace=app.namespace)
-        for i in range(20):
+        for _ in range(20):
             time.sleep(1)
             cnt = len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items)
             if cnt == 0:
@@ -185,7 +185,7 @@ class TestLabelBasedOps:
         KPod(k8s_client).ops_label.delete_individual(
             {"app": app.name}, namespace=app.namespace, non_grace_period=False
         )
-        for i in range(20):
+        for _ in range(20):
             time.sleep(1)
             cnt = len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items)
             if cnt == 0:

@@ -60,7 +60,7 @@ class BuildProcessExecutor:
         self.procedure = partial(BuildProcedure, stream)
         self._builder_name = generate_builder_name(self.app)
 
-    def execute(self, metadata=None):
+    def execute(self, metadata: Optional[Dict] = None):
         """Execute the build process"""
         try:
             with self.procedure("准备构建环境"):

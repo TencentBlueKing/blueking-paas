@@ -156,13 +156,16 @@
                   @click="handleShoEnvDialog"
                 >{{ $t('查看内置环境变量') }}</span>
               </p>
-              <p v-if="!canModifyEnvVariable" class="desc" >
+              <p
+                v-if="!canModifyEnvVariable"
+                class="desc"
+              >
                 <bk-alert type="error">
                   <div slot="title">
                     <span v-if="curAppInfo.application.type === 'bk_plugin'">
                       {{ $t('应用已迁移到插件开发中心，本页面仅做展示用，如需操作请到') }}
                       <router-link :to="{ name: 'pluginDeployEnv', params: { id: curAppCode, pluginTypeId: 'bksaas' }}">{{ $t('插件开发- 配置管理页面') }}</router-link>
-                      {{  $t('。') }}
+                      {{ $t('。') }}
                     </span>
                     <span v-else>
                       {{ $t('当前应用不支持配置环境变量。') }}
@@ -399,7 +402,10 @@
                     />
                   </bk-select>
                 </bk-form-item>
-                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px;" v-if="canModifyEnvVariable">
+                <bk-form-item
+                  v-if="canModifyEnvVariable"
+                  style="flex: 1 1 7%; text-align: right; min-width: 80px;"
+                >
                   <template v-if="isReadOnlyRow(index)">
                     <a
                       class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"

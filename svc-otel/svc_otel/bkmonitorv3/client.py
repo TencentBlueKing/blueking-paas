@@ -92,7 +92,7 @@ def make_bk_monitor_client() -> BkMonitorClient:
                 'bk_app_secret': settings.BK_APP_SECRET,
             }
         )
-    return BkMonitorClient(apigw_client.api)
+        return BkMonitorClient(apigw_client.api)
 
     # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
     esb_client = get_client_by_username("admin")

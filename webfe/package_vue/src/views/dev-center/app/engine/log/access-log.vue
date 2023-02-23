@@ -1282,7 +1282,6 @@
     }
     .table-wrapper {
         width: auto;
-        overflow: auto;
     }
     .tooltip-icon {
         cursor: pointer;

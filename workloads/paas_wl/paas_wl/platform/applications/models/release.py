@@ -36,7 +36,7 @@ class ReleaseManager(models.Manager):
         owner: str,
         build: 'Build',
         procfile: Dict[str, str],
-        summary: str = None,
+        summary: Optional[str] = None,
         config: Optional['Config'] = None,
     ):
         """Create a new release

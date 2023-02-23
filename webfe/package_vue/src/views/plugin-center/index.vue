@@ -126,26 +126,12 @@
             </template>
           </template>
         </bk-table-column>
-        <!-- 状态 -->
         <bk-table-column
-          :label="$t('状态')"
-          prop="status"
-          column-key="status"
-          :filters="statusFilters"
-          :filter-multiple="true"
+          :label="$t('操作')"
+          :width="localLanguage === 'en' ? 280 : 220"
         >
           <template slot-scope="{ row }">
-            <round-loading v-if="row.status === 'releasing'" />
-            <div
-              v-else
-              :class="['point', row.status]"
-            />
-            <span v-bk-tooltips="$t(pluginStatus[row.status])">{{ $t(pluginStatus[row.status]) || '--' }}</span>
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('操作')">
-          <template slot-scope="{ row }">
-            <div class="table-operate-buttons">
+            <div :class="['table-operate-buttons', localLanguage === 'en' ? 'en-operate' : 'zh-operate']">
               <bk-button
                 v-if="row.status === 'waiting-approval' || row.status === 'approval-failed'"
                 theme="primary"
@@ -165,6 +151,7 @@
                   {{ row.ongoing_release && releaseStatusMap[row.ongoing_release.status] ? $t('发布进度') : $t('发布') }}
                 </bk-button>
                 <bk-button
+                  class="versions-btn"
                   theme="primary"
                   size="small"
                   text
@@ -175,6 +162,7 @@
               </template>
               <bk-button
                 v-if="row.status === 'approval-failed'"
+                class="del-btn"
                 theme="primary"
                 size="small"
                 text
@@ -221,7 +209,6 @@
                     count: 0
                 },
                 isFilter: false,
-                filterStatus: [],
                 filterLanguage: [],
                 filterPdName: [],
                 languageFilters: [],
@@ -239,15 +226,8 @@
             };
         },
         computed: {
-            statusFilters () {
-                const statusList = [];
-                for (const key in PLUGIN_STATUS) {
-                    statusList.push({
-                        value: key,
-                        text: this.$t(PLUGIN_STATUS[key])
-                    });
-                }
-                return statusList;
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -258,9 +238,6 @@
                         this.isFilter = false;
                     }
                 }
-            },
-            filterStatus () {
-                this.fetchPluginsList();
             },
             filterLanguage () {
                 this.fetchPluginsList();
@@ -286,14 +263,6 @@
                     let statusParams = '';
                     let languageParams = '';
                     let pdIdParams = '';
-                    if (this.filterStatus.length) {
-                        // pageParams.status = this.filterStatus;
-                        let paramsText = '';
-                        this.filterStatus.forEach(item => {
-                            paramsText += `status=${item}&`;
-                        });
-                        statusParams = paramsText.substring(0, paramsText.length - 1);
-                    }
                     if (this.filterLanguage.length) {
                         // pageParams.language = this.filterLanguage;
                         let paramsText = '';
@@ -399,10 +368,6 @@
             },
 
             handleFilterChange (filters) {
-                if (filters.status) {
-                    this.filterStatus = filters.status.length ? filters.status : [];
-                }
-
                 if (filters.language) {
                     this.filterLanguage = filters.language.length ? filters.language : [];
                 }
@@ -572,11 +537,24 @@
     }
 </style>
 
-<style>
+<style lang="scss">
     .bk-plugin-wrapper .exception-wrap-item .bk-exception-img.part-img {
         height: 130px;
     }
     .bk-plugin-wrapper .bk-table th .bk-table-column-filter-trigger.is-filtered {
         color: #3a84ff !important;
+    }
+    .bk-plugin-wrapper {
+        .table-operate-buttons .bk-button-text>div {
+            text-align: left;
+        }
+        .table-operate-buttons.en-operate .bk-button-text>div {
+            width: 92px !important;
+        }
+        .table-operate-buttons.zh-operate .bk-button-text>div,
+        .table-operate-buttons.en-operate .versions-btn>div,
+        .table-operate-buttons.en-operate .del-btn>div {
+            width: 50px !important;
+        }
     }
 </style>

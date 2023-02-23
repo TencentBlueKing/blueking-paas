@@ -42,7 +42,7 @@ import devopsAuth from './modules/devops-auth';
 import alarm from './modules/alarm';
 import docuManagement from './modules/docu-management';
 import cloudApi from './modules/cloud-api';
-import voucher from './modules/voucher';
+import credential from './modules/credential';
 import plugin from './modules/plugin';
 import pluginMembers from './modules/plugin-members';
 import http from '@/api';
@@ -398,8 +398,8 @@ export default new Vuex.Store({
     alarm,
     docuManagement,
     cloudApi,
-    voucher,
-    // 插件开发者中心的状态
+    credential,
+    // 插件开发者中心
     plugin,
     pluginMembers
   },

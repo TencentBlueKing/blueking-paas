@@ -150,9 +150,12 @@ def create_market_config(
 
 @transaction.atomic
 def create_third_app(
-    region: str, code: str, name: str, name_en: str, operator: str, market_params: dict = {}
+    region: str, code: str, name: str, name_en: str, operator: str, market_params: Optional[dict] = None
 ) -> Application:
     """创建第三方（外链）应用"""
+    if market_params is None:
+        market_params = {}
+
     application = create_application(
         region=region,
         code=code,

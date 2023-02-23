@@ -243,7 +243,7 @@
         z-index: 1;
         height: 50px;
         .bar-container {
-            max-width: $maxContentWidth;
+            max-width: 1180px;
             /*padding: 0 30px;*/
             margin: auto;
             /*box-shadow: 0px 1px 2px 0px rgba(0,0,0,0.1); */

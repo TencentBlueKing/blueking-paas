@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import re
 import subprocess
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Tuple
+from typing import TYPE_CHECKING, Any, Iterable, Tuple
 
 import requests
 import requests.adapters
@@ -41,14 +41,13 @@ MOSAIC_REG = re.compile(r"(?<=\d{3})(\d{4})(?=\d{4})")
 class ChoicesEnum(Enum):
     """Enum with choices"""
 
-    _choices_labels: ClassVar[Any]
-
     @classmethod
     def get_choices(cls):
         # 没有设置 skip
-        if isinstance(cls._choices_labels, cls):
-            return cls._choices_labels.value
-        return cls._choices_labels
+        labels = cls._choices_labels  # type: ignore
+        if isinstance(labels, cls):
+            return labels.value
+        return labels
 
     @classmethod
     def get_choice_label(cls, value):

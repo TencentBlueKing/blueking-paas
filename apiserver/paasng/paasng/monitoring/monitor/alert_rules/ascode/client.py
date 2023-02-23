@@ -85,7 +85,7 @@ class AsCodeClient:
                 # 配置中告警接收者与 app 的默认告警接收者不一致时, 单独创建告警组
                 ctx['notice_group_name'] = f"{conf.alert_rule_display_name} {_('通知组')}"
                 configs[f'notice/{conf.alert_rule_name}.yaml'] = j2_env.get_template('notice.yaml.j2').render(
-                    **{'notice_group_name': ctx['notice_group_name'], 'receivers': conf.receivers}
+                    notice_group_name=ctx['notice_group_name'], receivers=conf.receivers
                 )
 
             configs[f'rule/{conf.alert_rule_name}.yaml'] = j2_env.get_template(f'{conf.alert_code}.yaml.j2').render(
@@ -94,7 +94,7 @@ class AsCodeClient:
 
         # 配置 App 默认通知组
         configs['notice/default_notice.yaml'] = j2_env.get_template('notice.yaml.j2').render(
-            **{'notice_group_name': self.default_notice_group_name, 'receivers': self.default_receivers}
+            notice_group_name=self.default_notice_group_name, receivers=self.default_receivers
         )
 
         return configs

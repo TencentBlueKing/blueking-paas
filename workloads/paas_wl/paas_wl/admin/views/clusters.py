@@ -35,6 +35,7 @@ from paas_wl.admin.serializers.clusters import (
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.networking.egress.models import generate_state
 from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
+from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.utils.app import get_scheduler_client
 
 logger = logging.getLogger(__name__)
@@ -97,8 +98,14 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
     def get_operator_info(self, requests, cluster_name, *args, **kwargs):
         """获取各集群 Operator 相关信息"""
         resp_data = {'cluster_name': cluster_name}
+        try:
+            client = get_client_by_cluster_name(cluster_name)
+        except ValueError:
+            # 可能存在废弃集群，占位没有删除的情况，这里做兼容处理
+            return Response(resp_data)
+
         # Operator 部署状态
-        resp_data.update(detect_operator_status(cluster_name))
+        resp_data.update(detect_operator_status(client))
         # PaaS 平台自定义资源信息
-        resp_data.update(fetch_paas_cobj_info(cluster_name, resp_data['crds']))
-        return Response(data=resp_data)
+        resp_data.update(fetch_paas_cobj_info(client, resp_data['crds']))
+        return Response(resp_data)

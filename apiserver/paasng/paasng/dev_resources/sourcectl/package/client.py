@@ -24,7 +24,7 @@ import tarfile
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import IO, List, Union
+from typing import IO, List, Literal, Optional, Union
 
 from paasng.dev_resources.sourcectl.models import SourcePackage
 from paasng.dev_resources.sourcectl.package.downloader import download_file_via_url
@@ -64,7 +64,13 @@ class BasePackageClient(metaclass=abc.ABCMeta):
 class TarClient(BasePackageClient):
     """基于本地 tar 包初始化的 client"""
 
-    def __init__(self, file_path: str = None, file_obj: IO = None, mode: str = "r:*", relative_path: str = "./"):
+    def __init__(
+        self,
+        file_path: Optional[str] = None,
+        file_obj: Optional[IO] = None,
+        mode: str = "r:*",
+        relative_path: str = "./",
+    ):
         """从本地文件或 IO Stream 对象创建操作该 Tar 包的客户端
         :param file_path: 本地的 tar 包存储路径
         :param file_obj: Tar 包的 IO Stream 对象
@@ -154,7 +160,13 @@ class BinaryTarClient(BasePackageClient):
 class ZipClient(BasePackageClient):
     """基于本地 zip 包初始化的 client"""
 
-    def __init__(self, file_path: str = None, file_obj: IO[bytes] = None, mode: str = "r", relative_path: str = "./"):
+    def __init__(
+        self,
+        file_path: Optional[str] = None,
+        file_obj: Optional[IO[bytes]] = None,
+        mode: Literal['r', 'w', 'x', 'a'] = "r",
+        relative_path: str = "./",
+    ):
         """从本地文件或 IO Stream 对象创建操作该 Zip 包的客户端
         :param file_path: 本地的 Zip 包存储路径
         :param file_obj: Zip 包的 IO Stream 对象
@@ -196,7 +208,13 @@ class ZipClient(BasePackageClient):
 class GenericLocalClient(BasePackageClient):
     """同时支持 zip, tar 格式的 SourcePackage 客户端"""
 
-    def __init__(self, file_path: str = None, file_obj: IO[bytes] = None, mode: str = "r", relative_path: str = "./"):
+    def __init__(
+        self,
+        file_path: Optional[str] = None,
+        file_obj: Optional[IO[bytes]] = None,
+        mode: str = "r",
+        relative_path: str = "./",
+    ):
         """从本地文件或 IO Stream 对象创建操作该 Zip 包的客户端
         :param file_path: 本地的 tar 包存储路径
         :param file_obj: Zip 包的 IO Stream 对象
@@ -211,7 +229,7 @@ class GenericLocalClient(BasePackageClient):
         self._client = self.detect_client(file_path, file_obj)(file_path, file_obj, mode, relative_path)
 
     @staticmethod
-    def detect_client(file_path: str = None, file_obj: IO = None):
+    def detect_client(file_path: Optional[str] = None, file_obj: Optional[IO] = None):
         if file_path:
             is_zipfile = zipfile.is_zipfile(file_path)
         elif file_obj:

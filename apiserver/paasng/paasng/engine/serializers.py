@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from typing import List
+from typing import List, Optional
 
 import yaml
 from django.conf import settings
@@ -85,7 +85,7 @@ class DeploymentSLZ(serializers.ModelSerializer):
     complete_time = serializers.DateTimeField(allow_null=True)
     finished_status = serializers.CharField(allow_null=True)
 
-    class Meta(object):
+    class Meta:
         model = Deployment
         fields = [
             'id',
@@ -150,7 +150,9 @@ RE_CONFIG_VAR_KEY = re.compile(r'^[A-Z][A-Z0-9_]*$')
 
 
 class ConfigVarReservedKeyValidator:
-    def __init__(self, protected_key_list: List[str] = None, protected_prefix_list: List[str] = None):
+    def __init__(
+        self, protected_key_list: Optional[List[str]] = None, protected_prefix_list: Optional[List[str]] = None
+    ):
         self.protected_key_set = set(protected_key_list or [])
         self.protected_prefix_list = protected_prefix_list or []
 
@@ -359,7 +361,7 @@ class CreateOfflineOperationSLZ(serializers.Serializer):
 class OfflineOperationSLZ(serializers.ModelSerializer):
     operator = UserField(read_only=True)
 
-    class Meta(object):
+    class Meta:
         model = OfflineOperation
         fields = ['id', 'status', 'operator', 'created', 'log', 'err_detail']
 
@@ -396,7 +398,7 @@ class OperationSLZ(serializers.ModelSerializer):
     offline_operation = OfflineOperationSLZ(source='get_offline_obj')
     deployment = DeploymentSLZ(source='get_deployment_obj')
 
-    class Meta(object):
+    class Meta:
         model = ModuleEnvironmentOperations
         fields = ['id', 'status', 'operator', 'created', 'operation_type', 'offline_operation', 'deployment']
 

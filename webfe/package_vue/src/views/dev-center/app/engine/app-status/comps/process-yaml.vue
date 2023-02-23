@@ -140,7 +140,7 @@
                     });
                     this.$paasMessage({
                         theme: 'success',
-                        message: '操作成功'
+                        message: this.$t('操作成功')
                     });
                     this.$emit('getCloudAppInfo');
                 } catch (e) {

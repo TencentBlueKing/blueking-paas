@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import inspect
-from typing import Callable, List, NoReturn, Optional, Union
+from typing import Callable, List, NoReturn, Optional, Union  # noqa:F401
 
 from django.apps import AppConfig
 from django.utils.module_loading import import_string
@@ -70,7 +70,7 @@ class PlugableAppConfig(AppConfig):
 class ReplaceableFunction:
     """A dummy placeholder to register extra logic in other Edition"""
 
-    def __init__(self, default_factory: Callable = None):
+    def __init__(self, default_factory: Optional[Callable] = None):
         self.default_factory = default_factory
         self.handler: Optional[Callable] = None
 

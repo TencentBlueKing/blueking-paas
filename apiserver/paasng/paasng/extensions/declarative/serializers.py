@@ -45,7 +45,7 @@ def validate_desc(
     serializer: Type[serializers.Serializer],
     data: Dict,
     instance: Optional[Any] = None,
-    context: Dict = None,
+    context: Optional[Dict] = None,
     partial: Optional[bool] = None,
 ) -> Any:
     """Use serializer to validate a given structure, the exception was transformed

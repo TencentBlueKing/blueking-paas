@@ -38,7 +38,7 @@ from .utils import MarketAvailableAddressHelper
 
 class AppLogoField(serializers.ImageField):
     def to_internal_value(self, logo):
-        if logo.size >= 2 ** 21:
+        if logo.size >= 2**21:
             raise ValidationError(_('文件太大, 大小不能超过2M'))
 
         if not re.match(r'^.+\.\w+$', logo.name):
@@ -150,7 +150,7 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
     tag_name = serializers.ReadOnlyField(source="tag.get_name_display", help_text=u"Tag名称")
     code = serializers.ReadOnlyField(help_text="应用编码", source="application.code")
 
-    class Meta(object):
+    class Meta:
         model = Product
         exclude = ('region', 'created', 'updated', 'owner')
 
@@ -188,7 +188,7 @@ class ProductCombinedSLZ(serializers.ModelSerializer, ProductBaseSLZ):
     logo = serializers.ReadOnlyField(source='get_logo_url', help_text=u"应用的logo地址，需要单独用接口上传")
     tag_name = serializers.ReadOnlyField(source="tag.get_name_display", help_text=u"Tag名称")
 
-    class Meta(object):
+    class Meta:
         model = Product
         exclude = ('region', 'created', 'updated', 'owner')
 
@@ -221,13 +221,13 @@ class TagSLZ(serializers.HyperlinkedModelSerializer):
 
     name = serializers.CharField(source="get_name_display")
 
-    class Meta(object):
+    class Meta:
         model = Tag
         fields = ("url", "id", "name", "parent", "remark", "index", "region")
 
 
 class ProductStateSLZ(serializers.ModelSerializer):
-    class Meta(object):
+    class Meta:
         model = Product
         fields = ['state']
 
@@ -243,7 +243,7 @@ class ProductLogoSLZ(serializers.ModelSerializer):
     logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text=u"上传Logo之后，应用Logo图片的下载地址")
     code = serializers.ReadOnlyField(help_text=u"应用编码")
 
-    class Meta(object):
+    class Meta:
         model = Product
         fields = ['logo', 'code', 'logo_url']
 
@@ -276,7 +276,7 @@ class MarketConfigSLZ(serializers.ModelSerializer):
     enabled = serializers.BooleanField(read_only=True, help_text="是否上架到市场")
     market_address = serializers.URLField(read_only=True, allow_blank=True, allow_null=True, help_text="市场访问链接")
 
-    class Meta(object):
+    class Meta:
         model = MarketConfig
         fields = [
             'enabled',

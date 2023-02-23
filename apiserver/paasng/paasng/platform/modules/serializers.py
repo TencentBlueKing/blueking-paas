@@ -96,7 +96,7 @@ class ModuleSLZ(serializers.ModelSerializer):
             env_clusters[env.environment] = cattr.unstructure(cluster) if cluster else None
         return env_clusters
 
-    class Meta(object):
+    class Meta:
         model = Module
         exclude = ['source_repo_id', 'source_type']
 
@@ -105,7 +105,7 @@ class ModuleWithOwnerAndCreatorSLZ(serializers.ModelSerializer):
     creator = UserNameField(help_text="创建者", default=None)
     owner = UserNameField(help_text="拥有者", default=None)
 
-    class Meta(object):
+    class Meta:
         model = Module
         fields = ['id', 'name', 'is_default', 'creator', 'owner']
 
@@ -113,7 +113,7 @@ class ModuleWithOwnerAndCreatorSLZ(serializers.ModelSerializer):
 class MinimalModuleSLZ(serializers.ModelSerializer):
     source_origin = serializers.IntegerField(source='get_source_origin')
 
-    class Meta(object):
+    class Meta:
         model = Module
         fields = ['id', 'name', 'source_origin', 'is_default']
 
@@ -162,7 +162,7 @@ class AppSlugBuilderMinimalSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
 
-    class Meta(object):
+    class Meta:
         model = AppSlugBuilder
         exclude = ["buildpacks", "modules", "environments"]
 
@@ -171,7 +171,7 @@ class AppSlugRunnerMinimalSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
 
-    class Meta(object):
+    class Meta:
         model = AppSlugRunner
         exclude = ["modules", "environments"]
 
@@ -180,7 +180,7 @@ class AppBuildPackMinimalSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
 
-    class Meta(object):
+    class Meta:
         model = AppBuildPack
         exclude = ["modules", "environments"]
 

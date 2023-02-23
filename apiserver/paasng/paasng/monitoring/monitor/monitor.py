@@ -18,12 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class Monitor(object):
+class Monitor:
     """
     AppMonitor / ProcessMonitor
     """
-
-    pass
 
 
 class ProcessMonitor(Monitor):

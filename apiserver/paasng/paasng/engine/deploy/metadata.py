@@ -36,6 +36,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+_current_path = Path(".")
+
+
 class MetaDataReader(Protocol):
     """Protocol to read metadata for deploy"""
 
@@ -135,7 +138,7 @@ class MetaDataFileReader:
 class VCSMetaDataReader(MetaDataFileReader):
     error_tips = "please ensure the file exists in the repository and the network or proxy is working normally"
 
-    def __init__(self, repo_controller: RepoController, source_dir: Path = Path(".")):
+    def __init__(self, repo_controller: RepoController, source_dir: Path = _current_path):
         self.repo_controller = repo_controller
         self.source_dir = source_dir
 
@@ -147,7 +150,7 @@ class VCSMetaDataReader(MetaDataFileReader):
 class PackageMetaDataReader(MetaDataFileReader):
     error_tips = "please ensure the file exists in the package"
 
-    def __init__(self, module: 'Module', source_dir: Path = Path(".")):
+    def __init__(self, module: 'Module', source_dir: Path = _current_path):
         self.module = module
         self._client: Optional[BasePackageClient] = None
         self.source_dir = source_dir
@@ -199,7 +202,7 @@ class PackageMetaDataReader(MetaDataFileReader):
 
 
 def get_metadata_reader(
-    module: 'Module', operator: Optional[str] = None, source_dir: Path = Path(".")
+    module: 'Module', operator: Optional[str] = None, source_dir: Path = _current_path
 ) -> MetaDataReader:
     """Get MetaData Reader for the given module
     :param module: 待操作的模块

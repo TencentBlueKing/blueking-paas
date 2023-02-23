@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
-
 from rest_framework import serializers
 
 from paasng.platform.applications.models import Application
@@ -32,7 +30,7 @@ class OperationSLZ(serializers.ModelSerializer):
     operate = serializers.ReadOnlyField(source="get_operate_display", help_text=u"操作名称")
     operate_type = serializers.ReadOnlyField(source="type", help_text=u"操作类型")
 
-    class Meta(object):
+    class Meta:
         model = Operation
         fields = ("application", "id", "region", "at", "operate", "operate_type", "operator")
         lookup_field = "id"
@@ -45,7 +43,7 @@ class OperationForRencentApp(OperationSLZ):
     operate_type = serializers.ReadOnlyField(source="type", help_text=u"操作类型")
     represent_info = serializers.DictField()
 
-    class Meta(object):
+    class Meta:
         model = Operation
         fields = ("application", "id", "at", "operate", "operate_type", 'represent_info')
         lookup_field = "id"
@@ -63,7 +61,7 @@ class ApplicationOperationSLZ(serializers.ModelSerializer):
     operate = serializers.ReadOnlyField(source="get_operate_display", help_text=u"操作名称")
     operate_type = serializers.ReadOnlyField(source="type", help_text=u"操作类型")
 
-    class Meta(object):
+    class Meta:
         model = Operation
         fields = (
             "application",

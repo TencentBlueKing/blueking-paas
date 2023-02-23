@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Iterable, List, NamedTuple
+from typing import Iterable, List, NamedTuple, Optional
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
@@ -60,7 +60,7 @@ class AppDefaultIngresses:
         for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
             yield CustomDomainIngressMgr(domain)
 
-    def sync_ignore_empty(self, default_service_name: str = None):
+    def sync_ignore_empty(self, default_service_name: Optional[str] = None):
         """Sync current ingress resources to apiserver,
         will not raise exceptions when any manager has no related domains.
         """

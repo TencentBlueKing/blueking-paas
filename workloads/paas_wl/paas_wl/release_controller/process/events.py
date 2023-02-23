@@ -28,6 +28,7 @@ from paas_wl.release_controller.process.utils import diff_list
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class ProcessBaseEvent:
     type: IntEnum
     invoker: Any

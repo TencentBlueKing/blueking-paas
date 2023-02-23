@@ -16,12 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
-
 from .models import get_region
 
 
-class AppRegionHelper(object):
+class AppRegionHelper:
     """AppRegionHelper is a helper for connect Application and region"""
 
     def __init__(self, application):
@@ -29,7 +27,7 @@ class AppRegionHelper(object):
         self.region = get_region(self.application.region)
 
 
-class BuiltInEnvsRegionHelper(object):
+class BuiltInEnvsRegionHelper:
     """Helps getting env vars from region configs, for example:
 
     If a region has below configs:
@@ -61,7 +59,7 @@ class BuiltInEnvsRegionHelper(object):
         return result
 
 
-class S3BucketRegionHelper(object):
+class S3BucketRegionHelper:
     def __init__(self, application):
         self.application = application
         self.region = get_region(self.application.region)

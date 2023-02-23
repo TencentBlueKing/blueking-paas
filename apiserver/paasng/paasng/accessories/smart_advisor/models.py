@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
-
 from django.db import models
 from django.utils import timezone
 from jsonfield import JSONField
@@ -57,7 +55,7 @@ class AppModuleTagRel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     objects = AppModuleTagManager()
 
-    class Meta(object):
+    class Meta:
         unique_together = ("module", "tag_str")
 
 

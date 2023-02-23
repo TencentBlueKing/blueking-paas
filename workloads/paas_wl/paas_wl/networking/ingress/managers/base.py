@@ -61,7 +61,7 @@ class AppIngressMgr(abc.ABC):
         """Delete the default ingress rule"""
         ingress_kmodel.delete_by_name(self.app, self.ingress_name, non_grace_period=True)
 
-    def sync(self, default_service_name: str = None, delete_when_empty: bool = False):
+    def sync(self, default_service_name: Optional[str] = None, delete_when_empty: bool = False):
         """Sync with kubernetes apiserver
 
         :param delete_when_empty: when True, will try to delete ingress object if it has no domains,
@@ -161,7 +161,7 @@ class IngressUpdater:
     def sync(
         self,
         domains: List[PIngressDomain],
-        default_service_name: str = None,
+        default_service_name: Optional[str] = None,
         server_snippet: str = '',
         configuration_snippet: str = '',
         annotations: Optional[Dict] = None,

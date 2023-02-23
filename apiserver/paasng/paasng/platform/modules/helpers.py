@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from operator import attrgetter
-from typing import TYPE_CHECKING, Dict, Iterable, List
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 
 from django.db import transaction
 
@@ -72,12 +72,12 @@ class SlugbuilderBinder:
 class ModuleRuntimeBinder:
     """模块相关运行时绑定工具"""
 
-    def __init__(self, module: 'Module', slugbuilder: AppSlugBuilder = None):
+    def __init__(self, module: 'Module', slugbuilder: Optional[AppSlugBuilder] = None):
         self.module = module
         self.slugbuilder = slugbuilder
 
     @transaction.atomic
-    def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder = None):
+    def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: Optional[AppSlugBuilder] = None):
         """绑定构建和运行镜像,如果两个镜像的名称不一致将会报错"""
         slugbuilder = slugbuilder or self.slugbuilder
         self.slugbuilder = slugbuilder
@@ -109,7 +109,7 @@ class ModuleRuntimeBinder:
         module.slugbuilders.set([slugbuilder], clear=True)
 
     @transaction.atomic
-    def unbind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder = None):
+    def unbind_image(self, slugrunner: AppSlugRunner, slugbuilder: Optional[AppSlugBuilder] = None):
         """解绑镜像"""
         if self.slugbuilder is None:
             return

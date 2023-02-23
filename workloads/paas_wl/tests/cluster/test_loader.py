@@ -80,10 +80,9 @@ class TestLoader:
         loader = DBConfigLoader()
 
         assert len(list(loader.list_configurations_by_name(context_name))) == configurations_count
-        assert (
-            set(urlparse(config.host).hostname for config in loader.list_configurations_by_name(context_name))
-            == server_hostname_set
-        )
+        assert {
+            urlparse(config.host).hostname for config in loader.list_configurations_by_name(context_name)
+        } == server_hostname_set
 
 
 class TestLoaderNoInitialClusters:
@@ -127,7 +126,6 @@ class TestEnhancedKubeConfigLoader:
 
         assert len(list(loader.list_configurations_by_tag(tag))) == configurations_count
 
-        assert (
-            set(urlparse(config.host).hostname for config in loader.list_configurations_by_tag(tag))
-            == server_hostname_set
-        )
+        assert {
+            urlparse(config.host).hostname for config in loader.list_configurations_by_tag(tag)
+        } == server_hostname_set

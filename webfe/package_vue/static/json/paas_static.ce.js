@@ -257,7 +257,7 @@ export const PLATFORM_CONFIG = {
         // 服务发现配置
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
         // 帮助：如何构建镜像
-        BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + 'quickstart/docker/docker_hello_world',
+        BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置'
     }
@@ -526,7 +526,6 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("应用编排"),
                 "matchRouters": [
                     "cloudAppDeploy",
-                    "cloudAppDeployHistory",
                     "cloudAppDeployForProcess",
                     "cloudAppDeployForEnv",
                     "cloudAppDeployForYaml",
@@ -595,13 +594,13 @@ export const PAAS_STATIC_CONFIG = {
                 ]
             },
             {
-                "name": "appVoucher",
+                "name": "imageCredential",
                 "label": staticI18n.$t("镜像凭证"),
-                "matchRouters": ["appVoucher"],
+                "matchRouters": ["imageCredential"],
                 "iconfontName": "key-2",
                 "supportModule": false,
                 "destRoute": {
-                  "name": "appVoucher"
+                  "name": "imageCredential"
                 },
                 "children": []
             },
@@ -624,6 +623,19 @@ export const PAAS_STATIC_CONFIG = {
                     }
                 ]
             },
+            {
+                "name": "docuManagement",
+                "label": staticI18n.$t("文档管理"),
+                "matchRouters": [
+                    "docuManagement"
+                ],
+                "iconfontName": "page-fill",
+                "supportModule": false,
+                "destRoute": {
+                    "name": "docuManagement"
+                },
+                "children": []
+            }
         ],
         "pluginList": [
             {

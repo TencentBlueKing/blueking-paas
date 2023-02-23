@@ -12,7 +12,7 @@
             ref="visitForm"
             :model="form"
             :rules="rules"
-            :label-width="100"
+            :label-width="104"
           >
             <bk-form-item
               class="w600"
@@ -267,7 +267,7 @@
         padding-top: 8px;
         padding-bottom: 20px;
         margin-left: 240px;
-        padding-left: 150px;
+        padding-left: 154px;
         background: #fff;
         width: 100%;
         z-index: 99;
@@ -285,8 +285,8 @@
     .lable-wrapper {
         position: absolute;
         top: 0;
-        left: -100px;
-        width: 100px;
+        left: -104px;
+        width: 104px;
         min-height: 32px;
         text-align: right;
         vertical-align: middle;
@@ -312,6 +312,10 @@
         .label {
             display: inline-block;
             line-height: 20px;
+            background: linear-gradient(to left, transparent 0%, transparent 50%,#979ba5 50%,#979ba5 100%);
+            background-size: 10px 1px;
+            background-repeat: repeat-x;
+            background-position-y: 100%;
         }
     }
 </style>

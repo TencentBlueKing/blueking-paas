@@ -105,7 +105,7 @@ class SourcePackageStatReader:
                 logger.warning('file: %s is not a valid tar file.', self.path)
                 return relative_path, {}
 
-            for (spec_version, filename) in product([AppSpecVersion.VER_2, AppSpecVersion.VER_1], existed_filenames):
+            for spec_version, filename in product([AppSpecVersion.VER_2, AppSpecVersion.VER_1], existed_filenames):
                 result = AppYamlDetector.detect(filename, spec_version)
                 if result is not None:
                     app_filename = filename

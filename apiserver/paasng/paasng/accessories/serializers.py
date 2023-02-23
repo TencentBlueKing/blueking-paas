@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from builtins import object
-
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -42,7 +40,6 @@ class ListAdvisedDocLinksSLZ(serializers.Serializer):
 
 
 class DocumentaryLinkSLZ(serializers.ModelSerializer):
-
     title = TranslatedCharField()
     short_description = TranslatedCharField()
 
@@ -56,6 +53,6 @@ class DocumentaryLinkSLZ(serializers.ModelSerializer):
         data['description'] = data['short_description']
         return data
 
-    class Meta(object):
+    class Meta:
         model = DocumentaryLink
         fields = ['title', 'location', 'short_description']

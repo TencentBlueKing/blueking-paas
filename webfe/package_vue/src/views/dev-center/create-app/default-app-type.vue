@@ -35,10 +35,6 @@
         {
             title: i18n.t('蓝鲸可视化平台推送的源码包'),
             type: 'bkLesscode'
-        },
-        {
-            title: i18n.t('S-mart 应用'),
-            type: 'smart'
         }
     ];
 
@@ -61,7 +57,14 @@
             },
             // 过滤字段控制的smart应用
             appTypeList () {
-                return this.typeList.filter(item => (this.userFeature.ALLOW_CREATE_SMART_APP ? true : item.type !== 'smart'));
+                const list = [...this.typeList];
+                if (this.userFeature.ALLOW_CREATE_SMART_APP) {
+                    list.push({
+                        title: this.$t('S-mart 应用'),
+                        type: 'smart'
+                    });
+                }
+                return list;
             }
         },
         methods: {

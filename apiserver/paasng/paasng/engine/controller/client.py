@@ -337,10 +337,6 @@ class ControllerClient:
 
     # App Domains start
 
-    def get_region_settings(self, region: str):
-        """Get a region's settings in workloads service"""
-        return self.request('GET', f'/regions/{region}/settings/')
-
     def app_domains__update(self, region, app_name, domains: List[Dict]):
         return self.request('PUT', f'/services/regions/{region}/apps/{app_name}/domains/', json={'domains': domains})
 

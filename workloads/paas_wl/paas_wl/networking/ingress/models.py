@@ -68,6 +68,7 @@ class AppDomain(AuditedModel):
 
     class Meta:
         unique_together = ("region", "host", "path_prefix")
+        db_table = "services_appdomain"
 
 
 class BasicCert(AuditedModel):
@@ -90,6 +91,9 @@ class AppDomainCert(BasicCert):
 
     type = 'normal'
 
+    class Meta:
+        db_table = "services_appdomaincert"
+
 
 class AppDomainSharedCert(BasicCert):
     """Shared TLS Certifications for AppDomain, every app's domain may link to this certificate as
@@ -101,6 +105,9 @@ class AppDomainSharedCert(BasicCert):
 
     type = 'shared'
 
+    class Meta:
+        db_table = "services_appdomainsharedcert"
+
 
 class AppSubpathManager(models.Manager):
     def create_obj(self, app: App, subpath: str, source=AppSubpathSource.DEFAULT) -> 'AppSubpath':
@@ -109,6 +116,9 @@ class AppSubpathManager(models.Manager):
         return self.get_queryset().create(
             app=app, region=app.region, cluster_name=cluster.name, subpath=subpath, source=source
         )
+
+    class Meta:
+        db_table = "services_appdomainsharedcert"
 
 
 class AppSubpath(AuditedModel):
@@ -127,6 +137,7 @@ class AppSubpath(AuditedModel):
 
     class Meta:
         unique_together = ('region', 'subpath')
+        db_table = "services_appsubpath"
 
 
 def get_default_subpath(app: App) -> str:
@@ -155,6 +166,7 @@ class Domain(TimestampedModel):
 
     class Meta:
         unique_together = ('name', 'path_prefix', 'module_id', 'environment_id')
+        db_table = "services_domain"
 
     @property
     def protocol(self) -> str:

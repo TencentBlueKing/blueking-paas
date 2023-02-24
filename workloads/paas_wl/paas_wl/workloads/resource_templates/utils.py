@@ -21,7 +21,7 @@ from typing import Dict, List
 import cattr
 
 from paas_wl.platform.applications.models.app import App
-from paas_wl.workloads.resource_templates.components.probe import Probe, default_readiness_probe
+from paas_wl.workloads.resource_templates.components.probe import Probe, get_default_readiness_probe
 from paas_wl.workloads.resource_templates.components.volume import Volume, VolumeMount
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
 from paas_wl.workloads.resource_templates.models import AppAddOn
@@ -37,7 +37,7 @@ class AddonManager:
                 AppAddOn.objects.get(app=self.app, template__type=AppAddOnType.READINESS_PROBE).render_spec(), Probe
             )
         except AppAddOn.DoesNotExist:
-            return default_readiness_probe
+            return get_default_readiness_probe()
 
     def get_sidecars(self) -> List[Dict]:
         return [

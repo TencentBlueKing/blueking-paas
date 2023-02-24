@@ -98,6 +98,7 @@ opentelemetry-instrumentation-celery = "0.26b1"
 cookiecutter = "^2.1.1"
 semver = "^2.13.0"
 protobuf = ">=3.15.0,<4"
+kubernetes = "24.2.0"
 
 [tool.poetry.dev-dependencies]
 black = "==20.8b0"

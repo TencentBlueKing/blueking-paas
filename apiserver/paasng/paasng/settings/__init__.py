@@ -94,7 +94,7 @@ DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
 
-RUNNING_TESTS = sys.argv[0].endswith('pytest')
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0]
 
 INSTALLED_APPS = [
     # WARNING: never enable django.contrib.admin here
@@ -152,6 +152,19 @@ INSTALLED_APPS = [
     # Put "scheduler" in the last position so models in other apps can be ready
     'paasng.platform.scheduler',
     'revproxy',
+    # workloads apps
+    'paas_wl.platform.misc',
+    'paas_wl.platform.applications',
+    'paas_wl.cluster',
+    'paas_wl.monitoring.metrics',
+    'paas_wl.networking.egress',
+    'paas_wl.networking.ingress',
+    'paas_wl.workloads.resource_templates',
+    'paas_wl.release_controller.hooks',
+    'paas_wl.workloads.processes',
+    'paas_wl.workloads.images',
+    'paas_wl.monitoring.app_monitor',
+    'paas_wl.cnative.specs',
 ]
 
 # Allow extending installed apps
@@ -400,7 +413,11 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {"default": get_database_conf(settings)}
+DATABASES = {
+    "default": get_database_conf(settings),
+    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
+}
+DATABASE_ROUTERS = ["paasng.platform.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存
 
@@ -1167,3 +1184,15 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
+
+# 引入 workloads 相关配置
+# fmt: off
+from . import workloads as workloads_settings
+
+for key in dir(workloads_settings):
+    if key in ["BASE_DIR", "SETTINGS_FILES_GLOB", "LOCAL_SETTINGS"] or not key.isupper():
+        continue
+    if key in locals() and getattr(workloads_settings, key) != locals()[key]:
+        raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
+    locals()[key] = getattr(workloads_settings, key)
+# fmt: on

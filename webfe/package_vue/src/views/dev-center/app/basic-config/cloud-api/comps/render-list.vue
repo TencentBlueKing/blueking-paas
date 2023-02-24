@@ -98,6 +98,7 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          :show-overflow-tooltip="true"
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
@@ -142,8 +143,12 @@
                 <a
                   target="_blank"
                   :href="props.row.doc_link"
+                  class="api-link"
                 >
-                  <span v-html="highlight(props.row)" />
+                  <span
+                    v-bk-overflow-tips
+                    v-html="highlight(props.row)"
+                  />
                   <i
                     class="fa fa-book"
                     aria-hidden="true"
@@ -151,7 +156,10 @@
                 </a>
               </template>
               <template v-else>
-                <span v-html="highlight(props.row)" />
+                <span
+                  v-bk-overflow-tips
+                  v-html="highlight(props.row)"
+                />
               </template>
             </template>
           </bk-table-column>
@@ -1003,6 +1011,18 @@
         .clear-search {
             cursor: pointer;
             color: #3a84ff;
+        }
+    }
+    .api-link {
+        display: inline-block;
+        width: 100%;
+        & span {
+            display: inline-block;
+            width: 100%;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     }
 </style>

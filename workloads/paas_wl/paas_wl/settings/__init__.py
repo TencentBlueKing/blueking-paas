@@ -594,5 +594,5 @@ FOR_TEST_E2E_INGRESS_CONFIG = settings.get("FOR_TEST_E2E_INGRESS_CONFIG", {})
 # 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress
 # 为避免 migrations 重复执行, 使用 replaces 声明该 migration 的历史名称
 # 以子模块被 apiserver 引用时, 不能声明 replaces 否则会与 apiserver 中的 services app 冲突
-# RENAME_APP_FROM_SERVICES_TO_INGRESS 只能在 workloads 项目中声明, 且永远为 True, 用于区分 workloads 是否以子模块形式被引用
-RENAME_APP_FROM_SERVICES_TO_INGRESS = True
+# WL_APP_SERVICES_RENAMED 只能在 workloads 项目中声明, 且永远为 True, 用于区分 workloads 是否以子模块形式被引用
+WL_APP_SERVICES_RENAMED = True

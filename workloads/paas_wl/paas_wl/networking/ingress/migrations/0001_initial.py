@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
     # 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress
     # 为避免 migrations 重复执行, 使用 replaces 声明该 migration 的历史名称
     # 以子模块被 apiserver 引用时, 不能声明 replaces 否则会与 apiserver 中的 services app 冲突
-    if getattr(settings, "RENAME_APP_FROM_SERVICES_TO_INGRESS", False):
+    if getattr(settings, "WL_APP_SERVICES_RENAMED", False):
         replaces = [
             ("services", "0001_initial"),
         ]

@@ -1185,5 +1185,14 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
-# 必须添加该配置才能引用 paas_wl.networking.ingress
-ENABLE_MODERN_INGRESS_SUPPORT = settings.get('ENABLE_MODERN_INGRESS_SUPPORT', True)
+# 引入 workloads 相关配置
+# fmt: off
+from . import workloads as workloads_settings
+
+for key in dir(workloads_settings):
+    if key in ["BASE_DIR", "SETTINGS_FILES_GLOB", "LOCAL_SETTINGS"] or not key.isupper():
+        continue
+    if key in locals() and getattr(workloads_settings, key) != locals()[key]:
+        raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
+    locals()[key] = getattr(workloads_settings, key)
+# fmt: on

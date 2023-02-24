@@ -29,32 +29,37 @@ class WorkloadsDBRouter:
 
     def db_for_read(self, model, **hints):
         """Route the db for read"""
-        if self._should_handle_model(model):
+        if self._model_form_wl(model):
             return self._workloads_db_name
         return None
 
     def db_for_write(self, model, **hints):
         """Route the db for write"""
-        if self._should_handle_model(model):
+        if self._model_form_wl(model):
             return self._workloads_db_name
         return None
 
     def allow_relation(self, obj1, obj2, **hint):
         """allow relations if obj1 and obj2 are both workloads models"""
-        if self._should_handle_model(obj1) and self._should_handle_model(obj2):
+        if self._model_form_wl(obj1) and self._model_form_wl(obj2):
             return True
         return None
 
     def allow_migrate(self, db, app_label, **hints):
         app_config = apps.get_app_config(app_label)
-        if not settings.RUNNING_TESTS:
+        if self._app_from_wl(app_config):
             # db migrations are forbidden except in unit tests
-            return not app_config.module.__name__.startswith("paas_wl")
-        # when running test, pass_wl migrations can only apply to workloads db
-        if app_config.module.__name__.startswith("paas_wl"):
-            return db == self._workloads_db_name
-        # other migrations can only apply to default db
-        return db != self._workloads_db_name
+            # And paas_wl migrations can only apply to workloads db
+            return settings.RUNNING_TESTS and db == self._workloads_db_name
 
-    def _should_handle_model(self, model):
+        # other migrations can not apply to workloads db
+        if db == self._workloads_db_name:
+            return False
+        # This DBRouter can't handle the input args, return None (which means not participating in the decision)
+        return None
+
+    def _model_form_wl(self, model) -> bool:
         return model.__module__.startswith("paas_wl")
+
+    def _app_from_wl(self, app_config) -> bool:
+        return app_config.module.__name__.startswith("paas_wl")

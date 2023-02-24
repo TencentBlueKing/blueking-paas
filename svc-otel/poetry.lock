@@ -1202,7 +1202,7 @@ backcall = [
     {file = "backcall-0.2.0.tar.gz", hash = "sha256:5cbdbf27be5e7cfadb448baf0aa95508f91f2bbc6c6437cd9cd06e2a4c215e1e"},
 ]
 bkapi-client-core = [
-    {file = "bkapi_client_core-1.1.8-py2.py3-none-any.whl", hash = "md5:219e351260fde025291d506310c836d2"},
+    {file = "bkapi_client_core-1.1.8-py2.py3-none-any.whl", hash = "sha256:59937769f5aeb95c8737b37f516b1f6d641151c629c414267613993011cc8bcd"},
 ]
 blue-krill = [
     {file = "blue-krill-1.0.15.tar.gz", hash = "md5:62c1ce7688b87434d53a16acc1bfb76a"},

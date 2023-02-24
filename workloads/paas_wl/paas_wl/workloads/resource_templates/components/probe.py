@@ -39,12 +39,13 @@ class Probe:
     tcpSocket: Optional[TCPSocketAction] = None
 
 
-default_readiness_probe = cattr.structure(
-    {
-        'tcpSocket': {'port': settings.CONTAINER_PORT},
-        'initialDelaySeconds': 1,
-        'periodSeconds': 15,
-        'failureThreshold': 6,
-    },
-    Probe,
-)
+def get_default_readiness_probe():
+    return cattr.structure(
+        {
+            'tcpSocket': {'port': settings.CONTAINER_PORT},
+            'initialDelaySeconds': 1,
+            'periodSeconds': 15,
+            'failureThreshold': 6,
+        },
+        Probe,
+    )

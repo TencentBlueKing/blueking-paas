@@ -34,9 +34,8 @@ logger = logging.getLogger(__name__)
 class BkMonitorClient:
     """蓝鲸监控 client"""
 
-    def __init__(self, client: Union[ApigwGroup, ESBGroup], use_apigw: bool = True):
+    def __init__(self, client: Union[ApigwGroup, ESBGroup]):
         self.client = client
-        self.use_apigw = use_apigw
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
         """
@@ -49,11 +48,13 @@ class BkMonitorClient:
         :param step: 步长，如："1m"
         :returns: 时序数据 Series
         """
-        params: Dict[str, Union[str, int]] = {'promql': promql, 'start': start, 'end': end, 'step': step}
-        # esb api 参数差异：start -> start_time, end -> end_time，类型从 str 换成 int
-        if not self.use_apigw:
-            params['start_time'] = int(params.pop('start'))
-            params['end_time'] = int(params.pop('end'))
+        params: Dict[str, Union[str, int, None]] = {
+            'promql': promql,
+            'start_time': start,
+            'end_time': end,
+            'step': step,
+            'bk_biz_id': bk_biz_id,
+        }
 
         headers = {'X-Bk-Scope-Space-Uid': f'bkcc__{bk_biz_id}'}
         try:
@@ -65,7 +66,7 @@ class BkMonitorClient:
         if resp.get('error'):
             raise BkMonitorApiError(resp['error'])
 
-        return resp.get('series', [])
+        return resp.get('data', {}).get('series', [])
 
 
 def make_bk_monitor_client() -> BkMonitorClient:
@@ -76,4 +77,4 @@ def make_bk_monitor_client() -> BkMonitorClient:
 
     # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
     esb_client = get_client_by_username("admin")
-    return BkMonitorClient(esb_client.monitor_v3, use_apigw=False)
+    return BkMonitorClient(esb_client.monitor_v3)

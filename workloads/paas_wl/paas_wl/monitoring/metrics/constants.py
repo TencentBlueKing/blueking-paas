@@ -75,9 +75,9 @@ BKMONITOR_PROMQL_TMPL = {
         'limit': 'kube_pod_container_resource_limits_memory_bytes{pod="%s",bcs_cluster_id="%s",bk_biz_id="%s"}',
     },
     'cpu': {
-        # CPU 实际使用值
+        # CPU 实际使用值，由于蓝鲸监控默认采样率较低，rate 时间窗口设置为 2m
         'current': 'sum by(container_name)(rate(container_cpu_usage_seconds_total{'
-        'image!="",pod_name="%s",container_name!="POD",bcs_cluster_id="%s",bk_biz_id="%s"}[1m]))',
+        'image!="",pod_name="%s",container_name!="POD",bcs_cluster_id="%s",bk_biz_id="%s"}[2m]))',
         # CPU 预留值
         'request': 'kube_pod_container_resource_requests_cpu_cores{pod="%s",bcs_cluster_id="%s",bk_biz_id="%s"}',
         # CPU 上限值

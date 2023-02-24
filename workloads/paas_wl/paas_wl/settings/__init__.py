@@ -596,5 +596,7 @@ BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 
 APIGW_ENVIRONMENT = settings.get('APIGW_ENVIRONMENT', 'prod')
 # 网关前缀 URL 模板
 BK_API_URL_TMPL = settings.get('BK_API_URL_TMPL', 'http://localhost:8080/api/{api_name}/')
+# 蓝鲸的云 API 地址（esb）
+BK_COMPONENT_API_URL = settings.get('BK_COMPONENT_API_URL', 'http://localhost:8080')
 
 FOR_TEST_E2E_INGRESS_CONFIG = settings.get("FOR_TEST_E2E_INGRESS_CONFIG", {})

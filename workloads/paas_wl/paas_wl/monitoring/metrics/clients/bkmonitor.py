@@ -136,8 +136,8 @@ class BkPromRangeSingleMetric:
     @classmethod
     def from_raw(cls, raw):
         return cls(
-            metric=cls.MetricResult(**dict(zip(raw['group_keys'], raw['group_values']))),
-            values=[cls.ValuePair(timestamp=timestamp, value=val) for (timestamp, val) in raw['values']],
+            metric=cls.MetricResult(**raw['dimensions']),
+            values=[cls.ValuePair(timestamp=timestamp, value=val) for (val, timestamp) in raw['datapoints']],
         )
 
     def to_raw(self) -> dict:

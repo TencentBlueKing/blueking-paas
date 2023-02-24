@@ -51,9 +51,7 @@ class Command(BaseCommand):
             '-a', '--app', dest="apps", default=None, nargs="+", help="legacy app name which need to patch"
         )
 
-    def handle(  # noqa: C901
-        self, apps, dry_run, pattern, process_type, with_create, app_created_after, *args, **options
-    ):
+    def handle(self, apps, dry_run, pattern, process_type, with_create, app_created_after, *args, **options):
         qs = App.objects.all().order_by('created')
         if apps:
             qs = qs.filter(name__in=apps)

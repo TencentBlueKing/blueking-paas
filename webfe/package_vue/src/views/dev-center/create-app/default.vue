@@ -1,17 +1,23 @@
 <template lang="html">
   <div class="establish">
+    <div class="ps-tip-block default-info mt15">
+      <i
+        style="color: #3A84FF;"
+        class="paasng-icon paasng-info-circle"
+      />
+      {{ isdefaultApp ? defaultAlertText : smartAlertText }}
+    </div>
+    <div class="default-app-type">
+      <default-app-type
+        @on-change-type="handleSwitchAppType"
+      />
+    </div>
     <form
+      v-show="isdefaultApp"
       id="form-create-app"
       data-test-id="createDefault_form_appInfo"
       @submit.stop.prevent="submitCreateForm"
     >
-      <div class="ps-tip-block default-info mt15">
-        <i
-          style="color: #3A84FF;"
-          class="paasng-icon paasng-info-circle"
-        />
-        {{ $t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。') }}
-      </div>
       <!-- 基本信息 -->
       <div
         class="create-item"
@@ -65,7 +71,7 @@
           </p>
         </div>
         <div
-          v-if="platformFeature.REGION_DISPLAY"
+          v-if="platformFeature.REGION_DISPLAY && isBkLesscode"
           class="form-group"
           style="margin-top: 7px;"
         >
@@ -94,7 +100,7 @@
           </div>
         </div>
         <div
-          v-if="curUserFeature.ENABLE_TC_DOCKER"
+          v-if="curUserFeature.ENABLE_TC_DOCKER && isBkLesscode"
           class="form-group"
           style="margin-top: 7px;margin-left: 10px"
         >
@@ -209,7 +215,7 @@
       <!-- 应用引擎 -->
       <div
         v-if="structureType !== 'mirror'"
-        class="create-item"
+        :class="['create-item', { 'template-wrapper': !isBkLesscode }]"
         data-test-id="createDefault_item_appEngine"
       >
         <div class="item-title">
@@ -219,31 +225,32 @@
           <!-- 代码库 -->
           <div class="establish-tab">
             <section class="code-type">
-              <label class="form-label"> {{ $t('模板来源') }} </label>
+              <label class="form-label template"> {{ $t('模板来源') }} </label>
               <div class="tab-box">
                 <li
-                  :class="['tab-item', { 'active': localSourceOrigin === 1 }]"
+                  v-if="isBkLesscode"
+                  :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
                   @click="handleCodeTypeChange(1)"
                 >
                   {{ $t('蓝鲸开发框架') }}
                 </li>
                 <li
-                  v-if="allRegionsSpecs[regionChoose] && allRegionsSpecs[regionChoose].allow_deploy_app_by_lesscode"
-                  :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
-                  @click="handleCodeTypeChange(2)"
+                  v-if="!isBkLesscode"
+                  class="bk-less-code"
                 >
                   {{ $t('蓝鲸可视化开发平台') }}
                 </li>
-                <li
+                <!-- 蓝鲸插件创建入口 -->
+                <!-- <li
                   v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && allowPluginCreation(regionChoose)"
                   :class="['tab-item', { 'active': localSourceOrigin === 3 }]"
                   @click="handleCodeTypeChange(3)"
                 >
                   {{ $t('蓝鲸插件') }}
-                </li>
+                </li> -->
                 <li
-                  v-if="sceneTemplateList.length"
-                  :class="['tab-item', { 'active': localSourceOrigin === 5 }]"
+                  v-if="sceneTemplateList.length && isBkLesscode"
+                  :class="['tab-item template', { 'active': localSourceOrigin === 5 }]"
                   @click="handleCodeTypeChange(5)"
                 >
                   {{ $t('场景模版') }}
@@ -389,7 +396,7 @@
               target="_blank"
               :href="GLOBAL.LINK.LESSCODE_INDEX"
               style="color: #3a84ff"
-            > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
+            > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块。') }}
           </div>
 
           <div
@@ -610,6 +617,11 @@
         </bk-button>
       </div>
     </form>
+    <!-- S-mart 应用 -->
+    <create-smart-app
+      v-if="curCodeSource === 'smart'"
+      key="smart"
+    />
   </div>
 </template>
 
@@ -622,12 +634,16 @@
     import gitExtend from '@/components/ui/git-extend.vue';
     import repoInfo from '@/components/ui/repo-info.vue';
     import ECharts from 'vue-echarts/components/ECharts.vue';
+    import createSmartApp from './smart';
+    import defaultAppType from './default-app-type';
 
     export default {
         components: {
             gitExtend,
             repoInfo,
-            'chart': ECharts
+            'chart': ECharts,
+            createSmartApp,
+            defaultAppType
         },
         data () {
             return {
@@ -772,7 +788,9 @@
                 sceneIsLoading: false,
                 sceneListIsLoading: false,
                 deploymentIsShow: true,
-                isLessCodeRule: false
+                isLessCodeRule: false,
+                curCodeSource: 'default',
+                defaultRegionChoose: 'default'
             };
         },
         computed: {
@@ -816,6 +834,19 @@
             },
             platformFeature () {
                 return this.$store.state.platformFeature;
+            },
+            // 蓝鲸可视化平台不显示对应表单项
+            isBkLesscode () {
+                return this.curCodeSource !== 'bkLesscode';
+            },
+            isdefaultApp () {
+                return this.curCodeSource !== 'smart';
+            },
+            defaultAlertText () {
+                return this.$t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。');
+            },
+            smartAlertText () {
+                return this.$t('平台为该类应用提供应用引擎、增强服务等功能，并提供源码包部署和通过配置文件定义应用信息的能力；适用于熟知蓝鲸官方S-mart打包流程的SaaS开发场景。');
             }
         },
         watch: {
@@ -848,6 +879,10 @@
                 this.curAppType = this.appTypes[value];
             },
             regionChoose () {
+                // 蓝鲸可视化平台推送的源码包, 无需请求场景模版
+                if (this.curCodeSource === 'bkLesscode') {
+                    return;
+                }
                 // 场景模版
                 this.getSceneTemplates();
                 if (this.structureType !== 'mirror') {
@@ -1074,6 +1109,7 @@
                         });
                     });
                     this.regionChoose = this.regionChoices[0].key;
+                    this.defaultRegionChoose = this.regionChoices[0].key;
                     this.languages = this.allRegionsSpecs[this.regionChoose].languages;
                     this.curLanguages = _.cloneDeep(this.languages);
                     this.sourceInitTemplate = this.languages[this.language][0].name;
@@ -1107,8 +1143,8 @@
             changeRegion () {
                 // 重置选择
                 this.clusterName = '';
-                this.languages = this.allRegionsSpecs[this.regionChoose].languages;
-                this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
+                this.languages = this.allRegionsSpecs[this.regionChoose] && this.allRegionsSpecs[this.regionChoose].languages;
+                this.regionDescription = this.allRegionsSpecs[this.regionChoose] && this.allRegionsSpecs[this.regionChoose].description;
                 this.language = 'Python';
                 this.langTransitionName = 'lang-card-to-right';
                 this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
@@ -1387,6 +1423,22 @@
                     }
                 });
                 this.changeScenarioTemplate();
+            },
+
+            // 切换应用类型
+            handleSwitchAppType (codeSource) {
+                this.curCodeSource = codeSource;
+                this.$nextTick(() => {
+                    // 蓝鲸可视化平台推送的源码包
+                    if (codeSource === 'bkLesscode') {
+                        this.regionChoose = 'ieod';
+                        this.structureType = 'soundCode';
+                        this.handleCodeTypeChange(2);
+                    } else if (codeSource === 'default') {
+                        // 普通应用
+                        this.regionChoose = this.defaultRegionChoose;
+                    }
+                });
             }
         }
     };
@@ -1396,6 +1448,7 @@
     @import './default.scss';
 </style>
 <style lang="scss">
+@import '~@/assets/css/mixins/border-active-logo.scss';
 #choose-cluster {
     .bk-select {
         width: 520px;
@@ -1451,25 +1504,9 @@
     }
     .cartActive {
         position: relative;
-        border: 1px solid #3a84ff;
+        border: 2px solid #3a84ff;
         border-radius: 2px;
-        &::after {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            content: "\E157";
-            font-family: 'paasng' !important;
-            font-size: 12px;
-            position: absolute;
-            right: -8px;
-            top: -8px;
-            line-height: 1;
-            display: inline-block;
-            z-index: 10;
-            background: #fff;
-            color: #3a84ff;
-        }
+        @include border-active-logo;
     }
     .icon-wrapper {
         text-align: center;
@@ -1562,6 +1599,17 @@
             }
         }
     }
+}
+
+.template-wrapper {
+  .form-label {
+      line-height: 32px !important;
+  }
+  .bk-less-code {
+      font-size: 14px;
+      color: #313238;
+      line-height: 32px;
+  }
 }
 
 </style>

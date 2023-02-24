@@ -162,17 +162,17 @@
             </div>
             <div class="establish-tab">
               <section class="code-type">
-                <label class="form-label"> {{ $t('模板来源') }} </label>
+                <label class="form-label template"> {{ $t('模板来源') }} </label>
                 <div class="tab-box">
                   <li
-                    :class="['tab-item', { 'active': localSourceOrigin === 1 }]"
+                    :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
                     @click="handleCodeTypeChange(1)"
                   >
                     {{ $t('蓝鲸开发框架') }}
                   </li>
                   <li
                     v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
-                    :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
+                    :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
                     @click="handleCodeTypeChange(2)"
                   >
                     {{ $t('蓝鲸可视化开发平台') }}

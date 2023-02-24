@@ -51,6 +51,7 @@ ALLOWED_PATH_PATTERNS = (
 urlpatterns = [
     # TODO: apiserver 重新实现的 workloads 的 enduser view, 并注册到这里
     re_path("^api/cnative/specs/", include("paasng.paas_wl.cnative.specs.urls_enduser")),
+    re_path("^api/services/", include("paasng.paas_wl.networking.ingress.urls_enduser")),
 ]
 
 

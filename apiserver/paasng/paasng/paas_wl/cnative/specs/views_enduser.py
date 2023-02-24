@@ -38,13 +38,7 @@ from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
-from paas_wl.platform.auth.utils import username_to_id
-from paas_wl.utils.error_codes import error_codes
-from paasng.accessories.iam.permissions.resources.application import AppAction
-from paasng.accounts.permissions.application import application_perm_class
-from paasng.paas_wl.cnative.specs.resource import deploy
-from paasng.paas_wl.cnative.specs.serializers import (
+from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
     CreateDeploySerializer,
     DeployDetailSerializer,
@@ -53,6 +47,12 @@ from paasng.paas_wl.cnative.specs.serializers import (
     MresStatusSLZ,
     QueryDeploysSerializer,
 )
+from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
+from paas_wl.platform.auth.utils import username_to_id
+from paas_wl.utils.error_codes import error_codes
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
+from paasng.paas_wl.cnative.specs.resource import deploy
 from paasng.paas_wl.cnative.specs.shim import build_manifest, get_exposed_url
 from paasng.paas_wl.cnative.specs.tasks import AppModelDeployStatusPoller2, DeployStatusHandler
 from paasng.platform.applications.views import ApplicationCodeInPathMixin

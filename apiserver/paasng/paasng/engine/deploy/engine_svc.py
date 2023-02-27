@@ -20,6 +20,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
+from django.conf import settings
+
+from paas_wl.platform.applications.models.build import BuildProcess
+from paas_wl.platform.applications.models.misc import OutputStream
+from paas_wl.release_controller.builder import tasks as builder_task
 from paasng.engine.controller.client import ControllerClient
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.helpers import SlugbuilderInfo
@@ -49,20 +54,29 @@ class EngineDeployClient:
         # 注入构建环境所需环境变量
         extra_envs = {**extra_envs, **build_info.environments}
 
-        resp = self.ctl_client.app__build_processes(
-            app_name=self.engine_app.name,
-            region=self.engine_app.region,
-            image=build_info.build_image,
-            buildpacks=build_info.buildpacks_info,
+        # Create the Build object and start a background build task
+        build_process = BuildProcess.objects.create(
+            # TODO: Set the correct owner value
+            # owner=None,
+            app=self.engine_app.to_wl_obj(),
+            source_tar_path=source_tar_path,
             revision=version.revision,
             branch=version.version_name,
-            stream_channel_id=stream_channel_id,
-            source_tar_path=source_tar_path,
-            procfile=procfile,
-            extra_envs=extra_envs,
+            output_stream=OutputStream.objects.create(),
+            image=build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE,
+            buildpacks=build_info.buildpacks_info or [],
         )
-        build_process_id = resp.get('uuid')
-        return build_process_id
+        builder_task.start_build_process.delay(
+            build_process.uuid,
+            stream_channel_id=stream_channel_id,
+            metadata={
+                'procfile': procfile,
+                'extra_envs': extra_envs or {},
+                'image': build_info.build_image,
+                'buildpacks': build_process.buildpacks_as_build_env(),
+            },
+        )
+        return str(build_process.uuid)
 
     def run_command(
         self, build_id: str, command: str, stream_channel_id: str, operator: str, type_: str, extra_envs: Dict

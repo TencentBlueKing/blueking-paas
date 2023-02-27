@@ -129,35 +129,6 @@ class ControllerClient:
             '/regions/{region}/apps/{name}/builds/{build_id}'.format(region=region, name=app_name, build_id=build_id),
         )
 
-    def app__build_processes(
-        self,
-        region,
-        app_name,
-        source_tar_path,
-        branch,
-        revision,
-        stream_channel_id,
-        procfile,
-        extra_envs=None,
-        image=None,
-        buildpacks=None,
-    ):
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/build_processes/'.format(region=region, name=app_name),
-            desired_code=codes.created,
-            json={
-                'source_tar_path': source_tar_path,
-                'branch': branch,
-                'revision': revision,
-                'stream_channel_id': stream_channel_id,
-                'procfile': procfile,
-                'extra_envs': extra_envs,
-                'image': image,
-                'buildpacks': buildpacks,
-            },
-        )
-
     def read_build_process_result(self, region: str, app_name: str, build_process_id: str):
         return self.request(
             'GET',
@@ -374,7 +345,6 @@ class ControllerClient:
         end_time=None,
         time_range_str=None,
     ):
-
         return self.request(
             'GET',
             f'/regions/{region}/apps/{app_name}/processes/{process_type}/instances/{instance_name}/metrics/',
@@ -390,7 +360,6 @@ class ControllerClient:
     def app_proc_all_metrics__list(
         self, region, app_name, process_type, metric_type, step, start_time=None, end_time=None, time_range_str=None
     ):
-
         return self.request(
             'GET',
             f'/regions/{region}/apps/{app_name}/processes/{process_type}/metrics/',

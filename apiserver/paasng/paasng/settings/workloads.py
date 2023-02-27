@@ -64,6 +64,50 @@ settings = LazySettings(
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
 
+# ---------------
+# 运行时默认配置
+# ---------------
+DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner')
+DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder')
+
+BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
+
+# 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
+PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
+
+# 从源码构建应用时，注入额外环境变量
+BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
+
+# ---------------
+# 对象存储配置
+# ---------------
+# 应用构建 SLUG 存放 bucket 名，默认无需修改，应和 apiserver 中 BLOBSTORE_BUCKET_APP_SOURCE 保持一致
+BLOBSTORE_S3_BUCKET_NAME = settings.get('BLOBSTORE_S3_BUCKET_NAME', default='bkpaas3-slug-packages')
+
+# 当配置该项时，使用 BK-Repo 而不是 S3 作为 BlobStore 存储
+BLOBSTORE_BKREPO_CONFIG = settings.get('BLOBSTORE_BKREPO_CONFIG')
+
+# 其他配置项如 BLOBSTORE_S3_ENDPOINT 与 apiserver 模块配置保持一致
+
+# ---------------
+# 服务导出配置
+# ---------------
+
+# 默认容器内监听地址
+CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
+
+# 服务相关插件配置
+SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
+
+# ---------------
+# Redis 配置
+# ---------------
+
+# 与 apiserver 通信的 redis 管道, 需要确保两个项目中的配置一致
+STREAM_CHANNEL_REDIS_URL = settings.get('STREAM_CHANNEL_REDIS_URL', default='redis://localhost:6379/0')
+
+# 其他配置项如 REDIS_URL 等未迁移，这些配置在 workloads 中只作缓存用，可使用 apiserver
+# 的同名配置项。
 
 # ---------------
 # 运行时默认配置

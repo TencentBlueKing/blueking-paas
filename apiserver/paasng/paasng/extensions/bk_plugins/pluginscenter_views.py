@@ -119,7 +119,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application.language = module.language
         application.save(update_fields=['language'])
 
-        post_create_application.send(sender=self.__class__, application=application)
+        post_create_application.send(sender=self.__class__, application=application, extra_fields=data['extra_fields'])
         create_market_config(
             application=application,
             # 当应用开启引擎时, 则所有访问入口都与 Prod 一致

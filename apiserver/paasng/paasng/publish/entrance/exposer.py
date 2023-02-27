@@ -24,17 +24,13 @@ import json
 import logging
 from typing import Dict, List, NamedTuple, Optional
 
-from attrs import define
+from attrs import asdict, define
 from django.conf import settings
-from django.dispatch import receiver
 
 from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import Cluster, get_region_cluster_helper
-from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.deploy.env_vars import env_vars_providers
-from paasng.engine.signals import on_builtin_domains_subpaths_updated
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.core.storages.cache import region as cache_region
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
@@ -297,27 +293,19 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
     :param no_cache: Whether to disable cache, useful when caller requires fresh
         data, default to false.
     """
-    if no_cache:
-        return _wrapped_get_live_addresses.original(module.application.code, module.name)
-    else:
-        return _wrapped_get_live_addresses(module.application.code, module.name)
+    from paasng.paas_wl.networking.ingress.addrs import EnvAddresses, env_is_running
 
-
-# Add cache to decrease calls to workloads service because many function such as
-# `get_deployed_status` and `get_exposed_url` will call `get_live_addresses()`
-# repetitively.
-@cache_region.cache_on_arguments(namespace='v1', expiration_time=60)
-def _wrapped_get_live_addresses(code: str, module_name: str) -> ModuleLiveAddrs:
-    """Cache wrapper for `get_live_addresses`, use primitive type arguments"""
-    data = make_internal_client().list_env_addresses(code, module_name)
-    return ModuleLiveAddrs(data)
-
-
-@receiver(on_builtin_domains_subpaths_updated)
-def _clear_get_live_addresses_cache(sender: ModuleEnvironment, **kwargs):
-    """When a deployment has been finished, clean live_addresses cache of it's module"""
-    module = sender.module
-    _wrapped_get_live_addresses.invalidate(module.application.code, module.name)
+    results = []
+    for env in module.get_envs():
+        addrs = [asdict(obj) for obj in EnvAddresses(env).get()]
+        results.append(
+            {
+                'env': env.environment,
+                'is_running': env_is_running(env),
+                'addresses': addrs,
+            }
+        )
+    return ModuleLiveAddrs(results)
 
 
 # pre-allocated addresses related functions start

@@ -19,9 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import json
 from typing import List, Optional
 
-from django.conf import settings
-
-from paas_wl.cnative.specs.configurations import EnvVar, merge_envvars
 from paas_wl.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     BKAPP_NAME_KEY,
@@ -37,8 +34,8 @@ from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.engine.models.config_var import generate_builtin_env_vars
-from paasng.paas_wl.networking.ingress.addr import EnvAddresses
+from paasng.paas_wl.cnative.specs.configurations import generate_builtin_configurations, merge_envvars
+from paasng.paas_wl.networking.ingress.addrs import EnvAddresses
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -90,12 +87,7 @@ def build_manifest(env: ModuleEnvironment, deploy: AppModelDeploy, credential_re
         manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = ""
 
     manifest.spec.configuration.env = merge_envvars(
-        manifest.spec.configuration.env,
-        [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))]
-        + [
-            EnvVar(name=name.upper(), value=value)
-            for name, value in generate_builtin_env_vars(env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX).items()
-        ],
+        manifest.spec.configuration.env, generate_builtin_configurations(env=env)
     )
 
     data = manifest.dict()

@@ -16,16 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.dispatch import Signal
+from unittest import mock
 
-# Triggered when a single deployment process is finished(usually in background worker process)
-post_appenv_deploy = Signal(providing_args=['deployment'])
-pre_appenv_deploy = Signal(providing_args=['deployment'])
-pre_appenv_build = Signal(providing_args=['deployment', 'step'])
+import pytest
 
-# mainly for DeployPhase & DeployStep
-pre_phase_start = Signal(providing_args=['phase'])
-post_phase_end = Signal(providing_args=['status', 'phase'])
 
-# 当某个 module_env 进行 release 时, 会触发该信号
-on_release_created = Signal(providing_args=["env"])
+@pytest.fixture
+def mock_knamespace(namespace_maker):
+    def get_or_create(name: str):
+        return namespace_maker.make(name)
+
+    with mock.patch("paas_wl.cnative.specs.resource.KNamespace") as mocked:
+        mocked().get_or_create.side_effect = get_or_create
+        yield

@@ -32,7 +32,7 @@ from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.utils.error_codes import error_codes
 from paasng.paas_wl.cnative.specs.resource import deploy_networking
-from paasng.paas_wl.networking.ingress.addr import env_is_running
+from paasng.paas_wl.networking.ingress.addrs import env_is_running
 from paasng.paas_wl.networking.ingress.domains.independent import (
     DomainResourceDeleteService,
     ReplaceAppDomainService,

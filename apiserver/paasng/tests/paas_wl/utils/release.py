@@ -16,16 +16,28 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.dispatch import Signal
+from bkpaas_auth.models import User
 
-# Triggered when a single deployment process is finished(usually in background worker process)
-post_appenv_deploy = Signal(providing_args=['deployment'])
-pre_appenv_deploy = Signal(providing_args=['deployment'])
-pre_appenv_build = Signal(providing_args=['deployment', 'step'])
+from paas_wl.platform.applications.models import EngineApp, Release
+from paasng.platform.applications.models import ModuleEnvironment
 
-# mainly for DeployPhase & DeployStep
-pre_phase_start = Signal(providing_args=['phase'])
-post_phase_end = Signal(providing_args=['status', 'phase'])
 
-# 当某个 module_env 进行 release 时, 会触发该信号
-on_release_created = Signal(providing_args=["env"])
+def create_release(env: ModuleEnvironment, user: User, failed: bool = False) -> Release:
+    """Create a release in given environment.
+
+    :return: The Release object
+    """
+    engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
+    # method for backward-compatibility reasons
+    version = Release.objects.count() + 10
+    # Create the Release object manually without any Build object
+    return Release.objects.create(
+        owner=user.username,
+        app=engine_app,
+        failed=failed,
+        config=engine_app.latest_config,
+        version=version,
+        summary='',
+        procfile={},
+    )

@@ -33,6 +33,8 @@ from paasng.platform.applications.models import ModuleEnvironment
 logger = logging.getLogger(__name__)
 
 
+# 由于 TaskPoller 的机制导致不能存在同名的 Poller
+# TODO: workloads 代码移除软连后重命名回 AppModelDeployStatusPoller
 class AppModelDeployStatusPoller2(TaskPoller):
     """A task poller to query status for fresh AppModelDeploy objects
 

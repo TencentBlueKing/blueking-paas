@@ -595,7 +595,7 @@
 
     const APP_TYPE_MAP = [
         {
-           text: i18n.t('普通应用'),
+           text: i18n.t('全部'),
            key: 'default_app_count',
            type: 'default'
         },
@@ -1371,6 +1371,7 @@
         background: #fff;
         cursor: pointer;
         z-index: 1;
+        color: #979BA5;
         &:hover {
             color: #3a84ff;
         }

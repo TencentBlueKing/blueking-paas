@@ -33,7 +33,7 @@
             type: 'default'
         },
         {
-            title: i18n.t('蓝鲸可视化平台推送的源码包'),
+            title: i18n.t('蓝鲸可视化开发平台'),
             type: 'bkLesscode'
         }
     ];

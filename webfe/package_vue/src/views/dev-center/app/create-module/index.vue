@@ -252,11 +252,11 @@
                 style="color: #3A84FF;"
                 class="paasng-icon paasng-info-circle"
               />
-              {{ $t('默认模块需要') }} <a
+              {{ $t('默认模块需要在') }} <a
                 target="_blank"
                 :href="GLOBAL.LINK.LESSCODE_INDEX"
                 style="color: #3a84ff"
-              > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
+              > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('生成源码包部署。') }}
             </div>
             <div
               v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"

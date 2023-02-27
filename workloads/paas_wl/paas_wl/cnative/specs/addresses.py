@@ -38,7 +38,6 @@ from paas_wl.networking.ingress.managers.subpath import save_subpaths
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, AutoGenDomain
 from paas_wl.networking.ingress.models import Domain as CustomDomain
 from paas_wl.platform.applications.models.app import EngineApp
-from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -51,6 +50,8 @@ def save_addresses(env: ModuleEnvironment) -> Set[EngineApp]:
     :return: Affected engine apps, "affected" means the app's domains or
         paths were updated during this save operation.
     """
+    from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
+
     engine_app = EngineApp.objects.get(pk=env.engine_app_id)
 
     apps = set()

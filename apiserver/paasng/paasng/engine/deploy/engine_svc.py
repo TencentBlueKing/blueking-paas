@@ -27,8 +27,11 @@ from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.config import Config
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.release_controller.builder import tasks as builder_task
+from paas_wl.resources import tasks as scheduler_tasks
 from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.tasks import release_app
+from paas_wl.utils.constants import CommandStatus, CommandType
+from paasng.engine.constants import JobStatus
 from paasng.engine.controller.client import ControllerClient
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.helpers import SlugbuilderInfo
@@ -93,25 +96,32 @@ class EngineDeployClient:
         self, build_id: str, command: str, stream_channel_id: str, operator: str, type_: str, extra_envs: Dict
     ) -> str:
         """run a command in a built slug."""
-        resp = self.ctl_client.app__run_command(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            build_id=build_id,
+        build = self.wl_engine_app.build_set.get(pk=build_id)
+        cmd_obj = self.wl_engine_app.command_set.new(
+            type_=CommandType(type_),
             command=command,
-            stream_channel_id=stream_channel_id,
+            build=build,
             operator=operator,
-            type_=type_,
-            extra_envs=extra_envs,
         )
-        command_id = resp.get("uuid")
-        return command_id
 
-    def get_command_status(self, command_id: str) -> Dict[str, Any]:
-        """Get current status of command"""
-        resp = self.ctl_client.command__retrieve(
-            region=self.engine_app.region, app_name=self.engine_app.name, command_id=command_id
+        scheduler_tasks.run_command.delay(
+            cmd_obj.uuid, stream_channel_id=stream_channel_id, extra_envs=extra_envs or {}
         )
-        return resp
+        return str(cmd_obj.uuid)
+
+    def get_command_status(self, command_id: str) -> JobStatus:
+        """Get current status of command"""
+        command = self.wl_engine_app.command_set.get(pk=command_id)
+
+        # TODO: Write a function which turn CommandStatus into JobStatus
+        if command.status == CommandStatus.SCHEDULED.value:
+            return JobStatus(CommandStatus.PENDING.value)
+        return JobStatus(command.status)
+
+    def list_command_logs(self, command_id: str) -> List[LogLine]:
+        """List all logs of command"""
+        command = self.wl_engine_app.command_set.get(pk=command_id)
+        return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
 
     def update_config(self, runtime: Dict[str, Any]):
         """Update engine-app's config"""
@@ -134,6 +144,7 @@ class EngineDeployClient:
             build=build,
             procfile=procfile,
         )
+
         try:
             release_app(release=release, deployment_id=deployment_id, extra_envs=extra_envs)
         except KubeException:

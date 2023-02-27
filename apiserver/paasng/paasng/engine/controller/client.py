@@ -111,37 +111,6 @@ class ControllerClient:
             'POST', f'/regions/{region}/apps/{app_name}/build_processes/{build_process_id}/interruptions/'
         )
 
-    def app__run_command(
-        self,
-        region: str,
-        app_name: str,
-        build_id: str,
-        command: str,
-        stream_channel_id: str,
-        operator: str,
-        type_: str,
-        extra_envs: dict,
-    ):
-        return self.request(
-            'POST',
-            f'/regions/{region}/apps/{app_name}/commands/',
-            desired_code=codes.created,
-            json={
-                'build': build_id,
-                'command': command,
-                'stream_channel_id': stream_channel_id,
-                'operator': operator,
-                'type': type_,
-                'extra_envs': extra_envs,
-            },
-        )
-
-    def command__retrieve(self, region: str, app_name: str, command_id: str):
-        return self.request(
-            'GET',
-            f'/regions/{region}/apps/{app_name}/commands/{command_id}',
-        )
-
     def list_processes_specs(self, region: str, app_name: str):
         """List specs of app's all processes"""
         return self.request('GET', f'/regions/{region}/apps/{app_name}/processes/specs/')

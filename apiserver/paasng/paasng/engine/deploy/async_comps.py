@@ -117,9 +117,7 @@ class CommandPoller(DeployPoller):
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])
 
         client = EngineDeployClient(deployment.get_engine_app())
-        resp = client.get_command_status(self.params['command_id'])
-
-        command_status = JobStatus(resp["status"])
+        command_status = client.get_command_status(self.params['command_id'])
 
         coordinator = DeploymentCoordinator(deployment.app_environment)
         # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间

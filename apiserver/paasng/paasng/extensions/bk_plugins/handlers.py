@@ -39,7 +39,12 @@ def on_plugin_app_created(sender, application: Application, **kwargs):
         logger.debug('Initializing plugin: "%s" is not plugin type, will not proceed.', application)
         return
 
-    BkPluginProfile.objects.get_or_create_by_application(application)  # Create profile object
+    profile, _ = BkPluginProfile.objects.get_or_create_by_application(application)  # Create profile object
+
+    # 创建插件时，将预设插件使用方信息存储到 DB 中
+    if distributor_codes := kwargs.get("extra_fields", {}).get('distributor_codes'):
+        profile.pre_distributor_codes = distributor_codes
+        profile.save()
 
 
 @receiver(pre_appenv_deploy)

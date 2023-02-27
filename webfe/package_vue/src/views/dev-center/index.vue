@@ -1364,7 +1364,7 @@
         float: left;
         width: 98px;
         height: 32px;
-        line-height: 30px;
+        line-height: 32px;
         margin-top: 3px;
         border: 1px solid #c4c6cc;
         border-radius: 0 2px 2px 0;
@@ -1372,6 +1372,7 @@
         cursor: pointer;
         z-index: 1;
         color: #979BA5;
+        font-size: 12px;
         &:hover {
             color: #3a84ff;
         }

@@ -869,7 +869,7 @@ export default {
   '默认模块只能由': 'The default module can only be used by',
   '提供源码包部署，您也可以在应用中新增普通模块': 'Provide source package deployment, and you can also add common modules in the app',
   '默认模块需要在': 'The default module needs to be in',
-  '生成源码包部署。': 'generate source package management.',
+  '生成源码包部署，您也可以在应用中新增普通模块。': 'to generate a source code package, and you can also add a common module in the application.',
   '模块创建中，请稍候': 'Module creation, please wait',
   '非内部版应用目前无法创建其它模块': 'Non internal apps cannot create other modules at present',
   '返回': 'Back',

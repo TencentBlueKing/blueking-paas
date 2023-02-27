@@ -536,12 +536,13 @@
             },
 
             clearFilter () {
+                this.choosedEnv = 'all';
                 this.personnelSelectorList = [];
                 this.getDeployHistory();
             },
 
             updateTableEmptyConfig () {
-                if (this.personnelSelectorList.length) {
+                if (this.personnelSelectorList.length || this.choosedEnv !== 'all') {
                     this.tableEmptyConf.keyword = 'placeholder';
                     return;
                 }

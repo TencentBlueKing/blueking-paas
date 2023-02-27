@@ -428,17 +428,22 @@
             },
 
             clearFilterKey () {
-                // 防止清空搜索条件时提示抖动
                 this.filterKey = '';
                 this.$refs.pluginTable.clearFilter();
+                // 手动清空表头筛选
                 if (this.$refs.pluginTable.$refs.tableHeader) {
                     const tableHeader = this.$refs.pluginTable.$refs.tableHeader;
                     clearFilter(tableHeader);
                 }
+                this.fetchPluginsList();
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.filterKey;
+                if (this.filterKey || this.filterLanguage.length || this.filterPdName.length) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

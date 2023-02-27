@@ -710,12 +710,11 @@
 
             clearFilterKey () {
                 this.searchValue = '';
-                this.statusValue = '';
                 this.applicants = [];
+                this.handleClear();
             },
 
             updateTableEmptyConfig () {
-                console.log('initDateTimeRange', this.initDateTimeRange);
                 if (this.searchValue || this.statusValue || this.applicants.length) {
                     this.tableEmptyConf.keyword = 'placeholder';
                     return;

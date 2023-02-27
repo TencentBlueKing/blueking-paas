@@ -999,17 +999,7 @@
                 // 筛选,搜索等操作时，强制切到 page 的页码
                 // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
                 // 如果能切到 axios 就可以去掉这部分代码了
-                if (!this.IncludeAllLanguages) {
-                    this.appFilter.languageList.forEach((item) => {
-                        url += '&language=' + item;
-                    });
-                }
-                // 应用版本
-                if (!this.IncludeAllRegions) {
-                    this.appFilter.regionList.forEach((item) => {
-                        url += '&region=' + item;
-                    });
-                }
+                url = this.getParams(url);
                 this.fetchParams.order_by = this.sortValue;
                 this.fetchParams = Object.assign(this.fetchParams, {
                     search_term: this.filterKey,
@@ -1124,10 +1114,39 @@
 
             clearFilterKey () {
                 this.filterKey = '';
+                this.reset();
             },
 
-            updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.filterKey;
+            getParams (url) {
+                if (!this.IncludeAllLanguages) {
+                    this.appFilter.languageList.forEach((item) => {
+                        url += '&language=' + item;
+                    });
+                }
+                // 应用版本
+                if (!this.IncludeAllRegions) {
+                    this.appFilter.regionList.forEach((item) => {
+                        url += '&region=' + item;
+                    });
+                }
+                return url;
+            },
+
+            updateTableEmptyConfig (arr) {
+                let url = '';
+                let isParams = false;
+                url = this.getParams(url);
+                for (const value in this.appFilter) {
+                    if (typeof this.appFilter[value] === 'boolean' && this.appFilter[value]) {
+                        isParams = true;
+                        break;
+                    }
+                };
+                if (this.filterKey || isParams || url) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

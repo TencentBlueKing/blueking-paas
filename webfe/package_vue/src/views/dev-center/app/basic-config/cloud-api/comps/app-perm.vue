@@ -752,11 +752,11 @@
             clearFilterKey () {
                 this.searchValue = '';
                 this.$refs.permRef.clearFilter();
-                this.fetchList();
                 if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
                     const tableHeader = this.$refs.permRef.$refs.tableHeader;
                     clearFilter(tableHeader);
                 }
+                this.fetchList();
             },
 
             updateTableEmptyConfig () {

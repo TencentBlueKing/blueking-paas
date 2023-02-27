@@ -95,8 +95,9 @@ def get_ns(env: ModuleEnv) -> str:
     return engine_app.namespace
 
 
-# An alias name to distinguish from Platform's App(Application/BluekingApplication) model
+# Alias names to distinguish from Platform's App(Application/BluekingApplication) model
 EngineApp = App
+WLEngineApp = App
 
 
 @receiver(post_save, sender=App)

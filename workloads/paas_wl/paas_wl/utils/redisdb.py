@@ -16,11 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List, Optional, Tuple, Union
+
 import redis
 from blue_krill.redis_tools.sentinel import SentinelBackend
 from django.conf import settings
-
-from paas_wl.settings.utils import is_redis_sentinel_backend
 
 _stream_channel_redisdb = None
 
@@ -59,3 +59,14 @@ def _get_redis_from_url(url: str) -> redis.Redis:
         return backend.client
 
     return redis.from_url(url, **connection_options)
+
+
+# NOTE: Duplicated with the function of the same name in the `settings.utils` module,
+# the latter will be removed in the future.
+def is_redis_sentinel_backend(backend: Optional[Union[List, Tuple, str]]) -> bool:
+    """Check if given celery backend is 'redis sentinel' type"""
+    if not backend:
+        return False
+
+    value = backend[0] if isinstance(backend, (list, tuple)) else backend
+    return value.startswith('sentinel://')

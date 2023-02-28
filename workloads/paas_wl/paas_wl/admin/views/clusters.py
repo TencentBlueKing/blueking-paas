@@ -34,9 +34,9 @@ from paas_wl.admin.serializers.clusters import (
 )
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.networking.egress.models import generate_state
-from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.utils.app import get_scheduler_client
+from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 
 logger = logging.getLogger(__name__)
 

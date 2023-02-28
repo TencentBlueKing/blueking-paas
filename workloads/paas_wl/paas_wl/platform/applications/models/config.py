@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import shlex
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from attrs import define, field
 from django.conf import settings
@@ -28,6 +28,9 @@ from jsonfield import JSONField
 from paas_wl.platform.applications.models import UuidAuditedModel
 from paas_wl.release_controller.constants import ImagePullPolicy, RuntimeType
 from paas_wl.utils.models import make_json_field
+
+if TYPE_CHECKING:
+    from paas_wl.platform.applications.models.app import WLEngineApp
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,14 @@ class RuntimeConfig:
 RuntimeConfigField = make_json_field("RuntimeConfigField", py_model=RuntimeConfig)
 
 
+class ConfigManager(models.Manager):
+    """Custom manager for Config model"""
+
+    def get_by_app(self, app: 'WLEngineApp') -> 'Config':
+        """Get the latest config object"""
+        return self.get_queryset().filter(app=app).latest()
+
+
 class Config(UuidAuditedModel):
     """App configs, includes env variables and resource limits"""
 
@@ -78,6 +89,8 @@ class Config(UuidAuditedModel):
     runtime: RuntimeConfig = RuntimeConfigField(default=RuntimeConfig)
     mount_log_to_host = models.BooleanField(default=True, help_text="Whether mount app logs to host")
 
+    objects = ConfigManager()
+
     class Meta:
         get_latest_by = 'created'
         ordering = ['-created']
@@ -88,6 +101,16 @@ class Config(UuidAuditedModel):
         if self.runtime.image:
             return self.runtime.image
         return self.image or settings.DEFAULT_SLUGRUNNER_IMAGE
+
+    def refresh_res_reqs(self):
+        """Refresh resource_requirements field"""
+        from paas_wl.workloads.processes.models import ProcessSpec
+
+        self.resource_requirements = {
+            pack.name: pack.plan.get_resource_summary()
+            for pack in ProcessSpec.objects.filter(engine_app_id=self.app.pk)
+        }
+        self.save(update_fields=['resource_requirements'])
 
     @property
     def envs(self):

@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Optional
 from django.db import models
 from django.utils import timezone
 
+from paas_wl.platform.applications.models.app import WLEngineApp
 from paasng.engine.constants import JobStatus
 from paasng.engine.controller.state import controller_client
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
@@ -61,6 +62,10 @@ class EngineApp(OwnerTimestampedModel):
 
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
+
+    def to_wl_obj(self) -> 'WLEngineApp':
+        """Return the corresponding WLEngineApp object in the workloads module"""
+        return WLEngineApp.objects.get(region=self.region, name=self.name)
 
     def get_latest_build(self):
         ret = controller_client.builds__retrieve(app_name=self.name, region=self.region, limit=1)

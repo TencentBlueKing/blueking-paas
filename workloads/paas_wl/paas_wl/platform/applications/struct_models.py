@@ -23,7 +23,7 @@ from uuid import UUID
 import cattr
 from attrs import Factory, asdict, define
 
-from paas_wl.platform.external.client import get_plat_client
+from paas_wl.platform.external.client import get_local_plat_client
 
 from .constants import ApplicationType
 from .exceptions import AppSubResourceNotFound, InstanceInPlaceNotFound, PermInPlaceNotFound, UnsupportedPermissionName
@@ -208,7 +208,7 @@ def get_structured_app(
     if len(params.values()) != 1:
         raise ValueError('Must provide a single condition')
 
-    data = get_plat_client().query_applications(**params)[0]  # type: ignore
+    data = get_local_plat_client().query_applications(**params)[0]  # type: ignore
     if not data:
         raise ValueError(f'Application conds={params!r} not found')
     return StructuredApp.from_json_data(data)

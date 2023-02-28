@@ -22,7 +22,7 @@ from blue_krill.monitoring.probe.mysql import MySQLProbe, transfer_django_db_set
 from blue_krill.monitoring.probe.redis import RedisProbe, RedisSentinelProbe
 from django.conf import settings
 
-from paas_wl.settings.utils import is_redis_sentinel_backend
+from paas_wl.utils.redisdb import is_redis_sentinel_backend
 
 STREAM_CHANNEL_REDIS_URL = settings.STREAM_CHANNEL_REDIS_URL
 

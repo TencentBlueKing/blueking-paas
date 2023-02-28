@@ -45,7 +45,7 @@ def poller(bk_stag_env, dp):
 
 
 class TestAppModelDeployStatusPoller:
-    @patch('paasng.paas_wl.cnative.specs.tasks.get_mres_from_cluster', return_value=create_res_with_conds([]))
+    @patch('paas_wl.cnative.specs.tasks.get_mres_from_cluster', return_value=create_res_with_conds([]))
     def test_pending(self, mocker, dp, poller):
         ret = poller.query()
         assert ret.status == PollingStatus.DOING
@@ -53,7 +53,7 @@ class TestAppModelDeployStatusPoller:
         assert dp.status == DeployStatus.PENDING
 
     @patch(
-        'paasng.paas_wl.cnative.specs.tasks.get_mres_from_cluster',
+        'paas_wl.cnative.specs.tasks.get_mres_from_cluster',
         return_value=create_res_with_conds([create_condition(MResConditionType.APP_AVAILABLE)]),
     )
     def test_progressing(self, mocker, dp, poller):
@@ -63,7 +63,7 @@ class TestAppModelDeployStatusPoller:
         assert dp.status == DeployStatus.PROGRESSING
 
     @patch(
-        'paasng.paas_wl.cnative.specs.tasks.get_mres_from_cluster',
+        'paas_wl.cnative.specs.tasks.get_mres_from_cluster',
         return_value=create_res_with_conds(
             [create_condition(MResConditionType.APP_AVAILABLE, "True")], MResPhaseType.AppRunning
         ),

@@ -193,17 +193,6 @@
               </label>
             </div>
             <div class="overflow shaixuan">
-              <label class="button-holder">
-                <input
-                  v-model="appFilter.type"
-                  type="checkbox"
-                  class="ps-checkbox-default"
-                  value="true"
-                >
-                <span> {{ $t('只显示插件应用') }} </span>
-              </label>
-            </div>
-            <div class="overflow shaixuan">
               <div style="margin-top: -5px; width: 78px; float: left">
                 {{ $t('排序方式') }}
               </div>
@@ -596,6 +585,11 @@
     const APP_TYPE_MAP = [
         {
            text: i18n.t('全部'),
+           key: 'all',
+           type: 'all'
+        },
+        {
+           text: i18n.t('普通应用'),
            key: 'default_app_count',
            type: 'default'
         },
@@ -724,8 +718,8 @@
                 isFilter: false,
                 type: 'default',
                 appTypeList: APP_TYPE_MAP,
-                curAppType: 'default',
-                curAppTypeActive: 'default_app_count'
+                curAppType: '',
+                curAppTypeActive: 'all'
             };
         },
         computed: {
@@ -1023,7 +1017,7 @@
                     // 是否包含已下架应用，默认不包含
                     include_inactive: this.appFilter.includeInactive,
                     // 对应类型
-                    type: this.appFilter.type ? 'bk_plugin' : this.curAppType
+                    type: this.curAppType
                 });
                 this.isLoading = true;
                 for (const key in this.fetchParams) {
@@ -1117,7 +1111,7 @@
             },
 
             switchAppType (item) {
-                this.curAppType = item.type;
+                this.curAppType = item.type !== 'all' ? item.type : '';
                 this.curAppTypeActive = item.key;
                 this.fetchAppList();
             }

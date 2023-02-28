@@ -28,6 +28,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
+from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -434,7 +435,10 @@ def create_scene_tmpls():
 
 
 def create_cnative_app(
-    owner_username: Optional[str] = None, region: Optional[str] = None, force_info: Optional[dict] = None
+    owner_username: Optional[str] = None,
+    region: Optional[str] = None,
+    force_info: Optional[dict] = None,
+    cluster_name: Optional[str] = None,
 ):
     """Create a cloud-native application, for testing purpose only
 
@@ -463,7 +467,8 @@ def create_cnative_app(
     )
 
     create_default_module(application)
-
+    with replace_cluster_service(), contextmanager(_mock_current_engine_client)():
+        initialize_simple(application.get_default_module(), {}, cluster_name=cluster_name)
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)
     return application

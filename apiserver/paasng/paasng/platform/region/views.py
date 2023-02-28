@@ -16,12 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from dataclasses import asdict
+
 from django.http import Http404
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.engine.controller.shortcuts import make_internal_client
+from paas_wl.networking.ingress.config import get_custom_domain_config
 from paasng.utils.views import allow_resp_patch
 
 from .models import get_all_regions, get_regions_by_user
@@ -44,12 +46,12 @@ class RegionViewSet(RegionBaseViewSet):
 
     @allow_resp_patch
     def retrieve(self, request, region):
-        region = self.get_region_or_404(region)
-        region.load_dynamic_infos()
+        region_object = self.get_region_or_404(region)
+        region_object.load_dynamic_infos()
 
-        resp = RegionSerializer(region).serialize()
+        resp = RegionSerializer(region_object).serialize()
         # Attach region settings from workloads
-        resp["module_custom_domain"] = make_internal_client().get_region_settings(region)['custom_domain']
+        resp["module_custom_domain"] = asdict(get_custom_domain_config(region))
         return Response(resp)
 
 

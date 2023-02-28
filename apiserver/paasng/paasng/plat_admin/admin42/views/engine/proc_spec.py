@@ -32,10 +32,10 @@ from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.region.models import get_all_regions
-from paasng.service_proxy.views import SvcWorkloadsView
+from paasng.service_proxy.views import SvcWorkloadsProxyView
 from paasng.utils.text import remove_prefix
 
-proxy = SvcWorkloadsView.as_view()
+proxy = SvcWorkloadsProxyView.as_view()
 
 
 def get_path(request: Request) -> str:

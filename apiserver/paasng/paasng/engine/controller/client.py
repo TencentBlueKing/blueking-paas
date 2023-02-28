@@ -323,10 +323,6 @@ class ControllerClient:
 
     # Bk-App(module) related start
 
-    def list_env_addresses(self, app_code: str, module_name: str):
-        """List all env's addresses under given module, result include "is_running" status"""
-        return self.request('GET', f'/applications/{app_code}/modules/{module_name}/addresses/')
-
     def delete_module_related_res(self, app_code: str, module_name: str):
         """Delete module's related resources"""
         return self.request(
@@ -336,10 +332,6 @@ class ControllerClient:
     # Bk-App(module) related end
 
     # App Domains start
-
-    def get_region_settings(self, region: str):
-        """Get a region's settings in workloads service"""
-        return self.request('GET', f'/regions/{region}/settings/')
 
     def app_domains__update(self, region, app_name, domains: List[Dict]):
         return self.request('PUT', f'/services/regions/{region}/apps/{app_name}/domains/', json={'domains': domains})

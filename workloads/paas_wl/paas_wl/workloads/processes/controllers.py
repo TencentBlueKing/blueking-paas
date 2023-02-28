@@ -36,6 +36,7 @@ from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOpera
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Process, ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +230,22 @@ def get_processes_status(app: EngineApp) -> List[Process]:
 
 
 def env_is_running(env: ModuleEnv) -> bool:
+    """Check if an env is running, which mean a successful deployment is available
+    for the env. This status is useful in many situations, such as creating a custom
+    domain and etc.
+
+    :param env: The environment object
+    :return: Whether current env is running
+    """
+    if env.application.type == ApplicationType.CLOUD_NATIVE:
+        return AppModelDeploy.objects.any_successful(env)
+    else:
+        engine_app = EngineApp.objects.get_by_env(env)
+        return Release.objects.any_successful(engine_app)
+
+
+# TODO: 合并至 env_is_running
+def module_env_is_running(env: ModuleEnvironment) -> bool:
     """Check if an env is running, which mean a successful deployment is available
     for the env. This status is useful in many situations, such as creating a custom
     domain and etc.

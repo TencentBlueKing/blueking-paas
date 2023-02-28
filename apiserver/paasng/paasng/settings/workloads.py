@@ -66,6 +66,32 @@ settings = LazySettings(
 
 
 # ---------------
+# 运行时默认配置
+# ---------------
+DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner')
+DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder')
+
+BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
+
+# 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
+PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
+
+# 从源码构建应用时，注入额外环境变量
+BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
+
+
+# ---------------
+# 服务导出配置
+# ---------------
+
+# 默认容器内监听地址
+CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
+
+# 服务相关插件配置
+SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
+
+
+# ---------------
 # 资源限制配置
 # ---------------
 DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 'prod': 2})
@@ -152,3 +178,66 @@ CUSTOM_DOMAIN_CONFIG = settings.get(
         "allow_user_modifications": True,
     },
 )
+
+
+# -----------
+# 进程相关配置
+# -----------
+
+# 默认进程规格套餐名称
+DEFAULT_PROC_SPEC_PLAN = 'Starter'
+PREMIUM_PROC_SPEC_PLAN = "4C2G5R"
+ULTIMATE_PROC_SPEC_PLAN = "4C4G5R"
+
+# 默认进程规格套餐配置
+# 最大资源限制，格式与单位请参考：https://kubernetes.io/docs/concepts/policy/resource-quotas/
+DEFAULT_PROC_SPEC_PLANS = {
+    "Starter": {
+        'max_replicas': 5,
+        'limits': {'cpu': '4096m', 'memory': '1024Mi'},
+        'requests': {'cpu': '100m', 'memory': '64Mi'},
+    },
+    "4C1G5R": {
+        'max_replicas': 5,
+        'limits': {'cpu': '4096m', 'memory': '1024Mi'},
+        'requests': {'cpu': '100m', 'memory': '64Mi'},
+    },
+    "4C2G5R": {
+        'max_replicas': 5,
+        'limits': {'cpu': '4096m', 'memory': '2048Mi'},
+        'requests': {'cpu': '100m', 'memory': '64Mi'},
+    },
+    "4C4G5R": {
+        'max_replicas': 5,
+        'limits': {'cpu': '4096m', 'memory': '4096Mi'},
+        'requests': {'cpu': '100m', 'memory': '64Mi'},
+    },
+}
+
+# 按照进程名称与环境，配置默认副本数
+ENGINE_PROC_REPLICAS_BY_TYPE = {
+    # （进程类型, 环境名称）： 副本数量
+    ('web', 'stag'): 1,
+    ('web', 'prod'): 2,
+}
+
+
+# ---------------------------------------------
+# （internal）内部配置，仅开发项目与特殊环境下使用
+# ---------------------------------------------
+
+FOR_TESTS_DEFAULT_REGION = settings.get('FOR_TESTS_DEFAULT_REGION', 'default')
+
+FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localhost:28080')
+FOR_TESTS_CA_DATA = settings.get('FOR_TESTS_CA_DATA', '')
+FOR_TESTS_CERT_DATA = settings.get('FOR_TESTS_CERT_DATA', '')
+FOR_TESTS_KEY_DATA = settings.get('FOR_TESTS_KEY_DATA', '')
+FOR_TESTS_FORCE_DOMAIN = settings.get('FOR_TESTS_FORCE_DOMAIN', '')
+
+FOR_TESTS_CLUSTER_CONFIG = {
+    "url": FOR_TESTS_APISERVER_URL,
+    "ca_data": FOR_TESTS_CA_DATA,
+    "cert_data": FOR_TESTS_CERT_DATA,
+    "key_data": FOR_TESTS_KEY_DATA,
+    "force_domain": FOR_TESTS_FORCE_DOMAIN,
+}

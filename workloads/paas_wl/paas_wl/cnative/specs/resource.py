@@ -34,22 +34,22 @@ from paas_wl.cnative.specs.constants import (
 from paas_wl.cnative.specs.models import default_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.platform.applications.models import EngineApp
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import KNamespace
-from paas_wl.resources.utils.basic import get_client_by_env
+from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.entities import ImageCredentials
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
 
-def get_mres_from_cluster(env: ModuleEnv) -> Optional[BkAppResource]:
+def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     """Get the application's model resource in given environment, if no resource
     can be found, return `None`.
     """
     engine_app = EngineApp.objects.get_by_env(env)
-    with get_client_by_env(env) as client:
+    with get_client_by_app(engine_app) as client:
         # TODO: Provide apiVersion or using AppEntity(after some adapting works) to make
         # code more robust.
         try:
@@ -63,7 +63,7 @@ def get_mres_from_cluster(env: ModuleEnv) -> Optional[BkAppResource]:
     return BkAppResource(**data)
 
 
-def deploy(env: ModuleEnv, manifest: Dict) -> Dict:
+def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
     """
     Create or update(replace) bkapp manifest in cluster
 
@@ -71,8 +71,8 @@ def deploy(env: ModuleEnv, manifest: Dict) -> Dict:
     :param manifest: Application manifest data.
     :raise: CreateServiceAccountTimeout 当创建 SA 超时（含无默认 token 的情况）时抛出异常
     """
-    engine_app = EngineApp.objects.get_by_env(env)
-    with get_client_by_env(env) as client:
+    engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+    with get_client_by_app(engine_app) as client:
         # 若命名空间不存在，则提前创建（若为新建命名空间，需要等待 ServiceAccount 就绪）
         namespace_client = KNamespace(client)
         _, created = namespace_client.get_or_create(name=engine_app.namespace)
@@ -98,12 +98,12 @@ def deploy(env: ModuleEnv, manifest: Dict) -> Dict:
     return bkapp.to_dict()
 
 
-def deploy_networking(env: ModuleEnv) -> None:
+def deploy_networking(env: ModuleEnvironment) -> None:
     """Deploy the networking related resources for env, such as Ingress and etc."""
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
-    engine_app = EngineApp.objects.get_by_env(env)
-    with get_client_by_env(env) as client:
+    engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+    with get_client_by_app(engine_app) as client:
         crd.DomainGroupMapping(client).create_or_update(
             mapping.metadata.name,
             namespace=engine_app.namespace,

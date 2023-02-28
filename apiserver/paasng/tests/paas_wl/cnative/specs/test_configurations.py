@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.cnative.specs.configurations import MergeStrategy, generate_builtin_configurations, merge_envvars
 from paas_wl.cnative.specs.v1alpha1.bk_app import EnvVar
-from paasng.paas_wl.cnative.specs.configurations import MergeStrategy, generate_builtin_configurations, merge_envvars
 
 pytestmark = pytest.mark.django_db(databases=["default"])
 

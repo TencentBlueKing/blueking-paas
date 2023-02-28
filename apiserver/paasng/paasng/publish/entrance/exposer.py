@@ -293,7 +293,8 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
     :param no_cache: Whether to disable cache, useful when caller requires fresh
         data, default to false.
     """
-    from paasng.paas_wl.networking.ingress.addrs import EnvAddresses, env_is_running
+    from paas_wl.networking.ingress.addrs import EnvAddresses
+    from paas_wl.workloads.processes.controllers import module_env_is_running
 
     results = []
     for env in module.get_envs():
@@ -301,7 +302,7 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
         results.append(
             {
                 'env': env.environment,
-                'is_running': env_is_running(env),
+                'is_running': module_env_is_running(env),
                 'addresses': addrs,
             }
         )

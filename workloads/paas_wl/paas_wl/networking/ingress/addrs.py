@@ -22,12 +22,11 @@ from typing import List
 from attrs import define
 
 from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.platform.applications.models.app import EngineApp
-from paas_wl.platform.applications.struct_models import ModuleEnv
-from paas_wl.utils.basic import HumanizeURL
-
-from .constants import AddressType, AppDomainSource
-from .models import AppDomain, AppSubpath, Domain
+from paas_wl.networking.ingress.constants import AddressType, AppDomainSource
+from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
+from paas_wl.platform.applications.models import EngineApp
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.publish.entrance.utils import URL
 
 
 @define
@@ -53,17 +52,17 @@ class EnvAddresses:
     for details.
     """
 
-    def __init__(self, env: ModuleEnv):
+    def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.app = env.application
-        self.engine_app = EngineApp.objects.get_by_env(self.env)
+        self.engine_app = EngineApp.objects.get(pk=self.env.engine_app_id)
         self.ingress_cfg = get_cluster_by_app(self.engine_app).ingress_config
 
     def get(self) -> List[Address]:
         """Get available addresses, sorted by: (subdomain, subpath, custom)"""
-        from paas_wl.workloads.processes.controllers import env_is_running
+        from paas_wl.workloads.processes.controllers import module_env_is_running
 
-        if not env_is_running(self.env):
+        if not module_env_is_running(self.env):
             return []
         return self._sort(self._get_subdomain()) + self._sort(self._get_subpath()) + self._sort(self._get_custom())
 
@@ -97,7 +96,7 @@ class EnvAddresses:
         """Make URL address"""
         protocol = "https" if https_enabled else "http"
         port = self.ingress_cfg.port_map.get_port_num(protocol)
-        return HumanizeURL(protocol, hostname=host, port=port, path=path).to_str()
+        return URL(protocol, hostname=host, port=port, path=path).as_address()
 
     @staticmethod
     def _sort(addrs: List[Address]) -> List[Address]:

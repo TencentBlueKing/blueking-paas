@@ -24,32 +24,35 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.networking.ingress.config import get_custom_domain_config
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr, validate_domain_payload
 from paas_wl.networking.ingress.entities.service import service_kmodel
-from paas_wl.networking.ingress.managers import AppDefaultIngresses, LegacyAppIngressMgr
+from paas_wl.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ, ProcIngressSLZ, ProcServiceSLZ
-from paas_wl.platform.applications.permissions import AppAction, application_perm_class
-from paas_wl.platform.applications.struct_models import Application, set_many_model_structured, to_structured
-from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
-from paas_wl.platform.auth.views import BaseEndUserViewSet
+from paas_wl.platform.applications.models import EngineApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.api_docs import openapi_empty_response
 from paas_wl.utils.error_codes import error_codes
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
+from paasng.paas_wl.platform.applications.struct_models import set_many_model_structured, set_model_structured
+from paasng.platform.applications.views import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ProcessServicesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class ProcessServicesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """管理应用内部服务相关 API"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def list(self, request, code, module_name, environment):
         """查看所有进程服务信息"""
-        engine_app = self.get_engine_app_via_path()
+        env = self.get_env_via_path()
+        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
         # Get all services
         proc_services = service_kmodel.list_by_app(engine_app)
         proc_services_json = ProcServiceSLZ(proc_services, many=True).data
@@ -65,7 +68,8 @@ class ProcessServicesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
     def update(self, request, code, module_name, environment, service_name):
         """更新某个服务下的端口配置信息"""
-        engine_app = self.get_engine_app_via_path()
+        env = self.get_env_via_path()
+        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
         serializer = ProcServiceSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -79,14 +83,15 @@ class ProcessServicesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         return Response(ProcServiceSLZ(proc_service).data)
 
 
-class ProcessIngressesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class ProcessIngressesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """管理应用模块主入口相关 API"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def update(self, request, code, module_name, environment):
         """更改模块各环境主入口"""
-        engine_app = self.get_engine_app_via_path()
+        env = self.get_env_via_path()
+        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
 
         serializer = ProcIngressSLZ(data=request.data, context={'app': engine_app})
         serializer.is_valid(raise_exception=True)
@@ -106,15 +111,18 @@ class ProcessIngressesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         return Response(serializer.data)
 
 
-class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """管理应用独立域名的 ViewSet"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    lookup_url_kwarg = "id"
+    lookup_field = "pk"
 
-    def get_queryset(self, application: Application) -> QuerySet:
+    def get_queryset(self) -> QuerySet:
         """Get Domain QuerySet of current application"""
-        struct_app = to_structured(application)
-        return Domain.objects.filter(module_id__in=struct_app.module_ids)
+        application = self.get_application()
+        module_ids = list(application.modules.values_list("id", flat=True))
+        return Domain.objects.filter(module_id__in=module_ids)
 
     @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=['Domains'])
     def list(self, request, **kwargs):
@@ -125,7 +133,7 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
 
         # Get results and sort
-        domains = self.get_queryset(application)
+        domains = self.get_queryset()
         set_many_model_structured(domains, application)
         domains = sorted(domains, key=lambda d: (d.module.name, d.environment.environment, d.id))
 
@@ -150,9 +158,10 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         if not self.allow_modifications(application.region):
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
 
-        data = validate_domain_payload(request.data, application)
+        data = validate_domain_payload(request.data, application, serializer_cls=DomainSLZ)
+        env = application.get_module(data["module"]["name"]).get_envs(data["environment"]["environment"])
         instance = get_custom_domain_mgr(application).create(
-            env=data['environment'],
+            env=env,
             host=data["name"],
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
@@ -168,11 +177,12 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     def update(self, request, **kwargs):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
+        set_model_structured(instance, application=application)
         if not self.allow_modifications(application.region):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
 
-        data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
+        data = validate_domain_payload(request.data, application, serializer_cls=DomainForUpdateSLZ, instance=instance)
         new_instance = get_custom_domain_mgr(application).update(
             instance, host=data['name'], path_prefix=data['path_prefix'], https_enabled=data['https_enabled']
         )
@@ -182,7 +192,8 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     def destroy(self, request, *args, **kwargs):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
+        set_model_structured(instance, application=application)
         if not self.allow_modifications(application.region):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
 

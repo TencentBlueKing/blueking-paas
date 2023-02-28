@@ -21,10 +21,10 @@ import pytest
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.constants import AppDomainSource
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
+from paas_wl.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
 from paas_wl.networking.ingress.models import AppDomain
 from paas_wl.networking.ingress.utils import make_service_name
 from paas_wl.workloads.processes.models import ProcessSpecManager
-from paasng.paas_wl.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

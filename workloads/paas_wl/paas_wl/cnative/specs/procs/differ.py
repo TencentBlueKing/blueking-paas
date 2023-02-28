@@ -23,8 +23,8 @@ from attrs import define
 
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.workloads.processes.constants import AppEnvName
+from paasng.platform.applications.models import ModuleEnvironment
 
 from .replicas import ReplicasReader
 
@@ -38,7 +38,7 @@ class ProcReplicasChange:
     new: int
 
 
-def get_online_replicas_diff(env: ModuleEnv, new_res: BkAppResource) -> List[ProcReplicasChange]:
+def get_online_replicas_diff(env: ModuleEnvironment, new_res: BkAppResource) -> List[ProcReplicasChange]:
     """Get the replicas differences between online version and incoming resource
 
     :param env: The online environment to be checked

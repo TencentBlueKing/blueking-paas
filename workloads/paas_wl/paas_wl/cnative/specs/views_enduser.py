@@ -30,22 +30,16 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
+from paas_wl.cnative.specs.addresses import get_exposed_url
+from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DeployStatus
+from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
+from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
-from paas_wl.platform.applications.permissions import AppAction, application_perm_class
-from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
-from paas_wl.platform.auth.utils import username_to_id
-from paas_wl.platform.auth.views import BaseEndUserViewSet
-from paas_wl.utils.error_codes import error_codes
-
-from .addresses import get_exposed_url
-from .constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DeployStatus
-from .credentials import get_references, validate_references
-from .models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
-from .resource import deploy, get_mres_from_cluster
-from .serializers import (
+from paas_wl.cnative.specs.resource import deploy, get_mres_from_cluster
+from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
     CreateDeploySerializer,
     DeployDetailSerializer,
@@ -54,12 +48,18 @@ from .serializers import (
     MresStatusSLZ,
     QueryDeploysSerializer,
 )
-from .tasks import AppModelDeployStatusPoller, DeployStatusHandler
+from paas_wl.cnative.specs.tasks import AppModelDeployStatusPoller, DeployStatusHandler
+from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
+from paas_wl.platform.auth.utils import username_to_id
+from paas_wl.utils.error_codes import error_codes
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
+from paasng.platform.applications.views import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
 
 
-class MresViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """管理应用模型资源"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
@@ -80,7 +80,7 @@ class MresViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         return Response(AppModelResourceSerializer(model_resource).data)
 
 
-class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """应用模型资源部署相关视图"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
@@ -123,7 +123,7 @@ class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """
         application = self.get_application()
         module = self.get_module_via_path()
-        env = self.get_module_env_via_path()
+        env = self.get_env_via_path()
 
         serializer = CreateDeploySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -159,7 +159,7 @@ class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         )
 
         try:
-            manifest = deploy(env, deployment.build_manifest(env, credential_refs))
+            manifest = deploy(env, deployment.build_manifest(env, credential_refs=credential_refs))
         except UnprocessibleEntityError as e:
             # 格式错误类异常（422）允许将错误信息提供给用户
             raise error_codes.DEPLOY_BKAPP_FAILED.f(
@@ -187,7 +187,7 @@ class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         - 客户端：当 `proc_replicas_changes` 没有数据时，不展示额外信息，只显示普通的
           二次确认框
         """
-        env = self.get_module_env_via_path()
+        env = self.get_env_via_path()
         slz = CreateDeploySerializer(data=request.data)
         slz.is_valid(raise_exception=True)
 
@@ -209,7 +209,7 @@ class MresDeploymentsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         )
 
 
-class MresStatusViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """应用模型资源状态相关视图"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
@@ -217,7 +217,7 @@ class MresStatusViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(responses={"200": MresStatusSLZ})
     def retrieve(self, request, code, module_name, environment):
         """查看应用模型资源当前状态"""
-        env = self.get_module_env_via_path()
+        env = self.get_env_via_path()
         try:
             latest_dp: AppModelDeploy = AppModelDeploy.objects.filter_by_env(env).latest("created")
         except AppModelDeploy.DoesNotExist:

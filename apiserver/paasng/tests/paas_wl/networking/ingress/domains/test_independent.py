@@ -20,10 +20,10 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
+from paas_wl.networking.ingress.domains.independent import ReplaceAppDomainService
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.networking.ingress.managers.domain import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paasng.paas_wl.networking.ingress.domains.independent import ReplaceAppDomainService
 from paasng.paas_wl.platform.applications.struct_models import set_model_structured
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

@@ -28,11 +28,10 @@ from paas_wl.cnative.specs.constants import (
     MResPhaseType,
 )
 from paas_wl.cnative.specs.credentials import ImageCredentialsManager
-from paas_wl.cnative.specs.resource import MresConditionParser
+from paas_wl.cnative.specs.resource import MresConditionParser, deploy, get_mres_from_cluster
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.constants import KUBE_RESOURCE_NAME as PULL_SECRET_NAME
-from paasng.paas_wl.cnative.specs.resource import deploy, get_mres_from_cluster
 from tests.paas_wl.cnative.specs.utils import create_condition, create_res_with_conds
 from tests.utils.mocks.engine import replace_cluster_service
 

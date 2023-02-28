@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 """Manage application's custom domains"""
 import logging
 from typing import Dict, Optional, Protocol, Type
-from urllib.parse import urlparse
 
 from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
@@ -27,19 +26,23 @@ from rest_framework.serializers import Serializer
 
 from paas_wl.cnative.specs.resource import deploy_networking
 from paas_wl.networking.ingress.config import get_custom_domain_config
+from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
+from paas_wl.networking.ingress.domains.independent import (
+    DomainResourceDeleteService,
+    ReplaceAppDomainService,
+    get_service_name,
+)
 from paas_wl.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.networking.ingress.serializers import DomainSLZ
-from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import EngineApp
-from paas_wl.platform.applications.struct_models import Application, ModuleEnv, to_structured
-from paas_wl.platform.external.client import get_plat_client
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.processes.controllers import env_is_running
-
-from .exceptions import ReplaceAppDomainFailed
-from .independent import DomainResourceDeleteService, ReplaceAppDomainService, get_service_name
+from paas_wl.workloads.processes.controllers import module_env_is_running
+from paasng.paas_wl.platform.applications.struct_models import set_model_structured
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.publish.market.models import MarketConfig
+from paasng.publish.market.utils import MarketAvailableAddressHelper
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,7 @@ logger = logging.getLogger(__name__)
 class CustomDomainManager(Protocol):
     """Manage custom domains for different kinds of applications"""
 
-    def create(self, *, env: ModuleEnv, host: str, path_prefix: str, https_enabled: bool) -> Domain:
+    def create(self, *, env: ModuleEnvironment, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Create a custom domain"""
         ...
 
@@ -70,7 +73,7 @@ class DftCustomDomainManager:
         self.application = application
 
     @transaction.atomic
-    def create(self, *, env: ModuleEnv, host: str, path_prefix: str, https_enabled: bool) -> Domain:
+    def create(self, *, env: ModuleEnvironment, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Create a custom domain
 
         :param env: The environment to which the domain binds
@@ -79,7 +82,7 @@ class DftCustomDomainManager:
         :param https_enabled: whether HTTPS is enabled
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
-        if not env_is_running(env):
+        if not module_env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
         engine_app = EngineApp.objects.get_by_env(env)
@@ -92,6 +95,7 @@ class DftCustomDomainManager:
                 environment_id=env.id,
                 defaults={"https_enabled": https_enabled},
             )
+            set_model_structured(domain, application=self.application)
             CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
         except ValidCertNotFound:
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f("找不到有效的 TLS 证书")
@@ -108,8 +112,13 @@ class DftCustomDomainManager:
         if check_domain_used_by_market(self.application, instance.name):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行更新操作')
 
+        env = ModuleEnvironment.objects.get(pk=instance.environment_id)
         try:
-            svc = ReplaceAppDomainService(instance.environment, instance.name, instance.path_prefix)
+            svc = ReplaceAppDomainService(
+                env,
+                instance.name,
+                instance.path_prefix,
+            )
             svc.replace_with(host, path_prefix, https_enabled)
         except ReplaceAppDomainFailed as e:
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
@@ -121,9 +130,8 @@ class DftCustomDomainManager:
         if check_domain_used_by_market(self.application, instance.name):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f('该域名已被绑定为主访问入口, 请解绑后再进行删除操作')
 
-        ret = DomainResourceDeleteService(instance.environment).do(
-            host=instance.name, path_prefix=instance.path_prefix
-        )
+        env = ModuleEnvironment.objects.get(pk=instance.environment_id)
+        ret = DomainResourceDeleteService(env).do(host=instance.name, path_prefix=instance.path_prefix)
         if not ret:
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")
 
@@ -131,8 +139,8 @@ class DftCustomDomainManager:
 def validate_domain_payload(
     data: Dict,
     application: Application,
+    serializer_cls: Type[Serializer],
     instance: Optional[Domain] = None,
-    serializer_cls: Type[Serializer] = DomainSLZ,
 ):
     """Validate a domain data, which was read form user input
 
@@ -144,8 +152,6 @@ def validate_domain_payload(
         data=data,
         instance=instance,
         context={
-            'application': application,
-            'struct_app': to_structured(application),
             'valid_domain_suffixes': get_custom_domain_config(application.region).valid_domain_suffixes,
         },
     )
@@ -159,11 +165,11 @@ def check_domain_used_by_market(application: Application, hostname: str) -> bool
     :param hostname: A domain name without scheme
     :return: Whether hostname was set as entrance
     """
-    ret = get_plat_client().get_market_entrance(application.code)
-    entrance = ret['entrance']
-    if not (entrance and entrance.get('address')):
+    market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+    entrance = MarketAvailableAddressHelper(market_config).access_entrance
+    if not entrance:
         return False
-    return urlparse(entrance['address']).hostname == hostname
+    return entrance.hostname == hostname
 
 
 # cloud-native related managers starts
@@ -181,7 +187,7 @@ class CNativeCustomDomainManager:
         self.application = application
 
     @transaction.atomic
-    def create(self, *, env: ModuleEnv, host: str, path_prefix: str, https_enabled: bool) -> Domain:
+    def create(self, *, env: ModuleEnvironment, host: str, path_prefix: str, https_enabled: bool) -> Domain:
         """Create a custom domain
 
         :param env: The environment to which the domain binds
@@ -190,7 +196,7 @@ class CNativeCustomDomainManager:
         :param https_enabled: whether HTTPS is enabled
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
-        if not env_is_running(env):
+        if not module_env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
         # Create the domain object first, so the later deploy process can read it
@@ -221,8 +227,9 @@ class CNativeCustomDomainManager:
         instance.https_enabled = https_enabled
         instance.save()
 
+        environment = self.application.get_module(instance.module.name).get_envs(instance.environment.environment)
         try:
-            deploy_networking(instance.environment)
+            deploy_networking(environment)
         except Exception as e:
             logger.exception("Update custom domain for c-native app failed")
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
@@ -236,9 +243,9 @@ class CNativeCustomDomainManager:
 
         # Delete the instance first so `deploy_networking` won't include it.
         instance.delete()
-
+        environment = self.application.get_module(instance.module.name).get_envs(instance.environment.environment)
         try:
-            deploy_networking(instance.environment)
+            deploy_networking(environment)
         except Exception:
             logger.exception("Delete custom domain for c-native app failed")
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.f("无法删除集群中域名访问记录")

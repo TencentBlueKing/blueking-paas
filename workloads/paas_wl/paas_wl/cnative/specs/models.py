@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import yaml
 from django.db import models
@@ -30,8 +30,9 @@ from paas_wl.platform.applications.models import EngineApp
 from paas_wl.platform.applications.struct_models import Application, ModuleAttrFromID, ModuleEnv, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
+from paasng.dev_resources.servicehub.manager import mixed_service_mgr
+from paasng.platform.applications.models import ModuleEnvironment
 
-from .addons import list_addons
 from .configurations import generate_builtin_configurations, merge_envvars
 from .constants import (
     BKAPP_CODE_ANNO_KEY,
@@ -180,12 +181,13 @@ class AppModelDeploy(TimestampedModel):
     class Meta:
         unique_together = ('application_id', 'module_id', 'environment_name', 'name')
 
-    def build_manifest(self, env: ModuleEnv, credential_refs: Optional[List[ImageCredentialRef]] = None) -> Dict:
+    def build_manifest(self, env: ModuleEnvironment, credential_refs: List[ImageCredentialRef]):
         """inject bkpaas-specific properties to annotations
 
         :param env: ModuleEnv object
         :param credential_refs: Image credential ref objects
         """
+        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
         manifest = BkAppResource(**self.revision.json_value)
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.pk)
         application = env.application
@@ -197,26 +199,26 @@ class AppModelDeploy(TimestampedModel):
                 BKAPP_NAME_KEY: application.name,
                 BKAPP_CODE_ANNO_KEY: application.code,
                 MODULE_NAME_ANNO_KEY: env.module.name,
-                ENVIRONMENT_ANNO_KEY: self.environment_name,
+                ENVIRONMENT_ANNO_KEY: env.environment,
             }
         )
 
         # inject addons services
-        service_info = list_addons(application.code, env.module.name, self.environment_name)
-        manifest.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps([addons["name"] for addons in service_info])
+        manifest.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(
+            [svc.name for svc in mixed_service_mgr.list_binded(env.module)]
+        )
 
         # flush credentials and inject a flag to tell operator that workloads have crated the secret
         if credential_refs:
             AppImageCredential.objects.flush_from_refs(
-                application=application, engine_app=EngineApp.objects.get_by_env(env), references=credential_refs
+                application=application, engine_app=engine_app, references=credential_refs
             )
             manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
         else:
             manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = ""
 
         manifest.spec.configuration.env = merge_envvars(
-            manifest.spec.configuration.env,
-            generate_builtin_configurations(code=application.code, environment=self.environment_name),
+            manifest.spec.configuration.env, generate_builtin_configurations(env=env)
         )
 
         data = manifest.dict()
@@ -287,7 +289,7 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-def default_bkapp_name(env: ModuleEnv) -> str:
+def default_bkapp_name(env: Union[ModuleEnvironment, ModuleEnv]) -> str:
     """Get name of the default BkApp resource by env.
 
     :param env: ModuleEnv object

@@ -19,11 +19,11 @@ to the current version of the project delivered to anyone in the future.
 
 import pytest
 
+from paas_wl.cnative.specs.addresses import AddrResourceManager
+from paas_wl.cnative.specs.addresses import Domain as MappingDomain
+from paas_wl.cnative.specs.addresses import save_addresses, to_domain, to_shared_tls_domain
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
-from paasng.paas_wl.cnative.specs.addresses import AddrResourceManager
-from paasng.paas_wl.cnative.specs.addresses import Domain as MappingDomain
-from paasng.paas_wl.cnative.specs.addresses import save_addresses, to_domain, to_shared_tls_domain
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.helpers import override_region_configs
 from tests.utils.mocks.engine import replace_cluster_service

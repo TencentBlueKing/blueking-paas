@@ -20,11 +20,10 @@ import pytest
 
 from paas_wl.cluster.models import Domain as ClusterDomain
 from paas_wl.cluster.models import PortMap
-from paas_wl.networking.ingress.addrs import AddressType
+from paas_wl.networking.ingress.addrs import Address, AddressType, EnvAddresses
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
 from paas_wl.platform.applications.models import EngineApp
-from paasng.paas_wl.networking.ingress.addrs import Address, EnvAddresses
 from tests.paas_wl.utils.release import create_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

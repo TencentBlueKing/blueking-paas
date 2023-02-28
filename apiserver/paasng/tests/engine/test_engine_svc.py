@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest import mock
-
 import pytest
 
 from paasng.engine.deploy.engine_svc import EngineDeployClient
@@ -26,10 +24,13 @@ pytestmark = pytest.mark.django_db
 
 
 class TestEngineDeployClient:
-    def test_update_metadata_normal(self, bk_stag_env):
-        mocked_client = mock.MagicMock()
-        deploy_client = EngineDeployClient(bk_stag_env.get_engine_app(), mocked_client)
-        deploy_client.update_metadata({'bar': '2'})
+    def test_metadata_funcs(self, bk_app, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        assert c.get_metadata()['paas_app_code'] == bk_app.code
+        c.update_metadata({'paas_app_code': 'foo-updated'})
+        assert c.get_metadata()['paas_app_code'] == 'foo-updated'
 
-        assert mocked_client.update_app_metadata.called
-        assert mocked_client.update_app_metadata.call_args[1]['payload']['metadata'] == {'bar': '2'}
+    def test_create_build(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        s = c.create_build({}, {})
+        assert s is not None

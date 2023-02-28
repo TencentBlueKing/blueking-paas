@@ -21,10 +21,12 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
 
+import cattr
 from django.conf import settings
 
+from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
-from paas_wl.platform.applications.models.config import Config
+from paas_wl.platform.applications.models.managers.app_metadata import get_metadata, update_metadata
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.release_controller.builder import tasks as builder_task
 from paas_wl.resources import tasks as scheduler_tasks
@@ -51,7 +53,7 @@ class EngineDeployClient:
 
     def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
         self.engine_app = engine_app
-        self.wl_engine_app = self.engine_app.to_wl_obj()
+        self.wl_engine_app: WLEngineApp = self.engine_app.to_wl_obj()
         self.ctl_client = controller_client or make_internal_client()
 
     def start_build_process(
@@ -126,7 +128,7 @@ class EngineDeployClient:
     def update_config(self, runtime: Dict[str, Any]):
         """Update engine-app's config"""
         # Save runtime field
-        config = Config.objects.get_by_app(self.wl_engine_app)
+        config = self.wl_engine_app.latest_config
         config.runtime = runtime  # type: ignore
         config.save(update_fields=['runtime'])
 
@@ -160,13 +162,12 @@ class EngineDeployClient:
 
     def create_build(self, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
         """Create the **fake** build for Image Type App"""
-        resp = self.ctl_client.create_build(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            procfile=procfile,
+        build = Build.objects.create(
+            app=self.wl_engine_app,
             env_variables=extra_envs,
+            procfile=procfile,
         )
-        return resp["uuid"]
+        return str(build.uuid)
 
     def get_procfile(self, build_id: str) -> Dict:
         """Get the procfile by build id"""
@@ -199,17 +200,14 @@ class EngineDeployClient:
 
     def get_metadata(self) -> Dict[str, Any]:
         """Get an engine app's metadata"""
-        config = self.ctl_client.retrieve_app_config(region=self.engine_app.region, app_name=self.engine_app.name)
-        return config['metadata'] or {}
+        return cattr.unstructure(get_metadata(self.wl_engine_app))
 
     def update_metadata(self, metadata_part: Dict[str, Union[str, bool]]):
         """Update an engine app's metadata, works like python's dict.update()
 
         :param metadata_part: An dict object which will be merged into app's metadata
         """
-        self.ctl_client.update_app_metadata(
-            region=self.engine_app.region, app_name=self.engine_app.name, payload={'metadata': metadata_part}
-        )
+        update_metadata(self.wl_engine_app, **metadata_part)
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""

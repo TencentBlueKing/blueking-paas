@@ -54,15 +54,6 @@ class ControllerClient:
         """Get cluster's egress info"""
         return self.request('GET', f'/services/regions/{region}/clusters/{cluster_name}/egress_info/')
 
-    def app__create(self, region, app_name, app_type):
-        """Retrieve an blueking app by uuid"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/'.format(region=region),
-            desired_code=codes.created,
-            json={'name': app_name, 'type': app_type},
-        )
-
     def create_cnative_app_model_resource(self, region: str, data: Dict[str, Any]) -> Dict:
         """Create a cloud-native AppModelResource object
 
@@ -128,18 +119,6 @@ class ControllerClient:
         """List current statuses of app's all processes"""
         return self.request('GET', f'/regions/{region}/apps/{app_name}/processes/')
 
-    def create_build(self, region, app_name, procfile: Dict[str, str], env_variables: Dict[str, str]):
-        """Create the **fake** build for Image Type App"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/builds/placeholder/'.format(region=region, name=app_name),
-            json={
-                "procfile": procfile,
-                "env_variables": env_variables,
-            },
-            desired_code=codes.created,
-        )
-
     def builds__retrieve(self, region, app_name, limit=20, offset=0):
         return self.request(
             'GET',
@@ -165,14 +144,6 @@ class ControllerClient:
                 region=region, name=app_name, cluster_name=cluster_name
             ),
             desired_code=codes.ok,
-        )
-
-    def update_app_metadata(self, region, app_name, payload):
-        """Patch app config"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/config/metadata'.format(region=region, name=app_name),
-            json=payload,
         )
 
     def upsert_image_credentials(self, region, app_name, credentials):

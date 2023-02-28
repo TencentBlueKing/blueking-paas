@@ -20,7 +20,6 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import Module
 
@@ -52,9 +51,7 @@ class Command(BaseCommand):
                 # EngineApp 元信息，理论上不会变更，所以可以直接覆盖
                 engine_app_meta_info = initializer.make_engine_meta_info(env_obj)
                 try:
-                    initializer._update_meta_info_for_engine_app(
-                        make_internal_client(), name=name, meta_info=engine_app_meta_info
-                    )
+                    initializer._update_meta_info_for_engine_app(name=name, meta_info=engine_app_meta_info)
                     updated_count += 1
                     logger.info(f"update metadata{engine_app_meta_info} successful")
                 except Exception:

@@ -166,6 +166,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
         )
+        set_model_structured(instance, application=application)
         return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(

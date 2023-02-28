@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Client to communicate with controller
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
@@ -95,23 +95,6 @@ class ControllerClient:
             json={'operation_id': operation_id},
         )
 
-    def app__release(
-        self,
-        region: str,
-        app_name: str,
-        build_id: str,
-        deployment_id: Optional[str],
-        extra_envs: Dict[str, str],
-        procfile: Dict[str, str],
-    ):
-        """Deploy a build slug"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/releases/'.format(region=region, name=app_name),
-            desired_code=codes.created,
-            json={'build': build_id, 'deployment_id': deployment_id, 'extra_envs': extra_envs, 'procfile': procfile},
-        )
-
     def get_app_release(self, region, app_name, release_id):
         """Deploy a build slug"""
         return self.request(
@@ -120,21 +103,6 @@ class ControllerClient:
             json={
                 'release_id': release_id,
             },
-        )
-
-    def get_app_build(self, region, app_name, build_id):
-        """Get the build object by id"""
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/builds/{build_id}'.format(region=region, name=app_name, build_id=build_id),
-        )
-
-    def read_build_process_result(self, region: str, app_name: str, build_process_id: str):
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/build_processes/{build_process_id}/result'.format(
-                region=region, name=app_name, build_process_id=build_process_id
-            ),
         )
 
     def interrupt_build_process(self, region: str, app_name: str, build_process_id: str):
@@ -218,15 +186,6 @@ class ControllerClient:
         return self.request(
             'GET',
             '/regions/{region}/apps/{name}/config/'.format(region=region, name=app_name),
-        )
-
-    def update_app_config(self, region, app_name, payload):
-        """Patch app config"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/config/'.format(region=region, name=app_name),
-            desired_code=codes.created,
-            json=payload,
         )
 
     def bind_app_cluster(self, region: str, app_name: str, cluster_name: str):

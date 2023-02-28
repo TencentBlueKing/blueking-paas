@@ -220,7 +220,7 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 build_id = engine_app.get_latest_build()['uuid']
                 create_release(application_env, build_id)
             except Exception:
-                raise error_codes.CANNOT_DEPLOY_APP.f(_(u"engine服务异常"))
+                raise error_codes.CANNOT_DEPLOY_APP.f(_(u"服务异常"))
 
         return Response(status=status.HTTP_201_CREATED)
 
@@ -844,7 +844,6 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(add_prefix_to_key(env_dict, settings.CONFIGVAR_SYSTEM_PREFIX))
 
     def get_builtin_envs_bk_platform(self, request, code):
-
         bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
 
         application = self.get_application()

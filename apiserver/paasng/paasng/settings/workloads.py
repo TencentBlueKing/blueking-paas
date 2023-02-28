@@ -285,3 +285,9 @@ FOR_TESTS_CLUSTER_CONFIG = {
     "key_data": FOR_TESTS_KEY_DATA,
     "force_domain": FOR_TESTS_FORCE_DOMAIN,
 }
+
+# 蓝鲸监控相关配置
+# 是否下发 ServiceMonitor 的总开关
+BKMONITOR_ENABLED = settings.get("BKMONITOR_ENABLED", False)
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])

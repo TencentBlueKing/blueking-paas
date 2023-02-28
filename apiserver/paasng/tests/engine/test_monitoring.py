@@ -82,7 +82,7 @@ class TestCountFrozenDeployments:
     )
     def test_different_log_lines(self, bk_deployment, log_lines, cnt):
         with mock.patch('paasng.engine.monitoring.EngineDeployClient') as mocked_client:
-            mocked_client().get_build_process_status.return_value = {'lines': log_lines}
+            mocked_client().list_build_proc_logs.return_value = log_lines
             assert count_frozen_deployments(edge_seconds=10, now=_NOW.datetime) == cnt
 
     def test_now_not_provided(self, bk_deployment):

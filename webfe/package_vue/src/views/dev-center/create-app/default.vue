@@ -5,7 +5,7 @@
         style="color: #3A84FF;"
         class="paasng-icon paasng-info-circle"
       />
-      {{ isdefaultApp ? defaultAlertText : smartAlertText }}
+      {{ notSmartAPP ? defaultAlertText : smartAlertText }}
     </div>
     <div class="default-app-type">
       <default-app-type
@@ -13,7 +13,7 @@
       />
     </div>
     <form
-      v-show="isdefaultApp"
+      v-show="notSmartAPP"
       id="form-create-app"
       data-test-id="createDefault_form_appInfo"
       @submit.stop.prevent="submitCreateForm"
@@ -71,7 +71,7 @@
           </p>
         </div>
         <div
-          v-if="platformFeature.REGION_DISPLAY && isBkLesscode"
+          v-if="platformFeature.REGION_DISPLAY && notBkLesscode"
           class="form-group"
           style="margin-top: 7px;"
         >
@@ -100,7 +100,7 @@
           </div>
         </div>
         <div
-          v-if="curUserFeature.ENABLE_TC_DOCKER && isBkLesscode"
+          v-if="curUserFeature.ENABLE_TC_DOCKER && notBkLesscode"
           class="form-group"
           style="margin-top: 7px;margin-left: 10px"
         >
@@ -215,7 +215,7 @@
       <!-- 应用引擎 -->
       <div
         v-if="structureType !== 'mirror'"
-        :class="['create-item', { 'template-wrapper': !isBkLesscode }]"
+        :class="['create-item', { 'template-wrapper': !notBkLesscode }]"
         data-test-id="createDefault_item_appEngine"
       >
         <div class="item-title">
@@ -228,14 +228,14 @@
               <label class="form-label template"> {{ $t('模板来源') }} </label>
               <div class="tab-box">
                 <li
-                  v-if="isBkLesscode"
+                  v-if="notBkLesscode"
                   :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
                   @click="handleCodeTypeChange(1)"
                 >
                   {{ $t('蓝鲸开发框架') }}
                 </li>
                 <li
-                  v-if="!isBkLesscode"
+                  v-if="!notBkLesscode"
                   class="bk-less-code"
                 >
                   {{ $t('蓝鲸可视化开发平台') }}
@@ -249,7 +249,7 @@
                   {{ $t('蓝鲸插件') }}
                 </li> -->
                 <li
-                  v-if="sceneTemplateList.length && isBkLesscode"
+                  v-if="sceneTemplateList.length && notBkLesscode"
                   :class="['tab-item template', { 'active': localSourceOrigin === 5 }]"
                   @click="handleCodeTypeChange(5)"
                 >
@@ -836,10 +836,10 @@
                 return this.$store.state.platformFeature;
             },
             // 蓝鲸可视化平台不显示对应表单项
-            isBkLesscode () {
+            notBkLesscode () {
                 return this.curCodeSource !== 'bkLesscode';
             },
-            isdefaultApp () {
+            notSmartAPP () {
                 return this.curCodeSource !== 'smart';
             },
             defaultAlertText () {
@@ -1431,7 +1431,7 @@
                 this.$nextTick(() => {
                     // 蓝鲸可视化平台推送的源码包
                     if (codeSource === 'bkLesscode') {
-                        this.regionChoose = 'ieod';
+                        this.regionChoose = this.GLOBAL.APP_VERSION === 'te' ? 'ieod' : 'default';
                         this.structureType = 'soundCode';
                         this.handleCodeTypeChange(2);
                     } else if (codeSource === 'default') {

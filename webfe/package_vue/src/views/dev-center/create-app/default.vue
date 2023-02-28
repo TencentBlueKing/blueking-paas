@@ -99,117 +99,6 @@
             </div>
           </div>
         </div>
-        <div
-          v-if="curUserFeature.ENABLE_TC_DOCKER && notBkLesscode"
-          class="form-group"
-          style="margin-top: 7px;margin-left: 10px"
-        >
-          <label class="form-label"> {{ $t('构建方式') }} </label>
-          <div
-            class="form-group-flex-radio"
-            style="width: 100%"
-          >
-            <div
-              class="form-group-radio"
-              style="margin-top: 5px;"
-            >
-              <bk-radio-group
-                v-model="structureType"
-                class="construction-manner"
-              >
-                <bk-radio :value="'soundCode'">
-                  {{ $t('提供源码') }}
-                </bk-radio>
-                <bk-radio :value="'mirror'">
-                  {{ $t('提供镜像') }}
-                </bk-radio>
-                <bk-radio
-                  :value="'isMirror'"
-                  :disabled="isShowRadio"
-                >
-                  {{ $t('从源码构建镜像') }}
-                </bk-radio>
-              </bk-radio-group>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- 镜像管理 -->
-      <div
-        v-if="structureType === 'mirror'"
-        class="create-item"
-        data-test-id="createDefault_item_baseInfo"
-      >
-        <div class="item-title">
-          {{ $t('镜像管理') }}
-        </div>
-
-        <div
-          class="form-group"
-          style="margin-top: 7px;"
-        >
-          <label class="form-label"> {{ $t('镜像类型') }} </label>
-          <div
-            class="form-group-radio"
-            style="margin-top: 5px;"
-          >
-            <bk-radio-group v-model="mirrorData.type">
-              <bk-radio value="public">
-                {{ $t('公开') }}
-              </bk-radio>
-              <bk-radio
-                value="private"
-                disabled
-              >
-                {{ $t('私有') }}
-              </bk-radio>
-            </bk-radio-group>
-          </div>
-        </div>
-
-        <bk-form
-          ref="validate2"
-          form-type="inline"
-          :model="mirrorData"
-          :rules="mirrorRules"
-          ext-cls="item-cls"
-        >
-          <bk-form-item
-            :required="true"
-            :property="'url'"
-            error-display-type="normal"
-          >
-            <div class="form-group mt10">
-              <label class="form-label"> {{ $t('镜像地址') }} </label>
-              <div class="form-input-flex">
-                <!-- <input type="text" autocomplete="off"
-                                    name="source_tp_url"
-                                    data-parsley-required-message="该字段是必填项"
-                                    data-parsley-pattern="^((https|http|ftp|rtsp|mms)?:\/\/)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/?[A-Za-z0-9]+(\/?))*$"
-                                    data-parsley-pattern-message="地址格式不正确"
-                                    data-parsley-trigger="input blur"
-                                    class="ps-form-control" placeholder="请输入正确的地址" /> -->
-                <bk-input
-                  v-model="mirrorData.url"
-                  style="width: 520px;"
-                  :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
-                  size="large"
-                  class="mt10"
-                  clearable
-                >
-                  <template
-                    v-if="GLOBAL.APP_VERSION === 'te'"
-                    slot="prepend"
-                  >
-                    <div class="group-text">
-                      mirrors.tencent.com/
-                    </div>
-                  </template>
-                </bk-input>
-              </div>
-            </div>
-          </bk-form-item>
-        </bk-form>
       </div>
 
       <!-- 应用引擎 -->
@@ -822,9 +711,6 @@
                 return {
                     height: '208px'
                 };
-            },
-            curUserFeature () {
-                return this.$store.state.userFeature;
             },
             curSourceControl () {
                 const match = this.sourceControlTypes.find(item => {

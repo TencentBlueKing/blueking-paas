@@ -89,7 +89,7 @@ class ApplicationReleaseMgr(DeployStep):
 
 
 def create_release(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
-    """Create a new release by calling enging's API
+    """Create a new release by calling engine's API
 
     :param deployment: if not given, will try using the latest succeed deployment for getting desc env vars
     """

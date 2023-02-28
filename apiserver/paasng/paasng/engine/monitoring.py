@@ -63,8 +63,7 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
         return True
 
     client = EngineDeployClient(deployment.get_engine_app())
-    resp = client.get_build_process_status(deployment.build_process_id)
-    log_lines = resp['lines']
+    log_lines = client.list_build_proc_logs(deployment.build_process_id)
 
     # Deployment with no logs lines was frozen
     if not log_lines:

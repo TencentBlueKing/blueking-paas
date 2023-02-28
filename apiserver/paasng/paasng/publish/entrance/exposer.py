@@ -293,6 +293,7 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
     :param no_cache: Whether to disable cache, useful when caller requires fresh
         data, default to false.
     """
+    # TODO: 修复循环依赖的问题
     from paas_wl.networking.ingress.addrs import EnvAddresses
     from paas_wl.workloads.processes.controllers import module_env_is_running
 

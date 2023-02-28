@@ -106,7 +106,9 @@ class BkPluginProfile(OwnerTimestampedModel):
         return bool(self.api_gw_id)
 
     @property
-    def pre_distributors(self) -> Collection["BkPluginDistributor"]:
+    def pre_distributors(self) -> Optional[Collection["BkPluginDistributor"]]:
+        if not self.pre_distributor_codes:
+            return None
         return BkPluginDistributor.objects.filter(code_name__in=self.pre_distributor_codes)
 
     def get_tag_info(self) -> Optional[dict]:

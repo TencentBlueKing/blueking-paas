@@ -23,13 +23,14 @@ from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 
 from paas_wl.cnative.specs.v1alpha1.bk_app import EnvVar
-from paas_wl.platform.external.client import get_plat_client
+from paasng.engine.models.config_var import generate_builtin_env_vars
+from paasng.platform.applications.models import ModuleEnvironment
 
 
-def generate_builtin_configurations(code: str, environment: str) -> List[EnvVar]:
-    builtin_envs = get_plat_client().list_builtin_envs(code=code, environment=environment)
+def generate_builtin_configurations(env: ModuleEnvironment) -> List[EnvVar]:
     return [EnvVar(name="PORT", value=str(settings.CONTAINER_PORT))] + [
-        EnvVar(name=name.upper(), value=value) for name, value in builtin_envs.items()
+        EnvVar(name=name.upper(), value=value)
+        for name, value in generate_builtin_env_vars(env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX).items()
     ]
 
 

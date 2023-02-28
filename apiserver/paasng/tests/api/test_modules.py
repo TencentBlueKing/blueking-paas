@@ -200,7 +200,7 @@ class TestModuleDeletion:
         assert "主模块不允许被删除" in response.json()["detail"]
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
 
-    def test_delete_module(self, api_client, bk_app, bk_user, mock_current_engine_client):
+    def test_delete_module(self, api_client, bk_app, bk_user, mock_current_engine_client, with_empty_live_addrs):
         module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
         initialize_module(module)
 
@@ -209,7 +209,7 @@ class TestModuleDeletion:
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
 
-    def test_delete_rollback(self, api_client, bk_app, bk_user, mock_current_engine_client):
+    def test_delete_rollback(self, api_client, bk_app, bk_user, mock_current_engine_client, with_empty_live_addrs):
         module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
         initialize_module(module)
 

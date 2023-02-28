@@ -46,9 +46,10 @@ class CNativeProcSpec:
     max_replicas: int = DEFAULT_MAX_REPLICAS
 
 
+# TODO: 调整 env 的参数类型
 def get_proc_specs(env: ModuleEnv) -> List[CNativeProcSpec]:
     """Get process specifications for env"""
-    res = get_mres_from_cluster(env)
+    res = get_mres_from_cluster(env)  # type: ignore
     if not res:
         return []
     return parse_proc_specs(res, AppEnvName(env.environment))

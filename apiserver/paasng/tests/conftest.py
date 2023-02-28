@@ -29,6 +29,7 @@ from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
 from django.core.management import call_command
 from django.test.utils import override_settings
+from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -62,6 +63,8 @@ logger = logging.getLogger(__file__)
 
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+# A random cluster name for running unittests
+CLUSTER_NAME_FOR_TESTING = get_random_string(6)
 
 
 def pytest_addoption(parser):
@@ -342,7 +345,7 @@ def bk_app(request, bk_user) -> Application:
 @pytest.fixture
 def bk_cnative_app(request, bk_user):
     """Generate a random cloud-native application owned by current user fixture"""
-    return create_cnative_app(owner_username=bk_user.username)
+    return create_cnative_app(owner_username=bk_user.username, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 
 @pytest.fixture
@@ -362,8 +365,12 @@ def bk_app_full(request, bk_user) -> Application:
 
 
 @pytest.fixture
-def bk_module(request, bk_app) -> Module:
+def bk_module(request) -> Module:
     """Return the default module if current application fixture"""
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app")
     return bk_app.get_default_module()
 
 

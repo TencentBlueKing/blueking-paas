@@ -1,0 +1,336 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.0
+  creationTimestamp: null
+  name: bkapps.paas.bk.tencent.com
+spec:
+  group: paas.bk.tencent.com
+  names:
+    kind: BkApp
+    listKind: BkAppList
+    plural: bkapps
+    singular: bkapp
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: BkApp is the Schema for the bkapps API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AppSpec defines the desired state of BkApp
+            properties:
+              configuration:
+                description: AppConfig is bkapp related configuration, such as environment
+                  variables, etc.
+                properties:
+                  env:
+                    description: List of environment variables to set in the container.
+                    items:
+                      description: AppEnvVar defines the environment variable of bkapp
+                      properties:
+                        name:
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
+                          type: string
+                        value:
+                          description: Value of the environment variable
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                type: object
+              envOverlay:
+                description: EnvOverlay holds environment specified configurations,
+                  includes replica count and environment variables.
+                properties:
+                  envVariables:
+                    description: EnvVariables overwrite BkApp's environment vars
+                    items:
+                      description: EnvVarOverlay overwrite or add application's environment
+                        vars by environment.
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        name:
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
+                          type: string
+                        value:
+                          description: Value of the environment variable
+                          type: string
+                      required:
+                      - envName
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  replicas:
+                    description: Replicas overwrite processes's replicas count
+                    items:
+                      description: ReplicasOverlay overwrite process's replicas by
+                        environment.
+                      properties:
+                        count:
+                          description: Count is the desired replicas for current process
+                          format: int32
+                          type: integer
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                      required:
+                      - count
+                      - envName
+                      - process
+                      type: object
+                    type: array
+                type: object
+              hooks:
+                description: Hook commands of current BkApp resource
+                properties:
+                  preRelease:
+                    description: Hook is a set of commands to execute during bkapp
+                      deployment, running, and termination
+                    properties:
+                      args:
+                        description: Arguments to the entrypoint.
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        description: Entrypoint array. Not executed within a shell.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                type: object
+              processes:
+                items:
+                  description: Process defines the process of BkApp
+                  properties:
+                    args:
+                      description: Arguments to the entrypoint.
+                      items:
+                        type: string
+                      type: array
+                    command:
+                      description: Entrypoint array. Not executed within a shell.
+                      items:
+                        type: string
+                      type: array
+                    cpu:
+                      description: CPU will be used as limits.cpu
+                      type: string
+                    image:
+                      description: Container image name
+                      type: string
+                    imagePullPolicy:
+                      description: Container image pull policy
+                      type: string
+                    memory:
+                      description: Memory will be used as limits.memory
+                      type: string
+                    name:
+                      description: Name of process
+                      type: string
+                    replicas:
+                      description: Replicas will be used as deployment's spec.replicas
+                      format: int32
+                      type: integer
+                    targetPort:
+                      description: The containerPort to expose server
+                      format: int32
+                      type: integer
+                  required:
+                  - image
+                  - name
+                  - replicas
+                  type: object
+                type: array
+            required:
+            - configuration
+            - processes
+            type: object
+          status:
+            description: AppStatus defines the observed state of BkApp
+            properties:
+              addresses:
+                description: Addresses holds all addressable locations of current
+                  BkApp, user may visit app via these locations, includes all domain
+                  source types.
+                items:
+                  description: Addressable includes URL and other related properties
+                  properties:
+                    sourceType:
+                      description: SourceType, see CRD DomainGroupMapping for more
+                        details
+                      type: string
+                    url:
+                      description: URL generally has the form "http[s]://{hostname}/{subpath}/"
+                      type: string
+                  required:
+                  - sourceType
+                  - url
+                  type: object
+                type: array
+              conditions:
+                description: Conditions Represents the latest available observations
+                  of a BkApp's current state.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              deployId:
+                description: DeployId of the BkApp, which is injected from bkpaas
+                type: string
+              hookStatuses:
+                description: HookStatuses is the status of Hook execution
+                items:
+                  description: HookStatus define the status of Hook execution
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the status
+                        transitioned from one status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: if pod is unhealthy, message will be the fail message,
+                        otherwise, same with PodStatus.Message
+                      type: string
+                    phase:
+                      description: HealthStatus Represents the hook pod health status
+                      type: string
+                    reason:
+                      description: Same with PodStatus.Reason
+                      type: string
+                    startTime:
+                      description: The hook's start time
+                      format: date-time
+                      type: string
+                    started:
+                      description: Started is true when hook is started
+                      type: boolean
+                    type:
+                      description: HookType hook type
+                      type: string
+                  required:
+                  - phase
+                  - type
+                  type: object
+                type: array
+              lastUpdate:
+                description: LastUpdate is the bkapp's last update time
+                format: date-time
+                type: string
+              observedGeneration:
+                description: observedGeneration is the most recent generation observed
+                  for this BkApp. It corresponds to the .metadata.generation, which
+                  is updated on mutation by the API Server.
+                format: int64
+                type: integer
+              phase:
+                description: The phase of a BkApp is a simple, high-level summary
+                  of where the BkApp is in its lifecycle.
+                type: string
+              revision:
+                description: Revision of the BkApp configuration it generates
+                properties:
+                  revision:
+                    description: BkApp's version
+                    format: int64
+                    type: integer
+                required:
+                - revision
+                type: object
+            required:
+            - phase
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

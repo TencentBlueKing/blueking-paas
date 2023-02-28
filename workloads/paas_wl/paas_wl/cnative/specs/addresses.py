@@ -20,6 +20,16 @@ import logging
 from typing import List, Optional, Set
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.cnative.specs.constants import DomainGroupSource
+from paas_wl.cnative.specs.models import default_bkapp_name
+from paas_wl.cnative.specs.v1alpha1.domain_group_mapping import (
+    Domain,
+    DomainGroup,
+    DomainGroupMapping,
+    DomainGroupMappingSpec,
+    MappingRef,
+    ObjectMetadata,
+)
 from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.networking.ingress.certs.utils import DomainWithCert, pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.constants import AppDomainSource
@@ -28,36 +38,24 @@ from paas_wl.networking.ingress.managers.subpath import save_subpaths
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, AutoGenDomain
 from paas_wl.networking.ingress.models import Domain as CustomDomain
 from paas_wl.platform.applications.models.app import EngineApp
-from paas_wl.platform.applications.struct_models import ModuleEnv
-from paas_wl.platform.external.client import get_plat_client
-
-from .constants import DomainGroupSource
-from .models import default_bkapp_name
-from .v1alpha1.domain_group_mapping import (
-    Domain,
-    DomainGroup,
-    DomainGroupMapping,
-    DomainGroupMappingSpec,
-    MappingRef,
-    ObjectMetadata,
-)
+from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
 
-def save_addresses(env: ModuleEnv) -> Set[EngineApp]:
+def save_addresses(env: ModuleEnvironment) -> Set[EngineApp]:
     """Save an environment's pre-allocated addresses to database, includes both
     subdomains and subpaths.
 
     :return: Affected engine apps, "affected" means the app's domains or
         paths were updated during this save operation.
     """
-    engine_app = EngineApp.objects.get_by_env(env)
-    addresses = get_plat_client().get_addresses(env.application.code, env.environment)
+    engine_app = EngineApp.objects.get(pk=env.engine_app_id)
 
     apps = set()
-    domains = [AutoGenDomain(**d) for d in addresses['subdomains']]
-    subpaths = [d['subpath'] for d in addresses['subpaths']]
+    domains = [AutoGenDomain(host=d.host, https_enabled=d.https_enabled) for d in AppDefaultDomains(env).domains]
+    subpaths = [d.subpath for d in AppDefaultSubpaths(env).subpaths]
     apps.update(save_subdomains(engine_app, domains))
     apps.update(save_subpaths(engine_app, subpaths))
     return apps
@@ -66,7 +64,7 @@ def save_addresses(env: ModuleEnv) -> Set[EngineApp]:
 class AddrResourceManager:
     """Manage kubernetes resources which was related with addresses"""
 
-    def __init__(self, env: ModuleEnv):
+    def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.application = env.application
         self.engine_app = EngineApp.objects.get_by_env(self.env)
@@ -159,7 +157,7 @@ def to_shared_tls_domain(d: Domain, app: EngineApp) -> Domain:
     return d
 
 
-def get_exposed_url(env: ModuleEnv) -> Optional[str]:
+def get_exposed_url(env: ModuleEnvironment) -> Optional[str]:
     """Get exposed URL for given env"""
     if addrs := EnvAddresses(env).get():
         return addrs[0].url

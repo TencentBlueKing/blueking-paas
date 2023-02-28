@@ -26,9 +26,9 @@ from paas_wl.networking.ingress.managers.base import AppIngressMgr
 from paas_wl.networking.ingress.managers.domain import CustomDomainIngressMgr, SubdomainAppIngressMgr
 from paas_wl.networking.ingress.managers.subpath import SubPathAppIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.platform.applications.models import App
-from paas_wl.platform.applications.struct_models import get_env_by_engine_app_id
+from paas_wl.platform.applications.models import EngineApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class UpdateTargetResult(NamedTuple):
 class AppDefaultIngresses:
     """helps managing app's default ingress rules."""
 
-    def __init__(self, app: App):
+    def __init__(self, app: EngineApp):
         self.app = app
 
     def list(self) -> Iterable[AppIngressMgr]:
@@ -54,9 +54,7 @@ class AppDefaultIngresses:
         yield SubPathAppIngressMgr(self.app)
 
         # Independent domain managers
-        # NOTE: get_env_by_engine_app_id 会产生 1 次网络请求(依赖 apiserver 服务)
-        # TODO: 添加查询缓存，或尽早合并项目减少模块之间的网络调用
-        env = get_env_by_engine_app_id(self.app.pk)
+        env = ModuleEnvironment.objects.get(engine_app_id=self.app.pk)
         for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
             yield CustomDomainIngressMgr(domain)
 

@@ -868,8 +868,8 @@ export default {
   '初始化代码模板：': 'Initialize the code template: ',
   '默认模块只能由': 'The default module can only be used by',
   '提供源码包部署，您也可以在应用中新增普通模块': 'Provide source package deployment, and you can also add common modules in the app',
-  '默认模块需要': 'The default module requires',
-  '并生成源码包部署，您也可以在应用中新增普通模块': 'and generate a source code package for deployment, you can also add new general modules',
+  '默认模块需要在': 'The default module needs to be in',
+  '生成源码包部署，您也可以在应用中新增普通模块。': 'to generate a source code package, and you can also add a common module in the application.',
   '模块创建中，请稍候': 'Module creation, please wait',
   '非内部版应用目前无法创建其它模块': 'Non internal apps cannot create other modules at present',
   '返回': 'Back',
@@ -2089,5 +2089,8 @@ export default {
   '不允许添加同名进程': 'Adding processes with the same name is not allowed',
   '命令{key}成功': 'Command {key} succeeded',
   '{key}失败': '{key} failed',
-  '已终止当前的发布流程': 'The current publishing process has been terminated'
+  '已终止当前的发布流程': 'The current publishing process has been terminated',
+  '代码来源': 'Code source',
+  '蓝鲸可视化平台推送的源码包': 'LessCode',
+  '应用未设置访问路径': 'Application does not set access path'
 };

@@ -31,7 +31,8 @@ from tests.utils.mocks.engine import replace_cluster_service
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_save_addresses(bk_prod_env, bk_prod_engine_app):
+def test_save_addresses(bk_prod_env, bk_prod_engine_app, settings):
+    settings.USE_LEGACY_SUB_PATH_PATTERN = False
     assert AppDomain.objects.filter(app=bk_prod_engine_app).count() == 0
     assert AppSubpath.objects.filter(app=bk_prod_engine_app).count() == 0
 
@@ -41,14 +42,14 @@ def test_save_addresses(bk_prod_env, bk_prod_engine_app):
     with replace_cluster_service(
         replaced_ingress_config={
             'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}],
-            'app_root_domains': [{"name": 'bkapps.example.com'}],
+            'app_root_domains': [{"name": 'bkapps.example.com'}, {"name": 'bkapps.example2.com'}],
         }
     ), override_region_configs(bk_prod_engine_app.region, set_exposed_url_type):
         save_addresses(bk_prod_env)
     # 不同长度的子域名
-    assert AppDomain.objects.filter(app=bk_prod_engine_app).count() == 3 * 1
-    # 不同长度的子路径
-    assert AppSubpath.objects.filter(app=bk_prod_engine_app).count() == 2 * 2
+    assert AppDomain.objects.filter(app=bk_prod_engine_app).count() == 3 * 2
+    # 不同长度的子路径, 即使配置了多个 sub_path_domains 都只会是 3 条记录
+    assert AppSubpath.objects.filter(app=bk_prod_engine_app).count() == 3
 
 
 @pytest.mark.auto_create_ns

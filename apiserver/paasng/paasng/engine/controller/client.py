@@ -86,38 +86,11 @@ class ControllerClient:
             json={'operation_id': operation_id},
         )
 
-    def get_app_release(self, region, app_name, release_id):
-        """Deploy a build slug"""
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/releases/'.format(region=region, name=app_name),
-            json={
-                'release_id': release_id,
-            },
-        )
-
     def interrupt_build_process(self, region: str, app_name: str, build_process_id: str):
         """Interrupt a running build process"""
         return self.request(
             'POST', f'/regions/{region}/apps/{app_name}/build_processes/{build_process_id}/interruptions/'
         )
-
-    def list_processes_specs(self, region: str, app_name: str):
-        """List specs of app's all processes"""
-        return self.request('GET', f'/regions/{region}/apps/{app_name}/processes/specs/')
-
-    def sync_processes_specs(self, region: str, app_name: str, processes: List[Dict]):
-        """Sync specs of app's all processes by processes"""
-        return self.request(
-            'POST',
-            f'/regions/{region}/apps/{app_name}/processes/specs/',
-            json={"processes": processes},
-            desired_code=codes.no_content,
-        )
-
-    def list_processes_statuses(self, region: str, app_name: str):
-        """List current statuses of app's all processes"""
-        return self.request('GET', f'/regions/{region}/apps/{app_name}/processes/')
 
     def builds__retrieve(self, region, app_name, limit=20, offset=0):
         return self.request(
@@ -146,25 +119,6 @@ class ControllerClient:
             desired_code=codes.ok,
         )
 
-    def upsert_image_credentials(self, region, app_name, credentials):
-        """upsert app's image credentials"""
-        return self.request(
-            'POST',
-            f"/regions/{region}/apps/{app_name}/image_credentials/",
-            desired_code=codes.ok,
-            json=credentials,
-        )
-
-    def create_webconsole(
-        self, region, app_name, process_type, process_instance, operator, container_name=None, command="bash"
-    ):
-        """Create WebConsole"""
-        return self.request(
-            'POST',
-            f'/regions/{region}/apps/{app_name}/processes/{process_type}/instances/{process_instance}/webconsole/',
-            json={"container_name": container_name, "operator": operator, "command": command},
-        )
-
     def get_process_instances(self, region, app_name, process_type):
         """Get process instance"""
         return self.request(
@@ -183,13 +137,6 @@ class ControllerClient:
         return self.request('DELETE', f'/regions/{region}/apps/{app_name}/rcstate_binding/')
 
     # Region Cluster State binding end
-
-    # Process Services start
-
-    def app_proc_ingress_actions__sync(self, region, app_name):
-        return self.request('POST', f'/services/regions/{region}/apps/{app_name}/proc_ingresses/actions/sync')
-
-    # Process Services end
 
     # Bk-App(module) related start
 

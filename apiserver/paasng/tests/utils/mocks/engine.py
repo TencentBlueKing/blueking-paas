@@ -124,11 +124,5 @@ class StubControllerClient:
     def bind_app_cluster(self, region, app_name, cluster_name):
         pass
 
-    def app_proc_ingress_actions__sync(self, region, app_name):
-        pass
-
-    def sync_processes_specs(self, region: str, app_name: str, processes: List[Dict]):
-        return
-
     def delete_module_related_res(self, app_code: str, module_name: str):
         return

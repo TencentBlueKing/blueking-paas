@@ -45,7 +45,7 @@ class ApplicationReleaseMgr(DeployStep):
     def start(self):
         with self.procedure(_('更新进程配置')):
             processes = [{"name": name, "command": command} for name, command in self.deployment.procfile.items()]
-            ProcessManager(self.engine_app, self.engine_client.ctl_client).sync_processes_specs(processes)
+            ProcessManager(self.engine_app).sync_processes_specs(processes)
 
         with self.procedure(_('更新应用配置')):
             update_engine_app_config(

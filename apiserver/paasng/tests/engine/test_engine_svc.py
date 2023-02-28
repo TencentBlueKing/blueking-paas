@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paasng.engine.deploy.engine_svc import EngineDeployClient
@@ -34,3 +36,29 @@ class TestEngineDeployClient:
         c = EngineDeployClient(bk_stag_env.get_engine_app())
         s = c.create_build({}, {})
         assert s is not None
+
+    def test_update_domains(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        with mock.patch('paasng.engine.deploy.engine_svc.assign_custom_hosts') as mocker:
+            c.update_domains(
+                [
+                    {'host': 'foo.example.com', 'https_enabled': True},
+                    {'host': 'bar.example.com'},
+                ]
+            )
+            assert mocker.called
+
+    def test_update_subpaths(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        with mock.patch('paasng.engine.deploy.engine_svc.assign_subpaths') as mocker:
+            c.update_subpaths(
+                [
+                    {'subpath': '/foo/'},
+                    {'subpath': '/bar/'},
+                ]
+            )
+            assert mocker.called
+
+    def test_upsert_image_credentials(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        c.upsert_image_credentials('example.com', 'user', 'pass')

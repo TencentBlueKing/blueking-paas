@@ -42,7 +42,6 @@ from paas_wl.workloads.processes.controllers import module_env_is_running
 from paasng.engine.constants import JobStatus
 from paasng.engine.controller.client import ControllerClient
 from paasng.engine.helpers import SlugbuilderInfo
-from paasng.platform.applications.models import ModuleEnvironment
 
 if TYPE_CHECKING:
     from paasng.dev_resources.sourcectl.models import VersionInfo
@@ -60,7 +59,7 @@ class EngineDeployClient:
     def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
         self.engine_app = engine_app
         self.wl_app: WLEngineApp = self.engine_app.to_wl_obj()
-        self.env = ModuleEnvironment.objects.get(engine_app=self.engine_app)
+        self.env = self.engine_app.env
 
     def start_build_process(
         self,

@@ -1135,6 +1135,8 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 # -----------------
 # 蓝鲸监控配置项
 # -----------------
+# 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
+ENABLE_BK_MONITOR = settings.get('ENABLE_BK_MONITOR', False)
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # 同步告警策略到监控的配置

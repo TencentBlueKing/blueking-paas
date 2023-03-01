@@ -93,6 +93,7 @@ class ClusterFeatureFlags:
     ENABLE_EGRESS_IP: bool = False
     ENABLE_MOUNT_LOG_TO_HOST: bool = False
     INGRESS_USE_REGEX: bool = False
+    ENABLE_BK_MONITOR: bool = True
 
 
 @define

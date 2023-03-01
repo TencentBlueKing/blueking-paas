@@ -24,7 +24,7 @@ from unittest.mock import Mock, patch
 import pytest
 from django.conf import settings
 
-from paas_wl.monitoring.metrics.clients import PrometheusMetricClient
+from paas_wl.monitoring.metrics.clients import BkMonitorMetricClient
 from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
@@ -47,17 +47,17 @@ class TestResourceMetricManager:
 
     @pytest.fixture
     def metric_client(self):
-        yield PrometheusMetricClient(basic_auth=("foo", "bar"), host="example.com")
+        yield BkMonitorMetricClient(bk_biz_id='123')
 
     def test_normal_gen_series_query(self, metric_client):
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         fake_metrics_value = [[1234, 1234], [1234, 1234], [1234, 1234]]
         query_range_mock = Mock(return_value=fake_metrics_value)
-        with patch('paas_wl.monitoring.metrics.clients.PrometheusMetricClient.query_range', query_range_mock):
+        with patch('paas_wl.monitoring.metrics.clients.BkMonitorMetricClient._query_range', query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
-                    resource_types=[MetricsResourceType.MEM.value],
+                    resource_types=[MetricsResourceType.MEM],
                 )
             )
 
@@ -70,7 +70,7 @@ class TestResourceMetricManager:
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         fake_metrics_value: List = []
         query_range_mock = Mock(return_value=fake_metrics_value)
-        with patch('paas_wl.monitoring.metrics.clients.PrometheusMetricClient.query_range', query_range_mock):
+        with patch('paas_wl.monitoring.metrics.clients.BkMonitorMetricClient._query_range', query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
@@ -87,7 +87,7 @@ class TestResourceMetricManager:
         FakeResponse = namedtuple('FakeResponse', 'status_code')
 
         query_range_mock = Mock(side_effect=RequestMetricBackendError(FakeResponse(status_code=400)))
-        with patch('paas_wl.monitoring.metrics.clients.PrometheusMetricClient.query_range', query_range_mock):
+        with patch('paas_wl.monitoring.metrics.clients.BkMonitorMetricClient._query_range', query_range_mock):
             result = list(
                 manager.get_all_instances_metrics(
                     time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
@@ -103,24 +103,22 @@ class TestResourceMetricManager:
         manager = ResourceMetricManager(process=temp_process, metric_client=metric_client, bcs_cluster_id='')
         query = manager.gen_series_query(
             instance_name=temp_process.instances[0].name,
-            resource_type=MetricsResourceType.MEM.value,
-            series_type=MetricsSeriesType.CURRENT.value,
+            resource_type=MetricsResourceType.MEM,
+            series_type=MetricsSeriesType.CURRENT,
             time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
         )
 
         assert query.type_name == "current"
         assert query.query.startswith(
-            'sum by(container_name) '
-            '(container_memory_working_set_bytes{'
-            f'pod_name="{settings.FOR_TESTS_DEFAULT_REGION}-test-test-stag-asdfasdf", '
-            'container_name!="POD", '
+            'sum by(container_name)(container_memory_working_set_bytes{'
+            f'pod_name="{settings.FOR_TESTS_DEFAULT_REGION}-test-test-stag-asdfasdf",container_name!="POD",'
         )
 
     def test_gen_all_series_query(self, metric_client):
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         queries = manager.gen_all_series_query(
             instance_name=self.web_process.instances[0].name,
-            resource_type=MetricsResourceType.MEM.value,
+            resource_type=MetricsResourceType.MEM,
             time_range=MetricSmartTimeRange(start="2013-05-11 21:23:58", end="2013-05-11 21:25:58"),
         )
 

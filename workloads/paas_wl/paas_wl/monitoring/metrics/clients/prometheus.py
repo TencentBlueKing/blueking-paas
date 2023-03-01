@@ -25,85 +25,59 @@ from requests.auth import HTTPBasicAuth
 from requests.status_codes import codes
 
 from paas_wl.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
-from paas_wl.monitoring.metrics.constants import PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
+from paas_wl.monitoring.metrics.constants import RAW_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
 
 
 class PrometheusMetricClient:
-    query_tmpl_config = PROMQL_TMPL
+    query_tmpl_config = RAW_PROMQL_TMPL
 
     def __init__(self, basic_auth: Tuple[str, str], host: str):
         self.basic_auth = basic_auth
         self.host = host
 
-    ######################
-    # High Level Methods #
-    ######################
     def general_query(
         self, queries: List['MetricQuery'], container_name: str
     ) -> Generator['MetricSeriesResult', None, None]:
-        """support query & query_range"""
+        """查询指定的各个指标数据"""
         for query in queries:
             try:
                 if not query.is_ranged or not query.time_range:
-                    results = self.query(query.query, container_name=container_name)
-                else:
-                    results = self.query_range(
-                        query.query, container_name=container_name, **query.time_range.to_dict()
-                    )
+                    raise ValueError("for security reasons, query metric without time range isn't allowed!")
+
+                results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception as e:
-                logger.exception("fetch metrics failed, query: %s , reason: %s", query.query, e)
+                logger.exception("fetch metrics failed, query: %s, reason: %s", query.query, e)
                 # 某些 metrics 如果失败，不影响其他数据
                 results = []
 
             yield MetricSeriesResult(type_name=query.type_name, results=results)
 
-    def get_query_template(self, resource_type: MetricsResourceType, series_type: MetricsSeriesType) -> str:
-        return self.query_tmpl_config[resource_type][series_type]
+    def get_query_promql(
+        self, resource_type: MetricsResourceType, series_type: MetricsSeriesType, instance_name: str, cluster_id: str
+    ) -> str:
+        tmpl = self.query_tmpl_config[resource_type][series_type]
+        return tmpl.format(instance_name=instance_name, cluster_id=cluster_id)
 
-    ##############################
-    # Low Level Prometheus Query #
-    ##############################
-    def query_range(self, _query, start, end, step, container_name: str = "") -> List:
+    def _query_range(self, query, start, end, step, container_name: str = "") -> List:
         """范围请求API
-        :param container_name: 请求容器名
-        :param _query: 具体请求QL
+
+        :param query: 具体请求的 PromQL
         :param start: 开始时间
         :param end: 结束时间
         :param step: 步长
+        :param container_name: 容器名称
         """
         path = 'api/v1/query_range'
-        params = {'query': _query, 'start': start, 'end': end, 'step': step}
+        params = {'query': query, 'start': start, 'end': end, 'step': step}
         logger.info('prometheus query_range: %s', params)
         result = self._request(method='GET', path=path, params=params, timeout=30)
         try:
-            ret = PromeResult.from_resp(result).get_raw_by_container_name(container_name)
+            ret = PromResult.from_resp(result).get_raw_by_container_name(container_name)
             if ret:
                 return ret.get("values", [])
-            else:
-                return []
-        except ValueError as e:
-            logger.warning("failed to get metric results, for %s", e)
-            return []
-        except Exception:
-            logger.exception("failed to get metrics results")
-            return []
-
-    def query(self, _query, container_name: str = "") -> List:
-        """查询API
-        :param container_name: 请求容器名
-        :param _query: 具体请求QL
-        """
-        path = 'api/v1/query'
-        params = {'query': _query}
-        logger.info('prometheus query: %s', params)
-        result = self._request(method='GET', path=path, params=params, timeout=30)
-        try:
-            ret = PromeResult.from_resp(result, is_range=False).get_raw_by_container_name(container_name)
-            if ret:
-                return ret.get("value", [])
             else:
                 return []
         except ValueError as e:
@@ -139,7 +113,7 @@ class PrometheusMetricClient:
 
 
 @dataclass
-class PromeRangeSingleMetric:
+class PromRangeSingleMetric:
     class MetricResult:
         container_name: str
 
@@ -160,44 +134,31 @@ class PromeRangeSingleMetric:
 
     metric: MetricResult
     values: List[ValuePair] = field(default_factory=list)
-    value: Optional[ValuePair] = None
-    is_range: bool = False
 
     @property
     def container_name(self) -> str:
         return self.metric.container_name
 
     @classmethod
-    def from_raw(cls, raw, is_range: bool):
-        if is_range:
-            return cls(
-                metric=cls.MetricResult(**raw['metric']),
-                values=[cls.ValuePair(timestamp=i[0], value=i[1]) for i in raw['values']],
-                is_range=is_range,
-            )
-        else:
-            return cls(
-                metric=cls.MetricResult(**raw['metric']),
-                value=cls.ValuePair(timestamp=raw['value'][0], value=raw['value'][1]),
-                is_range=is_range,
-            )
+    def from_raw(cls, raw):
+        return cls(
+            metric=cls.MetricResult(**raw['metric']),
+            values=[cls.ValuePair(timestamp=i[0], value=i[1]) for i in raw['values']],
+        )
 
     def to_raw(self) -> dict:
         # 当前为了兼容原来的处理方法，会重新转换成 dict
-        if self.is_range:
-            return dict(metric=self.metric.to_raw(), values=[i.to_raw() for i in self.values] if self.values else [])
-        else:
-            return dict(metric=self.metric.to_raw(), value=self.value.to_raw() if self.value else [])
+        return dict(metric=self.metric.to_raw(), values=[i.to_raw() for i in self.values] if self.values else [])
 
 
 @dataclass
-class PromeResult:
-    """结果解析器"""
+class PromResult:
+    """原生 Prometheus 结果解析器"""
 
-    results: List[PromeRangeSingleMetric]
+    results: List[PromRangeSingleMetric]
 
     @classmethod
-    def from_resp(cls, raw_resp: dict, is_range: bool = True) -> 'PromeResult':
+    def from_resp(cls, raw_resp: dict) -> 'PromResult':
         if not raw_resp:
             raise ValueError("No valid results")
 
@@ -207,9 +168,7 @@ class PromeResult:
             else:
                 raise ValueError("empty results")
 
-        return cls(
-            results=[PromeRangeSingleMetric.from_raw(i, is_range) for i in raw_resp.get('data', {}).get('result', [])]
-        )
+        return cls(results=[PromRangeSingleMetric.from_raw(r) for r in raw_resp.get('data', {}).get('result', [])])
 
     def get_raw_by_container_name(self, container_name: str = "") -> Optional[dict]:
         """通过 container name 获取结果"""

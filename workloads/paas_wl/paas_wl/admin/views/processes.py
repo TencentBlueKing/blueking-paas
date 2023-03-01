@@ -26,7 +26,6 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
-from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
 from paas_wl.platform.applications.struct_models import get_env_by_engine_app_id
 from paas_wl.platform.auth.permissions import IsInternalAdmin
 from paas_wl.platform.system_api.views import SysAppRelatedViewSet
@@ -34,6 +33,7 @@ from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.controllers import get_proc_mgr
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.workloads.processes.readers import instance_kmodel
+from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 
 
 class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewSet):

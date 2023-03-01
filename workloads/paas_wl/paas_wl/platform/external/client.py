@@ -239,3 +239,12 @@ def get_plat_client() -> PlatformSvcClient:
     jwt_auth_conf = JWTAuthConf(**settings.INTERNAL_SERVICES_JWT_AUTH_CONF)
     _config = PlatformClientConfig(settings.PAAS_APISERVER_ENDPOINT, jwt_auth_conf)
     return PlatformSvcClient(_config)
+
+
+def get_local_plat_client():
+    """When "workloads" was migrated from service into module, use local client to
+    call apiserver module directly.
+    """
+    from .local import LocalPlatformSvcClient
+
+    return LocalPlatformSvcClient()

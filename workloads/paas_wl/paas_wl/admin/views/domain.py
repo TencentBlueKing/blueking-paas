@@ -22,18 +22,23 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr, validate_domain_payload
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ
-from paas_wl.platform.applications.permissions import SiteAction, site_perm_class
-from paas_wl.platform.applications.struct_models import Application, set_many_model_structured, to_structured
-from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
-from paas_wl.platform.auth.views import BaseEndUserViewSet
+from paas_wl.platform.applications.struct_models import (
+    Application,
+    set_many_model_structured,
+    set_model_structured,
+    to_structured,
+)
 from paas_wl.utils.api_docs import openapi_empty_response
+from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
 
-class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """管理应用独立域名的 ViewSet"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -75,13 +80,15 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """
         application = self.get_application()
 
-        data = validate_domain_payload(request.data, application)
+        data = validate_domain_payload(request.data, application, serializer_cls=DomainSLZ)
+        env = application.get_module(data["module"]["name"]).get_envs(data["environment"]["environment"])
         instance = get_custom_domain_mgr(application).create(
-            env=data['environment'],
+            env=env,
             host=data["name"],
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
         )
+        set_model_structured(instance, application=application)
         return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
@@ -94,6 +101,8 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
         instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        set_model_structured(instance, application=application)
+
         data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
         new_instance = get_custom_domain_mgr(application).update(
             instance, host=data['name'], path_prefix=data['path_prefix'], https_enabled=data['https_enabled']
@@ -105,6 +114,7 @@ class AppDomainsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
         instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs['id'])
+        set_model_structured(instance, application=application)
 
         get_custom_domain_mgr(application).delete(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)

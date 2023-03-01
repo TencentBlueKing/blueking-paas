@@ -7,54 +7,23 @@
       <span> {{ $t('创建应用') }} </span>
     </div>
     <div
-      v-if="userFeature.ALLOW_CREATE_SMART_APP"
       class="tab-box mt10"
     >
       <li
-        :class="['tab-item', { 'active': appType === 'default' }, { 'tab-item-nosmart': !cloudFlag }]"
+        :class="['tab-item', { 'active': appType === 'default' }]"
         @click="handleToggleType('default')"
       >
         {{ $t('普通应用') }}
       </li>
       <li
         v-if="cloudFlag"
-        :class="['tab-item', { 'active': appType === 'cloud' }, { 'tab-item-nosmart': !cloudFlag }]"
+        :class="['tab-item', { 'active': appType === 'cloud' }]"
         @click="handleToggleType('cloud')"
       >
         {{ $t('云原生应用') }}
       </li>
       <li
-        :class="['tab-item', { 'active': appType === 'smart' }, { 'tab-item-nosmart': !cloudFlag }]"
-        @click="handleToggleType('smart')"
-      >
-        {{ $t('S-mart 应用') }}
-      </li>
-      <li
-        :class="['tab-item', { 'active': appType === 'external' }, { 'tab-item-nosmart': !cloudFlag }]"
-        @click="handleToggleType('external')"
-      >
-        {{ $t('外链应用') }}
-      </li>
-    </div>
-    <div
-      v-else
-      class="tab-box mt10"
-    >
-      <li
-        :class="['tab-item tab-item-nosmart', { 'active': appType === 'default' }, { 'tab-item-nocloud': !cloudFlag }]"
-        @click="handleToggleType('default')"
-      >
-        {{ $t('普通应用') }}
-      </li>
-      <li
-        v-if="cloudFlag"
-        :class="['tab-item tab-item-nosmart', { 'active': appType === 'cloud' }, { 'tab-item-nocloud': !cloudFlag }]"
-        @click="handleToggleType('cloud')"
-      >
-        {{ $t('云原生应用') }}
-      </li>
-      <li
-        :class="['tab-item tab-item-nosmart', { 'active': appType === 'external' }, { 'tab-item-nocloud': !cloudFlag }]"
+        :class="['tab-item', { 'active': appType === 'external' }]"
         @click="handleToggleType('external')"
       >
         {{ $t('外链应用') }}
@@ -72,16 +41,11 @@
       v-else-if="appType === 'external'"
       key="external"
     />
-    <create-smart-app
-      v-else
-      key="smart"
-    />
   </div>
 </template>
 
 <script>
     import createDefaultApp from './default';
-    import createSmartApp from './smart';
     import createExternalApp from './external';
     import createCloudApp from './cloud';
 
@@ -95,7 +59,6 @@
     export default {
         components: {
             createDefaultApp,
-            createSmartApp,
             createExternalApp,
             createCloudApp
         },
@@ -156,6 +119,7 @@
 </script>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/border-active-logo.scss';
     .tab-box {
         width: 1000px;
         margin: auto;
@@ -165,7 +129,8 @@
         justify-content: space-between;
 
         .tab-item {
-            width: 240px;
+            flex: 1;
+            margin-right: 24px;
             height: 56px;
             line-height: 56px;
             text-align: center;
@@ -176,34 +141,17 @@
             cursor: pointer;
             position: relative;
 
+            &:last-of-type {
+                margin-right: 0 !important;
+            }
+
             &.active {
                 background: #fff;
                 border: 2px solid #3a84ff;
                 color: #3a84ff;
 
-                &::after {
-                    width: 16px;
-                    height: 16px;
-                    border: 2px solid #fff;
-                    border-radius: 50%;
-                    content: "\e157";
-                    font-family: 'paasng' !important;
-                    font-size: 12px;
-                    position: absolute;
-                    right: -8px;
-                    top: -8px;
-                    line-height: 1;
-                    display: inline-block;
-                    z-index: 10;
-                    background: #fff;
-                }
+                @include border-active-logo;
             }
-        }
-        .tab-item-nosmart{
-           width: 328px;
-        }
-        .tab-item-nocloud{
-            width: 490px;
         }
     }
 

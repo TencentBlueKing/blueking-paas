@@ -29,7 +29,6 @@ from rest_framework.serializers import UniqueTogetherValidator
 
 from paas_wl.networking.ingress.entities.service import PServicePortPair, service_kmodel
 from paas_wl.networking.ingress.models import AppDomainSharedCert, Domain
-from paas_wl.platform.applications.struct_models import StructuredApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.text import DNS_SAFE_PATTERN
 
@@ -85,26 +84,6 @@ class ProcIngressSLZ(serializers.Serializer):
         return data
 
 
-class AppDomainSLZ(serializers.Serializer):
-    host = serializers.CharField()
-    path_prefix = serializers.CharField()
-    https_enabled = serializers.BooleanField()
-    source = serializers.IntegerField()
-
-
-class AutoGenAppDomainForCreationSLZ(serializers.Serializer):
-    """Serializer for creating **Auto-generated** AppDomain object"""
-
-    host = serializers.CharField()
-    https_enabled = serializers.BooleanField(default=False)
-
-
-class UpdateAutoGenAppDomainsSLZ(serializers.Serializer):
-    """Serializer for updating **Auto-generated** AppDomain objects"""
-
-    domains = serializers.ListField(child=AutoGenAppDomainForCreationSLZ())
-
-
 def validate_cert(d):
     """Validate certificate content"""
     try:
@@ -129,20 +108,6 @@ class UpdateAppDomainSharedCertSLZ(serializers.ModelSerializer):
     class Meta:
         model = AppDomainSharedCert
         fields = ['cert_data', 'key_data', 'auto_match_cns']
-
-
-class AppSubpathForCreationSLZ(serializers.Serializer):
-    subpath = serializers.CharField()
-
-
-class AppSubpathSLZ(serializers.Serializer):
-    cluster_name = serializers.CharField()
-    subpath = serializers.CharField()
-    source = serializers.IntegerField()
-
-
-class UpdateAppSubpathsSLZ(serializers.Serializer):
-    subpaths = serializers.ListField(child=AppSubpathForCreationSLZ())
 
 
 # Custom Domain(end-user) serializers start
@@ -198,15 +163,6 @@ class DomainSLZ(DomainEditableMixin):
     environment_name = serializers.ChoiceField(
         source='environment.environment', choices=('stag', 'prod'), required=True, help_text='环境'
     )
-
-    def to_internal_value(self, data):
-        struct_app: StructuredApp = self.context.get('struct_app')
-        data = super().to_internal_value(data)
-
-        # Get ID of module and environment from name
-        data['module'] = struct_app.get_module_by_name(data['module']['name'])
-        data['environment'] = struct_app.get_env_by_environment(data['module'], data['environment']['environment'])
-        return data
 
 
 class DomainForUpdateSLZ(DomainEditableMixin):

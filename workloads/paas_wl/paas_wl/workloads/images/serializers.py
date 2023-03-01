@@ -21,14 +21,6 @@ from rest_framework import serializers
 from paas_wl.workloads.images.models import AppUserCredential
 
 
-class AppImageCredentialSerializer(serializers.Serializer):
-    """Serializer for Creating AppImageCredential"""
-
-    registry = serializers.CharField()
-    username = serializers.CharField()
-    password = serializers.CharField()
-
-
 class UsernamePasswordPairSLZ(serializers.ModelSerializer):
     """Serializer for username password pair"""
 

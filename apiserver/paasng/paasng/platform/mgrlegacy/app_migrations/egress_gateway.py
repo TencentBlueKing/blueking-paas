@@ -18,9 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.utils import IntegrityError
 from django.utils.translation import gettext_lazy as _
 
-from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.controller.state import controller_client
 
 from .base import BaseMigration
@@ -36,29 +37,32 @@ class EgressGatewayMigration(BaseMigration):
         application = self.context.app
         module = application.get_default_module()
         for env in module.get_envs():
-            engine_app = env.engine_app
+            wl_engine_app = env.engine_app.to_wl_obj()
             try:
-                controller_client.app_rcsbinding__create(engine_app.region, engine_app.name)
-            except BadResponse as e:
+                controller_client.app_rcsbinding__create(wl_engine_app)
+            except ObjectDoesNotExist:
                 self.add_log(
-                    _("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=e.get_error_message())
+                    _("{env} 环境绑定出口IP异常, 详情: {detail}").format(
+                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=wl_engine_app.region)
+                    )
                 )
+            except IntegrityError:
+                self.add_log(_("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("不能重复绑定")))
+            except Exception:
+                self.add_log(_("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("未知错误")))
 
     def rollback(self):
         # 删除 Egress 记录
         application = self.context.app
         module = application.get_default_module()
         for env in module.get_envs():
-            engine_app = env.engine_app
+            wl_engine_app = env.engine_app.to_wl_obj()
             try:
-                controller_client.app_rcsbinding__destroy(engine_app.region, engine_app.name)
-            except BadResponse as e:
-                if e.status_code == 404:
-                    self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
-                else:
-                    self.add_log(
-                        _("{env} 环境解绑出口IP异常, 详情: {detail}").format(env=env.environment, detail=e.get_error_message())
-                    )
+                controller_client.app_rcsbinding__destroy(wl_engine_app)
+            except ObjectDoesNotExist as e:
+                self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
+            except Exception:
+                self.add_log(_("{env} 环境解绑出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("未知错误")))
 
     def get_description(self):
         return _("绑定出口 IP ")

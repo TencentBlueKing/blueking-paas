@@ -17,13 +17,13 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List, Optional
+from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
+from paas_wl.platform.api import create_app_ignore_duplicated
 from paasng.engine.constants import AppEnvName, EngineAppType
 from paasng.engine.controller.cluster import get_region_cluster_helper
-from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.controller.state import controller_client
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -56,14 +56,7 @@ def initialize_simple(module: Module, data: Dict, cluster_name: Optional[str] = 
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
 
-    try:
-        model_res = controller_client.create_cnative_app_model_resource(application.region, data)
-    except BadResponse as e:
-        if e.get_error_code() == 'VALIDATION_ERROR':
-            detail = e.json_response.get('fields_detail', e.get_error_message())
-            raise ValidationError(detail=detail)
-        raise
-
+    model_res = controller_client.create_cnative_app_model_resource(application.region, data)
     create_engine_apps(application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
 
@@ -79,31 +72,27 @@ def create_engine_apps(
     for environment in environments:
         engine_app_name = f'{default_engine_app_prefix}-{application.code}-{environment}'
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
-        engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
+        wl_engine_app_id = get_or_create_engine_app(application.owner, application.region, engine_app_name)
         controller_client.bind_app_cluster(application.region, engine_app_name, cluster_name=cluster_name)
         ModuleEnvironment.objects.create(
-            application=application, module=module, engine_app_id=engine_app["uuid"], environment=environment
+            application=application, module=module, engine_app_id=wl_engine_app_id, environment=environment
         )
 
 
-def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> Dict:
-    """get or create engine app from workload"""
-    try:
-        created = controller_client.app__create(
-            region=region, app_name=engine_app_name, app_type=EngineAppType.CLOUD_NATIVE
-        )
-        # Create EngineApp and binding relationships
-        EngineApp.objects.create(
-            id=created["uuid"],
-            name=engine_app_name,
-            owner=owner,
-            region=region,
-        )
-        return created
-    except BadResponse as e:
-        if e.error_code == 'APP_ALREADY_EXISTS':
-            return controller_client.app__retrive_by_name(region=region, app_name=engine_app_name)
-        raise
+def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> UUID:
+    """get or create engine app from workload
+
+    :return: UUID of the workloads's EngineApp object
+    """
+    info = create_app_ignore_duplicated(region, engine_app_name, EngineAppType.CLOUD_NATIVE)
+    # Create EngineApp and binding relationships
+    EngineApp.objects.create(
+        id=info.uuid,
+        name=engine_app_name,
+        owner=owner,
+        region=region,
+    )
+    return info.uuid
 
 
 def get_default_cluster_name(region: str) -> str:

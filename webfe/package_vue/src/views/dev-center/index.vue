@@ -101,52 +101,69 @@
       class="wrap"
       :height="575"
     >
-      <div class="paas-application-tit">
-        <h2> {{ $t('我的应用') }} <span> ({{ pageConf.count }}) </span></h2>
-
-        <div class="fright">
-          <div
-            v-if="userFeature.MGRLEGACY"
-            class="migrate"
-          >
-            <bk-button
-              theme="primary"
-              text
-              @click="appMigrate"
+      <h2 class="application-title">
+        {{ $t('我的应用') }}
+        <span> ({{ pageConf.count }}) </span>
+      </h2>
+      <div class="paas-application-tit clearfix">
+        <div class="fright clearfix">
+          <div class="app-title-left">
+            <div class="create-app">
+              <bk-button
+                class="mr8"
+                theme="primary"
+                @click="createApp"
+              >
+                {{ $t('创建应用') }}
+              </bk-button>
+            </div>
+            <div
+              v-if="userFeature.MGRLEGACY"
+              class="migrate"
             >
-              {{ $t('迁移旧版应用') }}
-            </bk-button>
-          </div>
-          <div class="create-app">
-            <bk-button
-              theme="primary"
-              @click="createApp"
-            >
-              {{ $t('创建应用') }}
-            </bk-button>
+              <bk-button
+                :theme="'default'"
+                @click="appMigrate"
+              >
+                {{ $t('迁移旧版应用') }}
+              </bk-button>
+            </div>
           </div>
 
-          <div class="paas-search">
-            <bk-input
-              v-model="filterKey"
-              :placeholder="$t('输入应用名称、ID，按Enter搜索')"
-              :clearable="true"
-              :right-icon="'paasng-icon paasng-search'"
-              @enter="searchApp"
-            />
-          </div>
-
-          <div
-            class="advanced-filter"
-            @click.stop="toggleChoose(true)"
-          >
-            <p>
-              {{ $t('高级筛选') }}
-              <i
-                class="paasng-icon"
-                :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+          <div class="app-title-right">
+            <!-- 应用分类筛选项 -->
+            <div class="paas-filter-wrapper mr8">
+              <div
+                v-for="item in appTypeList"
+                :key="item.key"
+                :class="['filter-item', { 'active': item.key === curAppTypeActive }]"
+                @click="switchAppType(item)"
+              >
+                {{ item.text }}
+              </div>
+            </div>
+            <div class="paas-search mr8">
+              <bk-input
+                v-model="filterKey"
+                :placeholder="$t('输入应用名称、ID，按Enter搜索')"
+                :clearable="true"
+                :right-icon="'paasng-icon paasng-search'"
+                @enter="searchApp"
               />
-            </p>
+            </div>
+
+            <div
+              class="advanced-filter"
+              @click.stop="toggleChoose(true)"
+            >
+              <p>
+                {{ $t('高级筛选') }}
+                <i
+                  class="paasng-icon"
+                  :class="ifopen ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+                />
+              </p>
+            </div>
           </div>
           <div
             v-if="ifopen"
@@ -173,17 +190,6 @@
                   value="true"
                 >
                 <span> {{ $t('只显示我创建的') }} </span>
-              </label>
-            </div>
-            <div class="overflow shaixuan">
-              <label class="button-holder">
-                <input
-                  v-model="appFilter.type"
-                  type="checkbox"
-                  class="ps-checkbox-default"
-                  value="true"
-                >
-                <span> {{ $t('只显示插件应用') }} </span>
               </label>
             </div>
             <div class="overflow shaixuan">
@@ -366,29 +372,34 @@
                   v-if="!Object.keys(appItem.application.deploy_info).length"
                   class="app-operation-section"
                 >
+                  <!-- 外链应用 -->
                   <bk-button
                     theme="primary"
+                    class="mr8"
                     text
                     @click="toCloudAPI(appItem)"
                   >
                     {{ $t('申请云API权限') }}
-                    <i class="paasng-icon paasng-keys" />
+                    <i class="paasng-icon paasng-keys cloud-icon" />
                   </bk-button>
+                  <span v-bk-tooltips.top="{ content: $t('应用未设置访问路径'), disabled: appItem.market_config.source_tp_url }">
+                    <bk-button
+                      theme="primary"
+                      text
+                      :disabled="!appItem.market_config.source_tp_url"
+                      @click="toAccessApps(appItem)"
+                    >
+                      {{ $t('访问应用') }}
+                      <i class="paasng-icon paasng-external-link" />
+                    </bk-button>
+                  </span>
                 </div>
 
                 <div
                   v-else
                   class="app-operation-section"
                 >
-                  <bk-button
-                    v-if="appItem.application.type === 'cloud_native'"
-                    text
-                    @click="deploy(appItem)"
-                  >
-                    {{ $t('应用编排') }}
-                    <i class="paasng-icon paasng-external-link" />
-                  </bk-button>
-                  <template v-else>
+                  <template>
                     <bk-button
                       :disabled="!appItem.application.deploy_info.stag.deployed"
                       text
@@ -569,6 +580,30 @@
 
 <script>
     import auth from '@/auth';
+    import i18n from '@/language/i18n';
+
+    const APP_TYPE_MAP = [
+        {
+           text: i18n.t('全部'),
+           key: 'all',
+           type: 'all'
+        },
+        {
+           text: i18n.t('普通应用'),
+           key: 'default_app_count',
+           type: 'default'
+        },
+        {
+           text: i18n.t('云原生应用'),
+           key: 'cloud_native_app_count',
+           type: 'cloud_native'
+        },
+        {
+           text: i18n.t('外链应用'),
+           key: 'engineless_app_count',
+           type: 'engineless_app'
+        }
+    ];
 
     export default {
         // Get userHasApp before render
@@ -681,7 +716,10 @@
                     default: this.$t('默认')
                 },
                 isFilter: false,
-                type: 'default'
+                type: 'default',
+                appTypeList: APP_TYPE_MAP,
+                curAppType: '',
+                curAppTypeActive: 'all'
             };
         },
         computed: {
@@ -978,7 +1016,8 @@
                     exclude_collaborated: this.appFilter.excludeCollaborated,
                     // 是否包含已下架应用，默认不包含
                     include_inactive: this.appFilter.includeInactive,
-                    type: this.appFilter.type ? 'bk_plugin' : ''
+                    // 对应类型
+                    type: this.curAppType
                 });
                 this.isLoading = true;
                 for (const key in this.fetchParams) {
@@ -988,8 +1027,8 @@
                     const res = await this.$store.dispatch('getAppList', { url });
                     this.pageConf.curPage = page;
                     this.pageConf.count = res.count;
-                    this.pageConf.totalPage = Math.ceil(this.pageConf.count / this.pageConf.limit)
-                    ;(res.results || []).forEach(item => {
+                    this.pageConf.totalPage = Math.ceil(this.pageConf.count / this.pageConf.limit);
+                    (res.results || []).forEach(item => {
                         this.$set(item, 'expanded', false);
                         this.$set(item, 'creation_allowed', true);
                     });
@@ -1063,6 +1102,18 @@
                         this.appNumInfo[item.region] = item.count;
                     });
                 });
+            },
+
+            toAccessApps (appItem) {
+                if (appItem.market_config && appItem.market_config.source_tp_url) {
+                    window.open(appItem.market_config.source_tp_url);
+                }
+            },
+
+            switchAppType (item) {
+                this.curAppType = item.type !== 'all' ? item.type : '';
+                this.curAppTypeActive = item.key;
+                this.fetchAppList();
             }
         }
     };
@@ -1303,22 +1354,19 @@
         }
     }
 
-    .migrate {
-        position: absolute;
-        right: 540px;
-    }
-
     .advanced-filter {
         float: left;
         width: 98px;
         height: 32px;
-        line-height: 30px;
+        line-height: 32px;
         margin-top: 3px;
         border: 1px solid #c4c6cc;
         border-radius: 0 2px 2px 0;
         background: #fff;
         cursor: pointer;
         z-index: 1;
+        color: #979BA5;
+        font-size: 12px;
         &:hover {
             color: #3a84ff;
         }
@@ -1335,8 +1383,14 @@
         button {
             i {
                 position: relative;
-                top: 1px;
+                top: 2px;
                 font-size: 20px;
+            }
+            i.cloud-icon {
+                left: -3px;
+            }
+            &.mr8 {
+                margin-right: 8px;
             }
         }
     }
@@ -1344,11 +1398,6 @@
     .shaixuan,
     .shaixuan input {
         cursor: pointer;
-    }
-
-    .create-app {
-        position: absolute;
-        right: 427px;
     }
 
     .paas-operation-icon {
@@ -1429,21 +1478,66 @@
     }
 
     .paas-application-tit {
-        padding: 20px 0;
+        padding: 16px 0;
         color: #666;
         line-height: 36px;
         position: relative;
+        .mr8 {
+            margin-right: 8px;
+        }
     }
 
-    .paas-application-tit h2 {
-        font-size: 18px;
+    .paas-application-tit .fright {
+        width: 100%;
+        .app-title-left {
+            float: left;
+            display: flex;
+        }
+        .app-title-right {
+            float: right;
+            display: flex;
+            .paas-filter-wrapper {
+                display: flex;
+                align-items: center;
+                height: 32px;
+                margin-top: 3px;
+                padding: 4px;
+                background: #F0F1F5;
+                color: #63656E;
+                border-radius: 2px;
+                .filter-item {
+                    font-size: 12px;
+                    line-height: 24px;
+                    padding: 0 10px;
+                    &:hover {
+                        cursor: pointer;
+                    }
+                    &.active {
+                        background: #fff;
+                        color: #3A84FF;
+                        border-radius: 2px;
+                    }
+                }
+            }
+        }
+    }
+
+    .clearfix::after {
+        content: "";
+        display: block;
+        height: 0;
+        clear:both;
+        visibility: hidden;
+    }
+    .clearfix {
+        *zoom: 1;
+    }
+
+    h2.application-title {
+        font-size: 16px;
+        margin-top: 8px;
         font-weight: normal;
-        display: inline-block;
         color: #313238;
-    }
-
-    .paas-application-tit h2 span {
-        color: #666;
     }
 
     .disabledBox .section-button {
@@ -1466,9 +1560,6 @@
 
     .paas-search {
         width: 320px;
-        position: absolute;
-        right: 97px;
-        z-index: 2;
     }
 
     .choose-box {

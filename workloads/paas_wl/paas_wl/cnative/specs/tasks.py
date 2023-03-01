@@ -24,11 +24,10 @@ from typing import Optional
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, TaskPoller
 from django.utils import timezone
 
-from paas_wl.platform.applications.struct_models import ModuleEnv, get_structured_app
-
-from .constants import DeployStatus
-from .models import AppModelDeploy
-from .resource import ModelResState, MresConditionParser, get_mres_from_cluster
+from paas_wl.cnative.specs.constants import DeployStatus
+from paas_wl.cnative.specs.models import AppModelDeploy
+from paas_wl.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,11 @@ class AppModelDeployStatusPoller(TaskPoller):
 
     def query(self) -> PollingResult:
         dp = AppModelDeploy.objects.get(id=self.params['deploy_id'])
-        mres = get_mres_from_cluster(dp.environment)
+        mres = get_mres_from_cluster(
+            ModuleEnvironment.objects.get(
+                application_id=dp.application_id, module_id=dp.module_id, environment=dp.environment_name
+            )
+        )
         if not mres:
             return PollingResult.doing()
 
@@ -58,11 +61,6 @@ class AppModelDeployStatusPoller(TaskPoller):
             update_status(dp, state, last_transition_time=mres.status.lastUpdate)
         # Still pending, do another query later
         return PollingResult.doing()
-
-    @staticmethod
-    def get_env(env_id: int) -> ModuleEnv:
-        app = get_structured_app(env_id=env_id)
-        return app.get_env_by_id(env_id)
 
 
 class DeployStatusHandler(CallbackHandler):

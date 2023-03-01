@@ -30,6 +30,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
+from paas_wl.platform.api import CreatedAppInfo, create_app_ignore_duplicated
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
@@ -39,8 +40,8 @@ from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import EngineAppType, RuntimeType
 from paasng.engine.controller.cluster import get_region_cluster_helper
-from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.controller.state import controller_client
+from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.applications.specs import AppSpecs
@@ -107,11 +108,11 @@ class ModuleInitializer:
 
         for environment in environments:
             name = self.make_engine_app_name(environment)
-            resp = self._create_or_get_engine_app(controller_client, name, _cluster_name)
+            info = self._create_or_get_engine_app(name, _cluster_name)
 
             # Create EngineApp and binding relationships
             engine_app = EngineApp.objects.create(
-                id=resp['uuid'], name=resp['name'], owner=self.application.owner, region=self.application.region
+                id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
             )
             env = ApplicationEnvironment.objects.create(
                 application=self.application, module=self.module, engine_app_id=engine_app.id, environment=environment
@@ -119,7 +120,7 @@ class ModuleInitializer:
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
-            self._update_meta_info_for_engine_app(controller_client, name=name, meta_info=engine_app_meta_info)
+            self._update_meta_info_for_engine_app(name=name, meta_info=engine_app_meta_info)
         return
 
     def initialize_with_template(
@@ -217,24 +218,15 @@ class ModuleInitializer:
         # 语言要求的构建工具
         helper.bind_buildpacks_by_module_language()
 
-    def _update_meta_info_for_engine_app(self, client, name, meta_info):
+    def _update_meta_info_for_engine_app(self, name, meta_info):
         """Update engine app's meta info"""
-        return client.update_app_metadata(
-            region=self.application.region, app_name=name, payload={"metadata": meta_info}
-        )
+        EngineDeployClient(EngineApp.objects.get(name=name)).update_metadata(meta_info)
 
-    def _create_or_get_engine_app(self, client, name, cluster_name: str) -> Dict:
+    def _create_or_get_engine_app(self, name, cluster_name: str) -> CreatedAppInfo:
         """Create or get existed engine app by given name"""
-        try:
-            ret = client.app__create(region=self.application.region, app_name=name, app_type=EngineAppType.DEFAULT)
-            # Set engine app cluster
-            self.cluster_helper.set_engine_app_cluster(name, cluster_name)
-            return ret
-        except BadResponse as e:
-            if e.error_code == 'APP_ALREADY_EXISTS':
-                app_info = client.app__retrive_by_name(app_name=name, region=self.application.region)
-                return app_info
-            raise
+        info = create_app_ignore_duplicated(self.application.region, name, EngineAppType.DEFAULT)
+        self.cluster_helper.set_engine_app_cluster(name, cluster_name)
+        return info
 
 
 ModuleInitResult = namedtuple('ModuleInitResult', 'source_init_result')

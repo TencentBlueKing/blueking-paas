@@ -49,6 +49,7 @@ class AppImageCredential(UuidAuditedModel):
 
     registry = models.CharField(max_length=255)
     username = models.CharField(max_length=32, blank=False)
+    # TODO: 迁移模型时, 修改成加密存储
     password = models.CharField(max_length=255, blank=True)
 
     objects = AppImageCredentialManager()
@@ -69,6 +70,7 @@ class AppUserCredential(UuidAuditedModel):
 
     name = models.CharField(max_length=32, help_text="凭证名称")
     username = models.CharField(max_length=64, help_text="账号")
+    # TODO: 迁移模型时, 修改成加密存储
     password = models.CharField(max_length=255, help_text="密码")
     description = models.TextField(help_text="描述")
 

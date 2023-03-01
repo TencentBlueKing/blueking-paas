@@ -16,14 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.urls import path
-
-from paas_wl.workloads.images import views
-
-urlpatterns = [
-    path(
-        "regions/<str:region>/apps/<str:name>/image_credentials/",
-        views.AppImageCredentialsViewSet.as_view({'post': 'upsert', 'get': 'list'}),
-        name="sys_api.app.image_credentials",
-    ),
-]

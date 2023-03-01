@@ -23,15 +23,15 @@ import logging
 
 from django.db import IntegrityError, transaction
 
+from paas_wl.networking.ingress.domains.exceptions import ReplaceAppDomainFailed
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.utils import get_main_process_service_name, guess_default_service_name
 from paas_wl.platform.applications.models import EngineApp
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-
-from .exceptions import ReplaceAppDomainFailed
+from paasng.paas_wl.platform.applications.struct_models import set_model_structured
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class ReplaceAppDomainService:
     :param path_prefix: used for locating original domain object
     """
 
-    def __init__(self, env: ModuleEnv, host: str, path_prefix: str):
+    def __init__(self, env: ModuleEnvironment, host: str, path_prefix: str):
         self.engine_app = EngineApp.objects.get_by_env(env)
         self.env = env
         self.host = host
@@ -63,12 +63,14 @@ class ReplaceAppDomainService:
 
     def _get_obj(self) -> Domain:
         try:
-            return Domain.objects.get(
+            domain = Domain.objects.get(
                 name=self.host,
                 path_prefix=self.path_prefix,
                 module_id=self.env.module_id,
                 environment_id=self.env.id,
             )
+            set_model_structured(domain, application=self.env.application)
+            return domain
         except Domain.DoesNotExist:
             raise ReplaceAppDomainFailed("无法找到旧域名记录，请稍后重试")
 
@@ -108,8 +110,8 @@ class ReplaceAppDomainService:
 class DomainResourceDeleteService:
     """Delete custom domain related resources"""
 
-    def __init__(self, env: ModuleEnv):
-        self.engine_app = EngineApp.objects.get_by_env(env)
+    def __init__(self, env: ModuleEnvironment):
+        self.engine_app = EngineApp.objects.get(pk=env.engine_app_id)
         self.env = env
 
     def do(self, *, host: str, path_prefix: str) -> bool:
@@ -144,10 +146,12 @@ class DomainResourceDeleteService:
             environment_id=self.env.id,
         )
         try:
-            return Domain.objects.get(**fields)
+            domain = Domain.objects.get(**fields)
         except Domain.DoesNotExist:
             logger.warning('AppDomain record: %s-%s no longer exists in database, skip deletion', host, path_prefix)
-            return Domain(**fields)
+            domain = Domain(**fields)
+        set_model_structured(domain, self.env.application)
+        return domain
 
 
 def get_service_name(app) -> str:

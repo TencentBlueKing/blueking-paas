@@ -17,16 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from dataclasses import asdict
+from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
 
-from paasng.engine.controller.state import controller_client
+from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.resources.base.bcs_client import BCSClient
+from paas_wl.workloads.processes.controllers import get_processes_status, list_proc_specs
+from paas_wl.workloads.processes.models import ProcessSpecManager
+from paas_wl.workloads.processes.readers import process_kmodel
 from paasng.engine.models import EngineApp
-
-if TYPE_CHECKING:
-    from paasng.engine.controller.client import ControllerClient
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +82,9 @@ class Process:
 class ProcessManager:
     """Manager for engine processes"""
 
-    def __init__(self, app: EngineApp, ctl_client: Optional['ControllerClient'] = None):
+    def __init__(self, app: EngineApp):
         self.app = app
-        self.ctl_client = ctl_client or controller_client
+        self.wl_app = app.to_wl_obj()
 
     def sync_processes_specs(self, processes: List[Dict]):
         """Sync specs by plain ProcessSpec structure
@@ -91,14 +93,14 @@ class ProcessManager:
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
         """
-        self.ctl_client.sync_processes_specs(self.app.region, self.app.name, processes)
+        ProcessSpecManager(self.wl_app).sync(processes)
 
     def list_processes_specs(self, target_status: Optional[str] = None) -> List[Dict]:
         """Get specs of current app's all processes
 
         :param target_status: if given, filter results by given target_status
         """
-        specs = self.ctl_client.list_processes_specs(self.app.region, self.app.name)
+        specs = list_proc_specs(self.wl_app)
         results = []
         for item in specs:
             # Filter by given conditions
@@ -109,9 +111,21 @@ class ProcessManager:
 
     def list_processes(self) -> List[Process]:
         """Query all running processes"""
-        resp = self.ctl_client.list_processes_statuses(region=self.app.region, app_name=self.app.name)
-        raw_processes = resp.get('results', [])
-        return [cattr.structure(x, Process) for x in raw_processes]
+        proc_status = get_processes_status(self.wl_app)
+        items = []
+        for proc in proc_status:
+            items.append(
+                {
+                    'type': proc.type,
+                    'app_name': proc.app.name,
+                    'instances': [asdict(inst) for inst in proc.instances],
+                    'command': proc.runtime.proc_command,
+                    'process_status': proc.status.to_dict() if proc.status else {},
+                    'desired_replicas': proc.replicas,
+                    'version': proc.version,
+                }
+            )
+        return [cattr.structure(x, Process) for x in items]
 
     def get_running_image(self) -> str:
         manager = ProcessManager(self.app)
@@ -126,12 +140,21 @@ class ProcessManager:
         self, operator: str, process_type: str, process_instance_name: str, container_name=None, command="bash"
     ):
         """Create a webconsole provided by bcs"""
-        return self.ctl_client.create_webconsole(
-            region=self.app.region,
-            app_name=self.app.name,
-            process_type=process_type,
-            process_instance=process_instance_name,
-            container_name=container_name,
-            operator=operator,
-            command=command,
+        if not container_name:
+            container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
+
+        cluster = get_cluster_by_app(self.wl_app)
+        return BCSClient().api.create_web_console_sessions(
+            json={
+                'namespace': self.wl_app.namespace,
+                'pod_name': process_instance_name,
+                'container_name': container_name,
+                'command': command,
+                'operator': operator,
+            },
+            path_params={
+                'cluster_id': cluster.annotations['bcs_cluster_id'],
+                'project_id_or_code': cluster.annotations['bcs_project_id'],
+                'version': 'v4',
+            },
         )

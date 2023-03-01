@@ -65,7 +65,7 @@ class BuildProcessPoller(DeployPoller):
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])
 
         client = EngineDeployClient(deployment.get_engine_app())
-        resp = client.get_build_process_status(self.params['build_process_id'])
+        build_proc = client.get_build_process(self.params['build_process_id'])
 
         subscriber = self.get_subscriber(self.params['deployment_id'])
         phase = deployment.deployphase_set.get(type=DeployPhaseTypes.BUILD)
@@ -83,12 +83,8 @@ class BuildProcessPoller(DeployPoller):
                 MessageStepMatcher.match_and_update_step(event, pattern_maps, phase)
         logger.info("[%s] history events from redis fetched", self.params['deployment_id'])
 
-        # Parse response
-        build_status = resp.get('status')
-        try:
-            build_id = resp['build']['uuid']
-        except (TypeError, KeyError):
-            build_id = None
+        build_status = build_proc.status
+        build_id = str(build_proc.build_id)
 
         status = PollingStatus.DOING
         if build_status in BuildStatus.get_finished_states():
@@ -121,9 +117,7 @@ class CommandPoller(DeployPoller):
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])
 
         client = EngineDeployClient(deployment.get_engine_app())
-        resp = client.get_command_status(self.params['command_id'])
-
-        command_status = JobStatus(resp["status"])
+        command_status = client.get_command_status(self.params['command_id'])
 
         coordinator = DeploymentCoordinator(deployment.app_environment)
         # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间

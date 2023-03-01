@@ -119,10 +119,6 @@ urlpatterns = [
 
 urlpatterns += [
     re_path(
-        make_app_path(r'/addresses/$', include_envs=False),
-        views.EnvDeployedStatusViewSet.as_view({'get': 'list_addrs'}),
-    ),
-    re_path(
         make_app_path(r'/related_resources/$', include_envs=False),
         views.BkModuleRelatedResourcesViewSet.as_view({'delete': 'destroy'}),
     ),

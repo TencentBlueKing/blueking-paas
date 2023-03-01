@@ -16,21 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest import mock
-
 import pytest
 
-from paas_wl.cnative.specs.configurations import MergeStrategy, generate_builtin_configurations, merge_envvars
+from paas_wl.cnative.specs.configurations import MergeStrategy, merge_envvars
 from paas_wl.cnative.specs.v1alpha1.bk_app import EnvVar
-
-
-def test_generate_builtin_configurations():
-    with mock.patch("paas_wl.cnative.specs.configurations.get_plat_client") as mocked_client:
-        mocked_client().list_builtin_envs.return_value = {"foo": "bar"}
-        assert generate_builtin_configurations("", "") == [
-            EnvVar(name="PORT", value="5000"),
-            EnvVar(name="FOO", value="bar"),
-        ]
 
 
 @pytest.mark.parametrize(

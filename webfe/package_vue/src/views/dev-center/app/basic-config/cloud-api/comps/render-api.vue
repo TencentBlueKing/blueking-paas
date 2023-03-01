@@ -5,6 +5,11 @@
     placeholder="cloud-api-inner-index-loading"
     :height="300"
   >
+    <bk-alert
+      style="margin-bottom: 16px;"
+      type="info"
+      :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')"
+    />
     <layout>
       <system-filter
         :list="filterList"

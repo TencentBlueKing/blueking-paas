@@ -394,13 +394,13 @@ class TestApplicationUpdate:
 class TestApplicationDeletion:
     """Test delete application API"""
 
-    def test_normal(self, api_client, bk_app, bk_user, mock_current_engine_client):
+    def test_normal(self, api_client, bk_app, bk_user, mock_current_engine_client, with_empty_live_addrs):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         response = api_client.delete('/api/bkapps/applications/{}/'.format(bk_app.code))
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
 
-    def test_rollback(self, api_client, bk_app, bk_user, mock_current_engine_client):
+    def test_rollback(self, api_client, bk_app, bk_user, mock_current_engine_client, with_empty_live_addrs):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
         with mock.patch(
             "paasng.platform.applications.views.ApplicationViewSet._delete_all_module",

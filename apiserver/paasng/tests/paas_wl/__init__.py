@@ -16,14 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.urls import re_path
-
-from paas_wl.utils import text
-
-from . import views
-
-urlpatterns = [
-    re_path(
-        f'^regions/{text.PVAR_REGION}/app_model_resources/$', views.AppModelResourceViewSet.as_view({'post': 'create'})
-    ),
-]

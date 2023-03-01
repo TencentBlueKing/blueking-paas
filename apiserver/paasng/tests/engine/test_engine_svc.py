@@ -26,12 +26,6 @@ pytestmark = pytest.mark.django_db
 
 
 class TestEngineDeployClient:
-    def test_metadata_funcs(self, bk_app, bk_stag_env):
-        c = EngineDeployClient(bk_stag_env.get_engine_app())
-        assert c.get_metadata()['paas_app_code'] == bk_app.code
-        c.update_metadata({'paas_app_code': 'foo-updated'})
-        assert c.get_metadata()['paas_app_code'] == 'foo-updated'
-
     def test_create_build(self, bk_stag_env):
         c = EngineDeployClient(bk_stag_env.get_engine_app())
         s = c.create_build({}, {})

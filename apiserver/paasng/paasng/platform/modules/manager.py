@@ -30,7 +30,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from paas_wl.platform.api import CreatedAppInfo, create_app_ignore_duplicated
+from paas_wl.platform.api import CreatedAppInfo, create_app_ignore_duplicated, update_metadata_by_env
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
@@ -41,7 +41,6 @@ from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import EngineAppType, RuntimeType
 from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.engine.controller.state import controller_client
-from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.applications.specs import AppSpecs
@@ -120,7 +119,7 @@ class ModuleInitializer:
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
-            self._update_meta_info_for_engine_app(name=name, meta_info=engine_app_meta_info)
+            update_metadata_by_env(env, engine_app_meta_info)
         return
 
     def initialize_with_template(
@@ -217,10 +216,6 @@ class ModuleInitializer:
 
         # 语言要求的构建工具
         helper.bind_buildpacks_by_module_language()
-
-    def _update_meta_info_for_engine_app(self, name, meta_info):
-        """Update engine app's meta info"""
-        EngineDeployClient(EngineApp.objects.get(name=name)).update_metadata(meta_info)
 
     def _create_or_get_engine_app(self, name, cluster_name: str) -> CreatedAppInfo:
         """Create or get existed engine app by given name"""

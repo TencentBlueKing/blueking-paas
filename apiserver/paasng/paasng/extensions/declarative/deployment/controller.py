@@ -90,8 +90,7 @@ class DeploymentDeclarativeController:
         """更新 SaaS 监控配置"""
         engine_app = self.deployment.get_engine_app()
         controller_client.upsert_app_monitor(
-            region=engine_app.region,
-            app_name=engine_app.name,
+            wl_engine_app=engine_app.to_wl_obj(),
             port=bk_monitor.port,
             target_port=bk_monitor.target_port,  # type: ignore
         )

@@ -23,13 +23,16 @@ from typing import TYPE_CHECKING, Any, Dict
 
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
+from django.db import transaction
 from requests.status_codes import codes
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.serializers import ClusterSLZ
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.engine.controller.exceptions import BadResponse
+from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_requests_session
 from paasng.utils.local import local
 
@@ -92,18 +95,11 @@ class ControllerClient:
         return AppModelResourceSerializer(model_resource).data
 
     def app__delete(self, region, app_name):
-        """"""
+        """删除 engine app, 仅应用迁移时使用"""
         return self.request(
             'DELETE',
             '/regions/{region}/apps/{name}'.format(region=region, name=app_name),
             desired_code=codes.no_content,
-        )
-
-    def app__retrive_by_name(self, region, app_name):
-        """Retrieve an blueking app by uuid"""
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}'.format(region=region, name=app_name),
         )
 
     def archive_app(self, region: str, app_name: str, operation_id: str):
@@ -131,31 +127,14 @@ class ControllerClient:
             },
         )
 
-    def retrieve_app_config(self, region, app_name):
-        """Retrieve an app's config"""
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/config/'.format(region=region, name=app_name),
-        )
-
-    def bind_app_cluster(self, region: str, app_name: str, cluster_name: str):
+    def bind_app_cluster(self, wl_engine_app: 'EngineApp', cluster_name: str):
         """Bind App to given cluster"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/bind_cluster/{cluster_name}/'.format(
-                region=region, name=app_name, cluster_name=cluster_name
-            ),
-            desired_code=codes.ok,
-        )
-
-    def get_process_instances(self, region, app_name, process_type):
-        """Get process instance"""
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{app_name}/process_types/{process_type}/instances/'.format(
-                region=region, app_name=app_name, process_type=process_type
-            ),
-        )
+        # TODO: 优化报错信息, 例如集群不存在, 绑定失败等
+        cluster = Cluster.objects.get(name=cluster_name)
+        latest_config = wl_engine_app.latest_config
+        latest_config.cluster = cluster.name
+        latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
+        latest_config.save()
 
     # Region Cluster State binding start
 
@@ -180,27 +159,35 @@ class ControllerClient:
 
     # Bk-App(module) related start
 
-    def delete_module_related_res(self, app_code: str, module_name: str):
+    def delete_module_related_res(self, module: 'Module'):
         """Delete module's related resources"""
-        return self.request(
-            'DELETE', f'/applications/{app_code}/modules/{module_name}/related_resources/', desired_code=204
-        )
+        from paas_wl.platform.applications.models_utils import delete_module_related_res
+
+        with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
+            delete_module_related_res(module)
+            # Delete related EngineApp db records
+            for env in module.get_envs():
+                env.get_engine_app().delete()
 
     # Bk-App(module) related end
 
     # Process Metrics Start
     def upsert_app_monitor(
         self,
-        region: str,
-        app_name: str,
+        wl_engine_app: 'EngineApp',
         port: int,
         target_port: int,
     ):
-        data = {
-            "port": port,
-            "target_port": target_port,
-        }
-        return self.request('POST', f'/regions/{region}/apps/{app_name}/metrics_monitor/', json=data)
+        from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
+
+        instance, _ = AppMetricsMonitor.objects.update_or_create(
+            defaults={
+                "port": port,
+                "target_port": target_port,
+                "is_enabled": True,
+            },
+            app=wl_engine_app,
+        )
 
     def app_proc_metrics__list(
         self,

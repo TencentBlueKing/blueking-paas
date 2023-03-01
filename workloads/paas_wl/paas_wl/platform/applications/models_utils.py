@@ -23,24 +23,22 @@ from django.db import models
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import BuildProcess, EngineApp
-from paas_wl.platform.applications.struct_models import Module, get_structured_app
 from paas_wl.resources.actions.delete import delete_app_resources
 from paas_wl.workloads.processes.models import ProcessSpec
+from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
 def delete_module_related_res(module: Module) -> None:
     """Delete all related resources of module"""
-    app = get_structured_app(code=module.application.code)
-
     # Remove module level data
     model_cls: models.Model
     for model_cls in [Domain, AppModelDeploy, AppModelResource, AppModelRevision]:
         model_cls.objects.filter(module_id=module.id).delete()
 
     # Environment/EngineApp level data
-    for env in app.get_envs_by_module(module):
+    for env in module.get_envs():
         # Manually remove data which don't has a foreign key relation
         ProcessSpec.objects.filter(engine_app_id=env.engine_app_id).delete()
         # Remove OutputStream manually because there is no backward foreign key
@@ -50,17 +48,17 @@ def delete_module_related_res(module: Module) -> None:
 
         # Delete EngineApp and it's related resources and models
         try:
-            engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+            wl_engine_app = EngineApp.objects.get(pk=env.engine_app_id)
         except EngineApp.DoesNotExist:
             continue
 
         # Delete all resources in cluster, allow failure
         try:
-            delete_app_resources(engine_app)
+            delete_app_resources(wl_engine_app)
         except Exception as e:
-            logger.warning('Error deleting app cluster resources, app: %s, error: %s', engine_app, e)
+            logger.warning('Error deleting app cluster resources, app: %s, error: %s', wl_engine_app, e)
 
         # This will also remove cascaded models:
         # Build, BuildProcess, Config, Release, AppMetricsMonitor, AppImageCredential,
         # AppAddOn, AppDomain, AppSubpath.
-        engine_app.delete()
+        wl_engine_app.delete()

@@ -54,20 +54,14 @@ def helper(bk_app):
 
 class TestGetEngineAppCluster:
     def test_empty_cluster_field(self, bk_stag_env, helper):
-        helper.client.retrieve_app_config.return_value = {'cluster': ''}
-
         engine_app = bk_stag_env.engine_app
         assert helper.get_engine_app_cluster(engine_app.name).name == 'default'
 
     def test_valid_cluster_field(self, bk_stag_env, helper):
-        helper.client.retrieve_app_config.return_value = {'cluster': 'extra-1'}
-
         engine_app = bk_stag_env.engine_app
         assert helper.get_engine_app_cluster(engine_app.name).name == 'extra-1'
 
     def test_invalid_cluster_field(self, bk_stag_env, helper):
-        helper.client.retrieve_app_config.return_value = {'cluster': 'invalid-cluster-name'}
-
         engine_app = bk_stag_env.engine_app
         with pytest.raises(ValueError):
             helper.get_engine_app_cluster(engine_app.name)

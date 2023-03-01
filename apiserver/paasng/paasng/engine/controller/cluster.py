@@ -94,21 +94,27 @@ class RegionClusterService(AbstractRegionClusterService):
 
     def get_engine_app_cluster(self, engine_app_name: str) -> Cluster:
         """Get the cluster info of one engine app"""
-        config = self.client.retrieve_app_config(self.region, engine_app_name)
+        from paas_wl.platform.applications.models import EngineApp
+
+        wl_engine_app = EngineApp.objects.get(name=engine_app_name)
+        config = wl_engine_app.latest_config
         # An empty cluster field means current app uses a default cluster
-        if not config['cluster']:
+        if not config.cluster:
             return self.get_default_cluster()
 
         clusters = self.list_clusters()
         for cluster in clusters:
-            if cluster.name == config["cluster"]:
+            if cluster.name == config.cluster:
                 return cluster
 
         raise ValueError('No cluster info found')
 
     def set_engine_app_cluster(self, engine_app_name: str, cluster_name: str):
         """Set cluster for engine app"""
-        self.client.bind_app_cluster(self.region, engine_app_name, cluster_name=cluster_name)
+        from paas_wl.platform.applications.models import EngineApp
+
+        wl_engine_app = EngineApp.objects.get(name=engine_app_name)
+        self.client.bind_app_cluster(wl_engine_app=wl_engine_app, cluster_name=cluster_name)
 
 
 def get_region_cluster_helper(region: str) -> AbstractRegionClusterService:

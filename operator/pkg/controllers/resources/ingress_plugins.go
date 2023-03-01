@@ -53,7 +53,7 @@ func (p *AccessControlPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains [
 	return ""
 }
 
-// MakeConfigurationSnippet access_control module 不提供 configuration snippet
+// MakeConfigurationSnippet return configuration snippet for access_control module
 func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
 	if p.Config.RedisConfigKey == "" {
 		return ""

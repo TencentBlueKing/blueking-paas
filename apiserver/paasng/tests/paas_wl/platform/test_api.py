@@ -6,7 +6,7 @@ from paas_wl.platform.api import create_app_ignore_duplicated, get_metadata_by_e
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.django_db(databases=["workloads"], transaction=True)
+@pytest.mark.django_db(databases=["workloads"])
 def test_create_app_ignore_duplicated():
     info = create_app_ignore_duplicated(settings.FOR_TESTS_DEFAULT_REGION, 'foo-app', 'default')
     assert info.name == 'foo-app'

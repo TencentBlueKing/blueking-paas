@@ -13,8 +13,6 @@ These modules will be refactored in the future.
 from typing import Dict, NamedTuple, Union
 from uuid import UUID
 
-from django.db.utils import IntegrityError
-
 from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.platform.applications.models.managers.app_metadata import EngineAppMetadata, get_metadata, update_metadata
 from paasng.platform.applications.models import ModuleEnvironment
@@ -28,9 +26,9 @@ class CreatedAppInfo(NamedTuple):
 def create_app_ignore_duplicated(region: str, name: str, type_: str) -> CreatedAppInfo:
     """Create an engine app object, return directly if the object already exists"""
     try:
-        obj = WLEngineApp.objects.create(region=region, name=name, type=type_)
-    except IntegrityError:
         obj = WLEngineApp.objects.get(region=region, name=name)
+    except WLEngineApp.DoesNotExist:
+        obj = WLEngineApp.objects.create(region=region, name=name, type=type_)
     return CreatedAppInfo(obj.uuid, obj.name)
 
 

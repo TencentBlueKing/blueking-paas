@@ -42,6 +42,7 @@ from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.engine_app import random_fake_app
+from tests.utils.helpers import create_pending_wl_engine_apps
 
 logger = logging.getLogger(__name__)
 
@@ -356,3 +357,11 @@ def bk_prod_engine_app(bk_prod_env):
         environment=bk_prod_env.environment,
         owner=bk_prod_env.application.owner,
     )
+
+
+@pytest.fixture
+def with_wl_apps(bk_app):
+    """Create all pending WlEngineApp objects related with current bk_app, useful
+    for tests which want to use `bk_app`, `bk_stag_env` fixtures.
+    """
+    create_pending_wl_engine_apps(bk_app)

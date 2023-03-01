@@ -119,7 +119,7 @@ class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
 
         engine_app = self.get_engine_app_via_path()
         controller_client.bind_app_cluster(
-            engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
+            wl_engine_app=engine_app.to_wl_obj(), cluster_name=slz.validated_data["cluster_name"]
         )
         # 清理 engine_app 集群信息缓存
         get_engine_app_cluster.invalidate(engine_app.region, engine_app.name)

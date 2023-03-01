@@ -15,7 +15,7 @@ from uuid import UUID
 
 from django.db.utils import IntegrityError
 
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models.app import WLEngineApp, create_initial_config
 
 
 class CreatedAppInfo(NamedTuple):
@@ -29,4 +29,5 @@ def create_app_ignore_duplicated(region: str, name: str, type_: str) -> CreatedA
         obj = WLEngineApp.objects.create(region=region, name=name, type=type_)
     except IntegrityError:
         obj = WLEngineApp.objects.get(region=region, name=name)
+    create_initial_config(obj)
     return CreatedAppInfo(obj.uuid, obj.name)

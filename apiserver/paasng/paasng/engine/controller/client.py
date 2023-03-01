@@ -19,16 +19,23 @@ to the current version of the project delivered to anyone in the future.
 """Client to communicate with controller
 """
 import logging
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict
 
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
 from requests.status_codes import codes
 
+from paas_wl.cluster.models import Cluster
+from paas_wl.cluster.serializers import ClusterSLZ
+from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paasng.engine.controller.exceptions import BadResponse
 from paasng.utils.basic import get_requests_session
 from paasng.utils.local import local
 
-from .exceptions import BadResponse
+if TYPE_CHECKING:
+    from paas_wl.platform.applications.models import EngineApp
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,19 +55,41 @@ class ControllerClient:
     ################
     def list_region_clusters(self, region):
         """List region clusters"""
-        return self.request('GET', f'/regions/{region}/clusters/')
+        return ClusterSLZ(data=Cluster.objects.filter(region=region), many=True).data
 
     def get_cluster_egress_info(self, region, cluster_name):
         """Get cluster's egress info"""
-        return self.request('GET', f'/services/regions/{region}/clusters/{cluster_name}/egress_info/')
+        from paas_wl.networking.egress.misc import get_cluster_egress_ips
+
+        cluster = Cluster.objects.get(region=region, name=cluster_name)
+        return get_cluster_egress_ips(cluster)
 
     def create_cnative_app_model_resource(self, region: str, data: Dict[str, Any]) -> Dict:
         """Create a cloud-native AppModelResource object
 
         :param region: Application region
         :param data: Payload for create resource
+        :raises: ValidationError when CreateAppModelResourceSerializer validation failed
         """
-        return self.request('POST', f'/regions/{region}/app_model_resources/', desired_code=codes.created, json=data)
+        from paas_wl.cnative.specs.models import AppModelResource, create_app_resource
+        from paas_wl.cnative.specs.serializers import AppModelResourceSerializer, CreateAppModelResourceSerializer
+
+        serializer = CreateAppModelResourceSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+
+        resource = create_app_resource(
+            # Use Application code as default resource name
+            name=d['code'],
+            image=d['image'],
+            command=d.get('command'),
+            args=d.get('args'),
+            target_port=d.get('target_port'),
+        )
+        model_resource = AppModelResource.objects.create_from_resource(
+            region, d['application_id'], d['module_id'], resource
+        )
+        return AppModelResourceSerializer(model_resource).data
 
     def app__delete(self, region, app_name):
         """"""
@@ -130,11 +159,22 @@ class ControllerClient:
 
     # Region Cluster State binding start
 
-    def app_rcsbinding__create(self, region, app_name):
-        return self.request('POST', f'/regions/{region}/apps/{app_name}/rcstate_binding/', desired_code=codes.created)
+    def app_rcsbinding__create(self, wl_engine_app: 'EngineApp'):
+        cluster = get_cluster_by_app(wl_engine_app)
+        state = RegionClusterState.objects.filter(region=wl_engine_app.region, cluster_name=cluster.name).latest()
+        RCStateAppBinding.objects.create(app=wl_engine_app, state=state)
 
-    def app_rcsbinding__destroy(self, region, app_name):
-        return self.request('DELETE', f'/regions/{region}/apps/{app_name}/rcstate_binding/')
+    def app_rcsbinding__destroy(self, wl_engine_app: 'EngineApp'):
+        binding = RCStateAppBinding.objects.get(app=wl_engine_app)
+        # Update app scheduling config
+        # TODO: Below logic is safe be removed as long as the node_selector will be fetched
+        # dynamically by querying for binding state.
+        latest_config = wl_engine_app.latest_config
+        # Remove labels related with current binding
+        for key in binding.state.to_labels():
+            latest_config.node_selector.pop(key, None)
+        latest_config.save()
+        binding.delete()
 
     # Region Cluster State binding end
 
@@ -147,23 +187,6 @@ class ControllerClient:
         )
 
     # Bk-App(module) related end
-
-    # App Domains start
-
-    def app_domains__update(self, region, app_name, domains: List[Dict]):
-        return self.request('PUT', f'/services/regions/{region}/apps/{app_name}/domains/', json={'domains': domains})
-
-    # App Domains end
-
-    # App subpaths start
-
-    def update_app_subpaths(self, region: str, app_name: str, subpaths: List[Dict]):
-        """Update application's default subpaths"""
-        return self.request(
-            'PUT', f'/services/regions/{region}/apps/{app_name}/subpaths/', json={'subpaths': subpaths}
-        )
-
-    # App subpaths end
 
     # Process Metrics Start
     def upsert_app_monitor(

@@ -20,12 +20,10 @@ from typing import Dict, List, Optional
 from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
 from paas_wl.platform.api import create_app_ignore_duplicated
 from paasng.engine.constants import AppEnvName, EngineAppType
 from paasng.engine.controller.cluster import get_region_cluster_helper
-from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.controller.state import controller_client
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -58,14 +56,7 @@ def initialize_simple(module: Module, data: Dict, cluster_name: Optional[str] = 
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
 
-    try:
-        model_res = controller_client.create_cnative_app_model_resource(application.region, data)
-    except BadResponse as e:
-        if e.get_error_code() == 'VALIDATION_ERROR':
-            detail = e.json_response.get('fields_detail', e.get_error_message())
-            raise ValidationError(detail=detail)
-        raise
-
+    model_res = controller_client.create_cnative_app_model_resource(application.region, data)
     create_engine_apps(application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
 

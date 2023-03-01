@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import copy
 import datetime
 import random
+import uuid
 from contextlib import ExitStack, contextmanager
 from typing import Any, Callable, ContextManager, Dict, List, Optional
 from unittest import mock
@@ -28,6 +29,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
+from paas_wl.platform.api import CreatedAppInfo
 from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.applications.constants import ApplicationType
@@ -82,6 +84,7 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
         mock.patch('paasng.platform.modules.manager.make_app_metadata'),
         mock.patch('paasng.dev_resources.sourcectl.connector.SvnRepositoryClient'),
         replace_cluster_service(),
+        contextmanager(_mock_wl_services_in_creation)(),
     ]
     # 通过 Mock 被跳过的应用流程（性能原因）
     optional_mockers = {
@@ -95,16 +98,15 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
         [stack.enter_context(mocker) for mocker in default_mockers]
         [stack.enter_context(mocker) for mocker in optional_mockers.values()]
 
-        with contextmanager(_mock_current_engine_client)():
-            module_initializer = ModuleInitializer(module)
-            module_initializer.create_engine_apps()
+        module_initializer = ModuleInitializer(module)
+        module_initializer.create_engine_apps()
 
-            # Set-up the repository data
-            if repo_url:
-                module.source_origin = SourceOrigin.AUTHORIZED_VCS
-                module.source_init_template = settings.DUMMY_TEMPLATE_NAME
-                module.save()
-                module_initializer.initialize_with_template(repo_type, repo_url)
+        # Set-up the repository data
+        if repo_url:
+            module.source_origin = SourceOrigin.AUTHORIZED_VCS
+            module.source_init_template = settings.DUMMY_TEMPLATE_NAME
+            module.save()
+            module_initializer.initialize_with_template(repo_type, repo_url)
 
 
 class BaseTestCaseWithApp(TestCase):
@@ -363,6 +365,53 @@ def _mock_current_engine_client():
         'paasng.engine.controller.shortcuts.ControllerClient', new=StubControllerClient
     ):
         yield
+
+
+# Stores pending actions related with workloads during app creation
+_faked_wl_engine_apps = {}
+_faked_env_metadata = {}
+
+
+def _mock_wl_services_in_creation():
+    """Mock workloads related functions related with app creation, the calls being
+    mocked will be stored and can be used for restoring data later.
+    """
+
+    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str):
+        obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name)
+
+        # Store params in global, so we can manually create the objects later.
+        _faked_wl_engine_apps[obj.uuid] = (region, name, type_)
+        return obj
+
+    def fake_update_metadata_by_env(env, metadata_part):
+        # Store params in global, so we can manually update the metadata later.
+        _faked_env_metadata[env.id] = metadata_part
+
+    with mock.patch(
+        'paasng.platform.modules.manager.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
+    ), mock.patch('paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env):
+        yield
+
+
+def create_pending_wl_engine_apps(bk_app: Application):
+    """Create WlEngineApp objects of the given application in workloads, these objects
+    should have been created during application creation, but weren't because the
+    `create_app_ignore_duplicated` function was mocked out.
+
+    :param bk_app: Application object.
+    """
+    from paas_wl.platform.api import update_metadata_by_env
+    from paas_wl.platform.applications.models.app import WLEngineApp
+
+    for module in bk_app.modules.all():
+        for env in module.envs.all():
+            # Create WLEngineApps and update metadata
+            if args := _faked_wl_engine_apps.get(env.engine_app_id):
+                region, name, type_ = args
+                WLEngineApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+            if metadata := _faked_env_metadata.get(env.id):
+                update_metadata_by_env(env, metadata)
 
 
 def create_scene_tmpls():

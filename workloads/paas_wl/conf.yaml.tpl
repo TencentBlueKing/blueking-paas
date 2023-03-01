@@ -225,7 +225,7 @@
 ## 调用 Healthz API 需要的 Token
 # HEALTHZ_TOKEN: example-healthz-token
 
-## 插件监控图表相关配置
+## 插件监控图表相关配置（仅不支持蓝鲸监控的低版本集群需要）
 # MONITOR_CONFIG:
 #   metrics:
 #     bkmonitor:
@@ -233,6 +233,15 @@
 #         - bkmonitor-api
 #         - example-auth-token
 #       host: http://bkmonitor-query.example.com
+
+## 是否支持蓝鲸监控（下发 ServiceMonitor 的总开关）
+# BKMONITOR_ENABLED: false
+## 蓝鲸监控运维相关的额外配置
+# BKMONITOR_METRIC_RELABELINGS: []
+## 能否通过 APIGW 访问蓝鲸监控 API，要求该环境已注册
+# ENABLE_BK_MONITOR_APIGW: true
+## 蓝鲸监控网关环境：测试 stage、正式 prod
+# BK_MONITOR_APIGW_SERVICE_STAGE: stage
 
 ## ---------------------------------------- 多区域配置 ----------------------------------------
 
@@ -280,6 +289,8 @@
 # BK_APP_CODE: ''
 ## 调用 APIGW API 使用的 APP Secret
 # BK_APP_SECRET: ''
+## 蓝鲸组件 API 网关（esb）
+# BK_COMPONENT_API_URL: ''
 ## 网关前缀 URL 模板，格式如 http://localhost:8080/api/{api_name}/
 # BK_API_URL_TMPL: ''
 ## 网关所部署的环境

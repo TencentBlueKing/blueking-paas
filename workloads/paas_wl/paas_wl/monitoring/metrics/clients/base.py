@@ -29,7 +29,9 @@ class MetricClient(Protocol):
     ) -> Generator['MetricSeriesResult', None, None]:
         raise NotImplementedError
 
-    def get_query_template(self, resource_type: MetricsResourceType, series_type: MetricsSeriesType) -> str:
+    def get_query_promql(
+        self, resource_type: MetricsResourceType, series_type: MetricsSeriesType, instance_name: str, cluster_id: str
+    ) -> str:
         """subclass may raise keyError if not given query_tmpl_config"""
         raise NotImplementedError
 

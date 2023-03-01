@@ -33,21 +33,21 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MetricsResourceResult:
-    type_name: 'MetricsResourceType'
-    results: List['MetricSeriesResult']
+    type_name: MetricsResourceType
+    results: List[MetricSeriesResult]
 
 
 @dataclass
 class MetricsInstanceResult:
     instance_name: str
-    results: List['MetricsResourceResult']
+    results: List[MetricsResourceResult]
 
     def __len__(self):
         return len(self.results)
 
 
 class ResourceMetricManager:
-    def __init__(self, process: 'Process', metric_client: 'MetricClient', bcs_cluster_id: str):
+    def __init__(self, process: 'Process', metric_client: MetricClient, bcs_cluster_id: str):
         self.process = process
         self.metric_client = metric_client
         self.bcs_cluster_id = bcs_cluster_id
@@ -56,18 +56,18 @@ class ResourceMetricManager:
 
     def gen_all_series_query(
         self,
-        resource_type: 'MetricsResourceType',
+        resource_type: MetricsResourceType,
         instance_name: str,
-        time_range: Optional['MetricSmartTimeRange'] = None,
-    ) -> Generator['MetricQuery', None, None]:
+        time_range: MetricSmartTimeRange,
+    ) -> Generator[MetricQuery, None, None]:
         """get all series type queries"""
 
         # not expose request series
-        for single_series_type in [MetricsSeriesType.CURRENT.value, MetricsSeriesType.LIMIT.value]:
+        for series_type in [MetricsSeriesType.CURRENT.value, MetricsSeriesType.LIMIT.value]:
             try:
-                yield self.gen_series_query(single_series_type, resource_type, instance_name, time_range)
+                yield self.gen_series_query(series_type, resource_type, instance_name, time_range)  # type: ignore
             except KeyError:
-                logger.info("%s type not exist in query tmpl", single_series_type)
+                logger.info("%s type not exist in query tmpl", series_type)
                 continue
 
     def gen_series_query(
@@ -75,20 +75,19 @@ class ResourceMetricManager:
         series_type: MetricsSeriesType,
         resource_type: MetricsResourceType,
         instance_name: str,
-        time_range: Optional['MetricSmartTimeRange'],
-    ) -> 'MetricQuery':
+        time_range: MetricSmartTimeRange,
+    ) -> MetricQuery:
         """get single metrics type query"""
-        tmpl = self.metric_client.get_query_template(series_type=series_type, resource_type=resource_type)
-        query = tmpl.format(instance_name=instance_name, cluster_id=self.bcs_cluster_id)
-        return MetricQuery(type_name=series_type, query=query, time_range=time_range)
+        promql = self.metric_client.get_query_promql(resource_type, series_type, instance_name, self.bcs_cluster_id)
+        return MetricQuery(type_name=series_type, query=promql, time_range=time_range)
 
     def get_instance_metrics(
         self,
         instance_name: str,
-        resource_types: List['MetricsResourceType'],
+        resource_types: List[MetricsResourceType],
+        time_range: MetricSmartTimeRange,
         series_type: Optional[MetricsSeriesType] = None,
-        time_range: Optional[MetricSmartTimeRange] = None,
-    ) -> List['MetricsResourceResult']:
+    ) -> List[MetricsResourceResult]:
         """query metrics at Engine Application level"""
 
         resource_results = []
@@ -109,24 +108,17 @@ class ResourceMetricManager:
                     )
                 )
 
-            resource_results.append(
-                MetricsResourceResult(
-                    type_name=resource_type,
-                    results=list(
-                        self.metric_client.general_query(queries, container_name=self.process.main_container_name)
-                    ),
-                )
-            )
+            results = list(self.metric_client.general_query(queries, self.process.main_container_name))
+            resource_results.append(MetricsResourceResult(type_name=resource_type, results=results))
 
         return resource_results
 
     def get_all_instances_metrics(
         self,
-        resource_types: List['MetricsResourceType'],
-        time_range: 'MetricSmartTimeRange',
+        resource_types: List[MetricsResourceType],
+        time_range: MetricSmartTimeRange,
         series_type: Optional[MetricsSeriesType] = None,
-    ) -> List['MetricsInstanceResult']:
-
+    ) -> List[MetricsInstanceResult]:
         all_instances_metrics = []
         for instance in self.process.instances:
             all_instances_metrics.append(
@@ -135,8 +127,8 @@ class ResourceMetricManager:
                     results=self.get_instance_metrics(
                         resource_types=resource_types,
                         instance_name=instance.name,
-                        series_type=series_type,
                         time_range=time_range,
+                        series_type=series_type,
                     ),
                 )
             )

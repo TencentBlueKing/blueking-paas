@@ -16,8 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .base import MetricClient, MetricQuery, MetricSeriesResult
-from .bkmonitor import BkMonitorMetricClient
-from .prometheus import PrometheusMetricClient
+from typing import Optional
 
-__all__ = ['BkMonitorMetricClient', 'PrometheusMetricClient', 'MetricClient', 'MetricQuery', 'MetricSeriesResult']
+
+class BkMonitorGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk-monitor's
+    API Gateway resource. It's a wrapper class of API SDK's original exceptions
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class BkMonitorApiError(BkMonitorGatewayServiceError):
+    """When calling the bk-monitor api, bk-monitor returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """
+
+    def __init__(self, message: str, code: Optional[int] = None):
+        super().__init__(message)
+        self.code = code

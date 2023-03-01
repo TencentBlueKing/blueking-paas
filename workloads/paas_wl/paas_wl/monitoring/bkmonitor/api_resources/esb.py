@@ -16,8 +16,27 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .base import MetricClient, MetricQuery, MetricSeriesResult
-from .bkmonitor import BkMonitorMetricClient
-from .prometheus import PrometheusMetricClient
+from bkapi_client_core.esb import ESBClient, Operation, OperationGroup, bind_property
+from bkapi_client_core.esb import generic_type_partial as _partial
+from bkapi_client_core.esb.django_helper import get_client_by_username as _get_client_by_username
 
-__all__ = ['BkMonitorMetricClient', 'PrometheusMetricClient', 'MetricClient', 'MetricQuery', 'MetricSeriesResult']
+
+class Group(OperationGroup):
+    """蓝鲸监控在 ESB 上注册的 API"""
+
+    # 统一查询时序数据
+    promql_query = bind_property(
+        Operation,
+        name='promql_query',
+        method='POST',
+        path='/api/c/compapi/v2/monitor_v3/graph_promql_query/',
+    )
+
+
+class Client(ESBClient):
+    """ESB Components"""
+
+    monitor_v3 = bind_property(Group, name="monitor_v3")
+
+
+get_client_by_username = _partial(Client, _get_client_by_username)

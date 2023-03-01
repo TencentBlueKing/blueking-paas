@@ -22,7 +22,13 @@ import pytest
 
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+
+
+@pytest.fixture(autouse=True)
+def _setup_data(with_wl_apps):
+    """Set up necessary data for running tests, such as WlEngineApp objects"""
+    yield
 
 
 class TestEngineDeployClient:

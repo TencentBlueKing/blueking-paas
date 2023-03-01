@@ -54,7 +54,7 @@ from paasng.publish.sync_market.handlers import before_finishing_application_cre
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, generate_random_string
+from tests.utils.helpers import configure_regions, create_pending_wl_engine_apps, generate_random_string
 
 from .utils.auth import create_user
 from .utils.helpers import _mock_current_engine_client, create_app, create_cnative_app, initialize_module
@@ -309,7 +309,10 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
+    ), mock.patch(
+        'paasng.platform.applications.helpers.BKIAMClient',
+        new=StubBKIAMClient,
+    ), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(
@@ -733,3 +736,11 @@ def with_live_addrs():
             ]
         )
         yield
+
+
+@pytest.fixture
+def with_wl_apps(bk_app):
+    """Create all pending WlEngineApp objects related with current bk_app, useful
+    for tests which want to use `bk_app`, `bk_stag_env` fixtures.
+    """
+    create_pending_wl_engine_apps(bk_app)

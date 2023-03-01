@@ -84,26 +84,6 @@ class ProcIngressSLZ(serializers.Serializer):
         return data
 
 
-class AppDomainSLZ(serializers.Serializer):
-    host = serializers.CharField()
-    path_prefix = serializers.CharField()
-    https_enabled = serializers.BooleanField()
-    source = serializers.IntegerField()
-
-
-class AutoGenAppDomainForCreationSLZ(serializers.Serializer):
-    """Serializer for creating **Auto-generated** AppDomain object"""
-
-    host = serializers.CharField()
-    https_enabled = serializers.BooleanField(default=False)
-
-
-class UpdateAutoGenAppDomainsSLZ(serializers.Serializer):
-    """Serializer for updating **Auto-generated** AppDomain objects"""
-
-    domains = serializers.ListField(child=AutoGenAppDomainForCreationSLZ())
-
-
 def validate_cert(d):
     """Validate certificate content"""
     try:
@@ -128,20 +108,6 @@ class UpdateAppDomainSharedCertSLZ(serializers.ModelSerializer):
     class Meta:
         model = AppDomainSharedCert
         fields = ['cert_data', 'key_data', 'auto_match_cns']
-
-
-class AppSubpathForCreationSLZ(serializers.Serializer):
-    subpath = serializers.CharField()
-
-
-class AppSubpathSLZ(serializers.Serializer):
-    cluster_name = serializers.CharField()
-    subpath = serializers.CharField()
-    source = serializers.IntegerField()
-
-
-class UpdateAppSubpathsSLZ(serializers.Serializer):
-    subpaths = serializers.ListField(child=AppSubpathForCreationSLZ())
 
 
 # Custom Domain(end-user) serializers start

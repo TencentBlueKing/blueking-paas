@@ -18,27 +18,15 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from django.db import transaction
-from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 
 from paas_wl.networking.ingress.exceptions import EmptyAppIngressError
 from paas_wl.platform.applications.models import Release
-from paas_wl.platform.system_api.views import SysAppRelatedViewSet, SysModelViewSet
+from paas_wl.platform.system_api.views import SysAppRelatedViewSet
 from paas_wl.utils.error_codes import error_codes
 
 from .exceptions import DefaultServiceNameRequired
-from .managers import AppDefaultIngresses, assign_custom_hosts, assign_subpaths
-from .models import AppDomain, AppDomainSharedCert, AppSubpath, AutoGenDomain
-from .serializers import (
-    AppDomainSharedCertSLZ,
-    AppDomainSLZ,
-    AppSubpathSLZ,
-    UpdateAppDomainSharedCertSLZ,
-    UpdateAppSubpathsSLZ,
-    UpdateAutoGenAppDomainsSLZ,
-)
-from .utils import guess_default_service_name
+from .managers import AppDefaultIngresses
 
 logger = logging.getLogger(__name__)
 
@@ -62,77 +50,3 @@ class ProcIngressViewSet(SysAppRelatedViewSet):
                 logger.exception('Fail to sync Ingress for %s', app)
                 raise error_codes.SYNC_INGRESSES_ERROR.f('请稍候重试')
         return Response({})
-
-
-class AppDomainViewSet(SysAppRelatedViewSet):
-    """A viewset for managing AppDomains"""
-
-    def list(self, request, region, name):
-        """list an app's domains, the results will include both domains created by paasng
-        system(CUSTOM) and those created by user(INDEPENDENT)
-        """
-        app = self.get_app()
-        domains = AppDomain.objects.filter(app=app).order_by('source')
-        return Response(AppDomainSLZ(domains, many=True).data)
-
-    @transaction.atomic
-    def update(self, request, region, name):
-        """Assign domains to an app, this API was original designed to be used by paasng system
-        only, if an user wants to create his own custom domain, see custom domain instead.
-        """
-        app = self.get_app()
-        serializer = UpdateAutoGenAppDomainsSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.data
-
-        default_service_name = guess_default_service_name(app)
-
-        # Assign domains to app
-        domains = [AutoGenDomain(**d) for d in data['domains']]
-        assign_custom_hosts(app, domains=domains, default_service_name=default_service_name)
-        return Response(serializer.data)
-
-
-class AppDomainSharedCertsViewSet(SysModelViewSet):
-    """A viewset for managing app certificates"""
-
-    lookup_field = 'name'
-    model = AppDomainSharedCert
-    serializer_class = AppDomainSharedCertSLZ
-    pagination_class = None
-    queryset = AppDomainSharedCert.objects.all()
-
-    @transaction.atomic
-    def update(self, request, name):
-        """Update a shared certificate"""
-        cert = get_object_or_404(AppDomainSharedCert, name=name)
-        serializer = UpdateAppDomainSharedCertSLZ(cert, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        # TODO: Find all appdomain which is using this certificate, refresh their secret resources
-        return Response(self.serializer_class(cert).data)
-
-
-class AppSubpathViewSet(SysAppRelatedViewSet):
-    """A viewset for managing application's subpaths"""
-
-    def list(self, request, region, name):
-        """list an app's subpaths"""
-        app = self.get_app()
-        subpaths = AppSubpath.objects.filter(app=app).order_by('source')
-        return Response(AppSubpathSLZ(subpaths, many=True).data)
-
-    @transaction.atomic
-    def update(self, request, region, name):
-        """assign subpaths to an app"""
-        app = self.get_app()
-        serializer = UpdateAppSubpathsSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.data
-
-        default_service_name = guess_default_service_name(app)
-
-        # Assign subpaths to app
-        subpaths = [d['subpath'] for d in data['subpaths']]
-        assign_subpaths(app, subpaths, default_service_name=default_service_name)
-        return Response(serializer.data)

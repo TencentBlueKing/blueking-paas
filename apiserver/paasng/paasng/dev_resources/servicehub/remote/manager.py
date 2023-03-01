@@ -56,7 +56,6 @@ from paasng.dev_resources.servicehub.services import (
     ServiceSpecificationHelper,
 )
 from paasng.dev_resources.services.models import ServiceCategory
-from paasng.engine.controller.client import BadResponse
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.models import EngineApp
@@ -179,9 +178,9 @@ class EngineAppClusterInfo:
         client = make_internal_client()
         try:
             return client.get_cluster_egress_info(region, cluster.name)
-        except BadResponse as e:
-            logger.exception("Can not get app cluster egress info from engine, detail: %s", e.get_error_message())
-            raise GetClusterEgressInfoError(e.get_error_message())
+        except Exception as e:
+            logger.exception("Can not get app cluster egress info from engine")
+            raise GetClusterEgressInfoError(str(e))
 
     @cached_property
     def egress_info_json(self):

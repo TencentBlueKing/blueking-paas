@@ -21,16 +21,26 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
 
+import cattr
 from django.conf import settings
 
+from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
+from paas_wl.networking.ingress.managers import AppDefaultIngresses, assign_custom_hosts, assign_subpaths
+from paas_wl.networking.ingress.models import AutoGenDomain
+from paas_wl.networking.ingress.utils import guess_default_service_name
+from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
-from paas_wl.platform.applications.models.config import Config
+from paas_wl.platform.applications.models.managers.app_metadata import get_metadata, update_metadata
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.release_controller.builder import tasks as builder_task
+from paas_wl.resources import tasks as scheduler_tasks
 from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.tasks import release_app
+from paas_wl.utils.constants import CommandStatus, CommandType
+from paas_wl.workloads.images.models import AppImageCredential
+from paas_wl.workloads.processes.controllers import module_env_is_running
+from paasng.engine.constants import JobStatus
 from paasng.engine.controller.client import ControllerClient
-from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.engine.helpers import SlugbuilderInfo
 
 if TYPE_CHECKING:
@@ -48,8 +58,8 @@ class EngineDeployClient:
 
     def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
         self.engine_app = engine_app
-        self.wl_engine_app = self.engine_app.to_wl_obj()
-        self.ctl_client = controller_client or make_internal_client()
+        self.wl_app: WLEngineApp = self.engine_app.to_wl_obj()
+        self.env = self.engine_app.env
 
     def start_build_process(
         self,
@@ -69,7 +79,7 @@ class EngineDeployClient:
         build_process = BuildProcess.objects.create(
             # TODO: Set the correct owner value
             # owner='',
-            app=self.wl_engine_app,
+            app=self.wl_app,
             source_tar_path=source_tar_path,
             revision=version.revision,
             branch=version.version_name,
@@ -93,30 +103,37 @@ class EngineDeployClient:
         self, build_id: str, command: str, stream_channel_id: str, operator: str, type_: str, extra_envs: Dict
     ) -> str:
         """run a command in a built slug."""
-        resp = self.ctl_client.app__run_command(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            build_id=build_id,
+        build = self.wl_app.build_set.get(pk=build_id)
+        cmd_obj = self.wl_app.command_set.new(
+            type_=CommandType(type_),
             command=command,
-            stream_channel_id=stream_channel_id,
+            build=build,
             operator=operator,
-            type_=type_,
-            extra_envs=extra_envs,
         )
-        command_id = resp.get("uuid")
-        return command_id
 
-    def get_command_status(self, command_id: str) -> Dict[str, Any]:
-        """Get current status of command"""
-        resp = self.ctl_client.command__retrieve(
-            region=self.engine_app.region, app_name=self.engine_app.name, command_id=command_id
+        scheduler_tasks.run_command.delay(
+            cmd_obj.uuid, stream_channel_id=stream_channel_id, extra_envs=extra_envs or {}
         )
-        return resp
+        return str(cmd_obj.uuid)
+
+    def get_command_status(self, command_id: str) -> JobStatus:
+        """Get current status of command"""
+        command = self.wl_app.command_set.get(pk=command_id)
+
+        # TODO: Write a function which turn CommandStatus into JobStatus
+        if command.status == CommandStatus.SCHEDULED.value:
+            return JobStatus(CommandStatus.PENDING.value)
+        return JobStatus(command.status)
+
+    def list_command_logs(self, command_id: str) -> List[LogLine]:
+        """List all logs of command"""
+        command = self.wl_app.command_set.get(pk=command_id)
+        return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
 
     def update_config(self, runtime: Dict[str, Any]):
         """Update engine-app's config"""
         # Save runtime field
-        config = Config.objects.get_by_app(self.wl_engine_app)
+        config = self.wl_app.latest_config
         config.runtime = runtime  # type: ignore
         config.save(update_fields=['runtime'])
 
@@ -134,6 +151,7 @@ class EngineDeployClient:
             build=build,
             procfile=procfile,
         )
+
         try:
             release_app(release=release, deployment_id=deployment_id, extra_envs=extra_envs)
         except KubeException:
@@ -141,21 +159,14 @@ class EngineDeployClient:
             raise
         return str(release.uuid)
 
-    def get_release(self, release_id: str) -> dict:
-        """Get the release object by id"""
-        return self.ctl_client.get_app_release(
-            region=self.engine_app.region, app_name=self.engine_app.name, release_id=release_id
-        )
-
     def create_build(self, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
         """Create the **fake** build for Image Type App"""
-        resp = self.ctl_client.create_build(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            procfile=procfile,
+        build = Build.objects.create(
+            app=self.wl_app,
             env_variables=extra_envs,
+            procfile=procfile,
         )
-        return resp["uuid"]
+        return str(build.uuid)
 
     def get_procfile(self, build_id: str) -> Dict:
         """Get the procfile by build id"""
@@ -176,38 +187,44 @@ class EngineDeployClient:
 
     def update_domains(self, domains: List[Dict]):
         """Update an engine app's domains"""
-        self.ctl_client.app_domains__update(
-            region=self.engine_app.region, app_name=self.engine_app.name, domains=domains
-        )
+        default_service_name = guess_default_service_name(self.wl_app)
+        # Assign domains to app
+        domain_objs = [AutoGenDomain(**d) for d in domains]
+        assign_custom_hosts(self.wl_app, domains=domain_objs, default_service_name=default_service_name)
 
     def update_subpaths(self, subpaths: List[Dict]):
         """Update an engine app's subpaths"""
-        self.ctl_client.update_app_subpaths(
-            region=self.engine_app.region, app_name=self.engine_app.name, subpaths=subpaths
-        )
+        default_service_name = guess_default_service_name(self.wl_app)
+        # Assign subpaths to app
+        subpath_vals = [d['subpath'] for d in subpaths]
+        assign_subpaths(self.wl_app, subpath_vals, default_service_name=default_service_name)
 
     def get_metadata(self) -> Dict[str, Any]:
         """Get an engine app's metadata"""
-        config = self.ctl_client.retrieve_app_config(region=self.engine_app.region, app_name=self.engine_app.name)
-        return config['metadata'] or {}
+        return cattr.unstructure(get_metadata(self.wl_app))
 
     def update_metadata(self, metadata_part: Dict[str, Union[str, bool]]):
         """Update an engine app's metadata, works like python's dict.update()
 
         :param metadata_part: An dict object which will be merged into app's metadata
         """
-        self.ctl_client.update_app_metadata(
-            region=self.engine_app.region, app_name=self.engine_app.name, payload={'metadata': metadata_part}
-        )
+        update_metadata(self.wl_app, **metadata_part)
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""
-        self.ctl_client.upsert_image_credentials(
-            region=self.engine_app.region,
-            app_name=self.engine_app.name,
-            credentials={"registry": registry, "username": username, "password": password},
+        AppImageCredential.objects.update_or_create(
+            app=self.wl_app,
+            registry=registry,
+            defaults={"username": username, "password": password},
         )
 
     def sync_proc_ingresses(self):
         """Sync ingresses configs with engine"""
-        self.ctl_client.app_proc_ingress_actions__sync(region=self.engine_app.region, app_name=self.engine_app.name)
+        if not module_env_is_running(self.env):
+            return
+
+        for mgr in AppDefaultIngresses(self.wl_app).list():
+            try:
+                mgr.sync()
+            except (DefaultServiceNameRequired, EmptyAppIngressError):
+                continue

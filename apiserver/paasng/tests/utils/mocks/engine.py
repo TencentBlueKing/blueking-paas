@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 """TestDoubles for paasng.engine module"""
 import copy
-import uuid
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
 from unittest import mock
@@ -92,9 +91,6 @@ class StubControllerClient:
     def __init__(self, *args, **kwargs):
         return
 
-    def app__create(self, region, app_name, app_type):
-        return {"uuid": str(uuid.uuid4()), "region": region, "name": app_name, "type": app_type}
-
     def create_cnative_app_model_resource(self, region: str, data: Dict[str, Any]) -> Dict:
         return {
             'application_id': data['application_id'],
@@ -125,17 +121,8 @@ class StubControllerClient:
         """List region clusters"""
         return [_faked_cluster_info]
 
-    def update_app_metadata(self, region, app_name, payload):
-        pass
-
     def bind_app_cluster(self, region, app_name, cluster_name):
         pass
-
-    def app_proc_ingress_actions__sync(self, region, app_name):
-        pass
-
-    def sync_processes_specs(self, region: str, app_name: str, processes: List[Dict]):
-        return
 
     def delete_module_related_res(self, app_code: str, module_name: str):
         return

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import shlex
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from attrs import define, field
 from django.conf import settings
@@ -28,9 +28,6 @@ from jsonfield import JSONField
 from paas_wl.platform.applications.models import UuidAuditedModel
 from paas_wl.release_controller.constants import ImagePullPolicy, RuntimeType
 from paas_wl.utils.models import make_json_field
-
-if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import WLEngineApp
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +63,6 @@ RuntimeConfigField = make_json_field("RuntimeConfigField", py_model=RuntimeConfi
 
 class ConfigManager(models.Manager):
     """Custom manager for Config model"""
-
-    def get_by_app(self, app: 'WLEngineApp') -> 'Config':
-        """Get the latest config object"""
-        return self.get_queryset().filter(app=app).latest()
 
 
 class Config(UuidAuditedModel):

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Client to communicate with controller
 """
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict
 
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
@@ -69,8 +69,27 @@ class ControllerClient:
 
         :param region: Application region
         :param data: Payload for create resource
+        :raises: ValidationError when CreateAppModelResourceSerializer validation failed
         """
-        return self.request('POST', f'/regions/{region}/app_model_resources/', desired_code=codes.created, json=data)
+        from paas_wl.cnative.specs.models import AppModelResource, create_app_resource
+        from paas_wl.cnative.specs.serializers import AppModelResourceSerializer, CreateAppModelResourceSerializer
+
+        serializer = CreateAppModelResourceSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+
+        resource = create_app_resource(
+            # Use Application code as default resource name
+            name=d['code'],
+            image=d['image'],
+            command=d.get('command'),
+            args=d.get('args'),
+            target_port=d.get('target_port'),
+        )
+        model_resource = AppModelResource.objects.create_from_resource(
+            region, d['application_id'], d['module_id'], resource
+        )
+        return AppModelResourceSerializer(model_resource).data
 
     def app__delete(self, region, app_name):
         """"""
@@ -168,23 +187,6 @@ class ControllerClient:
         )
 
     # Bk-App(module) related end
-
-    # App Domains start
-
-    def app_domains__update(self, region, app_name, domains: List[Dict]):
-        return self.request('PUT', f'/services/regions/{region}/apps/{app_name}/domains/', json={'domains': domains})
-
-    # App Domains end
-
-    # App subpaths start
-
-    def update_app_subpaths(self, region: str, app_name: str, subpaths: List[Dict]):
-        """Update application's default subpaths"""
-        return self.request(
-            'PUT', f'/services/regions/{region}/apps/{app_name}/subpaths/', json={'subpaths': subpaths}
-        )
-
-    # App subpaths end
 
     # Process Metrics Start
     def upsert_app_monitor(

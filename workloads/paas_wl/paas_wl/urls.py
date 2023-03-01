@@ -26,7 +26,6 @@ urlpatterns = [
     re_path(r'^', include('paas_wl.platform.misc.urls')),
     re_path(r'^services/', include('paas_wl.networking.ingress.urls')),
     re_path(r'', include('paas_wl.release_controller.hooks.urls')),
-    re_path(r'', include('paas_wl.workloads.images.urls')),
     re_path(r"", include("paas_wl.admin.urls")),
     re_path(r"", include("paas_wl.monitoring.app_monitor.urls")),
     re_path('', include("paas_wl.cnative.specs.urls")),

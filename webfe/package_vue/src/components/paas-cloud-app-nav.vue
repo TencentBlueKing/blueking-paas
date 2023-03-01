@@ -413,14 +413,7 @@
                     });
                 } catch (e) {
                     console.warn('error', e);
-                    if (!e) {
-                        this.$router.push({
-                            name: 'appBaseInfo',
-                            params: {
-                                id: this.curAppInfo.application.code
-                            }
-                        });
-                    } else {
+                    if (e.name === 'appSummary') {
                         this.$router.push({
                             name: 'appSummary',
                             params: {
@@ -428,13 +421,20 @@
                                 moduleId: 'default'
                             }
                         });
-                        if (e.name) {
-                            this.$bkNotify({
-                                theme: 'error',
-                                message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
-                                offsetY: 80
-                            });
-                        }
+                    } else {
+                        this.$router.push({
+                            name: 'appBaseInfo',
+                            params: {
+                                id: this.curAppInfo.application.code
+                            }
+                        });
+                    }
+                    if (e.label || e.name) {
+                        this.$bkNotify({
+                            theme: 'error',
+                            message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
+                            offsetY: 80
+                        });
                     }
                 }
             },
@@ -576,14 +576,23 @@
                     };
                     this.$router.push(routeConf);
                 } catch (e) {
-                    this.$router.push({
-                        name: 'appSummary',
-                        params: {
-                            id: this.curAppInfo.application.code,
-                            moduleId: 'default'
-                        }
-                    });
-                    if (e.name) {
+                    if (e.name === 'appSummary') {
+                        this.$router.push({
+                            name: 'appSummary',
+                            params: {
+                                id: this.curAppInfo.application.code,
+                                moduleId: 'default'
+                            }
+                        });
+                    } else {
+                        this.$router.push({
+                            name: 'appBaseInfo',
+                            params: {
+                                id: this.curAppInfo.application.code
+                            }
+                        });
+                    }
+                    if (e.label || e.name) {
                         this.$bkNotify({
                             theme: 'error',
                             message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,

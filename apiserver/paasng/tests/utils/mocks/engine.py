@@ -24,6 +24,7 @@ from unittest import mock
 
 import cattr
 
+from paas_wl.platform.applications.models.app import WLEngineApp
 from paasng.engine.controller.cluster import AbstractRegionClusterService
 from paasng.engine.controller.models import Cluster
 
@@ -121,7 +122,7 @@ class StubControllerClient:
         """List region clusters"""
         return [_faked_cluster_info]
 
-    def bind_app_cluster(self, region, app_name, cluster_name):
+    def bind_app_cluster(self, wl_engine_app: 'WLEngineApp', cluster_name):
         pass
 
     def delete_module_related_res(self, app_code: str, module_name: str):

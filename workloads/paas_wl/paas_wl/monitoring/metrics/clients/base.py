@@ -19,19 +19,19 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import Generator, List, Optional, Protocol, Union
 
-from paas_wl.monitoring.metrics.constants import MetricsDataSource, MetricsResourceType, MetricsSeriesType
+from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 
 
 class MetricClient(Protocol):
-    data_source: MetricsDataSource
-
     def general_query(
-        self, queries: List['MetricQuery'], container_name: str, bk_biz_id: Optional[str]
+        self, queries: List['MetricQuery'], container_name: str
     ) -> Generator['MetricSeriesResult', None, None]:
         raise NotImplementedError
 
-    def get_query_template(self, resource_type: MetricsResourceType, series_type: MetricsSeriesType) -> str:
+    def get_query_promql(
+        self, resource_type: MetricsResourceType, series_type: MetricsSeriesType, instance_name: str, cluster_id: str
+    ) -> str:
         """subclass may raise keyError if not given query_tmpl_config"""
         raise NotImplementedError
 

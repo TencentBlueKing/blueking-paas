@@ -24,12 +24,7 @@ from attrs import Factory, define
 from paas_wl.monitoring.bkmonitor.client import make_bk_monitor_client
 from paas_wl.monitoring.bkmonitor.exceptions import BkMonitorGatewayServiceError
 from paas_wl.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
-from paas_wl.monitoring.metrics.constants import (
-    BKMONITOR_PROMQL_TMPL,
-    MetricsDataSource,
-    MetricsResourceType,
-    MetricsSeriesType,
-)
+from paas_wl.monitoring.metrics.constants import BKMONITOR_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
@@ -37,10 +32,12 @@ logger = logging.getLogger(__name__)
 
 class BkMonitorMetricClient:
     query_tmpl_config = BKMONITOR_PROMQL_TMPL
-    data_source = MetricsDataSource.BKMONITOR
+
+    def __init__(self, bk_biz_id: str):
+        self.bk_biz_id = bk_biz_id
 
     def general_query(
-        self, queries: List[MetricQuery], container_name: str, bk_biz_id: Optional[str]
+        self, queries: List[MetricQuery], container_name: str
     ) -> Generator[MetricSeriesResult, None, None]:
         """查询指定的各个指标数据"""
         for query in queries:
@@ -49,7 +46,7 @@ class BkMonitorMetricClient:
                     raise ValueError('query metric in bkmonitor without time range is unsupported!')
 
                 results = self._query_range(
-                    bk_biz_id, query.query, container_name=container_name, **query.time_range.to_dict()
+                    self.bk_biz_id, query.query, container_name=container_name, **query.time_range.to_dict()
                 )
             except Exception as e:
                 logger.exception("fetch metrics failed, query: %s, reason: %s", query.query, e)
@@ -58,15 +55,16 @@ class BkMonitorMetricClient:
 
             yield MetricSeriesResult(type_name=query.type_name, results=results)
 
-    def get_query_template(self, resource_type: MetricsResourceType, series_type: MetricsSeriesType) -> str:
-        return self.query_tmpl_config[resource_type][series_type]
+    def get_query_promql(
+        self, resource_type: MetricsResourceType, series_type: MetricsSeriesType, instance_name: str, cluster_id: str
+    ) -> str:
+        tmpl = self.query_tmpl_config[resource_type][series_type]
+        # NOTE: 蓝鲸监控 promql 不支持 {{}}，需要使用 {} 导致字符串 format 会出错，因此使用 % 来格式化字符串
+        return tmpl % (instance_name, cluster_id, self.bk_biz_id)
 
-    def _query_range(
-        self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str, container_name: str = ""
-    ) -> List:
+    def _query_range(self, promql: str, start: str, end: str, step: str, container_name: str = "") -> List:
         """范围请求API
 
-        :param bk_biz_id: 集群绑定的蓝鲸业务 ID
         :param promql: 具体请求QL
         :param start: 开始时间
         :param end: 结束时间
@@ -75,7 +73,7 @@ class BkMonitorMetricClient:
         """
         logger.info('prometheus query_range promql: %s, start: %s, end: %s, step: %s', promql, start, end, step)
         try:
-            series = self._request(bk_biz_id, promql, start, end, step)
+            series = self._request(promql, start, end, step)
             ret = BkPromResult.from_series(series).get_raw_by_container_name(container_name)
             if ret:
                 return ret.get("values", [])
@@ -84,13 +82,12 @@ class BkMonitorMetricClient:
 
         return []
 
-    @staticmethod
-    def _request(bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
+    def _request(self, promql: str, start: str, end: str, step: str) -> List:
         """请求蓝鲸监控时序数据 API，若成功则返回 Series 数据(list)，否则抛出异常"""
 
         try:
             client = make_bk_monitor_client()
-            series = client.promql_query(bk_biz_id, promql, start, end, step)
+            series = client.promql_query(self.bk_biz_id, promql, start, end, step)
         except BkMonitorGatewayServiceError as e:
             logger.warning("fetch metrics failed, promql: %s, start: %s, end: %s, step: %s", promql, start, end, step)
             raise RequestMetricBackendError(str(e))

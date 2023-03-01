@@ -517,7 +517,7 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
                 raise error_codes.EDITION_NOT_SUPPORT
             if not cluster.bk_biz_id:
                 raise error_codes.QUERY_RESOURCE_METRIC_FAILED.f("进程所在集群未关联 BKCC 业务信息, 不支持该功能")
-            metric_client = BkMonitorMetricClient()
+            metric_client = BkMonitorMetricClient(bk_biz_id=cluster.bk_biz_id)
 
         else:
             if not settings.MONITOR_CONFIG:
@@ -539,7 +539,6 @@ class ResourceMetricsViewSet(SysAppRelatedViewSet):
             process=process,
             metric_client=metric_client,
             bcs_cluster_id=cluster.bcs_cluster_id,
-            bk_biz_id=cluster.bk_biz_id,
         )
 
 

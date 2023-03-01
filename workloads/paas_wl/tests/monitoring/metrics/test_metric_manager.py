@@ -47,12 +47,10 @@ class TestResourceMetricManager:
 
     @pytest.fixture
     def metric_client(self):
-        yield BkMonitorMetricClient()
+        yield BkMonitorMetricClient(bk_biz_id='123')
 
     def test_normal_gen_series_query(self, metric_client):
-        manager = ResourceMetricManager(
-            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bk_biz_id=''
-        )
+        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         fake_metrics_value = [[1234, 1234], [1234, 1234], [1234, 1234]]
         query_range_mock = Mock(return_value=fake_metrics_value)
         with patch('paas_wl.monitoring.metrics.clients.BkMonitorMetricClient._query_range', query_range_mock):
@@ -69,9 +67,7 @@ class TestResourceMetricManager:
             assert result[0].results[0].results[0].results == fake_metrics_value
 
     def test_empty_gen_series_query(self, metric_client):
-        manager = ResourceMetricManager(
-            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bk_biz_id=''
-        )
+        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         fake_metrics_value: List = []
         query_range_mock = Mock(return_value=fake_metrics_value)
         with patch('paas_wl.monitoring.metrics.clients.BkMonitorMetricClient._query_range', query_range_mock):
@@ -87,9 +83,7 @@ class TestResourceMetricManager:
             assert result[0].results[0].results[0].results == fake_metrics_value
 
     def test_exception_gen_series_query(self, metric_client):
-        manager = ResourceMetricManager(
-            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bk_biz_id=''
-        )
+        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         FakeResponse = namedtuple('FakeResponse', 'status_code')
 
         query_range_mock = Mock(side_effect=RequestMetricBackendError(FakeResponse(status_code=400)))
@@ -106,9 +100,7 @@ class TestResourceMetricManager:
     def test_gen_series_query(self, metric_client):
         temp_process = self.worker_process
         temp_process.instances[0].name = f"{settings.FOR_TESTS_DEFAULT_REGION}-test-test-stag-asdfasdf"
-        manager = ResourceMetricManager(
-            process=temp_process, metric_client=metric_client, bcs_cluster_id='', bk_biz_id=''
-        )
+        manager = ResourceMetricManager(process=temp_process, metric_client=metric_client, bcs_cluster_id='')
         query = manager.gen_series_query(
             instance_name=temp_process.instances[0].name,
             resource_type=MetricsResourceType.MEM,
@@ -123,9 +115,7 @@ class TestResourceMetricManager:
         )
 
     def test_gen_all_series_query(self, metric_client):
-        manager = ResourceMetricManager(
-            process=self.web_process, metric_client=metric_client, bcs_cluster_id='', bk_biz_id=''
-        )
+        manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id='')
         queries = manager.gen_all_series_query(
             instance_name=self.web_process.instances[0].name,
             resource_type=MetricsResourceType.MEM,

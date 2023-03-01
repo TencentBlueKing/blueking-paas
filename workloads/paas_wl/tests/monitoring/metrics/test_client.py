@@ -156,50 +156,28 @@ class TestBkPrometheusResult(TestCase):
     def setUp(self) -> None:
         self.fake_range_series = [
             {
-                "name": "_result0",
-                "metric_name": "",
-                "columns": ["_time", "_value"],
-                "types": ["float", "float"],
-                "group_keys": [
-                    "bcs_cluster_id",
-                    "bk_biz_id",
-                    "container_name",
-                    "pod_name",
-                ],
-                "group_values": [
-                    "BCS-K8S-00000",
-                    "12345",
-                    "web-proc",
-                    "web-569b5ccf00-fh99m",
-                ],
-                "values": [
-                    [1673257360000, 1073741824],
-                    [1673257370000, 1073741824],
-                    [1673257380000, 1073741824],
+                "alias": "_result0",
+                "metric_field": "_result_",
+                "unit": "",
+                "target": 'container_name="web-proc"',
+                "dimensions": {"container_name": "web-proc"},
+                "datapoints": [
+                    [1073741824, 1673257360000],
+                    [1073741824, 1673257370000],
+                    [1073741824, 1673257380000],
                 ],
             },
             {
-                "name": "_result1",
-                "metric_name": "",
-                "columns": ["_time", "_value"],
-                "types": ["float", "float"],
-                "group_keys": [
-                    "bcs_cluster_id",
-                    "bk_biz_id",
-                    "container_name",
-                    "pod_name",
-                ],
-                "group_values": [
-                    "BCS-K8S-00000",
-                    "12345",
-                    "celery-proc",
-                    "celery-569b5ccf00-fh99m",
-                ],
-                "values": [
-                    [1673257280000, 1073741824],
-                    [1673257290000, 1073741824],
-                    [1673257300000, 1073741824],
-                    [1673257310000, 1073741824],
+                "alias": "_result1",
+                "metric_field": "_result_",
+                "unit": "",
+                "target": 'container_name="celery-proc"',
+                "dimensions": {"container_name": "celery-proc"},
+                "datapoints": [
+                    [1073741824, 1673257280000],
+                    [1073741824, 1673257290000],
+                    [1073741824, 1673257300000],
+                    [1073741824, 1673257310000],
                 ],
             },
         ]
@@ -245,25 +223,14 @@ class TestBkPrometheusResult(TestCase):
     def test_no_container_name(self):
         fake_series = [
             {
-                "name": "_result0",
-                "metric_name": "",
-                "columns": ["_time", "_value"],
-                "types": ["float", "float"],
-                "group_keys": [
-                    "bcs_cluster_id",
-                    "bk_biz_id",
-                    "container",
-                    "pod_name",
-                ],
-                "group_values": [
-                    "BCS-K8S-00000",
-                    "12345",
-                    "web-proc",
-                    "celery-569b5ccf00-fh99m",
-                ],
-                "values": [
-                    [1673257280000, 1073741824],
-                    [1673257290000, 1073741824],
+                "alias": "_result0",
+                "metric_field": "_result_",
+                "unit": "",
+                "target": 'container="web-proc"',
+                "dimensions": {"container": "web-proc"},
+                "datapoints": [
+                    [1073741824, 1673257280000],
+                    [1073741824, 1673257290000],
                 ],
             },
         ]

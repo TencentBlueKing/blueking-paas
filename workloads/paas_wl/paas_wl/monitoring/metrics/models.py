@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generator, List, Optional
 
 from paas_wl.monitoring.metrics.clients import MetricClient, MetricQuery, MetricSeriesResult
-from paas_wl.monitoring.metrics.constants import MetricsDataSource, MetricsResourceType, MetricsSeriesType
+from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 
 if TYPE_CHECKING:
@@ -47,11 +47,10 @@ class MetricsInstanceResult:
 
 
 class ResourceMetricManager:
-    def __init__(self, process: 'Process', metric_client: MetricClient, bcs_cluster_id: str, bk_biz_id: Optional[str]):
+    def __init__(self, process: 'Process', metric_client: MetricClient, bcs_cluster_id: str):
         self.process = process
         self.metric_client = metric_client
         self.bcs_cluster_id = bcs_cluster_id
-        self.bk_biz_id = bk_biz_id
         if not self.process.instances:
             raise ValueError("Process should contain info of instances when querying metrics")
 
@@ -79,16 +78,8 @@ class ResourceMetricManager:
         time_range: MetricSmartTimeRange,
     ) -> MetricQuery:
         """get single metrics type query"""
-        tmpl = self.metric_client.get_query_template(series_type=series_type, resource_type=resource_type)
-        if self.metric_client.data_source == MetricsDataSource.BKMONITOR:
-            # NOTE: 蓝鲸监控 promql 不支持 {{}}，需要使用 {} 导致字符串 format 会出错，因此使用 % 来格式化字符串
-            query = tmpl % (instance_name, self.bcs_cluster_id, self.bk_biz_id)
-        elif self.metric_client.data_source == MetricsDataSource.PROMETHEUS:
-            query = tmpl.format(instance_name=instance_name, cluster_id=self.bcs_cluster_id)
-        else:
-            raise ValueError(f'data source [{self.metric_client.data_source}] unsupported!')
-
-        return MetricQuery(type_name=series_type, query=query, time_range=time_range)
+        promql = self.metric_client.get_query_promql(resource_type, series_type, instance_name, self.bcs_cluster_id)
+        return MetricQuery(type_name=series_type, query=promql, time_range=time_range)
 
     def get_instance_metrics(
         self,
@@ -117,14 +108,8 @@ class ResourceMetricManager:
                     )
                 )
 
-            resource_results.append(
-                MetricsResourceResult(
-                    type_name=resource_type,
-                    results=list(
-                        self.metric_client.general_query(queries, self.process.main_container_name, self.bk_biz_id)
-                    ),
-                )
-            )
+            results = list(self.metric_client.general_query(queries, self.process.main_container_name))
+            resource_results.append(MetricsResourceResult(type_name=resource_type, results=results))
 
         return resource_results
 

@@ -289,6 +289,8 @@
 # BK_APP_CODE: ''
 ## 调用 APIGW API 使用的 APP Secret
 # BK_APP_SECRET: ''
+## 蓝鲸组件 API 网关（esb）
+# BK_COMPONENT_API_URL: ''
 ## 网关前缀 URL 模板，格式如 http://localhost:8080/api/{api_name}/
 # BK_API_URL_TMPL: ''
 ## 网关所部署的环境

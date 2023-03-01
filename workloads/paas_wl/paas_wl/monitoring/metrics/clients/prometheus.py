@@ -25,12 +25,7 @@ from requests.auth import HTTPBasicAuth
 from requests.status_codes import codes
 
 from paas_wl.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
-from paas_wl.monitoring.metrics.constants import (
-    RAW_PROMQL_TMPL,
-    MetricsDataSource,
-    MetricsResourceType,
-    MetricsSeriesType,
-)
+from paas_wl.monitoring.metrics.constants import RAW_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
@@ -38,14 +33,13 @@ logger = logging.getLogger(__name__)
 
 class PrometheusMetricClient:
     query_tmpl_config = RAW_PROMQL_TMPL
-    data_source = MetricsDataSource.PROMETHEUS
 
     def __init__(self, basic_auth: Tuple[str, str], host: str):
         self.basic_auth = basic_auth
         self.host = host
 
     def general_query(
-        self, queries: List['MetricQuery'], container_name: str, bk_biz_id: Optional[str]
+        self, queries: List['MetricQuery'], container_name: str
     ) -> Generator['MetricSeriesResult', None, None]:
         """查询指定的各个指标数据"""
         for query in queries:
@@ -61,8 +55,11 @@ class PrometheusMetricClient:
 
             yield MetricSeriesResult(type_name=query.type_name, results=results)
 
-    def get_query_template(self, resource_type: MetricsResourceType, series_type: MetricsSeriesType) -> str:
-        return self.query_tmpl_config[resource_type][series_type]
+    def get_query_promql(
+        self, resource_type: MetricsResourceType, series_type: MetricsSeriesType, instance_name: str, cluster_id: str
+    ) -> str:
+        tmpl = self.query_tmpl_config[resource_type][series_type]
+        return tmpl.format(instance_name=instance_name, cluster_id=cluster_id)
 
     def _query_range(self, query, start, end, step, container_name: str = "") -> List:
         """范围请求API

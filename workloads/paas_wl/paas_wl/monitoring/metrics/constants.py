@@ -36,13 +36,6 @@ class MetricsResourceType(str, StructuredEnum):
         return choices + [('__all__', '__ALL__')]
 
 
-class MetricsDataSource(str, StructuredEnum):
-    """指标数据来源"""
-
-    BKMONITOR = EnumField('bkmonitor', '蓝鲸监控')
-    PROMETHEUS = EnumField('prometheus', '普罗米修斯')
-
-
 RAW_PROMQL_TMPL = {
     "mem": {
         # 内存实际使用值

@@ -54,15 +54,6 @@ class ControllerClient:
         """Get cluster's egress info"""
         return self.request('GET', f'/services/regions/{region}/clusters/{cluster_name}/egress_info/')
 
-    def app__create(self, region, app_name, app_type):
-        """Retrieve an blueking app by uuid"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/'.format(region=region),
-            desired_code=codes.created,
-            json={'name': app_name, 'type': app_type},
-        )
-
     def create_cnative_app_model_resource(self, region: str, data: Dict[str, Any]) -> Dict:
         """Create a cloud-native AppModelResource object
 
@@ -95,80 +86,10 @@ class ControllerClient:
             json={'operation_id': operation_id},
         )
 
-    def get_app_release(self, region, app_name, release_id):
-        """Deploy a build slug"""
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/releases/'.format(region=region, name=app_name),
-            json={
-                'release_id': release_id,
-            },
-        )
-
     def interrupt_build_process(self, region: str, app_name: str, build_process_id: str):
         """Interrupt a running build process"""
         return self.request(
             'POST', f'/regions/{region}/apps/{app_name}/build_processes/{build_process_id}/interruptions/'
-        )
-
-    def app__run_command(
-        self,
-        region: str,
-        app_name: str,
-        build_id: str,
-        command: str,
-        stream_channel_id: str,
-        operator: str,
-        type_: str,
-        extra_envs: dict,
-    ):
-        return self.request(
-            'POST',
-            f'/regions/{region}/apps/{app_name}/commands/',
-            desired_code=codes.created,
-            json={
-                'build': build_id,
-                'command': command,
-                'stream_channel_id': stream_channel_id,
-                'operator': operator,
-                'type': type_,
-                'extra_envs': extra_envs,
-            },
-        )
-
-    def command__retrieve(self, region: str, app_name: str, command_id: str):
-        return self.request(
-            'GET',
-            f'/regions/{region}/apps/{app_name}/commands/{command_id}',
-        )
-
-    def list_processes_specs(self, region: str, app_name: str):
-        """List specs of app's all processes"""
-        return self.request('GET', f'/regions/{region}/apps/{app_name}/processes/specs/')
-
-    def sync_processes_specs(self, region: str, app_name: str, processes: List[Dict]):
-        """Sync specs of app's all processes by processes"""
-        return self.request(
-            'POST',
-            f'/regions/{region}/apps/{app_name}/processes/specs/',
-            json={"processes": processes},
-            desired_code=codes.no_content,
-        )
-
-    def list_processes_statuses(self, region: str, app_name: str):
-        """List current statuses of app's all processes"""
-        return self.request('GET', f'/regions/{region}/apps/{app_name}/processes/')
-
-    def create_build(self, region, app_name, procfile: Dict[str, str], env_variables: Dict[str, str]):
-        """Create the **fake** build for Image Type App"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/builds/placeholder/'.format(region=region, name=app_name),
-            json={
-                "procfile": procfile,
-                "env_variables": env_variables,
-            },
-            desired_code=codes.created,
         )
 
     def builds__retrieve(self, region, app_name, limit=20, offset=0):
@@ -198,33 +119,6 @@ class ControllerClient:
             desired_code=codes.ok,
         )
 
-    def update_app_metadata(self, region, app_name, payload):
-        """Patch app config"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/config/metadata'.format(region=region, name=app_name),
-            json=payload,
-        )
-
-    def upsert_image_credentials(self, region, app_name, credentials):
-        """upsert app's image credentials"""
-        return self.request(
-            'POST',
-            f"/regions/{region}/apps/{app_name}/image_credentials/",
-            desired_code=codes.ok,
-            json=credentials,
-        )
-
-    def create_webconsole(
-        self, region, app_name, process_type, process_instance, operator, container_name=None, command="bash"
-    ):
-        """Create WebConsole"""
-        return self.request(
-            'POST',
-            f'/regions/{region}/apps/{app_name}/processes/{process_type}/instances/{process_instance}/webconsole/',
-            json={"container_name": container_name, "operator": operator, "command": command},
-        )
-
     def get_process_instances(self, region, app_name, process_type):
         """Get process instance"""
         return self.request(
@@ -243,13 +137,6 @@ class ControllerClient:
         return self.request('DELETE', f'/regions/{region}/apps/{app_name}/rcstate_binding/')
 
     # Region Cluster State binding end
-
-    # Process Services start
-
-    def app_proc_ingress_actions__sync(self, region, app_name):
-        return self.request('POST', f'/services/regions/{region}/apps/{app_name}/proc_ingresses/actions/sync')
-
-    # Process Services end
 
     # Bk-App(module) related start
 

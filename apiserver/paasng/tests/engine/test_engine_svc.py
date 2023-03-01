@@ -26,10 +26,39 @@ pytestmark = pytest.mark.django_db
 
 
 class TestEngineDeployClient:
-    def test_update_metadata_normal(self, bk_stag_env):
-        mocked_client = mock.MagicMock()
-        deploy_client = EngineDeployClient(bk_stag_env.get_engine_app(), mocked_client)
-        deploy_client.update_metadata({'bar': '2'})
+    def test_metadata_funcs(self, bk_app, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        assert c.get_metadata()['paas_app_code'] == bk_app.code
+        c.update_metadata({'paas_app_code': 'foo-updated'})
+        assert c.get_metadata()['paas_app_code'] == 'foo-updated'
 
-        assert mocked_client.update_app_metadata.called
-        assert mocked_client.update_app_metadata.call_args[1]['payload']['metadata'] == {'bar': '2'}
+    def test_create_build(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        s = c.create_build({}, {})
+        assert s is not None
+
+    def test_update_domains(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        with mock.patch('paasng.engine.deploy.engine_svc.assign_custom_hosts') as mocker:
+            c.update_domains(
+                [
+                    {'host': 'foo.example.com', 'https_enabled': True},
+                    {'host': 'bar.example.com'},
+                ]
+            )
+            assert mocker.called
+
+    def test_update_subpaths(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        with mock.patch('paasng.engine.deploy.engine_svc.assign_subpaths') as mocker:
+            c.update_subpaths(
+                [
+                    {'subpath': '/foo/'},
+                    {'subpath': '/bar/'},
+                ]
+            )
+            assert mocker.called
+
+    def test_upsert_image_credentials(self, bk_stag_env):
+        c = EngineDeployClient(bk_stag_env.get_engine_app())
+        c.upsert_image_credentials('example.com', 'user', 'pass')

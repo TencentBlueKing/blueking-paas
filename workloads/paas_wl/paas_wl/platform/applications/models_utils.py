@@ -62,7 +62,3 @@ def delete_module_related_res(module: Module) -> None:
         # Build, BuildProcess, Config, Release, AppMetricsMonitor, AppImageCredential,
         # AppAddOn, AppDomain, AppSubpath.
         wl_engine_app.delete()
-
-    # Delete related EngineApp db records
-    for env in module.get_envs():
-        env.get_engine_app().delete()

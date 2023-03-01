@@ -165,6 +165,9 @@ class ControllerClient:
 
         with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
             delete_module_related_res(module)
+            # Delete related EngineApp db records
+            for env in module.get_envs():
+                env.get_engine_app().delete()
 
     # Bk-App(module) related end
 

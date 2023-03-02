@@ -22,7 +22,7 @@ from django_dynamic_fixture import G
 from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.monitoring.app_monitor.utils import build_monitor_port
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_build_monitor_port(bk_stag_engine_app):

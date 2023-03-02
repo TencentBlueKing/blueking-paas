@@ -389,7 +389,9 @@ def _mock_wl_services_in_creation():
     ), mock.patch(
         'paasng.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
     ), mock.patch(
-        "paasng.cnative.services.controller_client"
+        "paasng.cnative.services.create_cnative_app_model_resource"
+    ), mock.patch(
+        "paasng.cnative.services.bind_wl_app_cluster"
     ):
         yield
 

@@ -22,6 +22,7 @@ import pytest
 from blue_krill.web.std_error import APIError
 
 from paasng.cnative.services import get_default_cluster_name
+from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -41,5 +42,5 @@ pytestmark = pytest.mark.django_db
 def test_get_default_cluster_name(settings, data, region, ctx, expected):
     settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = data
 
-    with ctx:
+    with ctx, replace_cluster_service():
         assert get_default_cluster_name(region) == expected

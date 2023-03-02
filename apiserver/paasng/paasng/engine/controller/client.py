@@ -19,20 +19,12 @@ to the current version of the project delivered to anyone in the future.
 """Client to communicate with controller
 """
 import logging
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING
 
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
-from django.conf import settings
-from requests.status_codes import codes
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.models import Cluster
-from paas_wl.cluster.serializers import ClusterSLZ
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
-from paasng.engine.controller.exceptions import BadResponse
-from paasng.utils.basic import get_requests_session
-from paasng.utils.local import local
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -54,55 +46,6 @@ class ControllerClient:
     ################
     # Regular Path #
     ################
-    def list_region_clusters(self, region):
-        """List region clusters"""
-        return ClusterSLZ(Cluster.objects.filter(region=region), many=True).data
-
-    def get_cluster_egress_info(self, region, cluster_name):
-        """Get cluster's egress info"""
-        from paas_wl.networking.egress.misc import get_cluster_egress_ips
-
-        cluster = Cluster.objects.get(region=region, name=cluster_name)
-        return get_cluster_egress_ips(cluster)
-
-    def create_cnative_app_model_resource(self, region: str, data: Dict[str, Any]) -> Dict:
-        """Create a cloud-native AppModelResource object
-
-        :param region: Application region
-        :param data: Payload for create resource
-        :raises: ValidationError when CreateAppModelResourceSerializer validation failed
-        """
-        from paas_wl.cnative.specs.models import AppModelResource, create_app_resource
-        from paas_wl.cnative.specs.serializers import AppModelResourceSerializer, CreateAppModelResourceSerializer
-
-        serializer = CreateAppModelResourceSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        d = serializer.validated_data
-
-        resource = create_app_resource(
-            # Use Application code as default resource name
-            name=d['code'],
-            image=d['image'],
-            command=d.get('command'),
-            args=d.get('args'),
-            target_port=d.get('target_port'),
-        )
-        model_resource = AppModelResource.objects.create_from_resource(
-            region, d['application_id'], d['module_id'], resource
-        )
-        return AppModelResourceSerializer(model_resource).data
-
-    def bind_app_cluster(self, engine_app: 'EngineApp', cluster_name: str):
-        """Bind App to given cluster"""
-        # TODO: 优化报错信息, 例如集群不存在, 绑定失败等
-        wl_engine_app = engine_app
-        cluster = Cluster.objects.get(name=cluster_name)
-        latest_config = wl_engine_app.latest_config
-        latest_config.cluster = cluster.name
-        latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-        latest_config.save()
-
-    # Region Cluster State binding start
 
     def app_rcsbinding__create(self, engine_app: 'EngineApp'):
         wl_engine_app = engine_app.to_wl_obj()
@@ -124,42 +67,3 @@ class ControllerClient:
         binding.delete()
 
     # Region Cluster State binding end
-
-    # Process Metrics Start
-    def upsert_app_monitor(
-        self,
-        engine_app: 'EngineApp',
-        port: int,
-        target_port: int,
-    ):
-        from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
-
-        instance, _ = AppMetricsMonitor.objects.update_or_create(
-            defaults={
-                "port": port,
-                "target_port": target_port,
-                "is_enabled": True,
-            },
-            app=engine_app.to_wl_obj(),
-        )
-
-    # Process Metrics End
-
-    def get_swagger_docs(self):
-        return self.request('GET', '/swagger.json')
-
-    def request(self, method, path, desired_code=codes.ok, **kwargs):
-        """Wrap request.request to provide auth header"""
-        url = self.controller_host + path
-        kwargs['headers'] = {settings.REQUEST_ID_HEADER_KEY: local.request_id}
-        kwargs['auth'] = self.auth_instance
-        logger.debug(f"Controller client sending request to [{method}]{url}, kwargs={kwargs}.")
-        resp = get_requests_session().request(method, url, **kwargs)
-
-        if resp.status_code == desired_code:
-            try:
-                return resp.json()
-            except Exception:
-                return resp
-
-        raise BadResponse(resp)

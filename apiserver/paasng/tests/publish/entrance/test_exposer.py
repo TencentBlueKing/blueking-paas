@@ -164,7 +164,8 @@ class TestGetPreallocatedAddress:
         ],
     )
     def test_with_clusters(self, clusters, stag_address, prod_address):
-        addr = get_preallocated_address('test-code', clusters=clusters)
+        with replace_cluster_service():
+            addr = get_preallocated_address('test-code', clusters=clusters)
         assert addr.prod == prod_address
         assert addr.stag == stag_address
 

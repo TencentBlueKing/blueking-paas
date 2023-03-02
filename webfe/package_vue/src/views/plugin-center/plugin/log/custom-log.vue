@@ -244,13 +244,14 @@
                     <div class="ps-no-result">
                       <div class="text">
                         <table-empty
+                          :is-content-text="false"
                           :keyword="tableEmptyConf.keyword"
                           :abnormal="tableEmptyConf.isAbnormal"
                           @reacquire="getPluginLogList"
                           @clear-filter="clearFilterKey"
                         />
                         <section class="search-tips">
-                          <p style="color: #c4c6cc;">
+                          <p style="color: #63656E;">
                             {{ $t('您可以按照以下方式优化查询结果：') }}
                           </p>
                           <p

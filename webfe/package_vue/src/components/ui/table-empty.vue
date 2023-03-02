@@ -12,7 +12,7 @@
         {{ curTitle }}
       </div>
       <span v-else />
-      <template v-if="curType !== 'empty'">
+      <template v-if="curType !== 'empty' && isContentText">
         <span
           v-if="abnormal"
           class="refresh-tips"
@@ -64,6 +64,10 @@
             abnormal: {
                 type: Boolean,
                 default: false
+            },
+            isContentText: {
+                type: Boolean,
+                default: true
             }
         },
         computed: {
@@ -102,7 +106,7 @@
     .paas-table-serch {
         max-height: 280px;
         .search-empty-tips {
-            margin-top: 8px;
+            font-size: 12px;
             color: #979BA5;
             .clear-search {
                 cursor: pointer;
@@ -115,7 +119,7 @@
         .exception-part-title {
             color: #63656E;
             font-size: 14px;
-            margin-bottom: 5px;
+            margin-bottom: 12px;
         }
         .refresh-tips {
             cursor: pointer;

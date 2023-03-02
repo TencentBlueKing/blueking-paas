@@ -399,9 +399,6 @@ def _mock_wl_services_in_creation():
     ):
         yield
 
-    _faked_wl_engine_apps.clear()
-    _faked_env_metadata.clear()
-
 
 def create_pending_wl_engine_apps(bk_app: Application):
     """Create WlEngineApp objects of the given application in workloads, these objects

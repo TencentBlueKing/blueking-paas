@@ -30,7 +30,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestReplaceAppDomainService:
-    def test_invalid_input(self, bk_app, bk_stag_env, bk_stag_engine_app):
+    def test_invalid_input(self, bk_app, bk_stag_env, bk_stag_wl_app):
         with pytest.raises(ReplaceAppDomainFailed):
             ReplaceAppDomainService(bk_stag_env, 'invalid-name.example.com', '/')
 
@@ -46,7 +46,7 @@ class TestReplaceAppDomainService:
         ],
     )
     def test_integrated(
-        self, bk_app, bk_stag_env, bk_stag_engine_app, old_host, old_path_prefix, new_host, new_path_prefix
+        self, bk_app, bk_stag_env, bk_stag_wl_app, old_host, old_path_prefix, new_host, new_path_prefix
     ):
         domain = G(
             Domain,
@@ -57,16 +57,16 @@ class TestReplaceAppDomainService:
         )
         set_model_structured(domain, bk_app)
         mgr = CustomDomainIngressMgr(domain)
-        mgr.sync(default_service_name=bk_stag_engine_app.name)
+        mgr.sync(default_service_name=bk_stag_wl_app.name)
 
         # Check ingress resource beforehand
-        ings = ingress_kmodel.list_by_app(bk_stag_engine_app)
+        ings = ingress_kmodel.list_by_app(bk_stag_wl_app)
         assert ings[0].domains[0].host == old_host
 
         ReplaceAppDomainService(bk_stag_env, old_host, old_path_prefix).replace_with(new_host, new_path_prefix, False)
 
         # Validate replacement
-        ings = ingress_kmodel.list_by_app(bk_stag_engine_app)
+        ings = ingress_kmodel.list_by_app(bk_stag_wl_app)
         assert len(ings) == 1
         assert len(ings[0].domains) == 1
         assert ings[0].domains[0].host == new_host

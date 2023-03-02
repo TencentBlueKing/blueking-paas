@@ -63,13 +63,13 @@ def test_check_domain_used_by_market(bk_app, bk_module, url_type, hostname, addr
 
 
 class TestCNativeDftCustomDomainManager:
-    def test_create_no_deploys(self, bk_cnative_app, bk_stag_env, bk_stag_engine_app):
+    def test_create_no_deploys(self, bk_cnative_app, bk_stag_env, bk_stag_wl_app):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         with pytest.raises(ValidationError):
             mgr.create(env=bk_stag_env, host='foo.example.com', path_prefix='/', https_enabled=False)
 
     @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')
-    def test_create_successfully(self, mocker, bk_cnative_app, bk_stag_env, bk_stag_engine_app, bk_user):
+    def test_create_successfully(self, mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy
         create_cnative_deploy(bk_stag_env, bk_user)
@@ -79,7 +79,7 @@ class TestCNativeDftCustomDomainManager:
         assert domain is not None
 
     @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking', side_effect=ValueError('foo'))
-    def test_create_failed(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_engine_app, bk_user):
+    def test_create_failed(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy
         create_cnative_deploy(bk_stag_env, bk_user)
@@ -88,9 +88,7 @@ class TestCNativeDftCustomDomainManager:
 
     @pytest.fixture
     @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')
-    def domain_foo_com(
-        self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_engine_app, bk_prod_engine_app, bk_user
-    ) -> Domain:
+    def domain_foo_com(self, _mocker, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_prod_wl_app, bk_user) -> Domain:
         """Create a Domain fixture"""
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy

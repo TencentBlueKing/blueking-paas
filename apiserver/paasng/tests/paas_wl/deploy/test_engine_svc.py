@@ -54,13 +54,13 @@ class TestEngineDeployClient:
             )
             assert mocker.called
 
-    def test_upsert_image_credentials(self, bk_stag_env, bk_stag_engine_app, with_wl_apps):
+    def test_upsert_image_credentials(self, bk_stag_env, bk_stag_wl_app, with_wl_apps):
         c = EngineDeployClient(bk_stag_env.get_engine_app())
         with pytest.raises(AppImageCredential.DoesNotExist):
-            AppImageCredential.objects.get(app=bk_stag_engine_app, registry="example.com")
+            AppImageCredential.objects.get(app=bk_stag_wl_app, registry="example.com")
         c.upsert_image_credentials('example.com', 'user', 'pass')
-        assert AppImageCredential.objects.filter(app=bk_stag_engine_app).count() == 1
-        assert AppImageCredential.objects.get(app=bk_stag_engine_app, registry="example.com").username == "user"
+        assert AppImageCredential.objects.filter(app=bk_stag_wl_app).count() == 1
+        assert AppImageCredential.objects.get(app=bk_stag_wl_app, registry="example.com").username == "user"
         c.upsert_image_credentials('example.com', 'user2', 'pass')
-        assert AppImageCredential.objects.filter(app=bk_stag_engine_app).count() == 1
-        assert AppImageCredential.objects.get(app=bk_stag_engine_app, registry="example.com").username == "user2"
+        assert AppImageCredential.objects.filter(app=bk_stag_wl_app).count() == 1
+        assert AppImageCredential.objects.get(app=bk_stag_wl_app, registry="example.com").username == "user2"

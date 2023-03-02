@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
-def dp(bk_stag_env, bk_stag_engine_app, bk_user):
+def dp(bk_stag_env, bk_stag_wl_app, bk_user):
     return create_cnative_deploy(bk_stag_env, bk_user, status=DeployStatus.PENDING)
 
 

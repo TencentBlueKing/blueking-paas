@@ -180,14 +180,14 @@ def namespace_maker(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
-    app / bk_stag_engine_app
+    app / bk_stag_wl_app
     """
     if not request.keywords.get('auto_create_ns'):
         yield
         return
 
-    if "bk_stag_engine_app" in request.fixturenames:
-        app = request.getfixturevalue("bk_stag_engine_app")
+    if "bk_stag_wl_app" in request.fixturenames:
+        app = request.getfixturevalue("bk_stag_wl_app")
     else:
         yield
         return
@@ -331,10 +331,10 @@ def set_structure(default_process_spec_plan):
 
 
 @pytest.fixture
-def bk_stag_engine_app(bk_stag_env, with_wl_apps):
+def bk_stag_wl_app(bk_stag_env, with_wl_apps):
     return bk_stag_env.engine_app.to_wl_obj()
 
 
 @pytest.fixture
-def bk_prod_engine_app(bk_prod_env, with_wl_apps):
+def bk_prod_wl_app(bk_prod_env, with_wl_apps):
     return bk_prod_env.engine_app.to_wl_obj()

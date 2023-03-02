@@ -81,7 +81,7 @@ class TestMresConditionDetector:
 class TestBkAppClusterOperator:
     """测试在集群中操作 bkapp 资源"""
 
-    def test_deploy_and_get_status(self, bk_app, bk_stag_env, bk_stag_engine_app, mock_knamespace):
+    def test_deploy_and_get_status(self, bk_app, bk_stag_env, bk_stag_wl_app, mock_knamespace):
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha1",
             "kind": "BkApp",
@@ -101,7 +101,7 @@ class TestBkAppClusterOperator:
         assert get_mres_from_cluster(bk_stag_env) is not None
 
         engine_app = EngineApp.objects.get_by_env(bk_stag_env)
-        with get_client_by_app(bk_stag_engine_app) as client:
+        with get_client_by_app(bk_stag_wl_app) as client:
             assert ImageCredentialsManager(client).get(engine_app, PULL_SECRET_NAME) is not None
 
         # 修改进程配置信息，再次部署到集群

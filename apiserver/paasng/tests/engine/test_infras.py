@@ -58,12 +58,13 @@ def setup_cluster():
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks(mock_current_engine_client):
+def setup_mocks():
     """Setup mocks for current testing module
 
-    - Mock engine client
+    - Mock ProcessManager which depends on `workloads` module
     """
-    yield
+    with mock.patch('paasng.extensions.declarative.deployment.controller.ProcessManager'):
+        yield
 
 
 class TestDeployProcedure:

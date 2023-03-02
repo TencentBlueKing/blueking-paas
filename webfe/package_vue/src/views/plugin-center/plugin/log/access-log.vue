@@ -111,7 +111,12 @@
             @page-limit-change="limitChange"
           >
             <div slot="empty">
-              <table-empty empty />
+              <table-empty
+                :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="getLogList"
+                @clear-filter="clearFilterKey"
+              />
             </div>
             <bk-table-column
               type="expand"
@@ -244,7 +249,11 @@
                 isFilter: false,
                 logs: [],
                 logKeyList: [],
-                existFieldList: EXIST_LOG_KEY
+                existFieldList: EXIST_LOG_KEY,
+                tableEmptyConf: {
+                    isAbnormal: false,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -634,7 +643,10 @@
                     this.logList.splice(0, this.logList.length, ...data);
                     this.pagination.count = res.total;
                     this.pagination.current = page;
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (res) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
@@ -740,6 +752,14 @@
 
             formatTime (time) {
                 return time ? formatDate(time * 1000) : '--';
+            },
+
+            clearFilterKey () {
+                this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.logParams.keyword;
             }
         }
     };

@@ -57,9 +57,9 @@
           <!-- 如果存在数据展示默认Exception -->
           <div slot="empty">
             <table-empty
-              :get-data-count="tableEmptyConf.getDataCount"
-              :data="versionList"
               :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="getVersionList"
               @clear-filter="clearFilterKey"
             />
           </div>
@@ -264,6 +264,7 @@
     import { PLUGIN_VERSION_STATUS } from '@/common/constants';
     import i18n from '@/language/i18n.js';
     import { formatDate } from '@/common/tools';
+    import { clearFilter } from '@/common/utils';
 
     const PLUGIN_VERSION_STATUS_FILTER = {
         'successful': i18n.t('已上线'),
@@ -310,8 +311,8 @@
                     exposed_link: ''
                 },
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -411,7 +412,9 @@
                     // 当前是否已有任务进行中
                     this.curIsPending = this.versionList.find(item => item.status === 'pending');
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$bkMessage({
                         theme: 'error',
                         message: e.detail || e.message || this.$t('接口异常')
@@ -527,6 +530,10 @@
             clearFilterKey () {
                 this.keyword = '';
                 this.$refs.versionTable.clearFilter();
+                if (this.$refs.versionTable.$refs.tableHeader) {
+                    const tableHeader = this.$refs.versionTable.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
             },
             async getPluginAccessEntry () {
                 try {
@@ -546,8 +553,11 @@
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
-                this.tableEmptyConf.keyword = this.keyword;
+                if (this.keyword || this.filterStatus.length || this.filterCreator.length) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

@@ -42,9 +42,9 @@
       >
         <div slot="empty">
           <table-empty
-            :get-data-count="tableEmptyConf.getDataCount"
-            :data="pluginList"
             :keyword="tableEmptyConf.keyword"
+            :abnormal="tableEmptyConf.isAbnormal"
+            @reacquire="fetchPluginsList"
             @clear-filter="clearFilterKey"
           />
         </div>
@@ -185,6 +185,7 @@
 
 <script>
     import { PLUGIN_STATUS } from '@/common/constants';
+    import { clearFilter } from '@/common/utils';
     export default {
         data () {
             return {
@@ -214,8 +215,8 @@
                     'initial': 'initial'
                 },
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -283,7 +284,10 @@
                     this.pluginList = res.results;
                     this.pagination.count = res.count;
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    // 显示异常
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -427,10 +431,13 @@
                 // 防止清空搜索条件时提示抖动
                 this.filterKey = '';
                 this.$refs.pluginTable.clearFilter();
+                if (this.$refs.pluginTable.$refs.tableHeader) {
+                    const tableHeader = this.$refs.pluginTable.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
                 this.tableEmptyConf.keyword = this.filterKey;
             }
         }

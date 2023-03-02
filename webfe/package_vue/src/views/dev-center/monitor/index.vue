@@ -169,9 +169,9 @@
         <template v-if="!isLoading && !curPageData.length">
           <div class="ps-no-result">
             <table-empty
-              :get-data-count="tableEmptyConf.getDataCount"
-              :data="curPageData"
               :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMonitorList"
               @clear-filter="clearFilterKey"
             />
           </div>
@@ -320,8 +320,8 @@
                 isDatePickerOpen: false,
                 curDateType: 'custom',
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -536,7 +536,9 @@
                     this.initPageConf();
                     this.curPageData = this.getDataByPage(this.pageConf.current);
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -551,7 +553,6 @@
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount += 1;
                 this.tableEmptyConf.keyword = this.filterKey;
             }
         }

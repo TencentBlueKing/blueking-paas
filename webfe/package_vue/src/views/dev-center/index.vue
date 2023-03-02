@@ -548,8 +548,11 @@
         <template v-if="!isLoading && !appList.length">
           <div class="ps-no-result">
             <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
               :empty-title="$t('暂无应用')"
-              empty
+              @reacquire="fetchAppList"
+              @clear-filter="clearFilterKey"
             />
           </div>
         </template>
@@ -715,7 +718,11 @@
                 type: 'default',
                 appTypeList: APP_TYPE_MAP,
                 curAppType: '',
-                curAppTypeActive: 'all'
+                curAppTypeActive: 'all',
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -1029,7 +1036,10 @@
                         this.$set(item, 'creation_allowed', true);
                     });
                     this.appList.splice(0, this.appList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -1110,6 +1120,14 @@
                 this.curAppType = item.type !== 'all' ? item.type : '';
                 this.curAppTypeActive = item.key;
                 this.fetchAppList();
+            },
+
+            clearFilterKey () {
+                this.filterKey = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.filterKey;
             }
         }
     };

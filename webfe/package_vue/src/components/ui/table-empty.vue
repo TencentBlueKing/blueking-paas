@@ -1,36 +1,39 @@
 <template>
   <div class="paas-table-serch">
-    <template v-if="!empty && isEmpty === 'search' && keyword">
-      <bk-exception
-        class="exception-wrap-item exception-part"
-        type="search-empty"
-        scene="part"
+    <bk-exception
+      class="exception-wrap-item exception-part"
+      :type="curType"
+      scene="part"
+    >
+      <div
+        v-if="isEmptyTitle"
+        class="exception-part-title"
       >
-        <span class="search-empty-title">{{ $t('搜索结果为空') }}</span>
-      </bk-exception>
-      <div class="search-empty-tips">
-        {{ $t('可以尝试 调整关键词 或') }}
-        <span
-          class="clear-search"
-          @click="handlerClearFilter"
-        >{{ $t('清空搜索条件') }}</span>
+        {{ curTitle }}
       </div>
-    </template>
-    <template v-else>
-      <bk-exception
-        class="exception-wrap-item exception-part"
-        type="empty"
-        scene="part"
-      >
+      <span v-else />
+      <template v-if="curType !== 'empty'">
         <span
-          v-if="isEmptyTitle"
-          class="empty-tips"
+          v-if="abnormal"
+          class="refresh-tips"
+          @click="toRefresh"
         >
-          {{ emptyTitle }}
+          {{ $t('刷新') }}
         </span>
-        <span v-else />
-      </bk-exception>
-    </template>
+        <div
+          v-else
+          class="search-empty-tips"
+        >
+          {{ $t('可以尝试 调整关键词 或') }}
+          <span
+            class="clear-search"
+            @click="handlerClearFilter"
+          >
+            {{ $t('清空搜索条件') }}
+          </span>
+        </div>
+      </template>
+    </bk-exception>
   </div>
 </template>
 
@@ -38,43 +41,58 @@
     import i18n from '@/language/i18n';
     export default {
         props: {
-            getDataCount: {
-                type: Number,
-                default: 0
-            },
             keyword: {
                 type: String,
                 default: ''
-            },
-            data: {
-                type: Array,
-                default: () => []
             },
             // 是否为暂无数据
             empty: {
                 type: Boolean,
                 default: false
             },
+            // 暂无数据
             emptyTitle: {
                 type: String,
                 default: i18n.t('暂无数据')
             },
+            // 是否显示title
             isEmptyTitle: {
                 type: Boolean,
                 default: true
+            },
+            // 是否为异常
+            abnormal: {
+                type: Boolean,
+                default: false
             }
         },
         computed: {
-            isEmpty () {
-                if (this.getDataCount <= 1 && !this.data.length) {
+            curType () {
+                if (this.abnormal) {
+                    return '500';
+                } else if (!this.empty && this.keyword) {
+                    return 'search-empty';
+                } else {
                     return 'empty';
                 }
-                return 'search';
+            },
+            curTitle () {
+                if (this.abnormal) {
+                    return this.$t('数据获取异常');
+                } else if (!this.empty && this.keyword) {
+                    return this.$t('搜索结果为空');
+                } else {
+                    return this.emptyTitle;
+                }
             }
         },
         methods: {
             handlerClearFilter () {
                 this.$emit('clear-filter');
+            },
+            toRefresh () {
+                this.$emit('clear-filter');
+                this.$emit('reacquire');
             }
         }
     };
@@ -93,6 +111,15 @@
         }
         .empty-tips {
             color: #63656E;
+        }
+        .exception-part-title {
+            color: #63656E;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .refresh-tips {
+            cursor: pointer;
+            color: #3a84ff;
         }
     }
 </style>

@@ -110,7 +110,10 @@
           v-if="!isStreamLogListLoading"
           class="text"
         >
-          <empty-dark />
+          <empty-dark
+            :keyword="emptyDarkConf.keyword"
+            @clear-filter="clearFilter"
+          />
         </div>
       </div>
     </div>
@@ -172,7 +175,10 @@
                     levelname: '',
                     time_range: '1h'
                 },
-                isFilter: false
+                isFilter: false,
+                emptyDarkConf: {
+                    keyword: ''
+                }
             };
         },
         watch: {
@@ -461,6 +467,7 @@
                             this.$refs.logContainer.scrollTop = this.$refs.logContainer.scrollHeight;
                         }, 0);
                     }
+                    this.updateEmptyDarkConfig();
                 } catch (res) {
                     this.$paasMessage({
                         theme: 'error',
@@ -573,6 +580,15 @@
 
             processIdSlice (str) {
                 return str.slice(0, 4) + '.';
+            },
+
+            clearFilter () {
+                this.$refs.standartLogFilter && this.$refs.standartLogFilter.clearKeyword();
+                this.isStreamLogListLoading = true;
+            },
+
+            updateEmptyDarkConfig () {
+                this.emptyDarkConf.keyword = this.logParams.keyword;
             }
         }
     };

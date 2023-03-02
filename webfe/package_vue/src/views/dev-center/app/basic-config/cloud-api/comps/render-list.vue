@@ -105,14 +105,9 @@
         >
           <div slot="empty">
             <table-empty
-              v-if="!apiList.length && !searchValue"
-              empty
-            />
-            <table-empty
-              v-else
-              :get-data-count="tableEmptyConf.getDataCount"
-              :data="tableList"
               :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList(id)"
               @clear-filter="clearFilterKey"
             />
           </div>
@@ -335,6 +330,7 @@
     import BatchDialog from './batch-apply-dialog';
     import RenewalDialog from './batch-renewal-dialog';
     import GatewayDialog from './apply-by-gateway-dialog';
+    import { clearFilter } from '@/common/utils';
     export default {
         name: '',
         components: {
@@ -418,8 +414,8 @@
                     isRenew: false
                 },
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -712,7 +708,6 @@
                 const start = this.pagination.limit * (this.pagination.current - 1);
                 const end = start + this.pagination.limit;
                 this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
-                // 前端过滤，需要将getDataCount更新
                 this.updateTableEmptyConfig();
             }, 350),
 
@@ -813,7 +808,9 @@
                     this.initPageConf();
                     this.tableList = this.getDataByPage();
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
@@ -916,10 +913,15 @@
             clearFilterKey () {
                 this.searchValue = '';
                 this.$refs.gatewayRef.clearFilter();
+                // 清空表头筛选条件
+                if (this.$refs.gatewayRef && this.$refs.gatewayRef.$refs.tableHeader) {
+                    const tableHeader = this.$refs.gatewayRef.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
+                this.fetchList(this.id);
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
                 this.tableEmptyConf.keyword = this.searchValue;
             }
         }

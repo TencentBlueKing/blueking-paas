@@ -60,9 +60,9 @@
           >
             <div slot="empty">
               <table-empty
-                :get-data-count="tableEmptyConf.getDataCount"
-                :data="userPermissionList"
                 :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="fetchPathExemptList(true)"
                 @clear-filter="clearFilterKey"
               />
             </div>
@@ -294,8 +294,8 @@
                 },
                 isUseUserPermission: true,
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -491,7 +491,9 @@
                     this.pagination.count = res.count;
                     this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -674,7 +676,6 @@
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
                 this.tableEmptyConf.keyword = this.keyword;
             }
         }

@@ -39,9 +39,9 @@
         >
           <div slot="empty">
             <table-empty
-              :get-data-count="tableEmptyConf.getDataCount"
-              :data="memberListShow"
               :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMemberList"
               @clear-filter="clearFilterKey"
             />
           </div>
@@ -282,8 +282,8 @@
                 isTableLoading: false,
                 isDelLoading: false,
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -369,7 +369,9 @@
                     this.memberList.splice(0, this.memberList.length, ...(res || []));
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -593,7 +595,6 @@
                 this.keyword = '';
             },
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
                 this.tableEmptyConf.keyword = this.keyword;
             }
         }

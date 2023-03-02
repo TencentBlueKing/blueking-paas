@@ -189,3 +189,18 @@ export function getActualLeft (node) {
 
   return actualLeft;
 }
+
+/**
+ * 手动清空table过滤条件
+ *
+ * @param refInstance {Object} 指定的 table
+ *
+ */
+export function clearFilter (refInstance) {
+  if (refInstance.filterPanels) {
+    const filterPanels = refInstance.filterPanels;
+    for (const key in filterPanels) {
+      filterPanels[key].handleReset();
+    };
+  }
+}

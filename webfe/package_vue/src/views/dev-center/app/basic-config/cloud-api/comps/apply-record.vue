@@ -108,9 +108,9 @@
         >
           <div slot="empty">
             <table-empty
-              :get-data-count="tableEmptyConf.getDataCount"
-              :data="tableList"
               :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList"
               @clear-filter="clearFilterKey"
             />
           </div>
@@ -505,8 +505,8 @@
                 },
                 searchValue: '',
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -676,14 +676,16 @@
                     query: this.searchValue
                 };
                 try {
-                    const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params)
-                    ;(res.data.results || []).forEach(item => {
+                    const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
+                    (res.data.results || []).forEach(item => {
                         item.type = this.typeValue;
                     });
                     this.pagination.count = res.data.count;
                     this.tableList = res.data.results;
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
@@ -708,11 +710,17 @@
 
             clearFilterKey () {
                 this.searchValue = '';
+                this.statusValue = '';
+                this.applicants = [];
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
-                this.tableEmptyConf.keyword = this.searchValue;
+                console.log('initDateTimeRange', this.initDateTimeRange);
+                if (this.searchValue || this.statusValue || this.applicants.length) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

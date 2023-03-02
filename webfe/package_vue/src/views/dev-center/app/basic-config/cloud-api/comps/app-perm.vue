@@ -81,9 +81,9 @@
         >
           <div slot="empty">
             <table-empty
-              :get-data-count="tableEmptyConf.getDataCount"
-              :data="tableList"
               :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList"
               @clear-filter="clearFilterKey"
             />
           </div>
@@ -279,6 +279,7 @@
 <script>
     import RenewalDialog from './batch-renewal-dialog';
     import PaasngAlert from './paasng-alert';
+    import { clearFilter } from '@/common/utils';
     export default {
         name: '',
         components: {
@@ -340,8 +341,8 @@
                 nameFilters: [],
                 tableKey: -1,
                 tableEmptyConf: {
-                    getDataCount: 0,
-                    keyword: ''
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -707,7 +708,9 @@
                     this.allChecked = false;
                     this.tableKey = +new Date();
                     this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
@@ -749,10 +752,14 @@
             clearFilterKey () {
                 this.searchValue = '';
                 this.$refs.permRef.clearFilter();
+                this.fetchList();
+                if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
+                    const tableHeader = this.$refs.permRef.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.getDataCount++;
                 this.tableEmptyConf.keyword = this.searchValue;
             }
         }

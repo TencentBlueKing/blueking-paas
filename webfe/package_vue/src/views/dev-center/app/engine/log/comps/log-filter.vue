@@ -680,6 +680,13 @@
 
             handleClickOutSide () {
                 this.isAutoPanelShow = false;
+            },
+
+            clearKeyword () {
+                this.keyword = '';
+                this.logParams.process_id = '';
+                this.logParams.stream = '';
+                this.logParams.environment = '';
             }
         }
     };

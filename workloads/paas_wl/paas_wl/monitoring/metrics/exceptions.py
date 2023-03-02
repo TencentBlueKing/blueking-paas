@@ -39,3 +39,11 @@ class RequestMetricBackendError(Exception):
 
     def __str__(self):
         return 'status_code=%s error_code=%s %s' % (self.status_code, self.error_code, self.error_message)
+
+
+class AppMetricNotSupportedError(Exception):
+    """配置缺失或版本不支持，无法提供应用指标信息"""
+
+
+class AppInstancesNotFoundError(Exception):
+    """因获取 APP 实例信息失败，无法查询指标信息"""

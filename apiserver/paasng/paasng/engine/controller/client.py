@@ -189,45 +189,6 @@ class ControllerClient:
             app=wl_engine_app,
         )
 
-    def app_proc_metrics__list(
-        self,
-        region,
-        app_name,
-        process_type,
-        instance_name,
-        metric_type,
-        step,
-        start_time=None,
-        end_time=None,
-        time_range_str=None,
-    ):
-        return self.request(
-            'GET',
-            f'/regions/{region}/apps/{app_name}/processes/{process_type}/instances/{instance_name}/metrics/',
-            params={
-                'metric_type': metric_type,
-                'start_time': start_time,
-                'end_time': end_time,
-                'step': step,
-                'time_range_str': time_range_str,
-            },
-        )
-
-    def app_proc_all_metrics__list(
-        self, region, app_name, process_type, metric_type, step, start_time=None, end_time=None, time_range_str=None
-    ):
-        return self.request(
-            'GET',
-            f'/regions/{region}/apps/{app_name}/processes/{process_type}/metrics/',
-            params={
-                'metric_type': metric_type,
-                'start_time': start_time,
-                'end_time': end_time,
-                'step': step,
-                'time_range_str': time_range_str,
-            },
-        )
-
     # Process Metrics End
 
     def get_swagger_docs(self):

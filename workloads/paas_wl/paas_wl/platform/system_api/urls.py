@@ -88,16 +88,4 @@ urlpatterns = [
         r"^regions/%s/apps/%s/archive/$" % (PVAR_REGION, PVAR_NAME),
         views.ArchiveViewSet.as_view({'post': 'archive'}),
     ),
-    ####################
-    # Resource Metrics #
-    ####################
-    re_path(
-        r"^regions/%s/apps/%s/processes/%s/instances/%s/metrics/$"
-        % (PVAR_REGION, PVAR_NAME, PVAR_PROCESS_TYPE, PVAR_PROCESS_INSTANCE_NAME),
-        views.ResourceMetricsViewSet.as_view({'get': 'query'}),
-    ),
-    re_path(
-        r"^regions/%s/apps/%s/processes/%s/metrics/$" % (PVAR_REGION, PVAR_NAME, PVAR_PROCESS_TYPE),
-        views.ResourceMetricsViewSet.as_view({'get': 'multi_query'}),
-    ),
 ]

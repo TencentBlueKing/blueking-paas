@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 
 class TestBuilder:
     @pytest.fixture
-    def builtin_relabelings(self, app):
-        metadata = get_metadata(app)
+    def builtin_relabelings(self, bk_stag_engine_app):
+        metadata = get_metadata(bk_stag_engine_app)
         return [
             {
                 "action": "replace",
@@ -63,8 +63,8 @@ class TestBuilder:
             },
         ]
 
-    def test_normal(self, app, builtin_relabelings):
-        monitor = G(AppMetricsMonitor, port=5000, target_port=5001, app=app)
+    def test_normal(self, bk_stag_engine_app, builtin_relabelings):
+        monitor = G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_engine_app)
 
         svc_monitor = build_service_monitor(monitor)
         assert svc_monitor.endpoint.interval == constants.METRICS_INTERVAL
@@ -72,12 +72,12 @@ class TestBuilder:
         assert svc_monitor.endpoint.port == constants.METRICS_PORT_NAME
         assert svc_monitor.endpoint.metric_relabelings == builtin_relabelings
 
-    def test_with_extra_field(self, app, settings, builtin_relabelings):
+    def test_with_extra_field(self, bk_stag_engine_app, settings, builtin_relabelings):
         settings.BKMONITOR_METRIC_RELABELINGS = parse_conf_data(
             '@json [{"action": "replace", "replacement": "bkop.example.com", "targetLabel": "bk_domain"}]'
         )
 
-        monitor = G(AppMetricsMonitor, port=5000, target_port=5001, app=app)
+        monitor = G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_engine_app)
         svc_monitor = build_service_monitor(monitor)
 
         assert (
@@ -90,7 +90,7 @@ class TestBuilder:
 class TestAppMonitorController:
     @pytest.fixture(autouse=True)
     def setup(self, settings):
-        settings.BKMONITOR_ENABLED = True
+        settings.ENABLE_BK_MONITOR = True
 
     @pytest.fixture
     def setup_crd(self, k8s_client, k8s_version, settings):
@@ -114,42 +114,42 @@ class TestAppMonitorController:
         KCustomResourceDefinition(k8s_client).delete(name)
 
     @pytest.fixture()
-    def monitor(self, app):
-        return G(AppMetricsMonitor, port=5000, target_port=5001, app=app)
+    def monitor(self, bk_stag_engine_app):
+        return G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_engine_app)
 
     @pytest.mark.auto_create_ns
-    def test_normal(self, monitor, app, setup_crd):
-        controller = make_bk_monitor_controller(app)
+    def test_normal(self, monitor, bk_stag_engine_app, setup_crd):
+        controller = make_bk_monitor_controller(bk_stag_engine_app)
         assert controller.app_monitor is not None
         controller.create_or_patch()
 
-        assert service_monitor_kmodel.get(app, build_service_monitor(controller.app_monitor).name)
+        assert service_monitor_kmodel.get(bk_stag_engine_app, build_service_monitor(controller.app_monitor).name)
         with mock.patch("paas_wl.monitoring.app_monitor.managers.service_monitor_kmodel.update") as mocked:
             controller.create_or_patch()
             assert not mocked.called
 
         controller.remove()
         with pytest.raises(AppEntityNotFound):
-            service_monitor_kmodel.get(app, build_service_monitor(controller.app_monitor).name)
+            service_monitor_kmodel.get(bk_stag_engine_app, build_service_monitor(controller.app_monitor).name)
 
-    def test_no_monitor(self, app):
-        controller = make_bk_monitor_controller(app)
+    def test_no_monitor(self, bk_stag_engine_app):
+        controller = make_bk_monitor_controller(bk_stag_engine_app)
         with mock.patch("paas_wl.monitoring.app_monitor.managers.service_monitor_kmodel") as mocked:
             assert controller.app_monitor is None
             controller.create_or_patch()
             assert not mocked.upsert.called
 
-    def test_disable(self, monitor, app):
+    def test_disable(self, monitor, bk_stag_engine_app):
         monitor.disable()
-        controller = make_bk_monitor_controller(app)
+        controller = make_bk_monitor_controller(bk_stag_engine_app)
         with mock.patch("paas_wl.monitoring.app_monitor.managers.service_monitor_kmodel") as mocked:
             assert controller.app_monitor is not None
             controller.create_or_patch()
             assert not mocked.upsert.called
 
-    def test_global_disable(self, monitor, app, settings):
-        settings.BKMONITOR_ENABLED = False
-        controller = make_bk_monitor_controller(app)
+    def test_global_disable(self, monitor, bk_stag_engine_app, settings):
+        settings.ENABLE_BK_MONITOR = False
+        controller = make_bk_monitor_controller(bk_stag_engine_app)
         with mock.patch("paas_wl.monitoring.app_monitor.managers.service_monitor_kmodel") as mocked:
             controller.create_or_patch()
             assert not mocked.upsert.called

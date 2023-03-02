@@ -81,7 +81,7 @@ def build_service_monitor(monitor: AppMetricsMonitor) -> ServiceMonitor:
 
 
 def make_bk_monitor_controller(app: EngineApp):
-    if not settings.BKMONITOR_ENABLED:
+    if not settings.ENABLE_BK_MONITOR:
         logger.warning("BKMonitor is not ready, skip apply ServiceMonitor")
         return NullController()
     else:

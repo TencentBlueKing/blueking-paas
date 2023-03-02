@@ -16,15 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import datetime
 import re
 from typing import TYPE_CHECKING
 
 from django.conf import settings
 from rest_framework import serializers
 
-from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
-from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+from paas_wl.monitoring.metrics.constants import MetricsSeriesType
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications import models
 from paas_wl.utils.models import validate_procfile
@@ -306,49 +304,6 @@ class SyncProcSpecsSerializer(serializers.Serializer):
 ####################
 # Resource Metrics #
 ####################
-class ResourceMetricsSerializer(serializers.Serializer):
-    start_time = serializers.CharField(required=False)
-    end_time = serializers.CharField(required=False)
-    metric_type = serializers.ChoiceField(choices=MetricsResourceType.choices())
-    time_range_str = serializers.CharField(required=False)
-    step = serializers.CharField()
-
-    query_metrics = serializers.SerializerMethodField()
-    time_range = serializers.SerializerMethodField()
-
-    def validate(self, attrs):
-        # to_now is a quick access
-        if attrs.get('time_range_str'):
-            return attrs
-
-        # check time format
-        try:
-            start_time = self._validate_datetime(attrs['start_time'])
-            end_time = self._validate_datetime(attrs['end_time'])
-
-            if start_time > end_time:
-                raise serializers.ValidationError("start time should earlier than end time")
-        except KeyError:
-            raise serializers.ValidationError("start & end time is not allowed to be null if time_range_str is null")
-        return attrs
-
-    @staticmethod
-    def _validate_datetime(date_string):
-        # default format, web page should pass
-        return datetime.datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
-
-    def get_query_metrics(self, data):
-        """根据 metric_type 注入 query_metrics 字段"""
-        if data["metric_type"] == "__all__":
-            query_metrics = [MetricsResourceType.MEM.value, MetricsResourceType.CPU.value]
-        else:
-            query_metrics = [MetricsResourceType(data["metric_type"]).value]
-        return query_metrics
-
-    def get_time_range(self, data):
-        return MetricSmartTimeRange.from_request_data(data)
-
-
 class SeriesMetricsResultSerializer(serializers.Serializer):
     type_name = serializers.CharField()
     results = serializers.ListField()

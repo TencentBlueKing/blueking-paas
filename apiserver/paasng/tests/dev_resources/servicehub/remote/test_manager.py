@@ -105,7 +105,7 @@ class TestRemoteEngineAppInstanceRel:
         assert plan.is_eager is plan_data["properties"]["is_eager"]  # type: ignore
         assert plan.properties == plan_data["properties"]
 
-    @mock.patch('paasng.dev_resources.servicehub.remote.manager.make_internal_client')
+    @mock.patch("paas_wl.platform.api.get_cluster_egress_info")
     @mock.patch('paasng.dev_resources.servicehub.remote.client.RemoteServiceClient.provision_instance')
     @pytest.mark.parametrize(
         "plans",
@@ -119,9 +119,9 @@ class TestRemoteEngineAppInstanceRel:
             ),
         ],
     )
-    def test_provision(self, mocked_provision, mocked_client, store, bk_module, bk_service_ver, plans):
+    def test_provision(self, mocked_provision, get_cluster_egress_info, store, bk_module, bk_service_ver, plans):
         """Test service instance provision"""
-        mocked_client().get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
+        get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
         mgr = RemoteServiceMgr(store=store)
         bk_service_ver.plans = plans
 
@@ -425,13 +425,13 @@ class TestRemoteMgr:
         for env in bk_app.envs.all():
             assert len(list(mgr.list_unprovisioned_rels(env.engine_app))) == 1
 
-    @mock.patch('paasng.dev_resources.servicehub.remote.manager.make_internal_client')
+    @mock.patch('paasng.dev_resources.servicehub.remote.manager.get_cluster_egress_info')
     @mock.patch('paasng.dev_resources.servicehub.remote.client.RemoteServiceClient.retrieve_instance')
     @mock.patch('paasng.dev_resources.servicehub.remote.client.RemoteServiceClient.provision_instance')
     def test_get_instance_has_create_time_attr(
-        self, mocked_provision, mocked_retrieve, mocked_client, store, bk_app, bk_module
+        self, mocked_provision, mocked_retrieve, get_cluster_egress_info, store, bk_app, bk_module
     ):
-        mocked_client().get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
+        get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
         mgr = RemoteServiceMgr(store=store)
 
         svc = mgr.get(id_of_first_service, region=bk_module.region)
@@ -448,12 +448,12 @@ class TestRemoteMgr:
             instance = rel.get_instance()
             assert isinstance(instance.create_time, datetime.datetime)
 
-    @mock.patch('paasng.dev_resources.servicehub.remote.manager.make_internal_client')
+    @mock.patch('paasng.dev_resources.servicehub.remote.manager.get_cluster_egress_info')
     @mock.patch('paasng.dev_resources.servicehub.remote.client.RemoteServiceClient.retrieve_instance')
     @mock.patch('paasng.dev_resources.servicehub.remote.client.RemoteServiceClient.provision_instance')
-    def test_get_instance(self, mocked_provision, mocked_retrieve, mocked_client, store, bk_app, bk_module):
+    def test_get_instance(self, mocked_provision, mocked_retrieve, get_cluster_egress_info, store, bk_app, bk_module):
         """Test service instance provision"""
-        mocked_client().get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
+        get_cluster_egress_info.return_value = {'egress_ips': ['1.1.1.1'], 'digest_version': 'foo'}
         mgr = RemoteServiceMgr(store=store)
 
         svc = mgr.get(id_of_first_service, region=bk_module.region)

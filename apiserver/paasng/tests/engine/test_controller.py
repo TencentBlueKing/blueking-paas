@@ -26,44 +26,54 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def helper(bk_app):
-    # Make a mocked controller client
-    mocked_client = mock.Mock()
-    mocked_client.list_region_clusters.return_value = [
-        {
-            "name": "default",
-            "is_default": True,
-            "bcs_cluster_id": "BCS-K8S-10000",
-            "support_bcs_metrics": False,
-            "ingress_config": {
-                "app_root_domains": [{"name": "local-bkapps-t.example.com"}],
+def setup_clusters():
+    with mock.patch(
+        "paasng.engine.controller.cluster.list_region_clusters",
+        return_value=[
+            {
+                "name": "default",
+                "is_default": True,
+                "bcs_cluster_id": "BCS-K8S-10000",
+                "support_bcs_metrics": False,
+                "ingress_config": {
+                    "app_root_domains": [{"name": "local-bkapps-t.example.com"}],
+                },
             },
-        },
-        {
-            "name": "extra-1",
-            "is_default": False,
-            "bcs_cluster_id": "BCS-K8S-10001",
-            "support_bcs_metrics": False,
-            "ingress_config": {
-                "app_root_domains": [{"name": "local-bkapps-extra.example.com"}],
+            {
+                "name": "extra-1",
+                "is_default": False,
+                "bcs_cluster_id": "BCS-K8S-10001",
+                "support_bcs_metrics": False,
+                "ingress_config": {
+                    "app_root_domains": [{"name": "local-bkapps-extra.example.com"}],
+                },
             },
-        },
-    ]
-    return RegionClusterService(bk_app, client=mocked_client)
+        ],
+    ):
+        yield
+
+
+@pytest.fixture
+def helper():
+    return RegionClusterService("")
 
 
 class TestGetEngineAppCluster:
     def test_empty_cluster_field(self, bk_stag_env, helper):
         engine_app = bk_stag_env.engine_app
-        assert helper.get_engine_app_cluster(engine_app.name).name == 'default'
+        with mock.patch("paasng.engine.controller.cluster.get_wl_app_cluster_name", return_value=None):
+            assert helper.get_engine_app_cluster(engine_app.name).name == 'default'
 
     def test_valid_cluster_field(self, bk_stag_env, helper):
         engine_app = bk_stag_env.engine_app
-        assert helper.get_engine_app_cluster(engine_app.name).name == 'extra-1'
+        with mock.patch("paasng.engine.controller.cluster.get_wl_app_cluster_name", return_value="extra-1"):
+            assert helper.get_engine_app_cluster(engine_app.name).name == 'extra-1'
 
     def test_invalid_cluster_field(self, bk_stag_env, helper):
         engine_app = bk_stag_env.engine_app
-        with pytest.raises(ValueError):
+        with mock.patch(
+            "paasng.engine.controller.cluster.get_wl_app_cluster_name", return_value="invalid"
+        ), pytest.raises(ValueError):
             helper.get_engine_app_cluster(engine_app.name)
 
 

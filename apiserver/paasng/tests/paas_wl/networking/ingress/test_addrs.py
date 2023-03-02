@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestEnvAddresses:
     @pytest.fixture(autouse=True)
-    def _setup_data(self, bk_module, bk_stag_env, bk_stag_engine_app):
+    def _setup_data(self, bk_module, bk_stag_env, bk_stag_wl_app):
         engine_app = EngineApp.objects.get_by_env(bk_stag_env)
 
         # Create all types of domains

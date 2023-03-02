@@ -58,7 +58,7 @@ class ControllerClient:
     ################
     def list_region_clusters(self, region):
         """List region clusters"""
-        return ClusterSLZ(data=Cluster.objects.filter(region=region), many=True).data
+        return ClusterSLZ(Cluster.objects.filter(region=region), many=True).data
 
     def get_cluster_egress_info(self, region, cluster_name):
         """Get cluster's egress info"""
@@ -93,39 +93,6 @@ class ControllerClient:
             region, d['application_id'], d['module_id'], resource
         )
         return AppModelResourceSerializer(model_resource).data
-
-    def app__delete(self, region, app_name):
-        """删除 engine app, 仅应用迁移时使用"""
-        return self.request(
-            'DELETE',
-            '/regions/{region}/apps/{name}'.format(region=region, name=app_name),
-            desired_code=codes.no_content,
-        )
-
-    def archive_app(self, region: str, app_name: str, operation_id: str):
-        """Stop All Process of the app"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/archive/'.format(region=region, name=app_name),
-            desired_code=codes.no_content,
-            json={'operation_id': operation_id},
-        )
-
-    def interrupt_build_process(self, region: str, app_name: str, build_process_id: str):
-        """Interrupt a running build process"""
-        return self.request(
-            'POST', f'/regions/{region}/apps/{app_name}/build_processes/{build_process_id}/interruptions/'
-        )
-
-    def builds__retrieve(self, region, app_name, limit=20, offset=0):
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/builds/'.format(region=region, name=app_name),
-            params={
-                'limit': limit,
-                'offset': offset,
-            },
-        )
 
     def bind_app_cluster(self, wl_engine_app: 'EngineApp', cluster_name: str):
         """Bind App to given cluster"""

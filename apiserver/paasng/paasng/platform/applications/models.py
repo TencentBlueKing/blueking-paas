@@ -32,7 +32,6 @@ from pilkit.processors import ResizeToFill
 
 from paasng.accessories.iam.helpers import fetch_role_members
 from paasng.accessories.iam.permissions.resources.application import ApplicationPermission
-from paasng.engine.models import Deployment, EngineApp
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.core.storages.object_storage import app_logo_storage
 from paasng.platform.modules.constants import SourceOrigin
@@ -433,7 +432,12 @@ class ApplicationEnvironment(TimestampedModel):
         return u"{app_code}-{env}".format(app_code=self.application.code, env=self.environment)
 
     def get_engine_app(self):
-        return EngineApp.objects.get(pk=self.engine_app_id)
+        return self.engine_app
+
+    @property
+    def wl_engine_app(self):
+        """Return the WlEngineApp object(in 'workloads' module)"""
+        return self.engine_app.to_wl_obj()
 
     def get_exposed_link(self):
         # TODO: move this method out of ApplicationEnvironment class
@@ -448,6 +452,9 @@ class ApplicationEnvironment(TimestampedModel):
 
     def is_running(self) -> bool:
         """Check if current environment is up and running"""
+        # TODO: Replace with env_is_running
+        from paasng.engine.models import Deployment
+
         if self.is_offlined:
             return False
 

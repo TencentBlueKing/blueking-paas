@@ -43,6 +43,7 @@ from paas_wl.monitoring.metrics.exceptions import (
 from paas_wl.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.platform.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
+from paas_wl.release_controller.api import get_latest_build_id
 from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accessories.smart_advisor.utils import get_failure_hint
@@ -220,10 +221,10 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             application_envs = module.envs.filter(environment=environment)
 
         for application_env in application_envs:
-            engine_app = application_env.engine_app
             try:
-                build_id = engine_app.get_latest_build()['uuid']
-                create_release(application_env, build_id)
+                build_id = get_latest_build_id(application_env)
+                if build_id:
+                    create_release(application_env, str(build_id))
             except Exception:
                 raise error_codes.CANNOT_DEPLOY_APP.f(_(u"服务异常"))
 

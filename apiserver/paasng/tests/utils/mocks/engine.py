@@ -112,9 +112,6 @@ class StubControllerClient:
             },
         }
 
-    def app__delete(self, region, app_name):
-        return
-
     def retrieve_app_config(self, region, app_name):
         return {'cluster': _faked_cluster_info['name'], 'metadata': {}}
 

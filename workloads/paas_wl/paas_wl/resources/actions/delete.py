@@ -18,8 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import TYPE_CHECKING
 
-from paas_wl.platform.applications.models import Release
+from paas_wl.platform.applications.struct_models import get_env_by_engine_app_id
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
+from paas_wl.workloads.processes.controllers import env_is_running
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models.app import EngineApp
@@ -27,7 +28,8 @@ if TYPE_CHECKING:
 
 def delete_app_resources(app: 'EngineApp'):
     """Delete app's resources in cluster"""
-    if not Release.objects.any_successful(app):
+    env = get_env_by_engine_app_id(app.pk)
+    if not env_is_running(env):
         return
 
     scheduler_client = get_scheduler_client_by_app(app)

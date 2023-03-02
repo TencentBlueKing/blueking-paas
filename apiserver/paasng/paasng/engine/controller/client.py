@@ -58,7 +58,7 @@ class ControllerClient:
     ################
     def list_region_clusters(self, region):
         """List region clusters"""
-        return ClusterSLZ(data=Cluster.objects.filter(region=region), many=True).data
+        return ClusterSLZ(Cluster.objects.filter(region=region), many=True).data
 
     def get_cluster_egress_info(self, region, cluster_name):
         """Get cluster's egress info"""
@@ -93,14 +93,6 @@ class ControllerClient:
             region, d['application_id'], d['module_id'], resource
         )
         return AppModelResourceSerializer(model_resource).data
-
-    def app__delete(self, region, app_name):
-        """删除 engine app, 仅应用迁移时使用"""
-        return self.request(
-            'DELETE',
-            '/regions/{region}/apps/{name}'.format(region=region, name=app_name),
-            desired_code=codes.no_content,
-        )
 
     def archive_app(self, region: str, app_name: str, operation_id: str):
         """Stop All Process of the app"""

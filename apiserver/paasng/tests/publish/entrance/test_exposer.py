@@ -163,7 +163,7 @@ class TestGetPreallocatedAddress:
             ),
         ],
     )
-    def test_with_clusters(self, clusters, stag_address, prod_address, mock_current_engine_client):
+    def test_with_clusters(self, clusters, stag_address, prod_address):
         addr = get_preallocated_address('test-code', clusters=clusters)
         assert addr.prod == prod_address
         assert addr.stag == stag_address

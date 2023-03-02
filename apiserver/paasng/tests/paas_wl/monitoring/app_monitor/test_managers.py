@@ -37,7 +37,7 @@ from paas_wl.platform.applications.models.managers.app_metadata import get_metad
 from paas_wl.resources.base.kres import KCustomResourceDefinition
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 logger = logging.getLogger(__name__)
 
 

@@ -45,7 +45,6 @@ pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db]
 )
 def test_create_then_release(
     api_client,
-    mock_current_engine_client,
     mock_wl_services_in_creation,
     mock_paas_analysis_client,
     mock_initialize_with_template,

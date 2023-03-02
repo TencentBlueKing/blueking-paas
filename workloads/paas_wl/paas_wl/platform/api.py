@@ -13,11 +13,14 @@ These modules will be refactored in the future.
 from typing import Dict, NamedTuple, Union
 from uuid import UUID
 
+from django.db import transaction
+
 from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.platform.applications.models.managers.app_metadata import EngineAppMetadata, get_metadata, update_metadata
 from paas_wl.resources.actions.delete import delete_app_resources
 from paas_wl.workloads.processes.models import ProcessSpec
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.models import Module
 
 
 class CreatedAppInfo(NamedTuple):
@@ -64,3 +67,14 @@ def delete_wl_resources(env: ModuleEnvironment):
     ProcessSpec.objects.filter(engine_app_id=wl_app.pk).delete()
 
     wl_app.delete()
+
+
+def delete_module_related_res(module: 'Module'):
+    """Delete module's related resources"""
+    from paas_wl.platform.applications.models_utils import delete_module_related_res as delete_wl_module_related_res
+
+    with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
+        delete_wl_module_related_res(module)
+        # Delete related EngineApp db records
+        for env in module.get_envs():
+            env.get_engine_app().delete()

@@ -57,13 +57,7 @@ from tests.utils import mock
 from tests.utils.helpers import configure_regions, create_pending_wl_engine_apps, generate_random_string
 
 from .utils.auth import create_user
-from .utils.helpers import (
-    _mock_current_engine_client,
-    _mock_wl_services_in_creation,
-    create_app,
-    create_cnative_app,
-    initialize_module,
-)
+from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
 
 logger = logging.getLogger(__file__)
 
@@ -678,7 +672,6 @@ def _mock_paas_analysis_client():
 
 
 mock_paas_analysis_client = pytest.fixture(_mock_paas_analysis_client)
-mock_current_engine_client = pytest.fixture(_mock_current_engine_client)
 mock_wl_services_in_creation = pytest.fixture(_mock_wl_services_in_creation)
 
 
@@ -743,8 +736,12 @@ def with_live_addrs():
 
 
 @pytest.fixture
-def with_wl_apps(bk_app):
+def with_wl_apps(request):
     """Create all pending WlEngineApp objects related with current bk_app, useful
     for tests which want to use `bk_app`, `bk_stag_env` fixtures.
     """
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app")
     create_pending_wl_engine_apps(bk_app)

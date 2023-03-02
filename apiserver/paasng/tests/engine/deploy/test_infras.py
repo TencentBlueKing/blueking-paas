@@ -120,7 +120,6 @@ class TestAppDefaultSubpaths:
         app,
         force_legacy_style,
         expected,
-        mock_current_engine_client,
     ):
         bk_app = request.getfixturevalue(app)
         settings.FORCE_USING_LEGACY_SUB_PATH_VAR_VALUE = force_legacy_style

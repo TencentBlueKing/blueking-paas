@@ -94,7 +94,7 @@ class TestBaseRemoteServiceMigration:
         for env in bk_module.envs.all():
             assert RemoteServiceEngineAppAttachment.objects.filter(engine_app=env.engine_app).exists() is False
 
-    def test_bind_default_plan_as_fallback(self, bk_module, migration_instance_maker, mock_current_engine_client):
+    def test_bind_default_plan_as_fallback(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
         migration.bind_service_to_default_module()
 
@@ -115,7 +115,7 @@ class TestBaseRemoteServiceMigration:
             attachment = migration.get_engine_app_attachment(env)
             assert attachment.plan_id == uuid.UUID('{00000000-0000-0000-0000-000000000000}')
 
-    def test_rollback_service_instance(self, bk_module, migration_instance_maker, mock_current_engine_client):
+    def test_rollback_service_instance(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
         migration.bind_service_to_default_module()
         migration.bind_default_plan_as_fallback()

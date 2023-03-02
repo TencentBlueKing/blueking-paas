@@ -215,7 +215,6 @@ class TestApplicationCreateWithEngine:
         desired_type,
         creation_succeeded,
         api_client,
-        mock_current_engine_client,
         mock_wl_services_in_creation,
         mock_initialize_with_template,
         settings,
@@ -274,7 +273,6 @@ class TestApplicationCreateWithEngine:
         self,
         api_client,
         bk_user,
-        mock_current_engine_client,
         mock_wl_services_in_creation,
         source_origin,
         source_repo_url,
@@ -358,7 +356,7 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
-    def test_normal(self, api_client, bk_app_full, bk_user, random_name, mock_current_engine_client):
+    def test_normal(self, api_client, bk_app_full, bk_user, random_name):
         response = api_client.put(
             '/api/bkapps/applications/{}/'.format(bk_app_full.code),
             data={'name': random_name},
@@ -366,7 +364,7 @@ class TestApplicationUpdate:
         assert response.status_code == 200
         assert Application.objects.get(pk=bk_app_full.pk).name == random_name
 
-    def test_duplicated(self, api_client, bk_app, bk_user, random_name, mock_current_engine_client):
+    def test_duplicated(self, api_client, bk_app, bk_user, random_name):
         G(Application, name=random_name)
         response = api_client.put(
             '/api/bkapps/applications/{}/'.format(bk_app.code),
@@ -376,9 +374,7 @@ class TestApplicationUpdate:
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
 
-    def test_desc_app(
-        self, api_client, bk_user, random_name, mock_current_engine_client, mock_wl_services_in_creation
-    ):
+    def test_desc_app(self, api_client, bk_user, random_name, mock_wl_services_in_creation):
         get_desc_handler(
             dict(
                 spec_version=2,
@@ -403,12 +399,12 @@ class TestApplicationDeletion:
         api_client,
         bk_app,
         bk_user,
-        mock_current_engine_client,
         mock_wl_services_in_creation,
         with_empty_live_addrs,
     ):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
-        response = api_client.delete('/api/bkapps/applications/{}/'.format(bk_app.code))
+        with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
+            response = api_client.delete('/api/bkapps/applications/{}/'.format(bk_app.code))
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_APPLICATION.value).exists()
 
@@ -417,7 +413,6 @@ class TestApplicationDeletion:
         api_client,
         bk_app,
         bk_user,
-        mock_current_engine_client,
         mock_wl_services_in_creation,
         with_empty_live_addrs,
     ):
@@ -434,7 +429,7 @@ class TestApplicationDeletion:
 class TestCreateBkPlugin:
     """Test 'bk_plugin' type application's creation"""
 
-    def test_normal(self, api_client, mock_current_engine_client, mock_wl_services_in_creation, settings, init_tmpls):
+    def test_normal(self, api_client, mock_wl_services_in_creation, settings, init_tmpls):
         settings.BK_PLUGIN_CONFIG = {'allow_creation': True}
         response = self._send_creation_request(api_client)
 
@@ -444,7 +439,7 @@ class TestCreateBkPlugin:
         assert response.json()['application']['language'] == 'Python'
         assert response.json()['application']['modules'][0]['repo'] is not None
 
-    def test_forbidden_via_config(self, api_client, mock_current_engine_client, settings):
+    def test_forbidden_via_config(self, api_client, settings):
         settings.BK_PLUGIN_CONFIG = {'allow_creation': False}
         response = self._send_creation_request(api_client)
 
@@ -471,7 +466,7 @@ class TestCreateBkPlugin:
 class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
-    def test_normal(self, bk_user, api_client, mock_current_engine_client, mock_wl_services_in_creation, settings):
+    def test_normal(self, bk_user, api_client, mock_wl_services_in_creation, settings):
         settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = "default"
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 

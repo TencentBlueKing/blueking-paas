@@ -38,7 +38,7 @@ pytestmark = pytest.mark.django_db
         ({"_lookup_field": "region", "data": {"default": "default"}}, "404", pytest.raises(APIError), ""),
     ],
 )
-def test_get_default_cluster_name(mock_current_engine_client, settings, data, region, ctx, expected):
+def test_get_default_cluster_name(settings, data, region, ctx, expected):
     settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = data
 
     with ctx:

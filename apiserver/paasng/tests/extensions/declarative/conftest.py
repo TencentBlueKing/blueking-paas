@@ -24,10 +24,11 @@ from tests.utils.mocks.engine import replace_cluster_service
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks(mock_current_engine_client, mock_wl_services_in_creation):
+def setup_mocks(mock_wl_services_in_creation):
     """Setup mocks for current testing module
 
-    - Mock engine client
+    - Mock wl_engine_app creation which depends on `workloads` module
+    - Mock ProcessManager which depends on `workloads` module
     """
     with replace_cluster_service(), mock.patch("paasng.engine.models.processes.ProcessManager.sync_processes_specs"):
         yield

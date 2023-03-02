@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Any, Dict
 
 from blue_krill.auth.jwt import ClientJWTAuth, JWTAuthConf
 from django.conf import settings
-from django.db import transaction
 from requests.status_codes import codes
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
@@ -32,7 +31,6 @@ from paas_wl.cluster.serializers import ClusterSLZ
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.engine.controller.exceptions import BadResponse
-from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_requests_session
 from paasng.utils.local import local
 
@@ -126,20 +124,6 @@ class ControllerClient:
         binding.delete()
 
     # Region Cluster State binding end
-
-    # Bk-App(module) related start
-
-    def delete_module_related_res(self, module: 'Module'):
-        """Delete module's related resources"""
-        from paas_wl.platform.applications.models_utils import delete_module_related_res
-
-        with transaction.atomic(using="default"), transaction.atomic(using="workloads"):
-            delete_module_related_res(module)
-            # Delete related EngineApp db records
-            for env in module.get_envs():
-                env.get_engine_app().delete()
-
-    # Bk-App(module) related end
 
     # Process Metrics Start
     def upsert_app_monitor(

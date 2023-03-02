@@ -19,15 +19,13 @@ to the current version of the project delivered to anyone in the future.
 """TestDoubles for paasng.engine module"""
 import copy
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from unittest import mock
 
 import cattr
 
 from paasng.engine.controller.cluster import AbstractRegionClusterService
 from paasng.engine.controller.models import Cluster
-from paasng.engine.models import EngineApp
-from paasng.platform.modules.models import Module
 
 _faked_cluster_info = {
     "name": "default",
@@ -85,43 +83,3 @@ def replace_cluster_service(ingress_config: Optional[Dict] = None, replaced_ingr
 
     with mock.patch('paasng.engine.controller.cluster.RegionClusterService', new=_stub_factory):
         yield
-
-
-class StubControllerClient:
-    """Stubbed controller client without calling sending real request"""
-
-    def __init__(self, *args, **kwargs):
-        return
-
-    def create_cnative_app_model_resource(self, region: str, data: Dict[str, Any]) -> Dict:
-        return {
-            'application_id': data['application_id'],
-            'module_id': data['module_id'],
-            'json': {
-                'apiVersion': 'paas.bk.tencent.com/v1alpha1',
-                'metadata': {'name': data['code']},
-                'spec': {
-                    'processes': [
-                        {
-                            'name': 'web',
-                            'image': 'nginx:latest',
-                            'replicas': 1,
-                        }
-                    ]
-                },
-                'kind': 'BkApp',
-            },
-        }
-
-    def retrieve_app_config(self, region, app_name):
-        return {'cluster': _faked_cluster_info['name'], 'metadata': {}}
-
-    def list_region_clusters(self, region):
-        """List region clusters"""
-        return [_faked_cluster_info]
-
-    def bind_app_cluster(self, engine_app: 'EngineApp', cluster_name):
-        pass
-
-    def delete_module_related_res(self, module: 'Module'):
-        return

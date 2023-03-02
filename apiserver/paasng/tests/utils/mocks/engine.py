@@ -24,9 +24,10 @@ from unittest import mock
 
 import cattr
 
-from paas_wl.platform.applications.models.app import WLEngineApp
 from paasng.engine.controller.cluster import AbstractRegionClusterService
 from paasng.engine.controller.models import Cluster
+from paasng.engine.models import EngineApp
+from paasng.platform.modules.models import Module
 
 _faked_cluster_info = {
     "name": "default",
@@ -48,7 +49,7 @@ class StubRegionClusterService(AbstractRegionClusterService):
         self.cluster_info = cluster_info
 
     def list_clusters(self) -> List[Cluster]:
-        return cattr.structure(self.cluster_info, List[Cluster])
+        return [cattr.structure(self.cluster_info, Cluster)]
 
     def get_default_cluster(self) -> Cluster:
         return cattr.structure(self.cluster_info, Cluster)
@@ -119,8 +120,8 @@ class StubControllerClient:
         """List region clusters"""
         return [_faked_cluster_info]
 
-    def bind_app_cluster(self, wl_engine_app: 'WLEngineApp', cluster_name):
+    def bind_app_cluster(self, engine_app: 'EngineApp', cluster_name):
         pass
 
-    def delete_module_related_res(self, app_code: str, module_name: str):
+    def delete_module_related_res(self, module: 'Module'):
         return

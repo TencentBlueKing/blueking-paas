@@ -37,7 +37,7 @@ from paasng.utils.basic import get_requests_session
 from paasng.utils.local import local
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models import EngineApp
+    from paasng.engine.models import EngineApp
 
 
 logger = logging.getLogger(__name__)
@@ -94,9 +94,10 @@ class ControllerClient:
         )
         return AppModelResourceSerializer(model_resource).data
 
-    def bind_app_cluster(self, wl_engine_app: 'EngineApp', cluster_name: str):
+    def bind_app_cluster(self, engine_app: 'EngineApp', cluster_name: str):
         """Bind App to given cluster"""
         # TODO: 优化报错信息, 例如集群不存在, 绑定失败等
+        wl_engine_app = engine_app
         cluster = Cluster.objects.get(name=cluster_name)
         latest_config = wl_engine_app.latest_config
         latest_config.cluster = cluster.name
@@ -105,17 +106,19 @@ class ControllerClient:
 
     # Region Cluster State binding start
 
-    def app_rcsbinding__create(self, wl_engine_app: 'EngineApp'):
+    def app_rcsbinding__create(self, engine_app: 'EngineApp'):
+        wl_engine_app = engine_app.to_wl_obj()
         cluster = get_cluster_by_app(wl_engine_app)
         state = RegionClusterState.objects.filter(region=wl_engine_app.region, cluster_name=cluster.name).latest()
         RCStateAppBinding.objects.create(app=wl_engine_app, state=state)
 
-    def app_rcsbinding__destroy(self, wl_engine_app: 'EngineApp'):
+    def app_rcsbinding__destroy(self, engine_app: 'EngineApp'):
+        wl_engine_app = engine_app.to_wl_obj()
         binding = RCStateAppBinding.objects.get(app=wl_engine_app)
         # Update app scheduling config
         # TODO: Below logic is safe be removed as long as the node_selector will be fetched
         # dynamically by querying for binding state.
-        latest_config = wl_engine_app.latest_config
+        latest_config = wl_engine_app.to_wl_obj().latest_config
         # Remove labels related with current binding
         for key in binding.state.to_labels():
             latest_config.node_selector.pop(key, None)
@@ -141,7 +144,7 @@ class ControllerClient:
     # Process Metrics Start
     def upsert_app_monitor(
         self,
-        wl_engine_app: 'EngineApp',
+        engine_app: 'EngineApp',
         port: int,
         target_port: int,
     ):
@@ -153,7 +156,7 @@ class ControllerClient:
                 "target_port": target_port,
                 "is_enabled": True,
             },
-            app=wl_engine_app,
+            app=engine_app.to_wl_obj(),
         )
 
     # Process Metrics End

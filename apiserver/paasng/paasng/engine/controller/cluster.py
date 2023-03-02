@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Cluster related utilities
 """
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from cattr import structure
 
@@ -27,6 +27,16 @@ from paasng.engine.controller.client import ControllerClient
 from paasng.engine.controller.models import Cluster
 from paasng.engine.controller.shortcuts import make_internal_client
 from paasng.platform.core.storages.cache import region as cache_region
+
+if TYPE_CHECKING:
+    from paas_wl.platform.applications.models import Config
+
+
+def get_engine_app_config(engine_app_name: str) -> 'Config':
+    from paas_wl.platform.applications.models import EngineApp
+
+    wl_engine_app = EngineApp.objects.get(name=engine_app_name)
+    return wl_engine_app.latest_config
 
 
 class AbstractRegionClusterService(ABC):
@@ -94,11 +104,9 @@ class RegionClusterService(AbstractRegionClusterService):
 
     def get_engine_app_cluster(self, engine_app_name: str) -> Cluster:
         """Get the cluster info of one engine app"""
-        from paas_wl.platform.applications.models import EngineApp
-
-        wl_engine_app = EngineApp.objects.get(name=engine_app_name)
-        config = wl_engine_app.latest_config
         # An empty cluster field means current app uses a default cluster
+        config = get_engine_app_config(engine_app_name)
+
         if not config.cluster:
             return self.get_default_cluster()
 
@@ -114,7 +122,7 @@ class RegionClusterService(AbstractRegionClusterService):
         from paas_wl.platform.applications.models import EngineApp
 
         wl_engine_app = EngineApp.objects.get(name=engine_app_name)
-        self.client.bind_app_cluster(wl_engine_app=wl_engine_app, cluster_name=cluster_name)
+        self.client.bind_app_cluster(engine_app=wl_engine_app, cluster_name=cluster_name)
 
 
 def get_region_cluster_helper(region: str) -> AbstractRegionClusterService:

@@ -114,7 +114,8 @@ def test_bind_buildpack(bk_module, slugbuilder, buildpack, slugbuilder_attrs, bu
 
 
 def test_get_module_clusters(bk_module, mock_current_engine_client):
-    assert len(get_module_clusters(bk_module)) != 0
+    with replace_cluster_service():
+        assert len(get_module_clusters(bk_module)) != 0
 
 
 def test_get_module_clusters_engineless(bk_module):

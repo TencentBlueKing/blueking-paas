@@ -56,6 +56,7 @@ class TestApiInAPIGW:
         bk_user,
         api_client,
         mock_current_engine_client,
+        mock_wl_services_in_creation,
         lesscode_public_params,
         bk_app_code,
         bk_app_name,

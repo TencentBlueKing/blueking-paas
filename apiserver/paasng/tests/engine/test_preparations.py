@@ -272,13 +272,13 @@ class TestGetProcesses:
 
 def test_get_processes_by_build(bk_module):
     engine_app = bk_module.envs.get(environment='prod').engine_app
-    fake_build = {
+    fake_procfile = {
         'web': (
             'gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '
             '\'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
     }
-    with mock.patch("paasng.engine.deploy.engine_svc.EngineDeployClient.get_procfile", return_value=fake_build):
+    with mock.patch("paasng.engine.deploy.engine_svc.EngineDeployClient.get_procfile", return_value=fake_procfile):
         assert 'web' in get_processes_by_build(engine_app=engine_app, build_id="fake-build-id")
 
 

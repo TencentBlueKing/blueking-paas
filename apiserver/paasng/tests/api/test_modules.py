@@ -62,6 +62,7 @@ class TestModuleCreation:
         init_tmpls,
         bk_app,
         mock_current_engine_client,
+        mock_wl_services_in_creation,
         mock_initialize_with_template,
         creation_params,
     ):
@@ -82,7 +83,15 @@ class TestModuleCreation:
 
     @pytest.mark.parametrize('with_feature_flag,is_success', [(True, True), (False, False)])
     def test_create_nondefault_origin(
-        self, api_client, init_tmpls, bk_app, bk_user, mock_current_engine_client, with_feature_flag, is_success
+        self,
+        api_client,
+        init_tmpls,
+        bk_app,
+        bk_user,
+        mock_current_engine_client,
+        mock_wl_services_in_creation,
+        with_feature_flag,
+        is_success,
     ):
         # Set user feature flag
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
@@ -200,7 +209,15 @@ class TestModuleDeletion:
         assert "主模块不允许被删除" in response.json()["detail"]
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
 
-    def test_delete_module(self, api_client, bk_app, bk_user, mock_current_engine_client, with_empty_live_addrs):
+    def test_delete_module(
+        self,
+        api_client,
+        bk_app,
+        bk_user,
+        mock_current_engine_client,
+        mock_wl_services_in_creation,
+        with_empty_live_addrs,
+    ):
         module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
         initialize_module(module)
 

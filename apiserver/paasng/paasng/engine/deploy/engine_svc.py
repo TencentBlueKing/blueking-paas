@@ -22,6 +22,7 @@ import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
 
 from django.conf import settings
+from django.utils.functional import cached_property
 
 from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
 from paas_wl.networking.ingress.models import AutoGenDomain
@@ -55,7 +56,7 @@ class EngineDeployClient:
     def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
         self.engine_app = engine_app
 
-    @property
+    @cached_property
     def wl_app(self) -> WLEngineApp:
         """Make 'wl_app' a property so tests using current class won't panic when
         initializing because not data can be found in workloads module.

@@ -390,8 +390,17 @@ def _mock_wl_services_in_creation():
 
     with mock.patch(
         'paasng.platform.modules.manager.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
-    ), mock.patch('paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env):
+    ), mock.patch(
+        'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
+    ), mock.patch(
+        "paasng.platform.modules.manager.get_region_cluster_helper"
+    ), mock.patch(
+        'paasng.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
+    ):
         yield
+
+    _faked_wl_engine_apps.clear()
+    _faked_env_metadata.clear()
 
 
 def create_pending_wl_engine_apps(bk_app: Application):
@@ -516,7 +525,9 @@ def create_cnative_app(
     )
 
     create_default_module(application)
-    with replace_cluster_service(), contextmanager(_mock_current_engine_client)():
+    with replace_cluster_service(), contextmanager(_mock_current_engine_client)(), contextmanager(
+        _mock_wl_services_in_creation
+    )():
         initialize_simple(application.get_default_module(), {}, cluster_name=cluster_name)
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)

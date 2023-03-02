@@ -49,21 +49,29 @@ def helper(bk_app):
             },
         },
     ]
-    return RegionClusterService(bk_app, client=mocked_client)
+    return RegionClusterService(bk_app.region, client=mocked_client)
 
 
 class TestGetEngineAppCluster:
     def test_empty_cluster_field(self, bk_stag_env, helper):
         engine_app = bk_stag_env.engine_app
-        assert helper.get_engine_app_cluster(engine_app.name).name == 'default'
+        with mock.patch(
+            "paasng.engine.controller.cluster.get_engine_app_config", return_value=mock.MagicMock(cluster=None)
+        ):
+            assert helper.get_engine_app_cluster(engine_app.name).name == 'default'
 
     def test_valid_cluster_field(self, bk_stag_env, helper):
         engine_app = bk_stag_env.engine_app
-        assert helper.get_engine_app_cluster(engine_app.name).name == 'extra-1'
+        with mock.patch(
+            "paasng.engine.controller.cluster.get_engine_app_config", return_value=mock.MagicMock(cluster="extra-1")
+        ):
+            assert helper.get_engine_app_cluster(engine_app.name).name == 'extra-1'
 
     def test_invalid_cluster_field(self, bk_stag_env, helper):
         engine_app = bk_stag_env.engine_app
-        with pytest.raises(ValueError):
+        with mock.patch(
+            "paasng.engine.controller.cluster.get_engine_app_config", return_value=mock.MagicMock(cluster="invalid")
+        ), pytest.raises(ValueError):
             helper.get_engine_app_cluster(engine_app.name)
 
 

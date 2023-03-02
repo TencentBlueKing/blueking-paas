@@ -29,6 +29,7 @@ from paasng.dev_resources.services.models import Service, ServiceCategory
 from paasng.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration, BaseServiceMigration
 from tests.conftest import skip_if_legacy_not_configured
+from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db]
 
@@ -58,6 +59,12 @@ dummy_service = RemoteServiceObj(
 def mock_get_service():
     with mock.patch.object(BaseServiceMigration, 'get_service') as get_service:
         get_service.return_value = dummy_service
+        yield
+
+
+@pytest.fixture(autouse=True)
+def setup_cluster():
+    with replace_cluster_service():
         yield
 
 

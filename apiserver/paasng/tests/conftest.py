@@ -57,7 +57,13 @@ from tests.utils import mock
 from tests.utils.helpers import configure_regions, create_pending_wl_engine_apps, generate_random_string
 
 from .utils.auth import create_user
-from .utils.helpers import _mock_current_engine_client, create_app, create_cnative_app, initialize_module
+from .utils.helpers import (
+    _mock_current_engine_client,
+    _mock_wl_services_in_creation,
+    create_app,
+    create_cnative_app,
+    initialize_module,
+)
 
 logger = logging.getLogger(__file__)
 
@@ -309,10 +315,7 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch(
-        'paasng.platform.applications.helpers.BKIAMClient',
-        new=StubBKIAMClient,
-    ), mock.patch(
+    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(
@@ -676,6 +679,7 @@ def _mock_paas_analysis_client():
 
 mock_paas_analysis_client = pytest.fixture(_mock_paas_analysis_client)
 mock_current_engine_client = pytest.fixture(_mock_current_engine_client)
+mock_wl_services_in_creation = pytest.fixture(_mock_wl_services_in_creation)
 
 
 def check_legacy_enabled():

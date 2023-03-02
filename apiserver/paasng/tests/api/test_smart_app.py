@@ -36,7 +36,7 @@ SMART_APP_PATH = Path(__file__).resolve().parent / 'assets' / 'smart_app_v2'
 
 
 @pytest.fixture(autouse=True)
-def setup_fixtures(mock_current_engine_client):
+def setup_fixtures(mock_current_engine_client, mock_wl_services_in_creation):
     """Set fixtures for testings"""
     # Create default tags
     parent_tag = Tag.objects.create(name="demo parent", region=settings.DEFAULT_REGION_NAME)

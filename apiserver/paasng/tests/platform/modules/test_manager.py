@@ -52,7 +52,7 @@ def raw_module(bk_user) -> Module:
 
 
 class TestModuleInitializer:
-    def test_create_engine_apps(self, raw_module, mock_current_engine_client):
+    def test_create_engine_apps(self, raw_module, mock_current_engine_client, mock_wl_services_in_creation):
         app_initializer = ModuleInitializer(raw_module)
         app_initializer.create_engine_apps()
 

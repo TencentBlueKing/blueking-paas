@@ -37,13 +37,13 @@ class EgressGatewayMigration(BaseMigration):
         application = self.context.app
         module = application.get_default_module()
         for env in module.get_envs():
-            wl_engine_app = env.engine_app.to_wl_obj()
+            engine_app = env.engine_app
             try:
-                controller_client.app_rcsbinding__create(wl_engine_app)
+                controller_client.app_rcsbinding__create(engine_app)
             except ObjectDoesNotExist:
                 self.add_log(
                     _("{env} 环境绑定出口IP异常, 详情: {detail}").format(
-                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=wl_engine_app.region)
+                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=engine_app.region)
                     )
                 )
             except IntegrityError:
@@ -56,9 +56,9 @@ class EgressGatewayMigration(BaseMigration):
         application = self.context.app
         module = application.get_default_module()
         for env in module.get_envs():
-            wl_engine_app = env.engine_app.to_wl_obj()
+            engine_app = env.engine_app
             try:
-                controller_client.app_rcsbinding__destroy(wl_engine_app)
+                controller_client.app_rcsbinding__destroy(engine_app)
             except ObjectDoesNotExist as e:
                 self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
             except Exception:

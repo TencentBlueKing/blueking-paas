@@ -41,7 +41,7 @@ from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
-from tests.paas_wl.utils.engine_app import random_fake_app
+from tests.utils.helpers import create_pending_wl_engine_apps
 
 logger = logging.getLogger(__name__)
 
@@ -332,28 +332,18 @@ def set_structure(default_process_spec_plan):
 
 
 @pytest.fixture
-def bk_stag_engine_app(bk_stag_env):
-    engine_app_info = bk_stag_env.engine_app
-    return random_fake_app(
-        force_app_info={
-            "name": engine_app_info.name,
-            "uuid": engine_app_info.id,
-        },
-        paas_app_code=bk_stag_env.application.code,
-        environment=bk_stag_env.environment,
-        owner=bk_stag_env.application.owner,
-    )
+def bk_stag_engine_app(bk_stag_env, with_wl_apps):
+    return bk_stag_env.engine_app.to_wl_obj()
 
 
 @pytest.fixture
-def bk_prod_engine_app(bk_prod_env):
-    engine_app_info = bk_prod_env.engine_app
-    return random_fake_app(
-        force_app_info={
-            "name": engine_app_info.name,
-            "uuid": engine_app_info.id,
-        },
-        paas_app_code=bk_prod_env.application.code,
-        environment=bk_prod_env.environment,
-        owner=bk_prod_env.application.owner,
-    )
+def bk_prod_engine_app(bk_prod_env, with_wl_apps):
+    return bk_prod_env.engine_app.to_wl_obj()
+
+
+@pytest.fixture
+def with_wl_apps(bk_app):
+    """Create all pending WlEngineApp objects related with current bk_app, useful
+    for tests which want to use `bk_app`, `bk_stag_env` fixtures.
+    """
+    create_pending_wl_engine_apps(bk_app)

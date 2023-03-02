@@ -22,8 +22,10 @@ from typing import Dict, List, Optional
 
 import cattr
 from attrs import define
+from django.utils.functional import cached_property
 
 from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.resources.base.bcs_client import BCSClient
 from paas_wl.workloads.processes.controllers import get_processes_status, list_proc_specs
 from paas_wl.workloads.processes.models import ProcessSpecManager
@@ -35,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 @define
 class Instance:
-    """An Process instance object"""
+    """A Process instance object"""
 
     name: str
     host_ip: str
@@ -84,7 +86,10 @@ class ProcessManager:
 
     def __init__(self, app: EngineApp):
         self.app = app
-        self.wl_app = app.to_wl_obj()
+
+    @cached_property
+    def wl_app(self) -> WLEngineApp:
+        return self.app.to_wl_obj()
 
     def sync_processes_specs(self, processes: List[Dict]):
         """Sync specs by plain ProcessSpec structure

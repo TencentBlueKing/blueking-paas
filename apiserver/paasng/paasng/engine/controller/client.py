@@ -94,15 +94,6 @@ class ControllerClient:
         )
         return AppModelResourceSerializer(model_resource).data
 
-    def archive_app(self, region: str, app_name: str, operation_id: str):
-        """Stop All Process of the app"""
-        return self.request(
-            'POST',
-            '/regions/{region}/apps/{name}/archive/'.format(region=region, name=app_name),
-            desired_code=codes.no_content,
-            json={'operation_id': operation_id},
-        )
-
     def interrupt_build_process(self, region: str, app_name: str, build_process_id: str):
         """Interrupt a running build process"""
         return self.request(

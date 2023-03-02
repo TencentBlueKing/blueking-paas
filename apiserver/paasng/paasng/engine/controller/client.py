@@ -94,12 +94,6 @@ class ControllerClient:
         )
         return AppModelResourceSerializer(model_resource).data
 
-    def interrupt_build_process(self, region: str, app_name: str, build_process_id: str):
-        """Interrupt a running build process"""
-        return self.request(
-            'POST', f'/regions/{region}/apps/{app_name}/build_processes/{build_process_id}/interruptions/'
-        )
-
     def builds__retrieve(self, region, app_name, limit=20, offset=0):
         return self.request(
             'GET',

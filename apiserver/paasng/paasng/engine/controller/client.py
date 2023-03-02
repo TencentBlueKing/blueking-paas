@@ -94,16 +94,6 @@ class ControllerClient:
         )
         return AppModelResourceSerializer(model_resource).data
 
-    def builds__retrieve(self, region, app_name, limit=20, offset=0):
-        return self.request(
-            'GET',
-            '/regions/{region}/apps/{name}/builds/'.format(region=region, name=app_name),
-            params={
-                'limit': limit,
-                'offset': offset,
-            },
-        )
-
     def bind_app_cluster(self, wl_engine_app: 'EngineApp', cluster_name: str):
         """Bind App to given cluster"""
         # TODO: 优化报错信息, 例如集群不存在, 绑定失败等

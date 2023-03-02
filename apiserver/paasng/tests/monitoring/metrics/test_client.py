@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.test import TestCase
 
-from paas_wl.monitoring.metrics.clients.bkmonitor import BkPromResult
-from paas_wl.monitoring.metrics.clients.prometheus import PromResult
+from paasng.monitoring.metrics.clients.bkmonitor import BkPromResult
+from paasng.monitoring.metrics.clients.prometheus import PromResult
 
 
 class TestPromResult(TestCase):

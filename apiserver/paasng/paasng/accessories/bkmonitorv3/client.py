@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
@@ -48,6 +48,9 @@ class BkMonitorBackend(Protocol):
         ...
 
     def search_alert(self, *args, **kwargs) -> Dict:
+        ...
+
+    def promql_query(self, *args, **kwargs) -> Dict:
         ...
 
 
@@ -106,6 +109,37 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp['message'])
 
         return resp.get('data', {}).get('alerts', [])
+
+    def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
+        """
+        通过 promql 语法访问蓝鲸监控，获取容器 cpu / 内存等指标数据
+
+        :param bk_biz_id: 集群绑定的蓝鲸业务 ID
+        :param promql: promql 查询语句，可参考 PROMQL_TMPL
+        :param start: 起始时间戳，如 "1622009400"
+        :param end: 结束时间戳，如 "1622009500"
+        :param step: 步长，如："1m"
+        :returns: 时序数据 Series
+        """
+        params: Dict[str, Union[str, int, None]] = {
+            'promql': promql,
+            'start_time': start,
+            'end_time': end,
+            'step': step,
+            'bk_biz_id': bk_biz_id,
+        }
+
+        headers = {'X-Bk-Scope-Space-Uid': f'bkcc__{bk_biz_id}'}
+        try:
+            resp = self.client.promql_query(headers=headers, data=params)
+        except APIGatewayResponseError:
+            # 详细错误信息 bkapi_client_core 会自动记录
+            raise BkMonitorGatewayServiceError('an unexpected error when request bkmonitor apigw')
+
+        if resp.get('error'):
+            raise BkMonitorApiError(resp['error'])
+
+        return resp.get('data', {}).get('series', [])
 
     def _get_space_detail(self, app_code: str) -> str:
         """获取空间详情"""

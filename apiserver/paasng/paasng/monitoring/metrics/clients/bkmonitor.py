@@ -21,11 +21,11 @@ from typing import Dict, Generator, List, Optional
 
 from attrs import Factory, define
 
-from paas_wl.monitoring.bkmonitor.client import make_bk_monitor_client
-from paas_wl.monitoring.bkmonitor.exceptions import BkMonitorGatewayServiceError
-from paas_wl.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
-from paas_wl.monitoring.metrics.constants import BKMONITOR_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
-from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
+from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
+from paasng.accessories.bkmonitorv3.exceptions import BkMonitorGatewayServiceError
+from paasng.monitoring.metrics.clients.base import MetricQuery, MetricSeriesResult
+from paasng.monitoring.metrics.constants import BKMONITOR_PROMQL_TMPL, MetricsResourceType, MetricsSeriesType
+from paasng.monitoring.metrics.exceptions import RequestMetricBackendError
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +45,7 @@ class BkMonitorMetricClient:
                 if not query.is_ranged or not query.time_range:
                     raise ValueError('query metric in bkmonitor without time range is unsupported!')
 
-                results = self._query_range(
-                    self.bk_biz_id, query.query, container_name=container_name, **query.time_range.to_dict()
-                )
+                results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception as e:
                 logger.exception("fetch metrics failed, query: %s, reason: %s", query.query, e)
                 # 某些 metrics 如果失败，不影响其他数据

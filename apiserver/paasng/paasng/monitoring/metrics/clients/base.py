@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import Generator, List, Optional, Protocol, Union
 
-from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
-from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+from paasng.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
+from paasng.monitoring.metrics.utils import MetricSmartTimeRange
 
 
 class MetricClient(Protocol):

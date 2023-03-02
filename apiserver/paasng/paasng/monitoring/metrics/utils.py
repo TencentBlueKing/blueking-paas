@@ -22,7 +22,7 @@ from typing import Union
 
 from django.utils import timezone
 
-from paas_wl.utils.basic import get_time_delta
+from paasng.utils.datetime import get_time_delta
 
 
 @dataclass

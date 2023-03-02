@@ -16,8 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Analyze all app's deploy status, highlight problematic stats
-"""
+# Analyze all app's deployment status, highlight problematic stats
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -35,7 +35,7 @@ logger = logging.getLogger("commands")
 
 
 class Command(BaseCommand):
-    """Analyze all applications's deployment, highlight problematic stats, includes:
+    """Analyze all application's deployment, highlight problematic stats, includes:
 
     - (same-host) "prod" process's pods have been assigned to one single same host
     - (multiple-clusters) A single process was deployed on multiple clusters

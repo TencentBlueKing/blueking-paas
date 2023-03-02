@@ -134,7 +134,6 @@ INSTALLED_APPS = [
     'paas_wl.platform.misc',
     'paas_wl.platform.applications',
     'paas_wl.cluster',
-    'paas_wl.monitoring.metrics',
     'paas_wl.networking.egress',
     'paas_wl.networking.ingress',
     'paas_wl.workloads.resource_templates',

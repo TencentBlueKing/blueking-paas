@@ -110,32 +110,6 @@ STREAM_CHANNEL_REDIS_URL = settings.get('STREAM_CHANNEL_REDIS_URL', default='red
 # 的同名配置项。
 
 # ---------------
-# 运行时默认配置
-# ---------------
-DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner')
-DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder')
-
-BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
-
-# 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
-PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
-
-# 从源码构建应用时，注入额外环境变量
-BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
-
-
-# ---------------
-# 服务导出配置
-# ---------------
-
-# 默认容器内监听地址
-CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
-
-# 服务相关插件配置
-SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
-
-
-# ---------------
 # 资源限制配置
 # ---------------
 DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 'prod': 2})
@@ -276,6 +250,7 @@ FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localh
 FOR_TESTS_CA_DATA = settings.get('FOR_TESTS_CA_DATA', '')
 FOR_TESTS_CERT_DATA = settings.get('FOR_TESTS_CERT_DATA', '')
 FOR_TESTS_KEY_DATA = settings.get('FOR_TESTS_KEY_DATA', '')
+FOR_TESTS_TOKEN_VALUE = settings.get('FOR_TESTS_TOKEN_VALUE', '')
 FOR_TESTS_FORCE_DOMAIN = settings.get('FOR_TESTS_FORCE_DOMAIN', '')
 
 FOR_TESTS_CLUSTER_CONFIG = {
@@ -283,11 +258,16 @@ FOR_TESTS_CLUSTER_CONFIG = {
     "ca_data": FOR_TESTS_CA_DATA,
     "cert_data": FOR_TESTS_CERT_DATA,
     "key_data": FOR_TESTS_KEY_DATA,
+    "token_value": FOR_TESTS_TOKEN_VALUE,
     "force_domain": FOR_TESTS_FORCE_DOMAIN,
 }
 
-# 蓝鲸监控相关配置
-# 是否下发 ServiceMonitor 的总开关
-BKMONITOR_ENABLED = settings.get("BKMONITOR_ENABLED", False)
+# ----------------------
+# 指标，监控，告警等相关配置
+# ----------------------
+
+# 插件监控图表相关配置
+MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
+
 # 蓝鲸监控运维相关的额外配置
-BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])

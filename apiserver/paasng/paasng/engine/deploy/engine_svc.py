@@ -19,18 +19,15 @@ to the current version of the project delivered to anyone in the future.
 """Engine services module
 """
 import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
 
-import cattr
 from django.conf import settings
 
-from paas_wl.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
-from paas_wl.networking.ingress.managers import AppDefaultIngresses, assign_custom_hosts, assign_subpaths
+from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
 from paas_wl.networking.ingress.models import AutoGenDomain
 from paas_wl.networking.ingress.utils import guess_default_service_name
 from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
-from paas_wl.platform.applications.models.managers.app_metadata import get_metadata, update_metadata
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.release_controller.builder import tasks as builder_task
 from paas_wl.resources import tasks as scheduler_tasks
@@ -38,7 +35,6 @@ from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.tasks import release_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.workloads.images.models import AppImageCredential
-from paas_wl.workloads.processes.controllers import module_env_is_running
 from paasng.engine.constants import JobStatus
 from paasng.engine.controller.client import ControllerClient
 from paasng.engine.helpers import SlugbuilderInfo
@@ -58,8 +54,13 @@ class EngineDeployClient:
 
     def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
         self.engine_app = engine_app
-        self.wl_app: WLEngineApp = self.engine_app.to_wl_obj()
-        self.env = self.engine_app.env
+
+    @property
+    def wl_app(self) -> WLEngineApp:
+        """Make 'wl_app' a property so tests using current class won't panic when
+        initializing because not data can be found in workloads module.
+        """
+        return self.engine_app.to_wl_obj()
 
     def start_build_process(
         self,
@@ -199,17 +200,6 @@ class EngineDeployClient:
         subpath_vals = [d['subpath'] for d in subpaths]
         assign_subpaths(self.wl_app, subpath_vals, default_service_name=default_service_name)
 
-    def get_metadata(self) -> Dict[str, Any]:
-        """Get an engine app's metadata"""
-        return cattr.unstructure(get_metadata(self.wl_app))
-
-    def update_metadata(self, metadata_part: Dict[str, Union[str, bool]]):
-        """Update an engine app's metadata, works like python's dict.update()
-
-        :param metadata_part: An dict object which will be merged into app's metadata
-        """
-        update_metadata(self.wl_app, **metadata_part)
-
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""
         AppImageCredential.objects.update_or_create(
@@ -217,14 +207,3 @@ class EngineDeployClient:
             registry=registry,
             defaults={"username": username, "password": password},
         )
-
-    def sync_proc_ingresses(self):
-        """Sync ingresses configs with engine"""
-        if not module_env_is_running(self.env):
-            return
-
-        for mgr in AppDefaultIngresses(self.wl_app).list():
-            try:
-                mgr.sync()
-            except (DefaultServiceNameRequired, EmptyAppIngressError):
-                continue

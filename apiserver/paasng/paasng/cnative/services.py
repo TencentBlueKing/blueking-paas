@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict, List, Optional
-from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
 
@@ -72,27 +71,26 @@ def create_engine_apps(
     for environment in environments:
         engine_app_name = f'{default_engine_app_prefix}-{application.code}-{environment}'
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
-        wl_engine_app_id = get_or_create_engine_app(application.owner, application.region, engine_app_name)
-        controller_client.bind_app_cluster(application.region, engine_app_name, cluster_name=cluster_name)
+        engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
+        controller_client.bind_app_cluster(wl_engine_app=engine_app.to_wl_obj(), cluster_name=cluster_name)
         ModuleEnvironment.objects.create(
-            application=application, module=module, engine_app_id=wl_engine_app_id, environment=environment
+            application=application, module=module, engine_app_id=engine_app.id, environment=environment
         )
 
 
-def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> UUID:
+def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:
     """get or create engine app from workload
 
     :return: UUID of the workloads's EngineApp object
     """
     info = create_app_ignore_duplicated(region, engine_app_name, EngineAppType.CLOUD_NATIVE)
     # Create EngineApp and binding relationships
-    EngineApp.objects.create(
+    return EngineApp.objects.create(
         id=info.uuid,
         name=engine_app_name,
         owner=owner,
         region=region,
     )
-    return info.uuid
 
 
 def get_default_cluster_name(region: str) -> str:

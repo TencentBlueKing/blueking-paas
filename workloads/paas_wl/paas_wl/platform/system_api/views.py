@@ -18,8 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from django.db import transaction
-from django.db.models import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -27,15 +25,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app, get_default_cluster_by_region
 from paas_wl.platform.applications import models
-from paas_wl.platform.applications.models import Release
-from paas_wl.platform.applications.models.app import create_initial_config
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
-from paas_wl.platform.applications.models_utils import delete_module_related_res
-from paas_wl.platform.applications.struct_models import get_structured_app
 from paas_wl.platform.auth.permissions import IsInternalAdmin
 from paas_wl.platform.system_api import serializers
 from paas_wl.release_controller.builder import tasks as builder_task
@@ -230,84 +222,6 @@ class ProcessInstanceViewSet(SysAppRelatedViewSet):
         return Response(result)
 
 
-class ConfigViewSet(SysAppRelatedViewSet):
-    """A viewset for interacting with Config objects."""
-
-    model = models.Config
-    serializer_class = serializers.ConfigSerializer
-
-    def get_object(self):
-        # Make sure the initial Config exists
-        app = self.get_app()
-        create_initial_config(app)
-        try:
-            # 先尝试获取最后一次成功发布的配置
-            return Release.objects.get_latest(app, ignore_failed=True).config
-        except ObjectDoesNotExist:
-            # 如果应用未发布过, 则返回默认的配置
-            return app.config_set.latest()
-
-    def update_metadata(self, request, region, name):
-        """更新 Metadata"""
-        app = self.get_app()
-        try:
-            latest_config = self.model.objects.filter(app=app).latest()
-            metadata = latest_config.metadata or {}
-            metadata.update(request.data.get("metadata"))
-            latest_config.metadata = metadata
-
-            latest_config.save(update_fields=['metadata', 'updated'])
-        except Exception:
-            logger.exception("update config metadata failed")
-            raise error_codes.UPDATE_CONFIG_FAILED
-
-        return Response(data=self.serializer_class(instance=latest_config).data)
-
-    def update_config(self, request, region, name):
-        slz = serializers.ConfigUpdateSerializer(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-
-        app = self.get_app()
-        try:
-            latest_config = self.model.objects.filter(app=app).latest()
-            # Update all given fields
-            for attr, value in data.items():
-                setattr(latest_config, attr, value)
-
-            # 若更新了绑定的集群信息，则也需要修改集群特性相关配置
-            if cluster_name := data.get('cluster'):
-                cluster: Cluster = Cluster.objects.get(name=cluster_name)
-                latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-
-            # Always update "resource_requirements", value was fetched from database
-            resource_requirements = {
-                pack.name: pack.plan.get_resource_summary()
-                for pack in ProcessSpec.objects.filter(engine_app_id=app.pk)
-            }
-            latest_config.resource_requirements = resource_requirements
-            latest_config.save()
-        except Exception:
-            logger.exception("update config failed")
-            raise error_codes.UPDATE_CONFIG_FAILED
-
-        return Response(data=self.serializer_class(instance=latest_config).data, status=status.HTTP_201_CREATED)
-
-    def bind_cluster(self, request, region, name, cluster_name):
-        """Bind app to given cluster"""
-        app = self.get_app()
-        cluster = get_object_or_404(Cluster, name=cluster_name)
-        try:
-            latest_config: models.Config = self.model.objects.filter(app=app).latest()
-            latest_config.cluster = cluster.name
-            latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-            latest_config.save()
-        except Exception:
-            logger.exception("bind app to cluster %s failed", cluster_name)
-            raise error_codes.UPDATE_CONFIG_FAILED.f("绑定应用集群失败")
-        return Response(data={}, status=status.HTTP_200_OK)
-
-
 class BuildViewSet(SysAppRelatedViewSet):
     model = models.Build
     serializer_class = serializers.BuildSerializer
@@ -446,17 +360,4 @@ class ArchiveViewSet(SysAppRelatedViewSet):
             logger.exception("Failed to stop all processes for App<%s>, operation id is: %s", app.name, operation_id)
             raise error_codes.APP_ARCHIVE_FAILED from e
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class BkModuleRelatedResourcesViewSet(SysViewSet):
-    """以蓝鲸模块为单位管理所有 workloads 服务资源"""
-
-    @transaction.atomic
-    def destroy(self, request, code, module_name):
-        """删除蓝鲸模块的所有相关资源，仅在删除模块时调用"""
-        app = get_structured_app(code=code)
-        module = app.get_module_by_name(module_name)
-
-        delete_module_related_res(module)
         return Response(status=status.HTTP_204_NO_CONTENT)

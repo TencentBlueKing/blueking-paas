@@ -21,8 +21,6 @@ to the current version of the project delivered to anyone in the future.
 from django.urls import include, re_path
 from rest_framework.routers import DefaultRouter
 
-from paas_wl.utils.basic import make_app_path
-
 from . import views
 
 router = DefaultRouter(trailing_slash=False)
@@ -89,25 +87,5 @@ urlpatterns = [
     re_path(
         r"^regions/%s/apps/%s/archive/$" % (PVAR_REGION, PVAR_NAME),
         views.ArchiveViewSet.as_view({'post': 'archive'}),
-    ),
-    # App Config
-    re_path(
-        r"^regions/%s/apps/%s/config/$" % (PVAR_REGION, PVAR_NAME),
-        views.ConfigViewSet.as_view({'get': 'retrieve', 'post': 'update_config'}),
-    ),
-    re_path(
-        r"^regions/%s/apps/%s/bind_cluster/(?P<cluster_name>[^/]+)/$" % (PVAR_REGION, PVAR_NAME),
-        views.ConfigViewSet.as_view({'post': 'bind_cluster'}),
-    ),
-    re_path(
-        r"^regions/%s/apps/%s/config/metadata$" % (PVAR_REGION, PVAR_NAME),
-        views.ConfigViewSet.as_view({'post': 'update_metadata'}),
-    ),
-]
-
-urlpatterns += [
-    re_path(
-        make_app_path(r'/related_resources/$', include_envs=False),
-        views.BkModuleRelatedResourcesViewSet.as_view({'delete': 'destroy'}),
     ),
 ]

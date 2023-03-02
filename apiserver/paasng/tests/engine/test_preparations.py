@@ -78,8 +78,13 @@ def git_client(bk_module):
 
 
 @pytest.fixture(autouse=True)
-def setup(init_tmpls, mock_current_engine_client):
-    pass
+def setup_mocks(init_tmpls):
+    """Setup mocks for current testing module
+
+    - Mock ProcessManager which depends on `workloads` module
+    """
+    with mock.patch('paasng.extensions.declarative.deployment.controller.ProcessManager'):
+        yield
 
 
 class TestGetProcesses:
@@ -268,22 +273,12 @@ class TestGetProcesses:
 def test_get_processes_by_build(bk_module):
     engine_app = bk_module.envs.get(environment='prod').engine_app
     fake_build = {
-        'owner': '--',
-        'app': 'dbe1781d-6058-45d3-ab25-7dba160b23ac',
-        'slug_path': 'ieod/home/bkapp-v20190808-001-stag:master:4017e0d6e6967a6aefdec6ae8a7898ab984e843a/push',
-        'branch': 'master',
-        'revision': '4017e0d6e6967a6aefdec6ae8a7898ab984e843a',
-        'procfile': {
-            'web': (
-                'gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '
-                '\'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
-            )
-        },
-        'created': '2019-10-16T07:22:26.575317Z',
-        'updated': '2019-10-16T07:22:26.575361Z',
-        'uuid': 'fcd194da-70c1-4dd4-a287-441633ebbd90',
+        'web': (
+            'gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile - --access-logformat '
+            '\'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
+        )
     }
-    with mock.patch("paasng.engine.deploy.engine_svc.EngineDeployClient.get_build", return_value=fake_build):
+    with mock.patch("paasng.engine.deploy.engine_svc.EngineDeployClient.get_procfile", return_value=fake_build):
         assert 'web' in get_processes_by_build(engine_app=engine_app, build_id="fake-build-id")
 
 

@@ -23,8 +23,10 @@ from bkpaas_auth.models import User
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
+from paas_wl.platform.applications.models import Build, Release
 from paas_wl.platform.applications.models.app import EngineApp
 from paas_wl.platform.applications.models.config import Config
+from paas_wl.workloads.processes.models import Instance
 from tests.utils.auth import create_user
 
 
@@ -58,3 +60,58 @@ def random_fake_app(
         },
     )
     return fake_app
+
+
+def random_fake_instance(app: EngineApp, force_instance_info: Optional[Dict] = None) -> Instance:
+    app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
+    instance_info = {
+        "app": app,
+        "process_type": "web",
+        "name": random.choice(["ieod", "tencent"]) + "-" + app_name + "-" + get_random_string(length=12).lower(),
+        "host_ip": "x.x.x.x",
+        "start_time": "",
+        "state": "",
+        "ready": True,
+        "restart_count": 0,
+        "version": 0,
+    }
+
+    if force_instance_info:
+        instance_info.update(force_instance_info)
+
+    return Instance(**instance_info)
+
+
+def release_setup(
+    fake_app: EngineApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
+) -> Release:
+    default_build_params = {
+        "owner": create_user(username="somebody"),
+        "app": fake_app,
+        "slug_path": "",
+        "source_type": "zzz",
+        "branch": "dsdf",
+        "revision": "asdf",
+        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
+    }
+
+    if build_params:
+        default_build_params.update(build_params)
+
+    build_info = default_build_params
+    fake_build = Build.objects.create(**build_info)
+
+    default_release_params = {
+        "owner": create_user(username="somebody"),
+        "app": fake_app,
+        "version": 2,
+        "summary": "",
+        "failed": False,
+        "build": fake_build,
+        "config": fake_app.config_set.latest(),
+    }
+    if release_params:
+        default_release_params.update(release_params)
+
+    release_info = default_release_params
+    return Release.objects.create(**release_info)

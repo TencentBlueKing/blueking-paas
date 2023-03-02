@@ -26,30 +26,36 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def helper(bk_app):
-    # Make a mocked controller client
-    mocked_client = mock.Mock()
-    mocked_client.list_region_clusters.return_value = [
-        {
-            "name": "default",
-            "is_default": True,
-            "bcs_cluster_id": "BCS-K8S-10000",
-            "support_bcs_metrics": False,
-            "ingress_config": {
-                "app_root_domains": [{"name": "local-bkapps-t.example.com"}],
+def setup_clusters():
+    with mock.patch(
+        "paasng.engine.controller.cluster.list_region_clusters",
+        return_value=[
+            {
+                "name": "default",
+                "is_default": True,
+                "bcs_cluster_id": "BCS-K8S-10000",
+                "support_bcs_metrics": False,
+                "ingress_config": {
+                    "app_root_domains": [{"name": "local-bkapps-t.example.com"}],
+                },
             },
-        },
-        {
-            "name": "extra-1",
-            "is_default": False,
-            "bcs_cluster_id": "BCS-K8S-10001",
-            "support_bcs_metrics": False,
-            "ingress_config": {
-                "app_root_domains": [{"name": "local-bkapps-extra.example.com"}],
+            {
+                "name": "extra-1",
+                "is_default": False,
+                "bcs_cluster_id": "BCS-K8S-10001",
+                "support_bcs_metrics": False,
+                "ingress_config": {
+                    "app_root_domains": [{"name": "local-bkapps-extra.example.com"}],
+                },
             },
-        },
-    ]
-    return RegionClusterService(bk_app.region, client=mocked_client)
+        ],
+    ):
+        yield
+
+
+@pytest.fixture
+def helper():
+    return RegionClusterService("")
 
 
 class TestGetEngineAppCluster:

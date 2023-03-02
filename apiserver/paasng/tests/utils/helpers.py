@@ -44,7 +44,7 @@ from paasng.platform.oauth2.utils import create_oauth2_client
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
 from paasng.utils.configs import RegionAwareConfig
-from tests.utils.mocks.engine import StubControllerClient, replace_cluster_service
+from tests.utils.mocks.engine import replace_cluster_service
 
 from .auth import create_user
 
@@ -359,14 +359,6 @@ def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
     return ''.join(rand.choice(chars) for x in range(length))
 
 
-def _mock_current_engine_client():
-    """Mock current engine client to return fake engine app infos"""
-    with mock.patch('paasng.engine.controller.client.ControllerClient', new=StubControllerClient), mock.patch(
-        'paasng.engine.controller.shortcuts.ControllerClient', new=StubControllerClient
-    ):
-        yield
-
-
 # Stores pending actions related with workloads during app creation
 _faked_wl_engine_apps = {}
 _faked_env_metadata = {}
@@ -390,7 +382,17 @@ def _mock_wl_services_in_creation():
 
     with mock.patch(
         'paasng.platform.modules.manager.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
-    ), mock.patch('paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env):
+    ), mock.patch(
+        'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
+    ), mock.patch(
+        "paasng.platform.modules.manager.get_region_cluster_helper"
+    ), mock.patch(
+        'paasng.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
+    ), mock.patch(
+        "paasng.cnative.services.create_cnative_app_model_resource"
+    ), mock.patch(
+        "paasng.cnative.services.bind_wl_app_cluster"
+    ):
         yield
 
 
@@ -516,7 +518,7 @@ def create_cnative_app(
     )
 
     create_default_module(application)
-    with replace_cluster_service(), contextmanager(_mock_current_engine_client)():
+    with replace_cluster_service(), contextmanager(_mock_wl_services_in_creation)():
         initialize_simple(application.get_default_module(), {}, cluster_name=cluster_name)
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)

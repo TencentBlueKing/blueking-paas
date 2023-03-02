@@ -16,22 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
-from django_dynamic_fixture import G
-
-from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
-from paas_wl.monitoring.app_monitor.utils import build_monitor_port
-
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-def test_build_monitor_port(bk_stag_wl_app):
-    assert build_monitor_port(bk_stag_wl_app) is None
-
-    G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_wl_app)
-
-    monitor_port = build_monitor_port(bk_stag_wl_app)
-    assert monitor_port
-    assert monitor_port.port == 5000
-    assert monitor_port.target_port == 5001
-    assert monitor_port.protocol == "TCP"

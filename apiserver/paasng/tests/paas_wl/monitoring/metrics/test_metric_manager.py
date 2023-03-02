@@ -32,7 +32,7 @@ from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.workloads.processes.managers import AppProcessManager
 from tests.paas_wl.utils.engine_app import random_fake_app, random_fake_instance, release_setup
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestResourceMetricManager:

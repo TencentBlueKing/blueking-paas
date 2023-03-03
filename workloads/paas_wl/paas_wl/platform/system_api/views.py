@@ -213,8 +213,8 @@ class ProcessInstanceViewSet(SysAppRelatedViewSet):
                 'operator': slz.validated_data['operator'],
             },
             path_params={
-                'cluster_id': cluster.annotations['bcs_cluster_id'],
-                'project_id_or_code': cluster.annotations['bcs_project_id'],
+                'cluster_id': cluster.bcs_cluster_id,
+                'project_id_or_code': cluster.bcs_project_id,
                 'version': 'v4',
             },
         )

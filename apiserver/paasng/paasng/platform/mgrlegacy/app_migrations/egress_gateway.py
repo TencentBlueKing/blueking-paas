@@ -47,9 +47,9 @@ class EgressGatewayMigration(BaseMigration):
                     )
                 )
             except IntegrityError:
-                self.add_log(_("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("不能重复绑定")))
+                self.add_log(_("{env} 环境绑定出口IP异常, 详情: 不能重复绑定").format(env=env.environment))
             except Exception:
-                self.add_log(_("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("未知错误")))
+                self.add_log(_("{env} 环境绑定出口IP异常").format(env=env.environment))
 
     def rollback(self):
         # 删除 Egress 记录
@@ -59,10 +59,10 @@ class EgressGatewayMigration(BaseMigration):
             engine_app = env.engine_app
             try:
                 controller_client.app_rcsbinding__destroy(engine_app)
-            except ObjectDoesNotExist as e:
+            except ObjectDoesNotExist:
                 self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
             except Exception:
-                self.add_log(_("{env} 环境解绑出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("未知错误")))
+                self.add_log(_("{env} 环境解绑出口IP异常").format(env=env.environment))
 
     def get_description(self):
         return _("绑定出口 IP ")

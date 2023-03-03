@@ -804,7 +804,7 @@ paths:
           method: post
           path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/deployments/
           matchSubpath: false
-          timeout: 0
+          timeout: 30
           upstreams: {}
           transformHeaders: {}
         authConfig:
@@ -829,7 +829,7 @@ paths:
           method: get
           path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/
           matchSubpath: false
-          timeout: 0
+          timeout: 30
           upstreams: {}
           transformHeaders: {}
         authConfig:
@@ -984,7 +984,7 @@ paths:
         authConfig:
           userVerifiedRequired: false
         disabledStages: []
-        descriptionEn: sync configurations for plugin applicaiton
+        descriptionEn: sync configurations for plugin application
   /sys/shim/plugins_center/bk_plugins/{code}/deploy/:
     post:
       operationId: shim_plugins_centers_deploy_plugin
@@ -1549,53 +1549,3 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn: Query the list of applications that the specified user has permission
-  /cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/deployments/:
-    post:
-      operationId: deploy_cnative
-      description: 云原生应用部署
-      tags:
-        - 部署相关接口
-      responses:
-        default:
-          description: ''
-      x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
-        matchSubpath: false
-        backend:
-          type: HTTP
-          method: post
-          path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/deployments/
-          matchSubpath: false
-          timeout: 30
-          upstreams: {}
-          transformHeaders: {}
-        authConfig:
-          userVerifiedRequired: true
-        disabledStages: []
-        descriptionEn: ''
-  /cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/:
-    get:
-      operationId: get_cnative_deploy_status
-      description: 查询云原生应用部署状态
-      tags:
-        - 部署相关接口
-      responses:
-        default:
-          description: ''
-      x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
-        matchSubpath: false
-        backend:
-          type: HTTP
-          method: get
-          path: /backend/svc_workloads/api/cnative/specs/applications/{app_code}/modules/{module}/envs/{env}/mres/status/
-          matchSubpath: false
-          timeout: 5
-          upstreams: {}
-          transformHeaders: {}
-        authConfig:
-          userVerifiedRequired: true
-        disabledStages: []
-        descriptionEn: ''

@@ -25,7 +25,7 @@ from typing import Optional
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from pydantic import ValidationError as DanticValidationError
 
-from paas_wl.platform.external.client import get_local_plat_client, get_plat_client
+from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.release_controller.process.wait import AbortedDetails
 from paas_wl.utils.constants import CommandStatus as ReleaseStatus
 
@@ -86,7 +86,7 @@ class ReleaseResultHandler(CallbackHandler):
 
 def finish_archive(operation_id: str, status: ReleaseStatus, error_detail: str):
     """Callback to API Server"""
-    get_plat_client().finish_archive(operation_id, status, error_detail)
+    get_local_plat_client().finish_archive(operation_id, status, error_detail)
 
 
 class ArchiveResultHandler(CallbackHandler):

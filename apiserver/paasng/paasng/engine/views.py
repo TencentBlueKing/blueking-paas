@@ -51,12 +51,12 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, JobStatus, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
 from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.deploy.infras import DeploymentCoordinator
 from paasng.engine.deploy.preparations import initialize_deployment
 from paasng.engine.deploy.protections import ModuleEnvDeployInspector
-from paasng.engine.deploy.release import ApplicationReleaseMgr, create_release
+from paasng.engine.deploy.release import create_release
 from paasng.engine.deploy.runner import DeployTaskRunner
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
 from paasng.engine.models.config_var import (
@@ -102,7 +102,6 @@ from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import AppEnvironment, AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.signals import module_environment_offline_success
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
@@ -790,39 +789,6 @@ def _get_deployment(module: Module, uuid: str) -> Deployment:
             _("模块 {module_name} 下没有 id 为 {id} 的部署记录"), module_name=module.name, id=uuid
         )
     return deployment
-
-
-class SysWorkloadsCallbackViewSet(viewsets.ViewSet):
-    """The ViewSet for handling workloads callback for release/offline and so on."""
-
-    def finish_release(self, request):
-        data = request.data
-        mgr = ApplicationReleaseMgr.from_deployment_id(data['deployment_id'])
-        mgr.callback_release(JobStatus(data["status"]), data["error_detail"])
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def finish_archive(self, request):
-        data = request.data
-        offline_op = OfflineOperation.objects.get(id=data['operation_id'])
-        archive_status = JobStatus(data["status"])
-        message = data.get("error_detail", '')
-
-        if archive_status == JobStatus.SUCCESSFUL:
-            offline_op.set_successful()
-        else:
-            offline_op.set_failed(message)
-
-        module_environment_offline_success.send(
-            sender=OfflineOperation, offline_instance=offline_op, environment=offline_op.app_environment.environment
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class SysDeploymentViewSet(viewsets.ReadOnlyModelViewSet):
-    """应用部署相关的 Sys API"""
-
-    queryset = Deployment.objects.all()
-    serializer_class = DeploymentSLZ
 
 
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

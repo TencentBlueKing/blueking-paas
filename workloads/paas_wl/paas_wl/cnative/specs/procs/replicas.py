@@ -22,14 +22,13 @@ from typing import Dict, List, Tuple
 
 from paas_wl.cnative.specs.models import default_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, ReplicasOverlay
-from paas_wl.platform.applications.models.app import get_ns
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.base import EnhancedApiClient
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import PatchType
-from paas_wl.resources.utils.basic import get_client_by_env
+from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.processes.constants import AppEnvName
+from paasng.platform.applications.models import ModuleEnvironment
 
 from .exceptions import ProcNotDeployed, ProcNotFoundInRes
 
@@ -42,9 +41,10 @@ class ProcReplicas:
     :param env: The deployed env.
     """
 
-    def __init__(self, env: ModuleEnv):
+    def __init__(self, env: ModuleEnvironment):
         self.env = env
-        self.ns = get_ns(self.env)
+        self.wl_engine_app = env.wl_engine_app
+        self.ns = self.wl_engine_app.namespace
         self.res_name = default_bkapp_name(self.env)
 
     def get(self, proc_type: str) -> int:
@@ -56,7 +56,7 @@ class ProcReplicas:
 
         :return: (replicas, whether replicas was defined in "envOverlay")
         """
-        with get_client_by_env(self.env) as client:
+        with get_client_by_app(self.env.wl_engine_app) as client:
             bkapp_res = self._get_bkapp_res(client)
 
         counts = ReplicasReader(bkapp_res).read_all(AppEnvName(self.env.environment))
@@ -76,7 +76,7 @@ class ProcReplicas:
         if count < 0:
             raise ValueError('count must greater than or equal to 0')
 
-        with get_client_by_env(self.env) as client:
+        with get_client_by_app(self.wl_engine_app) as client:
             bkapp_res = self._get_bkapp_res(client)
             self._validate_proc_type(bkapp_res, proc_type)
 

@@ -23,10 +23,9 @@ import arrow
 from attrs import define
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.platform.applications.models.app import get_ns
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base.kres import KEvent
-from paas_wl.resources.utils.basic import get_client_by_env
+from paas_wl.resources.utils.basic import get_client_by_app
+from paasng.platform.applications.models import ModuleEnvironment
 
 
 @define
@@ -78,16 +77,17 @@ def deserialize(kube_data: ResourceInstance) -> Event:
     )
 
 
-def list_events(env: ModuleEnv, dt: Optional[datetime.datetime]) -> List[Event]:
+def list_events(env: ModuleEnvironment, dt: Optional[datetime.datetime]) -> List[Event]:
     """List all Events in 'env'
 
     :param env: 模块环境
     :param dt: datetime, Optional, filter events first seen after dt
 
     """
+    wl_app = env.wl_engine_app
     all_events = []
-    with get_client_by_env(env) as client:
-        ret = KEvent(client).ops_label.list(namespace=get_ns(env), labels={})
+    with get_client_by_app(wl_app) as client:
+        ret = KEvent(client).ops_label.list(namespace=wl_app.namespace, labels={})
         for kube_data in ret.items:
             all_events.append(deserialize(kube_data))
     if dt:

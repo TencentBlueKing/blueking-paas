@@ -9,7 +9,7 @@ def sync_proc_ingresses(env: ModuleEnvironment):
     if not module_env_is_running(env):
         return
 
-    wl_app = env.engine_app.to_wl_obj()
+    wl_app = env.wl_engine_app
     for mgr in AppDefaultIngresses(wl_app).list():
         try:
             mgr.sync()

@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Base data model from PaaS"""
-from typing import Dict, Iterable, List, Optional, Type, Union, overload
+from typing import Dict, List, Optional, Type, Union, overload
 from uuid import UUID
 
 import cattr
@@ -212,20 +212,6 @@ def get_structured_app(
     if not data:
         raise ValueError(f'Application conds={params!r} not found')
     return StructuredApp.from_json_data(data)
-
-
-def get_env_by_engine_app_id(engine_app_id: UUID) -> 'ModuleEnv':
-    """Get a module env object by engine app ID"""
-    app = get_structured_app(engine_app_id=engine_app_id)
-    return app.get_env_by_engine_app_id(engine_app_id)
-
-
-def to_structured(application: Application) -> 'StructuredApp':
-    """Make a structured application(with modules and envs) from a pure Application object
-
-    :raise: ValueError when application can not be found
-    """
-    return get_structured_app(code=application.code)
 
 
 @define
@@ -430,27 +416,3 @@ class ModuleEnvAttrFromName(AppSubResourceDescriptor):
         module = struct_app.get_module_by_id(module_id)
         env_name = getattr(instance, self.key_field)
         return struct_app.get_env_by_environment(module, env_name)
-
-
-def set_model_structured(obj: object, application: Application):
-    """Initialize an object with structured application data
-
-    :param obj: Any valid data object which belongs to a single Application, multiple object supported
-    :param application: The `Application` object which was used for initialization
-    """
-    data_source_name = AppSubResourceDescriptor.data_source_name
-    if hasattr(obj, data_source_name):
-        return
-    setattr(obj, data_source_name, to_structured(application))
-
-
-def set_many_model_structured(objs: Iterable[object], application: Application):
-    """Initialize many objects with structured application data, the objs must
-    share same application"""
-    data_source_name = AppSubResourceDescriptor.data_source_name
-    # Query for structured application only once
-    struct_app = to_structured(application)
-    for obj in objs:
-        if hasattr(obj, data_source_name):
-            return
-        setattr(obj, data_source_name, struct_app)

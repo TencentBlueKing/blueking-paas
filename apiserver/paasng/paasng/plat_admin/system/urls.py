@@ -18,15 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.conf.urls import url
 
-from paasng.plat_admin.system.views import (
-    ApplicationAddressViewSet,
-    ApplicationBuiltinEnvViewSet,
-    LessCodeSystemAPIViewSet,
-    SysAddonsAPIViewSet,
-    SysApplicationViewSet,
-    SysMarketViewSet,
-    SysUniApplicationViewSet,
-)
+from paasng.plat_admin.system.views import LessCodeSystemAPIViewSet, SysAddonsAPIViewSet, SysUniApplicationViewSet
 from paasng.utils.basic import make_app_pattern, re_path
 
 urlpatterns = [
@@ -62,26 +54,5 @@ urlpatterns = [
         make_app_pattern(suffix="/addons/", prefix="sys/api/bkapps/applications/"),
         SysAddonsAPIViewSet.as_view({"get": "list_services"}),
         name="sys.api.applications.list_addons",
-    ),
-    # Query application's modules and envs
-    url(
-        'sys/api/applications/query/$',
-        SysApplicationViewSet.as_view({'get': 'query'}),
-        name='sys.api.applications.query',
-    ),
-    url(
-        'sys/api/market/applications/(?P<code>[^/]+)/entrance/$',
-        SysMarketViewSet.as_view({'get': 'get_entrance'}),
-        name='sys.api.market.entrance',
-    ),
-    re_path(
-        make_app_pattern("/preallocated_addresses/", prefix='sys/api/bkapps/applications/', include_envs=True),
-        ApplicationAddressViewSet.as_view({"get": "list_preallocated_addresses"}),
-        name="sys.api.preallocated_addresses",
-    ),
-    re_path(
-        make_app_pattern("/builtin_envs/", prefix='sys/api/bkapps/applications/', include_envs=True),
-        ApplicationBuiltinEnvViewSet.as_view({"get": "list_builtin_envs"}),
-        name="sys.api.builtin_envs",
     ),
 ]

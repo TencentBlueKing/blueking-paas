@@ -79,17 +79,6 @@ PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
 BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
 
 # ---------------
-# 对象存储配置
-# ---------------
-# 应用构建 SLUG 存放 bucket 名，默认无需修改，应和 apiserver 中 BLOBSTORE_BUCKET_APP_SOURCE 保持一致
-BLOBSTORE_S3_BUCKET_NAME = settings.get('BLOBSTORE_S3_BUCKET_NAME', default='bkpaas3-slug-packages')
-
-# 当配置该项时，使用 BK-Repo 而不是 S3 作为 BlobStore 存储
-BLOBSTORE_BKREPO_CONFIG = settings.get('BLOBSTORE_BKREPO_CONFIG')
-
-# 其他配置项如 BLOBSTORE_S3_ENDPOINT 与 apiserver 模块配置保持一致
-
-# ---------------
 # 服务导出配置
 # ---------------
 

@@ -145,7 +145,7 @@ def delete_from_blob_store(build: Build, dry_run: bool = True, pattern: Optional
 def get_store():
     global _store
     if _store is None:
-        _store = make_blob_store(settings.BLOBSTORE_S3_BUCKET_NAME)
+        _store = make_blob_store(settings.BLOBSTORE_BUCKET_APP_SOURCE)
     return _store
 
 

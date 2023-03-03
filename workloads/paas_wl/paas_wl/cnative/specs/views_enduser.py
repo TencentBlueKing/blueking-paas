@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import time
 
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import models
 from django.shortcuts import get_object_or_404
@@ -50,7 +51,6 @@ from paas_wl.cnative.specs.serializers import (
 )
 from paas_wl.cnative.specs.tasks import AppModelDeployStatusPoller, DeployStatusHandler
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
-from paas_wl.platform.auth.utils import username_to_id
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
@@ -110,7 +110,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = QueryDeploysSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         if operator := serializer.validated_data.get('operator'):
-            qs = qs.filter(operator=username_to_id(operator, settings.USER_TYPE))
+            qs = qs.filter(operator=user_id_encoder.encode(settings.USER_TYPE, operator))
 
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         return self.paginator.get_paginated_response(data=DeploySerializer(page, many=True).data)

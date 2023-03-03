@@ -52,7 +52,7 @@ def generate_slug_path(bp: BuildProcess):
 
 def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
     """generate all env vars needed for building"""
-    bucket = settings.BLOBSTORE_S3_BUCKET_NAME
+    bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'App' = bp.app
     cache_path = '%s/home/%s/cache' % (app.region, app.name)
@@ -96,10 +96,10 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
 
 def generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
     """generate all env vars needed for launching a build result."""
-    store = make_blob_store(bucket=settings.BLOBSTORE_S3_BUCKET_NAME)
+    store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
     object_key = os.path.join(slug_path, "slug.tgz")
     return {
-        'SLUG_URL': os.path.join(settings.BLOBSTORE_S3_BUCKET_NAME, object_key),
+        'SLUG_URL': os.path.join(settings.BLOBSTORE_BUCKET_APP_SOURCE, object_key),
         # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
         'SLUG_GET_URL': store.generate_presigned_url(
             # slug get url 签发尽可能长的时间, 避免应用长期不部署, 重新调度后无法运行。

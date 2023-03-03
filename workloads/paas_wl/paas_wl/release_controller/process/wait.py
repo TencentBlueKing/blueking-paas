@@ -27,7 +27,7 @@ from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, Pol
 from pydantic import BaseModel, validator
 
 from paas_wl.platform.applications.models.app import EngineApp
-from paas_wl.platform.external.client import get_plat_client
+from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.release_controller.process.events import ProcEventsProducer
 from paas_wl.release_controller.process.models import PlainProcess, condense_processes
 from paas_wl.release_controller.process.utils import ProcessesSnapshotStore
@@ -229,7 +229,7 @@ class UserInterruptedPolicy(AbortPolicy):
             return False
 
         try:
-            deployment = get_plat_client().retrieve_deployment(deployment_id=deployment_id)
+            deployment = get_local_plat_client().retrieve_deployment(deployment_id=deployment_id)
         except Exception:
             logger.warning('Deployment not exists for UserInterruptedPolicy, will not proceed.')
             return False

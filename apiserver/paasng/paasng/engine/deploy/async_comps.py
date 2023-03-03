@@ -84,7 +84,7 @@ class BuildProcessPoller(DeployPoller):
         logger.info("[%s] history events from redis fetched", self.params['deployment_id'])
 
         build_status = build_proc.status
-        build_id = str(build_proc.build_id)
+        build_id = str(build_proc.build_id) if build_proc.build_id else None
 
         status = PollingStatus.DOING
         if build_status in BuildStatus.get_finished_states():

@@ -23,7 +23,7 @@ from django.db import models
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import BuildProcess, EngineApp
-from paas_wl.resources.actions.delete import delete_app_resources
+from paas_wl.resources.actions.delete import delete_env_resources
 from paas_wl.workloads.processes.models import ProcessSpec
 from paasng.platform.modules.models import Module
 
@@ -54,7 +54,7 @@ def delete_module_related_res(module: Module) -> None:
 
         # Delete all resources in cluster, allow failure
         try:
-            delete_app_resources(wl_engine_app)
+            delete_env_resources(env)
         except Exception as e:
             logger.warning('Error deleting app cluster resources, app: %s, error: %s', wl_engine_app, e)
 

@@ -17,23 +17,18 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import asdict
 from typing import Dict, List, Union, cast
 
-from django.conf import settings
 from django.http.response import Http404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
-from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.display_blocks import ServicesInfo
-from paasng.engine.models.config_var import generate_builtin_env_vars
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
     get_contact_info,
@@ -42,20 +37,13 @@ from paasng.plat_admin.system.applications import (
 )
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
-    AppBasicSLZ,
     ContactInfo,
-    ModuleBasicSLZ,
-    ModuleEnvBasicSLZ,
-    QueryApplicationsSLZ,
     QueryUniApplicationsByID,
     QueryUniApplicationsByUserName,
     UniversalAppSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.modules.models import Module
-from paasng.publish.market.models import MarketConfig
-from paasng.publish.market.utils import MarketAvailableAddressHelper
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -218,101 +206,3 @@ class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         if svc is None:
             raise Http404("DB Service Not Found!")
         return svc
-
-
-class SysApplicationViewSet(viewsets.ViewSet):
-    """System application view sets"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def query(self, request):  # noqa: C901
-        """查询应用的模块、环境等信息"""
-        serializer = QueryApplicationsSLZ(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        if data['code']:
-            indexes = data['code']
-            apps_map = {app.code: app for app in Application.default_objects.filter(code__in=data['code'])}
-        elif data['uuid']:
-            indexes = data['uuid']
-            apps_map = {app.id: app for app in Application.default_objects.filter(id__in=data['uuid'])}
-        # Below conditions only allows a single query term
-        elif module_id := data.get('module_id'):
-            indexes = [module_id]
-            try:
-                apps_map = {module_id: Module.objects.get(pk=module_id).application}
-            except Module.DoesNotExist:
-                apps_map = {}
-        elif env_id := data.get('env_id'):
-            indexes = [env_id]
-            try:
-                apps_map = {env_id: ModuleEnvironment.objects.get(pk=env_id).application}
-            except ModuleEnvironment.DoesNotExist:
-                apps_map = {}
-        elif engine_app_id := data.get('engine_app_id'):
-            indexes = [engine_app_id]
-            try:
-                apps_map = {engine_app_id: ModuleEnvironment.objects.get(engine_app_id=engine_app_id).application}
-            except ModuleEnvironment.DoesNotExist:
-                apps_map = {}
-        else:
-            raise ValidationError('params invalid')
-
-        results: List[Union[None, Dict]] = []
-        for idx in indexes:
-            app = apps_map.get(idx)
-            if not app:
-                results.append(None)
-                continue
-
-            item = {'application': AppBasicSLZ(app).data}
-
-            modules = Module.objects.filter(application=app)
-            item['modules'] = ModuleBasicSLZ(modules, many=True).data
-
-            envs = ModuleEnvironment.objects.filter(module__in=modules)
-            item['envs'] = ModuleEnvBasicSLZ(envs, many=True).data
-            results.append(item)
-        return Response(results)
-
-
-class SysMarketViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
-    """System Market view sets"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def get_entrance(self, request, code):
-        """获取某应用的蓝鲸市场访问入口地址"""
-        application = self.get_application()
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-        entrance = MarketAvailableAddressHelper(market_config).access_entrance
-        if not entrance:
-            return Response({'entrance': None})
-        else:
-            return Response({'entrance': asdict(entrance)})
-
-
-class ApplicationAddressViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
-    """本视图提供应用访问地址相关的接口
-    TODO: Remove this ViewSet, move the algorithm to workloads
-    """
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def list_preallocated_addresses(self, request, code, module_name, environment):
-        """获取给应用预分配的子域名和子路径
-        Preallocated addresses contains sub-domains and sub-paths generated via platform's
-        algorithm. The algorithm depends on application's cluster configs, such as
-        "sub_path_domains" and "app_root_domains" properties in "ingress_config" field.
-        """
-        env = self.get_env_via_path()
-        subdomains = [d.as_dict() for d in AppDefaultDomains(env).domains]
-        subpaths = [d.as_dict() for d in AppDefaultSubpaths(env).subpaths]
-        return Response({"subdomains": subdomains, "subpaths": subpaths})
-
-
-class ApplicationBuiltinEnvViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
-    """本视图提供应用内置环境变量相关的接口"""
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def list_builtin_envs(self, request, code, module_name, environment):
-        engine_app = self.get_engine_app_via_path()
-        return Response({"data": generate_builtin_env_vars(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)})

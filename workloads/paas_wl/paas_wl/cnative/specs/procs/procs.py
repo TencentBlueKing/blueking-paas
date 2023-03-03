@@ -23,8 +23,8 @@ from attrs import define
 
 from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.workloads.processes.constants import AppEnvName, ProcessTargetStatus
+from paasng.platform.applications.models import ModuleEnvironment
 
 from .replicas import ReplicasReader
 
@@ -46,10 +46,9 @@ class CNativeProcSpec:
     max_replicas: int = DEFAULT_MAX_REPLICAS
 
 
-# TODO: 调整 env 的参数类型
-def get_proc_specs(env: ModuleEnv) -> List[CNativeProcSpec]:
+def get_proc_specs(env: ModuleEnvironment) -> List[CNativeProcSpec]:
     """Get process specifications for env"""
-    res = get_mres_from_cluster(env)  # type: ignore
+    res = get_mres_from_cluster(env)
     if not res:
         return []
     return parse_proc_specs(res, AppEnvName(env.environment))

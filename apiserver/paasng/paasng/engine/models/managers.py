@@ -27,7 +27,7 @@ from django.db.models import Model
 from django.utils.translation import gettext as _
 from pydantic import BaseModel
 
-from paas_wl.resources.tasks import archive_app
+from paas_wl.resources.tasks import archive_env
 from paasng.engine.constants import JobStatus, RuntimeType
 from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, OfflineOperationExistError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
@@ -101,8 +101,7 @@ class OfflineManager:
             sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
         )
 
-        engine_app = self.env.engine_app
-        archive_app(engine_app.to_wl_obj(), str(offline_operation.pk))
+        archive_env(self.env, str(offline_operation.pk))
         return offline_operation
 
 

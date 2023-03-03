@@ -60,20 +60,25 @@ RAW_PROMQL_TMPL = {
 BKMONITOR_PROMQL_TMPL = {
     'mem': {
         # 内存实际使用值
-        'current': 'sum by(container_name)(container_memory_working_set_bytes{'
-        'pod_name="%s",container_name!="POD",bcs_cluster_id="%s",bk_biz_id="%s"})',
+        'current': 'sum by(container_name)(container_memory_working_set_bytes{{'
+        'pod_name="{instance_name}",container_name!="POD",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}})',
         # 内存预留值
-        'request': 'kube_pod_container_resource_requests_memory_bytes{pod="%s",bcs_cluster_id="%s",bk_biz_id="%s"}',
+        'request': 'kube_pod_container_resource_requests_memory_bytes{{'
+        'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
         # 内存上限值
-        'limit': 'kube_pod_container_resource_limits_memory_bytes{pod="%s",bcs_cluster_id="%s",bk_biz_id="%s"}',
+        'limit': 'kube_pod_container_resource_limits_memory_bytes{{'
+        'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
     },
     'cpu': {
         # CPU 实际使用值，由于蓝鲸监控默认采样率较低，rate 时间窗口设置为 2m
-        'current': 'sum by(container_name)(rate(container_cpu_usage_seconds_total{'
-        'image!="",pod_name="%s",container_name!="POD",bcs_cluster_id="%s",bk_biz_id="%s"}[2m]))',
+        'current': 'sum by(container_name)(rate(container_cpu_usage_seconds_total{{'
+        'image!="",pod_name="{instance_name}",container_name!="POD",'
+        'bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}[2m]))',
         # CPU 预留值
-        'request': 'kube_pod_container_resource_requests_cpu_cores{pod="%s",bcs_cluster_id="%s",bk_biz_id="%s"}',
+        'request': 'kube_pod_container_resource_requests_cpu_cores{{'
+        'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
         # CPU 上限值
-        'limit': 'kube_pod_container_resource_limits_cpu_cores{pod="%s",bcs_cluster_id="%s",bk_biz_id="%s"}',
+        'limit': 'kube_pod_container_resource_limits_cpu_cores{{'
+        'pod="{instance_name}",bcs_cluster_id="{cluster_id}",bk_biz_id="{bk_biz_id}"}}',
     },
 }

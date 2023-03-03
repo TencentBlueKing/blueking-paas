@@ -59,8 +59,7 @@ class BkMonitorMetricClient:
         self, resource_type: MetricsResourceType, series_type: MetricsSeriesType, instance_name: str, cluster_id: str
     ) -> str:
         tmpl = self.query_tmpl_config[resource_type][series_type]
-        # NOTE: 蓝鲸监控 promql 不支持 {{}}，需要使用 {} 导致字符串 format 会出错，因此使用 % 来格式化字符串
-        return tmpl % (instance_name, cluster_id, self.bk_biz_id)
+        return tmpl.format(instance_name=instance_name, cluster_id=cluster_id, bk_biz_id=self.bk_biz_id)
 
     def _query_range(self, promql: str, start: str, end: str, step: str, container_name: str = "") -> List:
         """范围请求API

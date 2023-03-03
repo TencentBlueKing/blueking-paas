@@ -230,6 +230,11 @@ class Cluster(UuidAuditedModel):
         return self.annotations.get('bcs_cluster_id', None)
 
     @property
+    def bcs_project_id(self) -> Optional[str]:
+        """集群在 bcs 中注册的集群所属的项目 ID，若没有配置，则返回 None"""
+        return self.annotations.get('bcs_project_id', None)
+
+    @property
     def bk_biz_id(self) -> Optional[str]:
         """bcs 集群所在项目在 bkcc 中的业务 ID，若没有配置，则返回 None"""
         # 如果不是 bcs 集群，则 bkcc 业务 ID 不会生效

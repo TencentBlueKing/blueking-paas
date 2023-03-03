@@ -16,14 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework import viewsets
+import pytest
+from django_dynamic_fixture import G
 
-from .internal.client import VerifiedClientRequired
-from .internal.user import UserFromVerifiedClientAuthentication
+from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
+from paas_wl.monitoring.app_monitor.utils import build_monitor_port
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class BaseEndUserViewSet(viewsets.ViewSet):
-    """Base ViewSet class, provides services for end-user directly by consuming JWT token from
-    other services. Consider user in JWT payload as current logged-in user"""
+def test_build_monitor_port(bk_stag_wl_app):
+    assert build_monitor_port(bk_stag_wl_app) is None
 
-    authentication_classes = [VerifiedClientRequired, UserFromVerifiedClientAuthentication]
+    G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_wl_app)
+
+    monitor_port = build_monitor_port(bk_stag_wl_app)
+    assert monitor_port
+    assert monitor_port.port == 5000
+    assert monitor_port.target_port == 5001
+    assert monitor_port.protocol == "TCP"

@@ -29,6 +29,7 @@ from paasng.dev_resources.services.models import Service, ServiceCategory
 from paasng.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration, BaseServiceMigration
 from tests.conftest import skip_if_legacy_not_configured
+from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db]
 
@@ -61,6 +62,12 @@ def mock_get_service():
         yield
 
 
+@pytest.fixture(autouse=True)
+def setup_cluster():
+    with replace_cluster_service():
+        yield
+
+
 class TestBaseServiceMigration:
     def test_get_service(self, migration_instance_maker):
         assert migration_instance_maker(BaseServiceMigration).get_service() is dummy_service
@@ -87,7 +94,7 @@ class TestBaseRemoteServiceMigration:
         for env in bk_module.envs.all():
             assert RemoteServiceEngineAppAttachment.objects.filter(engine_app=env.engine_app).exists() is False
 
-    def test_bind_default_plan_as_fallback(self, bk_module, migration_instance_maker, mock_current_engine_client):
+    def test_bind_default_plan_as_fallback(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
         migration.bind_service_to_default_module()
 
@@ -108,7 +115,7 @@ class TestBaseRemoteServiceMigration:
             attachment = migration.get_engine_app_attachment(env)
             assert attachment.plan_id == uuid.UUID('{00000000-0000-0000-0000-000000000000}')
 
-    def test_rollback_service_instance(self, bk_module, migration_instance_maker, mock_current_engine_client):
+    def test_rollback_service_instance(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
         migration.bind_service_to_default_module()
         migration.bind_default_plan_as_fallback()

@@ -79,17 +79,6 @@ PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
 BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
 
 # ---------------
-# 对象存储配置
-# ---------------
-# 应用构建 SLUG 存放 bucket 名，默认无需修改，应和 apiserver 中 BLOBSTORE_BUCKET_APP_SOURCE 保持一致
-BLOBSTORE_S3_BUCKET_NAME = settings.get('BLOBSTORE_S3_BUCKET_NAME', default='bkpaas3-slug-packages')
-
-# 当配置该项时，使用 BK-Repo 而不是 S3 作为 BlobStore 存储
-BLOBSTORE_BKREPO_CONFIG = settings.get('BLOBSTORE_BKREPO_CONFIG')
-
-# 其他配置项如 BLOBSTORE_S3_ENDPOINT 与 apiserver 模块配置保持一致
-
-# ---------------
 # 服务导出配置
 # ---------------
 
@@ -276,6 +265,7 @@ FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localh
 FOR_TESTS_CA_DATA = settings.get('FOR_TESTS_CA_DATA', '')
 FOR_TESTS_CERT_DATA = settings.get('FOR_TESTS_CERT_DATA', '')
 FOR_TESTS_KEY_DATA = settings.get('FOR_TESTS_KEY_DATA', '')
+FOR_TESTS_TOKEN_VALUE = settings.get('FOR_TESTS_TOKEN_VALUE', '')
 FOR_TESTS_FORCE_DOMAIN = settings.get('FOR_TESTS_FORCE_DOMAIN', '')
 
 FOR_TESTS_CLUSTER_CONFIG = {
@@ -283,11 +273,16 @@ FOR_TESTS_CLUSTER_CONFIG = {
     "ca_data": FOR_TESTS_CA_DATA,
     "cert_data": FOR_TESTS_CERT_DATA,
     "key_data": FOR_TESTS_KEY_DATA,
+    "token_value": FOR_TESTS_TOKEN_VALUE,
     "force_domain": FOR_TESTS_FORCE_DOMAIN,
 }
 
-# 蓝鲸监控相关配置
-# 是否下发 ServiceMonitor 的总开关
-BKMONITOR_ENABLED = settings.get("BKMONITOR_ENABLED", False)
+# ----------------------
+# 指标，监控，告警等相关配置
+# ----------------------
+
+# 插件监控图表相关配置
+MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
+
 # 蓝鲸监控运维相关的额外配置
-BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])

@@ -26,14 +26,17 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
-from paas_wl.platform.applications.struct_models import get_env_by_engine_app_id
-from paas_wl.platform.auth.permissions import IsInternalAdmin
-from paas_wl.platform.system_api.views import SysAppRelatedViewSet
+from paas_wl.platform.applications.models.app import WLEngineApp
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.controllers import get_proc_mgr
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.workloads.processes.readers import instance_kmodel
 from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.platform.applications.models import ModuleEnvironment
+
+
+def get_env_by_wl_app(wl_app: WLEngineApp) -> ModuleEnvironment:
+    return ModuleEnvironment.objects.get(engine_app_id=wl_app.pk)
 
 
 class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewSet):
@@ -84,11 +87,16 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
         return Response(ProcessSpecBoundInfoSLZ(qs, many=True).data)
 
 
-class ProcessSpecManageViewSet(SysAppRelatedViewSet):
+class ProcessSpecManageViewSet(GenericViewSet):
     """ProcessSpec 管理API"""
 
     # NOTE: 由于 switch_process_plan 需要给后台调用, 因此需要通过 IsInternalAdmin 权限
-    permission_classes = [IsInternalAdmin | site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_app(self):
+        app = get_object_or_404(WLEngineApp, region=self.kwargs['region'], name=self.kwargs['name'])
+        self.check_object_permissions(self.request, app)
+        return app
 
     def switch_process_plan(self, request, region, name, process_type):
         engine_app = self.get_app()
@@ -123,22 +131,23 @@ class ProcessSpecManageViewSet(SysAppRelatedViewSet):
         engine_app = self.get_app()
         data = request.data
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=engine_app.pk, name=process_type)
-        ctl = get_proc_mgr(get_env_by_engine_app_id(engine_app.pk))
+        ctl = get_proc_mgr(get_env_by_wl_app(engine_app))
         if process_spec.target_replicas != int(data["target_replicas"]):
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ProcessInstanceViewSet(SysAppRelatedViewSet):
+class ProcessInstanceViewSet(GenericViewSet):
     exclude_from_schema = True
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_app(self):
+        app = get_object_or_404(WLEngineApp, region=self.kwargs['region'], name=self.kwargs['name'])
+        self.check_object_permissions(self.request, app)
+        return app
 
     def retrieve(self, request, region, name, process_type, instance_name):
         app = self.get_app()
         inst = instance_kmodel.get(app, instance_name)
         return Response(InstanceSerializer(inst).data)
-
-
-class AppResourceQuotaViewSet:
-    """TODO: 实现应用资源配额视图"""

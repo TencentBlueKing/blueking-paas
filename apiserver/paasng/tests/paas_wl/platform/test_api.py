@@ -1,12 +1,18 @@
 import pytest
 from django.conf import settings
 
-from paas_wl.platform.api import create_app_ignore_duplicated, get_metadata_by_env, update_metadata_by_env
+from paas_wl.platform.api import (
+    create_app_ignore_duplicated,
+    delete_wl_resources,
+    get_metadata_by_env,
+    update_metadata_by_env,
+)
+from paas_wl.platform.applications.models.app import WLEngineApp
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.django_db(databases=["workloads"], transaction=True)
+@pytest.mark.django_db(databases=["workloads"])
 def test_create_app_ignore_duplicated():
     info = create_app_ignore_duplicated(settings.FOR_TESTS_DEFAULT_REGION, 'foo-app', 'default')
     assert info.name == 'foo-app'
@@ -20,3 +26,9 @@ def test_metadata_funcs(bk_app, bk_stag_env, with_wl_apps):
     assert get_metadata_by_env(bk_stag_env).paas_app_code == bk_app.code
     update_metadata_by_env(bk_stag_env, {'paas_app_code': 'foo-updated'})
     assert get_metadata_by_env(bk_stag_env).paas_app_code == 'foo-updated'
+
+
+def test_delete_wl_resources(bk_stag_env, with_wl_apps):
+    assert WLEngineApp.objects.filter(pk=bk_stag_env.engine_app_id).exists()
+    delete_wl_resources(bk_stag_env)
+    assert not WLEngineApp.objects.filter(pk=bk_stag_env.engine_app_id).exists()

@@ -56,6 +56,11 @@ class PlatformMysqlProbe(MySQLProbe):
     config = transfer_django_db_settings(settings.DATABASES['default'])
 
 
+class WorkloadsMysqlProbe(MySQLProbe):
+    name = "platform-mysql"
+    config = transfer_django_db_settings(settings.DATABASES['workloads'])
+
+
 class ESBProbe(BKHttpProbe):
     name = 'esb'
     url = settings.COMPONENT_SYSTEM_HEALTHZ_URL

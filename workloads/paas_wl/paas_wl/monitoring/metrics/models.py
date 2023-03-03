@@ -20,9 +20,23 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generator, List, Optional
 
-from paas_wl.monitoring.metrics.clients import MetricClient, MetricQuery, MetricSeriesResult
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.monitoring.metrics.clients import (
+    BkMonitorMetricClient,
+    MetricClient,
+    MetricQuery,
+    MetricSeriesResult,
+    PrometheusMetricClient,
+)
 from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
+from paas_wl.monitoring.metrics.exceptions import AppInstancesNotFoundError, AppMetricNotSupportedError
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 
 if TYPE_CHECKING:
     from paas_wl.workloads.processes.models import Process
@@ -134,3 +148,42 @@ class ResourceMetricManager:
             )
 
         return all_instances_metrics
+
+
+def get_resource_metric_manager(app: WLEngineApp, process_type: str):
+    try:
+        cluster = get_cluster_by_app(app)
+    except ObjectDoesNotExist:
+        raise RuntimeError('no cluster can be found, query aborted')
+
+    if not cluster.bcs_cluster_id:
+        raise AppMetricNotSupportedError("cluster this process deployed isn't a bcs cluster, failed to get metrics")
+
+    # 不同的指标数据来源依赖配置不同，需要分别检查
+    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_MONITOR):
+        if not settings.ENABLE_BK_MONITOR:
+            raise AppMetricNotSupportedError('bkmonitor in this edition not enabled')
+        if not cluster.bk_biz_id:
+            raise AppMetricNotSupportedError("cluster this process deployed hasn't bkcc info, failed to get metrics")
+        metric_client = BkMonitorMetricClient(bk_biz_id=cluster.bk_biz_id)
+
+    else:
+        if not settings.MONITOR_CONFIG:
+            raise AppMetricNotSupportedError('MONITOR_CONFIG unset')
+        metric_client = PrometheusMetricClient(**settings.MONITOR_CONFIG["metrics"]["prometheus"])  # type: ignore
+
+    # 获取 EngineApp 对应的进程实例
+    try:
+        process = process_kmodel.get_by_type(app, process_type)
+        process.instances = instance_kmodel.list_by_process_type(app, process_type)
+    except Exception:
+        raise AppInstancesNotFoundError('failed to get process instances info')
+
+    if not process.instances:
+        raise AppInstancesNotFoundError("current process hasn't instances")
+
+    return ResourceMetricManager(
+        process=process,
+        metric_client=metric_client,
+        bcs_cluster_id=cluster.bcs_cluster_id,
+    )

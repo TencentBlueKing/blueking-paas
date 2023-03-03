@@ -114,11 +114,7 @@ class DftCustomDomainManager:
 
         env = ModuleEnvironment.objects.get(pk=instance.environment_id)
         try:
-            svc = ReplaceAppDomainService(
-                env,
-                instance.name,
-                instance.path_prefix,
-            )
+            svc = ReplaceAppDomainService(env, instance.name, instance.path_prefix)
             svc.replace_with(host, path_prefix, https_enabled)
         except ReplaceAppDomainFailed as e:
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))

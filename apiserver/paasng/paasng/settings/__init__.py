@@ -153,7 +153,6 @@ INSTALLED_APPS = [
     'paasng.platform.scheduler',
     'revproxy',
     # workloads apps
-    'paas_wl.platform.misc',
     'paas_wl.platform.applications',
     'paas_wl.cluster',
     'paas_wl.monitoring.metrics',

@@ -37,32 +37,32 @@ class EgressGatewayMigration(BaseMigration):
         application = self.context.app
         module = application.get_default_module()
         for env in module.get_envs():
-            wl_engine_app = env.engine_app.to_wl_obj()
+            engine_app = env.engine_app
             try:
-                controller_client.app_rcsbinding__create(wl_engine_app)
+                controller_client.app_rcsbinding__create(engine_app)
             except ObjectDoesNotExist:
                 self.add_log(
                     _("{env} 环境绑定出口IP异常, 详情: {detail}").format(
-                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=wl_engine_app.region)
+                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=engine_app.region)
                     )
                 )
             except IntegrityError:
-                self.add_log(_("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("不能重复绑定")))
+                self.add_log(_("{env} 环境绑定出口IP异常, 详情: 不能重复绑定").format(env=env.environment))
             except Exception:
-                self.add_log(_("{env} 环境绑定出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("未知错误")))
+                self.add_log(_("{env} 环境绑定出口IP异常").format(env=env.environment))
 
     def rollback(self):
         # 删除 Egress 记录
         application = self.context.app
         module = application.get_default_module()
         for env in module.get_envs():
-            wl_engine_app = env.engine_app.to_wl_obj()
+            engine_app = env.engine_app
             try:
-                controller_client.app_rcsbinding__destroy(wl_engine_app)
-            except ObjectDoesNotExist as e:
+                controller_client.app_rcsbinding__destroy(engine_app)
+            except ObjectDoesNotExist:
                 self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
             except Exception:
-                self.add_log(_("{env} 环境解绑出口IP异常, 详情: {detail}").format(env=env.environment, detail=_("未知错误")))
+                self.add_log(_("{env} 环境解绑出口IP异常").format(env=env.environment))
 
     def get_description(self):
         return _("绑定出口 IP ")

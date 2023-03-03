@@ -61,10 +61,6 @@ class RuntimeConfig:
 RuntimeConfigField = make_json_field("RuntimeConfigField", py_model=RuntimeConfig)
 
 
-class ConfigManager(models.Manager):
-    """Custom manager for Config model"""
-
-
 class Config(UuidAuditedModel):
     """App configs, includes env variables and resource limits"""
 
@@ -81,8 +77,6 @@ class Config(UuidAuditedModel):
     metadata = JSONField(null=True, blank=True)
     runtime: RuntimeConfig = RuntimeConfigField(default=RuntimeConfig)
     mount_log_to_host = models.BooleanField(default=True, help_text="Whether mount app logs to host")
-
-    objects = ConfigManager()
 
     class Meta:
         get_latest_by = 'created'

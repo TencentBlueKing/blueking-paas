@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding
 from paas_wl.platform.applications.models.app import EngineApp
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.utils.basic import make_subdict
 
@@ -76,12 +75,6 @@ def get_full_tolerations(app: EngineApp, config: Optional['Config'] = None) -> L
     cluster = get_cluster_by_app(app)
     results.extend(cluster.default_tolerations or [])
     return standardize_tolerations(results)
-
-
-def get_client_by_env(env: ModuleEnv) -> EnhancedApiClient:
-    """Get kubernetes client by environment object"""
-    app = EngineApp.objects.get_by_env(env)
-    return get_client_by_app(app)
 
 
 def get_client_by_app(app: EngineApp) -> EnhancedApiClient:

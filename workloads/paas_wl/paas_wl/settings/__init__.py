@@ -131,7 +131,6 @@ INSTALLED_APPS = [
     'bkpaas_auth',
     'drf_yasg',
     'django_prometheus',
-    'paas_wl.platform.misc',
     'paas_wl.platform.applications',
     'paas_wl.cluster',
     'paas_wl.monitoring.metrics',
@@ -584,7 +583,7 @@ if ENABLE_OTEL_TRACE:
 # 蓝鲸监控配置项
 # -----------------
 # 是否支持蓝鲸监控（下发 ServiceMonitor 的总开关）
-BKMONITOR_ENABLED = settings.get('BKMONITOR_ENABLED', False)
+ENABLE_BK_MONITOR = settings.get('BKMONITOR_ENABLED', False)
 # 蓝鲸监控运维相关的额外配置
 BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
 # 能否通过 APIGW 访问蓝鲸监控 API，要求该环境已注册

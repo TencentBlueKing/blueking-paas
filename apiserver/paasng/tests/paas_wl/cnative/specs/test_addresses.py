@@ -31,10 +31,10 @@ from tests.utils.mocks.engine import replace_cluster_service
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_save_addresses(bk_prod_env, bk_prod_engine_app, settings):
+def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
     settings.USE_LEGACY_SUB_PATH_PATTERN = False
-    assert AppDomain.objects.filter(app=bk_prod_engine_app).count() == 0
-    assert AppSubpath.objects.filter(app=bk_prod_engine_app).count() == 0
+    assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 0
+    assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 0
 
     def set_exposed_url_type(region_config):
         region_config["entrance_config"]["exposed_url_type"] = ExposedURLType.SUBDOMAIN
@@ -44,12 +44,12 @@ def test_save_addresses(bk_prod_env, bk_prod_engine_app, settings):
             'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}],
             'app_root_domains': [{"name": 'bkapps.example.com'}, {"name": 'bkapps.example2.com'}],
         }
-    ), override_region_configs(bk_prod_engine_app.region, set_exposed_url_type):
+    ), override_region_configs(bk_prod_wl_app.region, set_exposed_url_type):
         save_addresses(bk_prod_env)
     # 不同长度的子域名
-    assert AppDomain.objects.filter(app=bk_prod_engine_app).count() == 3 * 2
+    assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 3 * 2
     # 不同长度的子路径, 即使配置了多个 sub_path_domains 都只会是 3 条记录
-    assert AppSubpath.objects.filter(app=bk_prod_engine_app).count() == 3
+    assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 3
 
 
 @pytest.mark.auto_create_ns
@@ -62,13 +62,13 @@ class TestToDomain:
             ('x-foo.example.com', True, True),
         ],
     )
-    def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_engine_app):
+    def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_wl_app):
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_engine_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
         )
         d = AppDomain.objects.create(
-            app=bk_stag_engine_app,
+            app=bk_stag_wl_app,
             host=host,
             source=AppDomainSource.AUTO_GEN,
             https_enabled=https_enabled,
@@ -84,29 +84,27 @@ class TestToDomain:
 
 @pytest.mark.auto_create_ns
 class TestToSharedTLSDomain:
-    def test_normal(self, bk_stag_engine_app):
+    def test_normal(self, bk_stag_wl_app):
         d = MappingDomain(host='x-foo.example.com', pathPrefixList=['/'])
-        d = to_shared_tls_domain(d, bk_stag_engine_app)
+        d = to_shared_tls_domain(d, bk_stag_wl_app)
         assert d.tlsSecretName is None
 
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_engine_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
         )
-        d = to_shared_tls_domain(d, bk_stag_engine_app)
+        d = to_shared_tls_domain(d, bk_stag_wl_app)
         assert d.tlsSecretName is not None
         assert len(d.tlsSecretName) > 0
 
 
 class TestAddrResourceManager:
-    def test_integrated(self, bk_module, bk_stag_env, bk_stag_engine_app):
+    def test_integrated(self, bk_module, bk_stag_env, bk_stag_wl_app):
         # Create all types of domains
         # source type: subdomain
-        AppDomain.objects.create(
-            app=bk_stag_engine_app, host='foo-subdomain.example.com', source=AppDomainSource.AUTO_GEN
-        )
+        AppDomain.objects.create(app=bk_stag_wl_app, host='foo-subdomain.example.com', source=AppDomainSource.AUTO_GEN)
         # source type: subpath
-        AppSubpath.objects.create(app=bk_stag_engine_app, subpath='/foo-subpath/', source=AppSubpathSource.DEFAULT)
+        AppSubpath.objects.create(app=bk_stag_wl_app, subpath='/foo-subpath/', source=AppSubpathSource.DEFAULT)
         # source type: custom
         Domain.objects.create(
             name='foo-custom.example.com', path_prefix='/', module_id=bk_module.id, environment_id=bk_stag_env.id

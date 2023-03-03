@@ -24,8 +24,12 @@ from rest_framework.renderers import JSONRenderer
 
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.release import ApplicationReleaseMgr
+from paasng.engine.models import Deployment
+from paasng.engine.models.offline import OfflineOperation
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.applications.signals import module_environment_offline_success
 from paasng.platform.modules.models import Module
+from paasng.platform.operations.models import Operation
 
 
 class AppBasicSLZ(serializers.ModelSerializer):
@@ -116,3 +120,39 @@ class LocalPlatformSvcClient:
     def finish_release(self, deployment_id: str, status: str, error_detail: str):
         mgr = ApplicationReleaseMgr.from_deployment_id(deployment_id)
         mgr.callback_release(JobStatus(status), error_detail)
+
+    def finish_archive(self, operation_id: str, status: str, error_detail: str):
+        offline_op = OfflineOperation.objects.get(id=operation_id)
+        if status == JobStatus.SUCCESSFUL:
+            offline_op.set_successful()
+        else:
+            offline_op.set_failed(error_detail)
+
+        module_environment_offline_success.send(
+            sender=OfflineOperation, offline_instance=offline_op, environment=offline_op.app_environment.environment
+        )
+
+    def retrieve_deployment(self, deployment_id: str) -> Deployment:
+        return Deployment.objects.get(pk=deployment_id)
+
+    def create_operation_log(
+        self,
+        env: ModuleEnvironment,
+        operate_type: int,
+        operator: str,
+        extra_values: Optional[Dict] = None,
+    ):
+        """Create an operation log for application
+
+        :returns: None if creation succeeded
+        :raises: PlatClientRequestError
+        """
+        Operation.objects.create(
+            application=env.application,
+            type=operate_type,
+            user=operator,
+            region=env.application.region,
+            module_name=env.module.name,
+            source_object_id=str(env.id),
+            extra_values=extra_values,
+        )

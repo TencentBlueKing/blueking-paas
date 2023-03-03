@@ -91,6 +91,7 @@ class ErrorCodes:
     # 市场上架
     RELEASED_MARKET_CONDITION_NOT_MET = ErrorCode(_('未满足应用市场服务开启条件'))
     # 资源 Metrics
+    APP_METRICS_UNSUPPORTED = ErrorCode(_('应用资源 metrics 暂不支持'))
     CANNOT_FETCH_RESOURCE_METRICS = ErrorCode(_('无法获取应用资源 metrics'))
     # Monitor
     QUERY_ALERTS_FAILED = ErrorCode(_('查询告警失败'))

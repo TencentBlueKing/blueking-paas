@@ -20,13 +20,10 @@ import logging
 from typing import Dict
 
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from jsonfield import JSONField
 
 from paas_wl.platform.applications.constants import EngineAppType
 from paas_wl.platform.applications.models import UuidAuditedModel
-from paas_wl.platform.applications.models.config import Config
 from paas_wl.platform.applications.models.validators import validate_app_name, validate_app_structure
 from paas_wl.platform.applications.struct_models import ModuleEnv
 
@@ -89,27 +86,6 @@ class App(UuidAuditedModel):
         return f'<{self.name}, region: {self.region}, type: {self.type}>'
 
 
-def get_ns(env: ModuleEnv) -> str:
-    """Get namespace by env object, a shortcut function"""
-    engine_app = EngineApp.objects.get_by_env(env)
-    return engine_app.namespace
-
-
 # Alias names to distinguish from Platform's App(Application/BluekingApplication) model
 EngineApp = App
 WLEngineApp = App
-
-
-@receiver(post_save, sender=App)
-def on_app_created(sender, instance, created, *args, **kwargs):
-    """Do extra things when an app was created"""
-    if created:
-        create_initial_config(instance)
-
-
-def create_initial_config(app: App):
-    """Make sure the initial Config was created"""
-    try:
-        app.config_set.latest()
-    except Config.DoesNotExist:
-        Config.objects.create(app=app, owner=app.owner, runtime={})

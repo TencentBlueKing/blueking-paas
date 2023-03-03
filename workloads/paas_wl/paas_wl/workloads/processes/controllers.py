@@ -62,8 +62,8 @@ class AppProcessesController:
     Only support default applications.
     """
 
-    def __init__(self, env: ModuleEnv):
-        self.app = EngineApp.objects.get_by_env(env)
+    def __init__(self, env: ModuleEnvironment):
+        self.app = env.wl_engine_app
         self.client = get_scheduler_client_by_app(self.app)
 
     def start(self, proc_type: str):
@@ -168,7 +168,7 @@ class CNativeProcController:
     # TODO: Replace it with more concise solutions
     HARD_LIMIT_COUNT = 10
 
-    def __init__(self, env: ModuleEnv):
+    def __init__(self, env: ModuleEnvironment):
         self.env = env
 
     def start(self, proc_type: str):
@@ -197,7 +197,7 @@ class CNativeProcController:
             raise ProcessNotFound(str(e))
 
 
-def get_proc_mgr(env: ModuleEnv) -> ProcController:
+def get_proc_mgr(env: ModuleEnvironment) -> ProcController:
     """Get a process controller by env"""
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return CNativeProcController(env)

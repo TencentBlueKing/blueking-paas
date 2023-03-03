@@ -35,6 +35,15 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.monitoring.metrics.exceptions import (
+    AppInstancesNotFoundError,
+    AppMetricNotSupportedError,
+    RequestMetricBackendError,
+)
+from paas_wl.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
+from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+from paas_wl.platform.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
+from paas_wl.release_controller.api import get_latest_build_id
 from paasng.accessories.iam.helpers import fetch_user_roles
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accessories.smart_advisor.utils import get_failure_hint
@@ -42,14 +51,12 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, JobStatus, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
 from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.exceptions import BadResponse
-from paasng.engine.controller.state import controller_client
 from paasng.engine.deploy.infras import DeploymentCoordinator
 from paasng.engine.deploy.preparations import initialize_deployment
 from paasng.engine.deploy.protections import ModuleEnvDeployInspector
-from paasng.engine.deploy.release import ApplicationReleaseMgr, create_release
+from paasng.engine.deploy.release import create_release
 from paasng.engine.deploy.runner import DeployTaskRunner
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
 from paasng.engine.models.config_var import (
@@ -95,13 +102,11 @@ from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import AppEnvironment, AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.signals import module_environment_offline_success
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.models import Module
 from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url, get_preallocated_url
-from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
 
@@ -215,10 +220,10 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             application_envs = module.envs.filter(environment=environment)
 
         for application_env in application_envs:
-            engine_app = application_env.engine_app
             try:
-                build_id = engine_app.get_latest_build()['uuid']
-                create_release(application_env, build_id)
+                build_id = get_latest_build_id(application_env)
+                if build_id:
+                    create_release(application_env, str(build_id))
             except Exception:
                 raise error_codes.CANNOT_DEPLOY_APP.f(_(u"服务异常"))
 
@@ -685,50 +690,36 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(query_serializer=ResourceMetricsSLZ)
     def list(self, request, code, module_name, environment):
         """获取 instance metrics"""
-        engine_app = self.get_engine_app_via_path()
+        engine_app = self.get_engine_app_via_path().to_wl_obj()
         serializer = ResourceMetricsSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        # request params
         params = {
-            "region": engine_app.region,
-            "app_name": engine_app.name,
-            "process_type": data['process_type'],
-            "metric_type": data.get('metric_type', '__all__'),
+            'engine_app': engine_app,
+            'process_type': data['process_type'],
+            'query_metrics': data['query_metrics'],
+            'time_range': MetricSmartTimeRange.from_request_data(data),
         }
-
-        # default min interval of metrics is 15s
-        # get step automatically instead of choosing by user
-        if data.get('time_range_str'):
-            params['time_range_str'] = data.get('time_range_str')
-            try:
-                params['step'] = calculate_gap_seconds_interval(
-                    get_time_delta(data.get('time_range_str')).total_seconds()
-                )
-            except ValueError as e:
-                raise error_codes.CANNOT_FETCH_RESOURCE_METRICS.f(str(e))
-        else:
-            params['start_time'] = data.get('start_time')
-            params['end_time'] = data.get('end_time')
-            params['step'] = calculate_gap_seconds_interval(
-                (
-                    self._format_datetime(data.get('end_time')) - self._format_datetime(data.get('start_time'))
-                ).total_seconds()
-            )
 
         if data.get('instance_name'):
             params['instance_name'] = data['instance_name']
-            engine_method = 'app_proc_metrics__list'
+            get_metrics_method = list_app_proc_metrics
+            ResultSLZ = ResourceMetricsResultSerializer
         else:
-            engine_method = 'app_proc_all_metrics__list'
+            get_metrics_method = list_app_proc_all_metrics  # type: ignore
+            ResultSLZ = InstanceMetricsResultSerializer
 
         try:
-            result = getattr(controller_client, engine_method)(**params)
-        except BadResponse as e:
+            result = get_metrics_method(**params)
+        except RequestMetricBackendError as e:
             raise error_codes.CANNOT_FETCH_RESOURCE_METRICS.f(str(e))
+        except AppInstancesNotFoundError as e:
+            raise error_codes.CANNOT_FETCH_RESOURCE_METRICS.f(str(e))
+        except AppMetricNotSupportedError as e:
+            raise error_codes.APP_METRICS_UNSUPPORTED.f(str(e))
 
-        return Response(data={"result": result})
+        return Response(data={'result': ResultSLZ(instance=result, many=True).data})
 
 
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -798,39 +789,6 @@ def _get_deployment(module: Module, uuid: str) -> Deployment:
             _("模块 {module_name} 下没有 id 为 {id} 的部署记录"), module_name=module.name, id=uuid
         )
     return deployment
-
-
-class SysWorkloadsCallbackViewSet(viewsets.ViewSet):
-    """The ViewSet for handling workloads callback for release/offline and so on."""
-
-    def finish_release(self, request):
-        data = request.data
-        mgr = ApplicationReleaseMgr.from_deployment_id(data['deployment_id'])
-        mgr.callback_release(JobStatus(data["status"]), data["error_detail"])
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def finish_archive(self, request):
-        data = request.data
-        offline_op = OfflineOperation.objects.get(id=data['operation_id'])
-        archive_status = JobStatus(data["status"])
-        message = data.get("error_detail", '')
-
-        if archive_status == JobStatus.SUCCESSFUL:
-            offline_op.set_successful()
-        else:
-            offline_op.set_failed(message)
-
-        module_environment_offline_success.send(
-            sender=OfflineOperation, offline_instance=offline_op, environment=offline_op.app_environment.environment
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class SysDeploymentViewSet(viewsets.ReadOnlyModelViewSet):
-    """应用部署相关的 Sys API"""
-
-    queryset = Deployment.objects.all()
-    serializer_class = DeploymentSLZ
 
 
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

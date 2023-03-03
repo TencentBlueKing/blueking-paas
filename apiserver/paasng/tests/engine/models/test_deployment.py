@@ -43,9 +43,9 @@ class TestInterruptDeployment:
             deployment.build_process_id = str(uuid.uuid4().hex)
             deployment.save()
 
-        with mock.patch('paasng.engine.models.deployment.controller_client') as mocked_client:
+        with mock.patch('paasng.engine.models.deployment.interrupt_build_proc') as mocked_interrupt:
             interrupt_deployment(deployment, bk_user)
-            assert mocked_client.interrupt_build_process.called is engine_called
+            assert mocked_interrupt.called is engine_called
 
     def test_failed_incorrect_user(self, bk_module):
         deployment = create_fake_deployment(bk_module)

@@ -2092,5 +2092,8 @@ export default {
   '已终止当前的发布流程': 'The current publishing process has been terminated',
   '代码来源': 'Code source',
   '蓝鲸可视化平台推送的源码包': 'LessCode',
-  '应用未设置访问路径': 'Application does not set access path'
+  '应用未设置访问路径': 'Application does not set access path',
+  '数据获取异常': 'Data acquisition exception',
+  '搜索结果为空': 'The search result is empty',
+  '前端组件库': 'Web components'
 };

@@ -23,3 +23,6 @@ class ApplicationsAppConfig(AppConfig):
     name = 'paas_wl.platform.applications'
     # Change label for backward compatibility
     label = 'api'
+
+    def ready(self):
+        from . import handlers  # noqa

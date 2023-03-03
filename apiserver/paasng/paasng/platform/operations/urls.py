@@ -32,13 +32,3 @@ urlpatterns = [
         name='api.bkapps.application.operations',
     ),
 ]
-
-# System APIs
-
-urlpatterns += [
-    re_path(
-        r'^sys/api/operations/',
-        views.SysOperationsViewSet.as_view({'post': 'create'}),
-        name='sys_api.operations',
-    ),
-]

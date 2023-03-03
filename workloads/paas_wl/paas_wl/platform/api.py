@@ -79,16 +79,15 @@ def delete_wl_resources(env: ModuleEnvironment):
 
     :param env: Environment object.
     """
-    from paas_wl.resources.actions.delete import delete_app_resources
+    from paas_wl.resources.actions.delete import delete_env_resources
 
-    wl_app = env.engine_app.to_wl_obj()
-    delete_app_resources(wl_app)
+    delete_env_resources(env)
 
+    wl_app = env.wl_engine_app
     # Delete some related records manually. Because during API migration, those related data
     # was stored in another database and the `Foreignkey` mechanism can't handle this situation.
     # TODO: Remove below lines when data was fully migrated
     ProcessSpec.objects.filter(engine_app_id=wl_app.pk).delete()
-
     wl_app.delete()
 
 

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.monitoring.probe.base import ProbeSet
 
-from paasng.monitoring.healthz.probes import PlatformMysqlProbe
+from paasng.monitoring.healthz.probes import PlatformMysqlProbe, WorkloadsMysqlProbe
 
 
 class MySQLAvailableMetric:
@@ -28,5 +28,5 @@ class MySQLAvailableMetric:
 
     @classmethod
     def calc_value(cls) -> bool:
-        probe_set = ProbeSet([PlatformMysqlProbe])
+        probe_set = ProbeSet([PlatformMysqlProbe, WorkloadsMysqlProbe])
         return not probe_set.examination().is_death

@@ -22,7 +22,6 @@ from typing import Dict, Optional
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
-from paas_wl.platform.applications.models.app import EngineApp
 from paas_wl.platform.applications.models.release import Release
 from paas_wl.release_controller.hooks.models import Command
 from paas_wl.release_controller.process.callbacks import ArchiveResultHandler, ReleaseResultHandler
@@ -32,6 +31,7 @@ from paas_wl.resources.actions.deploy import AppDeploy
 from paas_wl.resources.actions.exec import AppCommandExecutor
 from paas_wl.utils.redisdb import get_stream_channel_redis
 from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +60,12 @@ def release_app(
         )
 
 
-def archive_app(app: EngineApp, operation_id: str):
+def archive_env(env: ModuleEnvironment, operation_id: str):
     """stop all processes of the app"""
-    ArchiveOperationController(engine_app=app, operation_id=operation_id).start()
+    ArchiveOperationController(env=env, operation_id=operation_id).start()
 
     wait_for_all_stopped(
-        engine_app=app,
+        engine_app=env.wl_engine_app,
         result_handler=ArchiveResultHandler,
         extra_params={"operation_id": operation_id},
     )

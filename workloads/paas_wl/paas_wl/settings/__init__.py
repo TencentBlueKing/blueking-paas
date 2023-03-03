@@ -131,7 +131,6 @@ INSTALLED_APPS = [
     'bkpaas_auth',
     'drf_yasg',
     'django_prometheus',
-    'paas_wl.platform.misc',
     'paas_wl.platform.applications',
     'paas_wl.cluster',
     'paas_wl.monitoring.metrics',

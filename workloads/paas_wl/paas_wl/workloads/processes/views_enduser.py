@@ -25,15 +25,13 @@ from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.constants import AppOperationType, EngineAppType
 from paas_wl.platform.applications.models import EngineApp
 from paas_wl.platform.applications.permissions import AppAction, application_perm_class
-from paas_wl.platform.applications.views import ApplicationCodeInPathMixin
-from paas_wl.platform.auth.views import BaseEndUserViewSet
-from paas_wl.platform.external.client import get_plat_client
-from paas_wl.platform.external.exceptions import PlatClientRequestError
+from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.platform.system_api.serializers import ProcExtraInfoSLZ, ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
@@ -52,11 +50,13 @@ from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.watch import watch_process_events
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
 
-class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     _operation_interval: datetime.timedelta = datetime.timedelta(seconds=3)
@@ -68,12 +68,12 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        module_env = self.get_module_env_via_path()
+        module_env = self.get_env_via_path()
         if module_env.is_offlined:
             logger.warning("Unable to update process, environment %s has gone offline.", module_env)
             raise error_codes.CANNOT_OPERATE_PROCESS.f('环境已下架')
 
-        engine_app = self.get_engine_app_via_path()
+        engine_app = self.get_engine_app_via_path().to_wl_obj()
         process_type = data["process_type"]
         operate_type = data["operate_type"]
         target_replicas = data.get("target_replicas")
@@ -88,16 +88,13 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         op_type = self.get_logging_operate_type(operate_type)
         if op_type:
             try:
-                module = self.get_module_via_path()
-                get_plat_client().create_operation_log(
-                    application_id=str(module.application_id),
+                get_local_plat_client().create_operation_log(
+                    env=module_env,
                     operate_type=op_type,
                     operator=request.user.pk,
-                    source_object_id=str(module_env.id),
-                    module_name=module.name,
                     extra_values={"process_type": process_type, "env_name": module_env.environment},
                 )
-            except PlatClientRequestError:
+            except Exception:
                 logger.exception('Error creating app operation log')
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -107,7 +104,13 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
         """Get the type of application operation"""
         return {'start': AppOperationType.PROCESS_START, 'stop': AppOperationType.PROCESS_STOP}.get(type_, None)
 
-    def _perform_update(self, module_env, operate_type: str, process_type: str, target_replicas: Optional[int] = None):
+    def _perform_update(
+        self,
+        module_env: ModuleEnvironment,
+        operate_type: str,
+        process_type: str,
+        target_replicas: Optional[int] = None,
+    ):
         ctl = get_proc_mgr(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
@@ -125,7 +128,7 @@ class ProcessesViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
 
-class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
+class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -134,8 +137,8 @@ class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
     def list(self, request, code, module_name, environment):
         """获取当前进程与进程实例，支持通过 release_id 参数过滤结果"""
-        env = self.get_module_env_via_path()
-        engine_app = self.get_engine_app_via_path()
+        env = self.get_env_via_path()
+        engine_app = self.get_engine_app_via_path().to_wl_obj()
         serializer = ListProcessesSLZ(data=request.query_params, context={'engine_app': engine_app})
         serializer.is_valid(raise_exception=True)
 
@@ -152,7 +155,7 @@ class ListAndWatchProcsViewSet(BaseEndUserViewSet, ApplicationCodeInPathMixin):
 
     def watch(self, request, code, module_name, environment):
         """实时监听进程与进程实例变动情况"""
-        engine_app = self.get_engine_app_via_path()
+        engine_app = self.get_engine_app_via_path().to_wl_obj()
         serializer = WatchProcessesSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

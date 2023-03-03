@@ -51,10 +51,11 @@ ALLOWED_PATH_PATTERNS = (
 urlpatterns = [
     # 为了方便统计已迁移的接口和保持接口地址不变, apiserver 重新实现的 workloads 下的 enduser view 注册到这里
     # TODO: 在 workloads 项目代码完全迁移后, 路由重新注册到各自的 urls.py
-    re_path("^api/cnative/specs/", include("paas_wl.cnative.specs.urls_enduser")),
+    re_path(r"^api/scheduling/", include("paas_wl.networking.egress.urls_enduser")),
     re_path("^api/services/", include("paas_wl.networking.ingress.urls_enduser")),
-    re_path(r'^api/scheduling/', include('paas_wl.networking.egress.urls_enduser')),
-    re_path(r'^api/credentials/', include('paas_wl.workloads.images.urls_enduser')),
+    re_path(r"^api/processes/", include("paas_wl.workloads.processes.urls_enduser")),
+    re_path("^api/cnative/specs/", include("paas_wl.cnative.specs.urls_enduser")),
+    re_path(r"^api/credentials/", include("paas_wl.workloads.images.urls_enduser")),
     re_path(r"", include("paas_wl.admin.urls")),
 ]
 

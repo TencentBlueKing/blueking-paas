@@ -32,6 +32,9 @@
           @select-all="allHandlerChange"
           @row-click="rowClick"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column
             type="expand"
             width="40"

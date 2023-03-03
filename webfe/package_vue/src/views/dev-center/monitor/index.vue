@@ -119,6 +119,9 @@
                   :outer-border="false"
                   :header-border="false"
                 >
+                  <div slot="empty">
+                    <table-empty empty />
+                  </div>
                   <bk-table-column
                     :label="$t('告警模块')"
                     width="180"
@@ -165,12 +168,12 @@
         </template>
         <template v-if="!isLoading && !curPageData.length">
           <div class="ps-no-result">
-            <div class="text">
-              <p>
-                <i class="paasng-icon paasng-empty" />
-              </p>
-              <p> {{ $t('暂无数据') }} </p>
-            </div>
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMonitorList"
+              @clear-filter="clearFilterKey"
+            />
           </div>
         </template>
       </div>
@@ -315,7 +318,11 @@
                 },
                 timerDisplay: this.$t('最近1天'),
                 isDatePickerOpen: false,
-                curDateType: 'custom'
+                curDateType: 'custom',
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         watch: {
@@ -509,6 +516,7 @@
                 }
 
                 this.curPageData = this.curSearchData.slice(startIndex, endIndex);
+                this.updateTableEmptyConfig();
             },
 
             async fetchMonitorList (page = 1) {
@@ -527,7 +535,10 @@
                     this.dataList.splice(0, this.dataList.length, ...(res.results || []));
                     this.initPageConf();
                     this.curPageData = this.getDataByPage(this.pageConf.current);
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -535,6 +546,14 @@
                 } finally {
                     this.isLoading = false;
                 }
+            },
+
+            clearFilterKey () {
+                this.filterKey = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.filterKey;
             }
         }
     };

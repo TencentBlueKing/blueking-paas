@@ -227,10 +227,10 @@
               data-test-id="developer_list_empty"
             >
               <div class="ps-no-result">
-                <div class="text">
-                  <p><i class="paasng-icon paasng-empty" /></p>
-                  <p> {{ $t('暂无应用') }} </p>
-                </div>
+                <table-empty
+                  :empty-title="$t('暂无应用')"
+                  empty
+                />
               </div>
             </div>
             <router-link
@@ -277,10 +277,7 @@
                     class="ps-no-result"
                     style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
                   >
-                    <div class="text">
-                      <p><i class="paasng-icon paasng-empty" /></p>
-                      <p> {{ $t('暂无数据') }} </p>
-                    </div>
+                    <table-empty empty />
                   </div>
                 </div>
               </paas-content-loader>
@@ -301,10 +298,7 @@
                     class="ps-no-result"
                     style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
                   >
-                    <div class="text">
-                      <p><i class="paasng-icon paasng-empty" /></p>
-                      <p> {{ $t('暂无数据') }} </p>
-                    </div>
+                    <table-empty empty />
                   </div>
                 </div>
               </paas-content-loader>

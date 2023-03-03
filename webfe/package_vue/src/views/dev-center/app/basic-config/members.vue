@@ -40,6 +40,14 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMemberList"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
           <bk-table-column :label="$t('成员姓名')">
             <template slot-scope="props">
               <span
@@ -351,7 +359,11 @@
                 currentBackup: 1,
                 enableToAddRole: false,
                 keyword: '',
-                memberListClone: []
+                memberListClone: [],
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -434,8 +446,11 @@
                     this.memberList.splice(0, this.memberList.length, ...(res.results || []));
 
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
                     this.hasPerm = false;
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -655,6 +670,7 @@
                         const end = start + this.pagination.limit;
                         this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
                     }
+                    this.updateTableEmptyConfig();
                 } else {
                     this.fetchMemberList();
                 }
@@ -672,6 +688,12 @@
                     }
                 }
                 return userPerms;
+            },
+            clearFilterKey () {
+                this.keyword = '';
+            },
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

@@ -60,6 +60,14 @@
       @page-limit-change="handlePageLimitChange"
       @page-change="handlePageChange"
     >
+      <div slot="empty">
+        <table-empty
+          :keyword="tableEmptyConf.keyword"
+          :abnormal="tableEmptyConf.isAbnormal"
+          @reacquire="getDeployHistory"
+          @clear-filter="clearFilter"
+        />
+      </div>
       <bk-table-column
         :label="$t('部署环境')"
         prop="name"
@@ -249,7 +257,11 @@
                     title: '',
                     isShow: false
                 },
-                errorTips: {}
+                errorTips: {},
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -411,7 +423,10 @@
                             this.handleShowLog(recordItem);
                         }
                     }
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || e.message
@@ -518,6 +533,20 @@
                 } finally {
                     this.isLogLoading = false;
                 }
+            },
+
+            clearFilter () {
+                this.choosedEnv = 'all';
+                this.personnelSelectorList = [];
+                this.getDeployHistory();
+            },
+
+            updateTableEmptyConfig () {
+                if (this.personnelSelectorList.length || this.choosedEnv !== 'all') {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

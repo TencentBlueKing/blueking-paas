@@ -28,6 +28,9 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column :label="$t('名称')">
             <template slot-scope="props">
               {{ props.row.name || '--' }}

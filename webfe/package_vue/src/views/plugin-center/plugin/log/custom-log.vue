@@ -69,10 +69,7 @@
             class="bk-table-empty-block"
             style="margin-top: -40px;"
           >
-            <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
-            </span>
+            <table-empty empty />
           </div>
         </template>
       </div>
@@ -246,12 +243,15 @@
                   <td :colspan="fieldSelectedList.length + 2">
                     <div class="ps-no-result">
                       <div class="text">
-                        <p>
-                          <i class="paasng-icon paasng-empty" />
-                        </p>
-                        <p> {{ $t('暂无数据') }} </p>
+                        <table-empty
+                          :is-content-text="false"
+                          :keyword="tableEmptyConf.keyword"
+                          :abnormal="tableEmptyConf.isAbnormal"
+                          @reacquire="getPluginLogList"
+                          @clear-filter="clearFilterKey"
+                        />
                         <section class="search-tips">
-                          <p style="color: #c4c6cc;">
+                          <p style="color: #63656E;">
                             {{ $t('您可以按照以下方式优化查询结果：') }}
                           </p>
                           <p
@@ -381,7 +381,11 @@
                         link: this.$t('为什么日志查询为空'),
                         url: this.GLOBAL.DOC.LOG_QUERY_EMPTY
                     }
-                ]
+                ],
+                tableEmptyConf: {
+                    isAbnormal: false,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -764,7 +768,10 @@
 
                     this.pagination.count = res.total;
                     this.pagination.current = page;
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (res) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
@@ -927,6 +934,14 @@
 
             formatTime (time) {
                 return time ? formatDate(time * 1000) : '--';
+            },
+
+            clearFilterKey () {
+                this.$refs.customLogFilter && this.$refs.customLogFilter.clearKeyword();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.logParams.keyword;
             }
         }
     };

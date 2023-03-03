@@ -45,6 +45,9 @@
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
       >
+        <div slot="empty">
+          <table-empty empty />
+        </div>
         <bk-table-column
           :label="$t('版本')"
           prop="name"
@@ -162,14 +165,7 @@
                 v-else
                 class="exception-wrapper"
               >
-                <img
-                  class="img-exception"
-                  src="/static/images/empty.png"
-                  alt=""
-                >
-                <p class="text-exception">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </bk-tab-panel>
             <bk-tab-panel

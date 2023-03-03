@@ -22,6 +22,9 @@
             @page-change="pageChange"
             @page-limit-change="limitChange"
           >
+            <div slot="empty">
+              <table-empty empty />
+            </div>
             <bk-table-column :label="$t('检查版本')">
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.deployment.repo.revision || ''">{{ row.deployment.repo.revision.substring(0, 8) || '--' }}</span>

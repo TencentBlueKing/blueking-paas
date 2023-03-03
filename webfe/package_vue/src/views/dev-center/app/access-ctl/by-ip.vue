@@ -104,6 +104,14 @@
             @select="handlerChange"
             @select-all="handlerAllChange"
           >
+            <div slot="empty">
+              <table-empty
+                :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="fetchIpList(true)"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="selection"
               width="60"
@@ -628,7 +636,11 @@
                     loading: false
                 },
                 curFile: {},
-                isFileTypeError: false
+                isFileTypeError: false,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -1197,7 +1209,10 @@
                     const res = await this.$store.dispatch('ip/getIpList', params);
                     this.pagination.count = res.count;
                     this.IPPermissionList.splice(0, this.IPPermissionList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -1448,6 +1463,14 @@
                 this.$refs.moduleRef && this.$refs.moduleRef.setCurModule(this.curModule);
                 this.checkIPPermissin();
                 this.fetchIpList(true);
+            },
+
+            clearFilterKey () {
+                this.keyword = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

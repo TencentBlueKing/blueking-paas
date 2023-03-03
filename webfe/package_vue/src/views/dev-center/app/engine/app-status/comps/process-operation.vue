@@ -14,10 +14,7 @@
             v-if="allProcesses.length === 0"
             class="ps-no-result"
           >
-            <div class="text">
-              <p><i class="paasng-icon paasng-empty" /></p>
-              <p> {{ $t('暂无数据') }} </p>
-            </div>
+            <table-empty empty />
           </div>
           <div
             v-for="(process, index) in allProcesses"
@@ -201,15 +198,13 @@
                       </tr>
                     </template>
                     <template v-if="!curProcess || !curProcess.instances.length">
-                      <tr>
+                      <tr class="process-empty">
                         <td colspan="4">
                           <div class="ps-no-result">
-                            <div class="text">
-                              <p>
-                                <i class="paasng-icon paasng-empty" />
-                              </p>
-                              <p> {{ $t('暂无实例') }} </p>
-                            </div>
+                            <table-empty
+                              :empty-title="$t('暂无实例')"
+                              empty
+                            />
                           </div>
                         </td>
                       </tr>
@@ -2644,5 +2639,8 @@
         &.refresh {
             width: 28px;
         }
+    }
+    .process-empty {
+        height: 280px;
     }
 </style>

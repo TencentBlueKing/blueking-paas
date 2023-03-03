@@ -199,10 +199,7 @@
                 v-if="!isProcessDataReady && !isChartLoading"
                 class="ps-no-result"
               >
-                <div class="text">
-                  <p><i class="paasng-icon paasng-empty" /></p>
-                  <p> {{ $t('暂无数据') }} </p>
-                </div>
+                <table-empty empty />
               </div>
             </div>
           </div>
@@ -395,12 +392,7 @@
                 <li />
               </template>
               <template v-else>
-                <div class="ps-no-result">
-                  <div class="text">
-                    <p><i class="paasng-icon paasng-empty" /></p>
-                    <p> {{ $t('暂无数据') }} </p>
-                  </div>
-                </div>
+                <table-empty empty />
               </template>
             </ul>
           </div>

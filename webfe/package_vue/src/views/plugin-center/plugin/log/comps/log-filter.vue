@@ -113,7 +113,7 @@
       <div :class="['log-search-input-wrapper', { 'mr10': isShowExample }]">
         <bk-input
           v-model="keyword"
-          :placeholder="$t('请输入过滤关键字，按 Enter 键搜索')"
+          :placeholder="$t('请输入过滤关键字33，按 Enter 键搜索')"
           :clearable="true"
           :right-icon="'paasng-icon paasng-search'"
           @focus="handleFocus"
@@ -528,6 +528,7 @@
             },
 
             handleRemove (payload, index) {
+                console.log('icon');
                 this.searchHistoryDisplayList.splice(index, 1);
                 const curIndex = this.searchHistoryList.findIndex(item => item === payload);
                 this.searchHistoryList.splice(curIndex, 1);
@@ -669,6 +670,10 @@
 
             handleClickOutSide () {
                 this.isAutoPanelShow = false;
+            },
+
+            clearKeyword () {
+                this.keyword = '';
             }
         }
     };

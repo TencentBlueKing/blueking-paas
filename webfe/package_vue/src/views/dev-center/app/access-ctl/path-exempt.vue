@@ -58,6 +58,14 @@
             @select="handlerChange"
             @select-all="handlerAllChange"
           >
+            <div slot="empty">
+              <table-empty
+                :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="fetchPathExemptList(true)"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="selection"
               width="60"
@@ -284,8 +292,11 @@
                     visiable: false,
                     isLoading: false
                 },
-
-                isUseUserPermission: true
+                isUseUserPermission: true,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -479,7 +490,10 @@
                     const res = await this.$store.dispatch('user/getExemptList', params);
                     this.pagination.count = res.count;
                     this.userPermissionList.splice(0, this.userPermissionList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -655,6 +669,14 @@
                         this.fetchPathExemptList();
                     }
                 }
+            },
+
+            clearFilterKey () {
+                this.keyword = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

@@ -1933,7 +1933,7 @@ export default {
   '插件类型': 'Plugin type',
   '版本管理': 'Versions',
   '审批详情': 'Approval Details',
-  '可以尝试调整关键词 或': 'Try adjusting keywords or',
+  '可以尝试 调整关键词 或': 'Try adjusting keywords or',
   '清空搜索条件': 'Clear search criteria',
   '输入插件ID、插件名称，按Enter搜索': 'Enter the plug-in ID and name, and press Enter to search',
   '确定删除插件': 'OK to delete plugin',
@@ -2092,5 +2092,8 @@ export default {
   '已终止当前的发布流程': 'The current publishing process has been terminated',
   '代码来源': 'Code source',
   '蓝鲸可视化平台推送的源码包': 'LessCode',
-  '应用未设置访问路径': 'Application does not set access path'
+  '应用未设置访问路径': 'Application does not set access path',
+  '数据获取异常': 'Data acquisition exception',
+  '搜索结果为空': 'The search result is empty',
+  '前端组件库': 'Web components'
 };

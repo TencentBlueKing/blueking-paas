@@ -64,6 +64,9 @@
             @page-change="handlePageChange"
             @page-limit-change="handlePageSizeChange"
           >
+            <div slot="empty">
+              <table-empty empty />
+            </div>
             <bk-table-column
               :label="$t('应用信息')"
               min-width="200"

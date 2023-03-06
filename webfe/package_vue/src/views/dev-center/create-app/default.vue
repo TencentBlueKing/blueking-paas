@@ -249,15 +249,7 @@
                     class="ps-no-result"
                     style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%);"
                   >
-                    <div class="text">
-                      <p>
-                        <i
-                          class="paasng-icon paasng-empty"
-                          style="font-size: 50px;"
-                        />
-                      </p>
-                      <p> {{ $t('暂无数据') }} </p>
-                    </div>
+                    <table-empty empty />
                   </div>
                 </div>
               </div>

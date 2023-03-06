@@ -237,6 +237,9 @@
           @page-limit-change="limitChange"
           @sort-change="sortChange"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column
             v-for="field of fieldList"
             :key="field.prop"

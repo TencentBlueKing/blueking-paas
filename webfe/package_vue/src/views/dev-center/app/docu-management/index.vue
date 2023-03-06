@@ -300,10 +300,7 @@
         v-if="!isLoading && tableList.length < 1"
         class="empty-wrapper"
       >
-        <i class="bk-icon icon-empty" />
-        <div class="empty-text">
-          {{ $t('暂无数据') }}
-        </div>
+        <table-empty empty />
       </div>
     </paas-content-loader>
   </div>

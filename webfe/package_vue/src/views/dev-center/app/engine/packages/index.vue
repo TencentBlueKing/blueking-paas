@@ -54,6 +54,9 @@
         @page-limit-change="limitChange"
         @sort-change="sortChange"
       >
+        <div slot="empty">
+          <table-empty empty />
+        </div>
         <bk-table-column
           :label="$t('版本')"
           :show-overflow-tooltip="true"

@@ -500,15 +500,13 @@
                       </tr>
                     </template>
                     <template v-else>
-                      <tr>
+                      <tr class="module-tr-empty">
                         <td colspan="4">
                           <div class="ps-no-result">
-                            <div class="text">
-                              <p>
-                                <i class="paasng-icon paasng-empty" />
-                              </p>
-                              <p> {{ $t('暂无模块') }} </p>
-                            </div>
+                            <table-empty
+                              :empty-title="$t('暂无模块')"
+                              empty
+                            />
                           </div>
                         </td>
                       </tr>
@@ -549,12 +547,13 @@
         </template>
         <template v-if="!isLoading && !appList.length">
           <div class="ps-no-result">
-            <div class="text">
-              <p>
-                <i class="paasng-icon paasng-empty" />
-              </p>
-              <p> {{ $t('暂无应用') }} </p>
-            </div>
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              :empty-title="$t('暂无应用')"
+              @reacquire="fetchAppList"
+              @clear-filter="clearFilterKey"
+            />
           </div>
         </template>
       </div>
@@ -719,7 +718,11 @@
                 type: 'default',
                 appTypeList: APP_TYPE_MAP,
                 curAppType: '',
-                curAppTypeActive: 'all'
+                curAppTypeActive: 'all',
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -996,17 +999,7 @@
                 // 筛选,搜索等操作时，强制切到 page 的页码
                 // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
                 // 如果能切到 axios 就可以去掉这部分代码了
-                if (!this.IncludeAllLanguages) {
-                    this.appFilter.languageList.forEach((item) => {
-                        url += '&language=' + item;
-                    });
-                }
-                // 应用版本
-                if (!this.IncludeAllRegions) {
-                    this.appFilter.regionList.forEach((item) => {
-                        url += '&region=' + item;
-                    });
-                }
+                url = this.getParams(url);
                 this.fetchParams.order_by = this.sortValue;
                 this.fetchParams = Object.assign(this.fetchParams, {
                     search_term: this.filterKey,
@@ -1033,7 +1026,10 @@
                         this.$set(item, 'creation_allowed', true);
                     });
                     this.appList.splice(0, this.appList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -1114,6 +1110,43 @@
                 this.curAppType = item.type !== 'all' ? item.type : '';
                 this.curAppTypeActive = item.key;
                 this.fetchAppList();
+            },
+
+            clearFilterKey () {
+                this.filterKey = '';
+                this.reset();
+            },
+
+            getParams (url) {
+                if (!this.IncludeAllLanguages) {
+                    this.appFilter.languageList.forEach((item) => {
+                        url += '&language=' + item;
+                    });
+                }
+                // 应用版本
+                if (!this.IncludeAllRegions) {
+                    this.appFilter.regionList.forEach((item) => {
+                        url += '&region=' + item;
+                    });
+                }
+                return url;
+            },
+
+            updateTableEmptyConfig (arr) {
+                let url = '';
+                let isParams = false;
+                url = this.getParams(url);
+                for (const value in this.appFilter) {
+                    if (typeof this.appFilter[value] === 'boolean' && this.appFilter[value]) {
+                        isParams = true;
+                        break;
+                    }
+                };
+                if (this.filterKey || isParams || url) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };
@@ -1754,5 +1787,8 @@
     }
     .wrap {
         width: 1180px;
+    }
+    .module-tr-empty {
+      height: 280px;
     }
 </style>

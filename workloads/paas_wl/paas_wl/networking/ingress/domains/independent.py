@@ -30,7 +30,6 @@ from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.utils import get_main_process_service_name, guess_default_service_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paasng.paas_wl.platform.applications.struct_models import set_model_structured
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,6 @@ class ReplaceAppDomainService:
                 module_id=self.env.module_id,
                 environment_id=self.env.id,
             )
-            set_model_structured(domain, application=self.env.application)
             return domain
         except Domain.DoesNotExist:
             raise ReplaceAppDomainFailed("无法找到旧域名记录，请稍后重试")
@@ -79,7 +77,7 @@ class ReplaceAppDomainService:
         """Replace current AppDomain object"""
         # Save a copy of old data to perform deletion later
         old_copy_obj = copy.deepcopy(self.domain_obj)
-        # Try modify the database object first
+        # Try to modify the database object first
 
         self.domain_obj.name = host
         self.domain_obj.path_prefix = path_prefix
@@ -150,7 +148,6 @@ class DomainResourceDeleteService:
         except Domain.DoesNotExist:
             logger.warning('AppDomain record: %s-%s no longer exists in database, skip deletion', host, path_prefix)
             domain = Domain(**fields)
-        set_model_structured(domain, self.env.application)
         return domain
 
 

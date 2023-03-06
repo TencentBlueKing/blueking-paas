@@ -18,19 +18,19 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict
 
-import cattr
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.cluster.serializers import ClusterSLZ
+from paas_wl.cluster.shim import EnvClusterService
 from paasng.dev_resources.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.dev_resources.sourcectl.serializers import RepositorySLZ
 from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.platform.applications.utils import RE_APP_CODE
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
@@ -92,8 +92,8 @@ class ModuleSLZ(serializers.ModelSerializer):
     def get_clusters(self, obj) -> Dict:
         env_clusters = {}
         for env in obj.envs.all():
-            cluster = get_engine_app_cluster(obj.region, env.engine_app.name)
-            env_clusters[env.environment] = cattr.unstructure(cluster) if cluster else None
+            cluster = EnvClusterService(env).get_cluster()
+            env_clusters[env.environment] = ClusterSLZ(cluster).data
         return env_clusters
 
     class Meta:

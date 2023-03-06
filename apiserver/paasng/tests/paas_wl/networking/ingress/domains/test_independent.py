@@ -24,7 +24,6 @@ from paas_wl.networking.ingress.domains.independent import ReplaceAppDomainServi
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.networking.ingress.managers.domain import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paasng.paas_wl.platform.applications.struct_models import set_model_structured
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -55,7 +54,6 @@ class TestReplaceAppDomainService:
             module_id=bk_stag_env.module_id,
             environment_id=bk_stag_env.id,
         )
-        set_model_structured(domain, bk_app)
         mgr = CustomDomainIngressMgr(domain)
         mgr.sync(default_service_name=bk_stag_wl_app.name)
 

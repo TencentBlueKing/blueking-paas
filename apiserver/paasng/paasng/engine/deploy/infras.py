@@ -38,7 +38,6 @@ from django.utils.translation import gettext as _
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import ServiceSharingManager
 from paasng.engine.constants import DeployEventStatus, JobStatus
-from paasng.engine.controller.exceptions import BadResponse
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.engine.deploy.exceptions import DeployShouldAbortError
@@ -218,10 +217,10 @@ class DeployProcedure:
 
             return False
 
-        # Only exception `DeployShouldAbortError` or `BadResponse` should be outputed directly into the stream,
+        # Only exception `DeployShouldAbortError` should be outputed directly into the stream,
         # While other exceptions should be masked as "Unknown error" instead for better user
         # experience.
-        if exc_type in [DeployShouldAbortError, BadResponse]:
+        if exc_type in [DeployShouldAbortError]:
             msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
                 title=Style.Title(self.title), reason=Style.Warning(exc_val)
             )

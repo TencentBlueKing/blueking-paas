@@ -28,15 +28,11 @@ Other modules which have similar purpose:
 
 These modules will be refactored in the future.
 """
-from typing import Any, Dict, NamedTuple, Optional, Union
+from typing import Any, Dict, NamedTuple, Union
 from uuid import UUID
 
 from django.db import transaction
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.models import Cluster
-from paas_wl.cluster.serializers import ClusterSLZ
-from paas_wl.networking.egress.misc import get_cluster_egress_ips
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import WlAppMetadata, get_metadata, update_metadata
@@ -101,31 +97,6 @@ def delete_module_related_res(module: 'Module'):
         # Delete related EngineApp db records
         for env in module.get_envs():
             env.get_engine_app().delete()
-
-
-def get_cluster_egress_info(region, cluster_name):
-    """Get cluster's egress info"""
-    cluster = Cluster.objects.get(region=region, name=cluster_name)
-    return get_cluster_egress_ips(cluster)
-
-
-def get_wl_app_cluster_name(engine_app_name: str) -> Optional[str]:
-    wl_app = WlApp.objects.get(name=engine_app_name)
-    return wl_app.latest_config.cluster
-
-
-def bind_wl_app_cluster(engine_app_name: str, cluster_name: str):
-    wl_app = WlApp.objects.get(name=engine_app_name)
-    cluster = Cluster.objects.get(name=cluster_name)
-    latest_config = wl_app.latest_config
-    latest_config.cluster = cluster.name
-    latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-    latest_config.save()
-
-
-def list_region_clusters(region):
-    """List region clusters"""
-    return ClusterSLZ(Cluster.objects.filter(region=region), many=True).data
 
 
 def create_cnative_app_model_resource(region: str, data: Dict[str, Any]) -> Dict:

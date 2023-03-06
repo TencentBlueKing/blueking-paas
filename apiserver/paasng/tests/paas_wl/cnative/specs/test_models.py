@@ -26,10 +26,9 @@ from paas_wl.cnative.specs.models import (
     default_bkapp_name,
     update_app_resource,
 )
+from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
-from .conftest import create_cnative_deploy
-
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_create_app_resource():

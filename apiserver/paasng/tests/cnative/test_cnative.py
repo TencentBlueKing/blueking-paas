@@ -22,7 +22,8 @@ import pytest
 from blue_krill.web.std_error import APIError
 
 from paasng.cnative.services import get_default_cluster_name
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -30,9 +31,14 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.parametrize(
     "data, region, ctx, expected",
     [
-        ({"_lookup_field": "region", "data": {"default": "default"}}, "default", does_not_raise(), "default"),
-        ("default", "default", does_not_raise(), "default"),
-        ("default", "404", does_not_raise(), "default"),
+        (
+            {"_lookup_field": "region", "data": {"default": CLUSTER_NAME_FOR_TESTING}},
+            "default",
+            does_not_raise(),
+            CLUSTER_NAME_FOR_TESTING,
+        ),
+        (CLUSTER_NAME_FOR_TESTING, "default", does_not_raise(), CLUSTER_NAME_FOR_TESTING),
+        (CLUSTER_NAME_FOR_TESTING, "404", does_not_raise(), CLUSTER_NAME_FOR_TESTING),
         # 集群不存在
         ("not-default", "default", pytest.raises(APIError), ""),
         # 对应 region 未配置 default cluster name
@@ -42,5 +48,5 @@ pytestmark = pytest.mark.django_db
 def test_get_default_cluster_name(settings, data, region, ctx, expected):
     settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = data
 
-    with ctx, replace_cluster_service():
+    with ctx, mock_cluster_service():
         assert get_default_cluster_name(region) == expected

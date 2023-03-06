@@ -1,0 +1,69 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
+import pytest
+from django_dynamic_fixture import G
+
+from paas_wl.cluster.shim import Cluster, EnvClusterService, RegionClusterService
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+@pytest.fixture(autouse=True)
+def setup(settings, with_wl_apps):
+    """setup clusters and wl_apps"""
+    Cluster.objects.all().delete()
+    G(Cluster, name="default", is_default=True, region=settings.DEFAULT_REGION_NAME)
+    G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
+    yield
+
+
+class TestEnvClusterService:
+    def test_empty_cluster_field(self, bk_stag_env):
+        wl_app = bk_stag_env.wl_engine_app
+        latest_config = wl_app.latest_config
+        latest_config.cluster = ""
+        latest_config.save()
+        wl_app.refresh_from_db()
+        assert EnvClusterService(bk_stag_env).get_cluster().name == "default"
+
+    def test_valid_cluster_field(self, bk_stag_env):
+        wl_app = bk_stag_env.wl_engine_app
+        latest_config = wl_app.latest_config
+        latest_config.cluster = "extra-1"
+        latest_config.save()
+        wl_app.refresh_from_db()
+        assert EnvClusterService(bk_stag_env).get_cluster().name == "extra-1"
+
+    def test_invalid_cluster_field(self, bk_stag_env):
+        wl_app = bk_stag_env.wl_engine_app
+        latest_config = wl_app.latest_config
+        latest_config.cluster = "invalid"
+        latest_config.save()
+        wl_app.refresh_from_db()
+        with pytest.raises(Cluster.DoesNotExist):
+            EnvClusterService(bk_stag_env).get_cluster()
+
+
+def test_get_cluster(settings):
+    svc = RegionClusterService(settings.DEFAULT_REGION_NAME)
+    assert svc.get_default_cluster().name == "default"
+    assert svc.get_cluster_by_name("default").name == "default"
+    assert svc.get_cluster_by_name("extra-1").name == "extra-1"
+    with pytest.raises(Cluster.DoesNotExist):
+        svc.get_cluster_by_name("invalid")

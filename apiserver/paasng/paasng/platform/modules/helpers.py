@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
 
 from django.db import transaction
 
+from paas_wl.cluster.models import Cluster, Domain
+from paas_wl.cluster.shim import EnvClusterService
 from paasng.engine.constants import AppEnvName
-from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.models import Cluster, Domain
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -262,10 +262,7 @@ class ModuleRuntimeManager:
 
 def get_module_clusters(module: 'Module') -> Dict[AppEnvName, Cluster]:
     """return all cluster info of module envs"""
-    return {
-        AppEnvName(env.environment): get_engine_app_cluster(module.region, env.engine_app.name)
-        for env in module.envs.all()
-    }
+    return {AppEnvName(env.environment): EnvClusterService(env).get_cluster() for env in module.envs.all()}
 
 
 def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = False) -> List[Domain]:
@@ -279,7 +276,7 @@ def get_module_prod_env_root_domains(module: 'Module', include_reserved: bool = 
     if not prod_env:
         return []
 
-    cluster = get_engine_app_cluster(module.region, prod_env.engine_app.name)
+    cluster = EnvClusterService(prod_env).get_cluster()
     if module.exposed_url_type == ExposedURLType.SUBDOMAIN:
         root_domains = cluster.ingress_config.app_root_domains
     else:

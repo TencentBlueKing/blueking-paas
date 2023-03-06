@@ -23,11 +23,12 @@ from uuid import uuid4
 
 from django.conf import settings
 
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.core.storages.sqlalchemy import legacy_db
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
 from paasng.platform.mgrlegacy.constants import MigrationStatus
 from paasng.platform.mgrlegacy.models import MigrationContext, MigrationProcess
-from paasng.platform.modules.manager import ApplicationEnvironment, EngineApp, ModuleInitializer
+from paasng.platform.modules.manager import EngineApp, ModuleInitializer
 from paasng.publish.market.models import Tag
 from paasng.publish.sync_market.models import TagMap
 from tests.utils import mock
@@ -51,7 +52,7 @@ def global_mock(context: MigrationContext):
                 uuid = str(uuid4())
                 name = f"{app.name}-{uuid4()}"
                 engine_app = EngineApp.objects.create(id=uuid, name=name, owner=app.owner, region=app.region)
-                ApplicationEnvironment.objects.create(
+                ModuleEnvironment.objects.create(
                     application=app, module=app.get_default_module(), engine_app_id=engine_app.id, environment=env
                 )
 

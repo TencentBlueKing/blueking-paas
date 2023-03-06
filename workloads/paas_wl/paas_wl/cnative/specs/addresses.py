@@ -66,7 +66,7 @@ class AddrResourceManager:
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.application = env.application
-        self.wl_app = WlApp.objects.get_by_env(self.env)
+        self.wl_app = env.wl_app
 
     def build_mapping(self) -> DomainGroupMapping:
         """Build the mapping resource object"""

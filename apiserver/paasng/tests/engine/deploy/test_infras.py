@@ -21,11 +21,11 @@ from unittest import mock
 import cattr
 import pytest
 
+from paas_wl.cluster.models import IngressConfig
 from paasng.engine.constants import AppEnvName
-from paasng.engine.controller.models import IngressConfig
 from paasng.engine.deploy.infras import AppDefaultSubpaths, get_env_variables
 from paasng.platform.modules.constants import ExposedURLType
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -124,6 +124,6 @@ class TestAppDefaultSubpaths:
     ):
         bk_app = request.getfixturevalue(app)
         settings.FORCE_USING_LEGACY_SUB_PATH_VAR_VALUE = force_legacy_style
-        with replace_cluster_service():
+        with mock_cluster_service():
             envs = get_env_variables(bk_app.get_default_module().get_envs("stag"))
         assert envs[sub_path_key] == request.getfixturevalue(expected)

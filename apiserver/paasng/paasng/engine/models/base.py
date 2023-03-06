@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Optional
 from django.db import models
 from django.utils import timezone
 
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models import WlApp
 from paasng.engine.constants import JobStatus
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
@@ -62,9 +62,9 @@ class EngineApp(OwnerTimestampedModel):
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
 
-    def to_wl_obj(self) -> 'WLEngineApp':
-        """Return the corresponding WLEngineApp object in the workloads module"""
-        return WLEngineApp.objects.get(region=self.region, name=self.name)
+    def to_wl_obj(self) -> 'WlApp':
+        """Return the corresponding WlApp object in the workloads module"""
+        return WlApp.objects.get(region=self.region, name=self.name)
 
 
 class MarkStatusMixin:

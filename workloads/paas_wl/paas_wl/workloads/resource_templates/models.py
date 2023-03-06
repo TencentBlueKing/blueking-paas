@@ -22,8 +22,7 @@ from typing import Dict, List, Union
 
 from django.db import models
 
-from paas_wl.platform.applications.models import UuidAuditedModel
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import UuidAuditedModel, WlApp
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
 
 
@@ -43,7 +42,7 @@ class AppAddOnTemplate(UuidAuditedModel):
     def digest(self) -> str:
         return hashlib.sha256(self.spec).hexdigest()
 
-    def link_to_app(self, app: App) -> 'AppAddOn':
+    def link_to_app(self, app: WlApp) -> 'AppAddOn':
         add_on, _ = AppAddOn.objects.get_or_create(app=app, template=self)
         add_on.sync_with_template()
         return add_on
@@ -57,7 +56,7 @@ class AppAddOnManager(models.Manager):
 class AppAddOn(UuidAuditedModel):
     """应用挂件关联实例"""
 
-    app = models.ForeignKey(App, related_name="add_ons", on_delete=models.CASCADE)
+    app = models.ForeignKey(WlApp, related_name="add_ons", on_delete=models.CASCADE)
     template = models.ForeignKey(AppAddOnTemplate, related_name="instances", on_delete=models.CASCADE)
     enabled = models.BooleanField("是否启用", default=True)
     spec = models.TextField("资源内容")

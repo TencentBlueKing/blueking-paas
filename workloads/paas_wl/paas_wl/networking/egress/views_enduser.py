@@ -43,8 +43,8 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
 
     def retrieve(self, request, code, module_name, environment):
         """返回已获取的出口网关信息"""
-        engine_app = self.get_engine_app_via_path().to_wl_obj()
-        binding = get_object_or_404(RCStateAppBinding, app=engine_app)
+        wl_app = self.get_wl_app_via_path()
+        binding = get_object_or_404(RCStateAppBinding, app=wl_app)
         serializer = RCStateAppBindingSLZ(binding)
         return Response(
             {
@@ -56,14 +56,14 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
 
     def create(self, request, code, module_name, environment):
         """获取应用在该部署环境下的出口网关信息"""
-        engine_app = self.get_engine_app_via_path().to_wl_obj()
-        cluster = get_cluster_by_app(engine_app)
+        wl_app = self.get_wl_app_via_path()
+        cluster = get_cluster_by_app(wl_app)
 
         try:
-            state = RegionClusterState.objects.filter(region=engine_app.region, cluster_name=cluster.name).latest()
-            binding = RCStateAppBinding.objects.create(app=engine_app, state=state)
+            state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
+            binding = RCStateAppBinding.objects.create(app=wl_app, state=state)
         except RegionClusterState.DoesNotExist:
-            logger.warning('No cluster state can be found for region=%s', engine_app.region)
+            logger.warning('No cluster state can be found for region=%s', wl_app.region)
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("集群数据未初始化，请稍候再试")
         except IntegrityError:
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("不能重复绑定")
@@ -76,9 +76,9 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
 
     def destroy(self, request, code, module_name, environment):
         """清除已获取的出口网关信息"""
-        engine_app = self.get_engine_app_via_path().to_wl_obj()
+        wl_app = self.get_wl_app_via_path()
         try:
-            binding = RCStateAppBinding.objects.get(app=engine_app)
+            binding = RCStateAppBinding.objects.get(app=wl_app)
         except RCStateAppBinding.DoesNotExist:
             raise error_codes.ERROR_RECYCLING_EGRESS_GATEWAY_INFO.f("未获取过网关信息")
         binding.delete()

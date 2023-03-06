@@ -31,7 +31,7 @@ MapperResource = TypeVar("MapperResource", bound=BaseKresource)
 
 
 class Mapper(Generic[MapperResource]):
-    """映射器，用于将 EngineApp 映射到 k8s 资源"""
+    """映射器，用于将 WlApp 映射到 k8s 资源"""
 
     # 主要映射两种东西：
     # - 属性值

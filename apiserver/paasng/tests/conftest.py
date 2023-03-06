@@ -54,7 +54,7 @@ from paasng.publish.sync_market.handlers import before_finishing_application_cre
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, create_pending_wl_engine_apps, generate_random_string
+from tests.utils.helpers import configure_regions, create_pending_wl_apps, generate_random_string
 
 from .utils.auth import create_user
 from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
@@ -737,11 +737,11 @@ def with_live_addrs():
 
 @pytest.fixture
 def with_wl_apps(request):
-    """Create all pending WlEngineApp objects related with current bk_app, useful
+    """Create all pending WlApp objects related with current bk_app, useful
     for tests which want to use `bk_app`, `bk_stag_env` fixtures.
     """
     if "bk_cnative_app" in request.fixturenames:
         bk_app = request.getfixturevalue("bk_cnative_app")
     else:
         bk_app = request.getfixturevalue("bk_app")
-    create_pending_wl_engine_apps(bk_app)
+    create_pending_wl_apps(bk_app)

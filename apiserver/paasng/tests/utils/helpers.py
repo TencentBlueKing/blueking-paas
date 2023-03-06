@@ -360,7 +360,7 @@ def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
 
 
 # Stores pending actions related with workloads during app creation
-_faked_wl_engine_apps = {}
+_faked_wl_apps = {}
 _faked_env_metadata = {}
 
 
@@ -373,7 +373,7 @@ def _mock_wl_services_in_creation():
         obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name)
 
         # Store params in global, so we can manually create the objects later.
-        _faked_wl_engine_apps[obj.uuid] = (region, name, type_)
+        _faked_wl_apps[obj.uuid] = (region, name, type_)
         return obj
 
     def fake_update_metadata_by_env(env, metadata_part):
@@ -396,22 +396,22 @@ def _mock_wl_services_in_creation():
         yield
 
 
-def create_pending_wl_engine_apps(bk_app: Application):
-    """Create WlEngineApp objects of the given application in workloads, these objects
+def create_pending_wl_apps(bk_app: Application):
+    """Create WlApp objects of the given application in workloads, these objects
     should have been created during application creation, but weren't because the
     `create_app_ignore_duplicated` function was mocked out.
 
     :param bk_app: Application object.
     """
     from paas_wl.platform.api import update_metadata_by_env
-    from paas_wl.platform.applications.models.app import WLEngineApp
+    from paas_wl.platform.applications.models import WlApp
 
     for module in bk_app.modules.all():
         for env in module.envs.all():
-            # Create WLEngineApps and update metadata
-            if args := _faked_wl_engine_apps.get(env.engine_app_id):
+            # Create WlApps and update metadata
+            if args := _faked_wl_apps.get(env.engine_app_id):
                 region, name, type_ = args
-                WLEngineApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
             if metadata := _faked_env_metadata.get(env.id):
                 update_metadata_by_env(env, metadata)
 

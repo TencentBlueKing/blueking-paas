@@ -26,7 +26,7 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.struct_models import Application, ModuleAttrFromID, ModuleEnv, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
@@ -151,7 +151,7 @@ class AppModelDeployManager(models.Manager):
 class AppModelDeploy(TimestampedModel):
     """Cloud-native App's deployments
 
-    TODO: Add engine_app field so we can operate this model using engine_app directly
+    TODO: Add wl_app field so we can operate this model using wl_app directly
     instead of the combination of (application_id, module_id, environment_name).
     """
 
@@ -187,7 +187,7 @@ class AppModelDeploy(TimestampedModel):
         :param env: ModuleEnv object
         :param credential_refs: Image credential ref objects
         """
-        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+        wl_app = WlApp.objects.get(pk=env.engine_app_id)
         manifest = BkAppResource(**self.revision.json_value)
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.pk)
         application = env.application
@@ -211,7 +211,7 @@ class AppModelDeploy(TimestampedModel):
         # flush credentials and inject a flag to tell operator that workloads have crated the secret
         if credential_refs:
             AppImageCredential.objects.flush_from_refs(
-                application=application, engine_app=engine_app, references=credential_refs
+                application=application, wl_app=wl_app, references=credential_refs
             )
             manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
         else:

@@ -23,13 +23,13 @@ import cattr
 from attrs import define
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import EngineApp
+    from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
 
 @define
-class EngineAppMetadata:
+class WlAppMetadata:
     """An engine app's metadata object, contains essential information"""
 
     paas_app_code: str = ''  # Owner application's code
@@ -47,23 +47,23 @@ class EngineAppMetadata:
         return self.paas_app_code
 
 
-def get_metadata(engine_app: 'EngineApp') -> EngineAppMetadata:
+def get_metadata(wl_app: 'WlApp') -> WlAppMetadata:
     """Get metadata object"""
     # TODO: Use `make_json_field()` to get structured object from Model directly
-    json_data = engine_app.latest_config.metadata or {}
-    return cattr.structure(json_data, EngineAppMetadata)
+    json_data = wl_app.latest_config.metadata or {}
+    return cattr.structure(json_data, WlAppMetadata)
 
 
-def update_metadata(engine_app: 'EngineApp', **kwargs) -> None:
-    """Update engine_app's metadata by key, only valid keys(see `EngineAppMetadata`) are allowed
+def update_metadata(wl_app: 'WlApp', **kwargs) -> None:
+    """Update wl_app's metadata by key, only valid keys(see `WlAppMetadata`) are allowed
 
     :param kwargs: New metadata values
     """
-    latest_config = engine_app.latest_config
-    obj = cattr.structure(latest_config.metadata or {}, EngineAppMetadata)
+    latest_config = wl_app.latest_config
+    obj = cattr.structure(latest_config.metadata or {}, WlAppMetadata)
 
     for key, value in kwargs.items():
-        # If given key is not a valid attribute of EngineAppMetadata type, raise error
+        # If given key is not a valid attribute of WlAppMetadata type, raise error
         if not hasattr(obj, key):
             raise ValueError(f'{key} is invalid')
         setattr(obj, key, value)

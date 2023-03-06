@@ -23,7 +23,7 @@ from typing import Dict, List, Optional
 
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
@@ -63,7 +63,7 @@ class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
 
 
 class ImageCredentialsDeserializer(AppEntityDeserializer['ImageCredentials']):
-    def deserialize(self, app: App, kube_data: ResourceInstance):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance):
         if kube_data.type != constants.KUBE_SECRET_TYPE:
             raise ValueError(f"Invalid kube resource: {kube_data.type}")
 
@@ -106,7 +106,7 @@ class ImageCredentials(AppEntity):
         serializer = ImageCredentialsSerializer
 
     @classmethod
-    def load_from_app(cls, app: App) -> 'ImageCredentials':
+    def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)

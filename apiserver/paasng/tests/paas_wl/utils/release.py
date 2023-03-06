@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from bkpaas_auth.models import User
 
-from paas_wl.platform.applications.models import EngineApp, Release
+from paas_wl.platform.applications.models import Release, WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -27,16 +27,16 @@ def create_release(env: ModuleEnvironment, user: User, failed: bool = False) -> 
 
     :return: The Release object
     """
-    engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+    wl_app = WlApp.objects.get(pk=env.engine_app_id)
     # Don't start from 1, because "version 1" will be ignored by `any_successful()`
     # method for backward-compatibility reasons
     version = Release.objects.count() + 10
     # Create the Release object manually without any Build object
     return Release.objects.create(
         owner=user.username,
-        app=engine_app,
+        app=wl_app,
         failed=failed,
-        config=engine_app.latest_config,
+        config=wl_app.latest_config,
         version=version,
         summary='',
         procfile={},

@@ -21,7 +21,8 @@ from typing import Dict, List, Optional
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.platform.api import bind_wl_app_cluster, create_app_ignore_duplicated, create_cnative_app_model_resource
-from paasng.engine.constants import AppEnvName, EngineAppType
+from paas_wl.platform.applications.constants import WlAppType
+from paasng.engine.constants import AppEnvName
 from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -82,7 +83,7 @@ def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> E
 
     :return: UUID of the workloads's EngineApp object
     """
-    info = create_app_ignore_duplicated(region, engine_app_name, EngineAppType.CLOUD_NATIVE)
+    info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE)
     # Create EngineApp and binding relationships
     return EngineApp.objects.create(
         id=info.uuid,

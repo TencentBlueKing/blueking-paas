@@ -25,7 +25,7 @@ from paas_wl.cnative.specs.addresses import Domain as MappingDomain
 from paas_wl.cnative.specs.addresses import save_addresses, to_domain, to_shared_tls_domain
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from tests.utils.mocks.platform import FakePlatformSvcClient
 
 pytestmark = pytest.mark.django_db
@@ -38,13 +38,13 @@ def _setup_clients():
 
 
 def test_save_addresses(bk_stag_env):
-    engine_app = EngineApp.objects.get_by_env(bk_stag_env)
-    assert AppDomain.objects.filter(app=engine_app).count() == 0
-    assert AppSubpath.objects.filter(app=engine_app).count() == 0
+    wl_app = WlApp.objects.get_by_env(bk_stag_env)
+    assert AppDomain.objects.filter(app=wl_app).count() == 0
+    assert AppSubpath.objects.filter(app=wl_app).count() == 0
 
     save_addresses(bk_stag_env)
-    assert AppDomain.objects.filter(app=engine_app).count() == 1
-    assert AppSubpath.objects.filter(app=engine_app).count() == 1
+    assert AppDomain.objects.filter(app=wl_app).count() == 1
+    assert AppSubpath.objects.filter(app=wl_app).count() == 1
 
 
 @pytest.mark.auto_create_ns
@@ -57,13 +57,13 @@ class TestToDomain:
             ('x-foo.example.com', True, True),
         ],
     )
-    def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_engine_app):
+    def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_wl_app):
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_engine_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
         )
         d = AppDomain.objects.create(
-            app=bk_stag_engine_app,
+            app=bk_stag_wl_app,
             host=host,
             source=AppDomainSource.AUTO_GEN,
             https_enabled=https_enabled,
@@ -95,13 +95,13 @@ class TestToSharedTLSDomain:
 
 class TestAddrResourceManager:
     def test_integrated(self, bk_module, bk_stag_env):
-        engine_app = EngineApp.objects.get_by_env(bk_stag_env)
+        wl_app = WlApp.objects.get_by_env(bk_stag_env)
 
         # Create all types of domains
         # source type: subdomain
-        AppDomain.objects.create(app=engine_app, host='foo-subdomain.example.com', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(app=wl_app, host='foo-subdomain.example.com', source=AppDomainSource.AUTO_GEN)
         # source type: subpath
-        AppSubpath.objects.create(app=engine_app, subpath='/foo-subpath/', source=AppSubpathSource.DEFAULT)
+        AppSubpath.objects.create(app=wl_app, subpath='/foo-subpath/', source=AppSubpathSource.DEFAULT)
         # source type: custom
         Domain.objects.create(
             name='foo-custom.example.com', path_prefix='/', module_id=bk_module.id, environment_id=bk_stag_env.id

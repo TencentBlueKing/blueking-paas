@@ -20,8 +20,7 @@ import logging
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from paas_wl.platform.applications.models import App
-from paas_wl.platform.applications.models.release import Release
+from paas_wl.platform.applications.models import Release, WlApp
 
 from .models import Process
 
@@ -30,11 +29,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AppProcessManager:
-    """
-    从 App 维度操作 Process
-    """
+    """从 WlApp 维度操作 Process"""
 
-    app: 'App'
+    app: 'WlApp'
 
     def assemble_process(
         self, process_type: str, release: Optional['Release'] = None, extra_envs: Optional[dict] = None
@@ -48,7 +45,7 @@ class AppProcessManager:
     def assemble_processes(
         self, release: Optional['Release'] = None, extra_envs: Optional[dict] = None
     ) -> Iterable[Process]:
-        """通过 Release 对象组装 App 所有 Process 对象"""
+        """通过 Release 对象组装 WlApp 所有 Process 对象"""
         if not release:
             release = Release.objects.get_latest(self.app)
 

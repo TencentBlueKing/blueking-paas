@@ -24,14 +24,14 @@ from django.conf import settings
 from paas_wl.monitoring.app_monitor import constants
 from paas_wl.monitoring.app_monitor.entities import Endpoint, ServiceMonitor, ServiceSelector, service_monitor_kmodel
 from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
 logger = logging.getLogger(__name__)
 
 
-def build_service_monitor_name(app: EngineApp) -> str:
+def build_service_monitor_name(app: WlApp) -> str:
     """Generate the ServiceMonitor name"""
     return app.scheduler_safe_name + "--monitor"
 
@@ -80,7 +80,7 @@ def build_service_monitor(monitor: AppMetricsMonitor) -> ServiceMonitor:
     )
 
 
-def make_bk_monitor_controller(app: EngineApp):
+def make_bk_monitor_controller(app: WlApp):
     if not settings.ENABLE_BK_MONITOR:
         logger.warning("BKMonitor is not ready, skip apply ServiceMonitor")
         return NullController()
@@ -91,7 +91,7 @@ def make_bk_monitor_controller(app: EngineApp):
 class AppMonitorController:
     app_monitor: Optional[AppMetricsMonitor]
 
-    def __init__(self, app: EngineApp):
+    def __init__(self, app: WlApp):
         self.app = app
         try:
             self.app_monitor = AppMetricsMonitor.objects.get(app=app)
@@ -99,7 +99,7 @@ class AppMonitorController:
             self.app_monitor = None
 
     def create_or_patch(self):
-        """创建当前 EngineApp 与 ServiceMonitor 的关联关系, 如果 ServiceMonitor 不存在, 则创建."""
+        """创建当前 WlApp 与 ServiceMonitor 的关联关系, 如果 ServiceMonitor 不存在, 则创建."""
         if not self.app_monitor or not self.app_monitor.is_enabled:
             return
 
@@ -117,7 +117,7 @@ class AppMonitorController:
             )
 
     def remove(self):
-        """删除当前 EngineApp 与 ServiceMonitor 的关联关系, 如果 ServiceMonitor 只关联当前 EngineApp, 则直接删除 ServiceMonitor"""
+        """删除当前 WlApp 与 ServiceMonitor 的关联关系, 如果 ServiceMonitor 只关联当前 WlApp, 则直接删除 ServiceMonitor"""
         if not self.app_monitor:
             return
 

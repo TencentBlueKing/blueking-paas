@@ -41,8 +41,8 @@ class AppOperationType(int, StructuredEnum):
     RELEASE_TO_MARKET = 17
 
 
-class EngineAppType(str, StructuredEnum):
-    """type of engine app"""
+class WlAppType(str, StructuredEnum):
+    """type of workloads app"""
 
     DEFAULT = EnumField('default')  # 默认类型：无任何定制逻辑
 

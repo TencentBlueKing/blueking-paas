@@ -24,7 +24,7 @@ from attrs import define
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.constants import AddressType, AppDomainSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.publish.entrance.utils import URL
 
@@ -55,8 +55,8 @@ class EnvAddresses:
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.app = env.application
-        self.engine_app = EngineApp.objects.get(pk=self.env.engine_app_id)
-        self.ingress_cfg = get_cluster_by_app(self.engine_app).ingress_config
+        self.wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
+        self.ingress_cfg = get_cluster_by_app(self.wl_app).ingress_config
 
     def get(self) -> List[Address]:
         """Get available addresses, sorted by: (subdomain, subpath, custom)"""
@@ -68,7 +68,7 @@ class EnvAddresses:
 
     def _get_subdomain(self) -> List[Address]:
         """Get addresses from subdomain source"""
-        subdomains = AppDomain.objects.filter(app=self.engine_app, source=AppDomainSource.AUTO_GEN)
+        subdomains = AppDomain.objects.filter(app=self.wl_app, source=AppDomainSource.AUTO_GEN)
         addrs = []
         for d in subdomains:
             root_domain = self.ingress_cfg.find_app_root_domain(d.host)
@@ -78,7 +78,7 @@ class EnvAddresses:
 
     def _get_subpath(self) -> List[Address]:
         """Get addresses from subpath source"""
-        path_objs = AppSubpath.objects.filter(app=self.engine_app).order_by('created')
+        path_objs = AppSubpath.objects.filter(app=self.wl_app).order_by('created')
         addrs = []
         for domain in self.ingress_cfg.sub_path_domains:
             for obj in path_objs:

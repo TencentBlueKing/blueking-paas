@@ -9,8 +9,7 @@ def sync_proc_ingresses(env: ModuleEnvironment):
     if not module_env_is_running(env):
         return
 
-    wl_app = env.wl_engine_app
-    for mgr in AppDefaultIngresses(wl_app).list():
+    for mgr in AppDefaultIngresses(env.wl_app).list():
         try:
             mgr.sync()
         except (DefaultServiceNameRequired, EmptyAppIngressError):

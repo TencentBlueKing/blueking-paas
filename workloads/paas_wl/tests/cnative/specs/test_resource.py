@@ -30,8 +30,8 @@ from paas_wl.cnative.specs.constants import (
 )
 from paas_wl.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.cnative.specs.resource import MresConditionParser, deploy, get_mres_from_cluster
-from paas_wl.platform.applications.models import EngineApp
-from paas_wl.resources.utils.basic import get_client_by_env
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.constants import KUBE_RESOURCE_NAME as PULL_SECRET_NAME
 from tests.cnative.specs.utils import create_condition, create_res_with_conds
 from tests.utils.mocks.platform import FakePlatformSvcClient
@@ -105,9 +105,9 @@ class TestBkAppClusterOperator:
         assert ret["spec"]["processes"][0]["name"] == "web"
         assert get_mres_from_cluster(bk_stag_env) is not None
 
-        engine_app = EngineApp.objects.get_by_env(bk_stag_env)
-        with get_client_by_env(bk_stag_env) as client:
-            assert ImageCredentialsManager(client).get(engine_app, PULL_SECRET_NAME) is not None
+        wl_app = WlApp.objects.get_by_env(bk_stag_env)
+        with get_client_by_app(wl_app) as client:
+            assert ImageCredentialsManager(client).get(wl_app, PULL_SECRET_NAME) is not None
 
         # 修改进程配置信息，再次部署到集群
         manifest["spec"]["processes"].append(

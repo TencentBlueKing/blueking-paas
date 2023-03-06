@@ -235,9 +235,7 @@ class TestCustomDomainIngressMgr:
             ('/foo/', ['/foo/'], True),
         ],
     )
-    def test_create(
-        self, path_prefix, expected_path_prefixes, customized_ingress_name, bk_stag_env, bk_stag_engine_app
-    ):
+    def test_create(self, path_prefix, expected_path_prefixes, customized_ingress_name, bk_stag_env, bk_stag_wl_app):
         domain = G(
             Domain,
             name='foo.example.com',
@@ -247,18 +245,18 @@ class TestCustomDomainIngressMgr:
         )
         mgr = CustomDomainIngressMgr(domain)
 
-        mgr.sync(default_service_name=bk_stag_engine_app.name)
-        obj = ingress_kmodel.get(bk_stag_engine_app, mgr.make_ingress_name())
+        mgr.sync(default_service_name=bk_stag_wl_app.name)
+        obj = ingress_kmodel.get(bk_stag_wl_app, mgr.make_ingress_name())
 
         if customized_ingress_name:
             assert obj.name == f"custom-foo.example.com-{domain.id}"
         else:
             assert obj.name == "custom-foo.example.com"
         assert obj.domains[0].path_prefix_list == expected_path_prefixes
-        assert obj.service_name == bk_stag_engine_app.name
+        assert obj.service_name == bk_stag_wl_app.name
         mgr.delete()
 
-    def test_normal_delete(self, bk_stag_env, bk_stag_engine_app):
+    def test_normal_delete(self, bk_stag_env, bk_stag_wl_app):
         domain = G(
             Domain,
             name='foo.example.com',
@@ -266,11 +264,11 @@ class TestCustomDomainIngressMgr:
             environment_id=bk_stag_env.id,
         )
         mgr = CustomDomainIngressMgr(domain)
-        mgr.sync(default_service_name=bk_stag_engine_app.name)
-        _ = ingress_kmodel.get(bk_stag_engine_app, mgr.make_ingress_name())
+        mgr.sync(default_service_name=bk_stag_wl_app.name)
+        _ = ingress_kmodel.get(bk_stag_wl_app, mgr.make_ingress_name())
         mgr.delete()
         with pytest.raises(AppEntityNotFound):
-            ingress_kmodel.get(bk_stag_engine_app, mgr.make_ingress_name())
+            ingress_kmodel.get(bk_stag_wl_app, mgr.make_ingress_name())
 
 
 @pytest.mark.auto_create_ns

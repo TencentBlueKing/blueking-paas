@@ -40,7 +40,7 @@ from paas_wl.utils.stream import Stream
 from paas_wl.utils.termcolors import Style
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
+    from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class BuildProcessExecutor:
 
     def __init__(self, bp: BuildProcess, stream: Stream):
         self.bp = bp
-        self.app: 'App' = bp.app
+        self.app: 'WlApp' = bp.app
         self.stream = stream
 
         self.procedure = partial(BuildProcedure, stream)

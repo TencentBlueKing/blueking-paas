@@ -27,7 +27,7 @@ class TestAppModel(TestCase):
         self.release = release_setup(fake_app=self.app)
 
     def test_release_failed(self):
-        self.release.fail("hahahahaha")
+        self.release.fail("release fail logs")
 
         assert self.release.failed
-        assert self.release.summary == "hahahahaha"
+        assert self.release.summary == "release fail logs"

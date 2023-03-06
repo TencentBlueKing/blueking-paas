@@ -26,7 +26,7 @@ from django.core.management.base import BaseCommand
 
 from paas_wl.networking.ingress.managers import LegacyAppIngressMgr
 from paas_wl.networking.ingress.utils import make_service_name
-from paas_wl.platform.applications.models import App, Release
+from paas_wl.platform.applications.models import Release, WlApp
 
 logger = logging.getLogger('commands')
 
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, apps, dry_run, pattern, process_type, with_create, app_created_after, *args, **options):
-        qs = App.objects.all().order_by('created')
+        qs = WlApp.objects.all().order_by('created')
         if apps:
             qs = qs.filter(name__in=apps)
 
@@ -64,7 +64,7 @@ class Command(BaseCommand):
         for app in qs:
             self._patch_app_ingress(app, dry_run, pattern, process_type, with_create)
 
-    def _patch_app_ingress(self, app: App, dry_run, pattern, process_type, with_create):
+    def _patch_app_ingress(self, app: WlApp, dry_run, pattern, process_type, with_create):
         # Only process released apps
         if not Release.objects.filter(app=app, build__isnull=False).exists():
             return False

@@ -20,7 +20,7 @@ import pytest
 from django.conf import settings
 
 from paas_wl.platform.applications.models.managers import AppConfigVarManager
-from paas_wl.platform.applications.models.managers.app_metadata import EngineAppMetadata
+from paas_wl.platform.applications.models.managers.app_metadata import WlAppMetadata
 from tests.utils.app import random_fake_app
 
 pytestmark = pytest.mark.django_db
@@ -43,12 +43,12 @@ class TestAppConfigVarManager:
         assert result_with_process['PORT'] == str(settings.CONTAINER_PORT)
 
 
-class TestEngineAppMetadata:
+class TestWlAppMetadata:
     def test_empty_data(self):
-        obj = EngineAppMetadata()
+        obj = WlAppMetadata()
         with pytest.raises(RuntimeError):
             _ = obj.get_paas_app_code()
 
     def test_valid_data(self):
-        obj = EngineAppMetadata(paas_app_code='foo')
+        obj = WlAppMetadata(paas_app_code='foo')
         assert obj.get_paas_app_code() == 'foo'

@@ -36,10 +36,10 @@ class ArchiveOperationController:
 
     def start(self):
         self.stop_all_processes()
-        make_bk_monitor_controller(self.env.wl_engine_app).remove()
+        make_bk_monitor_controller(self.env.wl_app).remove()
 
     def stop_all_processes(self):
         """Stop all processes"""
         ctl = get_proc_mgr(env=self.env)
-        for spec in self.env.wl_engine_app.process_specs.all():
+        for spec in self.env.wl_app.process_specs.all():
             ctl.stop(proc_type=spec.name)

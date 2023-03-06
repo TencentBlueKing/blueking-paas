@@ -84,7 +84,7 @@ class TestDynamicReadyTimeoutPolicy:
 
 class TestWaitForAllStopped:
     def test_still_running(self, app, process, metadata, poller_mocker):
-        poller = WaitForAllStopped(params={'engine_app_id': app.pk}, metadata=metadata)
+        poller = WaitForAllStopped(params={'wl_app_id': app.pk}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
 
@@ -93,7 +93,7 @@ class TestWaitForAllStopped:
     def test_all_stopped(self, app, process, metadata, poller_mocker):
         # Stop all processes
         process.instances = []
-        poller = WaitForAllStopped(params={'engine_app_id': app.pk}, metadata=metadata)
+        poller = WaitForAllStopped(params={'wl_app_id': app.pk}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -117,7 +117,7 @@ class TestWaitForAllStopped:
 
         # Mark current query as the second try
         metadata.queried_count = 1
-        poller = WaitForAllStopped(params={'engine_app_id': app.pk, 'broadcast_enabled': enabled}, metadata=metadata)
+        poller = WaitForAllStopped(params={'wl_app_id': app.pk, 'broadcast_enabled': enabled}, metadata=metadata)
         with poller_mocker(poller, [process], [last_process]):
             _ = poller.query()
 
@@ -130,7 +130,7 @@ class TestWaitForAllStopped:
 class TestWaitForReleaseAllReady:
     def test_not_ready(self, app, metadata, process, poller_mocker):
         processes = [process]
-        poller = WaitForReleaseAllReady(params={'engine_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'wl_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DOING
@@ -140,7 +140,7 @@ class TestWaitForReleaseAllReady:
         process.version = 10
         instance.version = 10
         instance.ready = True
-        poller = WaitForReleaseAllReady(params={'engine_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'wl_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -148,7 +148,7 @@ class TestWaitForReleaseAllReady:
     def test_aborted_by_dynamic_timeout(self, app, process, poller_mocker):
         processes = [process]
         metadata = PollingMetadata(retries=0, query_started_at=0, queried_count=0)
-        poller = WaitForReleaseAllReady(params={'engine_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'wl_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE

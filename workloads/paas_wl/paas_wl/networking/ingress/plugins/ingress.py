@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Optional, Sequence
 from django.conf import settings
 
 from paas_wl.networking.ingress.plugins.exceptions import PluginNotConfigured
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.utils.configs import RegionAwareConfig
 
@@ -38,13 +38,13 @@ logger = logging.getLogger(__name__)
 class IngressPlugin(ABC):
     """Ingress plugin type
 
-    :param app: current App object
+    :param app: current WlApp object
     :param domains: current ingress domains objects
     """
 
     config_key: str
 
-    def __init__(self, app: App, domains: Optional[Sequence['PIngressDomain']] = None):
+    def __init__(self, app: WlApp, domains: Optional[Sequence['PIngressDomain']] = None):
         self.app = app
         self.domains = domains
 
@@ -102,7 +102,7 @@ class AccessControlPlugin(IngressPlugin):
         """
     )
 
-    def __init__(self, app: App, domains: Optional[Sequence['PIngressDomain']] = None):
+    def __init__(self, app: WlApp, domains: Optional[Sequence['PIngressDomain']] = None):
         super().__init__(app, domains)
 
     def make_configuration_snippet(self) -> str:
@@ -156,7 +156,7 @@ class PaasAnalysisPlugin(IngressPlugin):
         '''
     )
 
-    def __init__(self, app: App, domains: Optional[Sequence['PIngressDomain']] = None):
+    def __init__(self, app: WlApp, domains: Optional[Sequence['PIngressDomain']] = None):
         super().__init__(app, domains)
 
     def make_configuration_snippet(self) -> str:

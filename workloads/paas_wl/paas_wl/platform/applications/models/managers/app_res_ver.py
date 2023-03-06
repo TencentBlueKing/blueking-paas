@@ -26,7 +26,7 @@ from paas_wl.resources.base.generation import check_if_available, get_mapper_ver
 from paas_wl.resources.utils.basic import get_client_by_app
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
+    from paas_wl.platform.applications.models import WlApp
     from paas_wl.resources.base.generation import MapperPack
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class AppResVerManager:
 
     _mapper_version_term: str = "mapper_version"
 
-    def __init__(self, app: 'App'):
+    def __init__(self, app: 'WlApp'):
         self.app = app
         self.client = get_client_by_app(app)
 

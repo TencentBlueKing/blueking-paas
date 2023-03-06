@@ -21,10 +21,10 @@ from typing import Optional
 from paas_wl.monitoring.app_monitor import constants
 from paas_wl.monitoring.app_monitor.models import AppMetricsMonitor
 from paas_wl.networking.ingress.entities.service import PServicePortPair
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 
 
-def build_monitor_port(app: EngineApp) -> Optional[PServicePortPair]:
+def build_monitor_port(app: WlApp) -> Optional[PServicePortPair]:
     """Generate the build-in metrics port objects"""
     try:
         monitor = AppMetricsMonitor.objects.get(app=app)

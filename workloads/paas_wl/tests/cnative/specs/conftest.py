@@ -24,10 +24,10 @@ from bkpaas_auth.models import User
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, create_app_resource
 from paas_wl.cnative.specs.resource import deploy
-from paas_wl.platform.applications.models.app import get_ns
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.base.kres import KNamespace
-from paas_wl.resources.utils.basic import get_client_by_env
+from paas_wl.resources.utils.basic import get_client_by_app
 from tests.utils.mocks.platform import FakePlatformSvcClient
 
 
@@ -73,5 +73,6 @@ def deploy_stag_env(bk_stag_env, mock_knamespace):
         yield
 
     # Clean up resource, delete entire namespace
-    with get_client_by_env(bk_stag_env) as client:
-        KNamespace(client).delete(get_ns(bk_stag_env))
+    wl_app = WlApp.objects.get_by_env(bk_stag_env)
+    with get_client_by_app(wl_app) as client:
+        KNamespace(client).delete(wl_app.namespace)

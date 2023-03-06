@@ -26,7 +26,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
-from paas_wl.platform.applications.models.app import WlApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.controllers import get_proc_mgr
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan

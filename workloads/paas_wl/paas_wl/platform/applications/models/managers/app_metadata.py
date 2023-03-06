@@ -23,7 +23,7 @@ import cattr
 from attrs import define
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import WlApp
+    from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 

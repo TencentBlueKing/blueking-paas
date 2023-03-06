@@ -39,8 +39,7 @@ from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.serializers import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models import WlApp
-    from paas_wl.platform.applications.models.release import Release
+    from paas_wl.platform.applications.models import Release, WlApp
 
 logger = logging.getLogger(__name__)
 

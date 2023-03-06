@@ -104,7 +104,7 @@ MIDDLEWARE = (
 
 ROOT_URLCONF = 'paas_wl.urls'
 
-WWSGI_APPLICATION = 'paas_wl.wsgi.application'
+WSGI_APPLICATION = 'paas_wl.wsgi.application'
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'paas_wl.utils.views.custom_exception_handler',

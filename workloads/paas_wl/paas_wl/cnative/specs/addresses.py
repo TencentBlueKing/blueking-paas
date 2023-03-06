@@ -37,7 +37,7 @@ from paas_wl.networking.ingress.managers.domain import save_subdomains
 from paas_wl.networking.ingress.managers.subpath import save_subpaths
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, AutoGenDomain
 from paas_wl.networking.ingress.models import Domain as CustomDomain
-from paas_wl.platform.applications.models.app import WlApp
+from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

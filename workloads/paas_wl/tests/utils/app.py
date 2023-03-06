@@ -23,10 +23,7 @@ from bkpaas_auth.models import User
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models.app import WlApp
-from paas_wl.platform.applications.models.build import Build
-from paas_wl.platform.applications.models.config import Config
-from paas_wl.platform.applications.models.release import Release
+from paas_wl.platform.applications.models import Build, Config, Release, WlApp
 from paas_wl.workloads.processes.models import Instance
 
 from .auth import create_user

@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import RCStateAppBinding
-from paas_wl.platform.applications.models.app import WlApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.utils.basic import make_subdict
 

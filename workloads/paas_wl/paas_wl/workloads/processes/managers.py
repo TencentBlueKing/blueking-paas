@@ -20,8 +20,7 @@ import logging
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.models.release import Release
+from paas_wl.platform.applications.models import Release, WlApp
 
 from .models import Process
 

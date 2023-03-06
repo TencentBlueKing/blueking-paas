@@ -27,7 +27,7 @@ from django.utils.functional import cached_property
 from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
 from paas_wl.networking.ingress.models import AutoGenDomain
 from paas_wl.networking.ingress.utils import guess_default_service_name
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.release_controller.builder import tasks as builder_task
@@ -57,7 +57,7 @@ class EngineDeployClient:
         self.engine_app = engine_app
 
     @cached_property
-    def wl_app(self) -> WLEngineApp:
+    def wl_app(self) -> WlApp:
         """Make 'wl_app' a property so tests using current class won't panic when
         initializing because not data can be found in workloads module.
         """

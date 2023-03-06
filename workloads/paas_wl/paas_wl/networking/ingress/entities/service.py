@@ -22,7 +22,7 @@ from typing import Any, Dict, List
 from attrs import define
 from kubernetes.dynamic import ResourceInstance
 
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
@@ -79,7 +79,7 @@ class ProcessServiceSerializer(AppEntitySerializer['ProcessService']):
 
 
 class ProcessServiceDeserializer(AppEntityDeserializer['ProcessService']):
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> 'ProcessService':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcessService':
         """Generate a ProcessService object from kubernetes resource"""
         res_name = kube_data.metadata.name
         annotations = kube_data.metadata.get('annotations', {})
@@ -96,7 +96,7 @@ class ProcessServiceDeserializer(AppEntityDeserializer['ProcessService']):
         return ProcessService(name=res_name, app=app, process_type=process_type, ports=ports)
 
     @staticmethod
-    def extract_process_type_from_name(app: App, name: str) -> str:
+    def extract_process_type_from_name(app: WlApp, name: str) -> str:
         """Try to extract the process_type from service name"""
         default_prefix = f"{app.region}-{app.scheduler_safe_name}"
         if not name.startswith(default_prefix):

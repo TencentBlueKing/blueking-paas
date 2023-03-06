@@ -26,7 +26,7 @@ from paas_wl.networking.ingress.models import get_default_subpath
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
+    from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class AppConfigVarManager:
     职责: 管理与 `应用`和 `应用进程` 相关的环境变量, 例如日志路径, 应用ID, 模块名称 等等, 不涉及与具体运行版本相关的配置
     """
 
-    app: 'App'
+    app: 'WlApp'
 
     def __post_init__(self):
         self.metadata = get_metadata(self.app)

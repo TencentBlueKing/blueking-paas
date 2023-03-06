@@ -690,13 +690,13 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(query_serializer=ResourceMetricsSLZ)
     def list(self, request, code, module_name, environment):
         """获取 instance metrics"""
-        engine_app = self.get_engine_app_via_path().to_wl_obj()
+        wl_app = self.get_wl_app_via_path()
         serializer = ResourceMetricsSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
         params = {
-            'engine_app': engine_app,
+            'wl_app': wl_app,
             'process_type': data['process_type'],
             'query_metrics': data['query_metrics'],
             'time_range': MetricSmartTimeRange.from_request_data(data),

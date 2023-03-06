@@ -23,7 +23,7 @@ from typing import Dict, List, Optional
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.monitoring.app_monitor import constants
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.crd import KServiceMonitor
 from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 class ServiceMonitorDeserializer(AppEntityDeserializer['ServiceMonitor']):
     api_version = "monitoring.coreos.com/v1"
 
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> 'ServiceMonitor':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ServiceMonitor':
         spec = kube_data.to_dict()["spec"]
         endpoint = spec["endpoints"][0]
         return ServiceMonitor(

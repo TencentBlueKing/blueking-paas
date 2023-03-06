@@ -34,7 +34,7 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
@@ -274,7 +274,7 @@ def setup_default_client(cluster: Cluster):
 def get_cluster_with_hook(hook_func: Callable) -> Callable:
     """Modify the original get_cluster function with extra hooks"""
 
-    def _wrapped(app: EngineApp) -> Cluster:
+    def _wrapped(app: WlApp) -> Cluster:
         from paas_wl.cluster.utils import get_cluster_by_app
 
         cluster = get_cluster_by_app(app)

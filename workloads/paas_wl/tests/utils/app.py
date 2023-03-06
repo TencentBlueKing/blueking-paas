@@ -23,7 +23,7 @@ from bkpaas_auth.models import User
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models.app import WlApp
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.platform.applications.models.config import Config
 from paas_wl.platform.applications.models.release import Release
@@ -37,7 +37,7 @@ def random_fake_app(
     paas_app_code: Optional[str] = None,
     environment: Optional[str] = None,
     owner: Optional[User] = None,
-) -> App:
+) -> WlApp:
     default_environment = random.choice(["stag", "prod"])
     default_app_name = 'app-' + get_random_string(length=12).lower()
     app_info = {
@@ -50,7 +50,7 @@ def random_fake_app(
     if force_app_info:
         app_info.update(force_app_info)
 
-    fake_app = App.objects.create(**app_info)
+    fake_app = WlApp.objects.create(**app_info)
     # Set up metadata
     Config.objects.create(
         app=fake_app,
@@ -64,7 +64,7 @@ def random_fake_app(
     return fake_app
 
 
-def random_fake_instance(app: App, force_instance_info: Optional[Dict] = None) -> Instance:
+def random_fake_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -> Instance:
     app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
     instance_info = {
         "app": app,
@@ -85,7 +85,7 @@ def random_fake_instance(app: App, force_instance_info: Optional[Dict] = None) -
 
 
 def release_setup(
-    fake_app: App, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
+    fake_app: WlApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
 ) -> Release:
     default_build_params = {
         "owner": create_user(username="somebody"),
@@ -119,7 +119,7 @@ def release_setup(
     return Release.objects.create(**release_info)
 
 
-def create_app(structure: Optional[Dict[str, int]] = None) -> App:
+def create_app(structure: Optional[Dict[str, int]] = None) -> WlApp:
     """Create an app object for testing purpose
 
     :param structure: Optional app structure, default to {'web': 1}
@@ -129,7 +129,7 @@ def create_app(structure: Optional[Dict[str, int]] = None) -> App:
     if structure is None:
         structure = {'web': 1}
 
-    app = App.objects.create(
+    app = WlApp.objects.create(
         region=settings.FOR_TESTS_DEFAULT_REGION,
         name=app_name,
         structure=structure,

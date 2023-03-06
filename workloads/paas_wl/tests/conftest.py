@@ -38,7 +38,7 @@ from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
 from paas_wl.cluster.models import APIServer, Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.platform.applications.constants import ApplicationType
-from paas_wl.platform.applications.models import Build, EngineApp
+from paas_wl.platform.applications.models import Build, WlApp
 from paas_wl.platform.applications.struct_models import Application, Module, ModuleEnv, StructuredApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
@@ -128,7 +128,7 @@ def init_s3_bucket(request):
 
 
 @pytest.fixture
-def app() -> EngineApp:
+def app() -> WlApp:
     """Return a new App object with random info"""
     return create_app()
 
@@ -184,14 +184,14 @@ def namespace_maker(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
-    app / bk_stag_engine_app
+    app / bk_stag_wl_app
     """
     if not request.keywords.get('auto_create_ns'):
         yield
         return
 
-    if "bk_stag_engine_app" in request.fixturenames:
-        app = request.getfixturevalue("bk_stag_engine_app")
+    if "bk_stag_wl_app" in request.fixturenames:
+        app = request.getfixturevalue("bk_stag_wl_app")
     elif "app" in request.fixturenames:
         app = request.getfixturevalue("app")
     else:
@@ -306,7 +306,7 @@ def setup_default_client(cluster: Cluster):
 def get_cluster_with_hook(hook_func: Callable) -> Callable:
     """Modify the original get_cluster function with extra hooks"""
 
-    def _wrapped(app: EngineApp) -> Cluster:
+    def _wrapped(app: WlApp) -> Cluster:
         from paas_wl.cluster.utils import get_cluster_by_app
 
         cluster = get_cluster_by_app(app)
@@ -416,25 +416,25 @@ def bk_module(bk_app):
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_app, bk_module):
+def bk_stag_env(request, bk_app, bk_module) -> ModuleEnv:
     """A random ModuleEnv object"""
     return create_env(request, bk_app, bk_module, 'stag')
 
 
 @pytest.fixture
-def bk_stag_engine_app(bk_stag_env) -> EngineApp:
-    return EngineApp.objects.get_by_env(bk_stag_env)
+def bk_stag_wl_app(bk_stag_env) -> WlApp:
+    return WlApp.objects.get_by_env(bk_stag_env)
 
 
 @pytest.fixture
-def bk_prod_env(request, bk_app, bk_module):
+def bk_prod_env(request, bk_app, bk_module) -> ModuleEnv:
     """A random ModuleEnv object"""
     return create_env(request, bk_app, bk_module, 'prod')
 
 
 @pytest.fixture
-def bk_prod_engine_app(bk_prod_env) -> EngineApp:
-    return EngineApp.objects.get_by_env(bk_prod_env)
+def bk_prod_wl_app(bk_prod_env) -> WlApp:
+    return WlApp.objects.get_by_env(bk_prod_env)
 
 
 @pytest.fixture(autouse=True)
@@ -467,13 +467,13 @@ def _mock_get_structured_app(request, bk_app, bk_module):
 def create_env(request, bk_app, bk_module, environment: str) -> ModuleEnv:
     # Use fixed ID
     id_map = {'stag': DEFAULT_STAG_ENV_ID, 'prod': DEFAULT_PROD_ENV_ID}
-    engine_app = create_app()
+    wl_app = create_app()
     return ModuleEnv(
         id=id_map[environment],
         application=bk_app,
         module=bk_module,
         environment=environment,
-        engine_app_id=engine_app.uuid,
+        engine_app_id=wl_app.uuid,
         is_offlined=False,
     )
 

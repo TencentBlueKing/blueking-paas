@@ -28,7 +28,7 @@ from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, V
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.utils import get_main_process_service_name, guess_default_service_name
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.paas_wl.platform.applications.struct_models import set_model_structured
 from paasng.platform.applications.models import ModuleEnvironment
@@ -55,7 +55,7 @@ class ReplaceAppDomainService:
     """
 
     def __init__(self, env: ModuleEnvironment, host: str, path_prefix: str):
-        self.engine_app = EngineApp.objects.get_by_env(env)
+        self.wl_app = WlApp.objects.get_by_env(env)
         self.env = env
         self.host = host
         self.path_prefix = path_prefix
@@ -89,7 +89,7 @@ class ReplaceAppDomainService:
         except IntegrityError:
             raise ReplaceAppDomainFailed(f"域名记录 {host}{path_prefix} 已被占用")
 
-        service_name = get_service_name(self.engine_app)
+        service_name = get_service_name(self.wl_app)
         try:
             with restore_ingress_on_error(old_copy_obj, service_name):
                 # Delete the old ingress resource first, then create a new one.
@@ -111,7 +111,7 @@ class DomainResourceDeleteService:
     """Delete custom domain related resources"""
 
     def __init__(self, env: ModuleEnvironment):
-        self.engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+        self.wl_app = WlApp.objects.get(pk=env.engine_app_id)
         self.env = env
 
     def do(self, *, host: str, path_prefix: str) -> bool:
@@ -154,7 +154,7 @@ class DomainResourceDeleteService:
         return domain
 
 
-def get_service_name(app) -> str:
+def get_service_name(app: WlApp) -> str:
     """Get service name for creating new ingress resources. By default, app's all Ingresses
     should point to the same Service."""
     try:

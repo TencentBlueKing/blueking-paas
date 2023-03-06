@@ -26,7 +26,7 @@ import django.dispatch
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingResult, PollingStatus, TaskPoller
 from pydantic import BaseModel, validator
 
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.release_controller.process.events import ProcEventsProducer
 from paas_wl.release_controller.process.models import PlainProcess, condense_processes
@@ -38,31 +38,29 @@ logger = logging.getLogger(__name__)
 processes_updated = django.dispatch.Signal(providing_args=['events', 'extra_params'])
 
 
-def wait_for_all_stopped(engine_app: EngineApp, result_handler: Type, extra_params: Optional[Dict] = None):
+def wait_for_all_stopped(wl_app: WlApp, result_handler: Type, extra_params: Optional[Dict] = None):
     """Wait for processes to be fully stopped
 
-    :param engine_app: EngineApp object
+    :param wl_app: WlApp object
     :param result_handler: type to handle poll result
     :param extra_params: extra params, use it to provide data for result handler
     """
     extra_params = extra_params or {}
-    params = {'engine_app_id': engine_app.pk, 'extra_params': extra_params}
+    params = {'wl_app_id': wl_app.pk, 'extra_params': extra_params}
     WaitForAllStopped.start(params, result_handler)
 
 
-def wait_for_release(
-    engine_app: EngineApp, release_version: int, result_handler: Type, extra_params: Optional[Dict] = None
-):
+def wait_for_release(wl_app: WlApp, release_version: int, result_handler: Type, extra_params: Optional[Dict] = None):
     """Wait for processes to be updated to given release version, includes all process instances
 
-    :param engine_app: EngineApp object
+    :param wl_app: WlApp object
     :param release_version: release version, included in each instance
     :param result_handler: type to handle poll result
     :param extra_params: extra params, use it to provide data for result handler
     """
     extra_params = extra_params or {}
     params = {
-        'engine_app_id': engine_app.pk,
+        'wl_app_id': wl_app.pk,
         'broadcast_enabled': True,
         'release_version': release_version,
         'extra_params': extra_params,
@@ -112,18 +110,18 @@ class WaitProcedurePoller(TaskPoller):
 
     def __init__(self, params: Dict, metadata: PollingMetadata):
         super().__init__(params, metadata)
-        self.engine_app = EngineApp.objects.get(uuid=self.params['engine_app_id'])
+        self.wl_app = WlApp.objects.get(uuid=self.params['wl_app_id'])
 
         self.broadcast_enabled = bool(self.params.get('broadcast_enabled'))
         self.extra_params = self.params.get('extra_params', {})
-        self.store = ProcessesSnapshotStore(self.engine_app)
+        self.store = ProcessesSnapshotStore(self.wl_app)
 
     def query(self) -> PollingResult:
         """Start polling query"""
         current_processes = self._get_current_processes()
 
         already_waited = time.time() - self.metadata.query_started_at
-        logger.info(f'wait procedure started {already_waited} seconds, engine_app: {self.engine_app.name}')
+        logger.info(f'wait procedure started {already_waited} seconds, wl_app: {self.wl_app.name}')
         # Check all abort policies
         for policy in self.abort_policies:
             if policy.evaluate(current_processes, already_waited, self.extra_params):
@@ -164,7 +162,7 @@ class WaitProcedurePoller(TaskPoller):
 
     def _get_current_processes(self) -> List[PlainProcess]:
         """Get current process list"""
-        return condense_processes(get_processes_status(self.engine_app))
+        return condense_processes(get_processes_status(self.wl_app))
 
     def _get_last_processes(self) -> Optional[List[PlainProcess]]:
         """Get process list of last polling action"""
@@ -249,7 +247,7 @@ class WaitForAllStopped(WaitProcedurePoller):
                 logger.info(f'Process {process.type} still have {count} instances')
                 return PollingResult.doing()
 
-        logger.info(f'No instances found, all processes has been stopped for engine-app: {self.engine_app.name}')
+        logger.info(f'No instances found, all processes has been stopped for wl-app: {self.wl_app.name}')
         return PollingResult.done()
 
 
@@ -264,16 +262,15 @@ class WaitForReleaseAllReady(WaitProcedurePoller):
         self.release_version = int(self.params['release_version'])
 
     def get_status(self, processes: List[PlainProcess]) -> PollingResult:
-        """Check if all were processes was updated to given release_version"""
+        """Check if all where processes was updated to given release_version"""
         for process in processes:
             if not process.is_all_ready(self.release_version):
                 logger.info(
-                    f'Process {process.type} was not updated to {self.release_version}, '
-                    f'engine-app: {self.engine_app.name}'
+                    f'Process {process.type} was not updated to {self.release_version}, ' f'wl-app: {self.wl_app.name}'
                 )
                 return PollingResult.doing()
 
-        logger.info(f'All processes has been updated to {self.release_version}, engine-app: {self.engine_app.name}')
+        logger.info(f'All processes has been updated to {self.release_version}, wl-app: {self.wl_app.name}')
         return PollingResult.done()
 
 

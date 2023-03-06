@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import pickle
 from typing import List, Optional, Set, Tuple, TypeVar
 
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.release_controller.process.models import PlainProcess
 from paas_wl.utils.redisdb import get_default_redis
 
@@ -37,10 +37,10 @@ class ProcessesSnapshotStore:
     # processes will expire after 1 day to save space
     data_expires_in = 3600 * 24
 
-    def __init__(self, engine_app: EngineApp):
-        self.engine_app = engine_app
+    def __init__(self, wl_app: WlApp):
+        self.wl_app = wl_app
         self.redis_db = get_default_redis()
-        self.rkey = f'procs::snapshot::app:{engine_app.name}'
+        self.rkey = f'procs::snapshot::app:{wl_app.name}'
 
     def save(self, processes: List[PlainProcess]):
         """Save processes"""

@@ -44,7 +44,7 @@ def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:
     :return: `None` if no builds can be found
     """
     try:
-        return Build.objects.filter(app=env.wl_engine_app).latest('created').pk
+        return Build.objects.filter(app=env.wl_app).latest('created').pk
     except Build.DoesNotExist:
         return None
 

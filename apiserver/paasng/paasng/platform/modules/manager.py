@@ -36,6 +36,7 @@ from paas_wl.platform.api import (
     delete_module_related_res,
     update_metadata_by_env,
 )
+from paas_wl.platform.applications.constants import WlAppType
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
@@ -43,7 +44,7 @@ from paasng.dev_resources.sourcectl.connector import get_repo_connector
 from paasng.dev_resources.sourcectl.docker.models import init_image_repo
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.constants import EngineAppType, RuntimeType
+from paasng.engine.constants import RuntimeType
 from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import ApplicationEnvironment
@@ -223,7 +224,7 @@ class ModuleInitializer:
 
     def _create_or_get_engine_app(self, name, cluster_name: str) -> CreatedAppInfo:
         """Create or get existed engine app by given name"""
-        info = create_app_ignore_duplicated(self.application.region, name, EngineAppType.DEFAULT)
+        info = create_app_ignore_duplicated(self.application.region, name, WlAppType.DEFAULT)
         self.cluster_helper.set_engine_app_cluster(name, cluster_name)
         return info
 

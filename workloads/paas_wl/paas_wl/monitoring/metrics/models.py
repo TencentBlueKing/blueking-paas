@@ -35,7 +35,7 @@ from paas_wl.monitoring.metrics.clients import (
 from paas_wl.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paas_wl.monitoring.metrics.exceptions import AppInstancesNotFoundError, AppMetricNotSupportedError
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 
 if TYPE_CHECKING:
@@ -150,7 +150,7 @@ class ResourceMetricManager:
         return all_instances_metrics
 
 
-def get_resource_metric_manager(app: WLEngineApp, process_type: str):
+def get_resource_metric_manager(app: WlApp, process_type: str):
     try:
         cluster = get_cluster_by_app(app)
     except ObjectDoesNotExist:
@@ -172,7 +172,7 @@ def get_resource_metric_manager(app: WLEngineApp, process_type: str):
             raise AppMetricNotSupportedError('MONITOR_CONFIG unset')
         metric_client = PrometheusMetricClient(**settings.MONITOR_CONFIG["metrics"]["prometheus"])  # type: ignore
 
-    # 获取 EngineApp 对应的进程实例
+    # 获取 WlApp 对应的进程实例
     try:
         process = process_kmodel.get_by_type(app, process_type)
         process.instances = instance_kmodel.list_by_process_type(app, process_type)

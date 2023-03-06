@@ -19,13 +19,13 @@ to the current version of the project delivered to anyone in the future.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models.app import WlApp
 from paas_wl.platform.applications.models.config import Config
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.base.generation import get_latest_mapper_version
 
 
-@receiver(post_save, sender=WLEngineApp)
+@receiver(post_save, sender=WlApp)
 def on_app_created(sender, instance, created, *args, **kwargs):
     """Do extra things when an app was created"""
     if created:
@@ -33,7 +33,7 @@ def on_app_created(sender, instance, created, *args, **kwargs):
         set_res_ver(instance)
 
 
-def create_initial_config(app: WLEngineApp):
+def create_initial_config(app: WlApp):
     """Make sure the initial Config was created"""
     try:
         app.config_set.latest()
@@ -41,7 +41,7 @@ def create_initial_config(app: WLEngineApp):
         Config.objects.create(app=app, owner=app.owner, runtime={})
 
 
-def set_res_ver(app: WLEngineApp):
+def set_res_ver(app: WlApp):
     # mapper version 概念应该只在 engine 中消化，当前在应用新建后更新
     latest_version = get_latest_mapper_version().version
     AppResVerManager(app).update(latest_version)

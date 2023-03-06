@@ -47,13 +47,13 @@ def release_app(
     :param deployment_id: RedisStreamChannel id
     :param extra_envs:
     """
-    app = release.app
-    AppDeploy(app=app, release=release, extra_envs=extra_envs).perform()
+    wl_app = release.app
+    AppDeploy(app=wl_app, release=release, extra_envs=extra_envs).perform()
 
     # NOTE: 更新环境变量时触发的 release 不提供 deployment_id, 此时无需触发 wait_for_release
     if deployment_id:
         wait_for_release(
-            engine_app=app,
+            wl_app=wl_app,
             release_version=release.version,
             result_handler=ReleaseResultHandler,
             extra_params={"deployment_id": deployment_id},
@@ -65,7 +65,7 @@ def archive_env(env: ModuleEnvironment, operation_id: str):
     ArchiveOperationController(env=env, operation_id=operation_id).start()
 
     wait_for_all_stopped(
-        engine_app=env.wl_engine_app,
+        wl_app=env.wl_app,
         result_handler=ArchiveResultHandler,
         extra_params={"operation_id": operation_id},
     )

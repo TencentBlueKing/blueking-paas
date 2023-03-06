@@ -26,14 +26,14 @@ from paas_wl.networking.ingress.certs.utils import pick_shared_cert, update_or_c
 from paas_wl.networking.ingress.constants import AppSubpathSource
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.models import AppSubpath
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 
 from .base import AppIngressMgr
 
 logger = logging.getLogger(__name__)
 
 
-def assign_subpaths(app: App, subpaths: List[str], default_service_name: str):
+def assign_subpaths(app: WlApp, subpaths: List[str], default_service_name: str):
     """Assign subpaths to app, may update multiple apps's Ingress resources
     if a path's ownership has been changed from one app to another.
 
@@ -47,7 +47,7 @@ def assign_subpaths(app: App, subpaths: List[str], default_service_name: str):
         SubPathAppIngressMgr(app).sync(default_service_name=default_service_name, delete_when_empty=True)
 
 
-def save_subpaths(app: App, subpaths: List[str]) -> Set[App]:
+def save_subpaths(app: WlApp, subpaths: List[str]) -> Set[WlApp]:
     """Save subpaths to database, return apps affected by this save operation.
 
     :param subpaths: List of subpaths

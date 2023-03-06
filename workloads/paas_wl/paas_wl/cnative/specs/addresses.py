@@ -37,13 +37,13 @@ from paas_wl.networking.ingress.managers.domain import save_subdomains
 from paas_wl.networking.ingress.managers.subpath import save_subpaths
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, AutoGenDomain
 from paas_wl.networking.ingress.models import Domain as CustomDomain
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models.app import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
 
-def save_addresses(env: ModuleEnvironment) -> Set[EngineApp]:
+def save_addresses(env: ModuleEnvironment) -> Set[WlApp]:
     """Save an environment's pre-allocated addresses to database, includes both
     subdomains and subpaths.
 
@@ -52,13 +52,11 @@ def save_addresses(env: ModuleEnvironment) -> Set[EngineApp]:
     """
     from paasng.engine.deploy.infras import AppDefaultDomains, AppDefaultSubpaths
 
-    engine_app = EngineApp.objects.get(pk=env.engine_app_id)
-
     apps = set()
     domains = [AutoGenDomain(host=d.host, https_enabled=d.https_enabled) for d in AppDefaultDomains(env).domains]
     subpaths = [d.subpath for d in AppDefaultSubpaths(env).subpaths]
-    apps.update(save_subdomains(engine_app, domains))
-    apps.update(save_subpaths(engine_app, subpaths))
+    apps.update(save_subdomains(env.wl_app, domains))
+    apps.update(save_subpaths(env.wl_app, subpaths))
     return apps
 
 
@@ -68,7 +66,7 @@ class AddrResourceManager:
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.application = env.application
-        self.engine_app = EngineApp.objects.get_by_env(self.env)
+        self.wl_app = WlApp.objects.get_by_env(self.env)
 
     def build_mapping(self) -> DomainGroupMapping:
         """Build the mapping resource object"""
@@ -85,29 +83,29 @@ class AddrResourceManager:
         data = [subdomain_group, subpath_group, custom_group]
         data = [d for d in data if d.domains]
         return DomainGroupMapping(
-            metadata=ObjectMetadata(name=self.engine_app.name),
+            metadata=ObjectMetadata(name=self.wl_app.name),
             spec=DomainGroupMappingSpec(ref=MappingRef(name=app_name), data=data),
         )
 
     def _get_subdomain_domains(self) -> List[Domain]:
         """Get all "subdomain" source domain objects"""
-        subdomains = AppDomain.objects.filter(app=self.engine_app, source=AppDomainSource.AUTO_GEN)
+        subdomains = AppDomain.objects.filter(app=self.wl_app, source=AppDomainSource.AUTO_GEN)
         return [to_domain(d) for d in subdomains]
 
     def _get_subpath_domains(self) -> List[Domain]:
         """Get all "subpath" source domain objects"""
-        cluster = get_cluster_by_app(self.engine_app)
+        cluster = get_cluster_by_app(self.wl_app)
         root_domains = cluster.ingress_config.sub_path_domains
         if not root_domains:
             return []
 
-        objs = AppSubpath.objects.filter(app=self.engine_app).order_by('created')
+        objs = AppSubpath.objects.filter(app=self.wl_app).order_by('created')
         paths = [obj.subpath for obj in objs]
         if not paths:
             return []
 
         return [
-            to_shared_tls_domain(Domain(host=domain.name, pathPrefixList=paths), self.engine_app)
+            to_shared_tls_domain(Domain(host=domain.name, pathPrefixList=paths), self.wl_app)
             for domain in root_domains
         ]
 
@@ -140,7 +138,7 @@ def to_domain(d: AppDomain) -> Domain:
     return Domain(host=d.host, pathPrefixList=['/'], tlsSecretName=secret_name)
 
 
-def to_shared_tls_domain(d: Domain, app: EngineApp) -> Domain:
+def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:
     """Modify a domain object to make it support TLS, this is archived by finding
     matching shared cert and mutating "tlsSecretName" field.
 

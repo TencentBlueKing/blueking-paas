@@ -58,12 +58,12 @@ RG = settings.FOR_TESTS_DEFAULT_REGION
 
 class TestClientProcess:
     @pytest.fixture
-    def app(self, set_structure, bk_stag_engine_app):
-        bk_stag_engine_app.region = RG
-        bk_stag_engine_app.name = "bk-fake-stag"
-        bk_stag_engine_app.save()
-        set_structure(bk_stag_engine_app, {"web": 2, "worker": 1})
-        return bk_stag_engine_app
+    def app(self, set_structure, bk_stag_wl_app):
+        bk_stag_wl_app.region = RG
+        bk_stag_wl_app.name = "bk-fake-stag"
+        bk_stag_wl_app.save()
+        set_structure(bk_stag_wl_app, {"web": 2, "worker": 1})
+        return bk_stag_wl_app
 
     @pytest.fixture
     def release(self, app):

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 from django.db import models
 from django.utils import timezone
 
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.models import UuidAuditedModel
@@ -53,7 +53,7 @@ class CommandManager(models.Manager):
         if not hasattr(self, "instance"):
             raise RuntimeError("Only call `new` method from RelatedManager.")
 
-        if not isinstance(self.instance, App):
+        if not isinstance(self.instance, WlApp):
             raise RuntimeError("Only call from app.command_set.")
 
         app = self.instance

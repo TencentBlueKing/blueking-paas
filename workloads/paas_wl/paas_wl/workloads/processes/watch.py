@@ -25,7 +25,7 @@ from typing import Any, ClassVar, Dict, Generator, Iterable, List, Optional, Tup
 from django.db import connection
 from rest_framework.serializers import Serializer
 
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.system_api.serializers import InstanceSerializer, ProcSpecsSerializer
 from paas_wl.resources.kube_res.base import AppEntity
 from paas_wl.resources.kube_res.exceptions import WatchKubeResourceError
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def watch_process_events(
-    app: App, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
+    app: WlApp, timeout_seconds: int, rv_proc: Optional[int] = None, rv_inst: Optional[int] = None
 ) -> Generator[Dict, None, None]:
     """Create a watch stream to track app's all process related changes
 

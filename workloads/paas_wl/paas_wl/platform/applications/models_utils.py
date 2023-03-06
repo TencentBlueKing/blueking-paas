@@ -22,7 +22,7 @@ from django.db import models
 
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.platform.applications.models import BuildProcess, EngineApp
+from paas_wl.platform.applications.models import BuildProcess, WlApp
 from paas_wl.resources.actions.delete import delete_env_resources
 from paas_wl.workloads.processes.models import ProcessSpec
 from paasng.platform.modules.models import Module
@@ -46,19 +46,19 @@ def delete_module_related_res(module: Module) -> None:
         for bp in BuildProcess.objects.filter(app__uuid=env.engine_app_id):
             bp.output_stream.delete()
 
-        # Delete EngineApp and it's related resources and models
+        # Delete WlApp and it's related resources and models
         try:
-            wl_engine_app = EngineApp.objects.get(pk=env.engine_app_id)
-        except EngineApp.DoesNotExist:
+            wl_app = WlApp.objects.get(pk=env.engine_app_id)
+        except WlApp.DoesNotExist:
             continue
 
         # Delete all resources in cluster, allow failure
         try:
             delete_env_resources(env)
         except Exception as e:
-            logger.warning('Error deleting app cluster resources, app: %s, error: %s', wl_engine_app, e)
+            logger.warning('Error deleting app cluster resources, app: %s, error: %s', wl_app, e)
 
         # This will also remove cascaded models:
         # Build, BuildProcess, Config, Release, AppMetricsMonitor, AppImageCredential,
         # AppAddOn, AppDomain, AppSubpath.
-        wl_engine_app.delete()
+        wl_app.delete()

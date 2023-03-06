@@ -33,19 +33,19 @@ from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
+    from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
 
-def generate_builder_name(app: 'App') -> str:
+def generate_builder_name(app: 'WlApp') -> str:
     """Get the builder name"""
     return "slug-builder"
 
 
 def generate_slug_path(bp: BuildProcess):
     """Get the slug path for store builded slug"""
-    app: 'App' = bp.app
+    app: 'WlApp' = bp.app
     slug_name = f'{app.name}:{bp.branch}:{bp.revision}'
     return f'{app.region}/home/{slug_name}/push'
 
@@ -54,7 +54,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
     """generate all env vars needed for building"""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
-    app: 'App' = bp.app
+    app: 'WlApp' = bp.app
     cache_path = '%s/home/%s/cache' % (app.region, app.name)
 
     env_vars: Dict[str, str] = {}
@@ -126,17 +126,17 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
         env_vars["REQUIRED_BUILDPACKS"] = buildpacks
 
 
-def prepare_slugbuilder_template(app: 'App', env_vars: Dict, metadata: Optional[Dict]) -> SlugBuilderTemplate:
+def prepare_slugbuilder_template(app: 'WlApp', env_vars: Dict, metadata: Optional[Dict]) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
-    :param app: App to build, provide info about namespace, region and etc.
+    :param app: WlApp to build, provide info about namespace, region and etc.
     :param env_vars: Extra environment vars
     :param metadata: metadata about slugbuilder
     :returns: args for start slugbuilder
     """
     # Builder image name
     image = (metadata or {}).get("image", settings.DEFAULT_SLUGBUILDER_IMAGE)
-    logger.info(f"build app<{app.name}> with slugbuilder<{image}>")
+    logger.info(f"build wl_app<{app.name}> with slugbuilder<{image}>")
 
     return SlugBuilderTemplate(
         name=generate_builder_name(app),

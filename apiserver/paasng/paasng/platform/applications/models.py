@@ -435,8 +435,8 @@ class ApplicationEnvironment(TimestampedModel):
         return self.engine_app
 
     @property
-    def wl_engine_app(self):
-        """Return the WlEngineApp object(in 'workloads' module)"""
+    def wl_app(self):
+        """Return the WlApp object(in 'workloads' module)"""
         return self.engine_app.to_wl_obj()
 
     def get_exposed_link(self):

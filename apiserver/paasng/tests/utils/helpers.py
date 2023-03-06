@@ -397,21 +397,21 @@ def _mock_wl_services_in_creation():
 
 
 def create_pending_wl_engine_apps(bk_app: Application):
-    """Create WlEngineApp objects of the given application in workloads, these objects
+    """Create WlApp objects of the given application in workloads, these objects
     should have been created during application creation, but weren't because the
     `create_app_ignore_duplicated` function was mocked out.
 
     :param bk_app: Application object.
     """
     from paas_wl.platform.api import update_metadata_by_env
-    from paas_wl.platform.applications.models.app import WLEngineApp
+    from paas_wl.platform.applications.models import WlApp
 
     for module in bk_app.modules.all():
         for env in module.envs.all():
-            # Create WLEngineApps and update metadata
+            # Create WlApps and update metadata
             if args := _faked_wl_engine_apps.get(env.engine_app_id):
                 region, name, type_ = args
-                WLEngineApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
             if metadata := _faked_env_metadata.get(env.id):
                 update_metadata_by_env(env, metadata)
 

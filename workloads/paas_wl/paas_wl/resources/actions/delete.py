@@ -26,7 +26,7 @@ def delete_env_resources(env: 'ModuleEnvironment'):
     if not module_env_is_running(env):
         return
 
-    wl_app = env.wl_engine_app
+    wl_app = env.wl_app
     scheduler_client = get_scheduler_client_by_app(app=wl_app)
     scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
     return

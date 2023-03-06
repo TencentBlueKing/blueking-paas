@@ -35,7 +35,7 @@ from paas_wl.networking.ingress.domains.independent import (
 from paas_wl.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.processes.controllers import module_env_is_running
 from paasng.paas_wl.platform.applications.struct_models import set_model_structured
@@ -85,8 +85,8 @@ class DftCustomDomainManager:
         if not module_env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
-        engine_app = EngineApp.objects.get_by_env(env)
-        service_name = get_service_name(engine_app)
+        wl_app = WlApp.objects.get_by_env(env)
+        service_name = get_service_name(wl_app)
         try:
             domain, _ = Domain.objects.update_or_create(
                 name=host,

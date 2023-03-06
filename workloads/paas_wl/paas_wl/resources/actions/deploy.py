@@ -32,7 +32,7 @@ from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.utils import get_command_name
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
+    from paas_wl.platform.applications.models import WlApp
     from paas_wl.platform.applications.models.release import Release
     from paas_wl.resources.base.client import K8sScheduler
     from paas_wl.workloads.processes.models import Process
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AppDeploy:
-    app: 'App'
+    app: 'WlApp'
     release: 'Release'
     extra_envs: Dict = field(default_factory=lambda: {}, metadata={"annotation": "envs from paasng"})
 

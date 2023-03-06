@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.resources.base.kres import KDeployment, KPod, KReplicaSet
 from paas_wl.workloads.processes.utils import get_command_name
@@ -24,7 +24,7 @@ from paas_wl.workloads.processes.utils import get_command_name
 from .mapper import CallThroughKresMapper, MapperField, MapperPack
 
 
-def v1_scheduler_safe_name(app: App):
+def v1_scheduler_safe_name(app: WlApp):
     """the legacy app name in scheduler backend
     diff with version v2 scheduler_safe_name(current version) , version v1 have `region` as prefix"""
     return f"{app.region}-{app.scheduler_safe_name}"

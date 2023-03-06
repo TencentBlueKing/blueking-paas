@@ -21,12 +21,12 @@ from typing import List
 import cattr
 from django.conf import settings
 
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.workloads.resource_templates.components.volume import Volume, VolumeMount
 
 
-def get_app_logging_volume(app) -> List[Volume]:
+def get_app_logging_volume(app: WlApp) -> List[Volume]:
     """获取应用(挂载到宿主机的)日志卷配置, 如果应用不支持挂载日志到宿主机, 返回空列表"""
     if not app.latest_config.mount_log_to_host:
         return []
@@ -52,7 +52,7 @@ def get_app_logging_volume(app) -> List[Volume]:
     )
 
 
-def get_app_logging_volume_mounts(app: App) -> List[VolumeMount]:
+def get_app_logging_volume_mounts(app: WlApp) -> List[VolumeMount]:
     """获取应用(挂载到宿主机的)日志卷挂载到容器的挂载点配置, 如果应用不支持挂载日志到宿主机, 返回空列表"""
     if not app.latest_config.mount_log_to_host:
         return []

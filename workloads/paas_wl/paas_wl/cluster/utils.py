@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.cluster.models import Cluster
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import WlApp
 
 
 def get_default_cluster_by_region(region: str) -> Cluster:
@@ -28,10 +28,10 @@ def get_default_cluster_by_region(region: str) -> Cluster:
         raise RuntimeError(f'No default cluster found in region `{region}`')
 
 
-def get_cluster_by_app(app: App) -> Cluster:
+def get_cluster_by_app(app: WlApp) -> Cluster:
     """Get kubernetes cluster by given app
 
-    :param app: EngineApp object
+    :param app: WlApp object
     :raise RuntimeError: App has an invalid cluster_name defined
     """
     cluster_name = app.config_set.latest().cluster

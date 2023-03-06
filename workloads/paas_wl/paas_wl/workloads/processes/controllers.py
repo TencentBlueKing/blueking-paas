@@ -27,7 +27,7 @@ from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.platform.applications.constants import ApplicationType
-from paas_wl.platform.applications.models import EngineApp, Release
+from paas_wl.platform.applications.models import Release, WlApp
 from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
@@ -63,7 +63,7 @@ class AppProcessesController:
     """
 
     def __init__(self, env: ModuleEnvironment):
-        self.app = env.wl_engine_app
+        self.app = env.wl_app
         self.client = get_scheduler_client_by_app(self.app)
 
     def start(self, proc_type: str):
@@ -121,7 +121,7 @@ class AppProcessesController:
         """Create Process object by name, reads properties from different sources:
 
         1. replicas: defined in Model `ProcessSpec`
-        2. command: defined in `EngineApp.structure`
+        2. command: defined in `WlApp.structure`
         """
         return AppProcessManager(app=self.app).assemble_process(name)
 
@@ -132,21 +132,21 @@ class AppProcessesController:
             raise ProcessNotFound(proc_type)
 
 
-def list_proc_specs(engine_app: EngineApp) -> List[Dict]:
-    """Return all processes's specs of an app
+def list_proc_specs(wl_app: WlApp) -> List[Dict]:
+    """Return all processes specs of an app
 
     :return: list of process specs
     """
     from .drf_serializers import ProcessSpecSLZ
 
     results = []
-    for process_type in engine_app.process_specs.all().values_list("name", flat=True):
-        proc_spec = ProcessSpec.objects.get(engine_app=engine_app, name=process_type)
+    for process_type in wl_app.process_specs.all().values_list("name", flat=True):
+        proc_spec = ProcessSpec.objects.get(engine_app=wl_app, name=process_type)
         results.append(ProcessSpecSLZ(proc_spec).data)
     return results
 
 
-def judge_operation_frequent(app: EngineApp, proc_type: str, operation_interval: datetime.timedelta):
+def judge_operation_frequent(app: WlApp, proc_type: str, operation_interval: datetime.timedelta):
     """检查 process 操作是否频繁
 
     - Only normal app which owns ProcessSpec objects is supported
@@ -204,7 +204,7 @@ def get_proc_mgr(env: ModuleEnvironment) -> ProcController:
     return AppProcessesController(env)
 
 
-def get_processes_status(app: EngineApp) -> List[Process]:
+def get_processes_status(app: WlApp) -> List[Process]:
     """Get the real-time processes status
 
     1. Get current process structure from `release.structure`
@@ -240,8 +240,8 @@ def env_is_running(env: ModuleEnv) -> bool:
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return AppModelDeploy.objects.any_successful(env)
     else:
-        engine_app = EngineApp.objects.get_by_env(env)
-        return Release.objects.any_successful(engine_app)
+        wl_app = WlApp.objects.get_by_env(env)
+        return Release.objects.any_successful(wl_app)
 
 
 # TODO: 合并至 env_is_running
@@ -256,5 +256,5 @@ def module_env_is_running(env: ModuleEnvironment) -> bool:
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return AppModelDeploy.objects.any_successful(env)
     else:
-        engine_app = EngineApp.objects.get_by_env(env)
-        return Release.objects.any_successful(engine_app)
+        wl_app = WlApp.objects.get_by_env(env)
+        return Release.objects.any_successful(wl_app)

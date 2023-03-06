@@ -26,7 +26,7 @@ from paas_wl.networking.ingress.managers.base import AppIngressMgr
 from paas_wl.networking.ingress.managers.domain import CustomDomainIngressMgr, SubdomainAppIngressMgr
 from paas_wl.networking.ingress.managers.subpath import SubPathAppIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -43,7 +43,7 @@ class UpdateTargetResult(NamedTuple):
 class AppDefaultIngresses:
     """helps managing app's default ingress rules."""
 
-    def __init__(self, app: EngineApp):
+    def __init__(self, app: WlApp):
         self.app = app
 
     def list(self) -> Iterable[AppIngressMgr]:

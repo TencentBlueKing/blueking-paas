@@ -26,7 +26,7 @@ from jsonfield import JSONField
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.platform.applications.constants import EngineAppType
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models.managers import AppConfigVarManager
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.release_controller.constants import ImagePullPolicy
@@ -39,7 +39,7 @@ from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.serializers import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import EngineApp
+    from paas_wl.platform.applications.models import WlApp
     from paas_wl.platform.applications.models.release import Release
 
 logger = logging.getLogger(__name__)
@@ -108,8 +108,8 @@ class ProcessSpec(TimestampedModel):
 
 
 class ProcessSpecManager:
-    def __init__(self, engine_app: 'EngineApp'):
-        self.engine_app = engine_app
+    def __init__(self, wl_app: 'WlApp'):
+        self.wl_app = wl_app
 
     def sync(self, processes: List[Dict]):
         """Sync ProcessSpecs data with given processes.
@@ -119,11 +119,11 @@ class ProcessSpecManager:
                           where 'replicas' and 'plan' is optional
         """
         processes_map = {process["name"]: process for process in processes}
-        environment = get_metadata(self.engine_app).environment
+        environment = get_metadata(self.wl_app).environment
 
         # Hardcode proc_type to "process" because no other values is supported at this moment.
         proc_type = 'process'
-        proc_specs = ProcessSpec.objects.filter(engine_app=self.engine_app, type=proc_type)
+        proc_specs = ProcessSpec.objects.filter(engine_app=self.wl_app, type=proc_type)
         existed_procs_name = set(proc_specs.values_list('name', flat=True))
 
         # remove proc spec objects which is already deleted via procfile
@@ -144,9 +144,9 @@ class ProcessSpecManager:
 
             process_spec = ProcessSpec(
                 type=proc_type,
-                region=self.engine_app.region,
+                region=self.wl_app.region,
                 name=process["name"],
-                engine_app_id=self.engine_app.pk,
+                engine_app_id=self.wl_app.pk,
                 target_replicas=target_replicas,
                 plan=plan,
             )
@@ -360,7 +360,7 @@ class Process(AppEntity):
     @property
     def main_container_name(self) -> str:
         # TODO: 统一主容器的名字
-        if self.app.type == EngineAppType.DEFAULT:
+        if self.app.type == WlAppType.DEFAULT:
             return f"{self.app.region}-{self.app.scheduler_safe_name}"
         return self.type
 

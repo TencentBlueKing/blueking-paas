@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework import serializers
 
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.platform.system_api.serializers import InstanceSerializer as _InstanceSerializer
 from paas_wl.workloads.processes.drf_serializers import HumanizeDateTimeField
@@ -32,8 +32,8 @@ class ProcessSpecBoundInfoSLZ(serializers.Serializer):
     target_status = serializers.CharField(help_text="用户设置的目标状态")
 
     def get_app_code(self, data) -> str:
-        engine_app = EngineApp.objects.get(pk=data.engine_app_id)
-        return get_metadata(engine_app).get_paas_app_code()
+        wl_app = WlApp.objects.get(pk=data.engine_app_id)
+        return get_metadata(wl_app).get_paas_app_code()
 
 
 class ProcessSpecPlanSLZ(serializers.ModelSerializer):

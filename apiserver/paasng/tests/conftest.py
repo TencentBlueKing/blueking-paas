@@ -737,7 +737,7 @@ def with_live_addrs():
 
 @pytest.fixture
 def with_wl_apps(request):
-    """Create all pending WlEngineApp objects related with current bk_app, useful
+    """Create all pending WlApp objects related with current bk_app, useful
     for tests which want to use `bk_app`, `bk_stag_env` fixtures.
     """
     if "bk_cnative_app" in request.fixturenames:

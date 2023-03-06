@@ -42,7 +42,7 @@ from typing import (
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.base.exceptions import ResourceDeleteTimeout, ResourceMissing
 from paas_wl.resources.kube_res.exceptions import (
@@ -61,9 +61,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AppEntity:
-    """Entity type related with App"""
+    """Entity type related with WlApp"""
 
-    app: App
+    app: WlApp
     name: str
 
     # If a resource was generated from kubernetes objects, the object will be stored
@@ -164,7 +164,7 @@ class AppEntityDeserializer(BaseTransformer, Generic[AET], metaclass=ABCMeta):
     """Base class for deserializing kube resource"""
 
     @abstractmethod
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> AET:
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> AET:
         """Generate a AppEntity object by given kube object"""
         raise NotImplementedError
 
@@ -281,7 +281,7 @@ class AppEntityReader(Generic[AET]):
     def __init__(self, entity_type: Type[AET]):
         self.entity_type = entity_type
 
-    def get(self, app: App, name: str) -> AET:
+    def get(self, app: WlApp, name: str) -> AET:
         """Get a resource by name
 
         :raises: AppEntityNotFound if not found
@@ -298,11 +298,11 @@ class AppEntityReader(Generic[AET]):
         res._kube_data = kube_data
         return res
 
-    def list_by_app(self, app: App, labels: Optional[Dict] = None) -> List[AET]:
+    def list_by_app(self, app: WlApp, labels: Optional[Dict] = None) -> List[AET]:
         """List all app's resources"""
         return self.list_by_app_with_meta(app, labels=labels).items
 
-    def list_by_app_with_meta(self, app: App, labels: Optional[Dict] = None) -> ResourceList[AET]:
+    def list_by_app_with_meta(self, app: WlApp, labels: Optional[Dict] = None) -> ResourceList[AET]:
         """List all app's resources,  return results including metadata
 
         :param labels: labels for filtering results
@@ -320,7 +320,7 @@ class AppEntityReader(Generic[AET]):
             items.append(item)
         return ResourceList[AET](items=items, metadata=ret.metadata)
 
-    def watch_by_app(self, app: App, labels: Optional[Dict] = None, *args, **kwargs) -> Iterator[WatchResultDict]:
+    def watch_by_app(self, app: WlApp, labels: Optional[Dict] = None, *args, **kwargs) -> Iterator[WatchResultDict]:
         """Get notified when resource changes
 
         :raises: WatchKubeResourceError when an ERROR event was received
@@ -359,7 +359,7 @@ class AppEntityReader(Generic[AET]):
         # ref: https://kubernetes.io/docs/reference/using-api/api-concepts/#410-gone-responses
         return exc.status == 410
 
-    def _make_deserializer(self, app: App) -> AppEntityDeserializer[AET]:
+    def _make_deserializer(self, app: WlApp) -> AppEntityDeserializer[AET]:
         gvk_config = self._load_gvk_config(app)
         if self.entity_type.Meta.deserializer:
             return self.entity_type.Meta.deserializer(self.entity_type, gvk_config)
@@ -369,7 +369,7 @@ class AppEntityReader(Generic[AET]):
         logger.debug('Picked deserializer:%s from multi choices, gvk_config: %s', ret.__class__.__name__, gvk_config)
         return ret
 
-    def _load_gvk_config(self, app: App) -> GVKConfig:
+    def _load_gvk_config(self, app: WlApp) -> GVKConfig:
         """Load GVK config of current Kind"""
         with self.kres(app) as kres_client:
             # TODO: Add cache to avoid too many api calls
@@ -380,7 +380,7 @@ class AppEntityReader(Generic[AET]):
                 available_apiversions=kres_client.get_available_versions(),
             )
 
-    def _kres(self, app: App, api_version: str = '') -> Iterator[kres.BaseKresource]:
+    def _kres(self, app: WlApp, api_version: str = '') -> Iterator[kres.BaseKresource]:
         """Return kres object as a context manager which was initialized with kubernetes client, will close all
         connection automatically when exit to avoid connections leaking.
         """
@@ -389,7 +389,7 @@ class AppEntityReader(Generic[AET]):
 
     kres: Callable[..., ContextManager['kres.BaseKresource']] = contextmanager(_kres)
 
-    def _get_namespace(self, app: App) -> str:
+    def _get_namespace(self, app: WlApp) -> str:
         """Return the namespace the kres object will create/query in"""
         return app.namespace
 
@@ -423,7 +423,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
         res._kube_data = kube_data
         return res
 
-    def delete_by_name(self, app: App, name: str, non_grace_period: bool = False) -> 'WaitDelete[AET]':
+    def delete_by_name(self, app: WlApp, name: str, non_grace_period: bool = False) -> 'WaitDelete[AET]':
         """Delete a resource by its name"""
         serializer = self._make_serializer(app)
         with self.kres(app, serializer.get_apiversion()) as kres_client:
@@ -481,7 +481,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
 
     # Concreate methods end
 
-    def _make_serializer(self, app: App) -> AppEntitySerializer[AET]:
+    def _make_serializer(self, app: WlApp) -> AppEntitySerializer[AET]:
         """Make a serializer object by given AppEntity object"""
         gvk_config = self._load_gvk_config(app)
         if self.entity_type.Meta.serializer:
@@ -505,7 +505,7 @@ class WaitDelete(Generic[AET]):
 
     _check_interval = 1
 
-    def __init__(self, reader: AppEntityReader[AET], app: App, name: str, namespace: str):
+    def __init__(self, reader: AppEntityReader[AET], app: WlApp, name: str, namespace: str):
         self.reader = reader
         self.app = app
         self.name = name

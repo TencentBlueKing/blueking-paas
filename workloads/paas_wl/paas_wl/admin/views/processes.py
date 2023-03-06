@@ -26,7 +26,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.admin.mixins import PaginationMixin
 from paas_wl.admin.serializers.processes import InstanceSerializer, ProcessSpecBoundInfoSLZ, ProcessSpecPlanSLZ
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models.app import WlApp
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.controllers import get_proc_mgr
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
@@ -35,7 +35,7 @@ from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.platform.applications.models import ModuleEnvironment
 
 
-def get_env_by_wl_app(wl_app: WLEngineApp) -> ModuleEnvironment:
+def get_env_by_wl_app(wl_app: WlApp) -> ModuleEnvironment:
     return ModuleEnvironment.objects.get(engine_app_id=wl_app.pk)
 
 
@@ -94,12 +94,12 @@ class ProcessSpecManageViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WLEngineApp, region=self.kwargs['region'], name=self.kwargs['name'])
+        app = get_object_or_404(WlApp, region=self.kwargs['region'], name=self.kwargs['name'])
         self.check_object_permissions(self.request, app)
         return app
 
     def switch_process_plan(self, request, region, name, process_type):
-        engine_app = self.get_app()
+        wl_app = self.get_app()
         data = request.data
 
         if "process_spec_plan_id" in data:
@@ -112,7 +112,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
                 raise Http404("No ProcessSpecPlan matches the given name.")
 
         process_spec, _ = ProcessSpec.objects.get_or_create(
-            engine_app_id=engine_app.pk,
+            engine_app_id=wl_app.pk,
             name=process_type,
             defaults={
                 "type": 'process',
@@ -128,10 +128,10 @@ class ProcessSpecManageViewSet(GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def scale(self, request, region, name, process_type):
-        engine_app = self.get_app()
+        wl_app = self.get_app()
         data = request.data
-        process_spec = get_object_or_404(ProcessSpec, engine_app_id=engine_app.pk, name=process_type)
-        ctl = get_proc_mgr(get_env_by_wl_app(engine_app))
+        process_spec = get_object_or_404(ProcessSpec, engine_app_id=wl_app.pk, name=process_type)
+        ctl = get_proc_mgr(get_env_by_wl_app(wl_app))
         if process_spec.target_replicas != int(data["target_replicas"]):
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
 
@@ -143,7 +143,7 @@ class ProcessInstanceViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WLEngineApp, region=self.kwargs['region'], name=self.kwargs['name'])
+        app = get_object_or_404(WlApp, region=self.kwargs['region'], name=self.kwargs['name'])
         self.check_object_permissions(self.request, app)
         return app
 

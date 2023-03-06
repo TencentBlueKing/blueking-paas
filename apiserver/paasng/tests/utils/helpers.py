@@ -360,7 +360,7 @@ def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
 
 
 # Stores pending actions related with workloads during app creation
-_faked_wl_engine_apps = {}
+_faked_wl_apps = {}
 _faked_env_metadata = {}
 
 
@@ -373,7 +373,7 @@ def _mock_wl_services_in_creation():
         obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name)
 
         # Store params in global, so we can manually create the objects later.
-        _faked_wl_engine_apps[obj.uuid] = (region, name, type_)
+        _faked_wl_apps[obj.uuid] = (region, name, type_)
         return obj
 
     def fake_update_metadata_by_env(env, metadata_part):
@@ -396,7 +396,7 @@ def _mock_wl_services_in_creation():
         yield
 
 
-def create_pending_wl_engine_apps(bk_app: Application):
+def create_pending_wl_apps(bk_app: Application):
     """Create WlApp objects of the given application in workloads, these objects
     should have been created during application creation, but weren't because the
     `create_app_ignore_duplicated` function was mocked out.
@@ -409,7 +409,7 @@ def create_pending_wl_engine_apps(bk_app: Application):
     for module in bk_app.modules.all():
         for env in module.envs.all():
             # Create WlApps and update metadata
-            if args := _faked_wl_engine_apps.get(env.engine_app_id):
+            if args := _faked_wl_apps.get(env.engine_app_id):
                 region, name, type_ = args
                 WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
             if metadata := _faked_env_metadata.get(env.id):

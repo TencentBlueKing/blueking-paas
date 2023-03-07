@@ -50,7 +50,7 @@ class LogLine(TypedDict):
 
 
 class EngineDeployClient:
-    """A high level client for engine"""
+    """A high level client for engine, provides functions related with deployments"""
 
     def __init__(self, engine_app):
         self.engine_app = engine_app

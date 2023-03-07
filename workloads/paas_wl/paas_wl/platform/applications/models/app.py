@@ -25,17 +25,8 @@ from jsonfield import JSONField
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import UuidAuditedModel
 from paas_wl.platform.applications.models.validators import validate_app_name, validate_app_structure
-from paas_wl.platform.applications.struct_models import ModuleEnv
 
 logger = logging.getLogger(__name__)
-
-
-class AppManager(models.Manager):
-    """Custom manager for App(WlApp) model"""
-
-    def get_by_env(self, env: ModuleEnv) -> 'WlApp':
-        """Get an WlApp by env object"""
-        return self.get_queryset().get(pk=env.engine_app_id)
 
 
 # Deprecated: 名称 App 容易与其他概念混淆，请使用别名 WlApp
@@ -48,8 +39,6 @@ class App(UuidAuditedModel):
     # deprecated field
     structure = JSONField(default={}, blank=True, validators=[validate_app_structure])
     type = models.CharField(verbose_name='应用类型', max_length=16, default=WlAppType.DEFAULT.value, db_index=True)
-
-    objects = AppManager()
 
     class Meta:
         unique_together = ('region', 'name')

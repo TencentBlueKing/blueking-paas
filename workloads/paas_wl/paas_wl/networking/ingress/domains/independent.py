@@ -54,7 +54,7 @@ class ReplaceAppDomainService:
     """
 
     def __init__(self, env: ModuleEnvironment, host: str, path_prefix: str):
-        self.wl_app = WlApp.objects.get_by_env(env)
+        self.wl_app = env.wl_app
         self.env = env
         self.host = host
         self.path_prefix = path_prefix

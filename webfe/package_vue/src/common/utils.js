@@ -204,3 +204,13 @@ export function clearFilter (refInstance) {
     };
   }
 }
+
+/**
+ *  设置bk-talbe表头title
+ *
+ * @param refInstance {h, { column }} 渲染函数
+ *
+ */
+export function renderHeader (h, { column }) {
+  return h('span', { attrs: { title: column.label } }, column.label);
+}

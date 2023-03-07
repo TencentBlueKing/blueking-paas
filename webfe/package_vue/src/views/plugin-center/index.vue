@@ -48,7 +48,10 @@
             @clear-filter="clearFilterKey"
           />
         </div>
-        <bk-table-column :label="$t('插件 ID')">
+        <bk-table-column
+          :label="$t('插件 ID')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             <span
               class="plugin-link"
@@ -63,7 +66,10 @@
             </span>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('插件名称')">
+        <bk-table-column
+          :label="$t('插件名称')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             <span>{{ row.name_zh_cn }}</span>
           </template>
@@ -74,6 +80,7 @@
           column-key="pd_name"
           :filters="pluginTypeFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             {{ row.pd_name || '--' }}
@@ -83,6 +90,7 @@
           :label="$t('创建时间')"
           prop="created"
           sortable
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             {{ row.created || '--' }}
@@ -94,6 +102,7 @@
           column-key="language"
           :filters="languageFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         />
         <bk-table-column
           :label="$t('版本')"

@@ -62,7 +62,10 @@
                   <span>{{ props.row.environment_name || '--' }}</span>
                 </template>
               </bk-table-column>
-              <bk-table-column :label="$t('域名')">
+              <bk-table-column
+                :label="$t('域名')"
+                :render-header="$renderHeader"
+              >
                 <template slot-scope="{ row }">
                   <span v-bk-tooltips="row.domain_name">{{ row.domain_name }}</span>
                 </template>
@@ -148,7 +151,10 @@
                   <span v-if="props.row.environment === 'stag'">{{ $t('预发布环境') }}</span>
                 </template>
               </bk-table-column>
-              <bk-table-column :label="$t('域名解析目标 IP')">
+              <bk-table-column
+                :label="$t('域名解析目标 IP')"
+                :render-header="$renderHeader"
+              >
                 <template slot-scope="props">
                   <span>{{ props.row.frontend_ingress_ip || '--' }}</span>
                 </template>

@@ -138,7 +138,10 @@
               :label="userTypeMap[userType]"
               prop="content"
             />
-            <bk-table-column :label="$t('添加者')">
+            <bk-table-column
+              :label="$t('添加者')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <span>{{ props.row.owner.username || '--' }}</span>
               </template>
@@ -151,12 +154,18 @@
                 <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('更新时间')">
+            <bk-table-column
+              :label="$t('更新时间')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('添加原因')">
+            <bk-table-column
+              :label="$t('添加原因')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <bk-popover>
                   <div class="reason">
@@ -174,6 +183,7 @@
             <bk-table-column
               :label="$t('到期时间')"
               width="100"
+              :render-header="$renderHeader"
             >
               <template slot-scope="{ row }">
                 <template v-if="row.is_expired">

@@ -80,6 +80,7 @@
           <bk-table-column
             :label="$t('代码分支')"
             prop="source_version_name"
+            :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
               <span>{{ row.source_version_name || '--' }}</span>
@@ -88,6 +89,7 @@
           <bk-table-column
             :label="$t('代码 Commit')"
             prop="comment"
+            :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
               <span>{{ row.source_hash || '--' }}</span>
@@ -96,6 +98,7 @@
           <bk-table-column
             :label="$t('创建人')"
             prop="creator"
+            :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
               <span>{{ row.creator || '--' }}</span>
@@ -104,6 +107,7 @@
           <bk-table-column
             :label="$t('创建时间')"
             prop="created"
+            :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
               <span>{{ row.created || '--' }}</span>

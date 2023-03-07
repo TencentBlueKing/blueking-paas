@@ -45,7 +45,10 @@
               @clear-filter="clearFilterKey"
             />
           </div>
-          <bk-table-column :label="$t('成员姓名')">
+          <bk-table-column
+            :label="$t('成员姓名')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <div v-bk-overflow-tips>
                 <span

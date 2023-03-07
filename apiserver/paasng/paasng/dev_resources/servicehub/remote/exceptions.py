@@ -59,4 +59,4 @@ class ServiceConfigNotFound(BaseRemoteStoreException):
 
 
 class GetClusterEgressInfoError(Exception):
-    """Can not get app cluster egress info from engine."""
+    """Can not get app cluster egress info"""

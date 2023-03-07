@@ -266,10 +266,19 @@ class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
         return code
 
 
+class CLoudNativeParamsSLZ(serializers.Serializer):
+    """创建云原生应用的详细参数"""
+
+    image = serializers.CharField(label=_('容器镜像地址'), required=True)
+    command = serializers.ListField(help_text='启动命令', child=serializers.CharField(), required=False, default=list)
+    args = serializers.ListField(help_text='命令参数', child=serializers.CharField(), required=False, default=list)
+    target_port = serializers.IntegerField(label=_('容器端口'), required=False)
+
+
 class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     """创建云原生架构应用的表单"""
 
-    cloud_native_params = serializers.JSONField(label=_('云原生架构应用参数'), required=True)
+    cloud_native_params = CLoudNativeParamsSLZ(label=_('云原生架构应用参数'), required=True)
     advanced_options = AdvancedCreationParamsMixin(required=False)
 
 

@@ -47,11 +47,15 @@
           </div>
           <bk-table-column :label="$t('成员姓名')">
             <template slot-scope="props">
-              <span
-                v-if="props.row.avatar"
-                class="user-photo"
-              ><img :src="props.row.avatar"></span>
-              <span class="user-name">{{ props.row.username }}</span>
+              <div v-bk-overflow-tips>
+                <span
+                  v-if="props.row.avatar"
+                  class="user-photo"
+                >
+                  <img :src="props.row.avatar">
+                </span>
+                {{ props.row.username }}
+              </div>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('角色')">

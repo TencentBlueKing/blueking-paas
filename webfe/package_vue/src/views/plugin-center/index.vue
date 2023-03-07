@@ -50,18 +50,17 @@
         </div>
         <bk-table-column :label="$t('插件 ID')">
           <template slot-scope="{ row }">
-            <img
-              :src="row.logo"
-              onerror="this.src='/static/images/plugin-default.svg'"
-              class="plugin-logo-cls"
-            >
-            <bk-button
-              v-bk-tooltips="row.id"
-              text
+            <span
+              class="plugin-link"
               @click="toPluginSummary(row)"
             >
+              <img
+                :src="row.logo"
+                onerror="this.src='/static/images/plugin-default.svg'"
+                class="plugin-logo-cls"
+              >
               {{ row.id || '--' }}
-            </bk-button>
+            </span>
           </template>
         </bk-table-column>
         <bk-table-column :label="$t('插件名称')">
@@ -543,6 +542,13 @@
         .clear-search {
             cursor: pointer;
             color: #3a84ff;
+        }
+    }
+    .plugin-link {
+        color: #3a84ff;
+        cursor: pointer;
+        &:hover {
+            color: #699df4;
         }
     }
 </style>

@@ -1959,7 +1959,7 @@ export default {
   '发布进度': 'Release Progress',
   '重新发布': 'Republish',
   '发布状态': 'Release Status',
-  '版本号、代码分支': 'Version No., Code Branch',
+  '版本号、代码分支': 'Version No, Code Branch',
   '已有发布任务进行中': 'There are already publishing tasks in progress',
   '版本号类型': 'Version No. Type',
   '版本日志': 'Version Log',

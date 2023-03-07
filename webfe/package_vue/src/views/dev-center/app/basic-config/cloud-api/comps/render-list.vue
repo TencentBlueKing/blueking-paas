@@ -138,7 +138,6 @@
                   class="api-link"
                 >
                   <span
-                    v-bk-overflow-tips
                     v-html="highlight(props.row)"
                   />
                   <i

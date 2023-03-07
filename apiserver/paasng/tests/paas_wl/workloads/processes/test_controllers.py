@@ -25,7 +25,7 @@ from paas_wl.workloads.processes.controllers import get_processes_status
 from paas_wl.workloads.processes.models import Instance, Process
 from tests.paas_wl.utils.wl_app import random_fake_app, release_setup
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestController:

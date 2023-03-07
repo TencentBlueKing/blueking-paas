@@ -28,9 +28,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.cnative.specs.procs import get_proc_specs
-from paas_wl.platform.applications.constants import AppOperationType, WlAppType
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.permissions import AppAction, application_perm_class
 from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.platform.system_api.serializers import ProcExtraInfoSLZ, ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
@@ -50,8 +49,11 @@ from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.watch import watch_process_events
+from paasng.accessories.iam.permissions.resources.application import AppAction
+from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.operations.constant import OperationType
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def get_logging_operate_type(type_: str) -> Optional[int]:
         """Get the type of application operation"""
-        return {'start': AppOperationType.PROCESS_START, 'stop': AppOperationType.PROCESS_STOP}.get(type_, None)
+        return {'start': OperationType.PROCESS_START.value, 'stop': OperationType.PROCESS_STOP.value}.get(type_, None)
 
     def _perform_update(
         self,

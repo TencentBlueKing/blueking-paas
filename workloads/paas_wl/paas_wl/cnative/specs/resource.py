@@ -48,7 +48,7 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     """Get the application's model resource in given environment, if no resource
     can be found, return `None`.
     """
-    wl_app = WlApp.objects.get_by_env(env)
+    wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
         # TODO: Provide apiVersion or using AppEntity(after some adapting works) to make
         # code more robust.

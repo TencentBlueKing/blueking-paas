@@ -27,11 +27,11 @@ from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.struct_models import Application, ModuleAttrFromID, ModuleEnvAttrFromName
+from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 
 from .configurations import generate_builtin_configurations, merge_envvars
 from .constants import (

@@ -25,7 +25,6 @@ from django.utils.crypto import get_random_string
 from paas_wl.utils.basic import digest_if_length_exceeded
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import make_json_field
-from paas_wl.utils.redisdb import get_stream_channel_redis
 
 
 class TestConstants:
@@ -35,12 +34,6 @@ class TestConstants:
             BLUE = 2
 
         assert make_enum_choices(FooEnum) == [(1, 'RED'), (2, 'BLUE')]
-
-
-class TestRedisUtils:
-    def test_get_stream_channel_redis(self):
-        redis_db = get_stream_channel_redis()
-        assert redis_db
 
 
 class TestDigestIfLengthExceeded:

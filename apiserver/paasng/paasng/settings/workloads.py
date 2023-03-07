@@ -104,17 +104,6 @@ DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 
 SLUGBUILDER_RESOURCES_SPEC = settings.get('SLUGBUILDER_RESOURCES_SPEC')
 
 # ---------------
-# Redis 配置
-# ---------------
-
-# 与 apiserver 通信的 redis 管道, 需要确保两个项目中的配置一致
-STREAM_CHANNEL_REDIS_URL = settings.get('STREAM_CHANNEL_REDIS_URL', default='redis://localhost:6379/0')
-
-# 其他配置项如 REDIS_URL 等未迁移，这些配置在 workloads 中只作缓存用，可使用 apiserver
-# 的同名配置项。
-
-
-# ---------------
 # 部署环境相关
 # ---------------
 # 环境变量前缀

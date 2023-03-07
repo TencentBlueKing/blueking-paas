@@ -22,19 +22,6 @@ import redis
 from blue_krill.redis_tools.sentinel import SentinelBackend
 from django.conf import settings
 
-_stream_channel_redisdb = None
-
-
-def get_stream_channel_redis() -> redis.Redis:
-    """Get redis for streaming communication with pass-ng"""
-    global _stream_channel_redisdb
-    if _stream_channel_redisdb is not None:
-        return _stream_channel_redisdb
-
-    _stream_channel_redisdb = _get_redis_from_url(settings.STREAM_CHANNEL_REDIS_URL)
-    return _stream_channel_redisdb
-
-
 _default_redisdb = None
 
 

@@ -35,7 +35,7 @@ def setup(settings, with_wl_apps):
 
 class TestEnvClusterService:
     def test_empty_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_engine_app
+        wl_app = bk_stag_env.wl_app
         latest_config = wl_app.latest_config
         latest_config.cluster = ""
         latest_config.save()
@@ -43,7 +43,7 @@ class TestEnvClusterService:
         assert EnvClusterService(bk_stag_env).get_cluster().name == "default"
 
     def test_valid_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_engine_app
+        wl_app = bk_stag_env.wl_app
         latest_config = wl_app.latest_config
         latest_config.cluster = "extra-1"
         latest_config.save()
@@ -51,7 +51,7 @@ class TestEnvClusterService:
         assert EnvClusterService(bk_stag_env).get_cluster().name == "extra-1"
 
     def test_invalid_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_engine_app
+        wl_app = bk_stag_env.wl_app
         latest_config = wl_app.latest_config
         latest_config.cluster = "invalid"
         latest_config.save()

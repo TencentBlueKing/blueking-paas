@@ -71,7 +71,6 @@ class EnvironmentSLZ(serializers.ModelSerializer):
 
     @staticmethod
     def get_cluster_name(env: ModuleEnvironment) -> Optional[str]:
-        # 目前云原生应用在 Admin42 没有概览页，先只考虑普通应用的情况
         try:
             return EnvClusterService(env).get_env_cluster_name()
         except ObjectDoesNotExist:

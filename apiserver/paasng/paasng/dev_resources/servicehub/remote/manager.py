@@ -165,7 +165,7 @@ class RemoteServiceObj(ServiceObj):
 
 
 @dataclass
-class EngineAppClusterInfo:
+class EnvClusterInfo:
     env: 'ModuleEnvironment'
 
     def get_egress_info(self):
@@ -315,7 +315,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         - `env`: current ModuleEnvironment object
         """
         result = {}
-        cluster_info = EngineAppClusterInfo(self.db_env)
+        cluster_info = EnvClusterInfo(self.db_env)
 
         bk_monitor_space_id = ""
         # 增强服务参数中声明了需要蓝鲸监控命名空间，则需要创建应用对应的蓝鲸监控命名空间

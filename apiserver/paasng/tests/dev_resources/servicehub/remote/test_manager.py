@@ -144,7 +144,7 @@ class TestRemoteEngineAppInstanceRel:
                     assert bool(all(mocked_provision.call_args[0]))
                     assert mocked_provision.call_args[1]['params']['username'] == rel.db_engine_app.name
 
-    @mock.patch('paasng.dev_resources.servicehub.remote.manager.EngineAppClusterInfo.get_egress_info')
+    @mock.patch('paasng.dev_resources.servicehub.remote.manager.EnvClusterInfo.get_egress_info')
     def test_render_params(self, mock_get_egress_info, store, bk_app, bk_module, bk_service_ver):
         mock_get_egress_info.return_value = {}
         mgr = RemoteServiceMgr(store=store)

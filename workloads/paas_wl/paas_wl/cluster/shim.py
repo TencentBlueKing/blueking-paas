@@ -59,7 +59,7 @@ class EnvClusterService:
         return Cluster.objects.get(name=self.get_env_cluster_name())
 
     def get_env_cluster_name(self) -> str:
-        wl_app = self.env.wl_engine_app
+        wl_app = self.env.wl_app
         if wl_app.latest_config.cluster:
             return wl_app.latest_config.cluster
         return RegionClusterService(self.env.application.region).get_default_cluster().name
@@ -74,7 +74,7 @@ class EnvClusterService:
         else:
             cluster = RegionClusterService(self.env.application.region).get_default_cluster()
 
-        wl_app = self.env.wl_engine_app
+        wl_app = self.env.wl_app
         latest_config = wl_app.latest_config
         latest_config.cluster = cluster.name
         latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)

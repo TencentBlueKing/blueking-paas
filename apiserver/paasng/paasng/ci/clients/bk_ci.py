@@ -1,0 +1,98 @@
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
+import logging
+from typing import TYPE_CHECKING
+
+from bkapi_client_core.exceptions import APIGatewayResponseError
+from django.conf import settings
+
+from paasng.ci.clients.apigw import Client
+from paasng.ci.clients.apigw import Group as BKCIGroup
+from paasng.ci.clients.exceptions import BKCIApiError, BKCIGatewayServiceError
+
+if TYPE_CHECKING:
+    from paasng.ci.base import BkUserOAuth
+
+logger = logging.getLogger(__name__)
+
+
+class BkCIClient:
+    """蓝盾通过 APIGW 提供的应用态 API"""
+
+    def __init__(self, user_oauth: 'BkUserOAuth'):
+        self.user_oauth = user_oauth
+        # 蓝盾只提供了正式环境的 API
+        client = Client(endpoint=settings.BK_API_URL_TMPL, stage="prod")
+
+        client.update_bkapi_authorization(
+            bk_app_code=settings.BK_APP_CODE,
+            bk_app_secret=settings.BK_APP_SECRET,
+        )
+        self.client: BKCIGroup = client.api
+
+    def _prepare_headers(self) -> dict:
+        headers = {
+            # 应用态 API 需要添加 X-DEVOPS-UID
+            "X-DEVOPS-UID": self.user_oauth.operator,
+        }
+        return headers
+
+    def trigger_codecc_pipeline(self, trigger_params: dict):
+        """[应用态]手动触发流水线，不存在时创建"""
+        try:
+            resp = self.client.app_codecc_custom_pipeline_new(headers=self._prepare_headers(), data=trigger_params)
+        except APIGatewayResponseError as e:
+            raise BKCIGatewayServiceError(f'trigger codecc pipeline error, detail: {e}')
+
+        # API 返回示例，code 是字符串格式
+        # {u'status': 200, u'message': u'The system is busy inside. Please try again later', u'code': u'2300001'}
+        if resp.get('code') != '0':
+            logger.exception(f"trigger codecc pipeline error, resp:{resp}")
+            raise BKCIApiError(resp['message'], resp['code'])
+
+        return resp
+
+    def check_codecc_build_status(self, build_id: str):
+        """[应用态]查询 CodeCC 构建状态"""
+        try:
+            resp = self.client.app_codecc_build_id_mapping(
+                headers=self._prepare_headers(), data={"codeccbuildId": build_id}
+            )
+        except APIGatewayResponseError as e:
+            raise BKCIGatewayServiceError(f'check codecc build stauts error, detail: {e}')
+
+        if resp.get('code') != '0':
+            logger.exception(f"check codecc build stauts error, resp:{resp}")
+            raise BKCIApiError(resp['message'], resp['code'])
+
+        return resp
+
+    def get_codecc_task_metrics(self, task_id: int, build_id: str):
+        """[应用态]查询codecc任务度量信息"""
+        try:
+            resp = self.client.app_codecc_task_metrics(
+                headers=self._prepare_headers(), path_params={"taskId": task_id}, data={"buildId": build_id}
+            )
+        except APIGatewayResponseError as e:
+            raise BKCIGatewayServiceError(f'get codecc task metrics error, detail: {e}')
+
+        if resp.get('code') != '0':
+            logger.exception(f"get codecc task metrics error, resp:{resp}")
+            raise BKCIApiError(resp['message'], resp['code'])
+
+        return resp

@@ -228,7 +228,7 @@ def get_processes_status(app: WlApp) -> List[Process]:
     return results
 
 
-def module_env_is_running(env: ModuleEnvironment) -> bool:
+def env_is_running(env: ModuleEnvironment) -> bool:
     """Check if an env is running, which mean a successful deployment is available
     for the env. This status is useful in many situations, such as creating a custom
     domain and etc.

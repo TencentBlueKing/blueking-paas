@@ -89,11 +89,14 @@ class ModuleSLZ(serializers.ModelSerializer):
             # 可能存在远古模版，并不在当前模版配置中
             return ""
 
-    def get_clusters(self, obj) -> Dict:
+    def get_clusters(self, obj: Module) -> Dict:
         env_clusters = {}
         for env in obj.envs.all():
-            cluster = EnvClusterService(env).get_cluster()
-            env_clusters[env.environment] = ClusterSLZ(cluster).data
+            try:
+                cluster = EnvClusterService(env).get_cluster()
+                env_clusters[env.environment] = ClusterSLZ(cluster).data
+            except ObjectDoesNotExist:
+                env_clusters[env.environment] = None
         return env_clusters
 
     class Meta:

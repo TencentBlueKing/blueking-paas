@@ -16,17 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.utils.app import get_scheduler_client_by_app
-from paas_wl.workloads.processes.controllers import env_is_running
-from paasng.platform.applications.models import ModuleEnvironment
+from contextlib import ExitStack, contextmanager
+from typing import Any, Callable, Optional, Set, Type
+from unittest import mock
+
+_default_whitelist: Set[str] = {"__init__", "__class__", "__dict__", "__new__"}
 
 
-def delete_env_resources(env: 'ModuleEnvironment'):
-    """Delete app's resources in cluster"""
-    if not env_is_running(env):
-        return
-
-    wl_app = env.wl_app
-    scheduler_client = get_scheduler_client_by_app(app=wl_app)
-    scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
-    return
+@contextmanager
+def patch_class_with_stub(
+    class_: Type, stub: Any, default_filling: Callable = mock.MagicMock, whitelist: Optional[Set[str]] = None
+):
+    """patch a class with a """
+    stack = ExitStack()
+    whitelist = whitelist or _default_whitelist
+    for attr_name in dir(class_):
+        if attr_name in whitelist:
+            continue
+        if hasattr(stub, attr_name):
+            stack.enter_context(mock.patch.object(class_, attr_name, side_effect=getattr(stub, attr_name)))
+        else:
+            stack.enter_context(mock.patch.object(class_, attr_name, side_effect=default_filling))
+    with stack:
+        yield

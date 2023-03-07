@@ -173,7 +173,7 @@ class EnvClusterInfo:
         {"egress_ips": [<IP>, ], "digest_version": <DIGEST_VERSION>}
         """
         try:
-            return get_cluster_egress_info(EnvClusterService(self.env).get_env_cluster_name())
+            return get_cluster_egress_info(EnvClusterService(self.env).get_cluster_name())
         except Exception as e:
             logger.exception("Can not get app cluster egress info from engine")
             raise GetClusterEgressInfoError(str(e))

@@ -72,7 +72,7 @@ class EnvironmentSLZ(serializers.ModelSerializer):
     @staticmethod
     def get_cluster_name(env: ModuleEnvironment) -> Optional[str]:
         try:
-            return EnvClusterService(env).get_env_cluster_name()
+            return EnvClusterService(env).get_cluster_name()
         except ObjectDoesNotExist:
             return None
 

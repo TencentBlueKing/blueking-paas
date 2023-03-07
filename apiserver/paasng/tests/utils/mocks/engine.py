@@ -19,13 +19,14 @@ to the current version of the project delivered to anyone in the future.
 """TestDoubles for paasng.engine module"""
 from contextlib import contextmanager
 from typing import Dict, Optional
-from unittest import mock
 
 import cattr
 from django.conf import settings
 
 from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
 from paas_wl.cluster.models import APIServer, Cluster, IngressConfig
+from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
+from tests.utils.mocks.helper import patch_class_with_stub
 
 
 def build_default_cluster():
@@ -65,7 +66,7 @@ def build_default_cluster():
 
 @contextmanager
 def mock_cluster_service(ingress_config: Optional[Dict] = None, replaced_ingress_config: Optional[Dict] = None):
-    """Replace the original ClusterHelper class to return fake cluster in memory"""
+    """Replace the original ClusterService class to return fake cluster in memory"""
     cluster, _ = build_default_cluster()
     new_ingress_config = cattr.unstructure(cluster.ingress_config)
     if ingress_config is not None:
@@ -74,26 +75,30 @@ def mock_cluster_service(ingress_config: Optional[Dict] = None, replaced_ingress
         new_ingress_config = replaced_ingress_config
     cluster.ingress_config = cattr.structure(new_ingress_config, IngressConfig)
 
-    def get_cluster_by_name(cluster_name):
-        if cluster_name != cluster.name:
-            raise Cluster.DoesNotExist
-        return cluster
+    class StubRegionClusterService:
+        def list_clusters(self):
+            return [cluster]
 
-    def has_cluster(cluster_name):
-        return cluster.name == cluster_name
+        def get_default_cluster(self):
+            return cluster
 
-    with mock.patch("paas_wl.cluster.shim.RegionClusterService.list_clusters", return_value=[cluster]), mock.patch(
-        "paas_wl.cluster.shim.RegionClusterService.get_default_cluster", return_value=cluster
-    ), mock.patch(
-        "paas_wl.cluster.shim.RegionClusterService.get_cluster_by_name", side_effect=get_cluster_by_name
-    ), mock.patch(
-        "paas_wl.cluster.shim.RegionClusterService.has_cluster", side_effect=has_cluster
-    ), mock.patch(
-        "paas_wl.cluster.shim.EnvClusterService.get_cluster", return_value=cluster
-    ), mock.patch(
-        "paas_wl.cluster.shim.EnvClusterService.get_env_cluster_name", return_value=cluster.name
-    ), mock.patch(
-        "paas_wl.cluster.shim.EnvClusterService.bind_cluster"
+        def get_cluster_by_name(self, cluster_name):
+            if cluster_name != cluster.name:
+                raise Cluster.DoesNotExist
+            return cluster
+
+        def has_cluster(self, cluster_name):
+            return cluster.name == cluster_name
+
+    class StubEnvClusterService:
+        def get_cluster(self):
+            return cluster
+
+        def get_cluster_name(self):
+            return cluster.name
+
+    with patch_class_with_stub(RegionClusterService, StubRegionClusterService()), patch_class_with_stub(
+        EnvClusterService, StubEnvClusterService()
     ):
         yield
 
@@ -115,7 +120,7 @@ def replace_cluster_service(ingress_config: Optional[Dict] = None, replaced_ingr
     if replaced_ingress_config is not None:
         new_ingress_config = replaced_ingress_config
     cluster.ingress_config = new_ingress_config
-    cluster.save()
+    cluster.save(update_fields=["ingress_config", "updated"])
     yield
     cluster.ingress_config = history_ingress_config
-    cluster.save()
+    cluster.save(update_fields=["ingress_config", "updated"])

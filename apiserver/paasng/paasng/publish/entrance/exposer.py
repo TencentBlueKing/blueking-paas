@@ -295,7 +295,7 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
     """
     # TODO: 修复循环依赖的问题
     from paas_wl.networking.ingress.addrs import EnvAddresses
-    from paas_wl.workloads.processes.controllers import module_env_is_running
+    from paas_wl.workloads.processes.controllers import env_is_running
 
     results = []
     for env in module.get_envs():
@@ -303,7 +303,7 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
         results.append(
             {
                 'env': env.environment,
-                'is_running': module_env_is_running(env),
+                'is_running': env_is_running(env),
                 'addresses': addrs,
             }
         )

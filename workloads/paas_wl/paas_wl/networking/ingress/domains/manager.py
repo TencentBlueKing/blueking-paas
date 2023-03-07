@@ -37,7 +37,7 @@ from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.processes.controllers import module_env_is_running
+from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.publish.market.models import MarketConfig
@@ -81,7 +81,7 @@ class DftCustomDomainManager:
         :param https_enabled: whether HTTPS is enabled
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
-        if not module_env_is_running(env):
+        if not env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
         wl_app = WlApp.objects.get_by_env(env)
@@ -190,7 +190,7 @@ class CNativeCustomDomainManager:
         :param https_enabled: whether HTTPS is enabled
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
-        if not module_env_is_running(env):
+        if not env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
         # Create the domain object first, so the later deploy process can read it

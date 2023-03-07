@@ -21,6 +21,7 @@ from typing import List, Optional
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.networking.egress.misc import ClusterEgressIps, get_cluster_egress_ips
+from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -31,6 +32,8 @@ def get_cluster_egress_info(cluster_name: str) -> ClusterEgressIps:
 
 
 class RegionClusterService:
+    """RegionClusterService provide interface for querying cluster[s] in given region"""
+
     def __init__(self, region: str):
         self.region = region
 
@@ -44,21 +47,27 @@ class RegionClusterService:
             return qs[0]
         raise Cluster.DoesNotExist(f'Default cluster not found for {self.region}')
 
-    def get_cluster_by_name(self, cluster_name) -> Cluster:
+    def get_cluster_by_name(self, cluster_name: str) -> Cluster:
         return Cluster.objects.get(region=self.region, name=cluster_name)
 
-    def has_cluster(self, cluster_name) -> bool:
+    def has_cluster(self, cluster_name: str) -> bool:
         return Cluster.objects.filter(region=self.region, name=cluster_name).exists()
 
 
 class EnvClusterService:
+    """EnvClusterService provide interface for managing the cluster info of given env"""
+
     def __init__(self, env: ModuleEnvironment):
         self.env = env
 
     def get_cluster(self) -> Cluster:
-        return Cluster.objects.get(name=self.get_env_cluster_name())
+        """get the cluster bound to the env, if no specific cluster is bound, return default cluster"""
+        return Cluster.objects.get(name=self.get_cluster_name())
 
-    def get_env_cluster_name(self) -> str:
+    def get_cluster_name(self) -> str:
+        """get the cluster bound to the env, if no specific cluster is bound, return default cluster name
+        this function will not check if the cluster actually exists.
+        """
         wl_app = self.env.wl_app
         if wl_app.latest_config.cluster:
             return wl_app.latest_config.cluster
@@ -75,7 +84,12 @@ class EnvClusterService:
             cluster = RegionClusterService(self.env.application.region).get_default_cluster()
 
         wl_app = self.env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = cluster.name
-        latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-        latest_config.save()
+        _bind_cluster_to_wl_app(wl_app, cluster)
+
+
+def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):
+    """bind cluster to wl_app by modifying config.cluster"""
+    latest_config = wl_app.latest_config
+    latest_config.cluster = cluster.name
+    latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
+    latest_config.save()

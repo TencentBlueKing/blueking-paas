@@ -127,7 +127,7 @@ class TestCustomDomainIngressWithHTTPS:
             auto_match_cns='*.foo.com;*.bar.com',
         )
 
-    def test_domain_with_shared_cert(self, bk_stag_env, bk_stag_engine_app, shared_cert):
+    def test_domain_with_shared_cert(self, bk_stag_env, bk_stag_wl_app, shared_cert):
         app_domain = Domain.objects.create(
             module_id=bk_stag_env.module_id,
             environment_id=bk_stag_env.id,
@@ -137,11 +137,11 @@ class TestCustomDomainIngressWithHTTPS:
         )
         mgr = CustomDomainIngressMgr(app_domain)
         mgr.sync(default_service_name="foo-service")
-        ingress = ingress_kmodel.get(bk_stag_engine_app, mgr.ingress_name)
+        ingress = ingress_kmodel.get(bk_stag_wl_app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is True
         assert ingress.domains[0].tls_secret_name == 'eng-shared-cert-wildcard-foo.com'
 
-    def test_domain_with_not_matched_shared_cert(self, bk_stag_env, bk_stag_engine_app):
+    def test_domain_with_not_matched_shared_cert(self, bk_stag_env, bk_stag_wl_app):
         app_domain = Domain.objects.create(
             module_id=bk_stag_env.module_id,
             environment_id=bk_stag_env.id,
@@ -151,10 +151,10 @@ class TestCustomDomainIngressWithHTTPS:
         )
         mgr = CustomDomainIngressMgr(app_domain)
         mgr.sync(default_service_name="foo-service")
-        ingress = ingress_kmodel.get(bk_stag_engine_app, mgr.ingress_name)
+        ingress = ingress_kmodel.get(bk_stag_wl_app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is False, "HTTPS domain with no certs should be turned off"
 
-    def test_domain_with_no_https(self, bk_stag_env, bk_stag_engine_app):
+    def test_domain_with_no_https(self, bk_stag_env, bk_stag_wl_app):
         app_domain = Domain.objects.create(
             module_id=bk_stag_env.module_id,
             environment_id=bk_stag_env.id,
@@ -164,6 +164,6 @@ class TestCustomDomainIngressWithHTTPS:
         )
         mgr = CustomDomainIngressMgr(app_domain)
         mgr.sync(default_service_name="foo-service")
-        ingress = ingress_kmodel.get(bk_stag_engine_app, mgr.ingress_name)
+        ingress = ingress_kmodel.get(bk_stag_wl_app, mgr.ingress_name)
         assert ingress.domains[0].tls_enabled is False
         assert ingress.domains[0].tls_secret_name == ''

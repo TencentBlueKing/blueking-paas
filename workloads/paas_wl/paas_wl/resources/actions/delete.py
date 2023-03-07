@@ -17,16 +17,16 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
-from paas_wl.workloads.processes.controllers import module_env_is_running
+from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.models import ModuleEnvironment
 
 
 def delete_env_resources(env: 'ModuleEnvironment'):
     """Delete app's resources in cluster"""
-    if not module_env_is_running(env):
+    if not env_is_running(env):
         return
 
-    wl_app = env.wl_engine_app
+    wl_app = env.wl_app
     scheduler_client = get_scheduler_client_by_app(app=wl_app)
     scheduler_client.delete_all_under_namespace(namespace=wl_app.namespace)
     return

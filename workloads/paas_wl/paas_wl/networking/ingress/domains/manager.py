@@ -35,10 +35,8 @@ from paas_wl.networking.ingress.domains.independent import (
 from paas_wl.networking.ingress.exceptions import ValidCertNotFound
 from paas_wl.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.networking.ingress.models import Domain
-from paas_wl.platform.applications.models import EngineApp
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.processes.controllers import module_env_is_running
-from paasng.paas_wl.platform.applications.struct_models import set_model_structured
+from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.publish.market.models import MarketConfig
@@ -82,11 +80,11 @@ class DftCustomDomainManager:
         :param https_enabled: whether HTTPS is enabled
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
-        if not module_env_is_running(env):
+        if not env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
-        engine_app = EngineApp.objects.get_by_env(env)
-        service_name = get_service_name(engine_app)
+        wl_app = env.wl_app
+        service_name = get_service_name(wl_app)
         try:
             domain, _ = Domain.objects.update_or_create(
                 name=host,
@@ -95,7 +93,6 @@ class DftCustomDomainManager:
                 environment_id=env.id,
                 defaults={"https_enabled": https_enabled},
             )
-            set_model_structured(domain, application=self.application)
             CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
         except ValidCertNotFound:
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f("找不到有效的 TLS 证书")
@@ -192,7 +189,7 @@ class CNativeCustomDomainManager:
         :param https_enabled: whether HTTPS is enabled
         :raise ValidationError: when input is not valid, such as host is duplicated
         """
-        if not module_env_is_running(env):
+        if not env_is_running(env):
             raise ValidationError('未部署的环境无法添加独立域名，请先部署对应环境')
 
         # Create the domain object first, so the later deploy process can read it

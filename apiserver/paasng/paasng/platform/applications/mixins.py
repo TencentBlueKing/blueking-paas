@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, List
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 
+from paas_wl.platform.applications.models import WlApp
 from paasng.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
@@ -77,11 +78,18 @@ class ApplicationCodeInPathMixin:
             raise Http404
 
     def get_engine_app_via_path(self) -> EngineApp:
-        """Return EngineApp object accroding to current path kwargs.
+        """Return EngineApp object according to current path kwargs.
 
         - required path vars: module_name, environment
         """
         return self.get_env_via_path().engine_app
+
+    def get_wl_app_via_path(self) -> WlApp:
+        """Return WlApp object according to current path kwargs.
+
+        - required path vars: module_name, environment
+        """
+        return self.get_engine_app_via_path().to_wl_obj()
 
     def _get_param_from_kwargs(self, param_names: List[str]):
         """Return a param value from self.kwargs

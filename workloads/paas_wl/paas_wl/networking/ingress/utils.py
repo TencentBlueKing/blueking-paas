@@ -19,21 +19,21 @@ to the current version of the project delivered to anyone in the future.
 import logging
 
 from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
 logger = logging.getLogger(__name__)
 
 
-def make_service_name(app: EngineApp, process_type: str) -> str:
+def make_service_name(app: WlApp, process_type: str) -> str:
     """Return the service name for each process"""
     return f"{app.region}-{app.scheduler_safe_name}-{process_type}"
 
 
-def parse_process_type(app: EngineApp, service_name: str) -> str:
+def parse_process_type(app: WlApp, service_name: str) -> str:
     """Parse process type from service name
 
-    :param app: EngineApp object
+    :param app: WlApp object
     :param service_name: Name of Service resource.
     :raise ValueError: When given service_name is not parsable.
     """
@@ -44,16 +44,16 @@ def parse_process_type(app: EngineApp, service_name: str) -> str:
     return parts[-1][1:]
 
 
-def get_service_dns_name(app: EngineApp, process_type: str) -> str:
+def get_service_dns_name(app: WlApp, process_type: str) -> str:
     """Return process's DNS name, can be used for communications across processes.
 
-    :param app: EngineApp object
+    :param app: WlApp object
     :param process_type: Process Type, e.g. "web"
     """
     return f'{make_service_name(app, process_type)}.{app.namespace}'
 
 
-def guess_default_service_name(app: EngineApp) -> str:
+def guess_default_service_name(app: WlApp) -> str:
     """Guess the default service name should be used when a brand new ingress creation is required."""
     if not app.get_structure():
         return make_service_name(app, 'web')
@@ -63,7 +63,7 @@ def guess_default_service_name(app: EngineApp) -> str:
     return make_service_name(app, list(app.get_structure().keys())[0])
 
 
-def get_main_process_service_name(app: EngineApp) -> str:
+def get_main_process_service_name(app: WlApp) -> str:
     """
     获取提供服务的主进程 Service Name
 

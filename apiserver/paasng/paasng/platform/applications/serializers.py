@@ -27,9 +27,9 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator, qs_exists
 
+from paas_wl.cluster.shim import RegionClusterService
 from paasng.dev_resources.sourcectl.validators import validate_image_url
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.platform.applications.constants import AppLanguage, ApplicationRole, ApplicationType
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
@@ -201,8 +201,7 @@ class AdvancedCreationParamsMixin(serializers.Serializer):
     def validate_cluster_name(self, value: str) -> str:
         # Get region value from parent serializer
         region = self.parent.initial_data['region']
-        region_helper = get_region_cluster_helper(region)
-        if not region_helper.has_cluster(value):
+        if not RegionClusterService(region).has_cluster(value):
             raise ValidationError(_('集群名称错误，无法找到名为 {value} 的集群').format(value=value))
         return value
 

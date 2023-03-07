@@ -25,14 +25,14 @@ from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.release import ApplicationReleaseMgr
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
 def setup_cluster():
-    with replace_cluster_service():
+    with mock_cluster_service():
         yield
 
 

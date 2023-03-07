@@ -35,6 +35,7 @@ from paasng.platform.operations.constant import OperationType
 from paasng.platform.operations.models import Operation
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
+from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.utils.auth import create_user
 from tests.utils.helpers import configure_regions, generate_random_string
 
@@ -467,7 +468,7 @@ class TestCreateCloudNativeApp:
     """Test 'cloud_native' type application's creation"""
 
     def test_normal(self, bk_user, api_client, mock_wl_services_in_creation, settings):
-        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = "default"
+        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
 
         random_suffix = generate_random_string(length=6)

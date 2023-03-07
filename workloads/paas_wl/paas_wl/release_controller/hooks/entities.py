@@ -28,7 +28,7 @@ from kubernetes.dynamic import ResourceField, ResourceInstance
 from typing_extensions import Literal
 
 from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.release_controller.entities import Runtime
 from paas_wl.release_controller.hooks.models import Command as CommandModel
@@ -70,7 +70,7 @@ class CommandKubeAdaptor:
 class CommandDeserializer(AppEntityDeserializer['Command']):
     api_version = "v1"
 
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> 'Command':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'Command':
         main_container = self._get_main_container(kube_data)
         annotations = kube_data.metadata.get('annotations', {})
 

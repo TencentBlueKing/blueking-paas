@@ -23,8 +23,7 @@ from bkpaas_auth.models import User
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models import Build, Release
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models import Build, Release, WlApp
 from paas_wl.platform.applications.models.config import Config
 from paas_wl.workloads.processes.models import Instance
 from tests.utils.auth import create_user
@@ -35,7 +34,7 @@ def random_fake_app(
     paas_app_code: Optional[str] = None,
     environment: Optional[str] = None,
     owner: Optional[User] = None,
-) -> EngineApp:
+) -> WlApp:
     default_environment = random.choice(["stag", "prod"])
     default_app_name = 'app-' + get_random_string(length=12).lower()
     app_info = {
@@ -48,7 +47,7 @@ def random_fake_app(
     if force_app_info:
         app_info.update(force_app_info)
 
-    fake_app = EngineApp.objects.create(**app_info)
+    fake_app = WlApp.objects.create(**app_info)
     # Set up metadata
     Config.objects.create(
         app=fake_app,
@@ -62,7 +61,7 @@ def random_fake_app(
     return fake_app
 
 
-def random_fake_instance(app: EngineApp, force_instance_info: Optional[Dict] = None) -> Instance:
+def random_fake_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -> Instance:
     app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
     instance_info = {
         "app": app,
@@ -83,7 +82,7 @@ def random_fake_instance(app: EngineApp, force_instance_info: Optional[Dict] = N
 
 
 def release_setup(
-    fake_app: EngineApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
+    fake_app: WlApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
 ) -> Release:
     default_build_params = {
         "owner": create_user(username="somebody"),

@@ -22,8 +22,8 @@ import cattr
 import pytest
 from django.test.utils import override_settings
 
-from paasng.engine.controller.models import Domain as DomainCfg
-from paasng.engine.controller.models import IngressConfig, PortMap
+from paas_wl.cluster.models import Domain as DomainCfg
+from paas_wl.cluster.models import IngressConfig, PortMap
 from paasng.publish.entrance.subpaths import (
     ModuleEnvSubpaths,
     SubPathAllocator,
@@ -32,7 +32,7 @@ from paasng.publish.entrance.subpaths import (
     get_preallocated_path,
     get_preallocated_paths_by_env,
 )
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -47,7 +47,7 @@ class TestModuleEnvSubpaths:
     @pytest.fixture(autouse=True)
     def setup_cluster(self):
         # Enable USE_LEGACY_SUB_PATH_PATTERN by default
-        with replace_cluster_service(
+        with mock_cluster_service(
             ingress_config={'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}]}
         ), override_settings(USE_LEGACY_SUB_PATH_PATTERN=True):
             yield
@@ -110,7 +110,7 @@ class TestModuleEnvSubpaths:
 class TestModuleEnvSubpathsNotConfigured:
     @pytest.fixture(autouse=True)
     def setup_cluster(self):
-        with replace_cluster_service(ingress_config={'sub_path_domains': []}):
+        with mock_cluster_service(ingress_config={'sub_path_domains': []}):
             yield
 
     def test_prod_default(self, bk_module):
@@ -208,7 +208,7 @@ class TestGetPreallocatedPathsByEnv:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         """Replace cluster info in module level"""
-        with replace_cluster_service(
+        with mock_cluster_service(
             ingress_config={
                 'sub_path_domains': [
                     {"name": 'sub.example.com'},

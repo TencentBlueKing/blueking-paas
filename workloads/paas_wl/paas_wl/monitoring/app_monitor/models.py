@@ -18,11 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.db import models
 
-from paas_wl.platform.applications.models import App, AuditedModel
+from paas_wl.platform.applications.models import AuditedModel, WlApp
 
 
 class AppMetricsMonitor(AuditedModel):
-    app = models.OneToOneField(App, on_delete=models.CASCADE, db_constraint=False)
+    app = models.OneToOneField(WlApp, on_delete=models.CASCADE, db_constraint=False)
     is_enabled = models.BooleanField(help_text="是否启动 AppMetrics", default=True)
     port = models.IntegerField(help_text="Service 端口")
     target_port = models.IntegerField(help_text="容器内的端口")

@@ -18,16 +18,15 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Optional
 
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
+from paas_wl.cluster.shim import EnvClusterService
 from paasng.engine.constants import JobStatus
-from paasng.engine.controller.cluster import RegionClusterService
-from paasng.engine.models.base import EngineApp
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.serializers import OperationSLZ as BaseModuleEnvironmentOperationsSLZ
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.modules.manager import ModuleInitializer
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
 
@@ -71,15 +70,11 @@ class EnvironmentSLZ(serializers.ModelSerializer):
             return None
 
     @staticmethod
-    def get_cluster_name(obj: ModuleEnvironment) -> Optional[str]:
-        # 目前云原生应用在 Admin42 没有概览页，先只考虑普通应用的情况
-        engine_app_name = ModuleInitializer(obj.module).make_engine_app_name(obj.environment)
-
-        if not EngineApp.objects.filter(name=engine_app_name).exists():
+    def get_cluster_name(env: ModuleEnvironment) -> Optional[str]:
+        try:
+            return EnvClusterService(env).get_cluster_name()
+        except ObjectDoesNotExist:
             return None
-
-        cluster = RegionClusterService(obj.module.region).get_engine_app_cluster(engine_app_name)
-        return cluster.name
 
     class Meta:
         model = ModuleEnvironment

@@ -29,7 +29,7 @@ from paas_wl.networking.ingress.plugins import get_default_plugins
 from paas_wl.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.networking.ingress.plugins.ingress import IngressPlugin
 from paas_wl.networking.ingress.utils import parse_process_type
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class AppIngressMgr(abc.ABC):
     # Whether to set header `X-Script-Name` to all request
     set_header_x_script_name: bool = True
 
-    def __init__(self, app: 'App'):
+    def __init__(self, app: 'WlApp'):
         self.app = app
         self.ingress_name = self.make_ingress_name()
         self.ingress_updater = IngressUpdater(self.app, self.ingress_name)
@@ -154,7 +154,7 @@ class IngressUpdater:
     # the hard-coded default port name, does not support modification yet
     DEFAULT_PORT_NAME = 'http'
 
-    def __init__(self, app: 'App', ingress_name: str):
+    def __init__(self, app: 'WlApp', ingress_name: str):
         self.app = app
         self.ingress_name = ingress_name
 

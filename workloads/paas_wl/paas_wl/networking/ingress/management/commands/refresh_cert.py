@@ -31,7 +31,7 @@ from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.certs.utils import pick_shared_cert, update_or_create_secret_by_cert
 from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models import WlApp
 
 
 class Command(BaseCommand):
@@ -54,7 +54,7 @@ class Command(BaseCommand):
         except AppDomainSharedCert.DoesNotExist:
             self.exit_with_error(f'Cert "{name}" does not exist')
 
-        # Find out all affected EngineApps
+        # Find out all affected WlApps
         d_apps = self.find_subdomain_apps(cert)
         p_apps = self.find_subpath_apps(cert)
         # Sort the app list to get a deterministic result
@@ -68,19 +68,19 @@ class Command(BaseCommand):
             self.exit_with_error("quit")
 
         # The update will walk through all affected applications. Each cert only
-        # have a single copy of Secret in one namespace although it may be shared
-        # by multiple Ingresses, so this approach will doing fine.
+        # have a single copy of Secret in one namespace, although it may be shared
+        # by multiple Ingresses, so this approach will do fine.
         self.update_secrets(apps, cert, options['dry_run'])
         return
 
-    def find_subdomain_apps(self, cert: AppDomainSharedCert) -> Sequence[EngineApp]:
-        """Find all affected EngineApps for subdomain addresses"""
+    def find_subdomain_apps(self, cert: AppDomainSharedCert) -> Sequence[WlApp]:
+        """Find all affected WlApps for subdomain addresses"""
         self.print("Refreshing Secret resources for sub-domains...")
         app_ids = AppDomain.objects.filter(shared_cert=cert).values_list('app_id').distinct()
-        return list(EngineApp.objects.filter(pk__in=app_ids))
+        return list(WlApp.objects.filter(pk__in=app_ids))
 
     def find_subpath_apps(self, cert: AppDomainSharedCert):
-        """Find all affected EngineApps for subpath addresses"""
+        """Find all affected WlApps for subpath addresses"""
         self.print("Refreshing Secret resources for sub-paths...")
         # Find related applications, first filter all clusters which configured
         # "sub_path_domains" and it's host matches given certificate.
@@ -101,15 +101,13 @@ class Command(BaseCommand):
         # querying "cluster_name" field.
         #
         # TODO: Improve below logic when AppSubpath model was improved
-        for app in EngineApp.objects.filter(pk__in=app_ids).order_by('name'):
+        for app in WlApp.objects.filter(pk__in=app_ids).order_by('name'):
             if get_cluster_by_app(app).name in cluster_names:
                 apps.append(app)
         return apps
 
-    def update_secrets(self, apps: Sequence[EngineApp], cert: AppDomainSharedCert, dry_run: bool):
-        """Update Secret resource which was created by given certificate and
-        lives in each EngineApp's namespace.
-        """
+    def update_secrets(self, apps: Sequence[WlApp], cert: AppDomainSharedCert, dry_run: bool):
+        """Update Secret resource which was created by given certificate and lives in each WlApp's namespace."""
         cnt = len(apps)
         error_cnt = 0
         self.print(f"App(Namespace) count: {cnt}")

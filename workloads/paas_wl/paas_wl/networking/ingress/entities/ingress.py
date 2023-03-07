@@ -30,7 +30,7 @@ from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.entities.utils import LegacyNginxRewrittenProvider, NginxRegexRewrittenProvider
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import AppEntity, AppEntityDeserializer, AppEntityManager, AppEntitySerializer
 
@@ -226,7 +226,7 @@ class IngressV1Beta1Deserializer(AppEntityDeserializer["ProcessIngress"]):
             return "networking.k8s.io/v1beta1"
         return "extensions/v1beta1"
 
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> "ProcessIngress":
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ProcessIngress":
         nginx_adaptor = IngressNginxAdaptor(get_cluster_by_app(app))
         spec = kube_data.spec
         rules = spec.get("rules") or []
@@ -379,7 +379,7 @@ class IngressV1Deserializer(AppEntityDeserializer["ProcessIngress"]):
     def get_api_version_from_gvk(gvk_config):
         return "networking.k8s.io/v1"
 
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> "ProcessIngress":
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ProcessIngress":
         spec = kube_data.spec
         rules = spec.get("rules") or []
         service_name, service_port_name = self.parse_service_info_from_rules(rules)

@@ -25,9 +25,7 @@ from paas_wl.platform.applications.models import UuidAuditedModel
 from paas_wl.utils.models import validate_procfile
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import EngineApp
-    from paas_wl.platform.applications.models.build import Build
-    from paas_wl.platform.applications.models.config import Config
+    from paas_wl.platform.applications.models import Build, Config, WlApp
 
 
 class ReleaseManager(models.Manager):
@@ -41,18 +39,18 @@ class ReleaseManager(models.Manager):
     ):
         """Create a new release
 
-        :params owner str: 发布者, 目前该字段无意义
-        :params build Build: 应用构建记录
-        :params summary str:
-        :params config Optional[Config]: 应用配置, 包含环境变量和资源限制等信息. 如果不提供, 则获取上一个发布版本的应用配置
+        :param owner str: 发布者, 目前该字段无意义
+        :param build 'Build': 应用构建记录
+        :param summary str:
+        :param config Optional[Config]: 应用配置, 包含环境变量和资源限制等信息. 如果不提供, 则获取上一个发布版本的应用配置
         """
-        from paas_wl.platform.applications.models.app import App
+        from paas_wl.platform.applications.models import WlApp
 
         # Get the largest(latest) version and increase it by 1.
         if not hasattr(self, "instance"):
             raise RuntimeError("Only call `new` method from RelatedManager.")
 
-        if not isinstance(self.instance, App):
+        if not isinstance(self.instance, WlApp):
             raise RuntimeError("Only call from app.release_set.")
 
         if build is None:
@@ -78,7 +76,7 @@ class ReleaseManager(models.Manager):
         )
         return release
 
-    def any_successful(self, app: 'EngineApp') -> bool:
+    def any_successful(self, app: 'WlApp') -> bool:
         """Check if engine app has any successful releases"""
         # In legacy versions, "workloads" will create an initial release object for
         # apps after creation, the object's "build" field was set to `None` and
@@ -87,10 +85,10 @@ class ReleaseManager(models.Manager):
         qs = self.get_queryset().exclude(version=1, build=None)
         return qs.filter(app=app, failed=False).exists()
 
-    def get_latest(self, app: 'EngineApp', ignore_failed: bool = False) -> 'Release':
+    def get_latest(self, app: 'WlApp', ignore_failed: bool = False) -> 'Release':
         """获取最后一次发布对象(不管是否成功或失败), 如果不存在, 则根据 allow_null 返回 None 或抛异常.
 
-        :param EngineApp app: engine app 对象
+        :param WlApp app: engine app 对象
         :param bool ignore_failed: 寻找最后一次发布对象时, 是否忽略发布失败
         """
         qs = self.filter(app=app).all()
@@ -99,8 +97,8 @@ class ReleaseManager(models.Manager):
 
         return qs.latest('version')
 
-    def get_by_version(self, app: 'EngineApp', version: int) -> 'Release':
-        """根据指定的 App，Version 获取对应的 Release"""
+    def get_by_version(self, app: 'WlApp', version: int) -> 'Release':
+        """根据指定的 WlApp，Version 获取对应的 Release"""
         return self.get(app=app, version=version)
 
 

@@ -43,8 +43,8 @@ class ProcReplicas:
 
     def __init__(self, env: ModuleEnvironment):
         self.env = env
-        self.wl_engine_app = env.wl_engine_app
-        self.ns = self.wl_engine_app.namespace
+        self.wl_app = env.wl_app
+        self.ns = self.wl_app.namespace
         self.res_name = default_bkapp_name(self.env)
 
     def get(self, proc_type: str) -> int:
@@ -56,7 +56,7 @@ class ProcReplicas:
 
         :return: (replicas, whether replicas was defined in "envOverlay")
         """
-        with get_client_by_app(self.env.wl_engine_app) as client:
+        with get_client_by_app(self.env.wl_app) as client:
             bkapp_res = self._get_bkapp_res(client)
 
         counts = ReplicasReader(bkapp_res).read_all(AppEnvName(self.env.environment))
@@ -76,7 +76,7 @@ class ProcReplicas:
         if count < 0:
             raise ValueError('count must greater than or equal to 0')
 
-        with get_client_by_app(self.wl_engine_app) as client:
+        with get_client_by_app(self.wl_app) as client:
             bkapp_res = self._get_bkapp_res(client)
             self._validate_proc_type(bkapp_res, proc_type)
 

@@ -25,8 +25,7 @@ from django.db import models
 from django.utils.encoding import force_bytes
 from jsonfield import JSONField
 
-from paas_wl.platform.applications.models import AuditedModel
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import AuditedModel, WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +64,7 @@ class RCStateAppBinding(AuditedModel):
     scheduled onto any nodes other than those were defined in that RegionClusterState instance.
     """
 
-    app = models.OneToOneField(App, on_delete=models.CASCADE)
+    app = models.OneToOneField(WlApp, on_delete=models.CASCADE)
     state = models.ForeignKey(RegionClusterState, null=True, on_delete=models.CASCADE)
 
 

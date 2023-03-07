@@ -24,7 +24,7 @@ from django.conf import settings
 from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.networking.ingress.managers.service import ProcDefaultServices
-from paas_wl.platform.applications.models.app import App
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.release_controller.hooks.entities import Command
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.controllers import BuildHandler, CommandHandler, NamespacesHandler, ProcessesHandler
@@ -208,7 +208,7 @@ class K8sScheduler:
     ####################
     # image secret API #
     ####################
-    def ensure_image_credentials_secret(self, app: App):
+    def ensure_image_credentials_secret(self, app: WlApp):
         """确保应用镜像的访问凭证存在"""
         credentials = ImageCredentials.load_from_app(app)
         self.credential_handler.upsert(credentials)

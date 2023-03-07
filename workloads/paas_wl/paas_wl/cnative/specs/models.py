@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import yaml
 from django.db import models
@@ -26,12 +26,12 @@ from pydantic import ValidationError as PDValidationError
 from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.platform.applications.models import EngineApp
-from paas_wl.platform.applications.struct_models import Application, ModuleAttrFromID, ModuleEnv, ModuleEnvAttrFromName
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 
 from .configurations import generate_builtin_configurations, merge_envvars
 from .constants import (
@@ -135,7 +135,7 @@ class AppModelRevision(TimestampedModel):
 class AppModelDeployManager(models.Manager):
     """Custom manager for AppModelDeploy"""
 
-    def filter_by_env(self, env: ModuleEnv) -> models.QuerySet:
+    def filter_by_env(self, env: ModuleEnvironment) -> models.QuerySet:
         """Get all deploys under an env"""
         return self.get_queryset().filter(
             application_id=env.application_id,
@@ -143,7 +143,7 @@ class AppModelDeployManager(models.Manager):
             environment_name=env.environment,
         )
 
-    def any_successful(self, env: ModuleEnv) -> bool:
+    def any_successful(self, env: ModuleEnvironment) -> bool:
         """Check if there are any successful deploys in given env"""
         return self.filter_by_env(env).filter(status=DeployStatus.READY).exists()
 
@@ -151,7 +151,7 @@ class AppModelDeployManager(models.Manager):
 class AppModelDeploy(TimestampedModel):
     """Cloud-native App's deployments
 
-    TODO: Add engine_app field so we can operate this model using engine_app directly
+    TODO: Add wl_app field so we can operate this model using wl_app directly
     instead of the combination of (application_id, module_id, environment_name).
     """
 
@@ -187,7 +187,7 @@ class AppModelDeploy(TimestampedModel):
         :param env: ModuleEnv object
         :param credential_refs: Image credential ref objects
         """
-        engine_app = EngineApp.objects.get(pk=env.engine_app_id)
+        wl_app = WlApp.objects.get(pk=env.engine_app_id)
         manifest = BkAppResource(**self.revision.json_value)
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.pk)
         application = env.application
@@ -211,7 +211,7 @@ class AppModelDeploy(TimestampedModel):
         # flush credentials and inject a flag to tell operator that workloads have crated the secret
         if credential_refs:
             AppImageCredential.objects.flush_from_refs(
-                application=application, engine_app=engine_app, references=credential_refs
+                application=application, wl_app=wl_app, references=credential_refs
             )
             manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = "true"
         else:
@@ -289,7 +289,7 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-def default_bkapp_name(env: Union[ModuleEnvironment, ModuleEnv]) -> str:
+def default_bkapp_name(env: ModuleEnvironment) -> str:
     """Get name of the default BkApp resource by env.
 
     :param env: ModuleEnv object

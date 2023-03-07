@@ -23,22 +23,22 @@ from django.db import models
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.platform.applications.models import EngineApp, UuidAuditedModel
-from paas_wl.platform.applications.struct_models import Application
+from paas_wl.platform.applications.models import UuidAuditedModel, WlApp
+from paasng.platform.applications.models import Application
 
 
 class AppImageCredentialManager(models.Manager):
     @atomic
-    def flush_from_refs(self, application: Application, engine_app: EngineApp, references: List['ImageCredentialRef']):
-        """flush all AppImageCredentials for given 'engine_app' by the ImageCredentialRefs,
+    def flush_from_refs(self, application: Application, wl_app: WlApp, references: List['ImageCredentialRef']):
+        """flush all AppImageCredentials for given 'wl_app' by the ImageCredentialRefs,
         will delete all outdated/not-used AppImageCredentials"""
         all_images = [ref.image for ref in references]
         # delete outdated/not-used image credentials, incase the secret size infinite inflate
-        self.filter(app=engine_app).exclude(registry__in=all_images).delete()
+        self.filter(app=wl_app).exclude(registry__in=all_images).delete()
         for ref in references:
             pair = AppUserCredential.objects.get(application_id=application.id, name=ref.credential_name)
             AppImageCredential.objects.update_or_create(
-                app=engine_app, registry=ref.image, defaults={"username": pair.username, "password": pair.password}
+                app=wl_app, registry=ref.image, defaults={"username": pair.username, "password": pair.password}
             )
 
 

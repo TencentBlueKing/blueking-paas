@@ -18,12 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.utils.crypto import get_random_string
 
-from paas_wl.platform.applications.models.app import App
-from paas_wl.platform.applications.models.build import BuildProcess
-from paas_wl.platform.applications.models.misc import OutputStream
+from paas_wl.platform.applications.models import BuildProcess, OutputStream, WlApp
 
 
-def random_fake_bp(app: App, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None):
+def random_fake_bp(app: WlApp, source_tar_path=None, revision=None, branch=None, image=None, buildpacks=None):
     source_tar_path = source_tar_path or get_random_string(10)
     revision = revision or get_random_string(10)
     branch = branch or get_random_string(10)

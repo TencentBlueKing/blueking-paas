@@ -24,7 +24,7 @@ from typing import Optional, Tuple
 from django.utils.encoding import force_bytes, force_str
 
 from paas_wl.networking.ingress.models import AppDomain, AppDomainSharedCert, BasicCert, Domain
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
 from paas_wl.resources.utils.basic import get_client_by_app
 
@@ -63,10 +63,10 @@ class DomainWithCert:
         return cls(host=domain.name, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
 
-def update_or_create_secret_by_cert(app: EngineApp, cert: BasicCert) -> Tuple[str, bool]:
+def update_or_create_secret_by_cert(app: WlApp, cert: BasicCert) -> Tuple[str, bool]:
     """Update or create the secret resource by cert object
 
-    :param app: `App` object, the Secret resource which holds HTTPS cert will be created
+    :param app: `WlApp` object, the Secret resource which holds HTTPS cert will be created
         in this app's namespace.
     :param cert: The certificate object
     :return: (<name of Secret resource>, <created>)

@@ -23,8 +23,8 @@ from django.db import models
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
-from paas_wl.platform.applications.models import App, AuditedModel
-from paas_wl.platform.applications.struct_models import ModuleAttrFromID, ModuleEnvAttrFromID
+from paas_wl.platform.applications.models import AuditedModel, WlApp
+from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
@@ -41,7 +41,7 @@ class AutoGenDomain:
 class AppDomain(AuditedModel):
     """Domains of applications, each object(entry) represents an (domain + path_prefix) pair."""
 
-    app = models.ForeignKey(App, on_delete=models.CASCADE)
+    app = models.ForeignKey(WlApp, on_delete=models.CASCADE)
     region = models.CharField(max_length=32)
     host = models.CharField(max_length=128)
 
@@ -87,7 +87,7 @@ class BasicCert(AuditedModel):
 
 
 class AppDomainCert(BasicCert):
-    """App's TLS Certifications, usually managed by user"""
+    """WlApp's TLS Certifications, usually managed by user"""
 
     type = 'normal'
 
@@ -110,7 +110,7 @@ class AppDomainSharedCert(BasicCert):
 
 
 class AppSubpathManager(models.Manager):
-    def create_obj(self, app: App, subpath: str, source=AppSubpathSource.DEFAULT) -> 'AppSubpath':
+    def create_obj(self, app: WlApp, subpath: str, source=AppSubpathSource.DEFAULT) -> 'AppSubpath':
         """Create an subpath object"""
         cluster = get_cluster_by_app(app)
         return self.get_queryset().create(
@@ -124,7 +124,7 @@ class AppSubpathManager(models.Manager):
 class AppSubpath(AuditedModel):
     """stores application's subpaths"""
 
-    app = models.ForeignKey(App, on_delete=models.CASCADE, db_constraint=False)
+    app = models.ForeignKey(WlApp, on_delete=models.CASCADE, db_constraint=False)
     region = models.CharField(max_length=32)
     cluster_name = models.CharField(max_length=32)
     subpath = models.CharField(max_length=128)
@@ -140,7 +140,7 @@ class AppSubpath(AuditedModel):
         db_table = "services_appsubpath"
 
 
-def get_default_subpath(app: App) -> str:
+def get_default_subpath(app: WlApp) -> str:
     """Get the default sub path for given application, this value will be used for:
 
     - sub path based ingress resource, used as request accessing location

@@ -19,19 +19,19 @@ from typing import List
 from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 from paas_wl.monitoring.metrics.models import get_resource_metric_manager
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
 
 def list_app_proc_metrics(
-    engine_app: WLEngineApp,
+    wl_app: WlApp,
     process_type: str,
     instance_name: str,
     query_metrics: List[str],
     time_range: MetricSmartTimeRange,
 ):
-    mgr = get_resource_metric_manager(engine_app, process_type)
+    mgr = get_resource_metric_manager(wl_app, process_type)
     try:
         # 请求某个特定 instance 的 metrics
         instance_result = mgr.get_instance_metrics(
@@ -46,12 +46,12 @@ def list_app_proc_metrics(
 
 
 def list_app_proc_all_metrics(
-    engine_app: WLEngineApp,
+    wl_app: WlApp,
     process_type: str,
     query_metrics: List[str],
     time_range: MetricSmartTimeRange,
 ):
-    mgr = get_resource_metric_manager(engine_app, process_type)
+    mgr = get_resource_metric_manager(wl_app, process_type)
     try:
         # 请求所有 instance 的 metrics
         instance_result = mgr.get_all_instances_metrics(time_range=time_range, resource_types=query_metrics)

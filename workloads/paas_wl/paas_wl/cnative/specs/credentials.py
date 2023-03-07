@@ -20,11 +20,11 @@ from contextlib import contextmanager
 from typing import Dict, Iterator, List
 
 from paas_wl.cnative.specs.constants import IMAGE_CREDENTIALS_REF_ANNO_KEY
-from paas_wl.platform.applications.models import App
-from paas_wl.platform.applications.struct_models import Application
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import kres
 from paas_wl.workloads.images.entities import ImageCredentialsManager as _ImageCredentialsManager
 from paas_wl.workloads.images.models import AppUserCredential, ImageCredentialRef
+from paasng.platform.applications.models import Application
 
 
 def split_image(repository: str) -> str:
@@ -68,7 +68,7 @@ class ImageCredentialsManager(_ImageCredentialsManager):
         super().__init__()
         self._client = client
 
-    def _kres(self, app: App, api_version: str = '') -> Iterator[kres.BaseKresource]:
+    def _kres(self, app: WlApp, api_version: str = '') -> Iterator[kres.BaseKresource]:
         """return kres object using given k8s client"""
         yield self.entity_type.Meta.kres_class(self._client, api_version=api_version)
 

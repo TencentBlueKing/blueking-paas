@@ -24,14 +24,14 @@ from paas_wl.monitoring.app_monitor.utils import build_monitor_port
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.networking.ingress.managers import AppDefaultIngresses
 from paas_wl.networking.ingress.utils import make_service_name
-from paas_wl.platform.applications.models.app import EngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.processes.models import Process
 
 logger = logging.getLogger(__name__)
 
 
-def build_process_service(app: EngineApp, process_type: str) -> ProcessService:
+def build_process_service(app: WlApp, process_type: str) -> ProcessService:
     """Generate the desired ProcessService object"""
     name = make_service_name(app, process_type)
     ports = [PServicePortPair(name="http", port=80, target_port=settings.CONTAINER_PORT)]

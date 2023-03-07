@@ -25,8 +25,8 @@ import cattr
 from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
-from paas_wl.platform.applications.constants import EngineAppType
-from paas_wl.platform.applications.models import App, Release
+from paas_wl.platform.applications.constants import WlAppType
+from paas_wl.platform.applications.models import Release, WlApp
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
@@ -53,13 +53,13 @@ def extract_type_from_name(name: str, namespace: str) -> Optional[str]:
 class ProcessDeserializer(AppEntityDeserializer['Process']):
     """Deserializer for Process"""
 
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> 'Process':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
         """Get meta info from pod template
-        :param app: Engine App
+        :param app: workloads app
         :param kube_data: k8s Deployment
         :return: Process
         """
-        if app.type == EngineAppType.DEFAULT:
+        if app.type == WlAppType.DEFAULT:
             process = self._deserialize_for_default_app(app, kube_data)
         else:
             process = self._deserialize_for_cnative_app(app, kube_data)
@@ -73,7 +73,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
 
         return process
 
-    def _deserialize_for_default_app(self, app: App, kube_data: ResourceInstance) -> 'Process':
+    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
         """deserialize process info for default type(Heroku) app"""
         pod_labels = kube_data.spec.template.metadata.labels
         version = int(pod_labels.get('release_version', 0))
@@ -83,7 +83,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
         )
         return process
 
-    def _deserialize_for_cnative_app(self, app: App, kube_data: ResourceInstance) -> 'Process':
+    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'Process':
         """deserialize process info for cloud native type app"""
         from paas_wl.workloads.processes.models import Runtime, Schedule
 
@@ -133,16 +133,14 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
 
         raise RuntimeError('No process_type found in resource')
 
-    def _get_main_container(self, app: App, deployment: ResourceInstance) -> ResourceField:
+    def _get_main_container(self, app: WlApp, deployment: ResourceInstance) -> ResourceField:
         """Get main container from main Pod"""
         process_type = self._get_process_type(deployment)
         pod_template = deployment.spec.template
         for c in pod_template.spec.containers:
-            # for app.type == EngineAppType.DEFAULT
             if c.name == app.scheduler_safe_name_with_region:
                 return c
 
-            # for app.type == EngineAppType.CLOUD_NATIVE
             if c.name == process_type:
                 return c
         raise RuntimeError("No main container found in resource")
@@ -151,7 +149,7 @@ class ProcessDeserializer(AppEntityDeserializer['Process']):
 class InstanceDeserializer(AppEntityDeserializer['Instance']):
     """Deserializer for Instance"""
 
-    def deserialize(self, app: App, kube_data: ResourceInstance) -> 'Instance':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'Instance':
         """Generate a ProcInstance by given Pod object"""
         pod = kube_data
         health_status = check_pod_health_status(parse_pod(kube_data))
@@ -188,13 +186,12 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
             version=int(pod.metadata.labels.get('release_version', 0)),
         )
 
-    def _get_main_container(self, app: App, pod_info: ResourceInstance) -> Optional[ResourceField]:
+    def _get_main_container(self, app: WlApp, pod_info: ResourceInstance) -> Optional[ResourceField]:
         process_type = self.get_process_type(pod_info)
         for c in pod_info.spec.containers:
             if c.name == app.scheduler_safe_name_with_region:
                 return c
 
-            # for app.type == EngineAppType.CLOUD_NATIVE
             if c.name == process_type:
                 return c
         return None

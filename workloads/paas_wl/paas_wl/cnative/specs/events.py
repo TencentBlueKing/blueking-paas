@@ -82,12 +82,10 @@ def list_events(env: ModuleEnvironment, dt: Optional[datetime.datetime]) -> List
 
     :param env: 模块环境
     :param dt: datetime, Optional, filter events first seen after dt
-
     """
-    wl_app = env.wl_engine_app
     all_events = []
-    with get_client_by_app(wl_app) as client:
-        ret = KEvent(client).ops_label.list(namespace=wl_app.namespace, labels={})
+    with get_client_by_app(env.wl_app) as client:
+        ret = KEvent(client).ops_label.list(namespace=env.wl_app.namespace, labels={})
         for kube_data in ret.items:
             all_events.append(deserialize(kube_data))
     if dt:

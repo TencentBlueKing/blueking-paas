@@ -27,13 +27,13 @@ from paas_wl.networking.ingress.entities.ingress import PIngressDomain
 from paas_wl.networking.ingress.exceptions import PersistentAppDomainRequired, ValidCertNotFound
 from paas_wl.networking.ingress.managers.base import AppIngressMgr
 from paas_wl.networking.ingress.models import AppDomain, AutoGenDomain, Domain
-from paas_wl.platform.applications.models import App
+from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
 
 
 @transaction.atomic()
-def assign_custom_hosts(app: App, domains: List[AutoGenDomain], default_service_name: str):
+def assign_custom_hosts(app: WlApp, domains: List[AutoGenDomain], default_service_name: str):
     """Assign custom_domains to app, may update multiple apps's Ingress resources
     if a domain's ownership has been changed from one app to another.
 
@@ -48,7 +48,7 @@ def assign_custom_hosts(app: App, domains: List[AutoGenDomain], default_service_
         SubdomainAppIngressMgr(app).sync(default_service_name=default_service_name, delete_when_empty=True)
 
 
-def save_subdomains(app: App, domains: List[AutoGenDomain]) -> Set[App]:
+def save_subdomains(app: WlApp, domains: List[AutoGenDomain]) -> Set[WlApp]:
     """Save subdomains to database, return apps affected by this save operation.
 
     :param domains: List of AutoGenDomain
@@ -97,7 +97,7 @@ class CustomDomainIngressMgr(AppIngressMgr):
 
     def __init__(self, domain: Domain):
         self.domain = domain
-        super().__init__(App.objects.get_by_env(domain.environment))
+        super().__init__(domain.environment.wl_app)
 
     def make_ingress_name(self) -> str:
         """Make the name of Ingress resource
@@ -127,7 +127,7 @@ class CustomDomainIngressMgr(AppIngressMgr):
 class IngressDomainFactory:
     """A factory class creates `PIngressDomain` objects"""
 
-    def __init__(self, app: App):
+    def __init__(self, app: WlApp):
         self.app = app
 
     def create(self, app_domain: DomainWithCert, raise_on_no_cert: bool = True) -> PIngressDomain:

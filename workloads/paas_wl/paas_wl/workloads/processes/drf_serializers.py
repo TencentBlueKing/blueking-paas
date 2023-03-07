@@ -104,7 +104,7 @@ class ListProcessesSLZ(serializers.Serializer):
             return None
 
         try:
-            self.context['engine_app'].release_set.get(pk=release_id)
+            self.context['wl_app'].release_set.get(pk=release_id)
         except Release.DoesNotExist:
             raise ValidationError(f'Release with id={release_id} do not exists')
         return release_id

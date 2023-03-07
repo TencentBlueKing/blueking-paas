@@ -28,17 +28,14 @@ Other modules which have similar purpose:
 
 These modules will be refactored in the future.
 """
-from typing import Any, Dict, NamedTuple, Optional, Union
+from typing import Any, Dict, NamedTuple, Union
 from uuid import UUID
 
 from django.db import transaction
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.models import Cluster
-from paas_wl.cluster.serializers import ClusterSLZ
-from paas_wl.networking.egress.misc import get_cluster_egress_ips
-from paas_wl.platform.applications.models.app import WLEngineApp
-from paas_wl.platform.applications.models.managers.app_metadata import EngineAppMetadata, get_metadata, update_metadata
+from paas_wl.platform.applications.constants import WlAppType
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.models.managers.app_metadata import WlAppMetadata, get_metadata, update_metadata
 from paas_wl.workloads.processes.models import ProcessSpec
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
@@ -49,18 +46,18 @@ class CreatedAppInfo(NamedTuple):
     name: str
 
 
-def create_app_ignore_duplicated(region: str, name: str, type_: str) -> CreatedAppInfo:
+def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType) -> CreatedAppInfo:
     """Create an engine app object, return directly if the object already exists"""
     try:
-        obj = WLEngineApp.objects.get(region=region, name=name)
-    except WLEngineApp.DoesNotExist:
-        obj = WLEngineApp.objects.create(region=region, name=name, type=type_)
+        obj = WlApp.objects.get(region=region, name=name)
+    except WlApp.DoesNotExist:
+        obj = WlApp.objects.create(region=region, name=name, type=type_)
     return CreatedAppInfo(obj.uuid, obj.name)
 
 
-def get_metadata_by_env(env: ModuleEnvironment) -> EngineAppMetadata:
+def get_metadata_by_env(env: ModuleEnvironment) -> WlAppMetadata:
     """Get an environment's metadata"""
-    wl_app = WLEngineApp.objects.get(pk=env.engine_app_id)
+    wl_app = WlApp.objects.get(pk=env.engine_app_id)
     return get_metadata(wl_app)
 
 
@@ -69,7 +66,7 @@ def update_metadata_by_env(env: ModuleEnvironment, metadata_part: Dict[str, Unio
 
     :param metadata_part: An dict object which will be merged into app's metadata
     """
-    wl_app = WLEngineApp.objects.get(pk=env.engine_app_id)
+    wl_app = WlApp.objects.get(pk=env.engine_app_id)
     update_metadata(wl_app, **metadata_part)
 
 
@@ -83,7 +80,7 @@ def delete_wl_resources(env: ModuleEnvironment):
 
     delete_env_resources(env)
 
-    wl_app = env.wl_engine_app
+    wl_app = env.wl_app
     # Delete some related records manually. Because during API migration, those related data
     # was stored in another database and the `Foreignkey` mechanism can't handle this situation.
     # TODO: Remove below lines when data was fully migrated
@@ -100,31 +97,6 @@ def delete_module_related_res(module: 'Module'):
         # Delete related EngineApp db records
         for env in module.get_envs():
             env.get_engine_app().delete()
-
-
-def get_cluster_egress_info(region, cluster_name):
-    """Get cluster's egress info"""
-    cluster = Cluster.objects.get(region=region, name=cluster_name)
-    return get_cluster_egress_ips(cluster)
-
-
-def get_wl_app_cluster_name(engine_app_name: str) -> Optional[str]:
-    wl_engine_app = WLEngineApp.objects.get(name=engine_app_name)
-    return wl_engine_app.latest_config.cluster
-
-
-def bind_wl_app_cluster(engine_app_name: str, cluster_name: str):
-    wl_engine_app = WLEngineApp.objects.get(name=engine_app_name)
-    cluster = Cluster.objects.get(name=cluster_name)
-    latest_config = wl_engine_app.latest_config
-    latest_config.cluster = cluster.name
-    latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-    latest_config.save()
-
-
-def list_region_clusters(region):
-    """List region clusters"""
-    return ClusterSLZ(Cluster.objects.filter(region=region), many=True).data
 
 
 def create_cnative_app_model_resource(region: str, data: Dict[str, Any]) -> Dict:
@@ -168,5 +140,5 @@ def upsert_app_monitor(
             "target_port": target_port,
             "is_enabled": True,
         },
-        app=WLEngineApp.objects.get(name=engine_app_name),
+        app=WlApp.objects.get(name=engine_app_name),
     )

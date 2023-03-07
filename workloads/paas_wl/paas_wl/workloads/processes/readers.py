@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, cast
 
-from paas_wl.platform.applications.constants import EngineAppType
+from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.base.kres import KPod
 from paas_wl.resources.kube_res.base import AppEntityReader, ResourceList
@@ -28,16 +28,16 @@ from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Instance, Process
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models import App
+    from paas_wl.platform.applications.models import WlApp
 
 
 class ProcessAPIAdapter:
     """Data adapter for Process"""
 
     @staticmethod
-    def get_kube_pod_selector(app: 'App', process_type: str) -> Dict[str, str]:
+    def get_kube_pod_selector(app: 'WlApp', process_type: str) -> Dict[str, str]:
         """Return pod selector dict, useful for construct Deployment body and related Service"""
-        if app.type == EngineAppType.CLOUD_NATIVE:
+        if app.type == WlAppType.CLOUD_NATIVE:
             return {PROCESS_NAME_KEY: process_type}
 
         proc = AppProcessManager(app).assemble_process(process_type)
@@ -47,7 +47,7 @@ class ProcessAPIAdapter:
 class ProcessReader(AppEntityReader[Process]):
     """Manager for ProcSpecs"""
 
-    def get_by_type(self, app: 'App', type: str) -> 'Process':
+    def get_by_type(self, app: 'WlApp', type: str) -> 'Process':
         """Get object by process type"""
         labels = ProcessAPIAdapter.get_kube_pod_selector(app, type)
         objs = self.list_by_app(app, labels=labels)
@@ -62,15 +62,15 @@ process_kmodel = ProcessReader(Process)
 class InstanceReader(AppEntityReader[Instance]):
     """Customized reader for ProcInstance"""
 
-    def list_by_process_type(self, app: 'App', process_type: str) -> List[Instance]:
+    def list_by_process_type(self, app: 'WlApp', process_type: str) -> List[Instance]:
         """List instances by process type"""
         labels = ProcessAPIAdapter.get_kube_pod_selector(app, process_type)
         return self.list_by_app(app, labels=labels)
 
-    def list_by_app_with_meta(self, app: 'App', labels: Optional[Dict] = None) -> ResourceList[Instance]:
+    def list_by_app_with_meta(self, app: 'WlApp', labels: Optional[Dict] = None) -> ResourceList[Instance]:
         """Overwrite original method to remove slugbuilder pods"""
         resources = super().list_by_app_with_meta(app, labels=labels)
-        if app.type == EngineAppType.CLOUD_NATIVE:
+        if app.type == WlAppType.CLOUD_NATIVE:
             resources.items = list(self.filter_cnative_insts(app, resources.items))
         else:
             # Ignore instances with no valid "release_version" label
@@ -90,7 +90,7 @@ class InstanceReader(AppEntityReader[Instance]):
             )
 
     @staticmethod
-    def filter_cnative_insts(app: 'App', items: Iterable[Instance]) -> Iterable[Instance]:
+    def filter_cnative_insts(app: 'WlApp', items: Iterable[Instance]) -> Iterable[Instance]:
         """Filter instances for cloud-native applications, remove hooks and other
         unrelated items.
         """

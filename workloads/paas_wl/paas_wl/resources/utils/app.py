@@ -30,7 +30,7 @@ from paas_wl.resources.utils.basic import get_client_by_app
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from paas_wl.platform.applications.models.app import App
+    from paas_wl.platform.applications.models import WlApp
 
 
 def get_scheduler_client(cluster_name: str):
@@ -38,7 +38,7 @@ def get_scheduler_client(cluster_name: str):
     return K8sScheduler.from_cluster_name(cluster_name)
 
 
-def get_scheduler_client_by_app(app: 'App') -> 'K8sScheduler':
+def get_scheduler_client_by_app(app: 'WlApp') -> 'K8sScheduler':
     """A wrapper function to make K8sSchedulerClient from a raw client object"""
     return K8sScheduler(
         get_client_by_app(app),

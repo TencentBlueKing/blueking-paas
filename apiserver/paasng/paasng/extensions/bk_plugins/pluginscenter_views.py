@@ -41,6 +41,7 @@ from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import AppEnvName
+from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.infras import DeploymentCoordinator
 from paasng.engine.deploy.preparations import initialize_deployment
 from paasng.engine.deploy.runner import DeployTaskRunner
@@ -281,7 +282,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # redis 管道已结束, 取数据库中存储的日志
             return Response(
                 data=api_serializers.PluginReleaseLogsResponseSLZ(
-                    {"finished": True, "logs": deployment.logs.split("\n")}
+                    {"finished": True, "logs": get_all_logs(deployment).split("\n")}
                 ).data
             )
 

@@ -28,7 +28,6 @@ from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import Release, WlApp
-from paas_wl.platform.applications.struct_models import ModuleEnv
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
@@ -229,7 +228,7 @@ def get_processes_status(app: WlApp) -> List[Process]:
     return results
 
 
-def env_is_running(env: ModuleEnv) -> bool:
+def env_is_running(env: ModuleEnvironment) -> bool:
     """Check if an env is running, which mean a successful deployment is available
     for the env. This status is useful in many situations, such as creating a custom
     domain and etc.
@@ -240,21 +239,5 @@ def env_is_running(env: ModuleEnv) -> bool:
     if env.application.type == ApplicationType.CLOUD_NATIVE:
         return AppModelDeploy.objects.any_successful(env)
     else:
-        wl_app = WlApp.objects.get_by_env(env)
-        return Release.objects.any_successful(wl_app)
-
-
-# TODO: 合并至 env_is_running
-def module_env_is_running(env: ModuleEnvironment) -> bool:
-    """Check if an env is running, which mean a successful deployment is available
-    for the env. This status is useful in many situations, such as creating a custom
-    domain and etc.
-
-    :param env: The environment object
-    :return: Whether current env is running
-    """
-    if env.application.type == ApplicationType.CLOUD_NATIVE:
-        return AppModelDeploy.objects.any_successful(env)
-    else:
-        wl_app = WlApp.objects.get_by_env(env)
+        wl_app = env.wl_app
         return Release.objects.any_successful(wl_app)

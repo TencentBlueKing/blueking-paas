@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import contextlib
 import logging
+from operator import attrgetter
 from typing import Any, Dict, List, Optional
 from urllib import parse
 
@@ -86,12 +87,44 @@ class IngressConfig:
     frontend_ingress_ip: str = ''
     port_map: PortMap = Factory(PortMap)
 
+    def __attrs_post_init__(self):
+        self.app_root_domains = sorted(self.app_root_domains, key=attrgetter("reserved"))
+        self.sub_path_domains = sorted(self.sub_path_domains, key=attrgetter("reserved"))
+
     def find_app_root_domain(self, hostname: str) -> Optional[Domain]:
         """Find the possible app_root_domain by given hostname"""
         for d in self.app_root_domains:
             if hostname.endswith(d.name):
                 return d
         return None
+
+    def find_subdomain_domain(self, host: str) -> Optional[Domain]:
+        """Find domain object in configured sub-domains by given host.
+
+        :param host: Any valid host name
+        """
+        for d in self.app_root_domains:
+            if d.name == host:
+                return d
+        return None
+
+    def find_subpath_domain(self, host: str) -> Optional[Domain]:
+        """Find domain object in configured sub-path domains by given host.
+
+        :param host: Any valid host name
+        """
+        for d in self.sub_path_domains:
+            if d.name == host:
+                return d
+        return None
+
+    @property
+    def default_root_domain(self) -> Domain:
+        return self.app_root_domains[0]
+
+    @property
+    def default_sub_path_domain(self) -> Domain:
+        return self.sub_path_domains[0]
 
 
 class ClusterManager(models.Manager):

@@ -744,4 +744,4 @@ def with_wl_apps(request):
         bk_app = request.getfixturevalue("bk_cnative_app")
     else:
         bk_app = request.getfixturevalue("bk_app")
-    create_pending_wl_apps(bk_app)
+    create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)

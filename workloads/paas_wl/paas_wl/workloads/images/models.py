@@ -24,7 +24,7 @@ from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.platform.applications.models import UuidAuditedModel, WlApp
-from paas_wl.platform.applications.struct_models import Application
+from paasng.platform.applications.models import Application
 
 
 class AppImageCredentialManager(models.Manager):

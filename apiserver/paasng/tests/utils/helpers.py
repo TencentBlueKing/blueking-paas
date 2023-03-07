@@ -44,7 +44,6 @@ from paasng.platform.oauth2.utils import create_oauth2_client
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
 from paasng.utils.configs import RegionAwareConfig
-from tests.utils.mocks.engine import replace_cluster_service
 
 from .auth import create_user
 
@@ -83,7 +82,6 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
     default_mockers: List[ContextManager] = [
         mock.patch('paasng.platform.modules.manager.make_app_metadata'),
         mock.patch('paasng.dev_resources.sourcectl.connector.SvnRepositoryClient'),
-        replace_cluster_service(),
         contextmanager(_mock_wl_services_in_creation)(),
     ]
     # 通过 Mock 被跳过的应用流程（性能原因）
@@ -385,19 +383,20 @@ def _mock_wl_services_in_creation():
     ), mock.patch(
         'paasng.platform.modules.manager.update_metadata_by_env', new=fake_update_metadata_by_env
     ), mock.patch(
-        "paasng.platform.modules.manager.get_region_cluster_helper"
+        "paasng.platform.modules.manager.EnvClusterService"
     ), mock.patch(
         'paasng.cnative.services.create_app_ignore_duplicated', new=fake_create_app_ignore_duplicated
     ), mock.patch(
         "paasng.cnative.services.create_cnative_app_model_resource"
     ), mock.patch(
-        "paasng.cnative.services.bind_wl_app_cluster"
+        "paasng.cnative.services.EnvClusterService"
     ):
         yield
 
 
-def create_pending_wl_apps(bk_app: Application):
+def create_pending_wl_apps(bk_app: Application, cluster_name: str):
     """Create WlApp objects of the given application in workloads, these objects
+
     should have been created during application creation, but weren't because the
     `create_app_ignore_duplicated` function was mocked out.
 
@@ -411,7 +410,10 @@ def create_pending_wl_apps(bk_app: Application):
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
                 region, name, type_ = args
-                WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                latest_config = wl_app.latest_config
+                latest_config.cluster = cluster_name
+                latest_config.save()
             if metadata := _faked_env_metadata.get(env.id):
                 update_metadata_by_env(env, metadata)
 
@@ -518,7 +520,7 @@ def create_cnative_app(
     )
 
     create_default_module(application)
-    with replace_cluster_service(), contextmanager(_mock_wl_services_in_creation)():
+    with contextmanager(_mock_wl_services_in_creation)():
         initialize_simple(application.get_default_module(), {}, cluster_name=cluster_name)
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)

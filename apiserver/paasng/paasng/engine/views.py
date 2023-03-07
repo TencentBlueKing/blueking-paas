@@ -35,6 +35,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.monitoring.metrics.exceptions import (
     AppInstancesNotFoundError,
     AppMetricNotSupportedError,
@@ -52,7 +53,6 @@ from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
-from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.deploy.infras import DeploymentCoordinator
 from paasng.engine.deploy.preparations import initialize_deployment
 from paasng.engine.deploy.protections import ModuleEnvDeployInspector
@@ -733,7 +733,7 @@ class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         custom_domain_configs = []
         for module in application.modules.all():
             for env in module.envs.all():
-                cluster = get_engine_app_cluster(module.region, env.engine_app.name)
+                cluster = EnvClusterService(env).get_cluster()
                 # `cluster` could be None when application's engine was disabled
                 frontend_ingress_ip = cluster.ingress_config.frontend_ingress_ip if cluster else ''
                 custom_domain_configs.append(

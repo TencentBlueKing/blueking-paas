@@ -17,15 +17,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Egress(cluster outgoing traffic) related module"""
-from typing import Dict
+from typing import List, TypedDict
 
 from paas_wl.cluster.models import Cluster
+from paas_wl.networking.egress.models import format_nodes_data, get_digest_of_nodes_name
 from paas_wl.resources.utils.app import get_scheduler_client
 
-from .models import format_nodes_data, get_digest_of_nodes_name
+
+class ClusterEgressIps(TypedDict):
+    digest_version: str
+    egress_ips: List[str]
 
 
-def get_cluster_egress_ips(cluster: Cluster) -> Dict:
+def get_cluster_egress_ips(cluster: Cluster) -> ClusterEgressIps:
     """Return cluster's egress IP addresses. by default, cluster's node IPs will be returned"""
     sched_client = get_scheduler_client(cluster_name=cluster.name)
     nodes = sched_client.get_nodes()
@@ -34,4 +38,4 @@ def get_cluster_egress_ips(cluster: Cluster) -> Dict:
     nodes_data = [node.to_dict() for node in sched_client.get_nodes()]
     nodes_digest = get_digest_of_nodes_name(nodes_name)
     egress_ips = [n['internal_ip_address'] for n in format_nodes_data(nodes_data)]
-    return {'digest_version': nodes_digest, 'egress_ips': egress_ips}
+    return ClusterEgressIps(digest_version=nodes_digest, egress_ips=egress_ips)

@@ -20,7 +20,7 @@ from unittest import mock
 
 import pytest
 
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +30,12 @@ def setup_mocks(mock_wl_services_in_creation):
     - Mock wl_app creation which depends on `workloads` module
     - Mock ProcessManager which depends on `workloads` module
     """
-    with replace_cluster_service(), mock.patch("paasng.engine.models.processes.ProcessManager.sync_processes_specs"):
+    with mock_cluster_service(
+        ingress_config={
+            "sub_path_domains": [],
+            "app_root_domains": [{"name": "bkapps.example.com"}],
+        }
+    ), mock.patch("paasng.engine.models.processes.ProcessManager.sync_processes_specs"):
         yield
 
 

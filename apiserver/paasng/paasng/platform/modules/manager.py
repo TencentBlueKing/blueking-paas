@@ -30,13 +30,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from paas_wl.platform.api import (
-    CreatedAppInfo,
-    create_app_ignore_duplicated,
-    delete_module_related_res,
-    update_metadata_by_env,
-)
+
 from paas_wl.platform.applications.constants import WlAppType
+from paas_wl.cluster.shim import EnvClusterService
+from paas_wl.platform.api import create_app_ignore_duplicated, delete_module_related_res, update_metadata_by_env
+
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
@@ -45,9 +43,8 @@ from paasng.dev_resources.sourcectl.docker.models import init_image_repo
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import RuntimeType
-from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.engine.models import EngineApp
-from paasng.platform.applications.models import ApplicationEnvironment
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
@@ -72,7 +69,6 @@ class ModuleInitializer:
     def __init__(self, module: Module):
         self.module = module
         self.application = self.module.application
-        self.cluster_helper = get_region_cluster_helper(self.application.region)
 
     def list_engine_app_names(self) -> List[str]:
         """列举当前所有的 engine app name"""
@@ -91,7 +87,7 @@ class ModuleInitializer:
             name = f'{self.default_engine_app_prefix}-{self.application.code}-m-' f'{self.module.name}-{env}'
         return name
 
-    def make_engine_meta_info(self, env: ApplicationEnvironment) -> Dict[str, Any]:
+    def make_engine_meta_info(self, env: ModuleEnvironment) -> Dict[str, Any]:
         ext_metadata = make_app_metadata(env)
         return {
             'paas_app_code': self.application.code,
@@ -104,23 +100,15 @@ class ModuleInitializer:
     def create_engine_apps(self, environments: Optional[List[str]] = None, cluster_name: Optional[str] = None):
         """Create engine app instances for application"""
         environments = environments or self.default_environments
-        # Use default cluster name if not given
-        if not cluster_name:
-            _cluster_name = self.cluster_helper.get_default_cluster().name
-        else:
-            _cluster_name = cluster_name
 
         for environment in environments:
             name = self.make_engine_app_name(environment)
-            info = self._create_or_get_engine_app(name, _cluster_name)
-
-            # Create EngineApp and binding relationships
-            engine_app = EngineApp.objects.create(
-                id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
-            )
-            env = ApplicationEnvironment.objects.create(
+            engine_app = self._get_or_create_engine_app(name)
+            env = ModuleEnvironment.objects.create(
                 application=self.application, module=self.module, engine_app_id=engine_app.id, environment=environment
             )
+            # bind env to cluster
+            EnvClusterService(env).bind_cluster(cluster_name)
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
@@ -222,11 +210,13 @@ class ModuleInitializer:
         # 语言要求的构建工具
         helper.bind_buildpacks_by_module_language()
 
-    def _create_or_get_engine_app(self, name, cluster_name: str) -> CreatedAppInfo:
+    def _get_or_create_engine_app(self, name: str) -> EngineApp:
         """Create or get existed engine app by given name"""
         info = create_app_ignore_duplicated(self.application.region, name, WlAppType.DEFAULT)
-        self.cluster_helper.set_engine_app_cluster(name, cluster_name)
-        return info
+        engine_app = EngineApp.objects.create(
+            id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
+        )
+        return engine_app
 
 
 ModuleInitResult = namedtuple('ModuleInitResult', 'source_init_result')

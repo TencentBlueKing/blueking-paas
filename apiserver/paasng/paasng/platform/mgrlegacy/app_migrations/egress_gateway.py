@@ -22,7 +22,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 from django.utils.translation import gettext_lazy as _
 
-from paasng.engine.controller.state import controller_client
+from paas_wl.cluster.utils import get_cluster_by_app
+from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
 
 from .base import BaseMigration
 
@@ -39,7 +40,10 @@ class EgressGatewayMigration(BaseMigration):
         for env in module.get_envs():
             engine_app = env.engine_app
             try:
-                controller_client.app_rcsbinding__create(engine_app)
+                wl_app = engine_app.to_wl_obj()
+                cluster = get_cluster_by_app(wl_app)
+                state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
+                RCStateAppBinding.objects.create(app=wl_app, state=state)
             except ObjectDoesNotExist:
                 self.add_log(
                     _("{env} 环境绑定出口IP异常, 详情: {detail}").format(
@@ -58,7 +62,17 @@ class EgressGatewayMigration(BaseMigration):
         for env in module.get_envs():
             engine_app = env.engine_app
             try:
-                controller_client.app_rcsbinding__destroy(engine_app)
+                wl_app = engine_app.to_wl_obj()
+                binding = RCStateAppBinding.objects.get(app=wl_app)
+                # Update app scheduling config
+                # TODO: Below logic is safe be removed as long as the node_selector will be fetched
+                # dynamically by querying for binding state.
+                latest_config = wl_app.latest_config
+                # Remove labels related with current binding
+                for key in binding.state.to_labels():
+                    latest_config.node_selector.pop(key, None)
+                latest_config.save()
+                binding.delete()
             except ObjectDoesNotExist:
                 self.add_log(_("{env} 环境未获取过网关信息").format(env=env.environment))
             except Exception:

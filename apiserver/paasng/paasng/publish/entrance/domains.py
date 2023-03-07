@@ -22,10 +22,10 @@ from typing import Dict, List, NamedTuple, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+from paas_wl.cluster.models import Domain as DomainCfg
+from paas_wl.cluster.models import IngressConfig, PortMap
+from paas_wl.cluster.shim import EnvClusterService
 from paasng.engine.constants import AppEnvName
-from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.models import Domain as DomainCfg
-from paasng.engine.controller.models import IngressConfig, PortMap
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.publish.entrance.utils import URL, to_dns_safe
 
@@ -81,7 +81,7 @@ def get_preallocated_domains_by_env(env: ModuleEnvironment) -> List[Domain]:
     """
     app = env.application
     module = env.module
-    cluster = get_engine_app_cluster(app.region, env.engine_app.name)
+    cluster = EnvClusterService(env).get_cluster()
     ingress_config = cluster.ingress_config
 
     # Iterate configured root domains, get domains
@@ -137,7 +137,7 @@ class ModuleEnvDomains:
 
     def get_ingress_config(self) -> IngressConfig:
         """Get ingress config from cluster info"""
-        cluster = get_engine_app_cluster(self.application.region, self.env.engine_app.name)
+        cluster = EnvClusterService(self.env).get_cluster()
         return cluster.ingress_config
 
     def all(self) -> List[Domain]:

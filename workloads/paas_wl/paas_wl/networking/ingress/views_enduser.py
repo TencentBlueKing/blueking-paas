@@ -38,7 +38,6 @@ from paas_wl.utils.api_docs import openapi_empty_response
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.paas_wl.platform.applications.struct_models import set_many_model_structured, set_model_structured
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
@@ -130,11 +129,8 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         结果默认按（“模块名”、“环境”）排序
         """
-        application = self.get_application()
-
         # Get results and sort
         domains = self.get_queryset()
-        set_many_model_structured(domains, application)
         domains = sorted(domains, key=lambda d: (d.module.name, d.environment.environment, d.id))
 
         serializer = DomainSLZ(domains, many=True)
@@ -166,7 +162,6 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
         )
-        set_model_structured(instance, application=application)
         return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
@@ -179,7 +174,6 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
         instance = get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
-        set_model_structured(instance, application=application)
         if not self.allow_modifications(application.region):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
 
@@ -194,7 +188,6 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
         instance = get_object_or_404(self.get_queryset(), pk=self.kwargs['id'])
-        set_model_structured(instance, application=application)
         if not self.allow_modifications(application.region):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.format('当前应用版本不允许手动管理独立域名，请联系平台管理员')
 

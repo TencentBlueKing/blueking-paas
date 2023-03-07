@@ -31,8 +31,7 @@ from django.db import transaction
 from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
-from paas_wl.cluster.models import APIServer, Cluster
+from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
@@ -41,6 +40,7 @@ from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
+from tests.utils.mocks.engine import build_default_cluster
 
 logger = logging.getLogger(__name__)
 
@@ -207,34 +207,9 @@ def resource_name() -> str:
 def create_default_cluster():
     """Destroy all existing clusters and create a default one"""
     Cluster.objects.all().delete()
-    cluster = Cluster.objects.register_cluster(
-        name=CLUSTER_NAME_FOR_TESTING,
-        region=settings.FOR_TESTS_DEFAULT_REGION,
-        is_default=True,
-        ingress_config={
-            "app_root_domains": [{"name": "example.com"}],
-            "sub_path_domains": [{"name": "example.com"}],
-            "default_ingress_domain_tmpl": "%s.unittest.com",
-            "frontend_ingress_ip": "0.0.0.0",
-            "port_map": {"http": "80", "https": "443"},
-        },
-        annotations={
-            "bcs_cluster_id": "",
-            "bcs_project_id": "",
-        },
-        ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
-        cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
-        key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
-        token_value=settings.FOR_TESTS_CLUSTER_CONFIG["token_value"],
-        feature_flags=ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
-    )
-    APIServer.objects.get_or_create(
-        host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],
-        cluster=cluster,
-        defaults=dict(
-            overridden_hostname=settings.FOR_TESTS_CLUSTER_CONFIG["force_domain"],
-        ),
-    )
+    cluster, apiserver = build_default_cluster()
+    cluster.save()
+    apiserver.save()
     return cluster
 
 

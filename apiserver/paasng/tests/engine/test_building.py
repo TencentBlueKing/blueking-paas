@@ -28,7 +28,7 @@ from paasng.engine.deploy.building import ApplicationBuilder, BuildProcessResult
 from paasng.engine.handlers import attach_all_phases
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 from tests.utils.mocks.poll_task import FakeTaskPoller
 
 pytestmark = pytest.mark.django_db
@@ -36,7 +36,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def setup_cluster():
-    with replace_cluster_service():
+    with mock_cluster_service():
         yield
 
 

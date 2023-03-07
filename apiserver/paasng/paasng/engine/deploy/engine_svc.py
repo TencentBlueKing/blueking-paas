@@ -37,7 +37,6 @@ from paas_wl.resources.tasks import release_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.engine.constants import JobStatus
-from paasng.engine.controller.client import ControllerClient
 from paasng.engine.helpers import SlugbuilderInfo
 
 if TYPE_CHECKING:
@@ -53,7 +52,7 @@ class LogLine(TypedDict):
 class EngineDeployClient:
     """A high level client for engine"""
 
-    def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
+    def __init__(self, engine_app):
         self.engine_app = engine_app
 
     @cached_property

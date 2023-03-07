@@ -37,6 +37,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from paas_wl.cluster.shim import RegionClusterService
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
@@ -60,7 +61,6 @@ from paasng.accounts.serializers import VerificationCodeSLZ
 from paasng.cnative.services import initialize_simple
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.controller.cluster import get_region_cluster_helper
 from paasng.extensions.bk_plugins.config import get_bk_plugin_config
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.scene_app.initializer import SceneAPPInitializer
@@ -519,9 +519,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
         adv_region_clusters = []
         if allow_advanced:
-            for name in get_all_regions().keys():
-                clusters = get_region_cluster_helper(name).list_clusters()
-                adv_region_clusters.append({'region': name, 'cluster_names': [cluster.name for cluster in clusters]})
+            for region_name in get_all_regions().keys():
+                clusters = RegionClusterService(region_name).list_clusters()
+                adv_region_clusters.append(
+                    {'region': region_name, 'cluster_names': [cluster.name for cluster in clusters]}
+                )
 
         options = {
             # configs related with "bk_plugin"
@@ -542,9 +544,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self, region: str, cluster_name: Optional[str], exposed_url_type: ExposedURLType
     ) -> bool:
         if not cluster_name:
-            cluster = get_region_cluster_helper(region).get_default_cluster()
+            cluster = RegionClusterService(region).get_default_cluster()
         else:
-            cluster = get_region_cluster_helper(region).get_cluster(cluster_name)
+            cluster = RegionClusterService(region).get_cluster_by_name(cluster_name)
 
         try:
             if exposed_url_type == ExposedURLType.SUBDOMAIN:

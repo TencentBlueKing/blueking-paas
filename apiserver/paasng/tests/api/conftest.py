@@ -20,7 +20,7 @@ from unittest import mock
 
 import pytest
 
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 
 def _mock_initialize_with_template():
@@ -54,5 +54,5 @@ def mock_bkpaas_auth_middlewares():
 
 @pytest.fixture(autouse=True)
 def setup_cluster():
-    with replace_cluster_service():
+    with mock_cluster_service():
         yield

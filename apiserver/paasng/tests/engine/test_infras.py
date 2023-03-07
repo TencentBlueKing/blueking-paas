@@ -44,7 +44,7 @@ from paasng.engine.models.steps import DeployStep, DeployStepMeta
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from tests.utils.helpers import BaseTestCaseWithApp
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 from .setup_utils import create_fake_deployment
 
@@ -53,7 +53,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def setup_cluster():
-    with replace_cluster_service():
+    with mock_cluster_service():
         yield
 
 

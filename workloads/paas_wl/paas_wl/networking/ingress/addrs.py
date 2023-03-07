@@ -60,9 +60,9 @@ class EnvAddresses:
 
     def get(self) -> List[Address]:
         """Get available addresses, sorted by: (subdomain, subpath, custom)"""
-        from paas_wl.workloads.processes.controllers import module_env_is_running
+        from paas_wl.workloads.processes.controllers import env_is_running
 
-        if not module_env_is_running(self.env):
+        if not env_is_running(self.env):
             return []
         return self._sort(self._get_subdomain()) + self._sort(self._get_subpath()) + self._sort(self._get_custom())
 

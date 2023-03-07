@@ -23,7 +23,6 @@ from paas_wl.cluster.models import PortMap
 from paas_wl.networking.ingress.addrs import Address, AddressType, EnvAddresses
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.networking.ingress.models import AppDomain, AppSubpath, Domain
-from paas_wl.platform.applications.models import WlApp
 from tests.paas_wl.utils.release import create_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -32,8 +31,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestEnvAddresses:
     @pytest.fixture(autouse=True)
     def _setup_data(self, bk_module, bk_stag_env, bk_stag_wl_app):
-        wl_app = WlApp.objects.get_by_env(bk_stag_env)
-
+        wl_app = bk_stag_wl_app
         # Create all types of domains
         # source type: subdomain
         AppDomain.objects.create(app=wl_app, host='foo.example.com', source=AppDomainSource.AUTO_GEN)

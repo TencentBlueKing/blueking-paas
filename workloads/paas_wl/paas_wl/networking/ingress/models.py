@@ -24,7 +24,7 @@ from django.db import models
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.platform.applications.models import AuditedModel, WlApp
-from paas_wl.platform.applications.struct_models import ModuleAttrFromID, ModuleEnvAttrFromID
+from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN

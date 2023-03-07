@@ -97,7 +97,7 @@ class CustomDomainIngressMgr(AppIngressMgr):
 
     def __init__(self, domain: Domain):
         self.domain = domain
-        super().__init__(WlApp.objects.get_by_env(domain.environment))
+        super().__init__(domain.environment.wl_app)
 
     def make_ingress_name(self) -> str:
         """Make the name of Ingress resource

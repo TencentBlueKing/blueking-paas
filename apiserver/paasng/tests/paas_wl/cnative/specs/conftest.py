@@ -23,6 +23,8 @@ import pytest
 
 @pytest.fixture
 def mock_knamespace(namespace_maker):
+    """Mock KNamespace.get_or_create to make sure namespace will auto recycle by `namespace_maker`"""
+
     def get_or_create(name: str):
         return namespace_maker.make(name)
 

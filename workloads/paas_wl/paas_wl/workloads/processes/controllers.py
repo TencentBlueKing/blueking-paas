@@ -26,7 +26,6 @@ from django.utils.translation import ugettext_lazy as _
 from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
-from paas_wl.platform.applications.constants import ApplicationType
 from paas_wl.platform.applications.models import Release, WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
@@ -35,6 +34,7 @@ from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOpera
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.models import Process, ProcessSpec
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

@@ -98,7 +98,6 @@ MIDDLEWARE = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'blue_krill.auth.client.VerifiedClientMiddleware',
-    'paas_wl.platform.applications.middlewares.InstancesInPlaceMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 )
 

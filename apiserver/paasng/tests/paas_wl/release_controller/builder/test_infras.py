@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 from unittest import mock
 
 import pytest
-from django.test import TestCase
 
 from paas_wl.release_controller.builder.infras import BuildProcedure
 from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
@@ -27,7 +26,7 @@ from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
 pytestmark = pytest.mark.django_db(databases=['workloads'])
 
 
-class TestStream(TestCase):
+class TestStream:
     def test_cleanup_message(self):
         message_list = ["error\x1b[1G error\x1b[1G", "normal, normal", "\x1b [1G", "中文"]
         output_list = ["error error", "normal, normal", "\x1b [1G", "中文"]
@@ -35,7 +34,7 @@ class TestStream(TestCase):
             assert Stream.cleanup_message(message) == output_list[i], "输出与预期不一致"
 
 
-class TestConsoleStream(TestCase):
+class TestConsoleStream:
     def test_console_stream_stdout(self):
         line = []
         with mock.patch("sys.stdout") as stdout:
@@ -70,7 +69,7 @@ class TestMixStream:
         assert build_proc.output_stream.lines.count() == 0, "标题内容写进了日志！"
 
 
-class TestBuildProcedure(TestCase):
+class TestBuildProcedure:
     def test_without_exception(self):
         line = []
         with mock.patch("sys.stdout") as stdout:

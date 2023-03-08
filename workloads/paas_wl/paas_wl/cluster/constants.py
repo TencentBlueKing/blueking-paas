@@ -45,7 +45,7 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     # Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
     INGRESS_USE_REGEX = FeatureFlagField(label=_("Ingress路径是否使用正则表达式"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸监控
-    ENABLE_BK_MONITOR = FeatureFlagField(label=_("支持蓝鲸监控"), default=True)
+    ENABLE_BK_MONITOR = FeatureFlagField(label=_("支持蓝鲸监控"), default=False)
 
     @classmethod
     def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:

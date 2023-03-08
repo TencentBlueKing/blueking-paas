@@ -42,7 +42,7 @@ from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient,
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.extensions.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.platform.core.storages.utils import SADBManager
@@ -337,7 +337,7 @@ def bk_app(request, bk_user) -> Application:
     """
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
-    app = create_app(owner_username=bk_user.username)
+    app = create_app(owner_username=bk_user.username, region=settings.FOR_TESTS_DEFAULT_REGION)
     before_finishing_application_creation.connect(register_app_core_data)
     return app
 
@@ -381,12 +381,12 @@ def bk_module_full(bk_app_full) -> Module:
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_module) -> ApplicationEnvironment:
+def bk_stag_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='stag')
 
 
 @pytest.fixture
-def bk_prod_env(request, bk_module) -> ApplicationEnvironment:
+def bk_prod_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='prod')
 
 

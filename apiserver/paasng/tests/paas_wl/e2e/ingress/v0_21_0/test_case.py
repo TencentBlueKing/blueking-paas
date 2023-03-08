@@ -20,7 +20,7 @@ from urllib.parse import urljoin
 
 import pytest
 
-pytestmark = [pytest.mark.django_db]
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(

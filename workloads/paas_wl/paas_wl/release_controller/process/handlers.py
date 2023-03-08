@@ -30,7 +30,7 @@ from paas_wl.release_controller.process.events import (
     ProcInstEventType,
 )
 from paas_wl.release_controller.process.wait import processes_updated
-from paas_wl.utils.redisdb import get_stream_channel_redis
+from paas_wl.utils.redisdb import get_default_redis
 from paas_wl.utils.stream import ConsoleStream, RedisChannelStream, Stream
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def _on_processes_updated(sender, events: Iterable[ProcessBaseEvent], extra_para
     stream: Stream
 
     if deployment_id:
-        channel = StreamChannel(deployment_id, get_stream_channel_redis())
+        channel = StreamChannel(deployment_id, get_default_redis())
         stream = RedisChannelStream(channel)
     else:
         stream = ConsoleStream()

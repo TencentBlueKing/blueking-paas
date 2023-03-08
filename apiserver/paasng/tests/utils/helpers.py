@@ -521,7 +521,7 @@ def create_cnative_app(
 
     create_default_module(application)
     with contextmanager(_mock_wl_services_in_creation)():
-        initialize_simple(application.get_default_module(), {}, cluster_name=cluster_name)
+        initialize_simple(application.get_default_module(), '', cluster_name=cluster_name)
     # Send post-creation signal
     post_create_application.send(sender=create_app, application=application)
     return application

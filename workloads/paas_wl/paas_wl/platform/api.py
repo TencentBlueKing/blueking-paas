@@ -28,7 +28,7 @@ Other modules which have similar purpose:
 
 These modules will be refactored in the future.
 """
-from typing import Any, Dict, NamedTuple, Union
+from typing import Dict, List, NamedTuple, Optional, Union
 from uuid import UUID
 
 from django.db import transaction
@@ -99,32 +99,36 @@ def delete_module_related_res(module: 'Module'):
             env.get_engine_app().delete()
 
 
-def create_cnative_app_model_resource(region: str, data: Dict[str, Any]) -> Dict:
+def create_cnative_app_model_resource(
+    module: Module,
+    image: str,
+    command: Optional[List[str]] = None,
+    args: Optional[List[str]] = None,
+    target_port: Optional[int] = None,
+) -> Dict:
     """Create a cloud-native AppModelResource object
 
-    :param region: Application region
-    :param data: Payload for create resource
-    :raises: ValidationError when CreateAppModelResourceSerializer validation failed
+    :param module: The Module object current app model resource bound with
     """
     from paas_wl.cnative.specs.models import AppModelResource, create_app_resource
-    from paas_wl.cnative.specs.serializers import AppModelResourceSerializer, CreateAppModelResourceSerializer
 
-    serializer = CreateAppModelResourceSerializer(data=data)
-    serializer.is_valid(raise_exception=True)
-    d = serializer.validated_data
-
+    application = module.application
     resource = create_app_resource(
         # Use Application code as default resource name
-        name=d['code'],
-        image=d['image'],
-        command=d.get('command'),
-        args=d.get('args'),
-        target_port=d.get('target_port'),
+        name=application.code,
+        image=image,
+        command=command,
+        args=args,
+        target_port=target_port,
     )
     model_resource = AppModelResource.objects.create_from_resource(
-        region, d['application_id'], d['module_id'], resource
+        application.region, str(application.id), str(module.id), resource
     )
-    return AppModelResourceSerializer(model_resource).data
+    return {
+        'application_id': model_resource.application_id,
+        'module_id': model_resource.module_id,
+        'manifest': model_resource.revision.json_value,
+    }
 
 
 def upsert_app_monitor(

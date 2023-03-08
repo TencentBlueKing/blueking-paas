@@ -29,7 +29,7 @@ from paas_wl.release_controller.process.wait import wait_for_all_stopped, wait_f
 from paas_wl.resources.actions.archive import ArchiveOperationController
 from paas_wl.resources.actions.deploy import AppDeploy
 from paas_wl.resources.actions.exec import AppCommandExecutor
-from paas_wl.utils.redisdb import get_stream_channel_redis
+from paas_wl.utils.redisdb import get_default_redis
 from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -84,7 +84,7 @@ def run_command(uuid: str, stream_channel_id: Optional[str] = None, extra_envs: 
 
     # Make a new channel if stream_channel_id is given
     if stream_channel_id:
-        stream_channel = StreamChannel(stream_channel_id, redis_db=get_stream_channel_redis())
+        stream_channel = StreamChannel(stream_channel_id, redis_db=get_default_redis())
         stream_channel.initialize()
         stream = MixedStream(command, stream_channel)
     else:

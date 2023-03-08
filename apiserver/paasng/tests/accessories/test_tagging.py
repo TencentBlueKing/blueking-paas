@@ -115,10 +115,6 @@ class TestGetDeploymentTags:
         self.setup_data()
 
         deployment = create_fake_deployment(bk_module)
-        with mock.patch(
-            'paasng.engine.models.deployment.Deployment.logs', new_callable=mock.PropertyMock
-        ) as mocked_logs:
-            mocked_logs.return_value = logs
-
+        with mock.patch('paasng.accessories.smart_advisor.tagging.get_all_logs', return_value=logs):
             results = get_deployment_tags(deployment)
             assert results == tags

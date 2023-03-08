@@ -19,10 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import copy
 import logging
 import tempfile
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Dict
-from unittest import mock
 
 import pytest
 import yaml
@@ -33,13 +31,14 @@ from kubernetes.client.exceptions import ApiException
 
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
-from paas_wl.platform.applications.models import Build, WlApp
+from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
+from tests.paas_wl.utils.build import create_build_proc
 from tests.paas_wl.utils.wl_app import create_app
 from tests.utils.mocks.engine import build_default_cluster
 
@@ -181,22 +180,25 @@ def namespace_maker(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
-    app / bk_stag_wl_app
+    bk_stag_wl_app / bk_prod_wl_app
     """
     if not request.keywords.get('auto_create_ns'):
         yield
         return
 
-    if "bk_stag_wl_app" in request.fixturenames:
-        app = request.getfixturevalue("bk_stag_wl_app")
-    elif "wl_app" in request.fixturenames:
-        app = request.getfixturevalue("wl_app")
-    else:
+    fixtures = ["bk_stag_wl_app", "bk_prod_wl_app", "wl_app"]
+    used_fixtures = []
+    for fixture in fixtures:
+        if fixture in request.fixturenames:
+            used_fixtures.append(fixture)
+    if not used_fixtures:
         yield
         return
 
     namespace_maker = request.getfixturevalue("namespace_maker")
-    namespace_maker.make(app.namespace)
+    for fixture in used_fixtures:
+        app = request.getfixturevalue(fixture)
+        namespace_maker.make(app.namespace)
     yield
     namespace_maker.set_block()
 
@@ -262,28 +264,6 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
     return _wrapped
 
 
-@contextmanager
-def override_cluster_ingress_attrs(attrs):
-    """Context manager which updates app's `cluster.ingress_config`"""
-
-    def _hook_set_sub_path_domain(cluster):
-        for key, value in attrs.items():
-            setattr(cluster.ingress_config, key, value)
-        cluster.save()
-        cluster.refresh_from_db()
-        return cluster
-
-    # Mock all related occurrences
-    with mock.patch(
-        'paas_wl.networking.ingress.managers.misc.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ), mock.patch(
-        'paas_wl.networking.ingress.managers.subpath.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ):
-        yield
-
-
 @pytest.fixture(autouse=True)
 def clear_kubernetes_dynamic_discoverer_cache():
     # delete all discoverer cache files to ensure tests successful of the multiple kubernetes clusters
@@ -324,7 +304,13 @@ def wl_app() -> WlApp:
 
 
 @pytest.fixture
-def simple_build(bk_stag_wl_app, bk_user):
+def build_proc(wl_app) -> BuildProcess:
+    """A new BuildProcess object with random info"""
+    return create_build_proc(wl_app)
+
+
+@pytest.fixture
+def simple_build(bk_stag_wl_app, bk_user) -> Build:
     build_params = {
         "owner": bk_user,
         "app": bk_stag_wl_app,

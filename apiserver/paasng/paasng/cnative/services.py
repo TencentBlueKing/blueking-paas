@@ -35,28 +35,29 @@ default_engine_app_prefix = 'bkapp'
 default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
 
 
-def initialize_simple(module: Module, data: Dict, cluster_name: Optional[str] = None) -> Dict:
+def initialize_simple(
+    module: Module,
+    image: str,
+    cluster_name: Optional[str] = None,
+    command: Optional[List[str]] = None,
+    args: Optional[List[str]] = None,
+    target_port: Optional[int] = None,
+) -> Dict:
     """Initialize a cloud-native application, return the initialized object
 
     :param module: Module object, a module can only be initialized once
-    :param data: Simple parameters for initialization, such as "image" and "command".
+    :param image: The container image of main process
     :param cluster_name: The name of cluster to deploy BkApp.
-    :raises: ValidationError when workloads service responds with "VALIDATION_ERROR"
+    :param command: Custom command
+    :param args: Custom args
+    :param target_port: Custom target port
     :raises: BadResponseError when fail to request workloads service
     """
-    application = module.application
-    default_data = {
-        'application_id': str(application.id),
-        'module_id': str(module.id),
-        'code': application.code,
-    }
-    data.update(default_data)
-
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
 
-    model_res = create_cnative_app_model_resource(application.region, data)
-    create_engine_apps(application, module, environments=default_environments, cluster_name=cluster_name)
+    model_res = create_cnative_app_model_resource(module, image, command, args, target_port)
+    create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
 
 

@@ -104,17 +104,6 @@ DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 
 SLUGBUILDER_RESOURCES_SPEC = settings.get('SLUGBUILDER_RESOURCES_SPEC')
 
 # ---------------
-# Redis 配置
-# ---------------
-
-# 与 apiserver 通信的 redis 管道, 需要确保两个项目中的配置一致
-STREAM_CHANNEL_REDIS_URL = settings.get('STREAM_CHANNEL_REDIS_URL', default='redis://localhost:6379/0')
-
-# 其他配置项如 REDIS_URL 等未迁移，这些配置在 workloads 中只作缓存用，可使用 apiserver
-# 的同名配置项。
-
-
-# ---------------
 # 部署环境相关
 # ---------------
 # 环境变量前缀
@@ -242,10 +231,13 @@ ENGINE_PROC_REPLICAS_BY_TYPE = {
 # 插件监控图表相关配置（原生 Prometheus 使用，仅用于不支持蓝鲸监控的集群 k8s 1.12-）
 MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
 
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
+
+
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
-
 FOR_TESTS_DEFAULT_REGION = settings.get('FOR_TESTS_DEFAULT_REGION', 'default')
 
 FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localhost:28080')

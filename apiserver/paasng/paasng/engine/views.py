@@ -53,6 +53,7 @@ from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.infras import DeploymentCoordinator
 from paasng.engine.deploy.preparations import initialize_deployment
 from paasng.engine.deploy.protections import ModuleEnvDeployInspector
@@ -479,7 +480,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         hint = get_failure_hint(deployment)
         result = {
             'status': deployment.status,
-            'logs': deployment.logs,
+            'logs': get_all_logs(deployment),
             'error_detail': deployment.err_detail,
             'error_tips': asdict(hint),
         }

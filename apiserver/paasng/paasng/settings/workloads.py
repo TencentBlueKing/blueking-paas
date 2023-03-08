@@ -89,40 +89,11 @@ CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
 SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
 
 # ---------------
-# Redis 配置
+# 资源命名配置
 # ---------------
 
-# 与 apiserver 通信的 redis 管道, 需要确保两个项目中的配置一致
-STREAM_CHANNEL_REDIS_URL = settings.get('STREAM_CHANNEL_REDIS_URL', default='redis://localhost:6379/0')
-
-# 其他配置项如 REDIS_URL 等未迁移，这些配置在 workloads 中只作缓存用，可使用 apiserver
-# 的同名配置项。
-
-# ---------------
-# 运行时默认配置
-# ---------------
-DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner')
-DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder')
-
-BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
-
-# 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
-PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get('PYTHON_BUILDPACK_PIP_INDEX_URL')
-
-# 从源码构建应用时，注入额外环境变量
-BUILD_EXTRA_ENV_VARS = settings.get('BUILD_EXTRA_ENV_VARS', {})
-
-
-# ---------------
-# 服务导出配置
-# ---------------
-
-# 默认容器内监听地址
-CONTAINER_PORT = settings.get('CONTAINER_PORT', 5000)
-
-# 服务相关插件配置
-SERVICES_PLUGINS = settings.get('SERVICES_PLUGINS', default={})
-
+STR_APP_NAME = r'^([a-z0-9_-]){1,64}$'
+PROC_TYPE_PATTERN = r'^[a-z0-9]([-a-z0-9])*$'
 
 # ---------------
 # 资源限制配置
@@ -131,7 +102,6 @@ DEFAULT_WEB_REPLICAS_MAP = settings.get('DEFAULT_WEB_REPLICAS_MAP', {'stag': 1, 
 
 # 构建 pod 资源规格，按 k8s 格式书写
 SLUGBUILDER_RESOURCES_SPEC = settings.get('SLUGBUILDER_RESOURCES_SPEC')
-
 
 # ---------------
 # 部署环境相关
@@ -254,6 +224,12 @@ ENGINE_PROC_REPLICAS_BY_TYPE = {
     ('web', 'prod'): 2,
 }
 
+# ----------------------
+# 指标，监控，告警等相关配置
+# ----------------------
+
+# 插件监控图表相关配置（原生 Prometheus 使用，仅用于不支持蓝鲸监控的集群 k8s 1.12-）
+MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
@@ -277,12 +253,4 @@ FOR_TESTS_CLUSTER_CONFIG = {
     "force_domain": FOR_TESTS_FORCE_DOMAIN,
 }
 
-# ----------------------
-# 指标，监控，告警等相关配置
-# ----------------------
-
-# 插件监控图表相关配置
-MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
-
-# 蓝鲸监控运维相关的额外配置
-BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
+FOR_TEST_E2E_INGRESS_CONFIG = settings.get("FOR_TEST_E2E_INGRESS_CONFIG", {})

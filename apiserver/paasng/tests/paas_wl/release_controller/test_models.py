@@ -16,32 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-
-from blue_krill.redis_tools.messaging import StreamChannel
-from celery import shared_task
+import pytest
 
 from paas_wl.platform.applications.models.build import BuildProcess
-from paas_wl.release_controller.builder.executor import BuildProcessExecutor
-from paas_wl.utils.redisdb import get_default_redis
-from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
+from paas_wl.utils.constants import BuildStatus
 
-logger = logging.getLogger(__name__)
+pytestmark = pytest.mark.django_db(databases=['workloads'])
 
 
-@shared_task
-def start_build_process(uuid, stream_channel_id=None, metadata=None):
-    """Start a new build process"""
-    build_process = BuildProcess.objects.get(pk=uuid)
-    # Make a new channel if stream_channel_id is given
+class TestInterruptionAllowed:
+    def test_default(self, build_proc: BuildProcess):
+        assert build_proc.check_interruption_allowed() is False
 
-    stream: Stream
-    if stream_channel_id:
-        stream_channel = StreamChannel(stream_channel_id, redis_db=get_default_redis())
-        stream_channel.initialize()
-        stream = MixedStream(build_process, stream_channel)
-    else:
-        stream = ConsoleStream()
+    def test_set_true(self, build_proc: BuildProcess):
+        build_proc.set_logs_was_ready()
+        assert build_proc.check_interruption_allowed() is True
 
-    bp_executor = BuildProcessExecutor(build_process, stream)
-    bp_executor.execute(metadata=metadata)
+    def test_finished_status(self, build_proc: BuildProcess):
+        build_proc.status = BuildStatus.SUCCESSFUL
+        build_proc.save(update_fields=['status'])
+        build_proc.set_logs_was_ready()
+        assert build_proc.check_interruption_allowed() is False

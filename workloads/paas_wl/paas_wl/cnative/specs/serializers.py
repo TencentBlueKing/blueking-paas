@@ -18,22 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 
 from .constants import DeployStatus
-from .models import AppModelDeploy, AppModelResource
-
-
-class CreateAppModelResourceSerializer(serializers.Serializer):
-    """[sys-api] 创建云原生架构应用 Serializer，支持简单字段，仅供“创建应用”时使用"""
-
-    application_id = serializers.UUIDField(label=_('所属应用'))
-    module_id = serializers.UUIDField(label=_('所属模块'), validators=[UniqueValidator(AppModelResource.objects.all())])
-    code = serializers.CharField(label=_('所属应用 code'))
-    image = serializers.CharField(label=_('容器镜像地址'), required=True)
-    command = serializers.ListField(help_text='启动命令', child=serializers.CharField(), required=False, default=list)
-    args = serializers.ListField(help_text='命令参数', child=serializers.CharField(), required=False, default=list)
-    target_port = serializers.IntegerField(label=_('容器端口'), required=False)
+from .models import AppModelDeploy
 
 
 class AppModelResourceSerializer(serializers.Serializer):

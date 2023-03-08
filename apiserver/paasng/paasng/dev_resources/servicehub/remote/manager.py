@@ -175,7 +175,7 @@ class EnvClusterInfo:
         try:
             return get_cluster_egress_info(EnvClusterService(self.env).get_cluster_name())
         except Exception as e:
-            logger.exception("Can not get app cluster egress info from engine")
+            logger.exception("Can not get app cluster egress info")
             raise GetClusterEgressInfoError(str(e))
 
     @cached_property

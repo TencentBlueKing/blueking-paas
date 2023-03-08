@@ -112,7 +112,6 @@ from paasng.publish.market.models import MarketConfig, Product
 from paasng.publish.sync_market.managers import AppDeveloperManger
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-from paasng.utils.error_message import wrap_validation_error
 from paasng.utils.views import permission_classes as perm_classes
 
 try:
@@ -497,11 +496,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
         create_default_module(application)
 
-        # Initialize by calling "workloads" service
-        try:
-            initialize_simple(application.default_module, params['cloud_native_params'], cluster_name)
-        except ValidationError as exc:
-            raise wrap_validation_error(exc, parent='cloud_native_params')
+        initialize_simple(
+            module=application.default_module, cluster_name=cluster_name, **params['cloud_native_params']
+        )
 
         post_create_application.send(sender=self.__class__, application=application)
         create_market_config(

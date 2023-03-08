@@ -28,6 +28,8 @@ from attrs import asdict, define
 from django.conf import settings
 
 from paas_wl.cluster.shim import Cluster, RegionClusterService
+from paas_wl.networking.ingress.addrs import EnvAddresses
+from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.engine.constants import AppEnvName
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -293,10 +295,6 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
     :param no_cache: Whether to disable cache, useful when caller requires fresh
         data, default to false.
     """
-    # TODO: 修复循环依赖的问题
-    from paas_wl.networking.ingress.addrs import EnvAddresses
-    from paas_wl.workloads.processes.controllers import env_is_running
-
     results = []
     for env in module.get_envs():
         addrs = [asdict(obj) for obj in EnvAddresses(env).get()]

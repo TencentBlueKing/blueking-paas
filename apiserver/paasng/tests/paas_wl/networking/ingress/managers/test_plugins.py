@@ -22,7 +22,7 @@ from paas_wl.networking.ingress.managers import AppIngressMgr
 from paas_wl.networking.ingress.plugins import override_plugins
 from paas_wl.networking.ingress.plugins.ingress import IngressPlugin
 
-pytestmark = [pytest.mark.django_db]
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class FooStubPlugin(IngressPlugin):
@@ -54,19 +54,19 @@ class TestPlugins:
             ([FooStubPlugin, BarStubPlugin], 'foo-server\nbar-server', 'foo-configuration'),
         ],
     )
-    def test_default_plugins(self, plugins, s_snippet, c_snippet, app):
+    def test_default_plugins(self, plugins, s_snippet, c_snippet, bk_stag_wl_app):
         class FakePluginIngressMgr(AppIngressMgr):
             def make_ingress_name(self) -> str:
                 return 'foo-ingress-test'
 
         with override_plugins(plugins):
-            server_snippet = FakePluginIngressMgr(app).construct_server_snippet(domains=[])
+            server_snippet = FakePluginIngressMgr(bk_stag_wl_app).construct_server_snippet(domains=[])
             assert server_snippet == s_snippet
 
-            configuration_snippet = FakePluginIngressMgr(app).construct_configuration_snippet(domains=[])
+            configuration_snippet = FakePluginIngressMgr(bk_stag_wl_app).construct_configuration_snippet(domains=[])
             assert configuration_snippet == c_snippet
 
-    def test_extra_plugins(self, app):
+    def test_extra_plugins(self, bk_stag_wl_app):
         class FakePluginIngressMgr(AppIngressMgr):
             plugins = [ExtraStubPlugin]
 
@@ -74,8 +74,8 @@ class TestPlugins:
                 return 'foo-ingress-test'
 
         with override_plugins([FooStubPlugin, BarStubPlugin]):
-            server_snippet = FakePluginIngressMgr(app).construct_server_snippet(domains=[])
+            server_snippet = FakePluginIngressMgr(bk_stag_wl_app).construct_server_snippet(domains=[])
             assert server_snippet == 'foo-server\nbar-server\nextra-server'
 
-            configuration_snippet = FakePluginIngressMgr(app).construct_configuration_snippet(domains=[])
+            configuration_snippet = FakePluginIngressMgr(bk_stag_wl_app).construct_configuration_snippet(domains=[])
             assert configuration_snippet == 'foo-configuration\nextra-configuration'

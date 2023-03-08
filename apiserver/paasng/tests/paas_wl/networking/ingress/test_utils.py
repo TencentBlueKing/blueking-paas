@@ -30,53 +30,53 @@ from paas_wl.networking.ingress.utils import (
 )
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 
-pytestmark = [pytest.mark.django_db]
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGuessDefaultServiceName:
-    def test_structure_with_web(self, fake_app, set_structure):
-        set_structure(fake_app, {"web": 1})
-        assert guess_default_service_name(fake_app) == f'{fake_app.region}-{fake_app.name}-web'
+    def test_structure_with_web(self, bk_stag_wl_app, set_structure):
+        set_structure(bk_stag_wl_app, {"web": 1})
+        assert guess_default_service_name(bk_stag_wl_app) == f'{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-web'
 
-    def test_structure_without_web(self, fake_app, set_structure):
-        set_structure(fake_app, {"worker": 1})
-        assert guess_default_service_name(fake_app) == f'{fake_app.region}-{fake_app.name}-worker'
+    def test_structure_without_web(self, bk_stag_wl_app, set_structure):
+        set_structure(bk_stag_wl_app, {"worker": 1})
+        assert guess_default_service_name(bk_stag_wl_app) == f'{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-worker'
 
-    def test_empty_structure(self, fake_app):
-        assert guess_default_service_name(fake_app) == f'{fake_app.region}-{fake_app.name}-web'
+    def test_empty_structure(self, bk_stag_wl_app):
+        assert guess_default_service_name(bk_stag_wl_app) == f'{bk_stag_wl_app.region}-{bk_stag_wl_app.name}-web'
 
 
 class TestGetMainProcessServiceName:
-    def test_normal(self, app):
+    def test_normal(self, bk_stag_wl_app):
         patch_mgr = Mock(
             return_value=[
                 ProcessIngress(
-                    app=app,
+                    app=bk_stag_wl_app,
                     name="",
                     domains=[PIngressDomain(host="bar.com")],
-                    service_name=app.name,
+                    service_name=bk_stag_wl_app.name,
                     service_port_name="http",
                 )
             ]
         )
         with patch('paas_wl.networking.ingress.entities.service.AppEntityManager.list_by_app', patch_mgr):
-            assert get_main_process_service_name(app) == app.name
+            assert get_main_process_service_name(bk_stag_wl_app) == bk_stag_wl_app.name
             assert patch_mgr.called
 
-    def test_none(self, app):
+    def test_none(self, bk_stag_wl_app):
         patch_mgr = Mock(return_value=[])
         with patch('paas_wl.networking.ingress.entities.service.AppEntityManager.list_by_app', patch_mgr):
             with pytest.raises(AppEntityNotFound):
-                assert not get_main_process_service_name(app)
+                assert not get_main_process_service_name(bk_stag_wl_app)
                 assert not patch_mgr.called
 
 
-def test_get_service_dns_name(app):
-    name = get_service_dns_name(app, 'web')
+def test_get_service_dns_name(bk_stag_wl_app):
+    name = get_service_dns_name(bk_stag_wl_app, 'web')
     _, ns = name.split('.')
-    assert ns == app.namespace
+    assert ns == bk_stag_wl_app.namespace
 
 
-def test_parse_process_type(app):
-    svc_name = make_service_name(app, 'web')
-    assert parse_process_type(app, svc_name) == 'web'
+def test_parse_process_type(bk_stag_wl_app):
+    svc_name = make_service_name(bk_stag_wl_app, 'web')
+    assert parse_process_type(bk_stag_wl_app, svc_name) == 'web'

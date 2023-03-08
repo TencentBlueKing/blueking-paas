@@ -19,10 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import copy
 import logging
 import tempfile
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Dict
-from unittest import mock
 
 import pytest
 import yaml
@@ -183,20 +181,25 @@ def namespace_maker(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
-    app / bk_stag_wl_app
+    bk_stag_wl_app / bk_prod_wl_app
     """
     if not request.keywords.get('auto_create_ns'):
         yield
         return
 
-    if "bk_stag_wl_app" in request.fixturenames:
-        app = request.getfixturevalue("bk_stag_wl_app")
-    else:
+    fixtures = ["bk_stag_wl_app", "bk_prod_wl_app"]
+    used_fixtures = []
+    for fixture in fixtures:
+        if fixture in request.fixturenames:
+            used_fixtures.append(fixture)
+    if not used_fixtures:
         yield
         return
 
     namespace_maker = request.getfixturevalue("namespace_maker")
-    namespace_maker.make(app.namespace)
+    for fixture in used_fixtures:
+        app = request.getfixturevalue(fixture)
+        namespace_maker.make(app.namespace)
     yield
     namespace_maker.set_block()
 
@@ -260,28 +263,6 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
         return cluster
 
     return _wrapped
-
-
-@contextmanager
-def override_cluster_ingress_attrs(attrs):
-    """Context manager which updates app's `cluster.ingress_config`"""
-
-    def _hook_set_sub_path_domain(cluster):
-        for key, value in attrs.items():
-            setattr(cluster.ingress_config, key, value)
-        cluster.save()
-        cluster.refresh_from_db()
-        return cluster
-
-    # Mock all related occurrences
-    with mock.patch(
-        'paas_wl.networking.ingress.managers.misc.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ), mock.patch(
-        'paas_wl.networking.ingress.managers.subpath.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ):
-        yield
 
 
 @pytest.fixture(autouse=True)

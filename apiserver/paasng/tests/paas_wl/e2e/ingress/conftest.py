@@ -21,15 +21,18 @@ import time
 import pytest
 import requests
 from django.conf import settings
+from django_dynamic_fixture import G
 
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.networking.ingress.entities.ingress import PIngressDomain, ProcessIngress
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
+from paas_wl.platform.applications.models import Config, WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KPod
 from paas_wl.workloads.processes.readers import ProcessAPIAdapter
-from tests.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
-from tests.utils.app import create_app, release_setup
+from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
+from tests.paas_wl.utils.basic import random_resource_name
+from tests.paas_wl.utils.wl_app import release_setup
 
 
 @pytest.fixture(scope="session")
@@ -119,7 +122,16 @@ def http_ingress_domain(echo_hostname, root_path, foo_path, multi_layer_path_end
 @pytest.fixture(scope="module")
 def e2e_app(namespace_maker, django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        app = create_app(structure={"web": 2})
+        app = G(WlApp, region=settings.FOR_TESTS_DEFAULT_REGION, structure={"web": 1}, name=random_resource_name())
+        G(
+            Config,
+            app=app,
+            metadata={
+                "environment": "prod",
+                "paas_app_code": 'paas-' + app.name,
+                "module_name": 'default',
+            },
+        )
         release_setup(app)
         namespace_maker.make(app.namespace)
         namespace_maker.set_block()

@@ -38,38 +38,38 @@ from paas_wl.networking.ingress.entities.ingress import (
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.networking.ingress.entities.utils import NginxRegexRewrittenProvider
 from paas_wl.resources.kube_res.base import GVKConfig
-from tests.utils.app import release_setup
+from tests.paas_wl.utils.wl_app import release_setup
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestProcessIngress:
     @pytest.fixture(autouse=True)
-    def _setup_data(self, app, settings):
+    def _setup_data(self, bk_stag_wl_app, settings):
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
         release_setup(
-            fake_app=app,
+            fake_app=bk_stag_wl_app,
             build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
             release_params={"version": 5},
         )
 
     @pytest.fixture
-    def service(self, app):
+    def service(self, bk_stag_wl_app):
         service = ProcessService(
-            app=app,
+            app=bk_stag_wl_app,
             name='foo-service',
             process_type='web',
             ports=[PServicePortPair(name='http', port=80, target_port=80)],
         )
 
         service_kmodel.save(service)
-        return service_kmodel.list_by_app(app)[0]
+        return service_kmodel.list_by_app(bk_stag_wl_app)[0]
 
     @pytest.mark.auto_create_ns
-    def test_normal(self, app, service):
+    def test_normal(self, bk_stag_wl_app, service):
         domains = [PIngressDomain(host='foo.com')]
         ingress = ProcessIngress(
-            app=app,
+            app=bk_stag_wl_app,
             name='normal-service',
             domains=domains,
             service_name=service.name,
@@ -80,20 +80,20 @@ class TestProcessIngress:
         )
         ingress_kmodel.save(ingress)
 
-        item = ingress_kmodel.get(app, 'normal-service')
+        item = ingress_kmodel.get(bk_stag_wl_app, 'normal-service')
         assert item is not None
         assert item.server_snippet == 'server'
         assert item.annotations == {'foo': 'bar'}
 
     @pytest.mark.auto_create_ns
-    def test_paths(self, app, service):
+    def test_paths(self, bk_stag_wl_app, service):
         """Multiple hosts with paths"""
         domains = [
             PIngressDomain(host='foo.com'),
             PIngressDomain(host='bar.com', path_prefix_list=['/foo/', '/extra_bar/']),
         ]
         ingress = ProcessIngress(
-            app=app,
+            app=bk_stag_wl_app,
             name='primary-path-service',
             domains=domains,
             service_name=service.name,
@@ -102,15 +102,15 @@ class TestProcessIngress:
         )
         ingress_kmodel.save(ingress)
 
-        item: ProcessIngress = ingress_kmodel.get(app, 'primary-path-service')
+        item: ProcessIngress = ingress_kmodel.get(bk_stag_wl_app, 'primary-path-service')
         assert len(item.domains) == 2
         assert item.domains[0].primary_prefix_path == '/'
         assert item.domains[0].path_prefix_list == ['/']
         assert item.domains[1].primary_prefix_path == '/foo/'
         assert item.domains[1].path_prefix_list == ['/foo/', '/extra_bar/']
 
-    def test_serializer_ordering(self, app):
-        serializer = ingress_kmodel._make_serializer(app)
+    def test_serializer_ordering(self, bk_stag_wl_app):
+        serializer = ingress_kmodel._make_serializer(bk_stag_wl_app)
         available_apiversions = serializer.gvk_config.available_apiversions
 
         if "networking.k8s.io/v1beta1" in available_apiversions:
@@ -122,8 +122,8 @@ class TestProcessIngress:
         else:
             pytest.fail("unknown api version")
 
-    def test_deserializer_ordering(self, app):
-        deserializer = ingress_kmodel._make_deserializer(app)
+    def test_deserializer_ordering(self, bk_stag_wl_app):
+        deserializer = ingress_kmodel._make_deserializer(bk_stag_wl_app)
         available_apiversions = deserializer.gvk_config.available_apiversions
 
         if "networking.k8s.io/v1beta1" in available_apiversions:
@@ -179,9 +179,9 @@ def http_ingress_domain(root_path, foo_path, foo_path_endswith_slash):
 
 
 @pytest.fixture
-def ingress(app, https_ingress_domain, http_ingress_domain):
+def ingress(bk_stag_wl_app, https_ingress_domain, http_ingress_domain):
     return ProcessIngress(
-        app=app,
+        app=bk_stag_wl_app,
         domains=[https_ingress_domain, http_ingress_domain],
         rewrite_to_root=False,
         **INGRESS_DATA,
@@ -189,9 +189,9 @@ def ingress(app, https_ingress_domain, http_ingress_domain):
 
 
 @pytest.fixture
-def subpath_ingress(app, https_ingress_domain, http_ingress_domain):
+def subpath_ingress(bk_stag_wl_app, https_ingress_domain, http_ingress_domain):
     return ProcessIngress(
-        app=app,
+        app=bk_stag_wl_app,
         domains=[https_ingress_domain, http_ingress_domain],
         rewrite_to_root=True,
         **INGRESS_DATA,
@@ -229,7 +229,9 @@ def build_v1beta1_ingress_path(path) -> Dict:
 @pytest.mark.parametrize("api_version", ["extensions/v1beta1", "networking.k8s.io/v1beta1"])
 class TestIngressV1Beta1:
     @pytest.fixture
-    def spec(self, api_version, app, https_ingress_domain, http_ingress_domain, fallback_configuration_snippet):
+    def spec(
+        self, api_version, bk_stag_wl_app, https_ingress_domain, http_ingress_domain, fallback_configuration_snippet
+    ):
         return {
             "apiVersion": api_version,
             "kind": "Ingress",
@@ -243,7 +245,7 @@ class TestIngressV1Beta1:
                     **INGRESS_DATA["annotations"],
                 },
                 "name": INGRESS_DATA["name"],
-                "namespace": app.namespace,
+                "namespace": bk_stag_wl_app.namespace,
             },
             "spec": {
                 "rules": [
@@ -270,7 +272,7 @@ class TestIngressV1Beta1:
 
     @pytest.fixture
     def subpath_spec(
-        self, api_version, app, https_ingress_domain, http_ingress_domain, fallback_configuration_snippet
+        self, api_version, bk_stag_wl_app, https_ingress_domain, http_ingress_domain, fallback_configuration_snippet
     ):
         return {
             "apiVersion": api_version,
@@ -286,7 +288,7 @@ class TestIngressV1Beta1:
                     **INGRESS_DATA["annotations"],
                 },
                 "name": INGRESS_DATA["name"],
-                "namespace": app.namespace,
+                "namespace": bk_stag_wl_app.namespace,
             },
             "spec": {
                 "rules": [
@@ -338,14 +340,14 @@ class TestIngressV1Beta1:
     def subpath_kube_data(self, subpath_spec):
         return ResourceInstance(None, subpath_spec)
 
-    def test_deserialize(self, gvk_config, app, kube_data, ingress):
+    def test_deserialize(self, gvk_config, bk_stag_wl_app, kube_data, ingress):
         deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, kube_data)
+        result = deserializer.deserialize(bk_stag_wl_app, kube_data)
         assert result == ingress
 
-    def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
+    def test_deserialize_subpath(self, gvk_config, bk_stag_wl_app, subpath_kube_data, subpath_ingress):
         deserializer = IngressV1Beta1Deserializer(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, subpath_kube_data)
+        result = deserializer.deserialize(bk_stag_wl_app, subpath_kube_data)
         assert result == subpath_ingress
 
 
@@ -374,15 +376,15 @@ def build_v1_ingress_path(path_str) -> Dict:
 
 class TestProcessIngressV1:
     @pytest.fixture(autouse=True)
-    def _setup(self, app, settings):
+    def _setup(self, bk_stag_wl_app, settings):
         # 目前 networking.k8s.io/v1 仅支持正则模式
-        cluster = get_cluster_by_app(app)
+        cluster = get_cluster_by_app(bk_stag_wl_app)
         cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_REGEX] = True
         cluster.save()
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
 
     @pytest.fixture
-    def subpath_spec(self, app, https_ingress_domain, http_ingress_domain, pattern_configuration_snippet):
+    def subpath_spec(self, bk_stag_wl_app, https_ingress_domain, http_ingress_domain, pattern_configuration_snippet):
         """spec rewrite to root"""
         return {
             "apiVersion": "networking.k8s.io/v1",
@@ -398,7 +400,7 @@ class TestProcessIngressV1:
                     **INGRESS_DATA["annotations"],
                 },
                 "name": INGRESS_DATA["name"],
-                "namespace": app.namespace,
+                "namespace": bk_stag_wl_app.namespace,
             },
             "spec": {
                 "rules": [
@@ -437,9 +439,9 @@ class TestProcessIngressV1:
     def subpath_kube_data(self, subpath_spec):
         return ResourceInstance(None, subpath_spec)
 
-    def test_deserialize_subpath(self, gvk_config, app, subpath_kube_data, subpath_ingress):
+    def test_deserialize_subpath(self, gvk_config, bk_stag_wl_app, subpath_kube_data, subpath_ingress):
         deserializer = IngressV1Deserializer(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, subpath_kube_data)
+        result = deserializer.deserialize(bk_stag_wl_app, subpath_kube_data)
         assert result == subpath_ingress
 
 
@@ -455,15 +457,15 @@ class TestPatternCompatible:
     """测试兼容旧版的正则表达式规则"""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, app, settings):
+    def _setup(self, bk_stag_wl_app, settings):
         # 目前 networking.k8s.io/v1 仅支持正则模式
-        cluster = get_cluster_by_app(app)
+        cluster = get_cluster_by_app(bk_stag_wl_app)
         cluster.feature_flags[ClusterFeatureFlag.INGRESS_USE_REGEX] = True
         cluster.save()
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
 
     @pytest.fixture
-    def v1beta1_spec(self, app, https_ingress_domain, http_ingress_domain):
+    def v1beta1_spec(self, bk_stag_wl_app, https_ingress_domain, http_ingress_domain):
         return {
             "apiVersion": "networking.k8s.io/v1beta1",
             "kind": "Ingress",
@@ -480,7 +482,7 @@ class TestPatternCompatible:
                     **INGRESS_DATA["annotations"],
                 },
                 "name": INGRESS_DATA["name"],
-                "namespace": app.namespace,
+                "namespace": bk_stag_wl_app.namespace,
             },
             "spec": {
                 "rules": [
@@ -520,7 +522,7 @@ class TestPatternCompatible:
         }
 
     @pytest.fixture
-    def v1_spec(self, app, https_ingress_domain, http_ingress_domain):
+    def v1_spec(self, bk_stag_wl_app, https_ingress_domain, http_ingress_domain):
         return {
             "apiVersion": "networking.k8s.io/v1beta1",
             "kind": "Ingress",
@@ -537,7 +539,7 @@ class TestPatternCompatible:
                     **INGRESS_DATA["annotations"],
                 },
                 "name": INGRESS_DATA["name"],
-                "namespace": app.namespace,
+                "namespace": bk_stag_wl_app.namespace,
             },
             "spec": {
                 "rules": [
@@ -589,7 +591,7 @@ class TestPatternCompatible:
             (IngressV1Deserializer, "networking.k8s.io/v1", "v1_spec"),
         ],
     )
-    def test_deserialize(self, request, app, deserializer_cls, api_version, spec_fixture, subpath_ingress):
+    def test_deserialize(self, request, bk_stag_wl_app, deserializer_cls, api_version, spec_fixture, subpath_ingress):
         gvk_config = GVKConfig(
             server_version="0.0.0",
             kind='Ingress',
@@ -597,5 +599,7 @@ class TestPatternCompatible:
             available_apiversions=[api_version],
         )
         deserializer = deserializer_cls(ProcessIngress, gvk_config)
-        result = deserializer.deserialize(app, ResourceInstance(None, request.getfixturevalue(spec_fixture)))
+        result = deserializer.deserialize(
+            bk_stag_wl_app, ResourceInstance(None, request.getfixturevalue(spec_fixture))
+        )
         assert result == subpath_ingress

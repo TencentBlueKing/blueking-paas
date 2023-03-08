@@ -33,17 +33,16 @@ from paas_wl.networking.ingress.managers.domain import (
 )
 from paas_wl.networking.ingress.models import AppDomain, AppDomainCert, AppDomainSharedCert, AutoGenDomain, Domain
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from tests.utils.app import create_app
 
-pytestmark = [pytest.mark.django_db]
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.auto_create_ns
 class TestAssignDomains:
     @pytest.fixture()
-    def foo_shared_cert(self, app):
+    def foo_shared_cert(self, bk_stag_wl_app):
         AppDomainSharedCert.objects.create(
-            region=app.region, name="foo", cert_data="", key_data="", auto_match_cns="*.foo.com"
+            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*.foo.com"
         )
 
     @pytest.mark.parametrize(
@@ -54,10 +53,10 @@ class TestAssignDomains:
             [AutoGenDomain('foo.com'), AutoGenDomain('www.foo.com', https_enabled=True)],
         ),
     )
-    def test_brand_new_domains(self, app, foo_shared_cert, domains):
-        assign_custom_hosts(app, domains, 'foo-service')
+    def test_brand_new_domains(self, bk_stag_wl_app, foo_shared_cert, domains):
+        assign_custom_hosts(bk_stag_wl_app, domains, 'foo-service')
 
-        ingress_mgr = SubdomainAppIngressMgr(app)
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         ingress = ingress_mgr.get()
 
         assert len(ingress.domains) == len(domains)
@@ -70,53 +69,49 @@ class TestAssignDomains:
             (['www.foo.com', 'bar.foo.com'], [True, True]),
         ),
     )
-    def test_create_https_domains(self, app, foo_shared_cert, hostnames, domains_https_enabled):
+    def test_create_https_domains(self, bk_stag_wl_app, foo_shared_cert, hostnames, domains_https_enabled):
         domains = [AutoGenDomain(hostname, https_enabled=True) for hostname in hostnames]
-        assign_custom_hosts(app, domains, default_service_name='foo-service')
+        assign_custom_hosts(bk_stag_wl_app, domains, default_service_name='foo-service')
         domain_count = len(domains)
-        ingress = SubdomainAppIngressMgr(app).get()
+        ingress = SubdomainAppIngressMgr(bk_stag_wl_app).get()
 
         assert [d.tls_enabled for d in ingress.domains] == domains_https_enabled
         assert AppDomain.objects.count() == domain_count
 
-    def test_domain_transfer_partially(self, app, namespace_maker):
+    def test_domain_transfer_partially(self, bk_stag_wl_app, bk_prod_wl_app):
         domains_app1 = [AutoGenDomain('foo.com'), AutoGenDomain('bar.com')]
-        assign_custom_hosts(app, domains_app1, 'foo-service')
-        app_2 = create_app()
-        namespace_maker.make(app_2.namespace)
+        assign_custom_hosts(bk_stag_wl_app, domains_app1, 'foo-service')
 
-        # Transfer "bar.com" to app_2
+        # Transfer "bar.com" to test_domain_transfer_partially
         domains_app1 = [
             AutoGenDomain('bar.com'),
             AutoGenDomain('app-2.com'),
         ]
-        assign_custom_hosts(app_2, domains_app1, 'foo-service')
+        assign_custom_hosts(bk_prod_wl_app, domains_app1, 'foo-service')
 
-        ingress = SubdomainAppIngressMgr(app).get()
+        ingress = SubdomainAppIngressMgr(bk_stag_wl_app).get()
         assert len(ingress.domains) == 1
         hosts = [d.host for d in ingress.domains]
         assert 'foo.com' in hosts
         assert 'bar.com' not in hosts
 
-        ingress = SubdomainAppIngressMgr(app_2).get()
+        ingress = SubdomainAppIngressMgr(bk_prod_wl_app).get()
         assert len(ingress.domains) == 2
         hosts = [d.host for d in ingress.domains]
         assert 'bar.com' in hosts
         assert 'app-2.com' in hosts
 
-    def test_domain_transfer_fully(self, app, namespace_maker):
+    def test_domain_transfer_fully(self, bk_stag_wl_app, bk_prod_wl_app):
         domains = [AutoGenDomain('foo.com')]
-        assign_custom_hosts(app, domains, 'foo-service')
+        assign_custom_hosts(bk_stag_wl_app, domains, 'foo-service')
 
-        # Transfer all domains to app_2
-        app_2 = create_app()
-        namespace_maker.make(app_2.namespace)
-        assign_custom_hosts(app_2, domains, 'foo-service')
+        # Transfer all domains to bk_prod_wl_app
+        assign_custom_hosts(bk_prod_wl_app, domains, 'foo-service')
 
         with pytest.raises(AppEntityNotFound):
-            SubdomainAppIngressMgr(app).get()
+            SubdomainAppIngressMgr(bk_stag_wl_app).get()
 
-        ingress = SubdomainAppIngressMgr(app_2).get()
+        ingress = SubdomainAppIngressMgr(bk_prod_wl_app).get()
         assert len(ingress.domains) == 1
         assert [d.host for d in ingress.domains] == ['foo.com']
 
@@ -126,64 +121,66 @@ class TestSubdomainAppIngressMgrCommon:
     """Test common interfaces for `SubdomainAppIngressMgr`"""
 
     @pytest.fixture(autouse=True)
-    def _setup_data(self, app):
-        AppDomain.objects.create(app=app, region=app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN)
+    def _setup_data(self, bk_stag_wl_app):
+        AppDomain.objects.create(
+            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+        )
 
-    def test_sync_no_domains(self, app):
-        AppDomain.objects.filter(app=app).delete()
+    def test_sync_no_domains(self, bk_stag_wl_app):
+        AppDomain.objects.filter(app=bk_stag_wl_app).delete()
         with pytest.raises(EmptyAppIngressError):
-            ingress_mgr = SubdomainAppIngressMgr(app)
+            ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
             ingress_mgr.sync(default_service_name='foo')
 
-    def test_sync_creation_with_no_default_server_name(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_sync_creation_with_no_default_server_name(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         with pytest.raises(DefaultServiceNameRequired):
             ingress_mgr.sync()
 
-    def test_sync_creation(self, app):
-        ingresses = ingress_kmodel.list_by_app(app)
+    def test_sync_creation(self, bk_stag_wl_app):
+        ingresses = ingress_kmodel.list_by_app(bk_stag_wl_app)
         assert len(ingresses) == 0
 
-        ingress_mgr = SubdomainAppIngressMgr(app)
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         ingress_mgr.sync(default_service_name='foo')
-        ingresses = ingress_kmodel.list_by_app(app)
+        ingresses = ingress_kmodel.list_by_app(bk_stag_wl_app)
 
         assert len(ingresses) == 1
         ingress = ingresses[0]
         assert len(ingress.domains) > 0
 
-    def test_sync_update(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_sync_update(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         ingress_mgr.sync(default_service_name='foo')
         ingress_name = ingress_mgr.ingress_name
-        assert len(ingress_kmodel.get(app, ingress_name).domains) == 1
+        assert len(ingress_kmodel.get(bk_stag_wl_app, ingress_name).domains) == 1
 
         # Add an extra domain
-        config = app.latest_config
+        config = bk_stag_wl_app.latest_config
         config.domain = 'bar.com'
         config.save()
         ingress_mgr.sync()
 
-        assert len(ingress_kmodel.get(app, ingress_name).domains) == 2
+        assert len(ingress_kmodel.get(bk_stag_wl_app, ingress_name).domains) == 2
 
-    def test_delete_non_existed(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_delete_non_existed(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         ingress_mgr.delete()
 
-    def test_integrated(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_integrated(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         ingress_mgr.sync(default_service_name='foo')
-        assert len(ingress_kmodel.list_by_app(app)) == 1
+        assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 1
 
         ingress_mgr.delete()
-        assert len(ingress_kmodel.list_by_app(app)) == 0
+        assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 0
 
-    def test_update_target(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_update_target(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         ingress_mgr.sync(default_service_name='foo')
         ingress_mgr.update_target('foo-service', 'foo-port')
 
-        ingress = ingress_kmodel.get(app, ingress_mgr.ingress_name)
+        ingress = ingress_kmodel.get(bk_stag_wl_app, ingress_mgr.ingress_name)
         assert ingress.service_name == 'foo-service'
         assert ingress.service_port_name == 'foo-port'
 
@@ -194,34 +191,38 @@ class TestSubdomainAppIngressMgrCommon:
             (False, False),
         ],
     )
-    def test_rewrite_ingress_path_to_root(self, rewrite_to_root, expected_ret, app):
+    def test_rewrite_ingress_path_to_root(self, rewrite_to_root, expected_ret, bk_stag_wl_app):
         with patch.object(SubdomainAppIngressMgr, 'rewrite_ingress_path_to_root', new=rewrite_to_root):
-            SubdomainAppIngressMgr(app).sync(default_service_name='foo')
-            assert ingress_kmodel.list_by_app(app)[0].rewrite_to_root is expected_ret
+            SubdomainAppIngressMgr(bk_stag_wl_app).sync(default_service_name='foo')
+            assert ingress_kmodel.list_by_app(bk_stag_wl_app)[0].rewrite_to_root is expected_ret
 
 
 class TestSubdomainAppIngressMgr:
-    def test_list_desired_domains(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_list_desired_domains(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         domains = ingress_mgr.list_desired_domains()
         assert len(domains) == 0
 
-    def test_list_desired_domains_with_extra(self, app):
-        config = app.latest_config
+    def test_list_desired_domains_with_extra(self, bk_stag_wl_app):
+        config = bk_stag_wl_app.latest_config
         config.domain = 'bar.com'
         config.save()
 
-        ingress_mgr = SubdomainAppIngressMgr(app)
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         assert len(ingress_mgr.list_desired_domains()) == 1
 
-        AppDomain.objects.create(app=app, region=app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN)
+        AppDomain.objects.create(
+            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host='bar-2.com', source=AppDomainSource.AUTO_GEN
+        )
         assert len(ingress_mgr.list_desired_domains()) == 2
 
-    def test_list_desired_domains_with_wrong_source(self, app):
-        ingress_mgr = SubdomainAppIngressMgr(app)
+    def test_list_desired_domains_with_wrong_source(self, bk_stag_wl_app):
+        ingress_mgr = SubdomainAppIngressMgr(bk_stag_wl_app)
         assert len(ingress_mgr.list_desired_domains()) == 0
         # SubDomain ingress should only include domains when their source is "CUSTOM"
-        AppDomain.objects.create(app=app, region=app.region, host='foo.com', source=AppDomainSource.INDEPENDENT)
+        AppDomain.objects.create(
+            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host='foo.com', source=AppDomainSource.INDEPENDENT
+        )
         assert len(ingress_mgr.list_desired_domains()) == 0
 
 
@@ -275,35 +276,38 @@ class TestCustomDomainIngressMgr:
 class TestIntegratedDomains:
     """Test cases for some combined situations"""
 
-    def test_assign_custom_hosts_affects_no_independent_domains(self, app):
+    def test_assign_custom_hosts_affects_no_independent_domains(self, bk_stag_wl_app):
         AppDomain.objects.create(
-            app=app, region=app.region, host='foo-independent.com', source=AppDomainSource.INDEPENDENT
+            app=bk_stag_wl_app,
+            region=bk_stag_wl_app.region,
+            host='foo-independent.com',
+            source=AppDomainSource.INDEPENDENT,
         )
         assert AppDomain.objects.filter(host='foo-independent.com').exists()
-        assign_custom_hosts(app, [AutoGenDomain('foo.com')], 'foo-service')
+        assign_custom_hosts(bk_stag_wl_app, [AutoGenDomain('foo.com')], 'foo-service')
 
         # Calling assign_custom_hosts should not remove AppDomain objects with source other than "CUSTOM"
         assert AppDomain.objects.filter(host='foo-independent.com').exists()
 
 
 class TestIngressDomainFactory:
-    def test_make_ingress_domain_with_http(self, app):
+    def test_make_ingress_domain_with_http(self, bk_stag_wl_app):
         domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=False)
-        factory = IngressDomainFactory(app)
+        factory = IngressDomainFactory(bk_stag_wl_app)
         domain = factory.create(domain_with_cert)
         assert domain.host == domain_with_cert.host
         assert domain.tls_enabled == domain_with_cert.https_enabled
         assert domain.tls_secret_name == ''
 
-    def test_https_cert_not_found(self, app):
+    def test_https_cert_not_found(self, bk_stag_wl_app):
         domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=True)
-        factory = IngressDomainFactory(app)
+        factory = IngressDomainFactory(bk_stag_wl_app)
         with pytest.raises(ValidCertNotFound):
             factory.create(domain_with_cert)
 
-    def test_https_cert_not_found_no_exception(self, app):
+    def test_https_cert_not_found_no_exception(self, bk_stag_wl_app):
         domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=True)
-        factory = IngressDomainFactory(app)
+        factory = IngressDomainFactory(bk_stag_wl_app)
         domain = factory.create(domain_with_cert, raise_on_no_cert=False)
         assert domain.tls_enabled is False
 
@@ -311,10 +315,10 @@ class TestIngressDomainFactory:
     @pytest.mark.parametrize(
         "cert_type, expected_cert_name", [(AppDomainCert, "eng-normal-test"), (AppDomainSharedCert, "eng-shared-test")]
     )
-    def test_https_cert_created(self, app, cert_type, expected_cert_name):
+    def test_https_cert_created(self, bk_stag_wl_app, cert_type, expected_cert_name):
         cert = G(cert_type, name="test")
         domain_with_cert = DomainWithCert(host="example.com", path_prefix="", https_enabled=True, cert=cert)
-        factory = IngressDomainFactory(app)
+        factory = IngressDomainFactory(bk_stag_wl_app)
 
         domain = factory.create(domain_with_cert)
         assert domain.host == domain_with_cert.host

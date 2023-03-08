@@ -64,6 +64,7 @@ def get_all_logs(d: Deployment) -> str:
     logs = []
     engine_app = d.get_engine_app()
     client = EngineDeployClient(engine_app)
+    # NOTE: 当前暂不包含“准备阶段”和“检测部署结果”这两个步骤的日志，将在未来版本添加
     if d.build_process_id:
         logs.extend([polish_line(obj['line']) for obj in client.list_build_proc_logs(d.build_process_id)])
     if d.pre_release_id:

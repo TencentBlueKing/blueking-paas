@@ -270,8 +270,8 @@ class CloudNativeParamsSLZ(serializers.Serializer):
     """创建云原生应用的详细参数"""
 
     image = serializers.CharField(label=_('容器镜像地址'), required=True)
-    command = serializers.ListField(help_text='启动命令', child=serializers.CharField(), required=False, default=list)
-    args = serializers.ListField(help_text='命令参数', child=serializers.CharField(), required=False, default=list)
+    command = serializers.ListField(help_text=_('启动命令'), child=serializers.CharField(), required=False, default=list)
+    args = serializers.ListField(help_text=_('命令参数'), child=serializers.CharField(), required=False, default=list)
     target_port = serializers.IntegerField(label=_('容器端口'), required=False)
 
 

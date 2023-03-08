@@ -188,18 +188,18 @@ def _auto_create_ns(request):
         return
 
     fixtures = ["bk_stag_wl_app", "bk_prod_wl_app"]
+    used_fixtures = []
     for fixture in fixtures:
         if fixture in request.fixturenames:
-            break
-    else:
+            used_fixtures.append(fixture)
+    if not used_fixtures:
         yield
         return
 
     namespace_maker = request.getfixturevalue("namespace_maker")
-    for fixture in fixtures:
-        if fixture in request.fixturenames:
-            app = request.getfixturevalue(fixture)
-            namespace_maker.make(app.namespace)
+    for fixture in used_fixtures:
+        app = request.getfixturevalue(fixture)
+        namespace_maker.make(app.namespace)
     yield
     namespace_maker.set_block()
 

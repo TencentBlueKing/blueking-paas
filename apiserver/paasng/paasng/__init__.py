@@ -80,3 +80,24 @@ global_converter.register_structure_hook_factory(
     ),
 )
 # End patch cattrs
+
+
+# Patch jsonfield start
+from jsonfield import JSONField, forms
+
+
+def formfield(self, **kwargs):
+    field = super(JSONField, self).formfield(**kwargs)
+    if isinstance(field, forms.JSONField):
+        # Patch note: To prevent the global default variable from being affected
+        # when other instances point to it, a copy of `dump_kwargs` is now created
+        # instead of directly mutating it in the original method.
+        field.dump_kwargs = field.dump_kwargs.copy()
+        # Note: TextField sets the Textarea widget
+        field.dump_kwargs.setdefault('indent', 4)
+        field.dump_kwargs.setdefault('ensure_ascii', False)
+    return field
+
+
+JSONField.formfield = formfield
+# Patch jsonfield end

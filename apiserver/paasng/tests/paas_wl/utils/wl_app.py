@@ -114,3 +114,31 @@ def release_setup(
 
     release_info = default_release_params
     return Release.objects.create(**release_info)
+
+
+def create_app(structure: Optional[Dict[str, int]] = None) -> WlApp:
+    """Create an app object for testing purpose
+
+    :param structure: Optional app structure, default to {'web': 1}
+    """
+    environment = random.choice(['stag', 'prod'])
+    app_name = 'app-' + get_random_string(length=12).lower()
+    if structure is None:
+        structure = {'web': 1}
+
+    app = WlApp.objects.create(
+        region=settings.FOR_TESTS_DEFAULT_REGION,
+        name=app_name,
+        structure=structure,
+        owner=create_user(username=get_random_string(length=6)),
+    )
+    # Set up metadata
+    Config.objects.create(
+        app=app,
+        metadata={
+            "environment": environment,
+            "paas_app_code": f'paas-{app_name}',
+            "module_name": 'default',
+        },
+    )
+    return app

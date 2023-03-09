@@ -21,11 +21,10 @@ from paas_wl.networking.ingress.models import Domain
 from paas_wl.platform.applications.models import Build, Release, WlApp
 from paas_wl.platform.applications.models_utils import delete_module_related_res
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestDeleteModuleRelatedRes:
-    @pytest.mark.mock_get_structured_app
     def test_normal(self, bk_user, bk_module, bk_stag_env, bk_stag_wl_app):
         # Setup data
         Domain.objects.create(name='example.com', module_id=bk_module.id, environment_id=bk_stag_env.id)

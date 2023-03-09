@@ -19,14 +19,12 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import hashlib
 from collections import MutableMapping
-from typing import ClassVar, Collection, Dict, Tuple
+from typing import Collection, Dict
 from uuid import UUID
 
 import cattr
 import requests
 import requests.adapters
-from attrs import define
-from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
 from django.utils.encoding import force_bytes
 
 # Register cattr custom hooks
@@ -83,112 +81,6 @@ def make_subdict(d: Dict, allowed_keys: Collection):
     :returns: A dict direivied from `d` but only contains `allowed_keys`
     """
     return {key: value for key, value in d.items() if key in allowed_keys}
-
-
-def make_app_path(
-    suffix,
-    include_envs=True,
-    support_envs: Tuple = ('stag', 'prod'),
-    app_field_type='code',
-    prefix: str = 'applications/',
-) -> str:
-    """Make an application URL path prefix
-
-    :param app_field_type: app identifier type, possible values: 'code', 'uuid'
-    :param prefix: default prefix of url, default to "applications/"
-    """
-    if app_field_type == 'code':
-        part_app = '(?P<code>[^/]+)'
-    elif app_field_type == 'uuid':
-        part_app = '(?P<application_id>[0-9a-f-]{32,36})'
-    else:
-        raise ValueError('Invalid app_field_type, only "code/uuid" are supported')
-
-    if not prefix.endswith('/'):
-        raise ValueError('prefix path must ends with "/"')
-    part_before = f'^{prefix}{part_app}'
-
-    part_module = r'(/modules/(?P<module_name>[^/]+))?'
-
-    envs = "|".join(support_envs)
-    part_envs = f'/envs/(?P<environment>{envs})'
-
-    result = part_before + part_module
-    if include_envs:
-        result += part_envs
-    return result + suffix
-
-
-class LegacyRegexPattern(RegexPattern):
-    """This is a RegexPattern, which work like with the one in django 2.2.x
-
-    The RegexPattern in django 3.x will no longer returns keyword arguments with ``None`` values to be passed to
-    the view for the optional named groups that are missing.(In a short word, DO NOT contain the key in kwargs!)
-
-    This duplicate will set the missing named args to None. e.g. {"named-args": None}
-    """
-
-    def match(self, path):
-        match = (
-            self.regex.fullmatch(path)
-            if self._is_endpoint and self.regex.pattern.endswith('$')
-            else self.regex.search(path)
-        )
-        if match:
-            # If there are any named groups, use those as kwargs, ignoring
-            # non-named groups. Otherwise, pass all non-named arguments as
-            # positional arguments.
-            kwargs = match.groupdict()
-            args = () if kwargs else match.groups()
-            return path[match.end() :], args, kwargs
-        return None
-
-
-def re_path(route, view, kwargs=None, name=None):
-    """This `re_path` work like with `django.urls.re_path`,
-    but will provide the missing named args as `None` instead of ignoring those."""
-    if isinstance(view, (list, tuple)):
-        # For include(...) processing.
-        pattern = LegacyRegexPattern(route, is_endpoint=False)
-        urlconf_module, app_name, namespace = view
-        return URLResolver(
-            pattern,
-            urlconf_module,
-            kwargs,
-            app_name=app_name,
-            namespace=namespace,
-        )
-    elif callable(view):
-        pattern = LegacyRegexPattern(route, name=name, is_endpoint=True)
-        return URLPattern(pattern, view, kwargs, name)
-    else:
-        raise TypeError('view must be a callable or a list/tuple in the case of include().')
-
-
-@define
-class HumanizeURL:
-    """A simple type to make processing URL more convenient"""
-
-    protocol: str
-    hostname: str
-    port: int
-    path: str
-    query: str = ''
-
-    _default_port_map: ClassVar = {
-        'http': 80,
-        'https': 443,
-    }
-
-    def to_str(self) -> str:
-        """Return the string representation of current value, query string and port
-        number are omitted if possible.
-        """
-        query_s = f"?{self.query}" if self.query else ''
-        port_s = f':{self.port}'
-        if self._default_port_map[self.protocol] == self.port:
-            port_s = ''
-        return f"{self.protocol}://{self.hostname}{port_s}{self.path}{query_s}"
 
 
 # Make a global session object to turn on connection pooling

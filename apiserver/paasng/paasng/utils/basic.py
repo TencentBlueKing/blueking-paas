@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import re
 import subprocess
+from functools import partial
 from typing import TYPE_CHECKING, Any, Iterable, Tuple
 
 import requests
@@ -121,6 +122,10 @@ def make_app_pattern(
     if include_envs:
         result += part_envs
     return result + suffix
+
+
+# Create a shortcut function form workloads module
+make_app_pattern_with_applications_prefix = partial(make_app_pattern, prefix='applications/')
 
 
 def make_app_pattern_with_global_envs(suffix):

@@ -27,10 +27,10 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.networking.ingress.domains.manager import get_custom_domain_mgr, validate_domain_payload
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ
-from paas_wl.utils.api_docs import openapi_empty_response
 from paasng.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.utils.api_docs import openapi_empty_response
 
 
 class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):

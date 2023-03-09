@@ -38,7 +38,7 @@ from paas_wl.networking.ingress.entities.ingress import (
 from paas_wl.networking.ingress.entities.service import ProcessService, PServicePortPair, service_kmodel
 from paas_wl.networking.ingress.entities.utils import NginxRegexRewrittenProvider
 from paas_wl.resources.kube_res.base import GVKConfig
-from tests.paas_wl.utils.wl_app import release_setup
+from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -47,7 +47,7 @@ class TestProcessIngress:
     @pytest.fixture(autouse=True)
     def _setup_data(self, bk_stag_wl_app, settings):
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
-        release_setup(
+        create_wl_release(
             wl_app=bk_stag_wl_app,
             build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
             release_params={"version": 5},

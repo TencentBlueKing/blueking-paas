@@ -39,7 +39,7 @@ from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
-from tests.paas_wl.utils.wl_app import create_app
+from tests.paas_wl.utils.wl_app import create_wl_release
 from tests.utils.mocks.engine import build_default_cluster
 
 logger = logging.getLogger(__name__)
@@ -299,8 +299,17 @@ def bk_prod_wl_app(bk_prod_env, with_wl_apps):
 
 
 @pytest.fixture
-def wl_app() -> WlApp:
-    return create_app()
+def wl_app(bk_stag_wl_app) -> WlApp:
+    return bk_stag_wl_app
+
+
+@pytest.fixture
+def wl_release(wl_app):
+    return create_wl_release(
+        wl_app=wl_app,
+        build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
+        release_params={"version": 5},
+    )
 
 
 @pytest.fixture
@@ -310,14 +319,14 @@ def build_proc(wl_app) -> BuildProcess:
 
 
 @pytest.fixture
-def simple_build(bk_stag_wl_app, bk_user) -> Build:
+def wl_build(bk_stag_wl_app, bk_user) -> Build:
     build_params = {
         "owner": bk_user,
         "app": bk_stag_wl_app,
         "slug_path": "",
-        "source_type": "zzz",
-        "branch": "dsdf",
-        "revision": "asdf",
+        "source_type": "foo",
+        "branch": "bar",
+        "revision": "1",
         "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
     }
     return Build.objects.create(**build_params)

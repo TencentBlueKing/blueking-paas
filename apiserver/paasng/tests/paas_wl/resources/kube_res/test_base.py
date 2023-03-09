@@ -34,7 +34,7 @@ from paas_wl.resources.kube_res.base import (
 )
 from paas_wl.resources.kube_res.exceptions import APIServerVersionIncompatible, WatchKubeResourceError
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_initialize_non_applicable_type():

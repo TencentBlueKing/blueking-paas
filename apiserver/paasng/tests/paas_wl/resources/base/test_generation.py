@@ -25,7 +25,7 @@ from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.utils import get_command_name
-from tests.paas_wl.utils.wl_app import release_setup
+from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -33,7 +33,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestGeneration:
     @pytest.fixture
     def release(self, wl_app):
-        return release_setup(
+        return create_wl_release(
             wl_app=wl_app,
             build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
             release_params={"version": 2},

@@ -28,7 +28,7 @@ from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.processes.models import Process
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.serializers import extract_type_from_name
-from tests.paas_wl.utils.wl_app import release_setup
+from tests.paas_wl.utils.wl_app import create_wl_release
 
 pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.auto_create_ns]
 
@@ -41,7 +41,7 @@ def client(wl_app):
 @pytest.fixture
 def release(wl_app, set_structure):
     set_structure(wl_app, {"web": 2})
-    return release_setup(
+    return create_wl_release(
         wl_app=wl_app,
         build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
         release_params={"version": 2},

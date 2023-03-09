@@ -21,7 +21,7 @@ import pytest
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations, standardize_tolerations
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGetFullNodeSelector:

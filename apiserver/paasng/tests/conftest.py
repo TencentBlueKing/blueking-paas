@@ -338,7 +338,7 @@ def bk_app(request, bk_user) -> Application:
     """
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
-    app = create_app(owner_username=bk_user.username, region=settings.FOR_TESTS_DEFAULT_REGION)
+    app = create_app(owner_username=bk_user.username)
     before_finishing_application_creation.connect(register_app_core_data)
     return app
 

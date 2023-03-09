@@ -30,7 +30,7 @@ from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
 from paas_wl.workloads.resource_templates.models import AppAddOnTemplate
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.auto_create_ns

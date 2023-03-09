@@ -71,12 +71,18 @@
               width="60"
               align="left"
             />
-            <bk-table-column :label="$t('路径前缀')">
+            <bk-table-column
+              :label="$t('路径前缀')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span>{{ row.path || '--' }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('添加者')">
+            <bk-table-column
+              :label="$t('添加者')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <span>{{ props.row.owner.username || '--' }}</span>
               </template>
@@ -89,7 +95,10 @@
                 <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('添加原因')">
+            <bk-table-column
+              :label="$t('添加原因')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <bk-popover>
                   <div class="reason">

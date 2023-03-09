@@ -125,6 +125,7 @@
                   <bk-table-column
                     :label="$t('告警模块')"
                     width="180"
+                    :render-header="$renderHeader"
                   >
                     <template slot-scope="{ row }">
                       <span>{{ row.module }}</span>
@@ -133,6 +134,7 @@
                   <bk-table-column
                     :label="$t('告警环境')"
                     width="90"
+                    :render-header="$renderHeader"
                   >
                     <template slot-scope="{ row }">
                       <span>{{ row.env === 'prod' ? $t('生产环境') : $t('预发布环境') }}</span>
@@ -141,6 +143,7 @@
                   <bk-table-column
                     :label="$t('告警类型')"
                     width="200"
+                    :render-header="$renderHeader"
                   >
                     <template slot-scope="{ row }">
                       <span v-bk-tooltips="row.genre.name">{{ row.genre.name || '--' }}</span>
@@ -150,13 +153,18 @@
                     :label="$t('告警次数')"
                     prop="count"
                     width="80"
+                    :render-header="$renderHeader"
                   />
                   <bk-table-column
                     :label="$t('最近一次告警开始时间')"
                     prop="start"
                     width="150"
+                    :render-header="$renderHeader"
                   />
-                  <bk-table-column :label="$t('最近一次告警内容')">
+                  <bk-table-column
+                    :label="$t('最近一次告警内容')"
+                    :render-header="$renderHeader"
+                  >
                     <template slot-scope="{ row }">
                       <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
                     </template>

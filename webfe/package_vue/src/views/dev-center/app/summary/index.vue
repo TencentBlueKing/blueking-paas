@@ -385,7 +385,11 @@
                       class="tooltip-time"
                     >{{ item.at_friendly }}</span>
                   </p>
-                  <p class="dynamic-content">
+                  <p
+                    v-bk-overflow-tips
+                    class="dynamic-content"
+                    style="-webkit-line-clamp: 2;-webkit-box-orient: vertical"
+                  >
                     {{ $t('由') }}<span class="gruy">{{ item.operator ? item.operator : '—' }}</span>{{ item.operate }}
                   </p>
                 </li>
@@ -1520,6 +1524,10 @@
         height: 48px;
         overflow: hidden;
         color: #666;
+        text-overflow: ellipsis;
+        white-space: normal;
+        word-break: break-all;
+        display: -webkit-box;
     }
 
     .visited-charts {

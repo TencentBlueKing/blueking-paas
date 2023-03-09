@@ -22,6 +22,7 @@
         <bk-table-column
           :label="$t('最近出现时间')"
           prop="last_seen"
+          :render-header="$renderHeader"
         />
         <bk-table-column
           :label="$t('组件')"
@@ -34,10 +35,12 @@
         <bk-table-column
           :label="$t('事件内容')"
           prop="message"
+          :render-header="$renderHeader"
         />
         <bk-table-column
           :label="$t('累计出现次数')"
           prop="count"
+          :render-header="$renderHeader"
         />
       </bk-table>
     </paas-content-loader>

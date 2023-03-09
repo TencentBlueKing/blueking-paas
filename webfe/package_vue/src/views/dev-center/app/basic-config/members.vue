@@ -48,13 +48,18 @@
               @clear-filter="clearFilterKey"
             />
           </div>
-          <bk-table-column :label="$t('成员姓名')">
+          <bk-table-column
+            :label="$t('成员姓名')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
-              <span
-                v-if="props.row.user.avatar"
-                class="user-photo"
-              ><img :src="props.row.user.avatar"></span>
-              <span class="user-name">{{ props.row.user.username }}</span>
+              <div v-bk-overflow-tips>
+                <span
+                  v-if="props.row.user.avatar"
+                  class="user-photo"
+                ><img :src="props.row.user.avatar"></span>
+                {{ props.row.user.username }}
+              </div>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('角色')">

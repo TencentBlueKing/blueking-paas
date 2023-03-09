@@ -20,20 +20,20 @@ import pytest
 from django.conf import settings
 
 from paas_wl.workloads.processes.managers import AppProcessManager
-from tests.utils.app import random_fake_app, release_setup
+from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_release
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 class TestProcessScheduler:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.app = random_fake_app(
+        self.app = create_wl_app(
             force_app_info={"name": "bkapp-fakeme-stag"},
             paas_app_code='fakeme',
             environment='stag',
         )
-        self.release = release_setup(fake_app=self.app)
+        self.release = create_wl_release(wl_app=self.app)
 
     def test_update_process_deploy_info(
         self,

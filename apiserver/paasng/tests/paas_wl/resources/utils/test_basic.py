@@ -21,40 +21,40 @@ import pytest
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations, standardize_tolerations
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGetFullNodeSelector:
-    def test_empty(self, app):
-        assert get_full_node_selector(app) == {}
+    def test_empty(self, wl_app):
+        assert get_full_node_selector(wl_app) == {}
 
-    def test_integrated(self, app):
-        config = app.config_set.latest()
+    def test_integrated(self, wl_app):
+        config = wl_app.config_set.latest()
         config.node_selector = {'key1': 'value1', 'key-c': 'value-new'}
         config.save()
 
-        cluster = get_cluster_by_app(app)
+        cluster = get_cluster_by_app(wl_app)
         cluster.default_node_selector = {'key-c': 'value-c', 'key-c2': 'value-c2'}
         cluster.save()
 
-        assert get_full_node_selector(app) == {'key1': 'value1', 'key-c': 'value-new', 'key-c2': 'value-c2'}
+        assert get_full_node_selector(wl_app) == {'key1': 'value1', 'key-c': 'value-new', 'key-c2': 'value-c2'}
 
 
 class TestGetFullTolerations:
-    def test_empty(self, app):
-        assert get_full_tolerations(app) == []
+    def test_empty(self, wl_app):
+        assert get_full_tolerations(wl_app) == []
 
-    def test_integrated(self, app):
-        config = app.config_set.latest()
+    def test_integrated(self, wl_app):
+        config = wl_app.config_set.latest()
         config.tolerations = [{'key': 'app', 'operator': 'Equal', 'value': 'value1', 'effect': 'NoExecute'}]
         config.save()
 
-        cluster = get_cluster_by_app(app)
+        cluster = get_cluster_by_app(wl_app)
         cluster.default_tolerations = [
             {'key': 'app-c', 'operator': 'Equal', 'value': 'value-c', 'effect': 'NoSchedule'}
         ]
         cluster.save()
-        assert get_full_tolerations(app) == [
+        assert get_full_tolerations(wl_app) == [
             {'key': 'app', 'operator': 'Equal', 'value': 'value1', 'effect': 'NoExecute'},
             {'key': 'app-c', 'operator': 'Equal', 'value': 'value-c', 'effect': 'NoSchedule'},
         ]

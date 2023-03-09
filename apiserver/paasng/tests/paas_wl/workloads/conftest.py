@@ -16,27 +16,28 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
+from bkpaas_auth.models import User
 
-from paas_wl.workloads.processes.controllers import env_is_running
-from tests.cnative.specs.conftest import create_cnative_deploy
-from tests.workloads.conftest import create_release
-
-pytestmark = pytest.mark.django_db
+from paas_wl.platform.applications.models import Release
+from paasng.platform.applications.models import ModuleEnvironment
 
 
-class Test__env_is_running:
-    def test_default(self, bk_app, bk_stag_env, bk_user):
-        assert env_is_running(bk_stag_env) is False
-        # Create a failed release at first, it should not affect the result
-        create_release(bk_stag_env, bk_user, failed=True)
-        assert env_is_running(bk_stag_env) is False
+def create_release(env: ModuleEnvironment, user: User, failed: bool = False) -> Release:
+    """Create a release in given environment.
 
-        create_release(bk_stag_env, bk_user, failed=False)
-        assert env_is_running(bk_stag_env) is True
-
-    def test_cnative(self, cnative_bk_app, bk_stag_env, bk_user):
-        assert env_is_running(bk_stag_env) is False
-
-        create_cnative_deploy(bk_stag_env, bk_user)
-        assert env_is_running(bk_stag_env) is True
+    :return: The Release object
+    """
+    wl_app = env.wl_app
+    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
+    # method for backward-compatibility reasons
+    version = Release.objects.count() + 10
+    # Create the Release object manually without any Build object
+    return Release.objects.create(
+        owner=user.username,
+        app=wl_app,
+        failed=failed,
+        config=wl_app.latest_config,
+        version=version,
+        summary='',
+        procfile={},
+    )

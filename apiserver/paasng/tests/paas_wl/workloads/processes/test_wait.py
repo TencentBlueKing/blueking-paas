@@ -40,7 +40,7 @@ from paas_wl.release_controller.process.wait import (
 )
 from paas_wl.workloads.processes.models import Process
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
@@ -83,17 +83,17 @@ class TestDynamicReadyTimeoutPolicy:
 
 
 class TestWaitForAllStopped:
-    def test_still_running(self, app, process, metadata, poller_mocker):
-        poller = WaitForAllStopped(params={'wl_app_id': app.pk}, metadata=metadata)
+    def test_still_running(self, wl_app, process, metadata, poller_mocker):
+        poller = WaitForAllStopped(params={'wl_app_id': wl_app.pk}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
 
         assert status.status == PollingStatus.DOING
 
-    def test_all_stopped(self, app, process, metadata, poller_mocker):
+    def test_all_stopped(self, wl_app, process, metadata, poller_mocker):
         # Stop all processes
         process.instances = []
-        poller = WaitForAllStopped(params={'wl_app_id': app.pk}, metadata=metadata)
+        poller = WaitForAllStopped(params={'wl_app_id': wl_app.pk}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -105,7 +105,7 @@ class TestWaitForAllStopped:
             (False, True),
         ],
     )
-    def test_broadcast(self, enabled, events_is_empty, app, process, metadata, poller_mocker):
+    def test_broadcast(self, enabled, events_is_empty, wl_app, process, metadata, poller_mocker):
         received_events = []
 
         @receiver(processes_updated)
@@ -117,7 +117,7 @@ class TestWaitForAllStopped:
 
         # Mark current query as the second try
         metadata.queried_count = 1
-        poller = WaitForAllStopped(params={'wl_app_id': app.pk, 'broadcast_enabled': enabled}, metadata=metadata)
+        poller = WaitForAllStopped(params={'wl_app_id': wl_app.pk, 'broadcast_enabled': enabled}, metadata=metadata)
         with poller_mocker(poller, [process], [last_process]):
             _ = poller.query()
 
@@ -128,27 +128,27 @@ class TestWaitForAllStopped:
 
 
 class TestWaitForReleaseAllReady:
-    def test_not_ready(self, app, metadata, process, poller_mocker):
+    def test_not_ready(self, wl_app, metadata, process, poller_mocker):
         processes = [process]
-        poller = WaitForReleaseAllReady(params={'wl_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'wl_app_id': wl_app.pk, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DOING
 
-    def test_ready(self, app, metadata, process, instance, poller_mocker):
+    def test_ready(self, wl_app, metadata, process, instance, poller_mocker):
         processes = [process]
         process.version = 10
         instance.version = 10
         instance.ready = True
-        poller = WaitForReleaseAllReady(params={'wl_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'wl_app_id': wl_app.pk, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
 
-    def test_aborted_by_dynamic_timeout(self, app, process, poller_mocker):
+    def test_aborted_by_dynamic_timeout(self, wl_app, process, poller_mocker):
         processes = [process]
         metadata = PollingMetadata(retries=0, query_started_at=0, queried_count=0)
-        poller = WaitForReleaseAllReady(params={'wl_app_id': app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'wl_app_id': wl_app.pk, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -182,7 +182,7 @@ class TestUserInterruptedPolicy:
                 raise Exception
             return deployment
 
-        with mock.patch("paas_wl.release_controller.process.wait.get_plat_client") as mocked:
+        with mock.patch("paas_wl.release_controller.process.wait.get_local_plat_client") as mocked:
             mocked().retrieve_deployment.side_effect = retrieve_deployment
             yield deployment
 

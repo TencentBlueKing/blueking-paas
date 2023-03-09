@@ -31,7 +31,7 @@ from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType
 from paas_wl.utils.stream import ConsoleStream
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppCommandExecutor:
@@ -40,12 +40,12 @@ class TestAppCommandExecutor:
         return ConsoleStream()
 
     @pytest.fixture()
-    def hook_maker(self, fake_app, fake_simple_build, bk_user):
+    def hook_maker(self, wl_app, wl_build, bk_user):
         def core(command: str, config: Optional[Config] = None) -> Command:
-            return fake_app.command_set.new(
+            return wl_app.command_set.new(
                 type_=CommandType.PRE_RELEASE_HOOK,
                 operator=bk_user.username,
-                build=fake_simple_build,
+                build=wl_build,
                 command=command,
                 config=config,
             )

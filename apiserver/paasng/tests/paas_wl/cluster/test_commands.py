@@ -24,7 +24,7 @@ from django.utils.crypto import get_random_string
 
 from paas_wl.cluster.models import APIServer, Cluster
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 @pytest.fixture()

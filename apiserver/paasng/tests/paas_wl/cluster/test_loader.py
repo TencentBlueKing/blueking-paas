@@ -25,7 +25,7 @@ from django.conf import settings
 from paas_wl.cluster.loaders import DBConfigLoader, LegacyKubeConfigLoader
 from paas_wl.cluster.models import APIServer, Cluster
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 @pytest.fixture(autouse=True)
@@ -107,10 +107,10 @@ class TestEnhancedKubeConfigLoader:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.loader = LegacyKubeConfigLoader.from_file("tests/assets/example-kube-config.yaml")
+        self.loader = LegacyKubeConfigLoader.from_file("tests/paas_wl/assets/example-kube-config.yaml")
 
     def test_get_all_tags(self):
-        loader = LegacyKubeConfigLoader.from_file("tests/assets/example-kube-config.yaml")
+        loader = LegacyKubeConfigLoader.from_file("tests/paas_wl/assets/example-kube-config.yaml")
         assert len(loader.get_all_tags()) == 3
 
     @pytest.mark.parametrize(
@@ -122,7 +122,7 @@ class TestEnhancedKubeConfigLoader:
         ],
     )
     def test_list_configurations_by_tag(self, tag, configurations_count, server_hostname_set):
-        loader = LegacyKubeConfigLoader.from_file("tests/assets/example-kube-config.yaml")
+        loader = LegacyKubeConfigLoader.from_file("tests/paas_wl/assets/example-kube-config.yaml")
 
         assert len(list(loader.list_configurations_by_tag(tag))) == configurations_count
 

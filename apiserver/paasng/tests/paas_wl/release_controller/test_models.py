@@ -21,7 +21,7 @@ import pytest
 from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.utils.constants import BuildStatus
 
-pytestmark = pytest.mark.django_db(databases=['workloads'])
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestInterruptionAllowed:

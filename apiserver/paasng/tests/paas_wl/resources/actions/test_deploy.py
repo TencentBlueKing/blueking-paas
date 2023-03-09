@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paas_wl.resources.actions.deploy import ZombieProcessesKiller
-from tests.utils.app import release_setup
+from tests.paas_wl.utils.wl_app import create_wl_release
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestZombieProcessesKiller:
@@ -64,10 +64,12 @@ class TestZombieProcessesKiller:
             ),
         ],
     )
-    def test_search(self, fake_app, latest_procfile, last_procfile, diff):
-        last_release = release_setup(fake_app, build_params={"procfile": last_procfile})
-        latest_release = release_setup(
-            fake_app, build_params={"procfile": latest_procfile}, release_params={"version": last_release.version + 1}
+    def test_search(self, wl_app, latest_procfile, last_procfile, diff):
+        last_release = create_wl_release(wl_app, build_params={"procfile": last_procfile})
+        latest_release = create_wl_release(
+            wl_app,
+            build_params={"procfile": latest_procfile},
+            release_params={"version": last_release.version + 1},
         )
 
         killer = ZombieProcessesKiller(release=latest_release, last_release=last_release)

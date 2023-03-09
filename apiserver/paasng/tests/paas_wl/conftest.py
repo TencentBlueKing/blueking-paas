@@ -31,8 +31,7 @@ from kubernetes.client.exceptions import ApiException
 
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.platform.applications.models.build import BuildProcess
+from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
@@ -40,7 +39,7 @@ from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
-from tests.paas_wl.utils.wl_app import create_app
+from tests.paas_wl.utils.wl_app import create_wl_release
 from tests.utils.mocks.engine import build_default_cluster
 
 logger = logging.getLogger(__name__)
@@ -187,7 +186,7 @@ def _auto_create_ns(request):
         yield
         return
 
-    fixtures = ["bk_stag_wl_app", "bk_prod_wl_app"]
+    fixtures = ["bk_stag_wl_app", "bk_prod_wl_app", "wl_app"]
     used_fixtures = []
     for fixture in fixtures:
         if fixture in request.fixturenames:
@@ -300,11 +299,34 @@ def bk_prod_wl_app(bk_prod_env, with_wl_apps):
 
 
 @pytest.fixture
-def wl_app() -> WlApp:
-    return create_app()
+def wl_app(bk_stag_wl_app) -> WlApp:
+    return bk_stag_wl_app
+
+
+@pytest.fixture
+def wl_release(wl_app):
+    return create_wl_release(
+        wl_app=wl_app,
+        build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
+        release_params={"version": 5},
+    )
 
 
 @pytest.fixture
 def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
     return create_build_proc(wl_app)
+
+
+@pytest.fixture
+def wl_build(bk_stag_wl_app, bk_user) -> Build:
+    build_params = {
+        "owner": bk_user,
+        "app": bk_stag_wl_app,
+        "slug_path": "",
+        "source_type": "foo",
+        "branch": "bar",
+        "revision": "1",
+        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
+    }
+    return Build.objects.create(**build_params)

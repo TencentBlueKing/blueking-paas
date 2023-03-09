@@ -32,7 +32,7 @@ from paas_wl.resources.base.kres import KPod
 from paas_wl.workloads.processes.readers import ProcessAPIAdapter
 from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
 from tests.paas_wl.utils.basic import random_resource_name
-from tests.paas_wl.utils.wl_app import release_setup
+from tests.paas_wl.utils.wl_app import create_wl_release
 
 
 @pytest.fixture(scope="session")
@@ -132,7 +132,7 @@ def e2e_app(namespace_maker, django_db_setup, django_db_blocker):
                 "module_name": 'default',
             },
         )
-        release_setup(app)
+        create_wl_release(app)
         namespace_maker.make(app.namespace)
         namespace_maker.set_block()
         yield app

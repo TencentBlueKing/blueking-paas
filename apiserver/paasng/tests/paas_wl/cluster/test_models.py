@@ -26,7 +26,7 @@ from paas_wl.cluster.constants import ClusterTokenType
 from paas_wl.cluster.exceptions import DuplicatedDefaultClusterError, NoDefaultClusterError, SwitchDefaultClusterError
 from paas_wl.cluster.models import Cluster, Domain, EnhancedConfiguration, IngressConfig, PortMap
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 @pytest.fixture()

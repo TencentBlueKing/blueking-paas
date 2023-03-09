@@ -28,18 +28,18 @@ from paas_wl.workloads.resource_templates.models import AppAddOnTemplate
 def sidecar_template():
     return dedent(
         """
+        {
+            "name": "agent",
+            "image": "blueking-fake.com:8090/gitlab-runner/agent:latest",
+            "imagePullPolicy": "Always",
+            "ports": [
                 {
-                    "name": "agent",
-                    "image": "blueking-fake.com:8090/gitlab-runner/agent:latest",
-                    "imagePullPolicy": "Always",
-                    "ports": [
-                        {
-                            "name": "some-config",
-                            "containerPort": 7788,
-                            "protocol": "UDP"
-                        }
-                    ]
-                }"""
+                    "name": "some-config",
+                    "containerPort": 7788,
+                    "protocol": "UDP"
+                }
+            ]
+        }"""
     )
 
 

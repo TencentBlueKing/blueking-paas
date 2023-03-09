@@ -28,21 +28,21 @@ from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.processes.models import Process
 from paas_wl.workloads.processes.readers import instance_kmodel, process_kmodel
 from paas_wl.workloads.processes.serializers import extract_type_from_name
-from tests.utils.app import release_setup
+from tests.paas_wl.utils.wl_app import create_wl_release
 
-pytestmark = [pytest.mark.django_db, pytest.mark.auto_create_ns]
-
-
-@pytest.fixture
-def client(app):
-    return get_client_by_app(app)
+pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.auto_create_ns]
 
 
 @pytest.fixture
-def release(app, set_structure):
-    set_structure(app, {"web": 2})
-    return release_setup(
-        fake_app=app,
+def client(wl_app):
+    return get_client_by_app(wl_app)
+
+
+@pytest.fixture
+def release(wl_app, set_structure):
+    set_structure(wl_app, {"web": 2})
+    return create_wl_release(
+        wl_app=wl_app,
         build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
         release_params={"version": 2},
     )
@@ -67,9 +67,9 @@ class TestProcInstManager:
     """TestCases for ProcInst"""
 
     @pytest.fixture
-    def pod(self, app, release, client, process_manager, process, v1_mapper):
+    def pod(self, wl_app, release, client, process_manager, process, v1_mapper):
         pod_name = v1_mapper.pod(process=process).name
-        serializer = process_manager._make_serializer(app)
+        serializer = process_manager._make_serializer(wl_app)
         pod_body = {
             'apiVersion': 'v1',
             'kind': 'Pod',
@@ -79,14 +79,14 @@ class TestProcInstManager:
         pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
         return pod
 
-    def test_query_instances(self, app, pod):
+    def test_query_instances(self, wl_app, pod):
         # Query process instances
-        insts = instance_kmodel.list_by_process_type(app, 'web')
+        insts = instance_kmodel.list_by_process_type(wl_app, 'web')
         assert len(insts) == 1
         assert insts[0].process_type == 'web'
         assert insts[0].envs
 
-    def test_query_instances_without_process_id_label(self, client, app, pod):
+    def test_query_instances_without_process_id_label(self, client, wl_app, pod):
         # Delete `process_id` label to simulate resources created by legacy engine versions
         labels = dict(pod.metadata.labels)
         del labels['process_id']
@@ -95,10 +95,10 @@ class TestProcInstManager:
         )
 
         # Query process instances
-        insts = instance_kmodel.list_by_process_type(app, 'web')
+        insts = instance_kmodel.list_by_process_type(wl_app, 'web')
         assert len(insts) == 1
 
-    def test_watch_from_rv0(self, client, app, pod):
+    def test_watch_from_rv0(self, client, wl_app, pod):
         labels = dict(pod.metadata.labels)
         # Update labels to produce events
         labels['foo'] = 'bar'
@@ -106,28 +106,28 @@ class TestProcInstManager:
             name=pod.metadata.name, body={'metadata': {'labels': labels}}, namespace=pod.metadata.namespace
         )
 
-        events = list(instance_kmodel.watch_by_app(app, resource_version=0, timeout_seconds=1))
+        events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0
 
-    def test_watch_from_empty_rv(self, app, pod):
-        inst = instance_kmodel.list_by_process_type(app, 'web')[0]
+    def test_watch_from_empty_rv(self, wl_app, pod):
+        inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
         events = list(
-            instance_kmodel.watch_by_app(app, resource_version=inst.get_resource_version(), timeout_seconds=1)
+            instance_kmodel.watch_by_app(wl_app, resource_version=inst.get_resource_version(), timeout_seconds=1)
         )
         assert len(events) == 0
 
-        events = list(instance_kmodel.watch_by_app(app, resource_version=0, timeout_seconds=1))
+        events = list(instance_kmodel.watch_by_app(wl_app, resource_version=0, timeout_seconds=1))
         assert len(events) > 0
 
-    def test_get_logs(self, app, pod):
+    def test_get_logs(self, wl_app, pod):
         # Query process instances
-        inst = instance_kmodel.list_by_process_type(app, 'web')[0]
+        inst = instance_kmodel.list_by_process_type(wl_app, 'web')[0]
         with mock.patch('paas_wl.workloads.processes.models.Instance.Meta.kres_class') as kp:
             instance_kmodel.get_logs(inst)
             assert kp().get_log.called
 
-    def test_list_with_meta(self, app, pod):
-        resources = instance_kmodel.list_by_app_with_meta(app)
+    def test_list_with_meta(self, wl_app, pod):
+        resources = instance_kmodel.list_by_app_with_meta(wl_app)
 
         assert resources.metadata is not None
         rv = resources.get_resource_version()
@@ -139,7 +139,7 @@ class TestProcSpecsManager:
     """TestCases for ProcSpecs"""
 
     @pytest.fixture
-    def process(self, app, release, process_manager, process, v1_mapper):
+    def process(self, wl_app, release, process_manager, process, v1_mapper):
         process_manager.create(process, mapper_version=v1_mapper)
         return process
 

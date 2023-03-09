@@ -34,7 +34,7 @@ from paas_wl.resources.kube_res.base import (
 )
 from paas_wl.resources.kube_res.exceptions import APIServerVersionIncompatible, WatchKubeResourceError
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def test_initialize_non_applicable_type():
@@ -72,14 +72,14 @@ dummy_reader = AppEntityReader(DummyObj)
 
 
 class TestDummyReader:
-    def test_watch_with_error_event(self, app):
+    def test_watch_with_error_event(self, wl_app):
         with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
             mocked_kres().__enter__().ops_label.create_watch_stream.return_value = [
                 {'type': 'ERROR', 'raw_object': {}}
             ]
 
             with pytest.raises(WatchKubeResourceError):
-                list(dummy_reader.watch_by_app(app, timeout_seconds=1))
+                list(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 
     @pytest.mark.parametrize(
         'status,reason,expected_exc_type',
@@ -88,30 +88,30 @@ class TestDummyReader:
             (500, 'Internal error', ApiException),
         ],
     )
-    def test_watch_with_expired_exception(self, status, reason, expected_exc_type, app):
+    def test_watch_with_expired_exception(self, status, reason, expected_exc_type, wl_app):
         with mock.patch.object(dummy_reader, 'kres') as mocked_kres:
             mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(status, reason)
             with pytest.raises(expected_exc_type):
-                list(dummy_reader.watch_by_app(app, timeout_seconds=1))
+                list(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 
 
 dummy_kmodel = AppEntityManager(DummyObj)
 
 
 class TestDummyManager:
-    def test_create(self, app, resource_name):
-        res = DummyObj(app=app, name=resource_name)
+    def test_create(self, wl_app, resource_name):
+        res = DummyObj(app=wl_app, name=resource_name)
         dummy_kmodel.create(res)
         dummy_kmodel.delete(res)
 
 
-def test_version_incompatible(app):
+def test_version_incompatible(wl_app):
     class WrongVersionDeserializer(AppEntityDeserializer):
         # Namespace does not has below api_version
         api_version = 'extensions/v1beta1'
 
-        def deserialize(self, app, kube_data):
-            return DummyObj(app=app, name=kube_data.metadata.name)
+        def deserialize(self, wl_app, kube_data):
+            return DummyObj(app=wl_app, name=kube_data.metadata.name)
 
     @dataclass
     class WrongVersionObj(AppEntity):
@@ -122,7 +122,7 @@ def test_version_incompatible(app):
             deserializer = WrongVersionDeserializer
 
     with pytest.raises(APIServerVersionIncompatible):
-        AppEntityReader(WrongVersionObj).list_by_app(app)
+        AppEntityReader(WrongVersionObj).list_by_app(wl_app)
 
 
 class TestEntitySerializerPicker:

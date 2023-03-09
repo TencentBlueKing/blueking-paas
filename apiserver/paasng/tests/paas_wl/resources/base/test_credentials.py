@@ -28,27 +28,27 @@ from paas_wl.workloads.images import constants
 from paas_wl.workloads.images.entities import credentials_kmodel
 from paas_wl.workloads.images.models import AppImageCredential
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.auto_create_ns
 class TestImageCredentialsHandler:
-    def test_create_empty(self, app, scheduler_client: K8sScheduler):
-        scheduler_client.ensure_image_credentials_secret(app)
-        obj = credentials_kmodel.get(app, name=constants.KUBE_RESOURCE_NAME)
+    def test_create_empty(self, wl_app, scheduler_client: K8sScheduler):
+        scheduler_client.ensure_image_credentials_secret(wl_app)
+        obj = credentials_kmodel.get(wl_app, name=constants.KUBE_RESOURCE_NAME)
         assert len(obj.credentials) == 0
         assert obj.name == constants.KUBE_RESOURCE_NAME
         assert obj._kube_data.data[constants.KUBE_DATA_KEY] == b64encode('{"auths": {}}')
 
-    def test_create(self, app, scheduler_client: K8sScheduler):
+    def test_create(self, wl_app, scheduler_client: K8sScheduler):
         registry = get_random_string()
         username = get_random_string()
         password = get_random_string()
 
-        AppImageCredential.objects.create(app=app, registry=registry, username=username, password=password)
+        AppImageCredential.objects.create(app=wl_app, registry=registry, username=username, password=password)
 
-        scheduler_client.ensure_image_credentials_secret(app)
-        obj = credentials_kmodel.get(app, name=constants.KUBE_RESOURCE_NAME)
+        scheduler_client.ensure_image_credentials_secret(wl_app)
+        obj = credentials_kmodel.get(wl_app, name=constants.KUBE_RESOURCE_NAME)
         assert len(obj.credentials) == 1
         assert obj.name == constants.KUBE_RESOURCE_NAME
         assert json.loads(b64decode(obj._kube_data.data[constants.KUBE_DATA_KEY])) == {
@@ -57,16 +57,16 @@ class TestImageCredentialsHandler:
             }
         }
 
-    def test_update(self, app, scheduler_client: K8sScheduler):
-        scheduler_client.ensure_image_credentials_secret(app)
-        obj = credentials_kmodel.get(app, name=constants.KUBE_RESOURCE_NAME)
+    def test_update(self, wl_app, scheduler_client: K8sScheduler):
+        scheduler_client.ensure_image_credentials_secret(wl_app)
+        obj = credentials_kmodel.get(wl_app, name=constants.KUBE_RESOURCE_NAME)
         assert len(obj.credentials) == 0
 
-        AppImageCredential.objects.create(app=app, registry="foo", username="bar", password="baz")
-        scheduler_client.ensure_image_credentials_secret(app)
-        obj = credentials_kmodel.get(app, name=constants.KUBE_RESOURCE_NAME)
+        AppImageCredential.objects.create(app=wl_app, registry="foo", username="bar", password="baz")
+        scheduler_client.ensure_image_credentials_secret(wl_app)
+        obj = credentials_kmodel.get(wl_app, name=constants.KUBE_RESOURCE_NAME)
         assert len(obj.credentials) == 1
 
-    def test_not_found(self, app):
+    def test_not_found(self, wl_app):
         with pytest.raises(AppEntityNotFound):
-            credentials_kmodel.get(app, name=constants.KUBE_RESOURCE_NAME)
+            credentials_kmodel.get(wl_app, name=constants.KUBE_RESOURCE_NAME)

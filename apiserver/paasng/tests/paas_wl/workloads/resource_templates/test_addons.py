@@ -25,13 +25,13 @@ from paas_wl.workloads.resource_templates.components.probe import get_default_re
 from paas_wl.workloads.resource_templates.components.sidecar import Container
 from paas_wl.workloads.resource_templates.utils import AddonManager
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppAddOns:
-    def test_sidecar(self, app, sidecar_addon_template):
-        sidecar_addon_template.link_to_app(app)
-        sidecars = cattr.structure(AddonManager(app).get_sidecars(), List[Container])
+    def test_sidecar(self, wl_app, sidecar_addon_template):
+        sidecar_addon_template.link_to_app(wl_app)
+        sidecars = cattr.structure(AddonManager(wl_app).get_sidecars(), List[Container])
 
         assert len(sidecars) == 1
         container = sidecars[0]
@@ -42,35 +42,35 @@ class TestAppAddOns:
         assert container.ports[0].containerPort == 7788
         assert container.ports[0].protocol == "UDP"
 
-    def test_default_readiness_probe(self, app):
-        readiness_probe = AddonManager(app).get_readiness_probe()
+    def test_default_readiness_probe(self, wl_app):
+        readiness_probe = AddonManager(wl_app).get_readiness_probe()
         assert readiness_probe == get_default_readiness_probe()
 
-    def test_user_readiness_probe(self, app, probe_addon_template):
-        probe_addon_template.link_to_app(app)
-        readiness_probe = AddonManager(app).get_readiness_probe()
+    def test_user_readiness_probe(self, wl_app, probe_addon_template):
+        probe_addon_template.link_to_app(wl_app)
+        readiness_probe = AddonManager(wl_app).get_readiness_probe()
         assert readiness_probe != get_default_readiness_probe()
 
         assert readiness_probe.httpGet
         assert readiness_probe.httpGet.port == 5000
         assert readiness_probe.httpGet.path == "/healthz"
 
-    def test_shm_mount_point(self, app, shm_volume_mount_addon_template):
-        assert len(AddonManager(app).get_volume_mounts()) == 0
+    def test_shm_mount_point(self, wl_app, shm_volume_mount_addon_template):
+        assert len(AddonManager(wl_app).get_volume_mounts()) == 0
 
-        shm_volume_mount_addon_template.link_to_app(app)
-        mounts = AddonManager(app).get_volume_mounts()
+        shm_volume_mount_addon_template.link_to_app(wl_app)
+        mounts = AddonManager(wl_app).get_volume_mounts()
         assert len(mounts) == 1
         mount = mounts[0]
 
         assert mount.name == "shm"
         assert mount.mountPath == "/dev/shm"
 
-    def test_shm_volume(self, app, shm_volume_addon_template):
-        assert len(AddonManager(app).get_volumes()) == 0
+    def test_shm_volume(self, wl_app, shm_volume_addon_template):
+        assert len(AddonManager(wl_app).get_volumes()) == 0
 
-        shm_volume_addon_template.link_to_app(app)
-        volumes = AddonManager(app).get_volumes()
+        shm_volume_addon_template.link_to_app(wl_app)
+        volumes = AddonManager(wl_app).get_volumes()
         assert len(volumes) == 1
         volume = volumes[0]
 
@@ -79,11 +79,11 @@ class TestAppAddOns:
         assert volume.emptyDir.medium == "Memory"
         assert volume.emptyDir.sizeLimit == "512Mi"
 
-    def test_secret_volume(self, app, secret_volume_addon_template):
-        assert len(AddonManager(app).get_volumes()) == 0
+    def test_secret_volume(self, wl_app, secret_volume_addon_template):
+        assert len(AddonManager(wl_app).get_volumes()) == 0
 
-        secret_volume_addon_template.link_to_app(app)
-        volumes = AddonManager(app).get_volumes()
+        secret_volume_addon_template.link_to_app(wl_app)
+        volumes = AddonManager(wl_app).get_volumes()
         assert len(volumes) == 1
         volume = volumes[0]
 

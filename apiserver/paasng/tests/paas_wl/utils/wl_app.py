@@ -29,7 +29,7 @@ from paas_wl.workloads.processes.models import Instance
 from tests.utils.auth import create_user
 
 
-def random_fake_app(
+def create_wl_app(
     force_app_info: Optional[Dict] = None,
     paas_app_code: Optional[str] = None,
     environment: Optional[str] = None,
@@ -47,10 +47,10 @@ def random_fake_app(
     if force_app_info:
         app_info.update(force_app_info)
 
-    fake_app = WlApp.objects.create(**app_info)
+    wl_app = WlApp.objects.create(**app_info)
     # Set up metadata
     Config.objects.create(
-        app=fake_app,
+        app=wl_app,
         metadata={
             "environment": environment or default_environment,
             # Use app name as paas_app_code by default if not given
@@ -58,10 +58,10 @@ def random_fake_app(
             "module_name": 'default',
         },
     )
-    return fake_app
+    return wl_app
 
 
-def random_fake_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -> Instance:
+def create_wl_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -> Instance:
     app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
     instance_info = {
         "app": app,
@@ -81,16 +81,16 @@ def random_fake_instance(app: WlApp, force_instance_info: Optional[Dict] = None)
     return Instance(**instance_info)
 
 
-def release_setup(
-    fake_app: WlApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
+def create_wl_release(
+    wl_app: WlApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
 ) -> Release:
     default_build_params = {
         "owner": create_user(username="somebody"),
-        "app": fake_app,
+        "app": wl_app,
         "slug_path": "",
-        "source_type": "zzz",
-        "branch": "dsdf",
-        "revision": "asdf",
+        "source_type": "foo",
+        "branch": "bar",
+        "revision": "1",
         "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
     }
 
@@ -102,43 +102,15 @@ def release_setup(
 
     default_release_params = {
         "owner": create_user(username="somebody"),
-        "app": fake_app,
+        "app": wl_app,
         "version": 2,
         "summary": "",
         "failed": False,
         "build": fake_build,
-        "config": fake_app.config_set.latest(),
+        "config": wl_app.config_set.latest(),
     }
     if release_params:
         default_release_params.update(release_params)
 
     release_info = default_release_params
     return Release.objects.create(**release_info)
-
-
-def create_app(structure: Optional[Dict[str, int]] = None) -> WlApp:
-    """Create an app object for testing purpose
-
-    :param structure: Optional app structure, default to {'web': 1}
-    """
-    environment = random.choice(['stag', 'prod'])
-    app_name = 'app-' + get_random_string(length=12).lower()
-    if structure is None:
-        structure = {'web': 1}
-
-    app = WlApp.objects.create(
-        region=settings.FOR_TESTS_DEFAULT_REGION,
-        name=app_name,
-        structure=structure,
-        owner=create_user(username=get_random_string(length=6)),
-    )
-    # Set up metadata
-    Config.objects.create(
-        app=app,
-        metadata={
-            "environment": environment,
-            "paas_app_code": f'paas-{app_name}',
-            "module_name": 'default',
-        },
-    )
-    return app

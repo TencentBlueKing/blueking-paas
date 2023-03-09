@@ -21,17 +21,17 @@ from django.conf import settings
 
 from paas_wl.workloads.processes.managers import AppProcessManager
 from paas_wl.workloads.processes.utils import get_command_name
-from tests.utils.app import random_fake_app, release_setup
+from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_release
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 class TestProcess:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.app = random_fake_app()
-        self.release = release_setup(
-            fake_app=self.app,
+        self.app = create_wl_app()
+        self.release = create_wl_release(
+            wl_app=self.app,
             build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
             release_params={"version": 2},
         )
@@ -62,7 +62,7 @@ class TestProcess:
 class TestProcessManager:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.app = random_fake_app(
+        self.app = create_wl_app(
             force_app_info={
                 "region": settings.FOR_TESTS_DEFAULT_REGION,
                 "name": "bkapp-lala_la-stag",
@@ -71,8 +71,8 @@ class TestProcessManager:
         )
 
     def test_assemble_process(self):
-        release = release_setup(
-            fake_app=self.app,
+        release = create_wl_release(
+            wl_app=self.app,
             build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
             release_params={"version": 2},
         )
@@ -87,8 +87,8 @@ class TestProcessManager:
         assert sample_process.app.region == settings.FOR_TESTS_DEFAULT_REGION
 
     def test_assemble_processes(self):
-        release = release_setup(
-            fake_app=self.app,
+        release = create_wl_release(
+            wl_app=self.app,
             build_params={
                 "procfile": {
                     "web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile",

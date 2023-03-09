@@ -29,7 +29,6 @@ from kubernetes.dynamic.resource import ResourceInstance
 from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
 from paas_wl.release_controller.builder.procedures import generate_builder_name
 from paas_wl.release_controller.entities import Runtime
-from paas_wl.resources.base.client import K8sScheduler
 from paas_wl.resources.base.controllers import BuildHandler
 from paas_wl.resources.base.exceptions import (
     PodAbsentError,
@@ -43,12 +42,10 @@ from paas_wl.resources.kube_res.base import Schedule
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.processes.managers import AppProcessManager
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
-from tests.utils.app import release_setup
 
 from .test_kres import construct_foo_pod
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 DummyObjectList = namedtuple('DummyObjectList', 'items metadata')
 
@@ -58,36 +55,15 @@ RG = settings.FOR_TESTS_DEFAULT_REGION
 
 class TestClientProcess:
     @pytest.fixture
-    def app(self, set_structure, bk_stag_wl_app):
-        bk_stag_wl_app.region = RG
-        bk_stag_wl_app.name = "bk-fake-stag"
-        bk_stag_wl_app.save()
-        set_structure(bk_stag_wl_app, {"web": 2, "worker": 1})
-        return bk_stag_wl_app
+    def web_process(self, wl_app, wl_release):
+        return AppProcessManager(app=wl_app).assemble_process("web", release=wl_release)
 
     @pytest.fixture
-    def release(self, app):
-        release = release_setup(
-            fake_app=app,
-            build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
-            release_params={"version": 5},
-        )
-        return release
-
-    @pytest.fixture
-    def scheduler_client(self):
-        return K8sScheduler.from_cluster_name(CLUSTER_NAME_FOR_TESTING)
-
-    @pytest.fixture
-    def web_process(self, app, release):
-        return AppProcessManager(app=app).assemble_process("web", release=release)
-
-    @pytest.fixture
-    def worker_process(self, app, release):
-        return AppProcessManager(app=app).assemble_process("worker", release=release)
+    def worker_process(self, wl_app, wl_release):
+        return AppProcessManager(app=wl_app).assemble_process("worker", release=wl_release)
 
     @pytest.mark.mock_get_structured_app
-    def test_deploy_processes(self, scheduler_client, web_process):
+    def test_deploy_processes(self, wl_app, scheduler_client, web_process):
         with patch('paas_wl.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
             'paas_wl.networking.ingress.managers.service.service_kmodel'
         ) as ks, patch('paas_wl.networking.ingress.managers.base.ingress_kmodel') as ki:
@@ -99,21 +75,21 @@ class TestClientProcess:
             # Check deployment resource
             assert kd.called
             deployment_args, deployment_kwargs = kd.call_args_list[0]
-            assert deployment_kwargs.get('name') == f"{RG}-bk-fake-stag-web-python-deployment"
+            assert deployment_kwargs.get('name') == f"{RG}-{wl_app.name}-web-python-deployment"
             assert deployment_kwargs.get('body')
-            assert deployment_kwargs.get('namespace') == "bk-fake-stag"
+            assert deployment_kwargs.get('namespace') == wl_app.name
 
             # Check service resource
             assert ks.get.called
             assert ks.create.called
             proc_service = ks.create.call_args_list[0][0][0]
-            assert proc_service.name == f"{RG}-bk-fake-stag-web"
+            assert proc_service.name == f"{RG}-{wl_app.name}-web"
 
             # Check ingress resource
             assert ks.get.called
             assert ki.save.called
             proc_ingress = ki.save.call_args_list[0][0][0]
-            assert proc_ingress.name == f"{RG}-bk-fake-stag"
+            assert proc_ingress.name == f"{RG}-{wl_app.name}"
 
     def test_scale_processes(self, scheduler_client, worker_process):
         with patch('paas_wl.resources.base.kres.NameBasedOperations.replace_or_patch') as kd, patch(
@@ -154,7 +130,7 @@ class TestClientProcess:
             args, kwargs = kd.call_args_list[0]
             assert kwargs['body']['spec']['replicas'] == 0
 
-    def test_shutdown_web_processes(self, scheduler_client, web_process):
+    def test_shutdown_web_processes(self, wl_app, scheduler_client, web_process):
         DSpec = make_dataclass('Dspec', [('replicas', int)])
         DBody = make_dataclass('DBody', [('spec', DSpec)])
         kg = Mock(return_value=DBody(spec=DSpec(replicas=1)))
@@ -165,7 +141,7 @@ class TestClientProcess:
         ):
             # Make ingress point to web service
             faked_ingress = Mock()
-            faked_ingress.configure_mock(service_name=f'{RG}-bk-fake-stag-web')
+            faked_ingress.configure_mock(service_name=f'{RG}-{wl_app.name}-web')
             ki.get.return_value = faked_ingress
 
             scheduler_client.shutdown_processes([web_process])
@@ -183,10 +159,9 @@ class TestClientProcess:
 
 
 class TestClientBuild:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        self.scheduler_client = K8sScheduler.from_cluster_name(CLUSTER_NAME_FOR_TESTING)
-        self.pod_template = SlugBuilderTemplate(
+    @pytest.fixture
+    def pod_template(self):
+        return SlugBuilderTemplate(
             name="slug-builder",
             namespace="bkapp-foo-stag",
             runtime=Runtime(image="blueking-fake.com:8090/bkpaas/slugrunner:latest", envs={"test": "1"}),
@@ -197,7 +172,7 @@ class TestClientBuild:
             ),
         )
 
-    def test_build_slug(self):
+    def test_build_slug(self, scheduler_client, pod_template):
         namespace_create = Mock(return_value=None)
         namespace_check = Mock(return_value=True)
 
@@ -217,7 +192,7 @@ class TestClientBuild:
             "paas_wl.resources.base.controllers.WaitPodDelete.wait"
         ):
 
-            self.scheduler_client.build_slug(template=self.pod_template)
+            scheduler_client.build_slug(template=pod_template)
             assert kpod_get.called
             assert kpod_create_or_update.called
 
@@ -229,7 +204,7 @@ class TestClientBuild:
             assert body['spec']['tolerations'][0]['key'] == 'region'
             assert body['spec']['tolerations'][0]['operator'] == 'Equal'
 
-    def test_build_slug_exist(self):
+    def test_build_slug_exist(self, scheduler_client, pod_template):
         namespace_create = Mock(return_value=None)
         namespace_check = Mock(return_value=True)
 
@@ -248,9 +223,9 @@ class TestClientBuild:
         ), patch('paas_wl.resources.base.kres.NameBasedOperations.get', kpod_get):
 
             with pytest.raises(ResourceDuplicate):
-                self.scheduler_client.build_slug(template=self.pod_template)
+                scheduler_client.build_slug(template=pod_template)
 
-    def test_delete_slug_pod(self):
+    def test_delete_slug_pod(self, scheduler_client):
         pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Completed"}})
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
@@ -258,7 +233,7 @@ class TestClientBuild:
         with patch('paas_wl.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
             'paas_wl.resources.base.kres.NameBasedOperations.delete', kpod_delete
         ):
-            self.scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="slug-builder")
+            scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="slug-builder")
 
             assert kpod_get.called
             assert kpod_delete.called
@@ -266,19 +241,19 @@ class TestClientBuild:
             assert args[0] == "slug-builder"
             assert kwargs.get('namespace') == "bkapp-foo-stag"
 
-    def test_delete_slug_pod_missing(self):
+    def test_delete_slug_pod_missing(self, scheduler_client):
         kpod_get = Mock(side_effect=ResourceMissing("bkapp-foo-stag-slug-pod", "bkapp-foo-stag"))
         kpod_delete = Mock(return_value=None)
 
         with patch('paas_wl.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
             'paas_wl.resources.base.kres.NameBasedOperations.delete', kpod_delete
         ):
-            self.scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
+            scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
             assert kpod_get.called
             assert not kpod_delete.called
 
-    def test_delete_slug_pod_running(self):
+    def test_delete_slug_pod_running(self, scheduler_client):
         pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Running"}})
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
@@ -286,7 +261,7 @@ class TestClientBuild:
         with patch('paas_wl.resources.base.kres.NameBasedOperations.get', kpod_get), patch(
             'paas_wl.resources.base.kres.NameBasedOperations.delete', kpod_delete
         ):
-            self.scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
+            scheduler_client.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
             assert kpod_get.called
             assert not kpod_delete.called
@@ -296,20 +271,32 @@ class TestClientBuild:
 class TestClientBuildNew:
     """New test cases using pytest"""
 
-    def test_interrupt_builder(self, app, scheduler_client, k8s_client):
-        builder_pod_name = BuildHandler.normalize_builder_name(generate_builder_name(app))
+    def test_interrupt_builder(self, wl_app, scheduler_client, k8s_client):
+        builder_pod_name = BuildHandler.normalize_builder_name(generate_builder_name(wl_app))
         KPod(k8s_client).create_or_update(
-            builder_pod_name, namespace=app.namespace, body=construct_foo_pod(builder_pod_name)
+            builder_pod_name, namespace=wl_app.namespace, body=construct_foo_pod(builder_pod_name)
         )
 
-        assert scheduler_client.interrupt_builder(namespace=app.namespace, name=generate_builder_name(app)) is True
+        assert (
+            scheduler_client.interrupt_builder(
+                namespace=wl_app.namespace,
+                name=generate_builder_name(wl_app),
+            )
+            is True
+        )
 
-    def test_interrupt_builder_non_existent(self, app, scheduler_client):
-        assert scheduler_client.interrupt_builder(namespace=app.namespace, name=generate_builder_name(app)) is False
+    def test_interrupt_builder_non_existent(self, wl_app, scheduler_client):
+        assert (
+            scheduler_client.interrupt_builder(
+                namespace=wl_app.namespace,
+                name=generate_builder_name(wl_app),
+            )
+            is False
+        )
 
-    def test_wait_for_succeeded_no_pod(self, app, scheduler_client):
+    def test_wait_for_succeeded_no_pod(self, wl_app, scheduler_client):
         with pytest.raises(PodAbsentError):
-            scheduler_client.wait_build_succeeded(app.namespace, generate_builder_name(app), timeout=1)
+            scheduler_client.wait_build_succeeded(wl_app.namespace, generate_builder_name(wl_app), timeout=1)
 
     @pytest.mark.parametrize(
         'phase, exc_context',
@@ -321,14 +308,14 @@ class TestClientBuildNew:
             ('Succeeded', does_not_raise()),
         ],
     )
-    def test_wait_for_succeeded(self, phase, exc_context, app, scheduler_client, k8s_client):
-        pod_name = BuildHandler.normalize_builder_name(generate_builder_name(app))
+    def test_wait_for_succeeded(self, phase, exc_context, wl_app, scheduler_client, k8s_client):
+        pod_name = BuildHandler.normalize_builder_name(generate_builder_name(wl_app))
         body = construct_foo_pod(pod_name, restart_policy="Never")
 
-        KPod(k8s_client).create_or_update(pod_name, namespace=app.namespace, body=body)
+        KPod(k8s_client).create_or_update(pod_name, namespace=wl_app.namespace, body=body)
 
         body = {'status': {'phase': phase, 'conditions': []}}
-        KPod(k8s_client).patch_subres('status', pod_name, namespace=app.namespace, body=body, ptype=PatchType.MERGE)
+        KPod(k8s_client).patch_subres('status', pod_name, namespace=wl_app.namespace, body=body, ptype=PatchType.MERGE)
 
         with exc_context:
-            scheduler_client.wait_build_succeeded(app.namespace, pod_name, timeout=1)
+            scheduler_client.wait_build_succeeded(wl_app.namespace, pod_name, timeout=1)

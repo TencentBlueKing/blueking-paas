@@ -30,9 +30,9 @@ from kubernetes.dynamic.resource import ResourceInstance
 
 from paas_wl.resources.base.exceptions import CreateServiceAccountTimeout, ReadTargetStatusTimeout, ResourceMissing
 from paas_wl.resources.base.kres import KDeployment, KNamespace, KPod, KServiceAccount
-from tests.utils.basic import random_resource_name
+from tests.paas_wl.utils.basic import random_resource_name
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestNameBasedOps:
@@ -110,35 +110,35 @@ class TestNameBasedOps:
 
 @pytest.mark.auto_create_ns
 class TestLabelBasedOps:
-    def test_create_watch_stream(self, k8s_client, app):
+    def test_create_watch_stream(self, k8s_client, wl_app):
         # Create a pod to generate event
         KPod(k8s_client).create_or_update(
-            app.scheduler_safe_name,
-            namespace=app.namespace,
-            body=construct_foo_pod(app.scheduler_safe_name, labels={"app": app.name}),
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
         stream = KPod(k8s_client).ops_label.create_watch_stream(
-            {"app": app.name}, namespace=app.namespace, timeout_seconds=1, resource_version=0
+            {"app": wl_app.name}, namespace=wl_app.namespace, timeout_seconds=1, resource_version=0
         )
         # 在集成测试中, K8s 集群有可能会更新 Pod 的 metadata 和 status, 导致版本变化多次
         assert len(list(stream)) >= 1
 
-    def test_filter_by_label(self, k8s_client, app):
-        results = KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace)
+    def test_filter_by_label(self, k8s_client, wl_app):
+        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 
         KPod(k8s_client).create_or_update(
-            app.scheduler_safe_name,
-            namespace=app.namespace,
-            body=construct_foo_pod(app.scheduler_safe_name, labels={"app": app.name}),
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        results = KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace)
+        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 1
         assert isinstance(results.items[0], ResourceInstance)
 
-    def test_list_with_different_namespaces(self, k8s_client, namespace_maker, app):
+    def test_list_with_different_namespaces(self, k8s_client, namespace_maker, wl_app):
         another_namespace = random_resource_name()
-        results = KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace)
+        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 
         obj, created = namespace_maker.make(another_namespace)
@@ -148,46 +148,46 @@ class TestLabelBasedOps:
         for _ in range(2):
             pod_name = random_resource_name()
             KPod(k8s_client).create_or_update(
-                pod_name, namespace=another_namespace, body=construct_foo_pod(pod_name, labels={"app": app.name})
+                pod_name, namespace=another_namespace, body=construct_foo_pod(pod_name, labels={"app": wl_app.name})
             )
-        results = KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace)
+        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace)
         assert len(results.items) == 0
 
-        results = KPod(k8s_client).ops_label.list({"app": app.name}, namespace=another_namespace)
+        results = KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=another_namespace)
         assert len(results.items) == 2
 
         results = KPod(k8s_client).ops_label.list({"app": "invalid-label-value"}, namespace=another_namespace)
         assert len(results.items) == 0
 
-    def test_delete_collection(self, k8s_client, app):
+    def test_delete_collection(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(
-            app.scheduler_safe_name,
-            namespace=app.namespace,
-            body=construct_foo_pod(app.scheduler_safe_name, labels={"app": app.name}),
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        assert len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items) == 1
-        KPod(k8s_client).ops_label.delete_collection({"app": app.name}, namespace=app.namespace)
+        assert len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items) == 1
+        KPod(k8s_client).ops_label.delete_collection({"app": wl_app.name}, namespace=wl_app.namespace)
         for _ in range(20):
             time.sleep(1)
-            cnt = len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items)
+            cnt = len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items)
             if cnt == 0:
                 break
         else:
             pytest.fail("delete collection failed")
 
-    def test_delete_individual(self, k8s_client, app):
+    def test_delete_individual(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(
-            app.scheduler_safe_name,
-            namespace=app.namespace,
-            body=construct_foo_pod(app.scheduler_safe_name, labels={"app": app.name}),
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, labels={"app": wl_app.name}),
         )
-        assert len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items) == 1
+        assert len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items) == 1
         KPod(k8s_client).ops_label.delete_individual(
-            {"app": app.name}, namespace=app.namespace, non_grace_period=False
+            {"app": wl_app.name}, namespace=wl_app.namespace, non_grace_period=False
         )
         for _ in range(20):
             time.sleep(1)
-            cnt = len(KPod(k8s_client).ops_label.list({"app": app.name}, namespace=app.namespace).items)
+            cnt = len(KPod(k8s_client).ops_label.list({"app": wl_app.name}, namespace=wl_app.namespace).items)
             if cnt == 0:
                 break
         else:
@@ -263,28 +263,28 @@ class TestKPod:
 
         assert time.time() - time_started > 0.2
 
-    def test_wait_for_status_normal(self, k8s_client, app):
+    def test_wait_for_status_normal(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(
-            app.scheduler_safe_name, namespace=app.namespace, body=construct_foo_pod(app.scheduler_safe_name)
+            wl_app.scheduler_safe_name, namespace=wl_app.namespace, body=construct_foo_pod(wl_app.scheduler_safe_name)
         )
         # Default status should be "Pending"
         assert (
             KPod(k8s_client).wait_for_status(
-                app.scheduler_safe_name,
+                wl_app.scheduler_safe_name,
                 ["Pending"],
-                namespace=app.namespace,
+                namespace=wl_app.namespace,
                 timeout=0.2,
             )
             is None
         )
 
-    def test_get_logs(self, k8s_client, app):
+    def test_get_logs(self, k8s_client, wl_app):
         KPod(k8s_client).create_or_update(
-            app.scheduler_safe_name,
-            namespace=app.namespace,
-            body=construct_foo_pod(app.scheduler_safe_name, restart_policy="Never"),
+            wl_app.scheduler_safe_name,
+            namespace=wl_app.namespace,
+            body=construct_foo_pod(wl_app.scheduler_safe_name, restart_policy="Never"),
         )
-        logs = KPod(k8s_client).get_log(app.scheduler_safe_name, namespace=app.namespace, timeout=0.1)
+        logs = KPod(k8s_client).get_log(wl_app.scheduler_safe_name, namespace=wl_app.namespace, timeout=0.1)
         assert logs is not None
 
 

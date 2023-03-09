@@ -30,7 +30,7 @@ from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.resource_templates.constants import AppAddOnType
 from paas_wl.workloads.resource_templates.models import AppAddOnTemplate
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.auto_create_ns
@@ -42,14 +42,14 @@ class TestCommand:
             pytest.skip("dummy cluster can't run e2e test")
 
     @pytest.fixture
-    def command_model(self, app):
-        config = app.latest_config
+    def command_model(self, wl_app):
+        config = wl_app.latest_config
         config.runtime.image = "busybox:latest"
         config.runtime.endpoint = ["sh", "-c"]
         config.save()
         return G(
             CommandModel,
-            app=app,
+            app=wl_app,
             command=r"echo\ 'finished'",
             config=config,
         )
@@ -80,7 +80,7 @@ class TestCommand:
         assert command_in_k8s.phase == "Succeeded"
 
     @pytest.fixture
-    def sidecar(self, app):
+    def sidecar(self, wl_app):
         template = G(
             AppAddOnTemplate,
             name="sidecar",
@@ -95,7 +95,7 @@ class TestCommand:
             ),
             type=AppAddOnType.SIMPLE_SIDECAR,
         )
-        return template.link_to_app(app)
+        return template.link_to_app(wl_app)
 
     def test_run_with_sidecar(self, handler, command, sidecar):
         handler.run_command(command)

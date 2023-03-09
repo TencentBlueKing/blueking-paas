@@ -23,7 +23,7 @@ import pytest
 from paas_wl.release_controller.builder.infras import BuildProcedure
 from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
 
-pytestmark = pytest.mark.django_db(databases=['workloads'])
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestStream:

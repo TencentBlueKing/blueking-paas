@@ -25,7 +25,7 @@ from paas_wl.workloads.resource_templates.components.probe import get_default_re
 from paas_wl.workloads.resource_templates.components.sidecar import Container
 from paas_wl.workloads.resource_templates.utils import AddonManager
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppAddOns:

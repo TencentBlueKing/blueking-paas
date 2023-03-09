@@ -20,7 +20,7 @@ import pytest
 
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecManager
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestProcessSpecManager:

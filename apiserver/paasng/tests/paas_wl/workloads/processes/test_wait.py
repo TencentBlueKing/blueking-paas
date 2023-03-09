@@ -40,7 +40,7 @@ from paas_wl.release_controller.process.wait import (
 )
 from paas_wl.workloads.processes.models import Process
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture

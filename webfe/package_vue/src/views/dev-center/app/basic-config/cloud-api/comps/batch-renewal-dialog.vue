@@ -41,6 +41,7 @@
           <bk-table-column
             :label="$t('续期前的过期时间')"
             prop="expires"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               {{ getExpiredTime(props.row) }}
@@ -49,6 +50,7 @@
           <bk-table-column
             :label="$t('续期后的过期时间')"
             prop="expires"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               <span

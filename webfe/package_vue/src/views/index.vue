@@ -809,6 +809,7 @@
     };
 </script>
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .paas-highcharts {
         width: 50%;
         position: relative;
@@ -860,6 +861,7 @@
         &.time-section {
             padding: 0;
             width: 100px;
+            @include ellipsis;
         }
         &.section1 {
             width: 210px;

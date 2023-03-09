@@ -15,8 +15,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from __future__ import print_function, unicode_literals
-
 import urllib3
 
 from paas_wl.release_controller.builder.utils import get_envs_for_pypi

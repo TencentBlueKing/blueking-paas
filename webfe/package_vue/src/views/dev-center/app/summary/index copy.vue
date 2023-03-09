@@ -3,175 +3,25 @@
     id="summary"
     class="right-main"
   >
+    <app-top-bar
+      data-test-id="summary_bar_moduleList"
+      :title="$t('应用概览')"
+      :can-create="canCreateModule"
+      :cur-module="curAppModule"
+      :module-list="curAppModuleList"
+    />
     <paas-content-loader
       :is-loading="loading"
       placeholder="summary-loading"
       :offset-top="20"
-      class="overview-middle"
+      class="app-container overview-middle"
     >
       <template v-if="!loading">
-        <div class="summary-content">
-          <div class="overview-warp mb20">
-            <div class="info flex_1">
-              <div class="type">
-                应用类型：普通应用
-              </div>
-              <div class="type-desc pt5">
-                平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能
-              </div>
-            </div>
-            <div class="process flex_1 flex align-center pl20">
-              <div class="img-warp">
-                <img
-                  src="/static/images/process.png"
-                >
-              </div>
-              <div class="desc pl10">
-                <div class="over-fs">
-                  6
-                </div>
-                <div>进程</div>
-              </div>
-              <div class="desc pl20">
-                <div>cpu: <span>111</span></div>
-                <div class="desc-text">
-                  内存: <span>111</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="alarm flex_1 flex align-center pl20">
-              <div class="img-warp">
-                <img
-                  src="/static/images/alarm.png"
-                >
-              </div>
-              <div class="desc pl10">
-                <div class="over-fs">
-                  6
-                </div>
-                <div class="desc">
-                  告警数量
-                </div>
-              </div>
-            </div>
-          </div>
-          <bk-collapse
-            v-model="activeName"
-            :accordion="true"
-            class="paas-module-warp"
-            @item-click="handleCollapseClick"
-          >
-            <bk-collapse-item
-              v-for="(item, key) in overViewData"
-              :key="key"
-              :hide-arrow="false"
-              class="paas-module-item"
-              :name="key"
-            >
-              <div class="header-warp">
-                <div class="mr20">
-                  <i
-                    class="paasng-icon paasng-bold"
-                    :class="activeName.includes(key) ? 'paasng-down-shape':'paasng-right-shape'"
-                  />
-                  <span
-                    class="
-                    header-title"
-                  >{{ key }} {{ item.is_default ? '(主)' : '' }}</span>
-                </div>
-                <div
-                  v-for="(data, k) in item.envs"
-                  v-if="!activeName.includes(key)"
-                  :key="k"
-                  class="header-info"
-                >
-                  <span class="header-env">{{ k === 'stag' ? '预发布环境' : '正式环境' }}</span>
-                  <span class="header-env pl10">{{ data.is_deployed ? '已部署' : '未部署' }}</span>
-                  <bk-button
-                    v-if="data.is_deployed"
-                    class="pl10"
-                    theme="primary"
-                    text
-                    @click="handleItemClick(k, 'access')"
-                  >
-                    访问
-                  </bk-button>
-                  <bk-button
-                    class="pl10"
-                    theme="primary"
-                    text
-                    @click="handleItemClick(k, 'deploy')"
-                  >
-                    部署
-                  </bk-button>
-                </div>
-              </div>
-              <div slot="content">
-                <div class="content-warp">
-                  <div
-                    v-for="(data, k) in item.envs"
-                    :key="k"
-                    class="content-info"
-                  >
-                    <div class="info-env">
-                      <div class="env-name">
-                        {{ k === 'stag' ? '预发布环境' : '正式环境' }}
-                      </div>
-                      <div class="env-status pl10 pr320">
-                        {{ data.is_deployed ? releaseInfoText(k) : '未部署' }}
-                      </div>
-                      <bk-button
-                        v-if="data.is_deployed"
-                        class="pl10"
-                        theme="primary"
-                        text
-                        @click="handleItemClick(k, 'access')"
-                      >
-                        访问
-                      </bk-button>
-                      <bk-button
-                        class="pl10"
-                        theme="primary"
-                        text
-                        @click="handleItemClick(k, 'deploy')"
-                      >
-                        部署
-                      </bk-button>
-                    </div>
-
-                    <!-- 折线图内容 部署了才展示内容-->
-                    <div
-                      v-if="data.is_deployed"
-                      class="chart-warp"
-                    >
-                      <chart
-                        :key="renderChartIndex"
-                        ref="chart"
-                        :options="envChartOption"
-                        auto-resize
-                        style="width: 100%; height: 220px; background: #1e1e21;"
-                      />
-                    </div>
-
-                    <div
-                      v-else
-                      class="empty-warp"
-                    >
-                      <img
-                        class="empty-img"
-                        src="/static/images/empty-content.png"
-                      >
-                      <p class="empty-tips">
-                        暂无数据
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </bk-collapse-item>
-          </bk-collapse>
-          <!-- <div
+        <div
+          v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed"
+          class="summary-content"
+        >
+          <div
             class="middle over-new"
             data-test-id="summary_list_overNew"
           >
@@ -193,215 +43,169 @@
                 />
               </li>
             </ul>
-          </div> -->
+          </div>
 
-          <bk-collapse
+          <div
             v-if="curAppInfo.feature.RESOURCE_METRICS"
-            v-model="activeResource"
-            :accordion="true"
-            class="paas-module-warp mt20"
+            class="middle bgc pl10 pr10"
           >
-            <bk-collapse-item
-              :hide-arrow="true"
-              class="paas-module-item"
-              name="1"
-            >
-              <div class="header-warp justify-between">
-                <div data-test-id="summary_header_select">
-                  <span class="header-title">{{ curEnv === 'prod' ? $t('生产环境') : $t('预发布环境') }}{{ $t('资源用量') }}</span>
-                  <span
-                    v-if="curEnv"
-                    class="text"
-                  >
-                    <a
-                      href="javascript: void(0);"
-                      @click="goProcessView"
-                    > {{ $t('查看详情') }} </a>
-                  </span>
-                </div>
-                <div
-                  v-if="isProcessDataReady && !isChartLoading"
-                  class="search-chart-wrap"
+            <h3 data-test-id="summary_header_select">
+              {{ curEnv === 'prod' ? $t('生产环境') : $t('预发布环境') }}{{ $t('资源用量') }}
+              <span
+                v-if="curEnv"
+                class="text"
+              >
+                ( <a
+                  href="javascript: void(0);"
+                  @click="goProcessView"
+                > {{ $t('查看详情') }} </a> )
+              </span>
+              <div
+                v-if="isProcessDataReady && !isChartLoading"
+                class="search-chart-wrapper"
+              >
+                <bk-select
+                  v-model="curProcessName"
+                  style="width: 150px; background: #fff; font-weight: normal;"
+                  class="fr mt10"
+                  :clearable="false"
+                  @selected="handlerProcessSelecte"
                 >
-                  <bk-select
-                    v-model="curProcessName"
-                    style="width: 150px; background: #fff; font-weight: normal;"
-                    class="fr collapse-select mb10 mr10"
-                    :clearable="false"
-                    behavior="simplicity"
-                    @selected="handlerProcessSelecte"
-                  >
-                    <bk-option
-                      v-for="option in curEnvProcesses"
-                      :id="option.name"
-                      :key="option.name"
-                      :name="option.name"
-                    />
-                  </bk-select>
-                  <bk-select
-                    v-model="curProcessName"
-                    style="width: 150px; background: #fff; font-weight: normal;"
-                    class="fr collapse-select mb10 mr10"
-                    :clearable="false"
-                    behavior="simplicity"
-                    @selected="handlerProcessSelecte"
-                  >
-                    <bk-option
-                      v-for="option in curEnvProcesses"
-                      :id="option.name"
-                      :key="option.name"
-                      :name="option.name"
-                    />
-                  </bk-select>
-                  <bk-select
-                    v-model="curProcessName"
-                    style="width: 150px; background: #fff; font-weight: normal;"
-                    class="fr collapse-select mb10 mr10"
-                    :clearable="false"
-                    behavior="simplicity"
-                    @selected="handlerProcessSelecte"
-                  >
-                    <bk-option
-                      v-for="option in curEnvProcesses"
-                      :id="option.name"
-                      :key="option.name"
-                      :name="option.name"
-                    />
-                  </bk-select>
+                  <bk-option
+                    v-for="option in curEnvProcesses"
+                    :id="option.name"
+                    :key="option.name"
+                    :name="option.name"
+                  />
+                </bk-select>
+              </div>
+            </h3>
+            <div data-test-id="summary_box_cpuCharts">
+              <!-- 使用v-show是因为需要及时获取ref并调用 -->
+              <div
+                v-show="isProcessDataReady || isChartLoading"
+                class="resource-charts active"
+              >
+                <div class="chart-box summary-chart-box">
+                  <div class="type-title">
+                    {{ $t('CPU使用率') }}
+                    <bk-dropdown-menu
+                      ref="dropdownCpu"
+                      trigger="click"
+                      @show="dropdownShow"
+                      @hide="dropdownHide"
+                    >
+                      <div
+                        slot="dropdown-trigger"
+                        class="dropdown-trigger-btn"
+                      >
+                        <span>{{ timeMap[curCpuActive] }}</span>
+                        <div class="trigger-icon">
+                          <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isCpuDropdownShow }]" />
+                        </div>
+                      </div>
+                      <div
+                        slot="dropdown-content"
+                        class="bk-dropdown-list"
+                      >
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curCpuActive === '1h' ? 'active' : ''"
+                            @click="triggerHandler('1h', 'cpu')"
+                          > {{ $t('1小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curCpuActive === '24h' ? 'active' : ''"
+                            @click="triggerHandler('24h', 'cpu')"
+                          > {{ $t('24小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curCpuActive === '168h' ? 'active' : ''"
+                            @click="triggerHandler('168h', 'cpu')"
+                          >7天</a>
+                        </li>
+                      </div>
+                    </bk-dropdown-menu>
+                  </div>
+                  <strong class="title"> {{ $t('单位：核') }} </strong>
+                  <chart
+                    ref="cpuLine"
+                    :options="cpuLine"
+                    auto-resize
+                    style="width: 100%; height: 235px;"
+                  />
+                </div>
+                <div class="chart-box summary-chart-box">
+                  <div class="type-title">
+                    {{ $t('内存使用量') }}
+                    <bk-dropdown-menu
+                      ref="dropdownMem"
+                      trigger="click"
+                      @show="dropdownShowMem"
+                      @hide="dropdownHideMem"
+                    >
+                      <div
+                        slot="dropdown-trigger"
+                        class="dropdown-trigger-btn"
+                      >
+                        <span>{{ timeMap[curMemActive] }}</span>
+                        <div class="trigger-icon">
+                          <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isMemDropdownShow }]" />
+                        </div>
+                      </div>
+                      <div
+                        slot="dropdown-content"
+                        class="bk-dropdown-list"
+                      >
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curMemActive === '1h' ? 'active' : ''"
+                            @click="triggerHandler('1h', 'mem')"
+                          > {{ $t('1小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curMemActive === '24h' ? 'active' : ''"
+                            @click="triggerHandler('24h', 'mem')"
+                          > {{ $t('24小时') }} </a>
+                        </li>
+                        <li>
+                          <a
+                            href="javascript:;"
+                            :class="curMemActive === '168h' ? 'active' : ''"
+                            @click="triggerHandler('168h', 'mem')"
+                          >7天</a>
+                        </li>
+                      </div>
+                    </bk-dropdown-menu>
+                  </div>
+                  <strong class="title"> {{ $t('单位：MB') }} </strong>
+                  <chart
+                    ref="memLine"
+                    :options="memLine"
+                    auto-resize
+                    style="width: 100%; height: 235px;"
+                  />
                 </div>
               </div>
               <div
-                slot="content"
-                class="middle bgc pl10 pr10"
+                v-if="!isProcessDataReady && !isChartLoading"
+                class="ps-no-result"
               >
-                <div data-test-id="summary_box_cpuCharts">
-                  <!-- 使用v-show是因为需要及时获取ref并调用 -->
-                  <div
-                    v-show="isProcessDataReady || isChartLoading"
-                    class="resource-charts active"
-                  >
-                    <div class="chart-box summary-chart-box">
-                      <div class="type-title">
-                        {{ $t('CPU使用率') }}
-                        <bk-dropdown-menu
-                          ref="dropdownCpu"
-                          trigger="click"
-                          @show="dropdownShow"
-                          @hide="dropdownHide"
-                        >
-                          <div
-                            slot="dropdown-trigger"
-                            class="dropdown-trigger-btn"
-                          >
-                            <span>{{ timeMap[curCpuActive] }}</span>
-                            <div class="trigger-icon">
-                              <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isCpuDropdownShow }]" />
-                            </div>
-                          </div>
-                          <div
-                            slot="dropdown-content"
-                            class="bk-dropdown-list"
-                          >
-                            <li>
-                              <a
-                                href="javascript:;"
-                                :class="curCpuActive === '1h' ? 'active' : ''"
-                                @click="triggerHandler('1h', 'cpu')"
-                              > {{ $t('1小时') }} </a>
-                            </li>
-                            <li>
-                              <a
-                                href="javascript:;"
-                                :class="curCpuActive === '24h' ? 'active' : ''"
-                                @click="triggerHandler('24h', 'cpu')"
-                              > {{ $t('24小时') }} </a>
-                            </li>
-                            <li>
-                              <a
-                                href="javascript:;"
-                                :class="curCpuActive === '168h' ? 'active' : ''"
-                                @click="triggerHandler('168h', 'cpu')"
-                              >7天</a>
-                            </li>
-                          </div>
-                        </bk-dropdown-menu>
-                      </div>
-                      <strong class="title"> {{ $t('单位：核') }} </strong>
-                      <chart
-                        ref="cpuLine"
-                        :options="cpuLine"
-                        auto-resize
-                        style="width: 100%; height: 235px;"
-                      />
-                    </div>
-                    <div class="chart-box summary-chart-box">
-                      <div class="type-title">
-                        {{ $t('内存使用量') }}
-                        <bk-dropdown-menu
-                          ref="dropdownMem"
-                          trigger="click"
-                          @show="dropdownShowMem"
-                          @hide="dropdownHideMem"
-                        >
-                          <div
-                            slot="dropdown-trigger"
-                            class="dropdown-trigger-btn"
-                          >
-                            <span>{{ timeMap[curMemActive] }}</span>
-                            <div class="trigger-icon">
-                              <i :class="['bk-icon icon-angle-down',{ 'icon-angle-up': isMemDropdownShow }]" />
-                            </div>
-                          </div>
-                          <div
-                            slot="dropdown-content"
-                            class="bk-dropdown-list"
-                          >
-                            <li>
-                              <a
-                                href="javascript:;"
-                                :class="curMemActive === '1h' ? 'active' : ''"
-                                @click="triggerHandler('1h', 'mem')"
-                              > {{ $t('1小时') }} </a>
-                            </li>
-                            <li>
-                              <a
-                                href="javascript:;"
-                                :class="curMemActive === '24h' ? 'active' : ''"
-                                @click="triggerHandler('24h', 'mem')"
-                              > {{ $t('24小时') }} </a>
-                            </li>
-                            <li>
-                              <a
-                                href="javascript:;"
-                                :class="curMemActive === '168h' ? 'active' : ''"
-                                @click="triggerHandler('168h', 'mem')"
-                              >7天</a>
-                            </li>
-                          </div>
-                        </bk-dropdown-menu>
-                      </div>
-                      <strong class="title"> {{ $t('单位：MB') }} </strong>
-                      <chart
-                        ref="memLine"
-                        :options="memLine"
-                        auto-resize
-                        style="width: 100%; height: 235px;"
-                      />
-                    </div>
-                  </div>
-                  <div
-                    v-if="!isProcessDataReady && !isChartLoading"
-                    class="ps-no-result"
-                  >
-                    <table-empty empty />
-                  </div>
-                </div>
+                <table-empty empty />
               </div>
-            </bk-collapse-item>
-          </bk-collapse>
+            </div>
+          </div>
         </div>
 
-        <!-- <div
+        <div
           v-else
           class="coding"
           data-test-id="summary_box_empty"
@@ -418,12 +222,12 @@
               </router-link>
             </div>
           </template>
-        </div> -->
+        </div>
         <div
           class="overview-sub-fright"
           data-test-id="summary_content_detail"
         >
-          <!-- <div
+          <div
             v-if="curAppModule.web_config.runtime_type === 'custom_image'"
             class="fright-middle"
             data-test-id="summary_content_source"
@@ -442,8 +246,8 @@
                 <p>{{ curAppModule.repo && curAppModule.repo.repo_url }}</p>
               </bk-popover>
             </div>
-          </div> -->
-          <!-- <div
+          </div>
+          <div
             v-else
             class="fright-middle"
             data-test-id="summary_content_source"
@@ -520,6 +324,7 @@
                   slot="content"
                   class="code-checkout ps-dropdown"
                 >
+                  <!-- SVN -->
                   <template>
                     <h2> {{ $t('使用 SVN 签出代码') }} </h2>
                     <div class="checkout-content">
@@ -561,7 +366,7 @@
                 </div>
               </dropdown>
             </div>
-          </div> -->
+          </div>
 
           <div
             class="fright-middle fright-last"
@@ -580,11 +385,7 @@
                       class="tooltip-time"
                     >{{ item.at_friendly }}</span>
                   </p>
-                  <p
-                    v-bk-overflow-tips
-                    class="dynamic-content"
-                    style="-webkit-line-clamp: 2;-webkit-box-orient: vertical"
-                  >
+                  <p class="dynamic-content">
                     {{ $t('由') }}<span class="gruy">{{ item.operator ? item.operator : '—' }}</span>{{ item.operate }}
                   </p>
                 </li>
@@ -605,14 +406,13 @@
     import ECharts from 'vue-echarts/components/ECharts.vue';
     import 'echarts/lib/chart/line';
     import 'echarts/lib/component/tooltip';
-    // import dropdown from '@/components/ui/Dropdown';
-    // import releaseInfo from './comps/release-info';
+    import dropdown from '@/components/ui/Dropdown';
+    import releaseInfo from './comps/release-info';
     import moment from 'moment';
     import chartOption from '@/json/process-chart-option';
-    import envChartOption from '@/json/analysis-chart-option';
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import appTopBar from '@/components/paas-app-bar';
     import i18n from '@/language/i18n.js';
-    import { formatDate } from '@/common/tools';
 
     const colorList = ['#3A84FF', '#89c1fa', '#a8d3ff', '#c9e4ff', '#e2f1ff'];
 
@@ -674,10 +474,10 @@
 
     export default {
         components: {
-            'chart': ECharts
-            // dropdown,
-            // releaseInfo
-            // appTopBar
+            'chart': ECharts,
+            dropdown,
+            releaseInfo,
+            appTopBar
         },
         mixins: [appBaseMixin],
         props: {
@@ -707,7 +507,6 @@
                 sourceType: '',
                 cpuLine: chartOption.cpu,
                 memLine: chartOption.memory,
-                envChartOption: envChartOption.pv_uv,
                 isChartLoading: true,
                 dateTimeRange: [initStartDate, initEndDate],
                 dateTimes: [initStartDate, initEndDate],
@@ -760,25 +559,7 @@
                 curCpuActive: '1h',
                 curMemActive: '1h',
                 isCpuDropdownShow: false,
-                isMemDropdownShow: false,
-
-                activeName: [],
-                overViewData: {},
-                renderChartIndex: 0,
-                dateRange: {
-                    startTime: '',
-                    endTime: ''
-                },
-                defaultRange: '1d',
-                siteName: 'default',
-                chartFilterType: {
-                    pv: true,
-                    uv: true
-                },
-                engineEnabled: true,
-                backendType: 'ingress',
-                envData: ['stag', 'prod'],
-                activeResource: '1'
+                isMemDropdownShow: false
             };
         },
         computed: {
@@ -815,13 +596,6 @@
         },
         mounted () {
             this.init();
-
-            const end = new Date();
-            const start = new Date();
-            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-
-            this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-            this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
         },
         methods: {
             init () {
@@ -841,7 +615,6 @@
                     this.trunkUrl = this.curAppModule.repo.trunk_url || '';
                     this.sourceType = this.curAppModule.repo.source_type || '';
                 }
-                this.getOverViewData(); // 获取概览数据
             },
             dropdownShow () {
                 this.isCpuDropdownShow = true;
@@ -1320,227 +1093,7 @@
                         message: resp.detail
                     });
                 });
-            },
-
-            // 新版本概览
-
-            // 概览数据接口
-            async getOverViewData () {
-                try {
-                    this.overViewData = await this.$store.dispatch('overview/getOverViewInfo', {appCode: this.appCode});
-                    // 默认展开第一个
-                    if (this.overViewData) {
-                        this.activeName = Object.keys(this.overViewData)[0];
-                        setTimeout(() => {
-                            this.$nextTick(() => {
-                                this.handleCollapseClick(Object.keys(this.overViewData));
-                            });
-                        }, 1500);
-                    }
-                } catch (error) {
-                    console.log(error);
-                }
-            },
-
-            handleCollapseClick (data) {
-                if (data.length) {
-                    this.$nextTick(() => {
-                        this.showInstanceChart();
-                    });
-                }
-            },
-
-            /**
-             * 显示实例指标数据
-             */
-             showInstanceChart (instance, processes) {
-                 const chartRef = this.$refs.chart;
-                 console.log('chartRef', chartRef);
-
-                chartRef && chartRef.forEach((refItem, index) => {
-                    refItem && refItem.mergeOptions({
-                        xAxis: [
-                            {
-                                data: []
-                            }
-                        ],
-                        series: []
-                    });
-
-                    refItem && refItem.showLoading({
-                        text: this.$t('正在加载'),
-                        color: '#30d878',
-                        textColor: '#fff',
-                        maskColor: 'rgba(255, 255, 255, 0.8)'
-                    });
-
-                    this.getChartData(this.envData[index]);
-                });
-            },
-
-            async getChartData (env) {
-                try {
-                    const appCode = this.appCode;
-                    const moduleId = this.curModuleId;
-                    console.log('this.curEnv', this.curEnv);
-                    console.log('this.dateRange', this.dateRange);
-                    const start = this.dateRange.startTime + ' 00:00';
-                    const end = this.dateRange.endTime + ' 23:59';
-                    const getEndDate = () => {
-                        const curTime = new Date(end).getTime();
-                        const nowTime = new Date().getTime();
-                        if (curTime > nowTime) {
-                            return formatDate(new Date());
-                        }
-                        return formatDate(end);
-                    };
-                    const backendType = this.backendType;
-
-                    const params = {
-                        'start_time': start,
-                        'end_time': getEndDate(),
-                        'interval': this.defaultRange
-                    };
-
-                    console.log('params', params);
-
-                    const res = await this.$store.dispatch('analysis/getChartData', {
-                        appCode,
-                        moduleId,
-                        env,
-                        params,
-                        backendType,
-                        siteName: this.siteName,
-                        engineEnabled: this.engineEnabled
-                    });
-                    this.chartDataCache = res.result.results;
-                    console.log('this.chartDataCache', this.chartDataCache);
-                    this.renderEnvChart();
-                } catch (e) {
-                    console.log('e', e);
-                    const chartRef = this.$refs.chart;
-                    chartRef && chartRef.forEach((refItem) => {
-                        refItem && refItem.hideLoading();
-                        if (e.detail && e.detail !== this.$t('未找到。')) {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: e.detail
-                            });
-                        }
-                    });
-                }
-            },
-
-            /**
-             * 图表初始化
-             * @param  {Object} chartData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
-             renderEnvChart () {
-                const series = [];
-                const xAxisData = [];
-                const pv = [];
-                const uv = [];
-                const chartData = this.chartDataCache;
-
-                chartData.forEach(item => {
-                    xAxisData.push(moment(item.time).format(this.dateFormat));
-                    uv.push(item.uv);
-                    pv.push(item.pv);
-                });
-
-                // color: ['#699df4', '#ffb849']
-                if (this.chartFilterType.uv) {
-                    series.push({
-                        name: 'uv',
-                        type: 'line',
-                        smooth: true,
-                        lineStyle: {
-                            color: '#699df4',
-                            normal: {
-                                color: '#699df4',
-                                width: 1.5
-                            }
-                        },
-                        symbolSize: 1,
-                        showSymbol: false,
-                        areaStyle: {
-                            normal: {
-                                opacity: 0
-                            }
-                        },
-                        data: uv
-                    });
-                }
-
-                // pv
-                if (this.chartFilterType.pv) {
-                    series.push({
-                        name: 'pv',
-                        type: 'line',
-                        smooth: true,
-                        symbolSize: 1,
-                        showSymbol: false,
-                        lineStyle: {
-                            color: '#ffb849',
-                            normal: {
-                                color: '#ffb849',
-                                width: 1.5
-                            }
-                        },
-                        areaStyle: {
-                            normal: {
-                                opacity: 0
-                            }
-                        },
-                        data: pv
-                    });
-                }
-
-                this.envChartOption.xAxis[0].data = xAxisData;
-                this.envChartOption.series = series;
-                setTimeout(() => {
-                    const chartRef = this.$refs.chart;
-                    chartRef && chartRef.forEach((refItem) => {
-                        refItem && refItem.mergeOptions(this.envChartOption, true);
-                        refItem && refItem.resize();
-                        refItem && refItem.hideLoading();
-                    });
-                }, 1000);
-            },
-
-            // 文案
-            releaseInfoText (env) {
-                const appDeployInfo = env === 'stag' ? this.releaseStatusStag : this.releaseStatusProd;
-                return `${appDeployInfo.username} 于 ${this.smartTime(appDeployInfo.time, 'smartShorten')} 
-                ${appDeployInfo.isEnvOfflined ? this.$t('下架') : this.$t('部署')}`;
-            },
-
-            // 点击访问或者部署
-            handleItemClick (env, type) {
-                const appDeployInfo = env === 'stag' ? this.releaseStatusStag : this.releaseStatusProd;
-                const appRouterInfo = env === 'stag' ? {
-                            name: 'appDeploy',
-                            params: {
-                                id: this.appCode
-                            }
-                        } : {
-                            name: 'appDeployForProd',
-                            params: {
-                                id: this.appCode
-                            },
-                            query: {
-                                focus: 'prod'
-                            }
-                        };
-                if (type === 'access') { // 访问
-                    window.open(appDeployInfo.url, '_blank');
-                } else { // 部署
-                    this.$router.push(appRouterInfo);
-                }
             }
-
         }
     };
 </script>
@@ -1683,73 +1236,9 @@
 
     .overview-middle {
         display: flex;
-        padding: 16px 24px;
         .summary-wrapper,
         .coding {
             flex: 1;
-        }
-
-        .header-warp{
-            display: flex;
-            .paasng-down-shape{
-                float: left !important;
-            }
-            .header-title{
-                font-weight: 700;
-                font-size: 14px;
-                color: #313238;
-            }
-            .header-env{
-                font-size: 12px;
-                color: #979BA5;
-            }
-        }
-
-        .header-info {
-            display: flex;
-        }
-
-        .header-info:nth-of-type(2) {
-            margin-left: 40px;
-        }
-        .header-info:nth-of-type(3) {
-            margin-left: 140px;
-        }
-        .content-warp{
-            display: flex;
-            align-items: center;
-            .content-info{
-                padding: 12px 0px;
-                flex: 1;
-                .info-env {
-                    display: flex;
-                    align-items: center;
-                    .env-name{
-                        color: #313238;
-                    }
-                    .env-status{
-                        font-size: 12px;
-                        color: #979BA5;
-                    }
-                }
-            }
-            .content-info:nth-of-type(1) {
-                padding-right: 10px;
-                border-right: solid 1px #F5F7FA;
-            }
-            .content-info:nth-of-type(2) {
-                padding-left: 10px;
-            }
-            .empty-warp{
-                text-align: center;
-                height: 220px;
-                .empty-img{
-                    margin-top: 20px;
-                }
-                .empty-tips{
-                    font-size: 12px;
-                }
-            }
         }
     }
 
@@ -2031,10 +1520,6 @@
         height: 48px;
         overflow: hidden;
         color: #666;
-        text-overflow: ellipsis;
-        white-space: normal;
-        word-break: break-all;
-        display: -webkit-box;
     }
 
     .visited-charts {
@@ -2105,46 +1590,7 @@
     }
 
     .summary-content {
-        padding-top: 20px;
         flex: 1;
-        .overview-warp{
-            display: flex;
-            padding: 25px 16px;
-            border: 1px solid #DCDEE5;
-            border-radius: 2px;
-            font-size: 12px;
-            .over-fs{
-                font-weight: 700;
-                font-size: 24px;
-                color: #313238;
-            }
-            .desc-text{
-                padding-top: 13px;
-            }
-            .info {
-                padding-right: 90px;
-                border-right: 1px solid #F5F7FA;
-                .type-desc{
-                    line-height: 20px;
-                }
-            }
-            .process{
-                padding-right: 48px;
-                border-right: 1px solid #F5F7FA;
-            }
-            .img-warp {
-                width: 48px;
-                height: 48px;
-                background: #F0F5FF;
-                border-radius: 4px;
-                text-align: center;
-                img{
-                    margin-top: 8px;
-                    width: 32px;
-                    height: 32px;
-                }
-            }
-        }
     }
 
     .coding {
@@ -2261,19 +1707,15 @@
     }
 
     .overview-sub-fright {
-        width: 280px;
+        width: 260px;
         min-height: 741px;
-        padding: 0px;
-        margin-left: 24px;
-        margin-top: 20px;
-        background: #FAFBFD;
-        // border-left: solid 1px #e6e9ea;
+        padding: 0 0 0 20px;
+        border-left: solid 1px #e6e9ea;
     }
 
     .fright-last {
         border-bottom: none;
         padding-top: 0;
-        padding: 0 20px 20px 20px;
     }
 
     .visited-span {
@@ -2311,38 +1753,5 @@
     }
     .address-en {
         min-width: 66px;
-    }
-    .flex{
-        display: flex;
-    }
-    .flex_1 {
-        flex: 1;
-    }
-    .align-center{
-        align-items: center;
-    }
-    .justify-center{
-        justify-content: center;
-    }
-    .justify-between{
-        justify-content: space-between;
-    }
-</style>
-
-<!-- 折叠板内部样式 -->
-<style lang="scss">
-    .paas-module-warp{
-        .paas-module-item {
-            border: solid 1px #e6e9ea;
-            .bk-collapse-item-header{
-                background: #F5F7FA !important;
-            }
-            .icon-angle-right{
-                display: none;
-            }
-        }
-        .collapse-select{
-           background: none !important;
-        }
     }
 </style>

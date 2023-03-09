@@ -21,25 +21,25 @@ from django.conf import settings
 
 from paas_wl.platform.applications.models.managers import AppConfigVarManager
 from paas_wl.platform.applications.models.managers.app_metadata import WlAppMetadata
-from tests.utils.app import random_fake_app
+from tests.paas_wl.utils.wl_app import create_wl_app
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
 class TestAppConfigVarManager:
     def test_app_configvar_generate(self):
-        app = random_fake_app(
-            force_app_info={"name": "bkapp-test_me-stag", "region": "ieod"},
+        wl_app = create_wl_app(
+            force_app_info={"name": "bkapp-test_me-stag", "region": settings.FOR_TESTS_DEFAULT_REGION},
             paas_app_code='test_me',
             environment='stag',
         )
 
-        action = AppConfigVarManager(app=app)
+        action = AppConfigVarManager(app=wl_app)
         result = action.get_envs()
-        assert result["BKPAAS_SUB_PATH"] == "/ieod-bkapp-test_me-stag/"
+        assert result["BKPAAS_SUB_PATH"] == "/default-bkapp-test_me-stag/"
 
         result_with_process = action.get_process_envs(process_type="fake")
-        assert result_with_process['BKPAAS_LOG_NAME_PREFIX'] == "ieod-bkapp-test_me-stag-fake"
+        assert result_with_process['BKPAAS_LOG_NAME_PREFIX'] == "default-bkapp-test_me-stag-fake"
         assert result_with_process['PORT'] == str(settings.CONTAINER_PORT)
 
 

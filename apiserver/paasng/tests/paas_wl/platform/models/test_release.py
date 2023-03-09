@@ -18,22 +18,15 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.platform.applications.models.build import BuildProcess
-from paas_wl.utils.constants import BuildStatus
+from paas_wl.platform.applications.models import Release
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestInterruptionAllowed:
-    def test_default(self, bp: BuildProcess):
-        assert bp.check_interruption_allowed() is False
+class TestReleaseManager:
+    def test_any_successful_empty(self, wl_app):
+        assert Release.objects.any_successful(wl_app) is False
 
-    def test_set_true(self, bp: BuildProcess):
-        bp.set_logs_was_ready()
-        assert bp.check_interruption_allowed() is True
-
-    def test_finished_status(self, bp: BuildProcess):
-        bp.status = BuildStatus.SUCCESSFUL
-        bp.save(update_fields=['status'])
-        bp.set_logs_was_ready()
-        assert bp.check_interruption_allowed() is False
+    def test_any_successful_positive(self, wl_app, bk_user, wl_build):
+        wl_app.release_set.new(bk_user.username, build=wl_build, procfile={'web': 'true'})
+        assert Release.objects.any_successful(wl_app) is True

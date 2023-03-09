@@ -24,17 +24,17 @@ from paas_wl.platform.applications.models.config import Config
 from paas_wl.release_controller.hooks.models import Command
 from paas_wl.utils.constants import CommandType
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestPreReleaseHook:
     @pytest.fixture()
-    def hook_maker(self, fake_app, fake_simple_build, bk_user):
+    def hook_maker(self, wl_app, wl_build, bk_user):
         def core(command: str, config: Optional[Config] = None) -> Command:
-            return fake_app.command_set.new(
+            return wl_app.command_set.new(
                 type_=CommandType.PRE_RELEASE_HOOK,
                 operator=bk_user.username,
-                build=fake_simple_build,
+                build=wl_build,
                 command=command,
                 config=config,
             )

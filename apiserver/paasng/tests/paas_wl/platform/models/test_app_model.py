@@ -16,3 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pytest
+from django.core.exceptions import ObjectDoesNotExist
+
+from paas_wl.platform.applications.models import Release
+from tests.paas_wl.utils.release import create_release
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+class TestAppModel:
+    def test_app_get_release(self, wl_app, bk_user):
+        create_release(wl_app, bk_user)
+        create_release(wl_app, bk_user)
+
+        release = Release.objects.get_latest(wl_app)
+        previous = release.get_previous()
+
+        assert release.version == 11
+        assert previous.version == 10
+
+    def test_first_release(self, wl_app):
+        with pytest.raises(ObjectDoesNotExist):
+            Release.objects.get_latest(wl_app).get_previous()

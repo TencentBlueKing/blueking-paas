@@ -201,6 +201,56 @@
             :accordion="true"
             class="paas-module-warp mt20"
           >
+            <div
+              v-if="isProcessDataReady && !isChartLoading"
+              class="search-chart-wrap"
+            >
+              <bk-select
+                v-model="curProcessName"
+                style="width: 150px; font-weight: normal;"
+                class="fr collapse-select mb10 mr10"
+                :clearable="false"
+                behavior="simplicity"
+                @selected="handlerProcessSelecte('process')"
+              >
+                <bk-option
+                  v-for="option in curEnvProcesses"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.name"
+                />
+              </bk-select>
+              <bk-select
+                v-model="curEnvName"
+                style="width: 150px; font-weight: normal;"
+                class="fr collapse-select mb10 mr10"
+                :clearable="false"
+                behavior="simplicity"
+                @selected="handlerProcessSelecte('env')"
+              >
+                <bk-option
+                  v-for="option in envData"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.label"
+                />
+              </bk-select>
+              <bk-select
+                v-model="curModuleName"
+                style="width: 150px; font-weight: normal;"
+                class="fr collapse-select mb10 mr10"
+                :clearable="false"
+                behavior="simplicity"
+                @selected="handlerProcessSelecte('module')"
+              >
+                <bk-option
+                  v-for="option in curAppModuleList"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.name"
+                />
+              </bk-select>
+            </div>
             <bk-collapse-item
               :hide-arrow="true"
               class="paas-module-item"
@@ -208,9 +258,9 @@
             >
               <div class="header-warp justify-between">
                 <div data-test-id="summary_header_select">
-                  <span class="header-title">{{ curEnv === 'prod' ? $t('生产环境') : $t('预发布环境') }}{{ $t('资源用量') }}</span>
+                  <span class="header-title">{{ curEnvName === 'prod' ? $t('生产环境') : $t('预发布环境') }}{{ $t('资源用量') }}</span>
                   <span
-                    v-if="curEnv"
+                    v-if="curEnvName"
                     class="text"
                   >
                     <a
@@ -219,7 +269,7 @@
                     > {{ $t('查看详情') }} </a>
                   </span>
                 </div>
-                <div
+                <!-- <div
                   v-if="isProcessDataReady && !isChartLoading"
                   class="search-chart-wrap"
                 >
@@ -229,7 +279,7 @@
                     class="fr collapse-select mb10 mr10"
                     :clearable="false"
                     behavior="simplicity"
-                    @selected="handlerProcessSelecte"
+                    @selected="handlerProcessSelecte('process')"
                   >
                     <bk-option
                       v-for="option in curEnvProcesses"
@@ -239,36 +289,36 @@
                     />
                   </bk-select>
                   <bk-select
-                    v-model="curProcessName"
+                    v-model="curEnvName"
                     style="width: 150px; background: #fff; font-weight: normal;"
                     class="fr collapse-select mb10 mr10"
                     :clearable="false"
                     behavior="simplicity"
-                    @selected="handlerProcessSelecte"
+                    @selected="handlerProcessSelecte('env')"
                   >
                     <bk-option
-                      v-for="option in curEnvProcesses"
+                      v-for="option in envData"
                       :id="option.name"
                       :key="option.name"
-                      :name="option.name"
+                      :name="option.label"
                     />
                   </bk-select>
                   <bk-select
-                    v-model="curProcessName"
+                    v-model="curModuleName"
                     style="width: 150px; background: #fff; font-weight: normal;"
                     class="fr collapse-select mb10 mr10"
                     :clearable="false"
                     behavior="simplicity"
-                    @selected="handlerProcessSelecte"
+                    @selected="handlerProcessSelecte('module')"
                   >
                     <bk-option
-                      v-for="option in curEnvProcesses"
+                      v-for="option in curAppModuleList"
                       :id="option.name"
                       :key="option.name"
                       :name="option.name"
                     />
                   </bk-select>
-                </div>
+                </div> -->
               </div>
               <div
                 slot="content"
@@ -777,8 +827,10 @@
                 },
                 engineEnabled: true,
                 backendType: 'ingress',
-                envData: ['stag', 'prod'],
-                activeResource: '1'
+                envData: [{name: 'prod', label: '生产环境'}, {name: 'stag', label: '预发布环境'}],
+                activeResource: '1',
+                curModuleName: '',
+                curEnvName: 'prod'
             };
         },
         computed: {
@@ -928,16 +980,18 @@
             /**
              * 切换process时回调
              */
-            handlerProcessSelecte (value) {
-                const process = this.curEnvProcesses.find(item => {
-                    return item.name === value;
-                });
-                if (process) {
-                    this.curMemActive = '1h';
-                    this.curCpuActive = '1h';
-                    this.curProcessName = process.name;
-                    this.showProcessResource(this.curEnv);
-                }
+            handlerProcessSelecte (type) {
+                console.log('type', type);
+                // console.log('curAppModuleList', value, this.curEnv, this.curProcessName);
+                // const process = this.curEnvProcesses.find(item => {
+                //     return item.name === value;
+                // });
+                // if (process) {
+                //     this.curMemActive = '1h';
+                //     this.curCpuActive = '1h';
+                //     this.curProcessName = process.name;
+                    this.showProcessResource(this.curEnvName);
+                // }
             },
 
             /**
@@ -1072,13 +1126,14 @@
              * @param {String} type
              */
             async getProcessMetric (conf, type = 'all') {
+                console.log('this.curProcessName', this.curProcessName);
                 // 请求数据
                 const fetchData = (metricType) => {
                     const params = {
                         appCode: this.appCode,
-                        moduleId: this.curModuleId,
+                        moduleId: this.curModuleName,
                         env: conf.env,
-                        process_type: conf.process.name,
+                        process_type: this.curProcessName,
                         time_range_str: metricType === 'cpu' ? this.curCpuActive : this.curMemActive,
                         metric_type: metricType
                     };
@@ -1331,6 +1386,7 @@
                     // 默认展开第一个
                     if (this.overViewData) {
                         this.activeName = Object.keys(this.overViewData)[0];
+                        this.curModuleName = Object.keys(this.overViewData)[0]; // 模块下拉默认选中第一个
                         setTimeout(() => {
                             this.$nextTick(() => {
                                 this.handleCollapseClick(Object.keys(this.overViewData));
@@ -1374,7 +1430,7 @@
                         maskColor: 'rgba(255, 255, 255, 0.8)'
                     });
 
-                    this.getChartData(this.envData[index]);
+                    this.getChartData(this.envData[index].name);
                 });
             },
 
@@ -1570,7 +1626,8 @@
         }
     }
 
-    .search-chart-wrapper {
+    .search-chart-wrap {
+        background: #F5F7FA !important;
         float: right;
     }
 
@@ -1693,6 +1750,8 @@
             display: flex;
             .paasng-down-shape{
                 float: left !important;
+                line-height: 45px !important;
+                color: #63656e !important;
             }
             .header-title{
                 font-weight: 700;
@@ -2342,7 +2401,7 @@
             }
         }
         .collapse-select{
-           background: none !important;
+           background: F5F7FA !important;
         }
     }
 </style>

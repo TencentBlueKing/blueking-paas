@@ -231,10 +231,13 @@ ENGINE_PROC_REPLICAS_BY_TYPE = {
 # 插件监控图表相关配置（原生 Prometheus 使用，仅用于不支持蓝鲸监控的集群 k8s 1.12-）
 MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
 
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
+
+
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
-
 FOR_TESTS_DEFAULT_REGION = settings.get('FOR_TESTS_DEFAULT_REGION', 'default')
 
 FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localhost:28080')

@@ -247,6 +247,7 @@
             :label="$t(field.name)"
             :prop="field.prop"
             :sortable="field.sortable"
+            :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
               <span

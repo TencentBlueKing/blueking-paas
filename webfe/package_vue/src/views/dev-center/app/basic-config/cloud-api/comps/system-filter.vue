@@ -25,7 +25,10 @@
             :class="['item', { active: curSelect === item.id }]"
             @click="handleSelectSys(item)"
           >
-            <p class="name">
+            <p
+              v-bk-overflow-tips
+              class="name"
+            >
               <span v-html="highlight(item)" />
               <template v-if="!isGateway && item.tag !== ''">
                 <span :class="['tag', { inner: [$t('内部版'), $t('互娱外部版')].includes(item.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(item.tag) }]">
@@ -34,6 +37,7 @@
               </template>
             </p>
             <p
+              v-bk-overflow-tips
               class="desc"
               v-html="highlightDesc(item)"
             />

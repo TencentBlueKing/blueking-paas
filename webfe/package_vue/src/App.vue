@@ -161,4 +161,10 @@
     .plugin-min-width {
         min-width: 1366px;
     }
+
+    .table-header-tips-cls {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
 </style>

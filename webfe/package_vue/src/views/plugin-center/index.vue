@@ -48,23 +48,28 @@
             @clear-filter="clearFilterKey"
           />
         </div>
-        <bk-table-column :label="$t('插件 ID')">
+        <bk-table-column
+          :label="$t('插件 ID')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
-            <img
-              :src="row.logo"
-              onerror="this.src='/static/images/plugin-default.svg'"
-              class="plugin-logo-cls"
-            >
-            <bk-button
-              v-bk-tooltips="row.id"
-              text
+            <span
+              class="plugin-link"
               @click="toPluginSummary(row)"
             >
+              <img
+                :src="row.logo"
+                onerror="this.src='/static/images/plugin-default.svg'"
+                class="plugin-logo-cls"
+              >
               {{ row.id || '--' }}
-            </bk-button>
+            </span>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('插件名称')">
+        <bk-table-column
+          :label="$t('插件名称')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             <span>{{ row.name_zh_cn }}</span>
           </template>
@@ -75,6 +80,7 @@
           column-key="pd_name"
           :filters="pluginTypeFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             {{ row.pd_name || '--' }}
@@ -84,6 +90,7 @@
           :label="$t('创建时间')"
           prop="created"
           sortable
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             {{ row.created || '--' }}
@@ -95,6 +102,7 @@
           column-key="language"
           :filters="languageFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         />
         <bk-table-column
           :label="$t('版本')"
@@ -543,6 +551,13 @@
         .clear-search {
             cursor: pointer;
             color: #3a84ff;
+        }
+    }
+    .plugin-link {
+        color: #3a84ff;
+        cursor: pointer;
+        &:hover {
+            color: #699df4;
         }
     }
 </style>

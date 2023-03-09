@@ -26,7 +26,7 @@ from paas_wl.utils.constants import BuildStatus
 from paas_wl.utils.stream import ConsoleStream
 from tests.paas_wl.utils.build import create_build_proc
 
-pytestmark = pytest.mark.django_db(databases=['workloads'])
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestBuildProcessExecutor:

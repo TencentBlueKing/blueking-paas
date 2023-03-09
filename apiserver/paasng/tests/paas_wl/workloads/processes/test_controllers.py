@@ -21,41 +21,36 @@ from unittest import mock
 import pytest
 
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.workloads.processes.controllers import get_processes_status
+from paas_wl.workloads.processes.controllers import env_is_running, get_processes_status
 from paas_wl.workloads.processes.models import Instance, Process
-from tests.paas_wl.utils.wl_app import random_fake_app, release_setup
+from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
+from tests.paas_wl.utils.wl_app import create_wl_app
+from tests.paas_wl.workloads.conftest import create_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestController:
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        self.wl_app = random_fake_app()
-        self.release = release_setup(fake_app=self.wl_app)
-
-    def test_get_processes_status(self):
+    def test_get_processes_status(self, wl_app, wl_release):
         with mock.patch(
             'paas_wl.workloads.processes.readers.ProcessReader.get_by_type',
-            new=lambda _self, app, process_type: Process.from_release(process_type, self.release),
+            new=lambda _self, app, process_type: Process.from_release(process_type, wl_release),
         ), mock.patch(
             'paas_wl.workloads.processes.readers.InstanceReader.list_by_process_type',
-            new=lambda _self, app, process_type: [
-                Instance(process_type=process_type, app=self.wl_app, name=process_type)
-            ],
+            new=lambda _self, app, process_type: [Instance(process_type=process_type, app=wl_app, name=process_type)],
         ):
-            web_proc = Process.from_release('web', self.release)
-            web_proc.instances = [Instance(process_type='web', app=self.wl_app, name='web')]
-            worker_proc = Process.from_release('worker', self.release)
-            worker_proc.instances = [Instance(process_type='worker', app=self.wl_app, name='worker')]
-            assert get_processes_status(self.wl_app) == [web_proc, worker_proc]
+            web_proc = Process.from_release('web', wl_release)
+            web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+            worker_proc = Process.from_release('worker', wl_release)
+            worker_proc.instances = [Instance(process_type='worker', app=wl_app, name='worker')]
+            assert get_processes_status(wl_app) == [web_proc, worker_proc]
 
     def test_get_processes_status_without_release(self):
         """没有发布过的 WlApp，无法获取进程信息"""
-        not_release_wl_app = random_fake_app()
+        not_release_wl_app = create_wl_app()
         assert len(get_processes_status(not_release_wl_app)) == 0
 
-    def test_get_processes_status_with_app_entity_not_found(self):
+    def test_get_processes_status_with_app_entity_not_found(self, wl_app, wl_release):
         """任意进程获取状态失败，应该跳过，不影响获取其他进程状态"""
 
         def fake_list_by_process_type(_self, app, process_type):
@@ -63,15 +58,30 @@ class TestController:
             if process_type != 'web':
                 raise AppEntityNotFound
 
-            return [Instance(process_type=process_type, app=self.wl_app, name=process_type)]
+            return [Instance(process_type=process_type, app=wl_app, name=process_type)]
 
         with mock.patch(
             'paas_wl.workloads.processes.readers.ProcessReader.get_by_type',
-            new=lambda _self, app, process_type: Process.from_release(process_type, self.release),
+            new=lambda _self, app, process_type: Process.from_release(process_type, wl_release),
         ), mock.patch(
             'paas_wl.workloads.processes.readers.InstanceReader.list_by_process_type',
             new=fake_list_by_process_type,
         ):
-            web_proc = Process.from_release('web', self.release)
-            web_proc.instances = [Instance(process_type='web', app=self.wl_app, name='web')]
-            assert get_processes_status(self.wl_app) == [web_proc]
+            web_proc = Process.from_release('web', wl_release)
+            web_proc.instances = [Instance(process_type='web', app=wl_app, name='web')]
+            assert get_processes_status(wl_app) == [web_proc]
+
+    def test_default_app_env_is_running(self, bk_app, bk_stag_env, bk_user, with_wl_apps):
+        assert env_is_running(bk_stag_env) is False
+        # Create a failed release at first, it should not affect the result
+        create_release(bk_stag_env, bk_user, failed=True)
+        assert env_is_running(bk_stag_env) is False
+
+        create_release(bk_stag_env, bk_user, failed=False)
+        assert env_is_running(bk_stag_env) is True
+
+    def test_cnative_app_env_is_running(self, bk_cnative_app, bk_stag_env, bk_user):
+        assert env_is_running(bk_stag_env) is False
+
+        create_cnative_deploy(bk_stag_env, bk_user)
+        assert env_is_running(bk_stag_env) is True

@@ -236,13 +236,18 @@
                 style="width: calc(100% - 180px);"
                 :class="{ 'input-show-index': isFormEdited.profileInput }"
               >
-                <bk-input
-                  ref="profileInput"
-                  :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
-                  :readonly="!isFormEdited.profileInput"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                />
+                <div
+                  v-bk-tooltips="marketInfo.introduction ? marketInfo.introduction : marketDefault"
+                  class="introductory"
+                >
+                  <bk-input
+                    ref="profileInput"
+                    :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
+                    :readonly="!isFormEdited.profileInput"
+                    ext-cls="paas-info-app-name-cls"
+                    :clearable="false"
+                  />
+                </div>
               </bk-form-item>
             </bk-form>
             <bk-form
@@ -367,7 +372,7 @@
                   :source-list="pluginList"
                   :display-key="'name'"
                   :setting-key="'code_name'"
-                  :show-overflow-tips="true"
+                  :show-overflow-tips="false"
                   :empty-content="promptContent"
                   :title="titleArr"
                   @change="transferChange"
@@ -1377,5 +1382,9 @@
             display: none;
         }
     }
-
+    .introductory .paas-info-app-name-cls input {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
 </style>

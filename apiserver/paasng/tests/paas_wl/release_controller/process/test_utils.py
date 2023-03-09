@@ -21,7 +21,7 @@ import pytest
 from paas_wl.release_controller.process.models import PlainInstance, PlainProcess
 from paas_wl.release_controller.process.utils import ProcessesSnapshotStore
 
-pytestmark = pytest.mark.django_db(databases=['workloads'])
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 @pytest.fixture

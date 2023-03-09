@@ -140,7 +140,12 @@
               <span>{{ appInfo.region_name }}</span>
             </div>
           </div>
-          <p>{{ appInfo.code }}</p>
+          <p
+            v-bk-overflow-tips
+            class="app-code-box"
+          >
+            {{ appInfo.code }}
+          </p>
         </div>
       </template>
     </div>
@@ -544,6 +549,7 @@
         top: 0;
         right: 0;
         transition: all .35s;
+        z-index: 99;
 
         .paasng-icon {
             font-size: 12px;
@@ -656,5 +662,13 @@
         &.marked {
             background: #FF9C01;
         }
+    }
+
+    .app-code-box {
+        max-width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        display: inline-block;
     }
 </style>

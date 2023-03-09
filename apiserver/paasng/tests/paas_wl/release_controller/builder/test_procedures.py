@@ -31,7 +31,7 @@ from paas_wl.release_controller.builder.procedures import (
 from paas_wl.release_controller.builder.utils import get_envs_for_pypi
 from paas_wl.resources.utils.basic import get_full_node_selector
 
-pytestmark = pytest.mark.django_db(databases=['workloads'])
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestEnvVars:

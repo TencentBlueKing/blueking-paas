@@ -231,7 +231,7 @@ class UserInterruptedPolicy(AbortPolicy):
         except Exception:
             logger.warning('Deployment not exists for UserInterruptedPolicy, will not proceed.')
             return False
-        return bool(deployment["release_int_requested_at"])
+        return bool(deployment.release_int_requested_at)
 
 
 class WaitForAllStopped(WaitProcedurePoller):

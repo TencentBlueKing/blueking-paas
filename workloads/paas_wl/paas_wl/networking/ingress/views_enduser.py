@@ -34,11 +34,11 @@ from paas_wl.networking.ingress.models import Domain
 from paas_wl.networking.ingress.serializers import DomainForUpdateSLZ, DomainSLZ, ProcIngressSLZ, ProcServiceSLZ
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
-from paas_wl.utils.api_docs import openapi_empty_response
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.utils.api_docs import openapi_empty_response
 
 logger = logging.getLogger(__name__)
 

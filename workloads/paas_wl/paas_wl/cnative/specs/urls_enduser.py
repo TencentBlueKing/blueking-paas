@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.utils.basic import make_app_path, re_path
+from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
 
 from . import views_enduser
 
@@ -27,22 +27,22 @@ urlpatterns = [
         name='api.mres',
     ),
     re_path(
-        make_app_path(r'/mres/deployments/$', include_envs=True),
+        make_app_pattern_with_applications_prefix(r'/mres/deployments/$', include_envs=True),
         views_enduser.MresDeploymentsViewSet.as_view({'get': 'list', 'post': 'create'}),
         name='api.mres.deployments',
     ),
     re_path(
-        make_app_path(r'/mres/deploy_preps/$', include_envs=True),
+        make_app_pattern_with_applications_prefix(r'/mres/deploy_preps/$', include_envs=True),
         views_enduser.MresDeploymentsViewSet.as_view({'post': 'prepare'}),
         name='api.mres.deploy_preps',
     ),
     re_path(
-        make_app_path(r'/mres/deployments/(?P<deploy_id>[\d]+)/$'),
+        make_app_pattern_with_applications_prefix(r'/mres/deployments/(?P<deploy_id>[\d]+)/$'),
         views_enduser.MresDeploymentsViewSet.as_view({'get': 'retrieve'}),
         name='api.mres.deployments.singular',
     ),
     re_path(
-        make_app_path(r'/mres/status/$'),
+        make_app_pattern_with_applications_prefix(r'/mres/status/$'),
         views_enduser.MresStatusViewSet.as_view({'get': 'retrieve'}),
         name='api.mres.status',
     ),

@@ -45,9 +45,7 @@ class BkMonitorMetricClient:
                 if not query.is_ranged or not query.time_range:
                     raise ValueError('query metric in bkmonitor without time range is unsupported!')
 
-                results = self._query_range(
-                    self.bk_biz_id, query.query, container_name=container_name, **query.time_range.to_dict()
-                )
+                results = self._query_range(query.query, container_name=container_name, **query.time_range.to_dict())
             except Exception as e:
                 logger.exception("fetch metrics failed, query: %s, reason: %s", query.query, e)
                 # 某些 metrics 如果失败，不影响其他数据

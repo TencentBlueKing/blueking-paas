@@ -17,16 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import re
-from typing import TYPE_CHECKING
 
 from rest_framework import serializers
 
 from paas_wl.monitoring.metrics.constants import MetricsSeriesType
-from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.workloads.processes.models import Instance
-
-if TYPE_CHECKING:
-    from paas_wl.workloads.processes.models import Process
 
 # proc type name is alphanumeric
 # https://docs-v2.readthedocs.io/en/latest/using-workflow/process-types-and-the-procfile/#declaring-process-types
@@ -63,27 +58,6 @@ class ProcSpecsSerializer(serializers.Serializer):
     success = serializers.IntegerField(source="status.success")
     failed = serializers.IntegerField(source="status.failed")
     version = serializers.IntegerField()
-
-
-class ProcExtraInfoSLZ(serializers.Serializer):
-    """Extra info for process, including command / cluster_link fields"""
-
-    type = serializers.CharField(source='name')
-    command = serializers.CharField(source='runtime.proc_command')
-    cluster_link = serializers.SerializerMethodField()
-
-    def get_cluster_link(self, obj: 'Process') -> str:
-        return 'http://' + get_service_dns_name(obj.app, obj.type)
-
-
-class CNativeProcExtraInfoSLZ(serializers.Serializer):
-    """Extra info for cnative process"""
-
-    type = serializers.CharField(source='name')
-    cluster_link = serializers.SerializerMethodField()
-
-    def get_cluster_link(self, obj: 'Process') -> str:
-        return f'http://{obj.metadata.name}.{obj.app.namespace}'  # type: ignore
 
 
 ####################

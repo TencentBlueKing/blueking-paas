@@ -28,6 +28,6 @@ class Group(OperationGroup):
 class Client(APIGatewayClient):
     """bkmonitor 监控平台 v3 上云版"""
 
-    _api_name = "bkmonitor"
+    _api_name = "bkmonitorv3"
 
     api = bind_property(Group, name="api")

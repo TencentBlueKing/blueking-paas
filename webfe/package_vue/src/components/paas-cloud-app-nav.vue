@@ -419,7 +419,7 @@
                     });
                 } catch (e) {
                     console.warn('error', e);
-                    if (e.name === 'appSummary') {
+                    if (e && e.name === 'appSummary') {
                         this.$router.push({
                             name: 'appSummary',
                             params: {
@@ -435,7 +435,7 @@
                             }
                         });
                     }
-                    if (e.label || e.name) {
+                    if (e && (e.label || e.name)) {
                         this.$bkNotify({
                             theme: 'error',
                             message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
@@ -582,7 +582,7 @@
                     };
                     this.$router.push(routeConf);
                 } catch (e) {
-                    if (e.name === 'appSummary') {
+                    if (e && e.name === 'appSummary') {
                         this.$router.push({
                             name: 'appSummary',
                             params: {
@@ -598,7 +598,7 @@
                             }
                         });
                     }
-                    if (e.label || e.name) {
+                    if (e && (e.label || e.name)) {
                         this.$bkNotify({
                             theme: 'error',
                             message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,

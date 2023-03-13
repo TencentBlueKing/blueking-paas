@@ -51,7 +51,9 @@ def application_perm_class(action: AppAction):
 def check_application_perm(user, application: Application, action: AppAction):
     """检查指定用户是否对应用的某个操作具有权限"""
     if not user_has_app_action_perm(user, application, action):
-        raise PermissionDenied(detail=user_group_apply_url(application.code))
+        raise PermissionDenied(
+            {'message': 'You are not allowed to do this operation.', **user_group_apply_url(application.code)}
+        )
 
 
 def can_exempt_application_perm(user, application: Application) -> bool:

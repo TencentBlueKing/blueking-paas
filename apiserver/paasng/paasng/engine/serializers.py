@@ -427,25 +427,20 @@ class ResourceMetricsSLZ(serializers.Serializer):
         if not (attrs.get('start_time') and attrs.get('end_time')):
             raise serializers.ValidationError("start & end not allowed to be null if no time_range_str pass in")
 
-        start_time = self._validate_datetime(attrs['start_time'])
-        end_time = self._validate_datetime(attrs['end_time'])
+        start_time = datetime.fromisoformat(attrs['start_time'])
+        end_time = datetime.fromisoformat(attrs['end_time'])
 
         if start_time > end_time:
             raise serializers.ValidationError("start time should earlier than end time")
 
         return attrs
 
-    @staticmethod
-    def _validate_datetime(date_string):
-        # default format, web page should pass
-        return datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
-
     def get_step(self, attrs) -> str:
         # default min interval of metrics is 15s, get step automatically instead of choosing by user
         if attrs.get('time_range_str'):
             return calculate_gap_seconds_interval(get_time_delta(attrs.get('time_range_str')).total_seconds())
 
-        time_delta = self._validate_datetime(attrs.get('end_time')) - self._validate_datetime(attrs.get('start_time'))
+        time_delta = datetime.fromisoformat(attrs.get('end_time')) - datetime.fromisoformat(attrs.get('start_time'))
         return calculate_gap_seconds_interval(time_delta.total_seconds())
 
     def get_query_metrics(self, attrs):

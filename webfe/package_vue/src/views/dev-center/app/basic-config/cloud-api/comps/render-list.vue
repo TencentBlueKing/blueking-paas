@@ -138,7 +138,6 @@
                   class="api-link"
                 >
                   <span
-                    v-bk-overflow-tips
                     v-html="highlight(props.row)"
                   />
                   <i
@@ -164,12 +163,18 @@
               <span v-html="highlightDesc(props.row)" />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level) ? 'sensitive' : ''">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -182,6 +187,7 @@
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
               :min-width="110"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -222,6 +228,7 @@
           <bk-table-column
             v-else
             :label="$t('状态')"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               <template v-if="props.row.permission_status === 'owned'">

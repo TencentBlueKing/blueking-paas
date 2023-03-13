@@ -27,8 +27,10 @@ from typing import Dict, List, NamedTuple, Optional
 from attrs import asdict, define
 from django.conf import settings
 
+from paas_wl.cluster.shim import Cluster, RegionClusterService
+from paas_wl.networking.ingress.addrs import EnvAddresses
+from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.engine.constants import AppEnvName
-from paasng.engine.controller.cluster import Cluster, get_region_cluster_helper
 from paasng.engine.deploy.env_vars import env_vars_providers
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
@@ -293,17 +295,13 @@ def get_live_addresses(module: Module, no_cache: bool = False) -> ModuleLiveAddr
     :param no_cache: Whether to disable cache, useful when caller requires fresh
         data, default to false.
     """
-    # TODO: 修复循环依赖的问题
-    from paas_wl.networking.ingress.addrs import EnvAddresses
-    from paas_wl.workloads.processes.controllers import module_env_is_running
-
     results = []
     for env in module.get_envs():
         addrs = [asdict(obj) for obj in EnvAddresses(env).get()]
         results.append(
             {
                 'env': env.environment,
-                'is_running': module_env_is_running(env),
+                'is_running': env_is_running(env),
                 'addresses': addrs,
             }
         )
@@ -383,12 +381,11 @@ def get_preallocated_address(
     region = region or settings.DEFAULT_REGION_NAME
     clusters = clusters or {}
 
-    helper = get_region_cluster_helper(region)
-    default_cluster = helper.get_default_cluster()
+    helper = RegionClusterService(region)
     stag_address, prod_address = "", ""
 
     # 生产环境
-    prod_cluster = clusters.get(AppEnvName.PROD, default_cluster)
+    prod_cluster = clusters.get(AppEnvName.PROD) or helper.get_default_cluster()
     prod_pre_subpaths = get_preallocated_path(app_code, prod_cluster.ingress_config, module_name=module_name)
     prod_pre_subdomains = get_preallocated_domain(app_code, prod_cluster.ingress_config, module_name=module_name)
 
@@ -400,7 +397,7 @@ def get_preallocated_address(
         prod_address = prod_pre_subpaths.prod.as_url().as_address()
 
     # 测试环境
-    stag_cluster = clusters.get(AppEnvName.STAG, default_cluster)
+    stag_cluster = clusters.get(AppEnvName.STAG) or helper.get_default_cluster()
     stag_pre_subpaths = get_preallocated_path(app_code, stag_cluster.ingress_config, module_name=module_name)
     stag_pre_subdomains = get_preallocated_domain(app_code, stag_cluster.ingress_config, module_name=module_name)
 

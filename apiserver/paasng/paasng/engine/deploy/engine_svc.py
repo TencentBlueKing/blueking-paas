@@ -27,7 +27,7 @@ from django.utils.functional import cached_property
 from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
 from paas_wl.networking.ingress.models import AutoGenDomain
 from paas_wl.networking.ingress.utils import guess_default_service_name
-from paas_wl.platform.applications.models.app import WLEngineApp
+from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.misc import OutputStream
 from paas_wl.release_controller.builder import tasks as builder_task
@@ -37,8 +37,8 @@ from paas_wl.resources.tasks import release_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.engine.constants import JobStatus
-from paasng.engine.controller.client import ControllerClient
 from paasng.engine.helpers import SlugbuilderInfo
+from paasng.engine.models.deployment import Deployment
 
 if TYPE_CHECKING:
     from paasng.dev_resources.sourcectl.models import VersionInfo
@@ -50,14 +50,36 @@ class LogLine(TypedDict):
     created: datetime.datetime
 
 
-class EngineDeployClient:
-    """A high level client for engine"""
+def polish_line(line: str) -> str:
+    """Return the line with special characters removed"""
+    return line.replace('\x1b[1G', '')
 
-    def __init__(self, engine_app, controller_client: Optional[ControllerClient] = None):
+
+def get_all_logs(d: Deployment) -> str:
+    """Get all logs of current deployment, command and error detail are included.
+
+    :param d: The Deployment object
+    :return: All logs of the current deployment
+    """
+    logs = []
+    engine_app = d.get_engine_app()
+    client = EngineDeployClient(engine_app)
+    # NOTE: 当前暂不包含“准备阶段”和“检测部署结果”这两个步骤的日志，将在未来版本添加
+    if d.build_process_id:
+        logs.extend([polish_line(obj['line']) for obj in client.list_build_proc_logs(d.build_process_id)])
+    if d.pre_release_id:
+        logs.extend([polish_line(obj['line']) for obj in client.list_command_logs(d.pre_release_id)])
+    return "".join(logs) + "\n" + (d.err_detail or '')
+
+
+class EngineDeployClient:
+    """A high level client for engine, provides functions related with deployments"""
+
+    def __init__(self, engine_app):
         self.engine_app = engine_app
 
     @cached_property
-    def wl_app(self) -> WLEngineApp:
+    def wl_app(self) -> WlApp:
         """Make 'wl_app' a property so tests using current class won't panic when
         initializing because not data can be found in workloads module.
         """

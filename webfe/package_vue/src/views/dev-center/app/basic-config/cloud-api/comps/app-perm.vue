@@ -102,7 +102,10 @@
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('API类型')">
+          <bk-table-column
+            :label="$t('API类型')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ typeMap[props.row.type] }}
             </template>
@@ -179,12 +182,18 @@
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -196,6 +205,7 @@
               :filters="statusFilters"
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -217,7 +227,10 @@
             </bk-table-column>
           </template>
           <template v-else>
-            <bk-table-column :label="$t('状态')">
+            <bk-table-column
+              :label="$t('状态')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}

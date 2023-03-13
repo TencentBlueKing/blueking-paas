@@ -174,7 +174,9 @@
                       :key="instanceIndex"
                     >
                       <td class="name">
-                        <p>{{ instance.display_name }}</p>
+                        <p v-bk-overflow-tips>
+                          {{ instance.display_name }}
+                        </p>
                       </td>
                       <td class="run-state">
                         <i

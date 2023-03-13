@@ -29,8 +29,18 @@
           href="javascript:void(0);"
           @click="handlerSelectApp(item)"
         >
-          <span class="app-name">{{ item.name }}</span>
-          <span class="app-code">{{ item.code }}</span>
+          <span
+            v-bk-overflow-tips
+            class="app-name"
+          >
+            {{ item.name }}
+          </span>
+          <span
+            v-bk-overflow-tips
+            class="app-code"
+          >
+            {{ item.code }}
+          </span>
         </a>
       </li>
     </template>

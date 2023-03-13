@@ -19,10 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import copy
 import logging
 import tempfile
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Dict
-from unittest import mock
 
 import pytest
 import yaml
@@ -31,16 +29,18 @@ from django.db import transaction
 from kubernetes.client.apis import VersionApi
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.cluster.constants import ClusterFeatureFlag, ClusterType
-from paas_wl.cluster.models import APIServer, Cluster
+from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
-from paas_wl.platform.applications.models import EngineApp
+from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
+from tests.paas_wl.utils.build import create_build_proc
+from tests.paas_wl.utils.wl_app import create_wl_release
+from tests.utils.mocks.engine import build_default_cluster
 
 logger = logging.getLogger(__name__)
 
@@ -180,20 +180,25 @@ def namespace_maker(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
-    app / bk_stag_wl_app
+    bk_stag_wl_app / bk_prod_wl_app
     """
     if not request.keywords.get('auto_create_ns'):
         yield
         return
 
-    if "bk_stag_wl_app" in request.fixturenames:
-        app = request.getfixturevalue("bk_stag_wl_app")
-    else:
+    fixtures = ["bk_stag_wl_app", "bk_prod_wl_app", "wl_app"]
+    used_fixtures = []
+    for fixture in fixtures:
+        if fixture in request.fixturenames:
+            used_fixtures.append(fixture)
+    if not used_fixtures:
         yield
         return
 
     namespace_maker = request.getfixturevalue("namespace_maker")
-    namespace_maker.make(app.namespace)
+    for fixture in used_fixtures:
+        app = request.getfixturevalue(fixture)
+        namespace_maker.make(app.namespace)
     yield
     namespace_maker.set_block()
 
@@ -207,34 +212,9 @@ def resource_name() -> str:
 def create_default_cluster():
     """Destroy all existing clusters and create a default one"""
     Cluster.objects.all().delete()
-    cluster = Cluster.objects.register_cluster(
-        name=CLUSTER_NAME_FOR_TESTING,
-        region=settings.FOR_TESTS_DEFAULT_REGION,
-        is_default=True,
-        ingress_config={
-            "app_root_domains": [{"name": "example.com"}],
-            "sub_path_domains": [{"name": "example.com"}],
-            "default_ingress_domain_tmpl": "%s.unittest.com",
-            "frontend_ingress_ip": "0.0.0.0",
-            "port_map": {"http": "80", "https": "443"},
-        },
-        annotations={
-            "bcs_cluster_id": "",
-            "bcs_project_id": "",
-        },
-        ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
-        cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],
-        key_data=settings.FOR_TESTS_CLUSTER_CONFIG["key_data"],
-        token_value=settings.FOR_TESTS_CLUSTER_CONFIG["token_value"],
-        feature_flags=ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
-    )
-    APIServer.objects.get_or_create(
-        host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],
-        cluster=cluster,
-        defaults=dict(
-            overridden_hostname=settings.FOR_TESTS_CLUSTER_CONFIG["force_domain"],
-        ),
-    )
+    cluster, apiserver = build_default_cluster()
+    cluster.save()
+    apiserver.save()
     return cluster
 
 
@@ -274,7 +254,7 @@ def setup_default_client(cluster: Cluster):
 def get_cluster_with_hook(hook_func: Callable) -> Callable:
     """Modify the original get_cluster function with extra hooks"""
 
-    def _wrapped(app: EngineApp) -> Cluster:
+    def _wrapped(app: WlApp) -> Cluster:
         from paas_wl.cluster.utils import get_cluster_by_app
 
         cluster = get_cluster_by_app(app)
@@ -282,28 +262,6 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
         return cluster
 
     return _wrapped
-
-
-@contextmanager
-def override_cluster_ingress_attrs(attrs):
-    """Context manager which updates app's `cluster.ingress_config`"""
-
-    def _hook_set_sub_path_domain(cluster):
-        for key, value in attrs.items():
-            setattr(cluster.ingress_config, key, value)
-        cluster.save()
-        cluster.refresh_from_db()
-        return cluster
-
-    # Mock all related occurrences
-    with mock.patch(
-        'paas_wl.networking.ingress.managers.misc.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ), mock.patch(
-        'paas_wl.networking.ingress.managers.subpath.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ):
-        yield
 
 
 @pytest.fixture(autouse=True)
@@ -332,9 +290,43 @@ def set_structure(default_process_spec_plan):
 
 @pytest.fixture
 def bk_stag_wl_app(bk_stag_env, with_wl_apps):
-    return bk_stag_env.wl_engine_app
+    return bk_stag_env.wl_app
 
 
 @pytest.fixture
 def bk_prod_wl_app(bk_prod_env, with_wl_apps):
-    return bk_prod_env.wl_engine_app
+    return bk_prod_env.wl_app
+
+
+@pytest.fixture
+def wl_app(bk_stag_wl_app) -> WlApp:
+    return bk_stag_wl_app
+
+
+@pytest.fixture
+def wl_release(wl_app):
+    return create_wl_release(
+        wl_app=wl_app,
+        build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
+        release_params={"version": 5},
+    )
+
+
+@pytest.fixture
+def build_proc(wl_app) -> BuildProcess:
+    """A new BuildProcess object with random info"""
+    return create_build_proc(wl_app)
+
+
+@pytest.fixture
+def wl_build(bk_stag_wl_app, bk_user) -> Build:
+    build_params = {
+        "owner": bk_user,
+        "app": bk_stag_wl_app,
+        "slug_path": "",
+        "source_type": "foo",
+        "branch": "bar",
+        "revision": "1",
+        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
+    }
+    return Build.objects.create(**build_params)

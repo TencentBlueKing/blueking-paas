@@ -24,7 +24,6 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.networking.ingress.domains.manager import CNativeCustomDomainManager, check_domain_used_by_market
 from paas_wl.networking.ingress.models import Domain
 from paas_wl.utils.error_codes import APIError
-from paasng.paas_wl.platform.applications.struct_models import set_model_structured
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
@@ -94,7 +93,6 @@ class TestCNativeDftCustomDomainManager:
         # Create a successful deploy
         create_cnative_deploy(bk_stag_env, bk_user)
         domain = mgr.create(env=bk_stag_env, host='foo.example.com', path_prefix='/', https_enabled=False)
-        set_model_structured(domain, application=bk_cnative_app)
         return domain
 
     @mock.patch('paas_wl.networking.ingress.domains.manager.deploy_networking')

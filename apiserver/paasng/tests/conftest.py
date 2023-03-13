@@ -42,7 +42,7 @@ from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient,
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.extensions.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.platform.core.storages.utils import SADBManager
@@ -54,7 +54,7 @@ from paasng.publish.sync_market.handlers import before_finishing_application_cre
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, create_pending_wl_engine_apps, generate_random_string
+from tests.utils.helpers import configure_regions, create_pending_wl_apps, generate_random_string
 
 from .utils.auth import create_user
 from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
@@ -78,6 +78,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--init-s3-bucket", dest="init_s3_bucket", action="store_true", default=False, help="是否需要执行 s3 初始化流程"
     )
+    parser.addoption("--run-e2e-test", dest="run_e2e_test", action="store_true", default=False, help="是否执行 e2e 测试")
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -381,12 +382,12 @@ def bk_module_full(bk_app_full) -> Module:
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_module) -> ApplicationEnvironment:
+def bk_stag_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='stag')
 
 
 @pytest.fixture
-def bk_prod_env(request, bk_module) -> ApplicationEnvironment:
+def bk_prod_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='prod')
 
 
@@ -737,11 +738,11 @@ def with_live_addrs():
 
 @pytest.fixture
 def with_wl_apps(request):
-    """Create all pending WlEngineApp objects related with current bk_app, useful
+    """Create all pending WlApp objects related with current bk_app, useful
     for tests which want to use `bk_app`, `bk_stag_env` fixtures.
     """
     if "bk_cnative_app" in request.fixturenames:
         bk_app = request.getfixturevalue("bk_cnative_app")
     else:
         bk_app = request.getfixturevalue("bk_app")
-    create_pending_wl_engine_apps(bk_app)
+    create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)

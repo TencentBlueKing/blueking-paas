@@ -30,7 +30,7 @@ from django.db.transaction import atomic
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 
-from paas_wl.platform.api import get_cluster_egress_info
+from paas_wl.cluster.shim import EnvClusterService, get_cluster_egress_info
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
 from paasng.dev_resources.servicehub import constants, exceptions
 from paasng.dev_resources.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
@@ -57,7 +57,6 @@ from paasng.dev_resources.servicehub.services import (
     ServiceSpecificationHelper,
 )
 from paasng.dev_resources.services.models import ServiceCategory
-from paasng.engine.controller.cluster import get_engine_app_cluster
 from paasng.engine.models import EngineApp
 from paasng.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
@@ -166,19 +165,17 @@ class RemoteServiceObj(ServiceObj):
 
 
 @dataclass
-class EngineAppClusterInfo:
-    engine_app: 'EngineApp'
+class EnvClusterInfo:
+    env: 'ModuleEnvironment'
 
     def get_egress_info(self):
         """Get current app cluster egress info
         {"egress_ips": [<IP>, ], "digest_version": <DIGEST_VERSION>}
         """
-        region = self.engine_app.region
-        cluster = get_engine_app_cluster(region, self.engine_app.name)
         try:
-            return get_cluster_egress_info(region, cluster.name)
+            return get_cluster_egress_info(EnvClusterService(self.env).get_cluster_name())
         except Exception as e:
-            logger.exception("Can not get app cluster egress info from engine")
+            logger.exception("Can not get app cluster egress info")
             raise GetClusterEgressInfoError(str(e))
 
     @cached_property
@@ -318,7 +315,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         - `env`: current ModuleEnvironment object
         """
         result = {}
-        cluster_info = EngineAppClusterInfo(self.db_engine_app)
+        cluster_info = EnvClusterInfo(self.db_env)
 
         bk_monitor_space_id = ""
         # 增强服务参数中声明了需要蓝鲸监控命名空间，则需要创建应用对应的蓝鲸监控命名空间

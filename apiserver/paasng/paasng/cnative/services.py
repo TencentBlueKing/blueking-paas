@@ -20,9 +20,10 @@ from typing import Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.platform.api import bind_wl_app_cluster, create_app_ignore_duplicated, create_cnative_app_model_resource
-from paasng.engine.constants import AppEnvName, EngineAppType
-from paasng.engine.controller.cluster import get_region_cluster_helper
+from paas_wl.platform.applications.constants import WlAppType
+from paasng.engine.constants import AppEnvName
+from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.platform.api import create_app_ignore_duplicated, create_cnative_app_model_resource
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
@@ -34,28 +35,29 @@ default_engine_app_prefix = 'bkapp'
 default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
 
 
-def initialize_simple(module: Module, data: Dict, cluster_name: Optional[str] = None) -> Dict:
+def initialize_simple(
+    module: Module,
+    image: str,
+    cluster_name: Optional[str] = None,
+    command: Optional[List[str]] = None,
+    args: Optional[List[str]] = None,
+    target_port: Optional[int] = None,
+) -> Dict:
     """Initialize a cloud-native application, return the initialized object
 
     :param module: Module object, a module can only be initialized once
-    :param data: Simple parameters for initialization, such as "image" and "command".
+    :param image: The container image of main process
     :param cluster_name: The name of cluster to deploy BkApp.
-    :raises: ValidationError when workloads service responds with "VALIDATION_ERROR"
+    :param command: Custom command
+    :param args: Custom args
+    :param target_port: Custom target port
     :raises: BadResponseError when fail to request workloads service
     """
-    application = module.application
-    default_data = {
-        'application_id': str(application.id),
-        'module_id': str(module.id),
-        'code': application.code,
-    }
-    data.update(default_data)
-
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
 
-    model_res = create_cnative_app_model_resource(application.region, data)
-    create_engine_apps(application, module, environments=default_environments, cluster_name=cluster_name)
+    model_res = create_cnative_app_model_resource(module, image, command, args, target_port)
+    create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
 
 
@@ -71,10 +73,10 @@ def create_engine_apps(
         engine_app_name = f'{default_engine_app_prefix}-{application.code}-{environment}'
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
         engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
-        bind_wl_app_cluster(engine_app.name, cluster_name=cluster_name)
-        ModuleEnvironment.objects.create(
+        env = ModuleEnvironment.objects.create(
             application=application, module=module, engine_app_id=engine_app.id, environment=environment
         )
+        EnvClusterService(env).bind_cluster(cluster_name)
 
 
 def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:
@@ -82,7 +84,7 @@ def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> E
 
     :return: UUID of the workloads's EngineApp object
     """
-    info = create_app_ignore_duplicated(region, engine_app_name, EngineAppType.CLOUD_NATIVE)
+    info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE)
     # Create EngineApp and binding relationships
     return EngineApp.objects.create(
         id=info.uuid,
@@ -99,10 +101,7 @@ def get_default_cluster_name(region: str) -> str:
     except Exception as e:
         raise error_codes.CANNOT_CREATE_APP.f(_("暂无可用集群, 请联系管理员")) from e
 
-    cluster_helper = get_region_cluster_helper(region)
-    for cluster in cluster_helper.list_clusters():
-        if cluster.name == default_cluster_name:
-            break
-    else:
+    try:
+        return RegionClusterService(region).get_cluster_by_name(default_cluster_name).name
+    except Exception:
         raise error_codes.CANNOT_CREATE_APP.f(_(f"集群 {default_cluster_name} 未就绪, 请联系管理员"))
-    return default_cluster_name

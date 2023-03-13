@@ -128,21 +128,24 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = CreateDeploySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        manifest = serializer.validated_data.get("manifest")
-        try:
-            credential_refs = get_references(manifest)
-            validate_references(application, credential_refs)
-        except ValueError:
-            raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-
-        # TODO: 检查 manifest 是否有变化
-        if manifest:
+        # Update the current manifest when "manifest" field was provided, the data
+        # will be validated in `update_app_resource` function.
+        # TODO: 当 manifest 提供时，检查 manifest 是否有变化
+        if manifest := serializer.validated_data.get("manifest"):
             update_app_resource(application, manifest)
 
         # Get current module resource object
         model_resource = AppModelResource.objects.get(application_id=application.id)
         # TODO: Allow use other revisions
         revision = model_resource.revision
+
+        # Try to get and validate the image credentials
+        try:
+            credential_refs = get_references(revision.json_value)
+            validate_references(application, credential_refs)
+        except ValueError:
+            raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
+
         # TODO: read name from request data or generate by model resource payload
         # Add current timestamp in name to avoid conflicts
         default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
@@ -159,7 +162,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
 
         try:
-            manifest = deploy(env, deployment.build_manifest(env, credential_refs=credential_refs))
+            deployed_manifest = deploy(env, deployment.build_manifest(env, credential_refs=credential_refs))
         except UnprocessibleEntityError as e:
             # 格式错误类异常（422）允许将错误信息提供给用户
             raise error_codes.DEPLOY_BKAPP_FAILED.f(
@@ -177,7 +180,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # Poll status in background
         AppModelDeployStatusPoller.start({'deploy_id': deployment.id}, DeployStatusHandler)
-        return Response(manifest)
+        return Response(deployed_manifest)
 
     @swagger_auto_schema(request_body=CreateDeploySerializer, responses={"200": DeployPrepResultSLZ()})
     def prepare(self, request, code, module_name, environment):

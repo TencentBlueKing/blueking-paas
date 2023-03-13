@@ -16,26 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkpaas_auth.models import User
+import logging
+from typing import Dict
 
-from paas_wl.platform.applications.models import Release, WlApp
+from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
+
+logger = logging.getLogger(__name__)
 
 
-def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
-    """Create a release in given environment.
+class ResourceQuotaReader:
+    """Read ResourceQuota (limit) from app model resource object
 
-    :return: The Release object
+    :param res: App model resource object
     """
-    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
-    # method for backward-compatibility reasons
-    version = Release.objects.filter(app=wl_app).count() + 10
-    # Create the Release object manually without any Build object
-    return Release.objects.create(
-        owner=user.username,
-        app=wl_app,
-        failed=failed,
-        config=wl_app.latest_config,
-        version=version,
-        summary='',
-        procfile={},
-    )
+
+    def __init__(self, res: BkAppResource):
+        self.res = res
+
+    def read_all(self) -> Dict[str, Dict[str, str]]:
+        """Read all resource quota defined
+
+        :returns: A dict contains resource limit for all processes, value format: {"cpu": "1000m", "memory": "128Mi"}
+        """
+        return {p.name: {"cpu": p.cpu, "memory": p.memory} for p in self.res.spec.processes}

@@ -16,26 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkpaas_auth.models import User
+import pytest
+from django.core.exceptions import ObjectDoesNotExist
 
-from paas_wl.platform.applications.models import Release, WlApp
+from paas_wl.platform.applications.models import Release
+from tests.paas_wl.utils.release import create_release
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
-    """Create a release in given environment.
+class TestAppModel:
+    def test_app_get_release(self, wl_app, bk_user):
+        create_release(wl_app, bk_user)
+        create_release(wl_app, bk_user)
 
-    :return: The Release object
-    """
-    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
-    # method for backward-compatibility reasons
-    version = Release.objects.filter(app=wl_app).count() + 10
-    # Create the Release object manually without any Build object
-    return Release.objects.create(
-        owner=user.username,
-        app=wl_app,
-        failed=failed,
-        config=wl_app.latest_config,
-        version=version,
-        summary='',
-        procfile={},
-    )
+        release = Release.objects.get_latest(wl_app)
+        previous = release.get_previous()
+
+        assert release.version == 11
+        assert previous.version == 10
+
+    def test_first_release(self, wl_app):
+        with pytest.raises(ObjectDoesNotExist):
+            Release.objects.get_latest(wl_app).get_previous()

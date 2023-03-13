@@ -16,26 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkpaas_auth.models import User
+import pytest
 
-from paas_wl.platform.applications.models import Release, WlApp
+from paas_wl.platform.applications.models import Release
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
-    """Create a release in given environment.
+class TestReleaseManager:
+    def test_any_successful_empty(self, wl_app):
+        assert Release.objects.any_successful(wl_app) is False
 
-    :return: The Release object
-    """
-    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
-    # method for backward-compatibility reasons
-    version = Release.objects.filter(app=wl_app).count() + 10
-    # Create the Release object manually without any Build object
-    return Release.objects.create(
-        owner=user.username,
-        app=wl_app,
-        failed=failed,
-        config=wl_app.latest_config,
-        version=version,
-        summary='',
-        procfile={},
-    )
+    def test_any_successful_positive(self, wl_app, bk_user, wl_build):
+        wl_app.release_set.new(bk_user.username, build=wl_build, procfile={'web': 'true'})
+        assert Release.objects.any_successful(wl_app) is True

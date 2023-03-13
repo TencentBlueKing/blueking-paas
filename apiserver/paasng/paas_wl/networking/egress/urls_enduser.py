@@ -16,26 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkpaas_auth.models import User
+from paasng.utils.basic import make_app_pattern_with_applications_prefix, re_path
 
-from paas_wl.platform.applications.models import Release, WlApp
+from . import views_enduser
 
-
-def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
-    """Create a release in given environment.
-
-    :return: The Release object
-    """
-    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
-    # method for backward-compatibility reasons
-    version = Release.objects.filter(app=wl_app).count() + 10
-    # Create the Release object manually without any Build object
-    return Release.objects.create(
-        owner=user.username,
-        app=wl_app,
-        failed=failed,
-        config=wl_app.latest_config,
-        version=version,
-        summary='',
-        procfile={},
-    )
+urlpatterns = [
+    re_path(
+        make_app_pattern_with_applications_prefix(r'/egress_gateway_infos/$'),
+        views_enduser.EgressGatewayInfosViewSet.as_view({'post': 'create'}),
+        name='api.egress_gateway_infos',
+    ),
+    re_path(
+        make_app_pattern_with_applications_prefix(r'/egress_gateway_infos/default/$'),
+        views_enduser.EgressGatewayInfosViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}),
+        name='api.egress_gateway_infos.default',
+    ),
+]

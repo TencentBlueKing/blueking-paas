@@ -16,26 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkpaas_auth.models import User
-
-from paas_wl.platform.applications.models import Release, WlApp
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
-    """Create a release in given environment.
+class Group(OperationGroup):
 
-    :return: The Release object
-    """
-    # Don't start from 1, because "version 1" will be ignored by `any_successful()`
-    # method for backward-compatibility reasons
-    version = Release.objects.filter(app=wl_app).count() + 10
-    # Create the Release object manually without any Build object
-    return Release.objects.create(
-        owner=user.username,
-        app=wl_app,
-        failed=failed,
-        config=wl_app.latest_config,
-        version=version,
-        summary='',
-        procfile={},
-    )
+    # 统一查询时序数据
+    promql_query = bind_property(Operation, name='promql_query', method='POST', path='/promql_query/')
+
+
+class Client(APIGatewayClient):
+    """bkmonitor 监控平台 v3 上云版"""
+
+    _api_name = "bkmonitorv3"
+
+    api = bind_property(Group, name="api")

@@ -78,6 +78,8 @@ class CNativeProcSpecSLZ(serializers.Serializer):
     target_replicas = serializers.IntegerField()
     target_status = serializers.CharField()
     max_replicas = serializers.IntegerField()
+    cpu_limit = serializers.CharField()
+    memory_limit = serializers.CharField()
 
 
 class UpdateProcessSLZ(serializers.Serializer):

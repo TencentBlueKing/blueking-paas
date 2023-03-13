@@ -76,6 +76,16 @@ class ProcExtraInfoSLZ(serializers.Serializer):
         return 'http://' + get_service_dns_name(obj.app, obj.type)
 
 
+class CNativeProcExtraInfoSLZ(serializers.Serializer):
+    """Extra info for cnative process"""
+
+    type = serializers.CharField(source='name')
+    cluster_link = serializers.SerializerMethodField()
+
+    def get_cluster_link(self, obj: 'Process') -> str:
+        return f'http://{obj.metadata.name}.{obj.app.namespace}'  # type: ignore
+
+
 ####################
 # Resource Metrics #
 ####################

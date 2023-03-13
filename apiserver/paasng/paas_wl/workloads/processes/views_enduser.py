@@ -31,7 +31,7 @@ from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.external.client import get_local_plat_client
-from paas_wl.platform.system_api.serializers import ProcExtraInfoSLZ, ProcSpecsSerializer
+from paas_wl.platform.system_api.serializers import CNativeProcExtraInfoSLZ, ProcExtraInfoSLZ, ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.processes.constants import ProcessUpdateType
@@ -212,7 +212,10 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
 
     # Get extra infos
     proc_extra_infos = []
-    if wl_app.type != WlAppType.CLOUD_NATIVE:
+    if wl_app.type == WlAppType.CLOUD_NATIVE:
+        for proc_spec in procs.items:
+            proc_extra_infos.append(CNativeProcExtraInfoSLZ(proc_spec).data)
+    else:
         for proc_spec in procs.items:
             release = wl_app.release_set.get(version=proc_spec.version)
             process_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.name, release=release)

@@ -41,12 +41,6 @@
                   <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
                 </div>
               </div>
-              <div
-                class="process-command"
-                @click="showProcessDetail(process)"
-              >
-                {{ process.cmd }}
-              </div>
               <div class="process-operate">
                 <a
                   slot="trigger"
@@ -1337,7 +1331,6 @@
                         isActionLoading: false, // 用于记录进程启动/停止接口是否已完成
                         maxReplicas: processInfo.max_replicas,
                         status: 'Stopped',
-                        cmd: processInfo.command,
                         operateIconTitle: operateIconTitle,
                         operateIconTitleCopy: operateIconTitle,
                         isShowTooltipConfirm: false,
@@ -1901,16 +1894,7 @@
                     white-space: nowrap;
                 }
             }
-            .process-command {
-                display: inline-block;
-                padding: 16px 24px 16px 0;
-                width: 200px;
-                vertical-align: middle;
-                word-break: break-all;
-                cursor: pointer;
-                user-select: none;
-            }
-
+            
             .process-status {
                 display: inline-block;
                 padding: 26px 0 0 0;

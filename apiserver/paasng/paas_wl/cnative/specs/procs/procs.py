@@ -26,6 +26,7 @@ from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.workloads.processes.constants import AppEnvName, ProcessTargetStatus
 from paasng.platform.applications.models import ModuleEnvironment
 
+from .quota import ResourceQuotaReader
 from .replicas import ReplicasReader
 
 # THe default maximum replicas for cloud-native apps's processes
@@ -34,13 +35,13 @@ DEFAULT_MAX_REPLICAS = 5
 
 @define
 class CNativeProcSpec:
-    """Process spec for cloud-native apps, it has less properties than default
-    app's ProcessSpec model, some fields includes "resource_limit" are removed.
-    """
+    """Process spec for cloud-native apps"""
 
     name: str
     target_replicas: int
     target_status: str
+    cpu_limit: str
+    memory_limit: str
 
     # TODO: Use dynamic limitation for each app
     max_replicas: int = DEFAULT_MAX_REPLICAS
@@ -58,7 +59,8 @@ def parse_proc_specs(res: BkAppResource, env_name: AppEnvName) -> List[CNativePr
     """Parse process specifications from app model resource"""
     results = []
     counts = ReplicasReader(res).read_all(env_name)
+    quotas = ResourceQuotaReader(res).read_all()
     for name, (cnt, _) in counts.items():
         target_status = ProcessTargetStatus.START.value if cnt > 0 else ProcessTargetStatus.STOP.value
-        results.append(CNativeProcSpec(name, cnt, target_status))
+        results.append(CNativeProcSpec(name, cnt, target_status, quotas[name]['cpu'], quotas[name]['memory']))
     return results

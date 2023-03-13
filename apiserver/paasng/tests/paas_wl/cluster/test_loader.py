@@ -105,10 +105,6 @@ class TestLoaderNoInitialClusters:
 class TestEnhancedKubeConfigLoader:
     """需要配合 assets/example-kube-config 进行测试"""
 
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        self.loader = LegacyKubeConfigLoader.from_file("tests/paas_wl/assets/example-kube-config.yaml")
-
     def test_get_all_tags(self):
         loader = LegacyKubeConfigLoader.from_file("tests/paas_wl/assets/example-kube-config.yaml")
         assert len(loader.get_all_tags()) == 3

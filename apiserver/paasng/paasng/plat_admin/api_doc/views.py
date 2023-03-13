@@ -53,11 +53,6 @@ class FullSwaggerConfigurationView(schema_view):  # type: ignore
         self._merge_paths(default, swagger_file)
         self._merge_definitions(default, swagger_file)
 
-        # TODO: 完成 swagger 文档的合并
-        # workloads docs
-        # workloads_docs = controller_client.get_swagger_docs()
-        # self._merge_paths(default, workloads_docs, base_path='/svc_workloads', ignore_conflict=False)
-        # self._merge_definitions(default, workloads_docs, ignore_conflict=False)
         return Response(default)
 
     def _merge_paths(self, base: Dict, target: Dict, base_path: str = '', ignore_conflict: bool = True):

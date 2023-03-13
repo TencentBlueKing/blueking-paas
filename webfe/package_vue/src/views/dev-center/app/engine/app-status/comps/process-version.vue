@@ -56,6 +56,7 @@
         <bk-table-column
           :label="$t('部署环境')"
           prop="environment_name"
+          :render-header="$renderHeader"
         >
           <template slot-scope="props">
             <span v-if="props.row.environment_name === 'stag'"> {{ $t('预发布环境') }} </span>
@@ -65,8 +66,12 @@
         <bk-table-column
           :label="$t('操作人')"
           prop="operator"
+          :render-header="$renderHeader"
         />
-        <bk-table-column :label="$t('耗时')">
+        <bk-table-column
+          :label="$t('耗时')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             {{ computedDeployTime(row) }}
           </template>

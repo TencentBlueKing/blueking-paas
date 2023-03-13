@@ -148,23 +148,6 @@ class Deployment(OperationVersionBase):
             path = path.relative_to("/")
         return path
 
-    @property
-    def logs(self):
-        from paasng.engine.deploy.engine_svc import EngineDeployClient
-
-        logs_ = []
-        if self.build_process_id:
-            lines = EngineDeployClient(self.get_engine_app()).list_build_proc_logs(self.build_process_id)
-            for item in lines:
-                logs_.append(item["line"].replace('\x1b[1G', ''))
-
-        if self.pre_release_id:
-            lines = EngineDeployClient(self.get_engine_app()).list_command_logs(self.pre_release_id)
-            for item in lines:
-                logs_.append(item["line"].replace('\x1b[1G', ''))
-
-        return "".join(logs_) + "\n" + (self.err_detail or '')
-
     def has_succeeded(self):
         return self.status == JobStatus.SUCCESSFUL.value
 

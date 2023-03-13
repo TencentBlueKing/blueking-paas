@@ -160,10 +160,12 @@
             <bk-table-column
               label="status_code"
               prop="status_code"
+              :render-header="$renderHeader"
             />
             <bk-table-column
               label="response_time"
               prop="response_time"
+              :render-header="$renderHeader"
             />
             <bk-table-column
               v-for="field in fieldSelectedList"

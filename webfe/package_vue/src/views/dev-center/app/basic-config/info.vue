@@ -397,7 +397,7 @@
                   :source-list="pluginList"
                   :display-key="'name'"
                   :setting-key="'code_name'"
-                  :show-overflow-tips="true"
+                  :show-overflow-tips="false"
                   :empty-content="promptContent"
                   :title="titleArr"
                   @change="transferChange"

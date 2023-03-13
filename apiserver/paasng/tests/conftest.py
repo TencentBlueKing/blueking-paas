@@ -42,7 +42,7 @@ from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient,
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.extensions.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.platform.core.storages.utils import SADBManager
@@ -78,6 +78,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--init-s3-bucket", dest="init_s3_bucket", action="store_true", default=False, help="是否需要执行 s3 初始化流程"
     )
+    parser.addoption("--run-e2e-test", dest="run_e2e_test", action="store_true", default=False, help="是否执行 e2e 测试")
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -381,12 +382,12 @@ def bk_module_full(bk_app_full) -> Module:
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_module) -> ApplicationEnvironment:
+def bk_stag_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='stag')
 
 
 @pytest.fixture
-def bk_prod_env(request, bk_module) -> ApplicationEnvironment:
+def bk_prod_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='prod')
 
 

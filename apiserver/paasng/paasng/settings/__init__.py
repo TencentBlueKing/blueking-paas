@@ -297,6 +297,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 )
 
 TEMPLATE_DIRS = [str(BASE_DIR / 'templates')]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -485,6 +486,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Shanghai'
 CELERY_ENABLE_UTC = False
 
+CELERY_IMPORTS = ["paas_wl.release_controller.builder.tasks", "paas_wl.resources.tasks"]
 CELERY_BROKER_TRANSPORT_OPTIONS = settings.get('CELERY_BROKER_TRANSPORT_OPTIONS', {})
 
 if not CELERY_BROKER_TRANSPORT_OPTIONS and is_redis_backend(CELERY_BROKER_URL):
@@ -606,7 +608,9 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 # 旧版本 PaaS 数据库，敏感字段所使用的加密 key
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get('PAAS_LEGACY_DB_ENCRYPT_KEY')
 
-# == 对象存储相关
+# ---------------
+# 对象存储配置
+# ---------------
 
 BLOBSTORE_TYPE = settings.get('BLOBSTORE_TYPE')
 
@@ -1140,6 +1144,8 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 # -----------------
 # 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
 ENABLE_BK_MONITOR = settings.get('ENABLE_BK_MONITOR', False)
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # 同步告警策略到监控的配置

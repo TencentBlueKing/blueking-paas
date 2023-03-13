@@ -19,18 +19,16 @@ to the current version of the project delivered to anyone in the future.
 from bkpaas_auth.models import User
 
 from paas_wl.platform.applications.models import Release, WlApp
-from paasng.platform.applications.models import ModuleEnvironment
 
 
-def create_release(env: ModuleEnvironment, user: User, failed: bool = False) -> Release:
+def create_release(wl_app: WlApp, user: User, failed: bool = False) -> Release:
     """Create a release in given environment.
 
     :return: The Release object
     """
-    wl_app = WlApp.objects.get(pk=env.engine_app_id)
     # Don't start from 1, because "version 1" will be ignored by `any_successful()`
     # method for backward-compatibility reasons
-    version = Release.objects.count() + 10
+    version = Release.objects.filter(app=wl_app).count() + 10
     # Create the Release object manually without any Build object
     return Release.objects.create(
         owner=user.username,

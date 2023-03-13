@@ -30,7 +30,7 @@ from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.workloads.processes.managers import AppProcessManager
-from tests.paas_wl.utils.engine_app import random_fake_app, random_fake_instance, release_setup
+from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_instance, create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -38,12 +38,12 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestResourceMetricManager:
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
-        self.app = random_fake_app(force_app_info={'region': settings.FOR_TESTS_DEFAULT_REGION})
-        release_setup(fake_app=self.app)
+        self.app = create_wl_app(force_app_info={'region': settings.FOR_TESTS_DEFAULT_REGION})
+        create_wl_release(wl_app=self.app)
         self.web_process = AppProcessManager(app=self.app).assemble_process('web')
         self.worker_process = AppProcessManager(app=self.app).assemble_process('worker')
-        self.web_process.instances = [random_fake_instance(self.app), random_fake_instance(self.app)]
-        self.worker_process.instances = [random_fake_instance(self.app)]
+        self.web_process.instances = [create_wl_instance(self.app), create_wl_instance(self.app)]
+        self.worker_process.instances = [create_wl_instance(self.app)]
 
     @pytest.fixture
     def metric_client(self):

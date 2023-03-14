@@ -70,4 +70,4 @@ def update_metadata(wl_app: 'WlApp', **kwargs) -> None:
         setattr(obj, key, value)
 
     latest_config.metadata = cattr.unstructure(obj)
-    latest_config.save(update_fields=['metadata'])
+    latest_config.save(update_fields=['metadata', 'updated'])

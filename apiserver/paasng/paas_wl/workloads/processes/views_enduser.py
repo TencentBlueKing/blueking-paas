@@ -54,6 +54,7 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.operations.constant import OperationType
+from paasng.utils.rate_limit import UserAction, rate_limit_on_view_func
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         data['cnative_proc_specs'] = CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
         return Response(data)
 
+    @rate_limit_on_view_func(UserAction.WATCH_PROCESS)
     def watch(self, request, code, module_name, environment):
         """实时监听进程与进程实例变动情况"""
         wl_app = self.get_wl_app_via_path()

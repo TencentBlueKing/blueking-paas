@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import List
 
 from attrs import define
+from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
@@ -49,8 +50,7 @@ class AppImageCredential(UuidAuditedModel):
 
     registry = models.CharField(max_length=255)
     username = models.CharField(max_length=32, blank=False)
-    # TODO: 迁移模型时, 修改成加密存储
-    password = models.CharField(max_length=255, blank=True)
+    password = EncryptField(verbose_name="镜像凭证", help_text="镜像凭证")
 
     objects = AppImageCredentialManager()
 
@@ -70,8 +70,7 @@ class AppUserCredential(UuidAuditedModel):
 
     name = models.CharField(max_length=32, help_text="凭证名称")
     username = models.CharField(max_length=64, help_text="账号")
-    # TODO: 迁移模型时, 修改成加密存储
-    password = models.CharField(max_length=255, help_text="密码")
+    password = EncryptField(verbose_name="镜像凭证", help_text="镜像凭证")
     description = models.TextField(help_text="描述")
 
     objects = AppUserCredentialManager()

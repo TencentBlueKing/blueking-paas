@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import List
 
-from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions
@@ -50,10 +50,9 @@ def plugin_action_permission_class(actions: List[PluginPermissionActions], use_c
                 is_allowed = all(
                     lazy_iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values()
                 )
-
             # 无插件应用权限时，需要返回应用权限申请链接
             if not is_allowed:
-                raise PermissionDenied(detail=user_group_apply_url(obj.id))
+                raise PermissionDenied({'message': self.message, **user_group_apply_url(obj.id)})
 
             return True
 

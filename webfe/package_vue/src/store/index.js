@@ -77,7 +77,7 @@ const state = {
   },
   localLanguage: localLanguage,
   navType: {},
-  notPermissionInfo: {}
+  applyUrl: ''
 };
 
 const getters = {
@@ -225,8 +225,8 @@ const mutations = {
   updateNavType (state, data) {
     state.navType = data;
   },
-  updateNotPermissionInfo (state, data) {
-    state.notPermissionInfo = data;
+  updateApplyUrl (state, data) {
+    state.applyUrl = data;
   }
 };
 
@@ -297,7 +297,9 @@ const actions = {
       commit('updateAppInfo', { appCode, moduleId, data: response });
       return response;
     }).catch((err) => {
-      commit('updateNotPermissionInfo', err);
+      if (err.apply_url_for_dev) {
+        commit('updateApplyUrl', err.apply_url_for_dev);
+      }
     }).finally(() => {
       commit('updateAppLoading', false);
     });

@@ -144,9 +144,10 @@
                 next(true);
             } catch (e) {
                 next({
-                    name: 'permission403',
+                    name: 'plugin403',
                     params: {
-                        id: pluginId
+                        id: pluginId,
+                        url: store.state.plugin.pluginApplyUrl
                     }
                 });
             }
@@ -173,9 +174,10 @@
                 next(true);
             } catch (e) {
                 next({
-                    name: 'permission403',
+                    name: 'plugin403',
                     params: {
-                        id: pluginId
+                        id: pluginId,
+                        url: store.state.plugin.pluginApplyUrl
                     }
                 });
             }

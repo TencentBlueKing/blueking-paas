@@ -180,12 +180,11 @@
                     next(true);
                 }
             } catch (e) {
-                const url = store.state.notPermissionInfo.apply_url_for_dev;
                 next({
                     name: 'permission403',
                     params: {
                         id: appCode,
-                        url
+                        url: store.state.applyUrl
                     }
                 });
             }
@@ -225,7 +224,8 @@
                 next({
                     name: 'permission403',
                     params: {
-                        id: appCode
+                        id: appCode,
+                        url: store.state.applyUrl
                     }
                 });
             }

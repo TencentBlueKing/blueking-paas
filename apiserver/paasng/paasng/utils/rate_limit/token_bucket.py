@@ -17,26 +17,11 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import abc
-import logging
 import time
+from typing import Optional
 
 import msgpack
 import redis
-import wrapt
-from blue_krill.data_types.enum import StructuredEnum
-from rest_framework.response import Response
-from rest_framework.status import HTTP_429_TOO_MANY_REQUESTS
-
-from paasng.platform.core.storages.redisdb import get_default_redis
-
-logger = logging.getLogger(__name__)
-
-
-class UserAction(str, StructuredEnum):
-    """用于频率限制的用户操作"""
-
-    FETCH_DEPLOY_LOG = 'fetch_deploy_log'
-    WATCH_PROCESSES = 'watch_processes'
 
 
 class RedisTokenBucketRateLimiter(abc.ABC):
@@ -111,13 +96,20 @@ class RedisTokenBucketRateLimiter(abc.ABC):
 class UserActionRateLimiter(RedisTokenBucketRateLimiter):
     """针对用户行为的速率控制器"""
 
-    def __init__(self, redis_db: redis.Redis, username: str, action: UserAction, window_size: int, threshold: int):
+    def __init__(
+        self,
+        redis_db: redis.Redis,
+        username: str,
+        window_size: int,
+        threshold: int,
+        action: Optional[str] = None,
+    ):
         """
         :param redis_db: redis client
         :param username: 用户 ID
-        :param action: 用户操作名
         :param window_size: 窗口时长（单位：秒，默认 60s）
         :param threshold: 时间窗口内的次数阈值（默认 15 次）
+        :param action: 用户操作名（若不指定则共用频率限额）
         """
         super().__init__(redis_db, window_size, threshold)
         self.username = username
@@ -125,19 +117,3 @@ class UserActionRateLimiter(RedisTokenBucketRateLimiter):
 
     def _gen_key(self) -> str:
         return f'bk_paas3:rate_limits:{self.username}:{self.action}'
-
-
-def rate_limits_by_user(action: UserAction, window_size: int, threshold: int):
-    """适用于 Django View 方法的装饰器，提供频率限制的能力"""
-
-    @wrapt.decorator
-    def wrapper(wrapped, instance, args, kwargs):
-        rate_limiter = UserActionRateLimiter(
-            get_default_redis(), instance.request.user.username, action, window_size, threshold
-        )
-        if not rate_limiter.is_allowed():
-            return Response(status=HTTP_429_TOO_MANY_REQUESTS)
-
-        return wrapped(*args, **kwargs)
-
-    return wrapper

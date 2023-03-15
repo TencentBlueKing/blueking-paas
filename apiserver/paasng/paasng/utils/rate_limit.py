@@ -36,7 +36,7 @@ class UserAction(str, StructuredEnum):
     """用于频率限制的用户操作"""
 
     FETCH_DEPLOY_LOG = 'fetch_deploy_log'
-    WATCH_PROCESS = 'watch_process'
+    WATCH_PROCESSES = 'watch_processes'
 
 
 class RedisTokenBucketRateLimiter:
@@ -110,7 +110,7 @@ class RedisTokenBucketRateLimiter:
         return f'bk_paas3:token_bucket_rate_limit:{self.username}:{self.action}'
 
 
-def rate_limit_on_view_func(
+def rate_limits_on_view_func(
     action: UserAction,
     window_size: int = DEFAULT_WINDOW_SIZE,
     threshold: int = DEFAULT_THRESHOLD,

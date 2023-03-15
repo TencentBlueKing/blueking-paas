@@ -502,7 +502,7 @@ const router = new Router({
       component: appMigration
     },
     {
-      path: '/developer-center/apps/:id/:moduleId/403',
+      path: '/developer-center/apps/:id/403',
       name: 'permission403',
       component: permission403
     },

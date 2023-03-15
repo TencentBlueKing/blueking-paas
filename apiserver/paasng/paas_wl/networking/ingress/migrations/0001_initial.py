@@ -20,9 +20,13 @@ to the current version of the project delivered to anyone in the future.
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
-from paasng.platform.core.storages.dbrouter import operation_router
+from paasng.platform.core.storages.dbrouter import skip_if_found_record
 
 
+# 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress
+# 为避免 migrations 重复执行, 使用 skip_if_found_record 声明该 migration 的历史名称
+# 如果 django_migrations 表中存在重命名前的执行记录, 则跳过执行该 Migration
+@skip_if_found_record(sentinel=("services", "0001_initial"))
 class Migration(migrations.Migration):
 
     initial = True
@@ -31,7 +35,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        operation_router(migrations.CreateModel(
+        migrations.CreateModel(
             name='AppDomainCert',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -46,8 +50,8 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'db_table': 'services_appdomaincert',
             },
-        ), migration_record_sentinel=("services", "0001_initial")),
-        operation_router(migrations.CreateModel(
+        ),
+        migrations.CreateModel(
             name='AppDomainSharedCert',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -63,8 +67,8 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'db_table': 'services_appdomainsharedcert',
             },
-        ), migration_record_sentinel=("services", "0001_initial")),
-        operation_router(migrations.CreateModel(
+        ),
+        migrations.CreateModel(
             name='AppDomain',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -83,5 +87,5 @@ class Migration(migrations.Migration):
                 'unique_together': {('region', 'host')},
                 'db_table': 'services_appdomain',
             },
-        ), migration_record_sentinel=("services", "0001_initial")),
+        ),
     ]

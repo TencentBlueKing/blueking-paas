@@ -2,30 +2,32 @@
 
 import django.core.validators
 from django.db import migrations, models
-from paasng.platform.core.storages.dbrouter import operation_router
+from paasng.platform.core.storages.dbrouter import skip_if_found_record
 
 
+# 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress
+# 为避免 migrations 重复执行, 使用 skip_if_found_record 声明该 migration 的历史名称
+# 如果 django_migrations 表中存在重命名前的执行记录, 则跳过执行该 Migration
+@skip_if_found_record(sentinel=("services", "0005_auto_20221212_1810"))
 class Migration(migrations.Migration):
 
     dependencies = [
         ('ingress', '0004_auto_20220331_1058'),
     ]
-    # 由于架构调整, 该 DjangoApp 从 services 重命名为 ingress
-    # 为避免 migrations 重复执行, 使用 replaces 声明该 migration 的历史名称
 
     operations = [
-        operation_router(migrations.RemoveField(
+        migrations.RemoveField(
             model_name='domain',
             name='lb_plan',
-        ), migration_record_sentinel=("services", "0005_auto_20221212_1810")),
-        operation_router(migrations.AlterField(
+        ),
+        migrations.AlterField(
             model_name='appdomaincert',
             name='name',
             field=models.CharField(max_length=128, unique=True, validators=[django.core.validators.RegexValidator('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')]),
-        ), migration_record_sentinel=("services", "0005_auto_20221212_1810")),
-        operation_router(migrations.AlterField(
+        ),
+        migrations.AlterField(
             model_name='appdomainsharedcert',
             name='name',
             field=models.CharField(max_length=128, unique=True, validators=[django.core.validators.RegexValidator('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')]),
-        ), migration_record_sentinel=("services", "0005_auto_20221212_1810")),
+        ),
     ]

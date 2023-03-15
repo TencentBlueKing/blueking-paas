@@ -76,7 +76,8 @@ const state = {
     secondaryColor: '#FAFAFC'
   },
   localLanguage: localLanguage,
-  navType: {}
+  navType: {},
+  notPermissionInfo: {}
 };
 
 const getters = {
@@ -223,6 +224,9 @@ const mutations = {
   },
   updateNavType (state, data) {
     state.navType = data;
+  },
+  updateNotPermissionInfo (state, data) {
+    state.notPermissionInfo = data;
   }
 };
 
@@ -292,6 +296,8 @@ const actions = {
       }
       commit('updateAppInfo', { appCode, moduleId, data: response });
       return response;
+    }).catch((err) => {
+      commit('updateNotPermissionInfo', err);
     }).finally(() => {
       commit('updateAppLoading', false);
     });

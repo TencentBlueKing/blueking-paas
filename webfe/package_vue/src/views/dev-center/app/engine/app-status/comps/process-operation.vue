@@ -1894,7 +1894,7 @@
                     white-space: nowrap;
                 }
             }
-            
+
             .process-status {
                 display: inline-block;
                 padding: 26px 0 0 0;

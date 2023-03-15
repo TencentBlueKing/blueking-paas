@@ -13,6 +13,18 @@
       >
         <img src="/static/images/permissions.png">
         <p> {{ $t('您没有访问当前应用该功能的权限') }} </p>
+        <a
+          :href="$route.params.url"
+          target="blank"
+        >
+          <bk-button
+            :theme="'primary'"
+            :title="$t('申请成为开发者')"
+            class="mr10"
+          >
+            {{ $t('申请成为开发者') }}
+          </bk-button>
+        </a>
       </div>
     </div>
   </div>

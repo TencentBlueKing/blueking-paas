@@ -2095,5 +2095,6 @@ export default {
   '应用未设置访问路径': 'Application does not set access path',
   '数据获取异常': 'Data acquisition exception',
   '搜索结果为空': 'The search result is empty',
-  '前端组件库': 'Web components'
+  '前端组件库': 'Web components',
+  '申请成为开发者': 'Apply to be a developer'
 };

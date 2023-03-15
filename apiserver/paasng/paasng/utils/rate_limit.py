@@ -30,6 +30,8 @@ from paasng.platform.core.storages.redisdb import get_default_redis
 DEFAULT_WINDOW_SIZE = 60
 # 时间窗口内默认次数阈值
 DEFAULT_THRESHOLD = 15
+# 令牌桶过期时间 24h
+TOKEN_BUCKET_EXPIRE_TIME = 24 * 60 * 60
 
 
 class UserAction(str, StructuredEnum):
@@ -55,7 +57,7 @@ class RedisTokenBucketRateLimiter:
         :param username: 用户 ID
         :param action: 用户操作名
         :param window_size: 窗口时长（单位：秒，默认 60s）
-        :param threshold: 时间窗口内的次数阈值
+        :param threshold: 时间窗口内的次数阈值（默认 15 次）
         """
         self.redis_db = redis_db
         self.username = username
@@ -93,8 +95,11 @@ class RedisTokenBucketRateLimiter:
         """
         cur_timestamp = int(time.time())
 
-        if self.redis_db.llen(self.key) < self.threshold:
+        length = self.redis_db.llen(self.key)
+        if length < self.threshold:
             self.redis_db.lpush(self.key, cur_timestamp)
+            if not length:
+                self.redis_db.expire(self.key, TOKEN_BUCKET_EXPIRE_TIME)
             return True
 
         oldest_timestamp = int(self.redis_db.lindex(self.key, -1))  # type: ignore
@@ -107,7 +112,7 @@ class RedisTokenBucketRateLimiter:
 
     def _gen_key(self) -> str:
         """生成 redis 中的 key"""
-        return f'bk_paas3:token_bucket_rate_limit:{self.username}:{self.action}'
+        return f'bk_paas3:token_bucket_rate_limits:{self.username}:{self.action}'
 
 
 def rate_limits_on_view_func(

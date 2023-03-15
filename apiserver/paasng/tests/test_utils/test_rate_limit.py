@@ -53,7 +53,7 @@ def test_rate_limits_on_view_func():
     class FakeViewSet:
         request = fake_request
 
-        @rate_limits_on_view_func(UserAction.WATCH_PROCESSES)
+        @rate_limits_on_view_func(UserAction.WATCH_PROCESSES, window_size, threshold)
         def fake_view_func(self):
             return Response("ok")
 
@@ -62,6 +62,6 @@ def test_rate_limits_on_view_func():
     for _ in range(threshold):
         assert viewset.fake_view_func().status_code == HTTP_200_OK
 
-    assert not viewset.fake_view_func().status_code == HTTP_429_TOO_MANY_REQUESTS
+    assert viewset.fake_view_func().status_code == HTTP_429_TOO_MANY_REQUESTS
     time.sleep(window_size)
     assert viewset.fake_view_func().status_code == HTTP_200_OK

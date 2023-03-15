@@ -23,14 +23,14 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_429_TOO_MANY_REQUESTS
 
 from paasng.platform.core.storages.redisdb import get_default_redis
-from paasng.utils.rate_limit import RedisTokenBucketRateLimiter, UserAction, rate_limits_on_view_func
+from paasng.utils.rate_limit import UserAction, UserActionRateLimiter, rate_limits_by_user
 from tests.utils.auth import create_user
 
 
-def test_RedisTokenBucketRateLimiter():
+def test_UserActionRateLimiter():
     window_size, threshold = 3, 2
     user = create_user()
-    rate_limiter = RedisTokenBucketRateLimiter(
+    rate_limiter = UserActionRateLimiter(
         get_default_redis(), user.username, UserAction.WATCH_PROCESSES, window_size, threshold
     )
     # 消耗令牌
@@ -53,7 +53,7 @@ def test_rate_limits_on_view_func():
     class FakeViewSet:
         request = fake_request
 
-        @rate_limits_on_view_func(UserAction.WATCH_PROCESSES, window_size, threshold)
+        @rate_limits_by_user(UserAction.WATCH_PROCESSES, window_size, threshold)
         def fake_view_func(self):
             return Response("ok")
 

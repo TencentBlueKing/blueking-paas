@@ -31,7 +31,7 @@ from rest_framework.viewsets import ViewSet
 from paasng.engine.deploy.infras import ServerSendEvent
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.utils.error_codes import error_codes
-from paasng.utils.rate_limit import UserAction, rate_limits_on_view_func
+from paasng.utils.rate_limit import UserAction, rate_limits_by_user
 from paasng.utils.views import EventStreamRender
 
 from .serializers import HistoryEventsQuerySLZ, StreamEventSLZ
@@ -47,7 +47,7 @@ class StreamViewSet(ViewSet):
             raise error_codes.CHANNEL_NOT_FOUND
         return subscriber
 
-    @rate_limits_on_view_func(UserAction.FETCH_DEPLOY_LOG)
+    @rate_limits_by_user(UserAction.FETCH_DEPLOY_LOG, window_size=60, threshold=10)
     def streaming(self, request, channel_id):
         subscriber = self.get_subscriber(channel_id)
 

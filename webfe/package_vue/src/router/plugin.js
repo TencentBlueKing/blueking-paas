@@ -112,9 +112,12 @@ export const pluginRouter = [
     }
   },
   {
-    path: '/plugin-centerr/plugin/:id/403',
+    path: '/plugin-centerr/plugin/:moduleId/:id/403',
     name: 'plugin403',
-    component: plugin403
+    component: plugin403,
+    meta: {
+      plugin: true
+    }
   },
   {
     path: '/plugin-center/plugin/',

@@ -14,7 +14,8 @@
         <img src="/static/images/permissions.png">
         <p> {{ $t('您没有访问当前应用该功能的权限') }} </p>
         <a
-          :href="$route.params.url"
+          v-if="applyUrl"
+          :href="applyUrl"
           target="blank"
         >
           <bk-button
@@ -29,6 +30,37 @@
     </div>
   </div>
 </template>
+
+<script>
+    export default {
+        computed: {
+            isPlugin () {
+                  return this.$route.meta.plugin;
+            },
+            applyUrl () {
+                if (this.isPlugin) {
+                    return this.$store.state.plugin.pluginApplyUrl;
+                }
+                return this.$store.state.applyUrl;
+            },
+            id () {
+                return this.$route.params.id;
+            },
+            moduleId () {
+                return this.$route.params.moduleId;
+            }
+        },
+        async created () {
+            if (!this.applyUrl) {
+                if (this.isPlugin) {
+                    await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.id, pluginTypeId: this.moduleId });
+                } else {
+                    await this.$store.dispatch('getAppInfo', { appCode: this.id, moduleId: this.moduleId });
+                }
+            }
+        }
+    };
+</script>
 
 <style lang="css" scoped>
     .nofound {

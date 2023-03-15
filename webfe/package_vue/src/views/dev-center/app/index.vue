@@ -184,6 +184,7 @@
                     name: 'permission403',
                     params: {
                         id: appCode,
+                        moduleId: moduleId,
                         url: store.state.applyUrl
                     }
                 });
@@ -225,6 +226,7 @@
                     name: 'permission403',
                     params: {
                         id: appCode,
+                        moduleId: moduleId,
                         url: store.state.applyUrl
                     }
                 });

@@ -147,6 +147,7 @@
                     name: 'plugin403',
                     params: {
                         id: pluginId,
+                        moduleId: pluginTypeId,
                         url: store.state.plugin.pluginApplyUrl
                     }
                 });
@@ -177,6 +178,7 @@
                     name: 'plugin403',
                     params: {
                         id: pluginId,
+                        moduleId: pluginTypeId,
                         url: store.state.plugin.pluginApplyUrl
                     }
                 });

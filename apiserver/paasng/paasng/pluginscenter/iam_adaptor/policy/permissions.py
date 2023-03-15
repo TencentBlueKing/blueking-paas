@@ -19,10 +19,12 @@ to the current version of the project delivered to anyone in the future.
 from typing import List
 
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions
 from paasng.pluginscenter.iam_adaptor.definitions import gen_iam_resource
+from paasng.pluginscenter.iam_adaptor.management.shim import user_group_apply_url
 from paasng.pluginscenter.iam_adaptor.policy.client import lazy_iam_client
 from paasng.pluginscenter.models import PluginInstance
 
@@ -41,9 +43,17 @@ def plugin_action_permission_class(actions: List[PluginPermissionActions], use_c
 
             iam_resource = gen_iam_resource(obj)
             if len(actions) == 1:
-                return lazy_iam_client.is_action_allowed(
+                is_allowed = lazy_iam_client.is_action_allowed(
                     request.user.username, actions[0], [iam_resource], use_cache=use_cache
                 )
-            return all(lazy_iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values())
+            else:
+                is_allowed = all(
+                    lazy_iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values()
+                )
+            # 无插件应用权限时，需要返回应用权限申请链接
+            if not is_allowed:
+                raise PermissionDenied({'message': self.message, **user_group_apply_url(obj.id)})
+
+            return True
 
     return PluginActionPermission

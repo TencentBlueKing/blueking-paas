@@ -40,7 +40,8 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     def get_queryset(self, application: Application) -> QuerySet:
         """Get Domain QuerySet of current application"""
-        return Domain.objects.filter(module_id__in=application.modules.values_list("id", flat=True))
+        module_ids = list(application.modules.values_list("id", flat=True))
+        return Domain.objects.filter(module_id__in=module_ids)
 
     @swagger_auto_schema(operation_id="list-app-domains", response_serializer=DomainSLZ(many=True), tags=['Domains'])
     def list(self, request, **kwargs):

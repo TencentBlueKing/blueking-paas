@@ -49,7 +49,7 @@ class AppResVerManager:
 
         # 一般对于只读的操作，都只需要直接读取当前版本
         return get_mapper_version(
-            target=latest_config.metadata.get(self._mapper_version_term, settings.LEGACY_MAPPER_VERSION),
+            target=latest_config.metadata.get(self._mapper_version_term) or settings.LEGACY_MAPPER_VERSION,
             init_kwargs=dict(client=self.client),
         )
 

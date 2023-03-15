@@ -21,12 +21,13 @@ from uuid import UUID
 
 import arrow
 from django.utils.translation import ugettext_lazy as _
+from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
 from paas_wl.platform.applications.models import Release
 from paas_wl.workloads.processes.constants import ProcessUpdateType
-from paas_wl.workloads.processes.models import Instance
+from paas_wl.workloads.processes.models import Instance, ProcessSpec
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):
@@ -59,7 +60,18 @@ class InstanceForDisplaySLZ(serializers.Serializer):
 
 
 class ProcessSpecSLZ(serializers.Serializer):
-    """Serializer for representing process packages"""
+    """Serializer for representing process packages
+
+    Need to convert the resource limit to a number:
+        "resource_limit": {
+                    "cpu": "100m",
+                    "memory": "64Mi"
+                }
+        "resource_limit_quota": {
+                    "cpu": 100,
+                    "memory": 64
+                }
+    """
 
     name = serializers.CharField()
     target_replicas = serializers.IntegerField()
@@ -69,6 +81,15 @@ class ProcessSpecSLZ(serializers.Serializer):
     resource_requests = serializers.JSONField(source='plan.requests')
     plan_id = serializers.CharField(source="plan.id")
     plan_name = serializers.CharField(source="plan.name")
+    resource_limit_quota = serializers.SerializerMethodField(read_only=True)
+
+    def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
+        limits = obj.plan.limits
+        # 内存的单位为 Mi
+        memory_quota = int(parse_quantity(limits['memory']) / (1024 * 1024))
+        # CPU 的单位为 m
+        cpu_quota = int(parse_quantity(limits['cpu']) * 1000)
+        return {"cpu": cpu_quota, "memory": memory_quota}
 
 
 class CNativeProcSpecSLZ(serializers.Serializer):
@@ -78,6 +99,8 @@ class CNativeProcSpecSLZ(serializers.Serializer):
     target_replicas = serializers.IntegerField()
     target_status = serializers.CharField()
     max_replicas = serializers.IntegerField()
+    cpu_limit = serializers.CharField()
+    memory_limit = serializers.CharField()
 
 
 class UpdateProcessSLZ(serializers.Serializer):

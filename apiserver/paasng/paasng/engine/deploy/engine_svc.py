@@ -99,6 +99,8 @@ class EngineDeployClient:
         # 注入构建环境所需环境变量
         extra_envs = {**extra_envs, **build_info.environments}
 
+        # Use the default image when it's None, which means no images are bound to the app
+        image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
         # Create the Build object and start a background build task
         build_process = BuildProcess.objects.create(
             # TODO: Set the correct owner value
@@ -108,7 +110,7 @@ class EngineDeployClient:
             revision=version.revision,
             branch=version.version_name,
             output_stream=OutputStream.objects.create(),
-            image=build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE,
+            image=image,
             buildpacks=build_info.buildpacks_info or [],
         )
         builder_task.start_build_process.delay(
@@ -117,7 +119,7 @@ class EngineDeployClient:
             metadata={
                 'procfile': procfile,
                 'extra_envs': extra_envs or {},
-                'image': build_info.build_image,
+                'image': image,
                 'buildpacks': build_process.buildpacks_as_build_env(),
             },
         )

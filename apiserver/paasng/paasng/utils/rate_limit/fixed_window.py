@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import abc
 import time
-from typing import Optional
 
 import redis
 import wrapt
@@ -26,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_429_TOO_MANY_REQUESTS
 
 from paasng.platform.core.storages.redisdb import get_default_redis
+from paasng.utils.rate_limit.constants import UserAction
 
 
 class RedisFixedWindowRateLimiter(abc.ABC):
@@ -52,9 +52,9 @@ class RedisFixedWindowRateLimiter(abc.ABC):
                                                                      |
                                                                      | >= threshold
                                                                      v
-                                                            +----------------------+
-                                                            | [✗] cause rate limit |
-                                                            +----------------------+
+                                                           +----------------------+
+                                                           | [✗] cause rate limit |
+                                                           +----------------------+
         """
         self.cur_window = int(time.time() / self.window_size)
         key = self._gen_key()
@@ -82,16 +82,16 @@ class UserActionRateLimiter(RedisFixedWindowRateLimiter):
         self,
         redis_db: redis.Redis,
         username: str,
+        action: UserAction,
         window_size: int,
         threshold: int,
-        action: Optional[str] = None,
     ):
         """
         :param redis_db: redis client
         :param username: 用户 ID
+        :param action: 用户操作名
         :param window_size: 时间窗口长度（单位：秒）
         :param threshold: 时间窗口内的次数阈值
-        :param action: 用户操作名（若不指定则共用频率限额）
         """
         super().__init__(redis_db, window_size, threshold)
         self.username = username
@@ -101,13 +101,13 @@ class UserActionRateLimiter(RedisFixedWindowRateLimiter):
         return f'bk_paas3:rate_limits:{self.username}:{self.action}:{self.cur_window}'
 
 
-def rate_limits_by_user(window_size: int, threshold: int, action: Optional[str] = None):
+def rate_limits_by_user(action: UserAction, window_size: int, threshold: int):
     """适用于 Django View 方法的装饰器，提供频率限制的能力"""
 
     @wrapt.decorator
     def wrapper(wrapped, instance, args, kwargs):
         rate_limiter = UserActionRateLimiter(
-            get_default_redis(), instance.request.user.username, window_size, threshold, action
+            get_default_redis(), instance.request.user.username, action, window_size, threshold
         )
         if not rate_limiter.is_allowed():
             return Response(status=HTTP_429_TOO_MANY_REQUESTS)

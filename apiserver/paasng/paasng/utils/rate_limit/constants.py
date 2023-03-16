@@ -16,3 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from blue_krill.data_types.enum import StructuredEnum
+
+
+class UserAction(str, StructuredEnum):
+    """
+    用于频率限制的用户操作
+
+    Q: 为什么需要有 UserAction 这个枚举类，而不是根据需要传入操作名称，或者直接使用函数名作为标识？
+    A: 传入操作名称或使用函数名作为标识，都可能出现重名的情况，这时它们将共享频率限制配额，可能埋下隐患
+       使用枚举类则可以避免这个问题，新增限制时需要先检查是否有重名的 Action，避免共享配额
+       反之亦然，如果希望共享频率限制配额，则可以使用相同的枚举值
+    """
+
+    FETCH_DEPLOY_LOG = 'fetch_deploy_log'
+    WATCH_PROCESS = 'watch_process'

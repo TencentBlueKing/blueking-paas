@@ -30,8 +30,8 @@ class RedisTokenBucketRateLimiter(abc.ABC):
     def __init__(self, redis_db: redis.Redis, window_size: int, threshold: int):
         """
         :param redis_db: redis client
-        :param window_size: 窗口时长（单位：秒，默认 60s）
-        :param threshold: 时间窗口内的次数阈值（默认 15 次）
+        :param window_size: 时间窗口长度（单位：秒）
+        :param threshold: 时间窗口内的次数阈值
         """
         self.redis_db = redis_db
         self.window_size = window_size
@@ -107,8 +107,8 @@ class UserActionRateLimiter(RedisTokenBucketRateLimiter):
         """
         :param redis_db: redis client
         :param username: 用户 ID
-        :param window_size: 窗口时长（单位：秒，默认 60s）
-        :param threshold: 时间窗口内的次数阈值（默认 15 次）
+        :param window_size: 时间窗口长度（单位：秒）
+        :param threshold: 时间窗口内的次数阈值
         :param action: 用户操作名（若不指定则共用频率限额）
         """
         super().__init__(redis_db, window_size, threshold)

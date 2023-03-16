@@ -294,8 +294,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: 8080
                 },
@@ -318,9 +318,9 @@
                     { key: '1024 Mi', value: '1024Mi' }
                 ],
                 cpuData: [
+                    { key: '500m', value: '500m' },
                     { key: '1000m', value: '1000m' },
-                    { key: '2000m', value: '2000m' },
-                    { key: '4000m', value: '4000m' }
+                    { key: '2000m', value: '2000m' }
                 ],
                 hooks: null,
                 isLoading: true,
@@ -482,8 +482,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: null
                 };
@@ -630,8 +630,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: 8080
                 };

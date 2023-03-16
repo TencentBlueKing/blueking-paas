@@ -132,20 +132,28 @@ class AppModelRevision(TimestampedModel):
         indexes = [models.Index(fields=['application_id', 'module_id'])]
 
 
-class AppModelDeployManager(models.Manager):
-    """Custom manager for AppModelDeploy"""
+class AppModelDeployQuerySet(models.QuerySet):
+    """Custom QuerySet for AppModelDeploy"""
 
-    def filter_by_env(self, env: ModuleEnvironment) -> models.QuerySet:
+    def filter_by_env(self, env: ModuleEnvironment):
         """Get all deploys under an env"""
-        return self.get_queryset().filter(
+        return self.filter(
             application_id=env.application_id,
             module_id=env.module_id,
             environment_name=env.environment,
         )
 
+    def filter_succeeded(self):
+        """return a queryset filter by status=READY"""
+        return self.filter(status=DeployStatus.READY)
+
+    def latest_succeeded(self):
+        """Return the latest succeeded deployment of queryset"""
+        return self.filter_succeeded().latest('created')
+
     def any_successful(self, env: ModuleEnvironment) -> bool:
         """Check if there are any successful deploys in given env"""
-        return self.filter_by_env(env).filter(status=DeployStatus.READY).exists()
+        return self.filter_by_env(env).filter_succeeded().exists()
 
 
 class AppModelDeploy(TimestampedModel):
@@ -176,7 +184,7 @@ class AppModelDeploy(TimestampedModel):
 
     operator = BkUserField(verbose_name=_('操作者'))
 
-    objects = AppModelDeployManager()
+    objects = AppModelDeployQuerySet.as_manager()
 
     class Meta:
         unique_together = ('application_id', 'module_id', 'environment_name', 'name')

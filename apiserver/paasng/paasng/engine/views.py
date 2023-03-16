@@ -124,7 +124,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = self.serializer_class(request.query_params)
 
         try:
-            deployment = Deployment.objects.filter(app_environment=module_env).latest_succeeded()
+            deployment = Deployment.objects.filter_by_env(env=module_env).latest_succeeded()
         except Deployment.DoesNotExist:
             raise error_codes.APP_NOT_RELEASED
 
@@ -195,7 +195,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_deployment_data(env) -> Optional[Dict]:
         """Try to get the latest deployment data by querying Deployment model"""
         try:
-            deployment = Deployment.objects.filter(app_environment=env).latest_succeeded()
+            deployment = Deployment.objects.filter_by_env(env=env).latest_succeeded()
         except Deployment.DoesNotExist:
             # Cloud-native app does not has any deployment objects
             return None

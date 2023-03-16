@@ -62,7 +62,7 @@ def _patch_operation(op: Operation, sentinel: Tuple[str, str]):
         connection = connections[connection_alias]
         # 如果哨兵记录已存在, 表示该环境并未全新部署. 跳过执行 operation
         if MigrationRecorder(connection).migration_qs.filter(app=sentinel[0], name=sentinel[1]).exists():
-            logger.info(_("检测到重命名前的 migration 记录 {}, 跳过执行当前 migration", str(sentinel)))
+            logger.info(_("检测到重命名前的 migration 记录 {}, 跳过执行当前 migration").format(str(sentinel)))
             return False
         return origin_allow_migrate_model(connection_alias, model)
 

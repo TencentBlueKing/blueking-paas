@@ -46,16 +46,16 @@
             id () {
                 return this.$route.params.id;
             },
-            moduleId () {
-                return this.$route.params.moduleId;
+            pluginTypeId () {
+                return this.$route.params.pluginTypeId;
             }
         },
         async created () {
             if (!this.applyUrl) {
                 if (this.isPlugin) {
-                    await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.id, pluginTypeId: this.moduleId });
+                    await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.id, pluginTypeId: this.pluginTypeId });
                 } else {
-                    await this.$store.dispatch('getAppInfo', { appCode: this.id, moduleId: this.moduleId });
+                    await this.$store.dispatch('getAppInfo', { appCode: this.id });
                 }
             }
         }

@@ -183,7 +183,8 @@
                 next({
                     name: 'permission403',
                     params: {
-                        id: appCode
+                        id: appCode,
+                        url: store.state.applyUrl
                     }
                 });
             }
@@ -223,7 +224,8 @@
                 next({
                     name: 'permission403',
                     params: {
-                        id: appCode
+                        id: appCode,
+                        url: store.state.applyUrl
                     }
                 });
             }

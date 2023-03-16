@@ -41,7 +41,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 """
 from pathlib import Path
 
-from dynaconf import LazySettings, Validator
+from dynaconf import LazySettings
 
 BASE_DIR = Path(__file__).parents[2]
 
@@ -53,10 +53,6 @@ settings = LazySettings(
     load_dotenv=True,
     # Read settings files in below locations
     includes=[SETTINGS_FILES_GLOB, LOCAL_SETTINGS],
-    validators=[
-        # Configure minimal required settings
-        Validator('BKKRILL_ENCRYPT_SECRET_KEY', must_exist=True),
-    ],
     # Envvar name configs
     # 环境变量的前缀差异化保留
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS_WL",
@@ -230,10 +226,6 @@ ENGINE_PROC_REPLICAS_BY_TYPE = {
 
 # 插件监控图表相关配置（原生 Prometheus 使用，仅用于不支持蓝鲸监控的集群 k8s 1.12-）
 MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
-
-# 蓝鲸监控运维相关的额外配置
-BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
-
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用

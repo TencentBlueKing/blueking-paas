@@ -13,19 +13,15 @@
       >
         <img src="/static/images/permissions.png">
         <p> {{ $t('您没有访问当前应用该功能的权限') }} </p>
-        <a
+        <bk-button
           v-if="applyUrl"
-          :href="applyUrl"
-          target="blank"
+          :theme="'primary'"
+          :title="$t('申请成为开发者')"
+          class="mr10"
+          @click="toApplication"
         >
-          <bk-button
-            :theme="'primary'"
-            :title="$t('申请成为开发者')"
-            class="mr10"
-          >
-            {{ $t('申请成为开发者') }}
-          </bk-button>
-        </a>
+          {{ $t('申请成为开发者') }}
+        </bk-button>
       </div>
     </div>
   </div>
@@ -57,6 +53,11 @@
                 } else {
                     await this.$store.dispatch('getAppInfo', { appCode: this.id });
                 }
+            }
+        },
+        methods: {
+            toApplication () {
+                window.open(this.applyUrl, '_blank');
             }
         }
     };

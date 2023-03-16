@@ -65,7 +65,7 @@ class OfflineManager:
         return None, False
 
     def get_latest_succeeded_deployment(self):
-        return Deployment.objects.filter(app_environment=self.env).latest_succeeded()
+        return Deployment.objects.filter_by_env(env=self.env).latest_succeeded()
 
     def perform_env_offline(self, operator: str):
         """可重入的下架操作，返回 OfflineOperation"""

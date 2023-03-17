@@ -17,17 +17,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
+import logging
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
-from .constants import BKPAAS_ADDONS_ANNO_KEY
+logger = logging.getLogger(__name__)
 
 
 class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -41,4 +43,13 @@ class CNativeAppManifestExtViewset(viewsets.ViewSet, ApplicationCodeInPathMixin)
         # 只要绑定即可用于展示，不关心是否已经分配实例
         service_names = [svc.name for svc in mixed_service_mgr.list_binded(engine_app.env.module)]
         manifest_ext = {"metadata": {"annotations": {BKPAAS_ADDONS_ANNO_KEY: json.dumps(service_names)}}}
+
+        try:
+            from paasng.security.access_control.models import ApplicationAccessControlSwitch
+        except ImportError:
+            logger.info('access control only supported in te region, skip...')
+        else:
+            if ApplicationAccessControlSwitch.objects.is_enabled(self.get_application()):
+                manifest_ext["metadata"]["annotations"][ACCESS_CONTROL_ANNO_KEY] = "true"
+
         return Response(data=manifest_ext)

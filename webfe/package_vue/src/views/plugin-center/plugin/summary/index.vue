@@ -101,10 +101,16 @@
             <div>
               <h3>{{ $t('基本信息') }}</h3>
               <div class="base-info">
-                <p>
+                <p
+                  v-bk-overflow-tips
+                  class="text-ellipsis"
+                >
                   {{ $t('插件类型：') }} <span>{{ curPluginInfo.pd_name }}</span>
                 </p>
-                <p>
+                <p
+                  v-bk-overflow-tips
+                  class="text-ellipsis"
+                >
                   {{ $t('开发语言：') }} <span>{{ curPluginInfo.language }}</span>
                 </p>
                 <p class="repos">
@@ -147,7 +153,11 @@
                           class="tooltip-time"
                         >{{ item.created_format }}</span>
                       </p>
-                      <p class="dynamic-content">
+                      <p
+                        v-bk-overflow-tips
+                        class="dynamic-content"
+                        style="-webkit-line-clamp: 2;-webkit-box-orient: vertical"
+                      >
                         {{ $t('由') }} {{ item.display_text }}
                       <!-- <span class="gruy">{{ item.display_text }}</span> -->
                       </p>
@@ -156,10 +166,7 @@
                   </template>
                   <template v-else>
                     <div class="ps-no-result">
-                      <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无数据') }} </p>
-                      </div>
+                      <table-empty empty />
                     </div>
                   </template>
                 </ul>
@@ -502,6 +509,8 @@
     };
 </script>
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
+
     .visible-range{
         .desc{
             font-size: 12px;
@@ -838,6 +847,10 @@
         height: 48px;
         overflow: hidden;
         color: #666;
+        text-overflow: ellipsis;
+        white-space: normal;
+        word-break: break-all;
+        display: -webkit-box;
     }
 
     .summary-content {

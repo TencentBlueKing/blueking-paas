@@ -110,18 +110,10 @@
           v-if="!isStreamLogListLoading"
           class="text"
         >
-          <p>
-            <i
-              class="paasng-icon paasng-empty"
-              style="font-size: 65px;"
-            />
-          </p>
-          <p
-            class="f12"
-            style="color: #c3cdd7;"
-          >
-            {{ $t('暂无数据') }}
-          </p>
+          <empty-dark
+            :keyword="emptyDarkConf.keyword"
+            @clear-filter="clearFilter"
+          />
         </div>
       </div>
     </div>
@@ -183,7 +175,10 @@
                     levelname: '',
                     time_range: '1h'
                 },
-                isFilter: false
+                isFilter: false,
+                emptyDarkConf: {
+                    keyword: ''
+                }
             };
         },
         watch: {
@@ -472,6 +467,7 @@
                             this.$refs.logContainer.scrollTop = this.$refs.logContainer.scrollHeight;
                         }, 0);
                     }
+                    this.updateEmptyDarkConfig();
                 } catch (res) {
                     this.$paasMessage({
                         theme: 'error',
@@ -584,6 +580,15 @@
 
             processIdSlice (str) {
                 return str.slice(0, 4) + '.';
+            },
+
+            clearFilter () {
+                this.$refs.standartLogFilter && this.$refs.standartLogFilter.clearKeyword();
+                this.isStreamLogListLoading = true;
+            },
+
+            updateEmptyDarkConfig () {
+                this.emptyDarkConf.keyword = this.logParams.keyword;
             }
         }
     };

@@ -27,8 +27,8 @@ from django.db.models import Model
 from django.utils.translation import gettext as _
 from pydantic import BaseModel
 
+from paas_wl.resources.tasks import archive_env
 from paasng.engine.constants import JobStatus, RuntimeType
-from paasng.engine.controller.state import controller_client
 from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, OfflineOperationExistError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
@@ -65,7 +65,7 @@ class OfflineManager:
         return None, False
 
     def get_latest_succeeded_deployment(self):
-        return Deployment.objects.filter(app_environment=self.env).latest_succeeded()
+        return Deployment.objects.filter_by_env(env=self.env).latest_succeeded()
 
     def perform_env_offline(self, operator: str):
         """可重入的下架操作，返回 OfflineOperation"""
@@ -101,10 +101,7 @@ class OfflineManager:
             sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
         )
 
-        engine_app = self.env.engine_app
-        controller_client.archive_app(
-            region=engine_app.region, app_name=engine_app.name, operation_id=str(offline_operation.pk)
-        )
+        archive_env(self.env, str(offline_operation.pk))
         return offline_operation
 
 

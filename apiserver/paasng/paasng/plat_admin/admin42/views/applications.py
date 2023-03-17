@@ -20,6 +20,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.accessories.iam.exceptions import BKIAMGatewayServiceError
 from paasng.accessories.iam.helpers import (
     add_role_members,
@@ -30,9 +31,6 @@ from paasng.accessories.iam.helpers import (
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import ClusterType
-from paasng.engine.controller.cluster import get_engine_app_cluster
-from paasng.engine.controller.shortcuts import make_internal_client
-from paasng.engine.controller.state import controller_client
 from paasng.plat_admin.admin42.serializers.application import ApplicationDetailSLZ, ApplicationSLZ, BindEnvClusterSLZ
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -83,8 +81,8 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs['application'] = application
         kwargs['cluster_choices'] = [
-            {'id': cluster['name'], 'name': f"{cluster['name']} -- {ClusterType.get_choice_label(cluster['type'])}"}
-            for cluster in make_internal_client().list_region_clusters(application['region'])
+            {'id': cluster.name, 'name': f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
+            for cluster in RegionClusterService(application['region']).list_clusters()
         ]
         return kwargs
 
@@ -117,12 +115,7 @@ class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
         slz = BindEnvClusterSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        engine_app = self.get_engine_app_via_path()
-        controller_client.bind_app_cluster(
-            engine_app.region, engine_app.name, cluster_name=slz.validated_data["cluster_name"]
-        )
-        # 清理 engine_app 集群信息缓存
-        get_engine_app_cluster.invalidate(engine_app.region, engine_app.name)
+        EnvClusterService(env=self.get_env_via_path()).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

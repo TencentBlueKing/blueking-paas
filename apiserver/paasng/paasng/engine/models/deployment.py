@@ -28,13 +28,13 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from jsonfield import JSONField
 
+from paas_wl.release_controller.api import InterruptionNotAllowed, interrupt_build_proc
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
-from paasng.engine.controller.exceptions import BadResponse
-from paasng.engine.controller.state import controller_client
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.base import OperationVersionBase
 from paasng.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
 from paasng.utils.models import make_legacy_json_field
 
@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 
 class DeploymentQuerySet(models.QuerySet):
     """Custom QuerySet for Deployment model"""
+
+    def filter_by_env(self, env: ModuleEnvironment):
+        """Get all deploys under an env"""
+        return self.filter(app_environment=env)
 
     def owned_by_module(self, module, environment=None):
         """Return deployments owned by module"""
@@ -149,25 +153,6 @@ class Deployment(OperationVersionBase):
             path = path.relative_to("/")
         return path
 
-    @property
-    def logs(self):
-        logs_ = []
-        if self.build_process_id:
-            resp = controller_client.read_build_process_result(
-                app_name=self.get_engine_app().name, region=self.region, build_process_id=self.build_process_id
-            )
-            for item in resp['lines']:
-                logs_.append(item["line"].replace('\x1b[1G', ''))
-
-        if self.pre_release_id:
-            resp = controller_client.command__retrieve(
-                region=self.region, app_name=self.get_engine_app().name, command_id=self.pre_release_id
-            )
-            for item in resp["lines"]:
-                logs_.append(item["line"].replace('\x1b[1G', ''))
-
-        return "".join(logs_) + "\n" + (self.err_detail or '')
-
     def has_succeeded(self):
         return self.status == JobStatus.SUCCESSFUL.value
 
@@ -260,11 +245,8 @@ def interrupt_deployment(deployment: Deployment, user: User):
     deployment.save(update_fields=['build_int_requested_at', 'release_int_requested_at', 'updated'])
 
     if deployment.build_process_id:
-        engine_app = deployment.get_engine_app()
         try:
-            controller_client.interrupt_build_process(engine_app.region, engine_app.name, deployment.build_process_id)
-        except BadResponse as e:
-            # This error code means that build has not been started yet
-            if e.get_error_code() == 'INTERRUPTION_NOT_ALLOWED':
-                raise DeployInterruptionFailed(e.get_error_message())
-            # Ignore other BadResponse errors
+            interrupt_build_proc(deployment.build_process_id)
+        except InterruptionNotAllowed:
+            # This exception means that build has not been started yet
+            raise DeployInterruptionFailed('任务正处于预备执行状态，无法中断，请稍候重试')

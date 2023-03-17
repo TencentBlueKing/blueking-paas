@@ -40,40 +40,36 @@
         @page-change="handlePageChange"
         @filter-change="handleFilterChange"
       >
-        <div
-          v-if="isSearchClear || pluginList.length || filterKey"
-          slot="empty"
-        >
-          <bk-exception
-            class="exception-wrap-item exception-part"
-            type="search-empty"
-            scene="part"
+        <div slot="empty">
+          <table-empty
+            :keyword="tableEmptyConf.keyword"
+            :abnormal="tableEmptyConf.isAbnormal"
+            @reacquire="fetchPluginsList"
+            @clear-filter="clearFilterKey"
           />
-          <div class="empty-tips">
-            {{ $t('可以尝试调整关键词 或') }}
-            <span
-              class="clear-search"
-              @click="clearFilterKey"
-            >{{ $t('清空搜索条件') }}</span>
-          </div>
         </div>
-        <bk-table-column :label="$t('插件 ID')">
+        <bk-table-column
+          :label="$t('插件 ID')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
-            <img
-              :src="row.logo"
-              onerror="this.src='/static/images/plugin-default.svg'"
-              class="plugin-logo-cls"
-            >
-            <bk-button
-              v-bk-tooltips="row.id"
-              text
+            <span
+              class="plugin-link"
               @click="toPluginSummary(row)"
             >
+              <img
+                :src="row.logo"
+                onerror="this.src='/static/images/plugin-default.svg'"
+                class="plugin-logo-cls"
+              >
               {{ row.id || '--' }}
-            </bk-button>
+            </span>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('插件名称')">
+        <bk-table-column
+          :label="$t('插件名称')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             <span>{{ row.name_zh_cn }}</span>
           </template>
@@ -84,6 +80,7 @@
           column-key="pd_name"
           :filters="pluginTypeFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             {{ row.pd_name || '--' }}
@@ -93,6 +90,7 @@
           :label="$t('创建时间')"
           prop="created"
           sortable
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             {{ row.created || '--' }}
@@ -104,6 +102,7 @@
           column-key="language"
           :filters="languageFilters"
           :filter-multiple="true"
+          :render-header="$renderHeader"
         />
         <bk-table-column
           :label="$t('版本')"
@@ -194,6 +193,7 @@
 
 <script>
     import { PLUGIN_STATUS } from '@/common/constants';
+    import { clearFilter } from '@/common/utils';
     export default {
         data () {
             return {
@@ -222,7 +222,10 @@
                     'pending': 'pending',
                     'initial': 'initial'
                 },
-                isSearchClear: false
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -288,7 +291,11 @@
                     });
                     this.pluginList = res.results;
                     this.pagination.count = res.count;
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    // 显示异常
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -297,7 +304,6 @@
                 } finally {
                     this.isDataLoading = false;
                     this.loading = false;
-                    this.isSearchClear = false;
                 }
             },
 
@@ -430,10 +436,22 @@
             },
 
             clearFilterKey () {
-                // 防止清空搜索条件时提示抖动
-                this.isSearchClear = true;
                 this.filterKey = '';
                 this.$refs.pluginTable.clearFilter();
+                // 手动清空表头筛选
+                if (this.$refs.pluginTable.$refs.tableHeader) {
+                    const tableHeader = this.$refs.pluginTable.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
+                this.fetchPluginsList();
+            },
+
+            updateTableEmptyConfig () {
+                if (this.filterKey || this.filterLanguage.length || this.filterPdName.length) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };
@@ -533,6 +551,13 @@
         .clear-search {
             cursor: pointer;
             color: #3a84ff;
+        }
+    }
+    .plugin-link {
+        color: #3a84ff;
+        cursor: pointer;
+        &:hover {
+            color: #699df4;
         }
     }
 </style>

@@ -64,9 +64,13 @@
             @page-change="handlePageChange"
             @page-limit-change="handlePageSizeChange"
           >
+            <div slot="empty">
+              <table-empty empty />
+            </div>
             <bk-table-column
               :label="$t('应用信息')"
               min-width="200"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <div
@@ -92,7 +96,10 @@
               prop="created"
               :render-header="renderHeader"
             />
-            <bk-table-column :label="$t('应用版本')">
+            <bk-table-column
+              :label="$t('应用版本')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <span>{{ lauguageMap[props.row.region] || '--' }}</span>
               </template>

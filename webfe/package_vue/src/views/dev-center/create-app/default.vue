@@ -1,17 +1,23 @@
 <template lang="html">
   <div class="establish">
+    <div class="ps-tip-block default-info mt15">
+      <i
+        style="color: #3A84FF;"
+        class="paasng-icon paasng-info-circle"
+      />
+      {{ notSmartAPP ? defaultAlertText : smartAlertText }}
+    </div>
+    <div class="default-app-type">
+      <default-app-type
+        @on-change-type="handleSwitchAppType"
+      />
+    </div>
     <form
+      v-show="notSmartAPP"
       id="form-create-app"
       data-test-id="createDefault_form_appInfo"
       @submit.stop.prevent="submitCreateForm"
     >
-      <div class="ps-tip-block default-info mt15">
-        <i
-          style="color: #3A84FF;"
-          class="paasng-icon paasng-info-circle"
-        />
-        {{ $t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。') }}
-      </div>
       <!-- 基本信息 -->
       <div
         class="create-item"
@@ -65,7 +71,7 @@
           </p>
         </div>
         <div
-          v-if="platformFeature.REGION_DISPLAY"
+          v-if="platformFeature.REGION_DISPLAY && notBkLesscode"
           class="form-group"
           style="margin-top: 7px;"
         >
@@ -93,123 +99,12 @@
             </div>
           </div>
         </div>
-        <div
-          v-if="curUserFeature.ENABLE_TC_DOCKER"
-          class="form-group"
-          style="margin-top: 7px;margin-left: 10px"
-        >
-          <label class="form-label"> {{ $t('构建方式') }} </label>
-          <div
-            class="form-group-flex-radio"
-            style="width: 100%"
-          >
-            <div
-              class="form-group-radio"
-              style="margin-top: 5px;"
-            >
-              <bk-radio-group
-                v-model="structureType"
-                class="construction-manner"
-              >
-                <bk-radio :value="'soundCode'">
-                  {{ $t('提供源码') }}
-                </bk-radio>
-                <bk-radio :value="'mirror'">
-                  {{ $t('提供镜像') }}
-                </bk-radio>
-                <bk-radio
-                  :value="'isMirror'"
-                  :disabled="isShowRadio"
-                >
-                  {{ $t('从源码构建镜像') }}
-                </bk-radio>
-              </bk-radio-group>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- 镜像管理 -->
-      <div
-        v-if="structureType === 'mirror'"
-        class="create-item"
-        data-test-id="createDefault_item_baseInfo"
-      >
-        <div class="item-title">
-          {{ $t('镜像管理') }}
-        </div>
-
-        <div
-          class="form-group"
-          style="margin-top: 7px;"
-        >
-          <label class="form-label"> {{ $t('镜像类型') }} </label>
-          <div
-            class="form-group-radio"
-            style="margin-top: 5px;"
-          >
-            <bk-radio-group v-model="mirrorData.type">
-              <bk-radio value="public">
-                {{ $t('公开') }}
-              </bk-radio>
-              <bk-radio
-                value="private"
-                disabled
-              >
-                {{ $t('私有') }}
-              </bk-radio>
-            </bk-radio-group>
-          </div>
-        </div>
-
-        <bk-form
-          ref="validate2"
-          form-type="inline"
-          :model="mirrorData"
-          :rules="mirrorRules"
-          ext-cls="item-cls"
-        >
-          <bk-form-item
-            :required="true"
-            :property="'url'"
-            error-display-type="normal"
-          >
-            <div class="form-group mt10">
-              <label class="form-label"> {{ $t('镜像地址') }} </label>
-              <div class="form-input-flex">
-                <!-- <input type="text" autocomplete="off"
-                                    name="source_tp_url"
-                                    data-parsley-required-message="该字段是必填项"
-                                    data-parsley-pattern="^((https|http|ftp|rtsp|mms)?:\/\/)[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/?[A-Za-z0-9]+(\/?))*$"
-                                    data-parsley-pattern-message="地址格式不正确"
-                                    data-parsley-trigger="input blur"
-                                    class="ps-form-control" placeholder="请输入正确的地址" /> -->
-                <bk-input
-                  v-model="mirrorData.url"
-                  style="width: 520px;"
-                  :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
-                  size="large"
-                  class="mt10"
-                  clearable
-                >
-                  <template
-                    v-if="GLOBAL.APP_VERSION === 'te'"
-                    slot="prepend"
-                  >
-                    <div class="group-text">
-                      mirrors.tencent.com/
-                    </div>
-                  </template>
-                </bk-input>
-              </div>
-            </div>
-          </bk-form-item>
-        </bk-form>
       </div>
 
       <!-- 应用引擎 -->
       <div
         v-if="structureType !== 'mirror'"
-        class="create-item"
+        :class="['create-item', { 'template-wrapper': !notBkLesscode }]"
         data-test-id="createDefault_item_appEngine"
       >
         <div class="item-title">
@@ -219,31 +114,32 @@
           <!-- 代码库 -->
           <div class="establish-tab">
             <section class="code-type">
-              <label class="form-label"> {{ $t('模板来源') }} </label>
+              <label class="form-label template"> {{ $t('模板来源') }} </label>
               <div class="tab-box">
                 <li
-                  :class="['tab-item', { 'active': localSourceOrigin === 1 }]"
+                  v-if="notBkLesscode"
+                  :class="['tab-item template', { 'active': localSourceOrigin === 1 }]"
                   @click="handleCodeTypeChange(1)"
                 >
                   {{ $t('蓝鲸开发框架') }}
                 </li>
                 <li
-                  v-if="allRegionsSpecs[regionChoose] && allRegionsSpecs[regionChoose].allow_deploy_app_by_lesscode"
-                  :class="['tab-item', { 'active': localSourceOrigin === 2 }]"
-                  @click="handleCodeTypeChange(2)"
+                  v-if="!notBkLesscode"
+                  class="bk-less-code"
                 >
                   {{ $t('蓝鲸可视化开发平台') }}
                 </li>
-                <li
+                <!-- 蓝鲸插件创建入口 -->
+                <!-- <li
                   v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && allowPluginCreation(regionChoose)"
                   :class="['tab-item', { 'active': localSourceOrigin === 3 }]"
                   @click="handleCodeTypeChange(3)"
                 >
                   {{ $t('蓝鲸插件') }}
-                </li>
+                </li> -->
                 <li
-                  v-if="sceneTemplateList.length"
-                  :class="['tab-item', { 'active': localSourceOrigin === 5 }]"
+                  v-if="sceneTemplateList.length && notBkLesscode"
+                  :class="['tab-item template', { 'active': localSourceOrigin === 5 }]"
                   @click="handleCodeTypeChange(5)"
                 >
                   {{ $t('场景模版') }}
@@ -353,15 +249,7 @@
                     class="ps-no-result"
                     style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%);"
                   >
-                    <div class="text">
-                      <p>
-                        <i
-                          class="paasng-icon paasng-empty"
-                          style="font-size: 50px;"
-                        />
-                      </p>
-                      <p> {{ $t('暂无数据') }} </p>
-                    </div>
+                    <table-empty empty />
                   </div>
                 </div>
               </div>
@@ -385,11 +273,11 @@
               style="color: #3A84FF;"
               class="paasng-icon paasng-info-circle"
             />
-            {{ $t('默认模块需要') }} <a
+            {{ $t('默认模块需要在') }} <a
               target="_blank"
               :href="GLOBAL.LINK.LESSCODE_INDEX"
               style="color: #3a84ff"
-            > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('并生成源码包部署，您也可以在应用中新增普通模块') }}
+            > {{ $t('蓝鲸可视化开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
           </div>
 
           <div
@@ -610,6 +498,11 @@
         </bk-button>
       </div>
     </form>
+    <!-- S-mart 应用 -->
+    <create-smart-app
+      v-if="curCodeSource === 'smart'"
+      key="smart"
+    />
   </div>
 </template>
 
@@ -622,12 +515,16 @@
     import gitExtend from '@/components/ui/git-extend.vue';
     import repoInfo from '@/components/ui/repo-info.vue';
     import ECharts from 'vue-echarts/components/ECharts.vue';
+    import createSmartApp from './smart';
+    import defaultAppType from './default-app-type';
 
     export default {
         components: {
             gitExtend,
             repoInfo,
-            'chart': ECharts
+            'chart': ECharts,
+            createSmartApp,
+            defaultAppType
         },
         data () {
             return {
@@ -772,7 +669,9 @@
                 sceneIsLoading: false,
                 sceneListIsLoading: false,
                 deploymentIsShow: true,
-                isLessCodeRule: false
+                isLessCodeRule: false,
+                curCodeSource: 'default',
+                defaultRegionChoose: 'default'
             };
         },
         computed: {
@@ -805,9 +704,6 @@
                     height: '208px'
                 };
             },
-            curUserFeature () {
-                return this.$store.state.userFeature;
-            },
             curSourceControl () {
                 const match = this.sourceControlTypes.find(item => {
                     return item.value === this.sourceControlType;
@@ -816,6 +712,19 @@
             },
             platformFeature () {
                 return this.$store.state.platformFeature;
+            },
+            // 蓝鲸可视化平台不显示对应表单项
+            notBkLesscode () {
+                return this.curCodeSource !== 'bkLesscode';
+            },
+            notSmartAPP () {
+                return this.curCodeSource !== 'smart';
+            },
+            defaultAlertText () {
+                return this.$t('平台为该类应用提供应用引擎、增强服务、云 API 权限、应用市场等功能；适用于自主基于PaaS平台开发SaaS的场景。');
+            },
+            smartAlertText () {
+                return this.$t('平台为该类应用提供应用引擎、增强服务等功能，并提供源码包部署和通过配置文件定义应用信息的能力；适用于熟知蓝鲸官方S-mart打包流程的SaaS开发场景。');
             }
         },
         watch: {
@@ -848,6 +757,10 @@
                 this.curAppType = this.appTypes[value];
             },
             regionChoose () {
+                // 蓝鲸可视化平台推送的源码包, 无需请求场景模版
+                if (this.curCodeSource === 'bkLesscode') {
+                    return;
+                }
                 // 场景模版
                 this.getSceneTemplates();
                 if (this.structureType !== 'mirror') {
@@ -1074,6 +987,7 @@
                         });
                     });
                     this.regionChoose = this.regionChoices[0].key;
+                    this.defaultRegionChoose = this.regionChoices[0].key;
                     this.languages = this.allRegionsSpecs[this.regionChoose].languages;
                     this.curLanguages = _.cloneDeep(this.languages);
                     this.sourceInitTemplate = this.languages[this.language][0].name;
@@ -1107,8 +1021,8 @@
             changeRegion () {
                 // 重置选择
                 this.clusterName = '';
-                this.languages = this.allRegionsSpecs[this.regionChoose].languages;
-                this.regionDescription = this.allRegionsSpecs[this.regionChoose].description;
+                this.languages = this.allRegionsSpecs[this.regionChoose] && this.allRegionsSpecs[this.regionChoose].languages;
+                this.regionDescription = this.allRegionsSpecs[this.regionChoose] && this.allRegionsSpecs[this.regionChoose].description;
                 this.language = 'Python';
                 this.langTransitionName = 'lang-card-to-right';
                 this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
@@ -1387,6 +1301,22 @@
                     }
                 });
                 this.changeScenarioTemplate();
+            },
+
+            // 切换应用类型
+            handleSwitchAppType (codeSource) {
+                this.curCodeSource = codeSource;
+                this.$nextTick(() => {
+                    // 蓝鲸可视化平台推送的源码包
+                    if (codeSource === 'bkLesscode') {
+                        this.regionChoose = this.GLOBAL.APP_VERSION === 'te' ? 'ieod' : 'default';
+                        this.structureType = 'soundCode';
+                        this.handleCodeTypeChange(2);
+                    } else if (codeSource === 'default') {
+                        // 普通应用
+                        this.regionChoose = this.defaultRegionChoose;
+                    }
+                });
             }
         }
     };
@@ -1396,6 +1326,7 @@
     @import './default.scss';
 </style>
 <style lang="scss">
+@import '~@/assets/css/mixins/border-active-logo.scss';
 #choose-cluster {
     .bk-select {
         width: 520px;
@@ -1451,25 +1382,9 @@
     }
     .cartActive {
         position: relative;
-        border: 1px solid #3a84ff;
+        border: 2px solid #3a84ff;
         border-radius: 2px;
-        &::after {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            content: "\E157";
-            font-family: 'paasng' !important;
-            font-size: 12px;
-            position: absolute;
-            right: -8px;
-            top: -8px;
-            line-height: 1;
-            display: inline-block;
-            z-index: 10;
-            background: #fff;
-            color: #3a84ff;
-        }
+        @include border-active-logo;
     }
     .icon-wrapper {
         text-align: center;
@@ -1562,6 +1477,17 @@
             }
         }
     }
+}
+
+.template-wrapper {
+  .form-label {
+      line-height: 32px !important;
+  }
+  .bk-less-code {
+      font-size: 14px;
+      color: #313238;
+      line-height: 32px;
+  }
 }
 
 </style>

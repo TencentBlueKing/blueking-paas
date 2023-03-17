@@ -199,10 +199,7 @@
                 v-if="!isProcessDataReady && !isChartLoading"
                 class="ps-no-result"
               >
-                <div class="text">
-                  <p><i class="paasng-icon paasng-empty" /></p>
-                  <p> {{ $t('暂无数据') }} </p>
-                </div>
+                <table-empty empty />
               </div>
             </div>
           </div>
@@ -388,19 +385,18 @@
                       class="tooltip-time"
                     >{{ item.at_friendly }}</span>
                   </p>
-                  <p class="dynamic-content">
+                  <p
+                    v-bk-overflow-tips
+                    class="dynamic-content"
+                    style="-webkit-line-clamp: 2;-webkit-box-orient: vertical"
+                  >
                     {{ $t('由') }}<span class="gruy">{{ item.operator ? item.operator : '—' }}</span>{{ item.operate }}
                   </p>
                 </li>
                 <li />
               </template>
               <template v-else>
-                <div class="ps-no-result">
-                  <div class="text">
-                    <p><i class="paasng-icon paasng-empty" /></p>
-                    <p> {{ $t('暂无数据') }} </p>
-                  </div>
-                </div>
+                <table-empty empty />
               </template>
             </ul>
           </div>
@@ -1528,6 +1524,10 @@
         height: 48px;
         overflow: hidden;
         color: #666;
+        text-overflow: ellipsis;
+        white-space: normal;
+        word-break: break-all;
+        display: -webkit-box;
     }
 
     .visited-charts {

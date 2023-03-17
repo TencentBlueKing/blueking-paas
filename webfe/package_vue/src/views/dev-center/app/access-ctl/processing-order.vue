@@ -32,6 +32,9 @@
           @select-all="allHandlerChange"
           @row-click="rowClick"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column
             type="expand"
             width="40"
@@ -66,7 +69,10 @@
             type="selection"
             width="60"
           />
-          <bk-table-column :label="$t('申请人')">
+          <bk-table-column
+            :label="$t('申请人')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span>{{ props.row.applicant || '--' }}</span>
             </template>
@@ -89,7 +95,10 @@
               <span>{{ props.row.created || '--' }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('有效时间')">
+          <bk-table-column
+            :label="$t('有效时间')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span>{{ props.row.expires || '--' }}</span>
             </template>

@@ -189,3 +189,28 @@ export function getActualLeft (node) {
 
   return actualLeft;
 }
+
+/**
+ * 手动清空table过滤条件
+ *
+ * @param refInstance {Object} 指定的 table
+ *
+ */
+export function clearFilter (refInstance) {
+  if (refInstance.filterPanels) {
+    const filterPanels = refInstance.filterPanels;
+    for (const key in filterPanels) {
+      filterPanels[key].handleReset();
+    };
+  }
+}
+
+/**
+ *  设置bk-talbe表头tips
+ *
+ * @param refInstance {h, { column }} 渲染函数
+ *
+ */
+export function renderHeader (h, { column }) {
+  return h('p', { class: 'table-header-tips-cls', directives: [{ name: 'bk-overflow-tips' }] }, [column.label]);
+}

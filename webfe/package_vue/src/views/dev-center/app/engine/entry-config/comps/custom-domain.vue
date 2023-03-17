@@ -56,12 +56,18 @@
               :class="{ 'set-border': tableLoading }"
               :ext-cls="'ps-permission-table'"
             >
+              <div slot="empty">
+                <table-empty empty />
+              </div>
               <bk-table-column :label="$t('环境')">
                 <template slot-scope="props">
                   <span>{{ props.row.environment_name || '--' }}</span>
                 </template>
               </bk-table-column>
-              <bk-table-column :label="$t('域名')">
+              <bk-table-column
+                :label="$t('域名')"
+                :render-header="$renderHeader"
+              >
                 <template slot-scope="{ row }">
                   <span v-bk-tooltips="row.domain_name">{{ row.domain_name }}</span>
                 </template>
@@ -71,7 +77,10 @@
                   <span>{{ props.row.path_prefix || '--' }}</span>
                 </template>
               </bk-table-column>
-              <bk-table-column :label="$t('绑定模块')">
+              <bk-table-column
+                :label="$t('绑定模块')"
+                :render-header="$renderHeader"
+              >
                 <template slot-scope="props">
                   <span>{{ props.row.module_name || '--' }}</span>
                 </template>
@@ -132,6 +141,9 @@
               size="small"
               :ext-cls="'ps-permission-table'"
             >
+              <div slot="empty">
+                <table-empty empty />
+              </div>
               <bk-table-column
                 :label="$t('模块')"
               >
@@ -145,7 +157,10 @@
                   <span v-if="props.row.environment === 'stag'">{{ $t('预发布环境') }}</span>
                 </template>
               </bk-table-column>
-              <bk-table-column :label="$t('域名解析目标 IP')">
+              <bk-table-column
+                :label="$t('域名解析目标 IP')"
+                :render-header="$renderHeader"
+              >
                 <template slot-scope="props">
                   <span>{{ props.row.frontend_ingress_ip || '--' }}</span>
                 </template>

@@ -25,7 +25,7 @@ from paasng.dev_resources.servicehub.remote.store import get_remote_store
 from tests.dev_resources.servicehub.utils import gen_plan, gen_service
 from tests.utils.api import mock_json_response
 from tests.utils.helpers import configure_regions
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 from . import data_mocks
 
@@ -51,9 +51,12 @@ def bk_plan_r2_v1():
 
 
 @pytest.fixture(autouse=True)
-def _setup_regions():
-    """Setup regions which were used in mocked data"""
-    with configure_regions(['r1', 'r2', 'r3', 'rr1', 'rr2']), replace_cluster_service():
+def setup_mocks():
+    """
+    - Setup regions which were used in mocked data
+    - Mock ClusterService which will be used in bind_service
+    """
+    with configure_regions(['r1', 'r2', 'r3', 'rr1', 'rr2']), mock_cluster_service():
         yield
 
 

@@ -1,5 +1,38 @@
 version: '3.2'
 services:
+  etcd0:
+      image: "quay.io/coreos/etcd:v3.2.9"
+      command: 
+          - /usr/local/bin/etcd
+          - "-name"
+          - etcd0
+          - "-advertise-client-urls"
+          - http://localhost:22379,http://localhost:24001
+          - --data-dir
+          - "/tmp/etcd_data"
+          - -listen-client-urls
+          - "http://0.0.0.0:22379,http://0.0.0.0:24001"
+          - -listen-peer-urls
+          - "http://0.0.0.0:22380"
+          - -initial-advertise-peer-urls
+          - "http://etcd0:22380"
+          - -initial-cluster
+          - "etcd0=http://etcd0:22380"
+          - -initial-cluster-state
+          - "new"
+      volumes:
+          - ${STORAGE_ROOT}/tmp/etcd0:/etcd_data
+  apiserver:
+      image: "gcr.io/google-containers/hyperkube:v1.8.15"
+      command:
+          - ./hyperkube
+          - apiserver
+          - --etcd-servers=http://etcd0:24001
+          - --service-cluster-ip-range=10.254.0.0/18
+          - --service-node-port-range=80-32767
+          - --insecure-bind-address=0.0.0.0
+          - --insecure-port=8080
+          - --apiserver-count=1
   mysql_main:
     container_name: "paasng_mysql_main"
     image: mysql:5.7.22

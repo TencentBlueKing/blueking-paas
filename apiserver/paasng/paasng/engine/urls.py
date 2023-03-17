@@ -16,8 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.urls import path
-
 from paasng.utils.basic import make_app_pattern, make_app_pattern_with_global_envs, re_path
 
 from . import views
@@ -204,16 +202,3 @@ urlpatterns += [
 ]
 
 # Deploy Phase End
-
-urlpatterns += [
-    # callback
-    path(
-        'sys/api/applications/finish_release/',
-        views.SysWorkloadsCallbackViewSet.as_view({"post": "finish_release"}),
-    ),
-    path(
-        'sys/api/applications/finish_archive/',
-        views.SysWorkloadsCallbackViewSet.as_view({"post": "finish_archive"}),
-    ),
-    path('sys/api/applications/deployment/<str:pk>/', views.SysDeploymentViewSet.as_view({"get": "retrieve"})),
-]

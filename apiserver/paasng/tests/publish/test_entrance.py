@@ -39,7 +39,7 @@ from paasng.publish.market.utils import MarketAvailableAddressHelper
 from paasng.publish.sync_market.handlers import register_application_with_default
 from paasng.publish.sync_market.managers import AppManger
 from tests.engine.setup_utils import create_fake_deployment
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -47,7 +47,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def setup_cluster():
     """Replace cluster info in module level"""
-    with replace_cluster_service(
+    with mock_cluster_service(
         ingress_config={
             'sub_path_domains': [{"name": 'sub.example.com'}, {"name": 'sub.example.cn'}],
             'app_root_domains': [{"name": 'bkapps.example.com'}],

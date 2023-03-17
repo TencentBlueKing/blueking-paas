@@ -23,6 +23,7 @@ from iam.exceptions import AuthAPIError
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
+from paasng.accessories.iam.helpers import user_group_apply_url
 from paasng.accessories.iam.permissions.resources.application import AppAction, ApplicationPermission, AppPermCtx
 from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 from paasng.platform.applications.models import Application
@@ -50,7 +51,9 @@ def application_perm_class(action: AppAction):
 def check_application_perm(user, application: Application, action: AppAction):
     """检查指定用户是否对应用的某个操作具有权限"""
     if not user_has_app_action_perm(user, application, action):
-        raise PermissionDenied('You are not allowed to do this operation.')
+        raise PermissionDenied(
+            {'message': 'You are not allowed to do this operation.', **user_group_apply_url(application.code)}
+        )
 
 
 def can_exempt_application_perm(user, application: Application) -> bool:

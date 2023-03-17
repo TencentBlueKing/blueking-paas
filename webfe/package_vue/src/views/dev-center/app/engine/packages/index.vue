@@ -54,6 +54,9 @@
         @page-limit-change="limitChange"
         @sort-change="sortChange"
       >
+        <div slot="empty">
+          <table-empty empty />
+        </div>
         <bk-table-column
           :label="$t('版本')"
           :show-overflow-tooltip="true"
@@ -65,6 +68,7 @@
         <bk-table-column
           :label="$t('文件名')"
           :show-overflow-tooltip="true"
+          :render-header="$renderHeader"
         >
           <template slot-scope="props">
             <span>{{ props.row.package_name || '--' }}</span>
@@ -74,6 +78,7 @@
           :label="$t('文件大小')"
           sortable="custom"
           prop="package_size"
+          :render-header="$renderHeader"
         >
           <template slot-scope="props">
             <span>{{ props.row.size || '--' }} MB</span>
@@ -82,12 +87,16 @@
         <bk-table-column
           :label="$t('摘要')"
           :show-overflow-tooltip="false"
+          :render-header="$renderHeader"
         >
           <template slot-scope="props">
             <span v-bk-tooltips="props.row.sha256_signature || '--'">{{ props.row.sha256_signature ? props.row.sha256_signature.substring(0, 8) : '--' }}</span>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('上传人')">
+        <bk-table-column
+          :label="$t('上传人')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="props">
             <span>{{ props.row.operator || '--' }}</span>
           </template>
@@ -96,6 +105,7 @@
           :label="$t('上传时间')"
           sortable="custom"
           prop="updated"
+          :render-header="$renderHeader"
         >
           <template slot-scope="props">
             <span>{{ props.row.updated || '--' }}</span>

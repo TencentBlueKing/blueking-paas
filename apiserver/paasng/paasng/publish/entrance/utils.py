@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-from paasng.engine.controller.models import PortMap
+from paas_wl.cluster.models import PortMap
 
 default_port_map = PortMap()
 

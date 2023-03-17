@@ -61,7 +61,7 @@ class TestModuleCreation:
         api_client,
         init_tmpls,
         bk_app,
-        mock_current_engine_client,
+        mock_wl_services_in_creation,
         mock_initialize_with_template,
         creation_params,
     ):
@@ -82,7 +82,14 @@ class TestModuleCreation:
 
     @pytest.mark.parametrize('with_feature_flag,is_success', [(True, True), (False, False)])
     def test_create_nondefault_origin(
-        self, api_client, init_tmpls, bk_app, bk_user, mock_current_engine_client, with_feature_flag, is_success
+        self,
+        api_client,
+        init_tmpls,
+        bk_app,
+        bk_user,
+        mock_wl_services_in_creation,
+        with_feature_flag,
+        is_success,
     ):
         # Set user feature flag
         AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
@@ -193,23 +200,31 @@ class TestModuleDeployConfigViewSet:
 class TestModuleDeletion:
     """Test delete module API"""
 
-    def test_delete_main_module(self, api_client, bk_app, bk_module, bk_user, mock_current_engine_client):
+    def test_delete_main_module(self, api_client, bk_app, bk_module, bk_user):
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
         response = api_client.delete(f'/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/')
         assert response.status_code == 400
         assert "主模块不允许被删除" in response.json()["detail"]
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
 
-    def test_delete_module(self, api_client, bk_app, bk_user, mock_current_engine_client):
+    def test_delete_module(
+        self,
+        api_client,
+        bk_app,
+        bk_user,
+        mock_wl_services_in_creation,
+        with_empty_live_addrs,
+    ):
         module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
         initialize_module(module)
 
         assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
-        response = api_client.delete(f'/api/bkapps/applications/{bk_app.code}/modules/{module.name}/')
+        with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
+            response = api_client.delete(f'/api/bkapps/applications/{bk_app.code}/modules/{module.name}/')
         assert response.status_code == 204
         assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
 
-    def test_delete_rollback(self, api_client, bk_app, bk_user, mock_current_engine_client):
+    def test_delete_rollback(self, api_client, bk_app, bk_user, with_empty_live_addrs):
         module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
         initialize_module(module)
 

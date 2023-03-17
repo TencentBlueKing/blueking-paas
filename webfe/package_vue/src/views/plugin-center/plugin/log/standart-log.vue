@@ -97,18 +97,10 @@
           v-if="!isStreamLogListLoading"
           class="text"
         >
-          <p>
-            <i
-              class="paasng-icon paasng-empty"
-              style="font-size: 65px;"
-            />
-          </p>
-          <p
-            class="f12"
-            style="color: #c3cdd7;"
-          >
-            {{ $t('暂无数据') }}
-          </p>
+          <empty-dark
+            :keyword="emptyDarkConf.keyword"
+            @clear-filter="clearFilter"
+          />
         </div>
       </div>
     </div>
@@ -172,7 +164,10 @@
                     time_range: '1h'
                 },
                 isFilter: false,
-                formatDate
+                formatDate,
+                emptyDarkConf: {
+                    keyword: ''
+                }
             };
         },
         watch: {
@@ -459,6 +454,7 @@
                             this.$refs.logContainer.scrollTop = this.$refs.logContainer.scrollHeight;
                         }, 0);
                     }
+                    this.updateEmptyDarkConfig();
                 } catch (e) {
                     this.$bkMessage({
                         theme: 'error',
@@ -538,6 +534,15 @@
 
             formatTime (time) {
                 return time ? formatDate(time * 1000) : '--';
+            },
+
+            clearFilter () {
+                this.$refs.standartLogFilter && this.$refs.standartLogFilter.clearKeyword();
+                this.isStreamLogListLoading = true;
+            },
+
+            updateEmptyDarkConfig () {
+                this.emptyDarkConf.keyword = this.logParams.keyword;
             }
         }
     };

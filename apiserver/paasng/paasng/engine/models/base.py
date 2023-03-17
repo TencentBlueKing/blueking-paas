@@ -23,8 +23,8 @@ from typing import TYPE_CHECKING, Optional
 from django.db import models
 from django.utils import timezone
 
+from paas_wl.platform.applications.models import WlApp
 from paasng.engine.constants import JobStatus
-from paasng.engine.controller.state import controller_client
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
 if TYPE_CHECKING:
@@ -62,11 +62,9 @@ class EngineApp(OwnerTimestampedModel):
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
 
-    def get_latest_build(self):
-        ret = controller_client.builds__retrieve(app_name=self.name, region=self.region, limit=1)
-        if ret['results']:
-            return ret['results'][0]
-        return
+    def to_wl_obj(self) -> 'WlApp':
+        """Return the corresponding WlApp object in the workloads module"""
+        return WlApp.objects.get(region=self.region, name=self.name)
 
 
 class MarkStatusMixin:

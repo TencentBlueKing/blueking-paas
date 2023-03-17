@@ -104,6 +104,14 @@
             @select="handlerChange"
             @select-all="handlerAllChange"
           >
+            <div slot="empty">
+              <table-empty
+                :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="fetchIpList(true)"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="selection"
               width="60"
@@ -112,12 +120,16 @@
             <bk-table-column
               label="IP/IP段"
               prop="content"
+              :render-header="$renderHeader"
             />
             <bk-table-column
               :label="$t('路径')"
               prop="path"
             />
-            <bk-table-column :label="$t('添加者')">
+            <bk-table-column
+              :label="$t('添加者')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <span>{{ props.row.owner.username || '--' }}</span>
               </template>
@@ -130,12 +142,18 @@
                 <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('更新时间')">
+            <bk-table-column
+              :label="$t('更新时间')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('添加原因')">
+            <bk-table-column
+              :label="$t('添加原因')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <bk-popover>
                   <div class="reason">
@@ -153,6 +171,7 @@
             <bk-table-column
               :label="$t('到期时间')"
               width="100"
+              :render-header="$renderHeader"
             >
               <template slot-scope="{ row }">
                 <template v-if="row.is_expired">
@@ -628,7 +647,11 @@
                     loading: false
                 },
                 curFile: {},
-                isFileTypeError: false
+                isFileTypeError: false,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -1197,7 +1220,10 @@
                     const res = await this.$store.dispatch('ip/getIpList', params);
                     this.pagination.count = res.count;
                     this.IPPermissionList.splice(0, this.IPPermissionList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -1448,6 +1474,14 @@
                 this.$refs.moduleRef && this.$refs.moduleRef.setCurModule(this.curModule);
                 this.checkIPPermissin();
                 this.fetchIpList(true);
+            },
+
+            clearFilterKey () {
+                this.keyword = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

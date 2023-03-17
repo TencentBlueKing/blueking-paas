@@ -251,10 +251,16 @@
                               </template>
                             </template>
                           </td>
-                          <td>
+                          <td
+                            v-bk-overflow-tips
+                            class="text-ellipsis"
+                          >
                             {{ subRow.instance ? subRow.instance.latest_operator || '--' : '--' }}
                           </td>
-                          <td>
+                          <td
+                            v-bk-overflow-tips
+                            class="text-ellipsis"
+                          >
                             {{ subRow.instance ? subRow.instance.updated ? smartTime(subRow.instance.updated, 'fromNow') : '--' : '--' }}
                           </td>
                           <td>
@@ -300,10 +306,7 @@
         v-if="!isLoading && tableList.length < 1"
         class="empty-wrapper"
       >
-        <i class="bk-icon icon-empty" />
-        <div class="empty-text">
-          {{ $t('暂无数据') }}
-        </div>
+        <table-empty empty />
       </div>
     </paas-content-loader>
   </div>
@@ -480,6 +483,7 @@
     };
 </script>
 <style lang="scss">
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .paas-docu-manager-wrapper {
         .link {
             font-size: 12px;

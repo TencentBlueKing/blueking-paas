@@ -29,7 +29,7 @@ from paasng.extensions.declarative.models import DeploymentDescription
 from paasng.extensions.declarative.serializers import validate_desc
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -103,7 +103,7 @@ class TestSvcDiscoveryField:
         }
 
     def test_as_env_vars_domain(self, bk_deployment):
-        with replace_cluster_service(
+        with mock_cluster_service(
             replaced_ingress_config={'app_root_domains': [{"name": 'foo.com'}, {"name": 'bar.com'}]}
         ):
             self.apply_config(bk_deployment)
@@ -124,7 +124,7 @@ class TestSvcDiscoveryField:
             }
 
     def test_as_env_vars_subpath(self, bk_deployment):
-        with replace_cluster_service(
+        with mock_cluster_service(
             replaced_ingress_config={'sub_path_domains': [{"name": 'foo.com'}, {"name": 'bar.com'}]}
         ):
             self.apply_config(bk_deployment)

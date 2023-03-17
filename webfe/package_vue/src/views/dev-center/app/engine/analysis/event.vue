@@ -195,6 +195,9 @@
             @page-limit-change="limitChange"
             @sort-change="sortChange"
           >
+            <div slot="empty">
+              <table-empty empty />
+            </div>
             <bk-table-column
               v-for="field of fieldList"
               :key="field.prop"
@@ -202,6 +205,7 @@
               :label="$t(field.name)"
               :prop="field.prop"
               :sortable="field.sortable"
+              :render-header="$renderHeader"
             >
               <template slot-scope="{ row }">
                 <span

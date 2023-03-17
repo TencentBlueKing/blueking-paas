@@ -89,6 +89,12 @@ const pluginProcess = () => import(/* webpackChunkName: 'app-basic-config' */'@/
   window.showDeployTip(error);
 });
 
+const plugin403 = () => import(/* webpackChunkName: 'permission403' */'@/views/error-pages/403').then(module => {
+  return module;
+}).catch(error => {
+  window.showDeployTip(error);
+});
+
 import i18n from '@/language/i18n.js';
 export const pluginRouter = [
   {
@@ -103,6 +109,14 @@ export const pluginRouter = [
     meta: {
       pathName: i18n.t('创建插件'),
       supportBack: true
+    }
+  },
+  {
+    path: '/plugin-centerr/plugin/:pluginTypeId/:id/403',
+    name: 'plugin403',
+    component: plugin403,
+    meta: {
+      plugin: true
     }
   },
   {

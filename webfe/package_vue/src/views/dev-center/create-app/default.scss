@@ -1,3 +1,4 @@
+@import '~@/assets/css/mixins/border-active-logo.scss';
 .default-info{
     background-color: #F0F8FF;
     border: 1px solid #A3C5FD;
@@ -121,6 +122,9 @@
     width: 90px;
     text-align: right;
     margin-right: 10px;
+    &.template {
+        line-height: 48px;
+    }
 }
 
 .card-container {
@@ -386,29 +390,20 @@ input.ps-form-control {
                 color: #63656e;
                 cursor: pointer;
                 position: relative;
+
+                &.template {
+                    width: 200px;
+                    height: 48px;
+                    line-height: 48px;
+                }
     
                 &.active {
                     background: #fff;
-                    border: 1px solid #3a84ff;
+                    border: 2px solid #3a84ff;
                     border-radius: 2px;
                     color: #3a84ff;
-    
-                    &::after {
-                        width: 16px;
-                        height: 16px;
-                        border: 2px solid #fff;
-                        border-radius: 50%;
-                        content: "\e157";
-                        font-family: 'paasng' !important;
-                        font-size: 12px;
-                        position: absolute;
-                        right: -8px;
-                        top: -8px;
-                        line-height: 1;
-                        display: inline-block;
-                        z-index: 10;
-                        background: #fff;
-                    }
+
+                    @include border-active-logo;
                 }
             }
         }
@@ -450,22 +445,8 @@ input.ps-form-control {
         padding: 0 16px 0 14px;
         background-color: #fff;
         color: #3A84FF;
-        &::after {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            content: "\e157";
-            font-family: 'paasng' !important;
-            font-size: 12px;
-            position: absolute;
-            right: -8px;
-            top: -8px;
-            line-height: 1;
-            display: inline-block;
-            z-index: 10;
-            background: #fff;
-        }
+
+        @include border-active-logo;
     }
 }
 

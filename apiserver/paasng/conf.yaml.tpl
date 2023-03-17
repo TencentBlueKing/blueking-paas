@@ -613,13 +613,119 @@
 
 ## ------------------------------------ 蓝鲸监控配置 ------------------------------------
 
+## 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
+# ENABLE_BK_MONITOR: false
+## 蓝鲸监控运维相关的额外配置
+# BKMONITOR_METRIC_RELABELINGS: {}
 ## 蓝鲸监控的API是否已经注册在 APIGW
-# ENABLE_BK_MONITOR_APIGW: true
-
+# ENABLE_BK_MONITOR_APIGW: false
 ## 同步告警策略到监控的配置
 # MONITOR_AS_CODE_CONF: {}
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
+
+
+## ---------------------------------------- 运行时默认配置 ----------------------------------------
+
+## 默认 slug 包运行镜像，默认值 bkpaas/slugrunner
+# DEFAULT_SLUGRUNNER_IMAGE: bkpaas/slugrunner
+## 默认 slug 包构建镜像，默认值 bkpaas/slugbuilder
+# DEFAULT_SLUGBUILDER_IMAGE: bkpaas/slugbuilder
+
+## 源码构建用户身份
+# BUILDER_USERNAME: blueking
+## 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
+# PYTHON_BUILDPACK_PIP_INDEX_URL: ''
+## 从源码构建应用时，额外注入的环境变量
+# BUILD_EXTRA_ENV_VARS: {}
+
+
+## ---------------------------------------- 服务导出配置 ----------------------------------------
+
+## 默认容器内监听地址，默认 5000
+# CONTAINER_PORT: 5000
+
+## 服务相关插件配置
+# SERVICES_PLUGINS: {}
+
+
+## ---------------------------------------- 资源限制配置 ----------------------------------------
+
+## Web 模块默认副本数量，默认值：{'stag': 1, 'prod': 2}
+# DEFAULT_WEB_REPLICAS_MAP:
+#   stag: 1
+#   prod: 2
+
+## 构建 slug 包资源规格，按 k8s 资源配额格式书写
+# SLUGBUILDER_RESOURCES_SPEC:
+#   limits:
+#     cpu: 2000m
+#     memory: 4096Mi
+#   requests:
+#     cpu: 500m
+#     memory: 1024Mi
+
+
+## ---------------------------------------- 部署环境相关 ----------------------------------------
+
+## 系统注入环境变量统一前缀，默认值为 BKPAAS_，一般不需要修改
+# SYSTEM_CONFIG_VARS_KEY_PREFIX: BKPAAS_
+
+## （兼容）应用日志存储卷名称，默认为 applogs
+# VOLUME_NAME_APP_LOGGING: applogs
+## （兼容）应用日志写入路径，默认为
+# VOLUME_MOUNT_APP_LOGGING_DIR: /app/logs
+## （兼容）应用日志挂载到 Host 的路径，默认为 /tmp/logs
+# VOLUME_HOST_PATH_APP_LOGGING_DIR: /tmp/logs
+
+
+## 多模块应用日志存储卷名称，默认为 appv3logs
+# MUL_MODULE_VOLUME_NAME_APP_LOGGING: appv3logs
+## 多模块应用日志写入路径，默认为 /app/v3logs
+# MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR: /app/v3logs
+## 多模块应用日志挂载到 Host 的路径，默认为 /tmp/v3logs
+# MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR: /tmp/v3logs
+
+
+## ---------------------------------------- 调度集群相关 ----------------------------------------
+
+## 指定 kubectl 使用的 config.yaml 文件路径，容器化交付时由 secret 挂载而来
+## 默认值：/data/kubelet/conf/kubeconfig.yaml
+# KUBE_CONFIG_FILE: /data/kubelet/conf/kubeconfig.yaml
+
+
+## ---------------------------------------- Ingress 配置 ----------------------------------------
+
+## 不指定则使用默认，可以指定为 bk-ingress-nginx
+# APP_INGRESS_CLASS: ''
+
+## ingress extensions/v1beta1 资源路径是否保留末尾斜杠，默认值为 true
+# APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH: true
+
+## 是否开启“现代” Ingress 资源的支持，将产生以下影响
+## - 支持使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须开启该选项。因为这些集群只能使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须使用 >1.0.0 版本的 ingress-nginx
+##
+## 假如关闭此配置，可能有以下风险：
+##  - 只能处理 extensions/v1beta1 和 networking.k8s.io/v1beta1 版本的 Ingress 资源, 如果未来的 Kubernetes 集群版本删除了对该
+##    apiVersion 的支持，服务会报错
+##  - 只能使用 <1.0 版本的 ingress-nginx
+# ENABLE_MODERN_INGRESS_SUPPORT: true
+
+## 应用独立域名相关配置
+# CUSTOM_DOMAIN_CONFIG:
+  ## 是否允许使用独立域名
+  # enabled: true
+  ## 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
+  # valid_domain_suffixes: []
+  ## 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
+  # allow_user_modifications: true
+
+## 独立域名简化版配置，表示允许用户配置的独立域名后缀列表，为空表示允许任意域名
+## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
+# VALID_CUSTOM_DOMAIN_SUFFIXES: []
+
 
 # ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 

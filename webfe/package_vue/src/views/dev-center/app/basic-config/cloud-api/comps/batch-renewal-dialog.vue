@@ -25,6 +25,9 @@
           :size="'small'"
           :max-height="250"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column :label="isComponent ? $t('系统') : $t('网关')">
             <template slot-scope="props">
               {{ isComponent ? props.row.system_name : props.row.api_name }}
@@ -38,6 +41,7 @@
           <bk-table-column
             :label="$t('续期前的过期时间')"
             prop="expires"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               {{ getExpiredTime(props.row) }}
@@ -46,6 +50,7 @@
           <bk-table-column
             :label="$t('续期后的过期时间')"
             prop="expires"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               <span

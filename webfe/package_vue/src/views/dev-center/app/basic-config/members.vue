@@ -40,13 +40,26 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <bk-table-column :label="$t('成员姓名')">
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchMemberList"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
+          <bk-table-column
+            :label="$t('成员姓名')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
-              <span
-                v-if="props.row.user.avatar"
-                class="user-photo"
-              ><img :src="props.row.user.avatar"></span>
-              <span class="user-name">{{ props.row.user.username }}</span>
+              <div v-bk-overflow-tips>
+                <span
+                  v-if="props.row.user.avatar"
+                  class="user-photo"
+                ><img :src="props.row.user.avatar"></span>
+                {{ props.row.user.username }}
+              </div>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('角色')">
@@ -351,7 +364,11 @@
                 currentBackup: 1,
                 enableToAddRole: false,
                 keyword: '',
-                memberListClone: []
+                memberListClone: [],
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -434,8 +451,11 @@
                     this.memberList.splice(0, this.memberList.length, ...(res.results || []));
 
                     this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
                     this.hasPerm = false;
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: e.detail || this.$t('接口异常')
@@ -655,6 +675,7 @@
                         const end = start + this.pagination.limit;
                         this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
                     }
+                    this.updateTableEmptyConfig();
                 } else {
                     this.fetchMemberList();
                 }
@@ -672,6 +693,12 @@
                     }
                 }
                 return userPerms;
+            },
+            clearFilterKey () {
+                this.keyword = '';
+            },
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.keyword;
             }
         }
     };

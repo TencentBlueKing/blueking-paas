@@ -251,8 +251,7 @@ def initialize_deployment(
 
 def get_processes_by_build(engine_app: EngineApp, build_id: str) -> Dict[str, str]:
     engine_client = EngineDeployClient(engine_app)
-    build = engine_client.get_build(build_id)
-    processes = build.get("procfile")
+    processes = engine_client.get_procfile(build_id)
     if not processes:
         raise RuntimeError("can't find processes in engine")
     return processes

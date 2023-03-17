@@ -24,6 +24,7 @@ from typing import List, Optional
 import cattr
 from attrs import define
 from blue_krill.web.std_error import APIError
+from django.conf import settings
 
 from paasng.accessories.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
 from paasng.pluginscenter.constants import PluginRole
@@ -246,3 +247,11 @@ def delete_builtin_user_groups(plugin: PluginInstance):
     user_groups = PluginUserGroup.objects.filter_by_plugin(plugin)
     lazy_iam_client.delete_user_groups(user_groups.values_list('user_group_id', flat=True))
     user_groups.delete()
+
+
+def user_group_apply_url(plugin_id: str) -> dict:
+    """应用用户组权限申请链接"""
+    dev_user_group_id = PluginUserGroup.objects.get(plugin_id=plugin_id, role=PluginRole.DEVELOPER).user_group_id
+    return {
+        "apply_url_for_dev": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=dev_user_group_id),
+    }

@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
+from datetime import datetime
 from typing import List, Optional
 
 import yaml
@@ -27,6 +28,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
+from paas_wl.monitoring.metrics.constants import MetricsResourceType
 from paasng.engine.constants import ConfigVarEnvName, DeployConditions, ImagePullPolicy, JobStatus, MetricsType
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
@@ -35,6 +37,7 @@ from paasng.engine.models.managers import DeployDisplayBlockRenderer
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField
 
@@ -414,12 +417,38 @@ class ResourceMetricsSLZ(serializers.Serializer):
     instance_name = serializers.CharField(required=False)
     time_range_str = serializers.CharField(required=False)
 
+    step = serializers.SerializerMethodField()
+    query_metrics = serializers.SerializerMethodField()
+
     def validate(self, attrs):
-        if not attrs.get('time_range_str'):
-            if not attrs.get('start_time') or not attrs.get('end_time'):
-                raise serializers.ValidationError("start & end not allowed to be null if no time_range_str pass in")
+        if attrs.get('time_range_str'):
+            return attrs
+
+        if not (attrs.get('start_time') and attrs.get('end_time')):
+            raise serializers.ValidationError("start & end not allowed to be null if no time_range_str pass in")
+
+        start_time = datetime.fromisoformat(attrs['start_time'])
+        end_time = datetime.fromisoformat(attrs['end_time'])
+
+        if start_time > end_time:
+            raise serializers.ValidationError("start time should earlier than end time")
 
         return attrs
+
+    def get_step(self, attrs) -> str:
+        # default min interval of metrics is 15s, get step automatically instead of choosing by user
+        if attrs.get('time_range_str'):
+            return calculate_gap_seconds_interval(get_time_delta(attrs.get('time_range_str')).total_seconds())
+
+        time_delta = datetime.fromisoformat(attrs.get('end_time')) - datetime.fromisoformat(attrs.get('start_time'))
+        return calculate_gap_seconds_interval(time_delta.total_seconds())
+
+    def get_query_metrics(self, attrs):
+        """根据 metric_type 注入 query_metrics 字段"""
+        if 'metric_type' in attrs and attrs['metric_type'] != "__all__":
+            return [MetricsResourceType(attrs["metric_type"]).value]
+
+        return [MetricsResourceType.MEM.value, MetricsResourceType.CPU.value]
 
 
 class CustomDomainsConfigSLZ(serializers.Serializer):

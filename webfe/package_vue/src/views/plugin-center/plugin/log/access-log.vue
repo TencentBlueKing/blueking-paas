@@ -70,8 +70,7 @@
             style="margin-top: -40px;"
           >
             <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
+              <table-empty empty />
             </span>
           </div>
         </template>
@@ -111,6 +110,14 @@
             @page-change="pageChange"
             @page-limit-change="limitChange"
           >
+            <div slot="empty">
+              <table-empty
+                :keyword="tableEmptyConf.keyword"
+                :abnormal="tableEmptyConf.isAbnormal"
+                @reacquire="getLogList"
+                @clear-filter="clearFilterKey"
+              />
+            </div>
             <bk-table-column
               type="expand"
               width="30"
@@ -153,10 +160,12 @@
             <bk-table-column
               label="status_code"
               prop="status_code"
+              :render-header="$renderHeader"
             />
             <bk-table-column
               label="response_time"
               prop="response_time"
+              :render-header="$renderHeader"
             />
             <bk-table-column
               v-for="field in fieldSelectedList"
@@ -242,7 +251,11 @@
                 isFilter: false,
                 logs: [],
                 logKeyList: [],
-                existFieldList: EXIST_LOG_KEY
+                existFieldList: EXIST_LOG_KEY,
+                tableEmptyConf: {
+                    isAbnormal: false,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -632,7 +645,10 @@
                     this.logList.splice(0, this.logList.length, ...data);
                     this.pagination.count = res.total;
                     this.pagination.current = page;
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (res) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
@@ -738,6 +754,14 @@
 
             formatTime (time) {
                 return time ? formatDate(time * 1000) : '--';
+            },
+
+            clearFilterKey () {
+                this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.logParams.keyword;
             }
         }
     };

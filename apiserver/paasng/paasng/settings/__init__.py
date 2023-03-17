@@ -94,7 +94,7 @@ DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
 
-RUNNING_TESTS = sys.argv[0].endswith('pytest')
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0]
 
 INSTALLED_APPS = [
     # WARNING: never enable django.contrib.admin here
@@ -152,6 +152,18 @@ INSTALLED_APPS = [
     # Put "scheduler" in the last position so models in other apps can be ready
     'paasng.platform.scheduler',
     'revproxy',
+    # workloads apps
+    'paas_wl.platform.applications',
+    'paas_wl.cluster',
+    'paas_wl.monitoring.metrics',
+    'paas_wl.networking.egress',
+    'paas_wl.networking.ingress',
+    'paas_wl.workloads.resource_templates',
+    'paas_wl.release_controller.hooks',
+    'paas_wl.workloads.processes',
+    'paas_wl.workloads.images',
+    'paas_wl.monitoring.app_monitor',
+    'paas_wl.cnative.specs',
 ]
 
 # Allow extending installed apps
@@ -285,6 +297,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 )
 
 TEMPLATE_DIRS = [str(BASE_DIR / 'templates')]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -400,7 +413,11 @@ NOTIFICATION_PLUGIN_CLASSES = settings.get(
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {"default": get_database_conf(settings)}
+DATABASES = {
+    "default": get_database_conf(settings),
+    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
+}
+DATABASE_ROUTERS = ["paasng.platform.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存
 
@@ -469,6 +486,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Shanghai'
 CELERY_ENABLE_UTC = False
 
+CELERY_IMPORTS = ["paas_wl.release_controller.builder.tasks", "paas_wl.resources.tasks"]
 CELERY_BROKER_TRANSPORT_OPTIONS = settings.get('CELERY_BROKER_TRANSPORT_OPTIONS', {})
 
 if not CELERY_BROKER_TRANSPORT_OPTIONS and is_redis_backend(CELERY_BROKER_URL):
@@ -590,7 +608,9 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 # 旧版本 PaaS 数据库，敏感字段所使用的加密 key
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get('PAAS_LEGACY_DB_ENCRYPT_KEY')
 
-# == 对象存储相关
+# ---------------
+# 对象存储配置
+# ---------------
 
 BLOBSTORE_TYPE = settings.get('BLOBSTORE_TYPE')
 
@@ -661,6 +681,7 @@ BK_IAM_RESOURCE_API_HOST = settings.get('BK_IAM_RESOURCE_API_HOST', BKPAAS_URL)
 # 权限中心应用ID，用于拼接权限中心的在桌面的访问地址
 BK_IAM_V3_APP_CODE = "bk_iam"
 
+
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get('BK_CC_URL', '')
 BK_JOB_URL = settings.get('BK_JOB_URL', '')
@@ -685,6 +706,9 @@ BK_PLATFORM_URLS = settings.get(
         'BK_JOB_HOST': BK_JOB_URL,
     },
 )
+
+# 权限中心用户组申请链接
+BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_URL + "/apply-join-user-group?id={user_group_id}"
 
 # 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 BKPAAS_WEIXIN_URL_MAP = settings.get(
@@ -1118,6 +1142,10 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 # -----------------
 # 蓝鲸监控配置项
 # -----------------
+# 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
+ENABLE_BK_MONITOR = settings.get('ENABLE_BK_MONITOR', False)
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # 同步告警策略到监控的配置
@@ -1167,3 +1195,15 @@ THIRD_APP_INIT_CODES = settings.get('THIRD_APP_INIT_CODES', '')
 # 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 ALLOW_THIRD_APP_SYS_IDS = settings.get('ALLOW_THIRD_APP_SYS_IDS', '')
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
+
+# 引入 workloads 相关配置
+# fmt: off
+from . import workloads as workloads_settings
+
+for key in dir(workloads_settings):
+    if key in ["BASE_DIR", "SETTINGS_FILES_GLOB", "LOCAL_SETTINGS"] or not key.isupper():
+        continue
+    if key in locals() and getattr(workloads_settings, key) != locals()[key]:
+        raise KeyError("Can't override apiserver settings, duplicated key: {}".format(key))
+    locals()[key] = getattr(workloads_settings, key)
+# fmt: on

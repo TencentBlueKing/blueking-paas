@@ -52,6 +52,8 @@ import 'Extension/vex-js/sass/vex-theme-default.sass';
 import passLoading from '@/components/ui/LoadingSlot';
 
 import roundLoading from '@/components/round-loading';
+import tableEmpty from '@/components/ui/table-empty';
+import emptyDark from '@/components/ui/empty-dark';
 
 import i18n from '@/language/i18n';
 // 全量引入自定义图标
@@ -59,6 +61,9 @@ import './assets/iconfont/style.css';
 
 // 平台配置
 import { PLATFORM_CONFIG } from '../static/json/paas_static.js';
+
+// 表头配置
+import { renderHeader } from '@/common/utils';
 
 // composition-api
 import VueCompositionAPI from '@vue/composition-api';
@@ -139,6 +144,8 @@ Vue.use(Directives);
 Vue.component('paas-content-loader', PaasContentLoader);
 Vue.component('paas-loading', passLoading);
 Vue.component('round-loading', roundLoading);
+Vue.component('table-empty', tableEmpty);
+Vue.component('empty-dark', emptyDark);
 
 Vue.prototype.$http = http;
 Vue.http = http;
@@ -149,6 +156,7 @@ Vue.prototype.$bkMessage = function (config) {
   bkMessage(config);
 };
 Vue.prototype.$bkNotify = bkNotify;
+Vue.prototype.$renderHeader = renderHeader;
 
 Vue.prototype.$paasMessage = function (conf) {
   conf.offsetY = 52;

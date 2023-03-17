@@ -68,6 +68,7 @@
           style="margin-bottom: 16px;width: 100%"
         />
         <bk-table
+          ref="permRef"
           :key="tableKey"
           :data="tableList"
           :size="'small'"
@@ -78,6 +79,14 @@
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList"
+              @clear-filter="clearFilterKey"
+            />
+          </div>
           <bk-table-column
             label="id"
             :render-header="renderHeader"
@@ -93,7 +102,10 @@
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('API类型')">
+          <bk-table-column
+            :label="$t('API类型')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ typeMap[props.row.type] }}
             </template>
@@ -170,12 +182,18 @@
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -187,6 +205,7 @@
               :filters="statusFilters"
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -208,7 +227,10 @@
             </bk-table-column>
           </template>
           <template v-else>
-            <bk-table-column :label="$t('状态')">
+            <bk-table-column
+              :label="$t('状态')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
@@ -270,6 +292,7 @@
 <script>
     import RenewalDialog from './batch-renewal-dialog';
     import PaasngAlert from './paasng-alert';
+    import { clearFilter } from '@/common/utils';
     export default {
         name: '',
         components: {
@@ -329,7 +352,11 @@
                 ],
                 is_up: true,
                 nameFilters: [],
-                tableKey: -1
+                tableKey: -1,
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -359,6 +386,9 @@
                     const end = start + this.pagination.limit;
                     this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
                     this.isFilter = false;
+                }
+                if (newVal === '') {
+                    this.updateTableEmptyConfig();
                 }
             },
             allData (value) {
@@ -647,6 +677,7 @@
                 const start = this.pagination.limit * (this.pagination.current - 1);
                 const end = start + this.pagination.limit;
                 this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+                this.updateTableEmptyConfig();
             },
 
             init () {
@@ -689,7 +720,10 @@
                     this.indeterminate = false;
                     this.allChecked = false;
                     this.tableKey = +new Date();
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
@@ -727,6 +761,19 @@
                     return '--';
                 }
                 return description || '--';
+            },
+            clearFilterKey () {
+                this.searchValue = '';
+                this.$refs.permRef.clearFilter();
+                if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
+                    const tableHeader = this.$refs.permRef.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
+                this.fetchList();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.searchValue;
             }
         }
     };

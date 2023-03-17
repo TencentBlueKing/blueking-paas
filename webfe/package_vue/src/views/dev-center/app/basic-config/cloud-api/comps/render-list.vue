@@ -91,6 +91,7 @@
     >
       <div class="spacing-x2">
         <bk-table
+          ref="gatewayRef"
           :key="tableKey"
           :data="tableList"
           :size="'small'"
@@ -98,25 +99,17 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          :show-overflow-tooltip="true"
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
-          <div
-            v-if="tableList.length"
-            slot="empty"
-          >
-            <bk-exception
-              class="exception-wrap-item exception-part"
-              type="search-empty"
-              scene="part"
+          <div slot="empty">
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              :abnormal="tableEmptyConf.isAbnormal"
+              @reacquire="fetchList(id)"
+              @clear-filter="clearFilterKey"
             />
-            <div class="empty-tips">
-              {{ $t('可以尝试调整关键词 或') }}
-              <span
-                class="clear-search"
-                @click="clearFilterKey"
-              >{{ $t('清空搜索条件') }}</span>
-            </div>
           </div>
           <bk-table-column
             label="id"
@@ -142,8 +135,11 @@
                 <a
                   target="_blank"
                   :href="props.row.doc_link"
+                  class="api-link"
                 >
-                  <span v-html="highlight(props.row)" />
+                  <span
+                    v-html="highlight(props.row)"
+                  />
                   <i
                     class="fa fa-book"
                     aria-hidden="true"
@@ -151,7 +147,10 @@
                 </a>
               </template>
               <template v-else>
-                <span v-html="highlight(props.row)" />
+                <span
+                  v-bk-overflow-tips
+                  v-html="highlight(props.row)"
+                />
               </template>
             </template>
           </bk-table-column>
@@ -164,12 +163,18 @@
               <span v-html="highlightDesc(props.row)" />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level) ? 'sensitive' : ''">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -182,6 +187,7 @@
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
               :min-width="110"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -222,6 +228,7 @@
           <bk-table-column
             v-else
             :label="$t('状态')"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               <template v-if="props.row.permission_status === 'owned'">
@@ -330,6 +337,7 @@
     import BatchDialog from './batch-apply-dialog';
     import RenewalDialog from './batch-renewal-dialog';
     import GatewayDialog from './apply-by-gateway-dialog';
+    import { clearFilter } from '@/common/utils';
     export default {
         name: '',
         components: {
@@ -411,6 +419,10 @@
                 listFilter: {
                     isApply: false,
                     isRenew: false
+                },
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
                 }
             };
         },
@@ -703,6 +715,7 @@
                 const start = this.pagination.limit * (this.pagination.current - 1);
                 const end = start + this.pagination.limit;
                 this.tableList.splice(0, this.tableList.length, ...this.allData.slice(start, end));
+                this.updateTableEmptyConfig();
             }, 350),
 
             /**
@@ -801,7 +814,10 @@
                     this.allData = this.apiList;
                     this.initPageConf();
                     this.tableList = this.getDataByPage();
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
@@ -903,6 +919,17 @@
 
             clearFilterKey () {
                 this.searchValue = '';
+                this.$refs.gatewayRef.clearFilter();
+                // 清空表头筛选条件
+                if (this.$refs.gatewayRef && this.$refs.gatewayRef.$refs.tableHeader) {
+                    const tableHeader = this.$refs.gatewayRef.$refs.tableHeader;
+                    clearFilter(tableHeader);
+                }
+                this.fetchList(this.id);
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.searchValue;
             }
         }
     };
@@ -1003,6 +1030,18 @@
         .clear-search {
             cursor: pointer;
             color: #3a84ff;
+        }
+    }
+    .api-link {
+        display: inline-block;
+        width: 100%;
+        & span {
+            display: inline-block;
+            width: 100%;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     }
 </style>

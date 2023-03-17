@@ -22,22 +22,37 @@
             @page-change="pageChange"
             @page-limit-change="limitChange"
           >
-            <bk-table-column :label="$t('检查版本')">
+            <div slot="empty">
+              <table-empty empty />
+            </div>
+            <bk-table-column
+              :label="$t('检查版本')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.deployment.repo.revision || ''">{{ row.deployment.repo.revision.substring(0, 8) || '--' }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('检查分支')">
+            <bk-table-column
+              :label="$t('检查分支')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span>{{ row.deployment.repo.name || '--' }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('检查时间')">
+            <bk-table-column
+              :label="$t('检查时间')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span>{{ row.created || '--' }}</span>
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('执行状态')">
+            <bk-table-column
+              :label="$t('执行状态')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="{ row }">
                 <span :style="{ color: computedColor(row.status) }">{{ statusMap[row.status] }}</span>
               </template>
@@ -45,6 +60,7 @@
             <bk-table-column
               :label="$t('检查结果')"
               width="120"
+              :render-header="$renderHeader"
             >
               <template slot-scope="{ row }">
                 <bk-button

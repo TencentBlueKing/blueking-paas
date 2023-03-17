@@ -44,7 +44,7 @@ from paasng.engine.models.steps import DeployStep, DeployStepMeta
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from tests.utils.helpers import BaseTestCaseWithApp
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 from .setup_utils import create_fake_deployment
 
@@ -53,17 +53,18 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def setup_cluster():
-    with replace_cluster_service():
+    with mock_cluster_service():
         yield
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks(mock_current_engine_client):
+def setup_mocks():
     """Setup mocks for current testing module
 
-    - Mock engine client
+    - Mock ProcessManager which depends on `workloads` module
     """
-    yield
+    with mock.patch('paasng.extensions.declarative.deployment.controller.ProcessManager'):
+        yield
 
 
 class TestDeployProcedure:

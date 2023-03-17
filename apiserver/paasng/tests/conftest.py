@@ -29,6 +29,7 @@ from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
 from django.core.management import call_command
 from django.test.utils import override_settings
+from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -41,7 +42,7 @@ from paasng.dev_resources.sourcectl.svn.client import LocalClient, RemoteClient,
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir
 from paasng.extensions.bk_plugins.models import BkPluginProfile
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.platform.core.storages.utils import SADBManager
@@ -53,15 +54,17 @@ from paasng.publish.sync_market.handlers import before_finishing_application_cre
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, generate_random_string
+from tests.utils.helpers import configure_regions, create_pending_wl_apps, generate_random_string
 
 from .utils.auth import create_user
-from .utils.helpers import _mock_current_engine_client, create_app, create_cnative_app, initialize_module
+from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
 
 logger = logging.getLogger(__file__)
 
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+# A random cluster name for running unittests
+CLUSTER_NAME_FOR_TESTING = get_random_string(6)
 
 
 def pytest_addoption(parser):
@@ -75,6 +78,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--init-s3-bucket", dest="init_s3_bucket", action="store_true", default=False, help="是否需要执行 s3 初始化流程"
     )
+    parser.addoption("--run-e2e-test", dest="run_e2e_test", action="store_true", default=False, help="是否执行 e2e 测试")
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -342,7 +346,7 @@ def bk_app(request, bk_user) -> Application:
 @pytest.fixture
 def bk_cnative_app(request, bk_user):
     """Generate a random cloud-native application owned by current user fixture"""
-    return create_cnative_app(owner_username=bk_user.username)
+    return create_cnative_app(owner_username=bk_user.username, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 
 @pytest.fixture
@@ -362,8 +366,12 @@ def bk_app_full(request, bk_user) -> Application:
 
 
 @pytest.fixture
-def bk_module(request, bk_app) -> Module:
+def bk_module(request) -> Module:
     """Return the default module if current application fixture"""
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app")
     return bk_app.get_default_module()
 
 
@@ -374,12 +382,12 @@ def bk_module_full(bk_app_full) -> Module:
 
 
 @pytest.fixture
-def bk_stag_env(request, bk_module) -> ApplicationEnvironment:
+def bk_stag_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='stag')
 
 
 @pytest.fixture
-def bk_prod_env(request, bk_module) -> ApplicationEnvironment:
+def bk_prod_env(request, bk_module) -> ModuleEnvironment:
     return bk_module.envs.get(environment='prod')
 
 
@@ -665,7 +673,7 @@ def _mock_paas_analysis_client():
 
 
 mock_paas_analysis_client = pytest.fixture(_mock_paas_analysis_client)
-mock_current_engine_client = pytest.fixture(_mock_current_engine_client)
+mock_wl_services_in_creation = pytest.fixture(_mock_wl_services_in_creation)
 
 
 def check_legacy_enabled():
@@ -726,3 +734,15 @@ def with_live_addrs():
             ]
         )
         yield
+
+
+@pytest.fixture
+def with_wl_apps(request):
+    """Create all pending WlApp objects related with current bk_app, useful
+    for tests which want to use `bk_app`, `bk_stag_env` fixtures.
+    """
+    if "bk_cnative_app" in request.fixturenames:
+        bk_app = request.getfixturevalue("bk_cnative_app")
+    else:
+        bk_app = request.getfixturevalue("bk_app")
+    create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)

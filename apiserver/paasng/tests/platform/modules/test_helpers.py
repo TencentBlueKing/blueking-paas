@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 
 import pytest
 
-from paasng.engine.controller.models import Domain
+from paas_wl.cluster.models import Domain
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.exceptions import BindError
 from paasng.platform.modules.helpers import (
@@ -29,7 +29,7 @@ from paasng.platform.modules.helpers import (
     get_module_prod_env_root_domains,
 )
 from tests.utils.helpers import generate_random_string
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -113,8 +113,9 @@ def test_bind_buildpack(bk_module, slugbuilder, buildpack, slugbuilder_attrs, bu
             binder.bind_buildpack(buildpack)
 
 
-def test_get_module_clusters(bk_module, mock_current_engine_client):
-    assert len(get_module_clusters(bk_module)) != 0
+def test_get_module_clusters(bk_module):
+    with mock_cluster_service():
+        assert len(get_module_clusters(bk_module)) != 0
 
 
 def test_get_module_clusters_engineless(bk_module):
@@ -154,6 +155,6 @@ def test_get_module_clusters_engineless(bk_module):
 def test_get_module_prod_env_root_domains(
     bk_module, exposed_url_type, ingress_config, include_reserved, expected_domains
 ):
-    with replace_cluster_service(replaced_ingress_config=ingress_config):
+    with mock_cluster_service(replaced_ingress_config=ingress_config):
         bk_module.exposed_url_type = exposed_url_type
         assert get_module_prod_env_root_domains(bk_module, include_reserved) == expected_domains

@@ -16,16 +16,27 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
+
+from tests.utils.mocks.engine import mock_cluster_service
 
 
 @pytest.fixture(autouse=True)
-def setup_mocks(mock_current_engine_client):
+def setup_mocks(mock_wl_services_in_creation):
     """Setup mocks for current testing module
 
-    - Mock engine client
+    - Mock wl_app creation which depends on `workloads` module
+    - Mock ProcessManager which depends on `workloads` module
     """
-    yield
+    with mock_cluster_service(
+        ingress_config={
+            "sub_path_domains": [],
+            "app_root_domains": [{"name": "bkapps.example.com"}],
+        }
+    ), mock.patch("paasng.engine.models.processes.ProcessManager.sync_processes_specs"):
+        yield
 
 
 @pytest.fixture

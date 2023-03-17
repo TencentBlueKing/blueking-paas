@@ -70,10 +70,7 @@
             class="bk-table-empty-block"
             style="margin-top: -40px;"
           >
-            <span class="bk-table-empty-text">
-              <i class="bk-table-empty-icon paasng-icon paasng-empty" />
-              <div class="f12"> {{ $t('暂无数据') }} </div>
-            </span>
+            <table-empty empty />
           </div>
         </template>
       </div>
@@ -256,12 +253,12 @@
                 <tr>
                   <td :colspan="fieldSelectedList.length + 2">
                     <div class="ps-no-result">
-                      <div class="text">
-                        <p>
-                          <i class="paasng-icon paasng-empty" />
-                        </p>
-                        <p> {{ $t('暂无数据') }} </p>
-                      </div>
+                      <table-empty
+                        :keyword="tableEmptyConf.keyword"
+                        :abnormal="tableEmptyConf.isAbnormal"
+                        @reacquire="getLogList"
+                        @clear-filter="clearFilterKey"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -356,7 +353,11 @@
                     time_range: '1h'
                 },
                 fieldSelectedList: [],
-                isFilter: false
+                isFilter: false,
+                tableEmptyConf: {
+                    isAbnormal: false,
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -744,7 +745,10 @@
                     if (!this.fieldSelectedList.length) {
                         this.fieldSelectedList = [...this.staticFileds];
                     }
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (res) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         theme: 'error',
                         message: res.detail || this.$t('日志服务暂不可用，请稍后再试')
@@ -909,6 +913,14 @@
                 this.getChartData();
                 this.getLogList();
                 this.renderIndex++;
+            },
+
+            clearFilterKey () {
+                this.$refs.accessLogFilter && this.$refs.accessLogFilter.clearKeyword();
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.logParams.keyword;
             }
         }
     };
@@ -1282,7 +1294,6 @@
     }
     .table-wrapper {
         width: auto;
-        overflow: auto;
     }
     .tooltip-icon {
         cursor: pointer;

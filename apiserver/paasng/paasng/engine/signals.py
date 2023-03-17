@@ -29,7 +29,3 @@ post_phase_end = Signal(providing_args=['status', 'phase'])
 
 # 当某个 module_env 进行 release 时, 会触发该信号
 on_release_created = Signal(providing_args=["env"])
-
-# Triggered when environment's builtin domains or subpaths were updated, usually
-# happens at the end of a deployment or a default module switching.
-on_builtin_domains_subpaths_updated = Signal()

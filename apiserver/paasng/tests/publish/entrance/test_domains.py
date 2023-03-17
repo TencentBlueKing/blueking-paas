@@ -21,8 +21,8 @@ to the current version of the project delivered to anyone in the future.
 import cattr
 import pytest
 
-from paasng.engine.controller.models import Domain as DomainCfg
-from paasng.engine.controller.models import IngressConfig, PortMap
+from paas_wl.cluster.models import Domain as DomainCfg
+from paas_wl.cluster.models import IngressConfig, PortMap
 from paasng.publish.entrance.domains import (
     DomainPriorityType,
     ModuleEnvDomains,
@@ -30,7 +30,7 @@ from paasng.publish.entrance.domains import (
     get_preallocated_domain,
     get_preallocated_domains_by_env,
 )
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
 
@@ -99,7 +99,7 @@ def bk_app(bk_app):
 @pytest.fixture(autouse=True)
 def setup_cluster():
     """Replace cluster info in module level"""
-    with replace_cluster_service(
+    with mock_cluster_service(
         ingress_config={
             'app_root_domains': [{"name": 'bar-1.example.com'}],
         }
@@ -134,7 +134,7 @@ class TestModuleEnvDomains:
 
     @pytest.mark.parametrize("https_enabled, expected_scheme", ((True, "https"), (False, "http")))
     def test_enable_https_by_default(self, https_enabled, expected_scheme, bk_stag_env):
-        with replace_cluster_service(
+        with mock_cluster_service(
             ingress_config={'app_root_domains': [{'name': 'example.com', 'https_enabled': https_enabled}]}
         ):
             domains = ModuleEnvDomains(bk_stag_env).all()
@@ -201,7 +201,7 @@ class TestGetPreallocatedDomainsByEnv:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         """Replace cluster info in module level"""
-        with replace_cluster_service(
+        with mock_cluster_service(
             ingress_config={
                 'app_root_domains': [
                     {"name": 'bar-1.example.com'},

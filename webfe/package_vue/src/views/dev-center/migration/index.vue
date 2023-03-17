@@ -301,8 +301,10 @@
                   >
                     <div class="ps-no-result">
                       <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无应用') }} </p>
+                        <table-empty
+                          :empty-title="$t('暂无应用')"
+                          empty
+                        />
                       </div>
                     </div>
                   </td>
@@ -378,8 +380,10 @@
                   >
                     <div class="ps-no-result">
                       <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无应用') }} </p>
+                        <table-empty
+                          :empty-title="$t('暂无应用')"
+                          empty
+                        />
                       </div>
                     </div>
                   </td>
@@ -451,8 +455,10 @@
                   >
                     <div class="ps-no-result">
                       <div class="text">
-                        <p><i class="paasng-icon paasng-empty" /></p>
-                        <p> {{ $t('暂无应用') }} </p>
+                        <table-empty
+                          :empty-title="$t('暂无应用')"
+                          empty
+                        />
                       </div>
                     </div>
                   </td>

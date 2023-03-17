@@ -25,6 +25,8 @@ from django.http import Http404
 from django.http.request import HttpRequest
 from django.http.response import JsonResponse
 from django.shortcuts import redirect
+from django.urls import Resolver404, include, re_path, resolve
+from django.views.generic import View
 from revproxy.views import ProxyView
 
 from paasng.utils.views import make_unauthorized_json
@@ -46,7 +48,36 @@ ALLOWED_PATH_PATTERNS = (
 )
 
 
-class SvcWorkloadsView(ProxyView):
+urlpatterns = [
+    # 为了方便统计已迁移的接口和保持接口地址不变, apiserver 重新实现的 workloads 下的 enduser view 注册到这里
+    # TODO: 在 workloads 项目代码完全迁移后, 路由重新注册到各自的 urls.py
+    re_path(r"^api/scheduling/", include("paas_wl.networking.egress.urls_enduser")),
+    re_path("^api/services/", include("paas_wl.networking.ingress.urls_enduser")),
+    re_path(r"^api/processes/", include("paas_wl.workloads.processes.urls_enduser")),
+    re_path("^api/cnative/specs/", include("paas_wl.cnative.specs.urls_enduser")),
+    re_path(r"^api/credentials/", include("paas_wl.workloads.images.urls_enduser")),
+    re_path(r"", include("paas_wl.admin.urls")),
+]
+
+
+def resolve_workloads_path(path: str):
+    return resolve("/" + path, urlconf=__name__)
+
+
+class SvcWorkloadsEndUserView(View):
+    def dispatch(self, request, *args, **kwargs):
+        if "path" not in kwargs:
+            raise Http404
+        path = kwargs["path"]
+        try:
+            match = resolve_workloads_path(path)
+        except Resolver404:
+            return SvcWorkloadsProxyView.as_view()(request, path)
+
+        return match.func(request, *match.args, **match.kwargs)
+
+
+class SvcWorkloadsProxyView(ProxyView):
     """Proxy requests for workloads service"""
 
     add_remote_user = True

@@ -143,8 +143,11 @@
                       <td :colspan="hasAdminUrl ? 4 : 3">
                         <div class="paas-loading-panel">
                           <div class="text">
-                            <p><i class="paasng-icon paasng-empty" /></p>
-                            <p> {{ $t('暂无增强服务配置信息') }} </p>
+                            <table-empty
+                              class="table-empty-cls"
+                              :empty-title="$t('暂无增强服务配置信息')"
+                              empty
+                            />
                             {{ $t('服务启用后，将在重新部署时申请实例，请先') }}
                             <span
                               class="blue pl27"
@@ -1024,5 +1027,8 @@
     }
     .config-width {
         width: 88%;
+    }
+    .ps-table-slide-up .paas-loading-panel .table-empty-cls .empty-tips {
+        color: #999;
     }
 </style>

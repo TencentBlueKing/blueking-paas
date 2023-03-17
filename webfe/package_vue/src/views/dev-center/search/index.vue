@@ -56,10 +56,7 @@
       >
         <template v-if="isEmpty">
           <section class="empty-wrapper">
-            <i class="paasng-icon paasng-empty" />
-            <p class="text">
-              {{ $t('暂无数据') }}
-            </p>
+            <table-empty empty />
           </section>
         </template>
         <template v-else>

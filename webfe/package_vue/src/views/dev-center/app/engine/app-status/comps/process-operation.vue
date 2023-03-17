@@ -14,10 +14,7 @@
             v-if="allProcesses.length === 0"
             class="ps-no-result"
           >
-            <div class="text">
-              <p><i class="paasng-icon paasng-empty" /></p>
-              <p> {{ $t('暂无数据') }} </p>
-            </div>
+            <table-empty empty />
           </div>
           <div
             v-for="(process, index) in allProcesses"
@@ -43,12 +40,6 @@
                 <div class="instance-count">
                   <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
                 </div>
-              </div>
-              <div
-                class="process-command"
-                @click="showProcessDetail(process)"
-              >
-                {{ process.cmd }}
               </div>
               <div class="process-operate">
                 <a
@@ -119,19 +110,6 @@
                     >
                   </a>
                 </template>
-
-                <!-- <dropdown :options="{ position: 'bottom right' }" ref="operateDropRef">
-                                    <a href="javascript:void(0);" class="ps-icon-btn-circle no-border a-more" slot="trigger">
-                                        <i class="paasng-icon paasng-icon-more"></i>
-                                    </a>
-                                    <div slot="content">
-                                        <ul class="ps-list-group-link spacing-x0">
-                                            <li>
-                                                <a href="javascript:void(0);" class="blue" @click="showProcessConfigDialog(process, index)"> {{ $t('调整实例数') }} </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </dropdown> -->
               </div>
               <div
                 v-if="process.status === 'Running'"
@@ -168,7 +146,9 @@
                         :key="instanceIndex"
                       >
                         <td class="name">
-                          <p>{{ instance.display_name }}</p>
+                          <p v-bk-overflow-tips>
+                            {{ instance.display_name }}
+                          </p>
                         </td>
                         <td class="run-state">
                           <i
@@ -201,15 +181,13 @@
                       </tr>
                     </template>
                     <template v-if="!curProcess || !curProcess.instances.length">
-                      <tr>
+                      <tr class="process-empty">
                         <td colspan="4">
                           <div class="ps-no-result">
-                            <div class="text">
-                              <p>
-                                <i class="paasng-icon paasng-empty" />
-                              </p>
-                              <p> {{ $t('暂无实例') }} </p>
-                            </div>
+                            <table-empty
+                              :empty-title="$t('暂无实例')"
+                              empty
+                            />
                           </div>
                         </td>
                       </tr>
@@ -541,7 +519,6 @@
     import ECharts from 'vue-echarts/components/ECharts.vue';
     import 'echarts/lib/chart/line';
     import 'echarts/lib/component/tooltip';
-    // import dropdown from '@/components/ui/Dropdown';
     import tooltipConfirm from '@/components/ui/TooltipConfirm';
     import moment from 'moment';
     import numInput from '@/components/ui/bkInput';
@@ -554,14 +531,6 @@
 
     const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
     const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
-    // const dateTextMap = {
-    //     '5m': '最近5分钟',
-    //     '1h': '最近1小时',
-    //     '3h': '最近3小时',
-    //     '12h': '最近12小时',
-    //     '1d': '最近1天',
-    //     '7d': '最近7天'
-    // }
     let timeRangeCache = '';
     let timeShortCutText = '';
     export default {
@@ -1117,7 +1086,6 @@
                         moduleId: this.curModuleId,
                         env: this.environment,
                         metric_type: type,
-                        // time_range_str: this.curChartTimeRange,
                         process_type: processType,
                         start_time: this.dateParams.start_time,
                         end_time: this.dateParams.end_time
@@ -1164,38 +1132,6 @@
                     const memData = getData(res2);
                     this.renderChartNew(cpuData, 'cpu', conf.cpuRef);
                     this.renderChartNew(memData, 'mem', conf.memRef);
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                    this.clearChart();
-                } finally {
-                    this.isChartLoading = false;
-                    conf.cpuRef.hideLoading();
-                    conf.memRef.hideLoading();
-                }
-            },
-
-            /**
-             * 从接口获取Metric 数据
-             * @param {Object} conf 配置参数
-             */
-            async getInstanceMetric (conf) {
-                this.isChartLoading = true;
-                try {
-                    const params = {
-                        appCode: this.appCode,
-                        moduleId: this.curModuleId,
-                        env: this.environment,
-                        process_type: conf.processes.type,
-                        instance_name: conf.instance.name,
-                        time_range_str: this.curChartTimeRange
-                    };
-                    const res = await this.$store.dispatch('processes/getInstanceMetrics', params);
-                    res.result.forEach(item => {
-                        this.renderChart(item.results, item.type_name, conf[`${item.type_name}Ref`]);
-                    });
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -1395,14 +1331,14 @@
                         isActionLoading: false, // 用于记录进程启动/停止接口是否已完成
                         maxReplicas: processInfo.max_replicas,
                         status: 'Stopped',
-                        cmd: processInfo.command,
                         operateIconTitle: operateIconTitle,
                         operateIconTitleCopy: operateIconTitle,
                         isShowTooltipConfirm: false,
                         desired_replicas: processInfo.replicas,
                         available_instance_count: processInfo.success,
                         failed: processInfo.failed,
-                        resourceLimit: processInfo.resource_limit,
+                        cpuLimit: processInfo.cpu_limit,
+                        memLimit: processInfo.memory_limit,
                         clusterLink: processInfo.cluster_link,
                         type: type
                     };
@@ -1628,8 +1564,8 @@
                     targetReplicas: process.targetReplicas,
                     maxReplicas: process.maxReplicas,
                     status: process.status,
-                    // cpuLimit: this.transfer_cpu_unit(process.resourceLimit.cpu),
-                    // memLimit: process.resourceLimit.memory,
+                    cpuLimit: this.transfer_cpu_unit(process.cpuLimit),
+                    memLimit: process.memLimit,
                     clusterLink: process.clusterLink
                 };
                 this.curProcess = process;
@@ -1680,13 +1616,6 @@
                         textColor: '#fff',
                         maskColor: 'rgba(255, 255, 255, 0.8)'
                     });
-
-                    // this.getInstanceMetric({
-                    //     cpuRef: cpuRef,
-                    //     memRef: memRef,
-                    //     instance: instance,
-                    //     processes: processes
-                    // })
 
                     this.fetchMetric({
                         cpuRef: cpuRef,
@@ -1964,15 +1893,6 @@
                     text-overflow: ellipsis;
                     white-space: nowrap;
                 }
-            }
-            .process-command {
-                display: inline-block;
-                padding: 16px 24px 16px 0;
-                width: 200px;
-                vertical-align: middle;
-                word-break: break-all;
-                cursor: pointer;
-                user-select: none;
             }
 
             .process-status {
@@ -2644,5 +2564,8 @@
         &.refresh {
             width: 28px;
         }
+    }
+    .process-empty {
+        height: 280px;
     }
 </style>

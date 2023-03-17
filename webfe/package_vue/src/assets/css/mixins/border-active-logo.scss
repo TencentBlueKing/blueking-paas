@@ -1,0 +1,27 @@
+@mixin border-active-logo {
+	&::before {
+      border: 2px solid #fff;
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: -1px;
+      z-index: 9;
+      border: 14px solid #3a84ff;
+      border-left-color: transparent;
+      border-bottom-color: transparent;
+  }
+
+  &::after {
+      content: "\e101";
+      font-family: 'paasng' !important;
+      font-weight: 100;
+      font-size: 22px;
+      position: absolute;
+      right: -4px;
+      top: -4px;
+      line-height: 1;
+      display: inline-block;
+      z-index: 10;
+      color: #fff;
+  }
+}

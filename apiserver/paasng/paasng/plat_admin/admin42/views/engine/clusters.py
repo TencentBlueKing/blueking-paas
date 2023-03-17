@@ -18,9 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 from rest_framework.permissions import IsAuthenticated
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.engine.constants import ClusterFeatureFlag, ClusterType
+from paasng.engine.constants import ClusterType
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.region.models import get_all_regions
 
@@ -46,7 +47,8 @@ class ClusterManageView(GenericTemplateView):
                     {'value': value, 'text': display_name} for value, display_name in ClusterType.get_choices()
                 ],
                 'feature_flag_list': [
-                    {'value': value, 'text': display_name} for value, display_name in ClusterFeatureFlag.get_choices()
+                    {'value': value, 'text': display_name}
+                    for value, display_name in ClusterFeatureFlag.get_django_choices()
                 ],
             }
         )

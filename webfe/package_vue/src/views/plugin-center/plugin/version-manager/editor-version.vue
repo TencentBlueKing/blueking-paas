@@ -179,10 +179,14 @@
           :size="'small'"
           :pagination="pagination"
         >
+          <div slot="empty">
+            <table-empty empty />
+          </div>
           <bk-table-column
             :label="$t('Commit ID')"
             prop="name"
             :show-overflow-tooltip="true"
+            :render-header="$renderHeader"
           />
           <bk-table-column
             :label="$t('状态')"
@@ -196,8 +200,12 @@
           <bk-table-column
             :label="$t('提交者')"
             prop="operator"
+            :render-header="$renderHeader"
           />
-          <bk-table-column :label="$t('提交时间')">
+          <bk-table-column
+            :label="$t('提交时间')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="{ row }">
               <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
             </template>

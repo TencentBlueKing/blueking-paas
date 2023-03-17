@@ -23,8 +23,8 @@ import cattr
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.platform.api import upsert_app_monitor
 from paasng.engine.constants import ConfigVarEnvName
-from paasng.engine.controller.state import controller_client
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.processes import ProcessManager
 from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, Process
@@ -89,9 +89,8 @@ class DeploymentDeclarativeController:
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
         engine_app = self.deployment.get_engine_app()
-        controller_client.upsert_app_monitor(
-            region=engine_app.region,
-            app_name=engine_app.name,
+        upsert_app_monitor(
+            engine_app_name=engine_app.name,
             port=bk_monitor.port,
             target_port=bk_monitor.target_port,  # type: ignore
         )

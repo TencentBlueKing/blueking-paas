@@ -26,29 +26,11 @@ from paasng.utils.basic import ChoicesEnum
 PROC_DEFAULT_REPLICAS = 1
 
 
-class EngineAppType(str, StructuredEnum):
-    """type of engine app"""
-
-    DEFAULT = EnumField('default')  # 默认类型：无任何定制逻辑
-
-    # 云原生架构应用：完全基于 YAML 模型的应用，当前作为一个独立应用类型存在，但未来它也许会成为所有应用
-    # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
-    CLOUD_NATIVE = EnumField('cloud_native')
-
-
 class ClusterType(str, StructuredEnum):
     """集群类别"""
 
     NORMAL = EnumField('normal', label=_('普通集群'))
     VIRTUAL = EnumField('virtual', label=_('虚拟集群'))
-
-
-class ClusterFeatureFlag(str, StructuredEnum):
-    """集群特性标志"""
-
-    ENABLE_EGRESS_IP = EnumField('ENABLE_EGRESS_IP', label=_('支持提供出口 IP'))
-    ENABLE_MOUNT_LOG_TO_HOST = EnumField('ENABLE_MOUNT_LOG_TO_HOST', label=_('允许挂载日志到主机'))
-    INGRESS_USE_REGEX = EnumField('INGRESS_USE_REGEX', label=_('Ingress路径是否使用正则表达式'))
 
 
 class AppEnvName(str, StructuredEnum):

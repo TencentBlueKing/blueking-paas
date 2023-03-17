@@ -98,6 +98,14 @@
       @page-change="pageChange"
       @page-limit-change="limitChange"
     >
+      <div slot="empty">
+        <table-empty
+          :keyword="tableEmptyConf.keyword"
+          :abnormal="tableEmptyConf.isAbnormal"
+          @reacquire="fetchRecordList(true)"
+          @clear-filter="clearFilter"
+        />
+      </div>
       <bk-table-column
         :label="$t('告警开始时间')"
         prop="start"
@@ -182,18 +190,12 @@
             </template>
             <template v-else-if="!isShowMetrics && !metricsLoading">
               <div class="metrics-empty">
-                <p><i class="paasng-icon paasng-empty" /></p>
-                <p class="text">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </template>
             <template v-else>
               <div class="metrics-empty">
-                <p><i class="paasng-icon paasng-empty" /></p>
-                <p class="text">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </template>
           </div>
@@ -453,7 +455,11 @@
                 metricsList: [],
                 metricsThreshold: '',
                 metricsLoading: false,
-                pageRequestQueue: ['type', 'list']
+                pageRequestQueue: ['type', 'list'],
+                tableEmptyConf: {
+                    keyword: '',
+                    isAbnormal: false
+                }
             };
         },
         computed: {
@@ -584,7 +590,10 @@
                     const res = await this.$store.dispatch('alarm/getAlarmList', params);
                     this.pagination.count = res.count;
                     this.alarmRecordList.splice(0, this.alarmRecordList.length, ...(res.results || []));
+                    this.updateTableEmptyConfig();
+                    this.tableEmptyConf.isAbnormal = false;
                 } catch (e) {
+                    this.tableEmptyConf.isAbnormal = true;
                     this.$paasMessage({
                         limit: 1,
                         theme: 'error',
@@ -905,6 +914,21 @@
                 this.pagination.limit = currentLimit;
                 this.pagination.current = 1;
                 this.fetchRecordList(true);
+            },
+
+            clearFilter () {
+                this.keyword = '';
+                this.curType = '';
+                this.curEnv = '';
+                this.fetchRecordList(true);
+            },
+
+            updateTableEmptyConfig () {
+                if (this.keyword || this.curType || this.curEnv) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '';
             }
         }
     };

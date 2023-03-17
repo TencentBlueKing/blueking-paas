@@ -45,6 +45,9 @@
         @page-limit-change="handlePageLimitChange"
         @page-change="handlePageChange"
       >
+        <div slot="empty">
+          <table-empty empty />
+        </div>
         <bk-table-column
           :label="$t('版本')"
           prop="name"
@@ -53,6 +56,7 @@
         <bk-table-column
           :label="$t('部署环境')"
           prop="environment_name"
+          :render-header="$renderHeader"
         >
           <template slot-scope="props">
             <span v-if="props.row.environment_name === 'stag'"> {{ $t('预发布环境') }} </span>
@@ -62,8 +66,12 @@
         <bk-table-column
           :label="$t('操作人')"
           prop="operator"
+          :render-header="$renderHeader"
         />
-        <bk-table-column :label="$t('耗时')">
+        <bk-table-column
+          :label="$t('耗时')"
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             {{ computedDeployTime(row) }}
           </template>
@@ -162,14 +170,7 @@
                 v-else
                 class="exception-wrapper"
               >
-                <img
-                  class="img-exception"
-                  src="/static/images/empty.png"
-                  alt=""
-                >
-                <p class="text-exception">
-                  {{ $t('暂无数据') }}
-                </p>
+                <table-empty empty />
               </div>
             </bk-tab-panel>
             <bk-tab-panel

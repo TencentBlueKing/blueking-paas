@@ -343,9 +343,11 @@
                 class="ps-no-result"
               >
                 <div class="text">
-                  <p>
-                    <i class="paasng-icon paasng-empty" />
-                  </p>
+                  <table-empty
+                    class="table-empty-cls"
+                    :is-empty-title="false"
+                    empty
+                  />
                   <p class="f13">
                     {{ $t('未找到进程服务，请尝试') }}
                     <router-link

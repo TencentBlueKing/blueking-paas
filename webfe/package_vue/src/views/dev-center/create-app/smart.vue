@@ -3,13 +3,6 @@
     class="smart-app"
     data-test-id="createSmart_content_appData"
   >
-    <div class="ps-tip-block default-info">
-      <i
-        style="color: #3A84FF;"
-        class="paasng-icon paasng-info-circle"
-      />
-      {{ $t('平台为该类应用提供应用引擎、增强服务等功能，并提供源码包部署和通过配置文件定义应用信息的能力；适用于熟知蓝鲸官方S-mart打包流程的SaaS开发场景。') }}
-    </div>
     <div v-if="packageData">
       <div
         class="bk-alert bk-alert-success mb20"

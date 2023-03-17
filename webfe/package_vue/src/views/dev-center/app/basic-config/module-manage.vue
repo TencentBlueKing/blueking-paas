@@ -1726,6 +1726,7 @@
 </script>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/border-active-logo.scss';
     .module-info-item {
         margin-bottom: 35px;
         .title {
@@ -2020,22 +2021,7 @@
         padding: 0 16px 0 14px;
         background-color: #fff;
         color: #3A84FF;
-        &::after {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            content: "\e157";
-            font-family: 'paasng' !important;
-            font-size: 12px;
-            position: absolute;
-            right: -8px;
-            top: -8px;
-            line-height: 1;
-            display: inline-block;
-            z-index: 10;
-            background: #fff;
-        }
+        @include border-active-logo;
     }
     .disabled{
         color: #c4c6cc;

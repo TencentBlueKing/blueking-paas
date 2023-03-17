@@ -26,7 +26,6 @@ from rest_framework.response import Response
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
-from paasng.engine.controller.state import controller_client
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -54,10 +53,6 @@ class FullSwaggerConfigurationView(schema_view):  # type: ignore
         self._merge_paths(default, swagger_file)
         self._merge_definitions(default, swagger_file)
 
-        # workloads docs
-        workloads_docs = controller_client.get_swagger_docs()
-        self._merge_paths(default, workloads_docs, base_path='/svc_workloads', ignore_conflict=False)
-        self._merge_definitions(default, workloads_docs, ignore_conflict=False)
         return Response(default)
 
     def _merge_paths(self, base: Dict, target: Dict, base_path: str = '', ignore_conflict: bool = True):

@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from paas_wl.cluster.shim import Cluster, EnvClusterService
 from paasng.engine.constants import RuntimeType
-from paasng.engine.controller.cluster import Cluster, get_engine_app_cluster
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
 
@@ -127,6 +127,5 @@ class RuntimeInfo:
 def get_application_cluster(application: 'Application') -> Cluster:
     """Return the cluster name of app's default module"""
     default_module = application.get_default_module()
-    engine_app = default_module.envs.get(environment='prod').engine_app
-    cluster = get_engine_app_cluster(application.region, engine_app.name)
-    return cluster
+    env = default_module.envs.get(environment='prod')
+    return EnvClusterService(env).get_cluster()

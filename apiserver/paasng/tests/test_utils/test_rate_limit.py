@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_429_TOO_MANY_REQUESTS
 
 from paasng.platform.core.storages.redisdb import get_default_redis
+from paasng.utils.rate_limit.constants import UserAction
 from paasng.utils.rate_limit.fixed_window import UserActionRateLimiter as UserActionFixedWindowRateLimiter
 from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
 from paasng.utils.rate_limit.token_bucket import UserActionRateLimiter as UserActionTokenBucketRateLimiter
@@ -34,7 +35,7 @@ from tests.utils.auth import create_user
 def test_UserActionRateLimiter(RateLimiter):
     window_size, threshold = 3, 2
     user = create_user()
-    rate_limiter = RateLimiter(get_default_redis(), user.username, window_size, threshold, 'action')
+    rate_limiter = RateLimiter(get_default_redis(), user.username, UserAction.WATCH_PROCESS, window_size, threshold)
     # 消耗令牌
     for _ in range(threshold):
         assert rate_limiter.is_allowed()
@@ -55,7 +56,7 @@ def test_rate_limits_on_view_func():
     class FakeViewSet:
         request = fake_request
 
-        @rate_limits_by_user(window_size, threshold)
+        @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size, threshold)
         def fake_view_func(self):
             return Response("ok")
 

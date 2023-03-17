@@ -18,10 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 import abc
 import time
-from typing import Optional
 
 import msgpack
 import redis
+
+from paasng.utils.rate_limit.constants import UserAction
 
 
 class RedisTokenBucketRateLimiter(abc.ABC):
@@ -100,16 +101,16 @@ class UserActionRateLimiter(RedisTokenBucketRateLimiter):
         self,
         redis_db: redis.Redis,
         username: str,
+        action: UserAction,
         window_size: int,
         threshold: int,
-        action: Optional[str] = None,
     ):
         """
         :param redis_db: redis client
         :param username: 用户 ID
+        :param action: 用户操作名
         :param window_size: 时间窗口长度（单位：秒）
         :param threshold: 时间窗口内的次数阈值
-        :param action: 用户操作名（若不指定则共用频率限额）
         """
         super().__init__(redis_db, window_size, threshold)
         self.username = username

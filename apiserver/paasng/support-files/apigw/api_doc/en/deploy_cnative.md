@@ -56,10 +56,10 @@ curl -X POST http://bkapi.example.com/api/bkpaas3/prod/cnative/specs/application
                         "bash",
                         "/app/start_web.sh"
                     ],
-                    "cpu": "4000m",
+                    "cpu": "500m",
                     "image": "hub.bktencent.com/blueking/django-helloworld:latest",
                     "imagePullPolicy": "IfNotPresent",
-                    "memory": "1024Mi",
+                    "memory": "256Mi",
                     "name": "web",
                     "replicas": 1
                 }

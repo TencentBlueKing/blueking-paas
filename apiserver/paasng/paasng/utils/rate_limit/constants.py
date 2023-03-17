@@ -27,6 +27,8 @@ class UserAction(int, StructuredEnum):
     A: 传入操作名称或使用函数名作为标识，都可能出现重名的情况，这时它们将共享频率限制配额，可能埋下隐患
        使用枚举类则可以避免这个问题，新增限制时需要先检查是否有重名的 Action，避免共享配额
        反之亦然，如果希望共享频率限制配额，则可以使用相同的枚举值
+    Q：为什么使用整数作为枚举值，生成的 redis key 可读性不佳？
+    A：讨论参见：https://github.com/TencentBlueKing/blueking-paas/pull/271#discussion_r1139562569
     """
 
     FETCH_DEPLOY_LOG = 1

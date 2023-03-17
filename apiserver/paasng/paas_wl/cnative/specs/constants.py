@@ -22,14 +22,19 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.workloads.processes.constants import AppEnvName  # noqa
 
 DEFAULT_PROCESS_NAME = 'web'
+
+# PaaS 平台保留的注解前缀
+BKPAAS_RESERVED_ANNO_PREFIX = "bkapp.paas.bk.tencent.com"
+# 注解中存储当前应用是否启用白名单功能的键名
+ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
 # workloads 注入到 annotations 的部署ID字段
 BKPAAS_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
 # workloads 注入到 annotations 的增强服务信息字段
 BKPAAS_ADDONS_ANNO_KEY = "bkapp.paas.bk.tencent.com/addons"
 # 注解中存储 region 的键名
-BKAPP_REGION_KEY = "bkapp.paas.bk.tencent.com/region"
+BKAPP_REGION_ANNO_KEY = "bkapp.paas.bk.tencent.com/region"
 # 注解或标签中存储应用名称的键名
-BKAPP_NAME_KEY = "bkapp.paas.bk.tencent.com/name"
+BKAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/name"
 # 注解中存储应用 ID 的键名
 BKAPP_CODE_ANNO_KEY = "bkapp.paas.bk.tencent.com/code"
 # 注解中存储模块名称的键名

@@ -23,12 +23,11 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.cnative.specs.constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-
-from .constants import ACCESS_CONTROL_ANNO_KEY, BKPAAS_ADDONS_ANNO_KEY
 
 logger = logging.getLogger(__name__)
 

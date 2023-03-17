@@ -44,9 +44,15 @@ from paasng.utils.datetime import (
 from paasng.utils.text import calculate_percentage
 
 from .constants import LOG_FILTER_FIELD_MAPS
+from .dataclasses import (
+    FieldFilter,
+    LogCountTimeHistogram,
+    LogPage,
+    SimpleDomainSpecialLanguage,
+    StandardOutputLogScroll,
+)
 from .exceptions import LogQueryError
 from .filters import BaseAppFilter
-from .models import FieldFilter, LogCountTimeHistogram, LogPage, SimpleDomainSpecialLanguage, StandardOutputLogScroll
 from .utils import detect_indexes, get_es_term, parse_simple_dsl_to_dsl
 
 logger = logging.getLogger(__name__)

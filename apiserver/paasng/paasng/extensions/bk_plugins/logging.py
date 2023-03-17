@@ -24,8 +24,8 @@ from elasticsearch_dsl.response import Response as ESResponse
 from pydantic import BaseModel, Field
 
 from paasng.platform.log.client import LogClient, SmartTimeRange
+from paasng.platform.log.dataclasses import LogLine, LogPage, SimpleDomainSpecialLanguage
 from paasng.platform.log.filters import AppLogFilter
-from paasng.platform.log.models import LogLine, LogPage, SimpleDomainSpecialLanguage
 
 from .models import BkPlugin
 

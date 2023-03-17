@@ -21,8 +21,8 @@ from typing import List, Optional, Type
 import pytest
 from elasticsearch_dsl.response.hit import Hit
 
+from paasng.platform.log.dataclasses import IngressLogLine, LogLine
 from paasng.platform.log.exceptions import LogLineInfoBrokenError
-from paasng.platform.log.models import IngressLogLine, LogLine
 from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db

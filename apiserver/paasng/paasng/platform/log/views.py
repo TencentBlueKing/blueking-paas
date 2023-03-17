@@ -39,9 +39,9 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.log import serializers
 from paasng.platform.log.client import LogClient, SmartTimeRange
 from paasng.platform.log.constants import LogType
+from paasng.platform.log.dataclasses import IngressLogPage, LogPage, ResponseWrapper, SimpleDomainSpecialLanguage
 from paasng.platform.log.exceptions import UnknownEngineAppNameError
 from paasng.platform.log.filters import AppAccessLogFilter, AppLogFilter, BaseAppFilter
-from paasng.platform.log.models import IngressLogPage, LogPage, ResponseWrapper, SimpleDomainSpecialLanguage
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)

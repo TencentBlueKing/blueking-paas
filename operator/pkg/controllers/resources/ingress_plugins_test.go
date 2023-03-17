@@ -40,13 +40,13 @@ var _ = Describe("Test ingress_plugins.go", func() {
 	})
 
 	Context("test AccessControlPlugin", func() {
-		DescribeTable("test MakeServerSnippet", func(initAction func(), expected string) {
+		DescribeTable("test MakeConfigurationSnippet", func(initAction func(), expected string) {
 			By("init", initAction)
 
 			var plugin NginxIngressPlugin = &AccessControlPlugin{
 				Config: &paasv1alpha1.AccessControlConfig{RedisConfigKey: "acc_redis_server_name"},
 			}
-			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(expected))
+			Expect(plugin.MakeConfigurationSnippet(bkapp, nil)).To(Equal(expected))
 		},
 			Entry("when without app metadata", func() {}, ""),
 			Entry("when missing AccessControlAnnoKey", func() { testing.WithAppInfoAnnotations(bkapp) }, ""),
@@ -72,11 +72,11 @@ var _ = Describe("Test ingress_plugins.go", func() {
         # content of access-control plugin ends`)),
 		)
 
-		It("test MakeConfigurationSnippet", func() {
+		It("test MakeServerSnippet", func() {
 			var plugin NginxIngressPlugin = &AccessControlPlugin{
 				Config: &paasv1alpha1.AccessControlConfig{RedisConfigKey: "local"},
 			}
-			Expect(plugin.MakeConfigurationSnippet(bkapp, nil)).To(Equal(""))
+			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(""))
 		})
 	})
 })

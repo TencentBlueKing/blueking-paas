@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from blue_krill.data_types.enum import StructuredEnum
 
 
-class UserAction(str, StructuredEnum):
+class UserAction(int, StructuredEnum):
     """
     用于频率限制的用户操作
 
@@ -29,5 +29,5 @@ class UserAction(str, StructuredEnum):
        反之亦然，如果希望共享频率限制配额，则可以使用相同的枚举值
     """
 
-    FETCH_DEPLOY_LOG = 'fetch_deploy_log'
-    WATCH_PROCESS = 'watch_process'
+    FETCH_DEPLOY_LOG = 1
+    WATCH_PROCESS = 2

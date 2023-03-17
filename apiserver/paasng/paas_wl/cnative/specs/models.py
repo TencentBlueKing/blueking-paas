@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
+import logging
 from typing import Dict, List, Optional
 
 import yaml
@@ -35,11 +36,13 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 
 from .configurations import generate_builtin_configurations, merge_envvars
 from .constants import (
+    ACCESS_CONTROL_ANNO_KEY,
     BKAPP_CODE_ANNO_KEY,
-    BKAPP_NAME_KEY,
-    BKAPP_REGION_KEY,
+    BKAPP_NAME_ANNO_KEY,
+    BKAPP_REGION_ANNO_KEY,
     BKPAAS_ADDONS_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
+    BKPAAS_RESERVED_ANNO_PREFIX,
     DEFAULT_PROCESS_NAME,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -48,6 +51,8 @@ from .constants import (
     DeployStatus,
 )
 from .v1alpha1.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+
+logger = logging.getLogger(__name__)
 
 
 class AppModelResourceManager(models.Manager):
@@ -197,14 +202,41 @@ class AppModelDeploy(TimestampedModel):
         """
         wl_app = WlApp.objects.get(pk=env.engine_app_id)
         manifest = BkAppResource(**self.revision.json_value)
+
+        # 更新注解，包含应用基本信息，增强服务，访问控制，镜像凭证等
+        self._inject_annotations(manifest, env.application, env, wl_app, credential_refs)
+
+        # 注入平台内置环境变量
+        manifest.spec.configuration.env = merge_envvars(
+            manifest.spec.configuration.env, generate_builtin_configurations(env=env)
+        )
+
+        data = manifest.dict()
+        # refresh status.conditions
+        data["status"] = {"conditions": []}
+        return data
+
+    def _inject_annotations(
+        self,
+        manifest: BkAppResource,
+        application: Application,
+        env: ModuleEnvironment,
+        wl_app: WlApp,
+        credential_refs: List[ImageCredentialRef],
+    ) -> None:
+        # 检查 annotations 中的各个值，如果占用 paas 保留的前缀，则 pop 掉
+        for key in manifest.metadata.annotations:
+            if key.startswith(BKPAAS_RESERVED_ANNO_PREFIX):
+                manifest.metadata.annotations.pop(key)
+
+        # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.pk)
-        application = env.application
 
         # inject bkapp basic info
         manifest.metadata.annotations.update(
             {
-                BKAPP_REGION_KEY: application.region,
-                BKAPP_NAME_KEY: application.name,
+                BKAPP_REGION_ANNO_KEY: application.region,
+                BKAPP_NAME_ANNO_KEY: application.name,
                 BKAPP_CODE_ANNO_KEY: application.code,
                 MODULE_NAME_ANNO_KEY: env.module.name,
                 ENVIRONMENT_ANNO_KEY: env.environment,
@@ -225,14 +257,14 @@ class AppModelDeploy(TimestampedModel):
         else:
             manifest.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = ""
 
-        manifest.spec.configuration.env = merge_envvars(
-            manifest.spec.configuration.env, generate_builtin_configurations(env=env)
-        )
-
-        data = manifest.dict()
-        # refresh status.conditions
-        data["status"] = {"conditions": []}
-        return data
+        # inject access control enable info
+        try:
+            from paasng.security.access_control.models import ApplicationAccessControlSwitch
+        except ImportError:
+            logger.info('access control only supported in te region, skip when inject annotations...')
+        else:
+            if ApplicationAccessControlSwitch.objects.is_enabled(application):
+                manifest.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
 
 
 def create_app_resource(

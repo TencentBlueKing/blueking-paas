@@ -34,6 +34,7 @@ from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.base import OperationVersionBase
 from paasng.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
 from paasng.utils.models import make_legacy_json_field
 
@@ -42,6 +43,10 @@ logger = logging.getLogger(__name__)
 
 class DeploymentQuerySet(models.QuerySet):
     """Custom QuerySet for Deployment model"""
+
+    def filter_by_env(self, env: ModuleEnvironment):
+        """Get all deploys under an env"""
+        return self.filter(app_environment=env)
 
     def owned_by_module(self, module, environment=None):
         """Return deployments owned by module"""

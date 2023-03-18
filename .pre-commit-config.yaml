@@ -67,14 +67,6 @@ repos:
         pass_filenames: false
         entry: bash -c "cd apiserver && poetry run mypy . --config-file=./pyproject.toml"
         files: '^apiserver/'
-      - id: mypy-workloads
-        name: run mypy check for "workloads"
-        # language: python
-        language: system
-        types: [python]
-        pass_filenames: false
-        entry: bash -c "cd workloads && poetry run python -m mypy . --config-file=./mypy.ini"
-        files: '^workloads/'
       # Disable this hook temporarily because is may results EOF error and loss
       # of changes.
       # - id: operator-fmt

@@ -16,6 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-
-# workloads 注入到 annotations 的增强服务信息字段
-BKPAAS_ADDONS_ANNO_KEY = "bkapp.paas.bk.tencent.com/addons"

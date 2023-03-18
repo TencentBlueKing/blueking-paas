@@ -34,7 +34,8 @@ export default {
     // curPluginId
     // curPluginTypeId
     // 当前插件的当前发布版本
-    curRelease: {}
+    curRelease: {},
+    pluginApplyUrl: ''
   },
   getters: {
     chartData: state => state.chartData
@@ -80,6 +81,9 @@ export default {
       state.curPluginInfo = data;
       state.curPluginId = pluginId;
       state.curPluginTypeId = pluginTypeId;
+    },
+    updatePluginApplyUrl (state, url) {
+      state.pluginApplyUrl = url;
     }
   },
   actions: {
@@ -202,6 +206,10 @@ export default {
       return http.get(url).then(response => {
         commit('updatePluginInfo', { pluginId, pluginTypeId, data: response });
         return response;
+      }).catch(err => {
+        if (err.apply_url_for_dev) {
+          commit('updatePluginApplyUrl', err.apply_url_for_dev);
+        }
       }).finally(() => {
         commit('updateAppLoading', false, { root: true });
       });

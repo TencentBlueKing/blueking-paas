@@ -398,7 +398,7 @@
                     if (this.localCloudAppData.spec) {
                         val.name = this.panels[this.panelActive] && this.panels[this.panelActive].name;
                         val.replicas = val.replicas && Number(val.replicas);
-                        if (val.targetPort) {
+                        if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
                             val.targetPort = Number(val.targetPort);
                         }
                         this.$set(this.localCloudAppData.spec.processes, this.panelActive, val);
@@ -614,12 +614,18 @@
                 this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
             },
 
-            formDataValidate (index) {
-                console.log('触发');
-                this.$refs.formResource.validate();
-                this.$refs.formDeploy.validate();
-                if (index) {
-                    this.handlePanelValidateSwitch(index);
+            async formDataValidate (index) {
+                console.log('触发', index);
+                try {
+                  await this.$refs.formResource.validate();
+                  await this.$refs.formDeploy.validate();
+                  if (index) {
+                      this.handlePanelValidateSwitch(index);
+                  }
+                  return true;
+                } catch (error) {
+                  console.error(error);
+                  return false;
                 }
             },
 

@@ -252,9 +252,16 @@
                 this.$refs.dropdown.hide();
             },
 
-            deployDialog (env) {
-                this.buttonLoading = true;
-                this.getCloudAppInfo(env);
+            async deployDialog (env) {
+                try {
+                   const res = await this.$refs.square.formDataValidate();
+                   if (res) {
+                       this.buttonLoading = true;
+                       this.getCloudAppInfo(env);
+                   }
+                } catch (error) {
+                    console.error(error);
+                }
             },
 
             showDeployDialog (env) {
@@ -322,6 +329,7 @@
                 const portReg = /^[0-9]*$/;
                 for (let i = 0; i < processes.length; i++) {
                     // image 镜像地址
+                    console.log('!processes[i].image', !processes[i].image);
                     if (!processes[i].image) {
                         this.$bkMessage({
                             theme: 'error',

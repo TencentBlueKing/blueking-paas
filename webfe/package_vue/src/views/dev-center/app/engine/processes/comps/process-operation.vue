@@ -790,7 +790,8 @@
                 },
                 dateShortCut: dateShortCut,
                 initDateTimeRange: [initStartDate, initEndDate],
-                isDatePickerOpen: false
+                isDatePickerOpen: false,
+                errorInterval: true
             };
         },
         computed: {
@@ -1480,12 +1481,15 @@
 
                 // 服务异常
                 this.serverEvent.onerror = (event) => {
+                    if (!this.errorInterval) return;
                     // 异常后主动关闭，否则会继续重连
                     console.error(this.$t('推送异常'), event);
+                    this.errorInterval = false;
                     this.serverEvent.close();
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
+                        this.errorInterval = true;
                         this.watchServerPush();
                     }, 5000);
                 };

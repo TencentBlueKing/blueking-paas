@@ -18,8 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from pathlib import Path
+from typing import Optional
 
-from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
+from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
+from blue_krill.redis_tools.messaging import StreamChannelSubscriber
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -30,10 +32,10 @@ from paasng.dev_resources.sourcectl.utils import compress_directory, generate_te
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.constants import BuildStatus, JobStatus
-from paasng.engine.deploy.async_comps import BuildProcessPoller
-from paasng.engine.deploy.infras import DeploymentStateMgr, DeployProcedure, DeployStep, Style, get_env_variables
-from paasng.engine.deploy.pre_release import ApplicationPreReleaseExecutor
-from paasng.engine.deploy.preparations import (
+from paasng.engine.deploy.config import get_env_variables
+from paasng.engine.deploy.engine_svc import EngineDeployClient
+from paasng.engine.deploy.infra.output import Style
+from paasng.engine.deploy.infra.source import (
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
@@ -41,11 +43,23 @@ from paasng.engine.deploy.preparations import (
     get_source_package_path,
     tag_module_from_source_files,
 )
+from paasng.engine.deploy.steps.base import DeployPoller
+from paasng.engine.deploy.steps.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.workflow import (
+    DeploymentCoordinator,
+    DeploymentStateMgr,
+    DeployProcedure,
+    DeployStep,
+    MessageParser,
+    MessageStepMatcher,
+)
+from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_appenv_build, pre_phase_start
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.constants import AppFeatureFlag
+from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.platform.modules.models.module import Module
 from paasng.utils.blobstore import make_blob_store
 
@@ -216,6 +230,71 @@ class ApplicationBuilder(DeployStep):
                 "please check if they need to be enabled"
             ).format(unbound_service_names=unbound_service_names)
             self.stream.write_message(Style.Warning(message))
+
+
+class BuildProcessPoller(DeployPoller):
+    """Poller for querying the status of build process
+    Finish when the building process in engine side was completed
+    """
+
+    max_retries_on_error = 10
+    overall_timeout_seconds = 60 * 15
+    default_retry_delay_seconds = 2
+
+    @staticmethod
+    def get_subscriber(channel_id) -> Optional[StreamChannelSubscriber]:
+        subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
+        channel_state = subscriber.get_channel_state()
+        if channel_state == 'none':
+            return None
+
+        return subscriber
+
+    def query(self) -> PollingResult:
+        deployment = Deployment.objects.get(pk=self.params['deployment_id'])
+
+        client = EngineDeployClient(deployment.get_engine_app())
+        build_proc = client.get_build_process(self.params['build_process_id'])
+
+        subscriber = self.get_subscriber(self.params['deployment_id'])
+        phase = deployment.deployphase_set.get(type=DeployPhaseTypes.BUILD)
+        pattern_maps = {
+            JobStatus.PENDING: phase.get_started_pattern_map(),
+            JobStatus.SUCCESSFUL: phase.get_finished_pattern_map(),
+        }
+        logger.info("[%s] going to get history events from redis", self.params['deployment_id'])
+        if subscriber:
+            for e in subscriber.get_history_events():
+                event = MessageParser.parse_msg(e)
+                if not event:
+                    continue
+
+                MessageStepMatcher.match_and_update_step(event, pattern_maps, phase)
+        logger.info("[%s] history events from redis fetched", self.params['deployment_id'])
+
+        build_status = build_proc.status
+        build_id = str(build_proc.build_id) if build_proc.build_id else None
+
+        status = PollingStatus.DOING
+        if build_status in BuildStatus.get_finished_states():
+            status = PollingStatus.DONE
+        else:
+            coordinator = DeploymentCoordinator(deployment.app_environment)
+            # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
+            if coordinator.status_polling_timeout:
+                logger.warning(
+                    "[deploy_id=%s, build_process_id=%s] polling build status timeout, regarding as failed by PaaS",
+                    self.params["deployment_id"],
+                    self.params["build_process_id"],
+                )
+                build_status = BuildStatus.FAILED
+                status = PollingStatus.DONE
+            else:
+                coordinator.update_polling_time()
+
+        result = {"build_id": build_id, "build_status": build_status}
+        logger.info("[%s] got build status [%s][%s]", self.params['deployment_id'], build_id, build_status)
+        return PollingResult(status=status, data=result)
 
 
 class BuildProcessResultHandler(CallbackHandler):

@@ -54,11 +54,11 @@ from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
 from paasng.engine.deploy.engine_svc import get_all_logs
-from paasng.engine.deploy.infras import DeploymentCoordinator
-from paasng.engine.deploy.preparations import initialize_deployment
-from paasng.engine.deploy.protections import ModuleEnvDeployInspector
-from paasng.engine.deploy.release import create_release
+from paasng.engine.deploy.infra.models_utils import initialize_deployment
 from paasng.engine.deploy.runner import DeployTaskRunner
+from paasng.engine.deploy.steps.release import create_release
+from paasng.engine.deploy.workflow import DeploymentCoordinator
+from paasng.engine.deploy.workflow.protections import ModuleEnvDeployInspector
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
 from paasng.engine.models.config_var import (
     ENVIRONMENT_NAME_FOR_GLOBAL,

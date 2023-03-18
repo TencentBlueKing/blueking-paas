@@ -54,9 +54,5 @@ class DuplicateNameInSamePhaseError(Exception):
         super().__init__(self.message, args, kwargs)
 
 
-class InternalEventFormatError(Exception):
-    """部署阶段 内部事件格式错误"""
-
-
 class DeployInterruptionFailed(Exception):
     """Unable to interrupt a deployment"""

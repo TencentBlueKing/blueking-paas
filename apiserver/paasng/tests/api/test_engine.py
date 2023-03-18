@@ -25,7 +25,7 @@ import pytest
 from django.urls import reverse
 from django_dynamic_fixture import G
 
-from paasng.engine.deploy.infras import DeploymentCoordinator
+from paasng.engine.deploy.workflow import DeploymentCoordinator
 from paasng.engine.models.deployment import Deployment
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.environments.constants import EnvRoleOperation

@@ -23,7 +23,8 @@ import pytest
 
 from paas_wl.cluster.models import IngressConfig
 from paasng.engine.constants import AppEnvName
-from paasng.engine.deploy.infras import AppDefaultSubpaths, get_env_variables
+from paasng.engine.deploy.config import get_env_variables
+from paasng.engine.deploy.config.ingress import AppDefaultSubpaths
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.engine import mock_cluster_service
 
@@ -41,7 +42,7 @@ class TestAppDefaultSubpaths:
             IngressConfig,
         )
         with mock.patch(
-            "paasng.engine.deploy.infras.ModuleEnvSubpaths.get_ingress_config"
+            "paasng.engine.deploy.config.ingress.ModuleEnvSubpaths.get_ingress_config"
         ) as get_ingress_config, mock.patch(
             "paasng.publish.entrance.exposer.get_module_clusters"
         ) as get_module_clusters:

@@ -16,32 +16,23 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
+"""Base functions for deploy steps"""
+import logging
+from typing import Dict, Optional, Type
 
-from paasng.engine.deploy.env_vars import EnvVariablesProviders
+from blue_krill.async_utils.poll_task import TaskPoller
 
-pytestmark = pytest.mark.django_db
+from paasng.engine.deploy.workflow import DeploymentCoordinator
+from paasng.engine.models import Deployment
+
+logger = logging.getLogger(__name__)
 
 
-def test_providers(bk_stag_env, bk_deployment):
-    providers = EnvVariablesProviders()
+class DeployPoller(TaskPoller):
+    """BasePoller for querying the status of deployment operation, will auto refresh polling time before task start"""
 
-    @providers.register_env
-    def test_get_vars(env):
-        return {'FOO': 'bar', 'FOOBAR': 'z'}
-
-    @providers.register_env
-    def test_get_vars_2(env):
-        return {'FOO': '1', 'BAR': str(env.id)}
-
-    @providers.register_deploy
-    def test_get_vars_deploy(deployment):
-        return {'DEP': str(deployment.id)}
-
-    assert providers.gather(bk_stag_env) == {'FOO': '1', 'BAR': str(bk_stag_env.id), 'FOOBAR': 'z'}
-    assert providers.gather(bk_stag_env, bk_deployment) == {
-        'FOO': '1',
-        'BAR': str(bk_stag_env.id),
-        'FOOBAR': 'z',
-        'DEP': str(bk_deployment.id),
-    }
+    @classmethod
+    def start(cls, params: Dict, callback_handler_cls: Optional[Type] = None):
+        deployment = Deployment.objects.get(pk=params['deployment_id'])
+        DeploymentCoordinator(deployment.app_environment).update_polling_time()
+        super().start(params, callback_handler_cls)

@@ -28,7 +28,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from paasng.engine.deploy.infras import ServerSendEvent
+from paasng.engine.deploy.workflow import ServerSendEvent
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.utils.error_codes import error_codes
 from paasng.utils.rate_limit.constants import UserAction

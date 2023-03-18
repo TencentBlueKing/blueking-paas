@@ -18,15 +18,19 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict
 
-from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
+from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from django.utils.translation import gettext as _
 
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.async_comps import CommandPoller
-from paasng.engine.deploy.infras import DeploymentStateMgr, DeployStep, Style, get_env_variables
-from paasng.engine.deploy.preparations import update_engine_app_config
-from paasng.engine.deploy.release import ApplicationReleaseMgr
+from paasng.engine.deploy.config import get_env_variables
+from paasng.engine.deploy.engine_svc import EngineDeployClient
+from paasng.engine.deploy.infra.models_utils import update_engine_app_config
+from paasng.engine.deploy.infra.output import Style
+from paasng.engine.deploy.steps.base import DeployPoller
+from paasng.engine.deploy.steps.release import ApplicationReleaseMgr
+from paasng.engine.deploy.workflow import DeploymentCoordinator, DeploymentStateMgr, DeployStep
 from paasng.engine.exceptions import StepNotInPresetListError
+from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.signals import pre_phase_start
 from paasng.platform.modules.constants import DeployHookType
@@ -101,6 +105,33 @@ class ApplicationPreReleaseExecutor(DeployStep):
         except StepNotInPresetListError:
             return
         step.mark_and_write_to_steam(stream=self.stream, status=status)
+
+
+class CommandPoller(DeployPoller):
+    """Poller for querying the status of a user command
+    Finish when the command in engine side was completed
+    """
+
+    def query(self) -> PollingResult:
+        deployment = Deployment.objects.get(pk=self.params['deployment_id'])
+
+        client = EngineDeployClient(deployment.get_engine_app())
+        command_status = client.get_command_status(self.params['command_id'])
+
+        coordinator = DeploymentCoordinator(deployment.app_environment)
+        # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
+        if coordinator.status_polling_timeout:
+            command_status = JobStatus.FAILED
+        else:
+            coordinator.update_polling_time()
+
+        if command_status in JobStatus.get_finished_states():
+            poller_status = PollingStatus.DONE
+        else:
+            poller_status = PollingStatus.DOING
+
+        result = {"command_status": command_status}
+        return PollingResult(status=poller_status, data=result)
 
 
 class PreReleaseHookCompleteHandler(CallbackHandler):

@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import logging
 
 from paasng.engine.constants import RuntimeType
-from paasng.engine.deploy.building import start_build, start_build_error_callback
-from paasng.engine.deploy.image import deploy_image
+from paasng.engine.deploy.steps.building import start_build, start_build_error_callback
+from paasng.engine.deploy.steps.image_release import deploy_image
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.signals import pre_appenv_deploy
 from paasng.platform.modules.constants import SourceOrigin

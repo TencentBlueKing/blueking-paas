@@ -22,7 +22,7 @@ import yaml
 from paasng.dev_resources.sourcectl.controllers.package import PackageController
 from paasng.dev_resources.sourcectl.models import AlternativeVersion, SourcePackage, SPStoragePolicy, VersionInfo
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir, generate_temp_file
-from paasng.engine.deploy.metadata import get_metadata_reader
+from paasng.engine.deploy.infra.metadata import get_metadata_reader
 from paasng.extensions.smart_app.detector import SourcePackageStatReader
 from tests.sourcectl.packages.utils import gen_tar, gen_zip
 

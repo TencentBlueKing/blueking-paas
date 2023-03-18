@@ -42,9 +42,9 @@ from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import AppEnvName
 from paasng.engine.deploy.engine_svc import get_all_logs
-from paasng.engine.deploy.infras import DeploymentCoordinator
-from paasng.engine.deploy.preparations import initialize_deployment
+from paasng.engine.deploy.infra.models_utils import initialize_deployment
 from paasng.engine.deploy.runner import DeployTaskRunner
+from paasng.engine.deploy.workflow import DeploymentCoordinator
 from paasng.engine.models import ConfigVar, Deployment
 from paasng.engine.models.managers import DeployPhaseManager
 from paasng.engine.streaming.constants import EventType

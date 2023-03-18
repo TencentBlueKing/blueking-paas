@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.release import ApplicationReleaseMgr
+from paasng.engine.deploy.steps.release import ApplicationReleaseMgr
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
@@ -46,7 +46,7 @@ def auto_binding_phases(bk_prod_env, bk_deployment):
 
 @pytest.fixture(autouse=True)
 def setup_mocks():
-    with mock.patch('paasng.engine.deploy.release.ProcessManager'):
+    with mock.patch('paasng.engine.deploy.steps.release.ProcessManager'):
         yield
 
 
@@ -54,12 +54,12 @@ class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""
 
     def test_failed_when_create_release(self, bk_deployment, auto_binding_phases):
-        with mock.patch('paasng.engine.deploy.infras.RedisChannelStream') as mocked_stream, mock.patch(
-            'paasng.engine.deploy.preparations.EngineDeployClient'
+        with mock.patch('paasng.engine.deploy.infra.output.RedisChannelStream') as mocked_stream, mock.patch(
+            'paasng.engine.deploy.infra.models_utils.EngineDeployClient'
         ) as mocked_client_p, mock.patch(
-            'paasng.engine.deploy.release.EngineDeployClient'
+            'paasng.engine.deploy.steps.release.EngineDeployClient'
         ) as mocked_client_r, mock.patch(
-            'paasng.engine.deploy.infras.EngineDeployClient'
+            'paasng.engine.deploy.workflow.flow.EngineDeployClient'
         ):
             mocked_client_r().create_release.side_effect = RuntimeError('can not create release')
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
@@ -74,10 +74,12 @@ class TestApplicationReleaseMgr:
             assert deployment.err_detail == 'can not create release'
 
     def test_start_normal(self, bk_deployment, auto_binding_phases):
-        with mock.patch('paasng.engine.deploy.infras.RedisChannelStream'), mock.patch(
-            'paasng.engine.deploy.preparations.EngineDeployClient'
-        ), mock.patch('paasng.engine.deploy.release.EngineDeployClient') as mocked_client_r, mock.patch(
-            'paasng.engine.deploy.infras.EngineDeployClient'
+        with mock.patch('paasng.engine.deploy.infra.output.RedisChannelStream'), mock.patch(
+            'paasng.engine.deploy.infra.models_utils.EngineDeployClient'
+        ), mock.patch('paasng.engine.deploy.steps.release.EngineDeployClient') as mocked_client_r, mock.patch(
+            'paasng.engine.deploy.workflow.flow.EngineDeployClient'
+        ), mock.patch(
+            'paasng.engine.deploy.config.ingress.EngineDeployClient'
         ):
             faked_release_id = uuid.uuid4().hex
             mocked_client_r().create_release.return_value = faked_release_id

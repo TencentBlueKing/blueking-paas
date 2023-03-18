@@ -30,7 +30,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from .signals import post_appenv_deploy, post_phase_end, pre_appenv_deploy, pre_phase_start
 
 if TYPE_CHECKING:
-    from paasng.engine.deploy.infras import DeployStep as DeployStepMemObj
+    from paasng.engine.deploy.workflow import DeployStep as DeployStepMemObj
     from paasng.engine.models import Deployment
     from paasng.platform.applications.models import ApplicationEnvironment
 

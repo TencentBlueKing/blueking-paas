@@ -20,8 +20,8 @@ from unittest import mock
 
 import pytest
 
-from paasng.engine.deploy.infras import Style
-from paasng.engine.deploy.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.infra.output import Style
+from paasng.engine.deploy.steps.pre_release import ApplicationPreReleaseExecutor
 from paasng.engine.handlers import attach_all_phases
 from paasng.platform.modules.constants import DeployHookType
 from tests.engine.setup_utils import create_fake_deployment
@@ -64,8 +64,10 @@ class TestApplicationPreReleaseExecutor:
         else:
             assert deployment.get_deploy_hooks().get_hook(DeployHookType.PRE_RELEASE_HOOK) == hook
 
-        with mock.patch("paasng.engine.deploy.pre_release.ApplicationReleaseMgr") as ApplicationReleaseMgr, mock.patch(
-            'paasng.engine.deploy.infras.RedisChannelStream'
+        with mock.patch(
+            "paasng.engine.deploy.steps.pre_release.ApplicationReleaseMgr"
+        ) as ApplicationReleaseMgr, mock.patch(
+            'paasng.engine.deploy.infra.output.RedisChannelStream'
         ) as mocked_stream:
             attach_all_phases(sender=deployment.app_environment, deployment=deployment)
             ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()

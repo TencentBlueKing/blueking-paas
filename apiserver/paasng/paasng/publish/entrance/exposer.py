@@ -31,7 +31,7 @@ from paas_wl.cluster.shim import Cluster, RegionClusterService
 from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.workloads.processes.controllers import env_is_running
 from paasng.engine.constants import AppEnvName
-from paasng.engine.deploy.env_vars import env_vars_providers
+from paasng.engine.deploy.config import env_vars_providers
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
@@ -456,7 +456,7 @@ def refresh_module_domains(module: Module):
     """Refresh a module's domains, you should call the function when module's exposed_url_type
     has been changed or application's default module was updated.
     """
-    from paasng.engine.deploy.infras import AppDefaultDomains
+    from paasng.engine.deploy.config import AppDefaultDomains
 
     for env in module.envs.all():
         if not env.is_running():
@@ -468,7 +468,7 @@ def refresh_module_subpaths(module: Module) -> None:
     """Refresh a module's subpaths, you should call the function when module's exposed_url_type
     has been changed or application's default module was updated.
     """
-    from paasng.engine.deploy.infras import AppDefaultSubpaths
+    from paasng.engine.deploy.config import AppDefaultSubpaths
 
     for env in module.envs.all():
         if not env.is_running():

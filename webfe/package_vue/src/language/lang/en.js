@@ -2096,5 +2096,18 @@ export default {
   '数据获取异常': 'Data acquisition exception',
   '搜索结果为空': 'The search result is empty',
   '前端组件库': 'Web components',
-  '申请成为开发者': 'Apply to be a developer'
+  '申请成为开发者': 'Apply to be a developer',
+  '所有进程 CPU limit 的总和': 'The sum of all process CPU limits',
+  '所有进程 Memory limit 的总和': 'Sum of all process Memory limits',
+  '核（生产）': 'core(prod)',
+  '核（预发布）': 'core(stag)',
+  '告警数量': 'Number of alert',
+  '访问数(pv)': 'Number of visits(pv)',
+  '访客数(uv)': 'Number of visitors(uv)',
+  '已申请权限的API数': 'The number of APIs that have applied for permissions',
+  '已申请权限的网关数': 'The number of gateways that have applied for permissions',
+  '应用类型': 'App type',
+  '已部署': 'Deployed',
+  '未部署': 'Undeployed',
+  '已申请权限的 API': 'API for which permissions have been requested'
 };

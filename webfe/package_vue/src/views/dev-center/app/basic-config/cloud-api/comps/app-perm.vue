@@ -727,6 +727,7 @@
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
+                    this.$emit('data-ready');
                 }
             },
 

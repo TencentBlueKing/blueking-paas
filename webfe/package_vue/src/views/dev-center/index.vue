@@ -842,11 +842,7 @@
             },
 
             toPage (appItem) {
-                if (appItem.application.config_info.engine_enabled) {
-                    this.toAppSummary(appItem);
-                    return;
-                }
-                this.toAppBaseInfo(appItem);
+                this.toAppSummary(appItem);
             },
 
             pageChange (page) {

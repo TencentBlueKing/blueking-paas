@@ -1,0 +1,181 @@
+
+<template lang="html">
+  <div
+    class="fright-middle fright-last"
+    data-test-id="summary_content_noSource"
+  >
+    <h3> {{ $t('最新动态') }} </h3>
+    <ul class="dynamic-list">
+      <template v-if="operationsList.length">
+        <li
+          v-for="(item, itemIndex) in operationsList"
+          :key="itemIndex"
+        >
+          <p class="dynamic-time">
+            <span
+              v-bk-tooltips="item.at"
+              class="tooltip-time"
+            >{{ item.at_friendly }}</span>
+          </p>
+          <p class="dynamic-content">
+            {{ $t('由') }}<span class="gruy">{{ item.operator ? item.operator : '—' }}</span>{{ item.operate }}
+          </p>
+        </li>
+        <li />
+      </template>
+      <template v-else>
+        <table-empty empty />
+      </template>
+    </ul>
+  </div>
+</template>
+
+<script>
+    export default {
+        props: {
+            operationsList: {
+                type: Array,
+                default: () => []
+            }
+        },
+        computed: {
+            curAppInfo () {
+                return this.$store.state.curAppInfo;
+            },
+            isEngineless () {
+                return this.curAppInfo.web_config.engine_enabled;
+            }
+        }
+    };
+</script>
+
+<style lang="scss" scoped>
+    .dynamic-list li {
+        padding-bottom: 15px;
+        padding-left: 20px;
+        position: relative;
+    }
+
+    .dynamic-list li:before {
+        position: absolute;
+        content: "";
+        width: 10px;
+        height: 10px;
+        top: 3px;
+        left: 1px;
+        border: solid 1px rgba(87, 163, 241, 1);
+        border-radius: 50%;
+    }
+
+    .dynamic-list li:after {
+        position: absolute;
+        content: "";
+        width: 1px;
+        height: 70px;
+        top: 15px;
+        left: 6px;
+        background: rgba(87, 163, 241, 1);
+    }
+
+    .dynamic-list li:nth-child(1):before {
+        border: solid 1px rgba(87, 163, 241, 1);
+    }
+
+    .dynamic-list li:nth-child(1):after {
+        background: rgba(87, 163, 241, 1);
+    }
+
+    .dynamic-list li:nth-child(2):before {
+        border: solid 1px rgba(87, 163, 241, 0.9);
+    }
+
+    .dynamic-list li:nth-child(2):after {
+        background: rgba(87, 163, 241, 0.9);
+    }
+
+    .dynamic-list li:nth-child(3):before {
+        border: solid 1px rgba(87, 163, 241, 0.8);
+    }
+
+    .dynamic-list li:nth-child(3):after {
+        background: rgba(87, 163, 241, 0.8);
+    }
+
+    .dynamic-list li:nth-child(4):before {
+        border: solid 1px rgba(87, 163, 241, 0.7);
+    }
+
+    .dynamic-list li:nth-child(4):after {
+        background: rgba(87, 163, 241, 0.7);
+    }
+
+    .dynamic-list li:nth-child(5):before {
+        border: solid 1px rgba(87, 163, 241, 0.6);
+    }
+
+    .dynamic-list li:nth-child(5):after {
+        background: rgba(87, 163, 241, 0.6);
+    }
+
+    .dynamic-list li:nth-child(6):before {
+        border: solid 1px rgba(87, 163, 241, 0.5);
+    }
+
+    .dynamic-list li:nth-child(6):after {
+        background: rgba(87, 163, 241, 0.5);
+    }
+
+    .dynamic-list li:nth-child(7):before {
+        border: solid 1px rgba(87, 163, 241, 0.4);
+    }
+
+    .dynamic-list li:nth-child(7):after {
+        background: rgba(87, 163, 241, 0.4);
+    }
+
+    .dynamic-list li:nth-child(8):before {
+        border: solid 1px rgba(87, 163, 241, 0.3);
+    }
+
+    .dynamic-list li:nth-child(8):after {
+        background: rgba(87, 163, 241, 0.3);
+    }
+
+    .dynamic-list li:nth-child(9):before {
+        border: solid 1px rgba(87, 163, 241, 0.2);
+    }
+
+    .dynamic-list li:nth-child(9):after {
+        background: rgba(87, 163, 241, 0.2);
+    }
+
+    .dynamic-list li:nth-child(10):before {
+        border: solid 1px rgba(87, 163, 241, 0.2);
+    }
+
+    .dynamic-list li:nth-child(10):after {
+        background: rgba(87, 163, 241, 0.2);
+    }
+
+    .dynamic-list li:last-child:before {
+        border: solid 1px rgba(87, 163, 241, 0.2);
+    }
+
+    .dynamic-list li:last-child:after {
+        background: rgba(87, 163, 241, 0);
+    }
+
+    .dynamic-time {
+        line-height: 18px;
+        font-size: 12px;
+        color: #c0c9d3;
+        cursor: default;
+    }
+
+    .dynamic-content {
+        line-height: 24px;
+        height: 48px;
+        overflow: hidden;
+        color: #666;
+    }
+</style>

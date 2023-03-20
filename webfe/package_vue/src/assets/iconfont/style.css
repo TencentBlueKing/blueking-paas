@@ -44,6 +44,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-github-logo:before {
 	content: "\e21e";
 }
+.paasng-check-small:before {
+	content: "\e247";
+}
 .paasng-template-fill:before {
 	content: "\e23b";
 }
@@ -931,4 +934,13 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-api:before {
 	content: "\e246";
+}
+.paasng-wangguan:before {
+	content: "\e248";
+}
+.paasng-api-2:before {
+	content: "\e249";
+}
+.paasng-pv:before {
+	content: "\e24a";
 }

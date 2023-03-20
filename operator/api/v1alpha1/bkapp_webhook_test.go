@@ -50,8 +50,8 @@ var _ = Describe("test webhook.Defaulter", func() {
 		web := bkapp.Spec.GetWebProcess()
 
 		Expect(web.TargetPort).To(Equal(int32(5000)))
-		Expect(web.CPU).To(Equal("4000m"))
-		Expect(web.Memory).To(Equal("1024Mi"))
+		Expect(web.CPU).To(Equal("500m"))
+		Expect(web.Memory).To(Equal("256Mi"))
 		Expect(web.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
 	})
 })

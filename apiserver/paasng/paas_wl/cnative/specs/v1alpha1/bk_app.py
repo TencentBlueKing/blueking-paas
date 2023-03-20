@@ -30,8 +30,8 @@ from paas_wl.cnative.specs.constants import ApiVersion, MResPhaseType
 from paas_wl.release_controller.constants import ImagePullPolicy
 
 # Default resource limitations for each process
-DEFAULT_PROC_CPU = '4000m'
-DEFAULT_PROC_MEM = '1024Mi'
+DEFAULT_PROC_CPU = '500m'
+DEFAULT_PROC_MEM = '256Mi'
 
 
 class MetaV1Condition(BaseModel):

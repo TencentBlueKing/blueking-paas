@@ -50,6 +50,15 @@ type AccessControlPlugin struct {
 
 // MakeServerSnippet return server snippet for access_control module
 func (p *AccessControlPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+	return ""
+}
+
+// MakeConfigurationSnippet return configuration snippet for access_control module
+func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+	if p.Config.RedisConfigKey == "" {
+		return ""
+	}
+
 	if bkapp == nil || bkapp.Annotations == nil {
 		return ""
 	}
@@ -67,7 +76,7 @@ func (p *AccessControlPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains [
 	}
 
 	var tpl bytes.Buffer
-	if err := accessControlTemplate.ExecuteTemplate(&tpl, "acl", struct {
+	if err = accessControlTemplate.ExecuteTemplate(&tpl, "acl", struct {
 		applications.BluekingAppInfo
 		RedisConfigKey string
 	}{
@@ -77,11 +86,6 @@ func (p *AccessControlPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains [
 		return ""
 	}
 	return tpl.String()
-}
-
-// MakeConfigurationSnippet access_control module 不提供 configuration snippet
-func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
-	return ""
 }
 
 func init() {

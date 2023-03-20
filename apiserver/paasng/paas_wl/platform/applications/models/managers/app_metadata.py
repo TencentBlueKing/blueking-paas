@@ -37,6 +37,7 @@ class WlAppMetadata:
     environment: str = ''  # Bound environment name
     bkpa_site_id: Optional[int] = None  # Site ID for "PaaS Analysis" service
     acl_is_enabled: bool = False  # Whether ACL module is enabled
+    mapper_version: str = ''  # mapper_version of the k8s resources naming rules
 
     def get_paas_app_code(self) -> str:
         """Get "paas_app_code" property, raise `RuntimeError` if result is empty, which
@@ -69,4 +70,4 @@ def update_metadata(wl_app: 'WlApp', **kwargs) -> None:
         setattr(obj, key, value)
 
     latest_config.metadata = cattr.unstructure(obj)
-    latest_config.save(update_fields=['metadata'])
+    latest_config.save(update_fields=['metadata', 'updated'])

@@ -28,10 +28,11 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.cnative.specs.procs import get_proc_specs
+from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.external.client import get_local_plat_client
-from paas_wl.platform.system_api.serializers import ProcExtraInfoSLZ, ProcSpecsSerializer
+from paas_wl.platform.system_api.serializers import ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.processes.constants import ProcessUpdateType
@@ -54,6 +55,8 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.operations.constant import OperationType
+from paasng.utils.rate_limit.constants import UserAction
+from paasng.utils.rate_limit.fixed_window import rate_limits_by_user
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +158,7 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         data['cnative_proc_specs'] = CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
         return Response(data)
 
+    @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)
     def watch(self, request, code, module_name, environment):
         """实时监听进程与进程实例变动情况"""
         wl_app = self.get_wl_app_via_path()
@@ -212,11 +216,26 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
 
     # Get extra infos
     proc_extra_infos = []
-    if wl_app.type != WlAppType.CLOUD_NATIVE:
+    if wl_app.type == WlAppType.CLOUD_NATIVE:
+        for proc_spec in procs.items:
+            proc_extra_infos.append(
+                {
+                    'type': proc_spec.name,
+                    'cluster_link': f'http://{proc_spec.metadata.name}.{proc_spec.app.namespace}',  # type: ignore
+                }
+            )
+    else:
         for proc_spec in procs.items:
             release = wl_app.release_set.get(version=proc_spec.version)
-            process_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.name, release=release)
-            proc_extra_infos.append(ProcExtraInfoSLZ(process_obj).data)
+            proc_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.name, release=release)
+            proc_extra_infos.append(
+                {
+                    'type': proc_obj.name,
+                    # command 仅普通应用独有，用于页面进程信息展示，云原生应用暂不展示命令信息
+                    'command': proc_obj.runtime.proc_command,
+                    'cluster_link': 'http://' + get_service_dns_name(proc_obj.app, proc_obj.type),
+                }
+            )
 
     return {
         'processes': {

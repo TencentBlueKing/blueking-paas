@@ -18,83 +18,19 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from collections import Counter, defaultdict
-from operator import attrgetter
-from typing import Dict, Generic, List, Literal, Optional, Tuple, TypeVar, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import arrow
-from attrs import converters, define, field, fields
-from elasticsearch_dsl.aggs import FieldBucketData
+from _operator import attrgetter
 from elasticsearch_dsl.response import Hit
+from elasticsearch_dsl.response.aggs import FieldBucketData
 from rest_framework.fields import get_attribute
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
+from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.text import calculate_percentage
 
 logger = logging.getLogger(__name__)
-
-
-@define
-class StandardOutputLogLine:
-    """标准输出日志结构"""
-
-    timestamp: int
-    message: str
-
-
-@define
-class StructureLogLine:
-    """结构化日志结构"""
-
-    timestamp: int
-    message: str
-    raw: Dict
-
-
-@define
-class IngressLogLine:
-    """ingress 访问日志结构"""
-
-    timestamp: int
-    message: str
-    raw: Dict
-
-    method: Optional[str] = field(init=False, converter=converters.optional(str))
-    path: Optional[str] = field(init=False, converter=converters.optional(str))
-    status_code: Optional[int] = field(init=False, converter=converters.optional(int))
-    response_time: Optional[float] = field(init=False, converter=converters.optional(float))
-    client_ip: Optional[str] = field(init=False, converter=converters.optional(str))
-    bytes_sent: Optional[int] = field(init=False, converter=converters.optional(int))
-    user_agent: Optional[str] = field(init=False, converter=converters.optional(str))
-    http_version: Optional[str] = field(init=False, converter=converters.optional(str))
-
-    def __attrs_post_init__(self):
-        for attr in fields(type(self)):
-            if not attr.init:
-                setattr(self, attr.name, self.raw.get(attr.name))
-
-
-MLine = TypeVar("MLine")
-
-
-@define
-class Logs(Generic[MLine]):
-    logs: List[MLine]
-    total: int
-    dsl: str
-
-
-@define
-class DataBucket:
-    count: str
-
-
-@define
-class DateHistogram:
-    # 按时间排序的值
-    series: List[int]
-    # Series 中对应位置记录的时间点
-    timestamps: List[int]
-    dsl: str
 
 
 def flatten_structure(structured_fields: Dict, parent: Optional[str] = None) -> Dict:
@@ -165,18 +101,6 @@ def format_timestamp(
         return int(value) // 1000
     else:
         return int(arrow.get(value).timestamp)
-
-
-@define
-class FieldFilter:
-    # 查询字段的title
-    name: str
-    # query_term: get参数中的key
-    key: str
-    # 该field的可选项
-    options: List[Tuple[str, str]] = field(factory=list)
-    # 该 field 出现的总次数
-    total: int = 0
 
 
 def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:

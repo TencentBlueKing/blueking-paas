@@ -31,7 +31,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch_dsl.query import Q, Query
 
 if TYPE_CHECKING:
-    from .dataclasses import SimpleDomainSpecialLanguage
+    from .dsl import SimpleDomainSpecialLanguage
 
 logger = logging.getLogger(__name__)
 

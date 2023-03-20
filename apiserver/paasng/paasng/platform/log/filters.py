@@ -19,15 +19,15 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from collections import defaultdict
 from operator import attrgetter
-from typing import Counter, Dict, Generator, List, Tuple
+from typing import Counter, Dict, List, Tuple
 
+import jinja2
 from attrs import define, field
-from elasticsearch_dsl import Search
 from rest_framework.fields import get_attribute
 
-from paasng.platform.log.constants import ESField
-from paasng.platform.modules.manager import ModuleInitializer
+from paasng.platform.log.models import ElasticSearchParams
 from paasng.platform.modules.models import Module
+from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.text import calculate_percentage
 
 logger = logging.getLogger(__name__)
@@ -77,72 +77,43 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
     return sorted(result, key=attrgetter("total", "key"), reverse=True)
 
 
-class BaseAppFilter:
+class ElasticSearchFilter:
+    def __init__(self, module: Module, search_params: ElasticSearchParams):
+        self.application = module.application
+        self.module = module
+        self.search_params = search_params
 
-    fields: List[dict] = []
+    def filter_by_module(self, search: SmartSearch) -> SmartSearch:
+        """为搜索增加插件相关过滤条件"""
+        context = {
+            "app_code": self.application.code,
+            "module_name": self.module.name,
+            "region": self.application.region,
+            "engine_app_names": [env.get_engine_app().name.replace("_", "0us0") for env in self.module.get_envs()],
+        }
+        fields = self.search_params.termTemplate.copy()
+        for k, v in fields.items():
+            fields[k] = jinja2.Template(v).render(**context)
+        return search.filter("term", **fields)
 
-    def __init__(self, region: str, app_code: str, module_name: str):
-        self.region = region
-        self.app_code = app_code
-        self.module_name = module_name
-
-    def filter_by_app(self, query: Search, mappings: dict) -> Search:
-        """为搜索增加应用相关过滤"""
-        for f in self.get_es_fields():
-            if getattr(self, f"get_field_{f.query_term}_value", None):
-                query_value = getattr(self, f"get_field_{f.query_term}_value")()
+    def filter_by_builtin_filters(self, search: SmartSearch) -> SmartSearch:
+        """根据 params 配置的 builtinFilters 添加过滤条件"""
+        if not self.search_params.builtinFilters:
+            return search
+        for key, value in self.search_params.builtinFilters.items():
+            if isinstance(value, str):
+                search = search.filter("term", **{key: value})
             else:
-                query_value = getattr(self, f.query_term)
+                search = search.filter("terms", **{key: value})
+        return search
 
-            query = query.filter("terms" if f.is_multiple else "term", **{f.get_es_term(mappings): query_value})
-
-        return query
-
-    def get_es_fields(self) -> Generator[ESField, None, None]:
-        """根据 fields 信息组装 ESField 对象列表"""
-        for f in self.fields:
-            yield ESField.parse_obj(f)
-
-
-class AppLogFilter(BaseAppFilter):
-    """应用日志过滤器"""
-
-    fields = [
-        {
-            "title": "AppCode",
-            "chinese_name": "应用 Code",
-            "query_term": "app_code",
-        },
-        {
-            "title": "ModuleName",
-            "chinese_name": "模块名",
-            "query_term": "module_name",
-        },
-        {
-            "title": "Region",
-            "chinese_name": "版本",
-            "query_term": "region",
-        },
-    ]
-
-
-class AppAccessLogFilter(BaseAppFilter):
-    """应用访问日志过滤器"""
-
-    fields = [
-        {
-            "title": "EngineAppName",
-            "chinese_name": "Engine应用名",
-            "query_term": "engine_app_name",
-            "is_multiple": True,
-        },
-    ]
-
-    def get_field_engine_app_name_value(self) -> List[str]:
-        # 默认请求预发布&生产环境的日志，不作环境过滤
-        return [
-            x.replace("_", "0us0")
-            for x in ModuleInitializer(
-                Module.objects.get(application__code=self.app_code, name=self.module_name)
-            ).list_engine_app_names()
-        ]
+    def filter_by_builtin_excludes(self, search: SmartSearch) -> SmartSearch:
+        """根据 params 配置的 builtinExcludes 添加过滤条件"""
+        if not self.search_params.builtinExcludes:
+            return search
+        for key, value in self.search_params.builtinExcludes.items():
+            if isinstance(value, str):
+                search = search.exclude("term", **{key: value})
+            else:
+                search = search.exclude("terms", **{key: value})
+        return search

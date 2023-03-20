@@ -24,36 +24,58 @@ from . import views
 
 # log
 urlpatterns = [
-    # new log query views
-    re_path(
-        make_app_pattern('/log/timechart/$', include_envs=False),
-        views.LogTimeChartAPIView.as_view(),
-        name='api.log_time_chart',
-    ),
-    re_path(
-        make_app_pattern(r'/log/filters/$', include_envs=False),
-        views.LogFiltersAPIView.as_view(),
-        name='api.log_filters',
-    ),
+    # 结构化日志
     re_path(
         make_app_pattern(r'/log/structured/list/$', include_envs=False),
-        views.StructuredLogAPIView.as_view(),
-        name='api.logs.structured',
+        views.StructuredLogAPIView.as_view({"get": "query_logs", "post": "query_logs"}),
+        name='api.logs.structured.query_logs',
     ),
     re_path(
-        make_app_pattern(r'/log/standard_output/list/$', include_envs=False),
-        views.StandardOutputLogAPIView.as_view(),
-        name="api.logs.standard",
+        make_app_pattern(r'/log/structured/date_histogram/$', include_envs=False),
+        views.StructuredLogAPIView.as_view({"get": "aggregate_date_histogram", "post": "aggregate_date_histogram"}),
+        name='api.logs.structured.aggregate_date_histogram',
     ),
+    re_path(
+        make_app_pattern(r'/log/structured/fields_filters/$', include_envs=False),
+        views.StructuredLogAPIView.as_view({"get": "aggregate_fields_filters", "post": "aggregate_fields_filters"}),
+        name='api.logs.structured.aggregate_fields_filters',
+    ),
+    # 标准输出日志
+    re_path(
+        make_app_pattern(r'/log/stdout/list/$', include_envs=False),
+        views.StdoutLogAPIView.as_view({"get": "query_logs", "post": "query_logs"}),
+        name='api.logs.stdout.query_logs',
+    ),
+    # re_path(
+    #     make_app_pattern(r'/log/stdout/date_histogram/$', include_envs=False),
+    #     views.StdoutLogAPIView.as_view({"get": "aggregate_date_histogram", "post": "aggregate_date_histogram"}),
+    #     name='api.logs.stdout.aggregate_date_histogram',
+    # ),
+    # re_path(
+    #     make_app_pattern(r'/log/stdout/fields_filters/$', include_envs=False),
+    #     views.StdoutLogAPIView.as_view({"get": "aggregate_fields_filters", "post": "aggregate_fields_filters"}),
+    #     name='api.logs.stdout.aggregate_fields_filters',
+    # ),
+    # Ingress 日志
     re_path(
         make_app_pattern(r'/log/ingress/list/$', include_envs=False),
-        views.IngressLogAPIView.as_view(),
-        name="api.logs.ingress",
+        views.IngressLogAPIView.as_view({"get": "query_logs", "post": "query_logs"}),
+        name='api.logs.ingress.query_logs',
+    ),
+    re_path(
+        make_app_pattern(r'/log/ingress/date_histogram/$', include_envs=False),
+        views.IngressLogAPIView.as_view({"get": "aggregate_date_histogram", "post": "aggregate_date_histogram"}),
+        name='api.logs.ingress.aggregate_date_histogram',
+    ),
+    re_path(
+        make_app_pattern(r'/log/ingress/fields_filters/$', include_envs=False),
+        views.IngressLogAPIView.as_view({"get": "aggregate_fields_filters", "post": "aggregate_fields_filters"}),
+        name='api.logs.ingress.aggregate_fields_filters',
     ),
     # System APIs
     url(
         'sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$',
-        views.SysStructuredLogAPIView.as_view(),
+        views.SysStructuredLogAPIView.as_view({"get": "query_logs", "post": "query_logs"}),
         name='sys.api.logs.structured',
     ),
 ]

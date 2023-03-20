@@ -27,9 +27,10 @@ from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.pluginscenter.definitions import BKLogConfig, ElasticSearchHost, PluginBackendAPIResource, PluginLogConfig
-from paasng.pluginscenter.log.models import FieldFilter, count_filters_options
-from paasng.pluginscenter.log.search import SmartSearch
 from paasng.pluginscenter.thirdparty.utils import make_client
+from paasng.utils.es_log.misc import count_filters_options
+from paasng.utils.es_log.models import FieldFilter
+from paasng.utils.es_log.search import SmartSearch
 
 
 class LogClientProtocol(Protocol):

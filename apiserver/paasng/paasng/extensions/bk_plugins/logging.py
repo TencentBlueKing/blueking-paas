@@ -17,17 +17,44 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 """Logging facilities for bk-plugins"""
-from typing import Dict, List, Optional
+import json
+from typing import Any, Dict, Optional
 
+import cattr
+from attrs import converters, define, field, fields
 from django.conf import settings
-from elasticsearch_dsl.response import Response as ESResponse
-from pydantic import BaseModel, Field
 
-from paasng.platform.log.client import LogClient, SmartTimeRange
-from paasng.platform.log.dataclasses import LogLine, LogPage, SimpleDomainSpecialLanguage
-from paasng.platform.log.filters import AppLogFilter
+from paasng.extensions.bk_plugins.models import BkPlugin
+from paasng.platform.log.client import instantiate_log_client
+from paasng.platform.log.filters import ElasticSearchFilter
+from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
+from paasng.platform.modules.models import Module
+from paasng.utils.es_log.misc import clean_logs
+from paasng.utils.es_log.models import Logs
+from paasng.utils.es_log.search import SmartSearch
+from paasng.utils.es_log.time_range import SmartTimeRange
 
-from .models import BkPlugin
+
+@define
+class StructureLogLine:
+    """结构化日志结构"""
+
+    timestamp: int
+    message: str
+
+    # key: json.*
+    # e.g. json.funcName
+    detail: Dict[str, Any]
+
+    region: str
+    plugin_code: str = field(init=False, converter=converters.optional(str))
+    environment: str
+    process_id: Optional[str]
+
+    def __attrs_post_init__(self):
+        for attr in fields(type(self)):
+            if not attr.init:
+                setattr(self, attr.name, self.detail.get(attr.name))
 
 
 class PluginLoggingClient:
@@ -44,66 +71,61 @@ class PluginLoggingClient:
         """
         self.application = bk_plugin.get_application()
 
-    def query(self, trace_id: str, scroll_id: Optional[str] = None) -> 'BkPluginLogs':
+    def query(self, trace_id: str, scroll_id: Optional[str] = None) -> Logs[StructureLogLine]:
         """Query logs
 
         :param trace_id: "trace_id" is an identifier for filtering logs
         :param scroll_id: id for scrolling logs
         """
-        client = self.make_client()
-        # The `trace_id` must be wrapped with a list to make LogClient's API happy
-        client.query_conditions.add_terms_conditions(**{'json.trace_id': [trace_id]})
-        return client.query_scrollable_logs(scroll_id, result_type=BkPluginLogs.new)
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search(trace_id)
 
-    def make_client(self) -> LogClient:
-        """Make a LogClient object for making queries"""
-        app_filter = self._make_app_filter()
-        client = LogClient(
-            app_filter=app_filter,
-            query_conditions=SimpleDomainSpecialLanguage(query={}),
-            smart_time_range=SmartTimeRange(time_range=self._default_time_range),
-            index_pattern=settings.ES_K8S_LOG_INDEX_PATTERNS,
-            log_page_class=LogPage,
+        # TODO: 支持 query_scrollable_logs
+        response, total = log_client.execute_search(
+            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
         )
-
-        # Ignore stdout/stderr logs
-        client.query_conditions.add_exclude_conditions(stream=["stderr", "stdout"])
-        return client
-
-    def _make_app_filter(self) -> AppLogFilter:
-        """Make filter object for query"""
-        app_filter = AppLogFilter(
-            region=self.application.region, app_code=self.application.code, module_name=self._module_name
+        logs = cattr.structure(
+            {
+                "logs": clean_logs(list(response), log_config.search_params),
+                "total": total,
+                "dsl": json.dumps(search.to_dict()),
+                # TODO: 设置 scroll_id
+                "scroll_id": scroll_id,
+            },
+            Logs[StructureLogLine],
         )
-        return app_filter
+        return logs
 
+    def instantiate_log_client(self):
+        """初始化日志查询客户端"""
+        # TODO: 统计 LOG_SEARCH_COUNTER 指标
+        # LOG_SEARCH_COUNTER.labels(
+        #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
+        # ).inc()
+        module = self.application.get_module(module_name=self._module_name)
+        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module)
+        return instantiate_log_client(log_config=log_config, bk_username="blueking"), log_config
 
-class LogEntry(BaseModel):
-    """A bk_plugin log entry object. Similar with `LogLine`, some fields were removed."""
+    def make_search(self, trace_id: str) -> SmartSearch:
+        """构造日志查询语句"""
+        module = self.application.get_module(module_name=self._module_name)
+        smart_time_range = SmartTimeRange(time_range=self._default_time_range)
+        query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module)
+        search = self._make_base_search(module, search_params=query_config.search_params, time_range=smart_time_range)
+        return search.filter(**{'json.trace_id': [trace_id]})
 
-    # Adapts the field name in raw log data because bk_plugin only have "code"， not "app_code"
-    plugin_code: str = Field(..., alias='app_code')
-    environment: str
-    process_id: str
-    stream: str
-    message: str
-    detail: Dict
-    ts: str
-
-
-class BkPluginLogs(BaseModel):
-    """A collection type for storing bk_plugin's structured logs"""
-
-    scroll_id: str
-    logs: List[LogEntry]
-    total: int = 0
-
-    @classmethod
-    def new(cls, scroll_id: str, logs: ESResponse, total: int) -> 'BkPluginLogs':
-        """A factory method for handling data from LogClient"""
-        log_items = []
-        for log in logs:
-            # Parsed with original structured parse first, then transform to LogEntry
-            _log = LogLine.parse_from_es_log(log)
-            log_items.append(LogEntry.parse_obj(_log))
-        return BkPluginLogs(scroll_id=scroll_id, logs=log_items, total=total)
+    def _make_base_search(
+        self,
+        module: Module,
+        search_params: ElasticSearchParams,
+        time_range: SmartTimeRange,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> SmartSearch:
+        """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
+        plugin_filter = ElasticSearchFilter(module=module, search_params=search_params)
+        search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
+        search = plugin_filter.filter_by_module(search)
+        search = plugin_filter.filter_by_builtin_filters(search)
+        search = plugin_filter.filter_by_builtin_excludes(search)
+        return search.limit_offset(limit=limit, offset=offset)

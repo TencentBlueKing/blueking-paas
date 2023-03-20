@@ -25,19 +25,12 @@ import cattr
 from paasng.pluginscenter.definitions import ElasticSearchParams
 from paasng.pluginscenter.log.client import instantiate_log_client
 from paasng.pluginscenter.log.filters import ElasticSearchFilter
-from paasng.pluginscenter.log.models import (
-    DateHistogram,
-    FieldFilter,
-    IngressLogLine,
-    Logs,
-    StandardOutputLogLine,
-    StructureLogLine,
-    clean_histogram_buckets,
-    clean_logs,
-)
-from paasng.pluginscenter.log.search import SmartSearch
-from paasng.pluginscenter.log.utils import SmartTimeRange
+from paasng.pluginscenter.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.pluginscenter.models import PluginDefinition, PluginInstance
+from paasng.utils.es_log.misc import clean_histogram_buckets, clean_logs
+from paasng.utils.es_log.models import DateHistogram, FieldFilter, Logs
+from paasng.utils.es_log.search import SmartSearch
+from paasng.utils.es_log.time_range import SmartTimeRange
 
 logger = logging.getLogger(__name__)
 

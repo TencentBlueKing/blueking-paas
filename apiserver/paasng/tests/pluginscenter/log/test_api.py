@@ -28,13 +28,13 @@ from elasticsearch_dsl.response.aggs import FieldBucketData
 from elasticsearch_dsl.search import Search
 
 from paasng.pluginscenter.log import (
-    SmartTimeRange,
     aggregate_date_histogram,
     query_ingress_logs,
     query_standard_output_logs,
     query_structure_logs,
 )
 from paasng.pluginscenter.log.client import LogClientProtocol
+from paasng.utils.es_log.time_range import SmartTimeRange
 
 pytestmark = pytest.mark.django_db
 

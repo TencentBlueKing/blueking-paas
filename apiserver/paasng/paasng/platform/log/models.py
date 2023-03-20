@@ -25,7 +25,8 @@ from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.utils.models import UuidAuditedModel, make_json_field
+from paasng.platform.modules.models import Module
+from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
 
 
 def registry(pydantic_model: Type[BaseModel]):
@@ -89,15 +90,16 @@ ElasticSearchParamsField = make_json_field("ElasticSearchParamsField", ElasticSe
 ContainerLogCollectorConfigField = make_json_field("ContainerLogCollectorConfigField", ContainerLogCollectorConfig)
 
 
-class ProcessStructureLogCollectorConfig(UuidAuditedModel):
+class ProcessStructureLogCollectorConfig(AuditedModel):
     """进程结构化日志采集配置"""
+
+    collector_config_id = models.BigAutoField(_("采集配置ID"), primary_key=True)
 
     # TODO: 二期功能, 支持管理日志采集规则
     application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
     env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
     process_type = models.CharField(help_text="进程类型(名称)", max_length=16)
 
-    collector_config_id = models.BigAutoField(_("采集配置ID"), primary_key=True)
     config = ContainerLogCollectorConfigField(null=True)
 
 
@@ -114,7 +116,7 @@ class ElasticSearchConfig(UuidAuditedModel):
     # 4. 所有应用的访问入职共用一份采集项配置
     # TODO: 支持云原生应用
     collector_config_id = models.CharField(_("采集配置ID"), unique=True, help_text="采集配置ID", max_length=64)
-    backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ")
+    backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ", max_length=16)
     elastic_search_host: Optional[ElasticSearchHost] = ElasticSearchHostField(
         null=True, help_text="required when backend_type is 'es'"
     )
@@ -124,16 +126,46 @@ class ElasticSearchConfig(UuidAuditedModel):
     search_params: ElasticSearchParams = ElasticSearchParamsField(help_text="ES 搜索相关配置")
 
 
+class ProcessLogQueryConfigManager(models.Manager):
+    def select_process_irrelevant(self, module: Optional[Module] = None):
+        # 兼容关联查询(RelatedManager)的接口
+        if module is None:
+            if hasattr(self, "instance"):
+                module = self.instance
+            else:
+                raise TypeError("select_process_irrelevant() 1 required positional argument: 'module'")
+        return self.filter(module=module, process_type="-").get()
+
+
 class ProcessLogQueryConfig(UuidAuditedModel):
     """进程日志查询配置"""
 
-    env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
-    process_type = models.CharField(help_text="进程类型(名称)", max_length=16)
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
+    process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True)
 
     stdout = models.ForeignKey(
-        ElasticSearchConfig, on_delete=models.SET_NULL, db_constraint=False, help_text="标准输出日志配置"
+        ElasticSearchConfig,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        help_text="标准输出日志配置",
+        null=True,
+        related_name="related_stdout",
     )
-    json = models.ForeignKey(ElasticSearchConfig, on_delete=models.SET_NULL, db_constraint=False, help_text="结构化日志配置")
+    json = models.ForeignKey(
+        ElasticSearchConfig,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        help_text="结构化日志配置",
+        null=True,
+        related_name="related_json",
+    )
     ingress = models.ForeignKey(
-        ElasticSearchConfig, on_delete=models.SET_NULL, db_constraint=False, help_text="接入层日志配置"
+        ElasticSearchConfig,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        help_text="接入层日志配置",
+        null=True,
+        related_name="related_ingress",
     )
+
+    objects = ProcessLogQueryConfigManager()

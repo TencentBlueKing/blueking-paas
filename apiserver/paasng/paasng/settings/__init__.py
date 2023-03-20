@@ -360,7 +360,7 @@ LOGGING = {
         },
         'simple': {'format': '%(levelname)s %(message)s'},
     },
-    'filters': {'request_id': {'()': 'paasng.utils.log.RequestIDFilter'}},
+    'filters': {'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'}},
     'handlers': {
         'null': {'level': LOG_LEVEL, 'class': 'logging.NullHandler'},
         'mail_admins': {'level': LOG_LEVEL, 'class': 'django.utils.log.AdminEmailHandler'},

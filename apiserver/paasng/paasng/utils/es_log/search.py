@@ -17,8 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import Query
 
-from paasng.pluginscenter.log.utils import SmartTimeRange
+from paasng.utils.es_log.time_range import SmartTimeRange
 
 
 class SmartSearch:
@@ -45,6 +46,11 @@ class SmartSearch:
     def limit_offset(self, limit: int = 100, offset: int = 0):
         """page filter by limit and offset"""
         self.search = self.search.extra(size=limit, from_=offset)
+        return self
+
+    def query(self, dsl: Query):
+        """query by dsl"""
+        self.search = self.search.query(dsl)
         return self
 
     def to_dict(self, count: bool = False):

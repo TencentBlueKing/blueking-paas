@@ -16,312 +16,219 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
-from typing import List, Type
+from typing import ClassVar, List, Optional, Type
 
+import cattr
 from django.conf import settings
 from django.utils.translation import gettext as _
-from drf_yasg.utils import swagger_auto_schema
 from elasticsearch.exceptions import RequestError
 from elasticsearch.helpers import ScanError
 from pydantic import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
-from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
-from paasng.metrics import LOG_SEARCH_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.log import serializers
-from paasng.platform.log.client import LogClient, SmartTimeRange
+from paasng.platform.log.client import instantiate_log_client
 from paasng.platform.log.constants import LogType
-from paasng.platform.log.dataclasses import IngressLogPage, LogPage, ResponseWrapper, SimpleDomainSpecialLanguage
-from paasng.platform.log.exceptions import UnknownEngineAppNameError
-from paasng.platform.log.filters import AppAccessLogFilter, AppLogFilter, BaseAppFilter
+from paasng.platform.log.dsl import SimpleDomainSpecialLanguage
+from paasng.platform.log.filters import ElasticSearchFilter
+from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
+from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
+from paasng.platform.log.utils import parse_simple_dsl_to_dsl
+from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
+from paasng.utils.es_log.misc import clean_histogram_buckets, clean_logs
+from paasng.utils.es_log.models import DateHistogram, Logs
+from paasng.utils.es_log.search import SmartSearch
+from paasng.utils.es_log.time_range import SmartTimeRange
 
 logger = logging.getLogger(__name__)
 
 
-class LogBaseAPIView(APIView, ApplicationCodeInPathMixin):
+class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
+    log_type: LogType
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @staticmethod
-    def get_extra_params_by_log_type(log_type: LogType) -> dict:
-        if log_type == LogType.INGRESS:
-            return dict(
-                index_pattern=settings.ES_K8S_LOG_INDEX_NGINX_PATTERNS,
-                log_page_class=IngressLogPage,
-            )
-        else:
-            return dict(index_pattern=settings.ES_K8S_LOG_INDEX_PATTERNS, log_page_class=LogPage)
-
-    def make_app_filter(self, log_type: LogType) -> BaseAppFilter:
-        """根据查询的日志类型, 返回对应的应用信息过滤器"""
-
-        application = self.get_application()
+    def instantiate_log_client(self):
+        """初始化日志查询客户端"""
+        # TODO: 统计 LOG_SEARCH_COUNTER 指标
+        # LOG_SEARCH_COUNTER.labels(
+        #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
+        # ).inc()
         module = self.get_module_via_path()
-        region = application.region
-        app_code = application.code
+        log_config = self._get_log_query_config(module, process_type=self.request.query_params.get("process_type"))
+        return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
-        if log_type == LogType.INGRESS:
-            return AppAccessLogFilter(region=region, app_code=app_code, module_name=module.name)
-        else:
-            return AppLogFilter(region=region, app_code=app_code, module_name=module.name)
-
-    def _gen_client(self, request, slz_class: Type[Serializer]):
-        slz = slz_class(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        params = slz.validated_data
-
-        if request.data:
-            try:
-                query_conditions = SimpleDomainSpecialLanguage(**request.data)
-            except ValidationError:
-                logger.exception("error log query conditions")
-                raise error_codes.QUERY_REQUEST_ERROR
-        else:
-            # MatchAll as fallback
-            query_conditions = SimpleDomainSpecialLanguage(query={})
-
-        log_type = LogType(params["log_type"])
-        app_filter = self.make_app_filter(log_type)
-
+    def make_search(self):
+        """构造日志查询语句"""
+        params = self.request.query_params
+        module = self.get_module_via_path()
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
+        query_config = self._get_log_query_config(module, process_type=params.get("process_type"))
+        search = self._make_base_search(module, search_params=query_config.search_params, time_range=smart_time_range)
+
+        if self.request.data:
+            try:
+                query_conditions = SimpleDomainSpecialLanguage(**self.request.data)
+            except ValidationError:
+                logger.exception("error log query conditions")
+                raise error_codes.QUERY_REQUEST_ERROR
+            # TODO: 查询 mappings
+            dsl = parse_simple_dsl_to_dsl(query_conditions, mappings={})
+            search = search.query(dsl)
+        return search
+
+    def _make_base_search(
+        self,
+        module: Module,
+        search_params: ElasticSearchParams,
+        time_range: SmartTimeRange,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> SmartSearch:
+        """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
+        plugin_filter = ElasticSearchFilter(module=module, search_params=search_params)
+        search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
+        search = plugin_filter.filter_by_module(search)
+        search = plugin_filter.filter_by_builtin_filters(search)
+        search = plugin_filter.filter_by_builtin_excludes(search)
+        return search.limit_offset(limit=limit, offset=offset)
+
+    def _get_log_query_config(self, module: Module, process_type: Optional[str] = None):
+        """获取日志查询配置"""
+        log_type = self.log_type
+        if log_type == LogType.INGRESS:
+            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module).ingress
+        elif log_type == LogType.STANDARD_OUTPUT:
+            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module).stdout
+        else:
+            if process_type is None:
+                raise
+            log_config = ProcessLogQueryConfig.objects.get(module=module, process_type=process_type).json
+        return log_config
+
+
+class LogAPIView(LogBaseAPIView):
+    line_model: ClassVar[Type]
+    logs_serializer_class: ClassVar[Type[Serializer]]
+
+    def query_logs(self, request, code, module_name):
+        """查询日志"""
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search()
+
         try:
-            client = LogClient(
-                app_filter=app_filter,
-                query_conditions=query_conditions,
-                smart_time_range=smart_time_range,
-                **self.get_extra_params_by_log_type(log_type=log_type)
+            response, total = log_client.execute_search(
+                index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
             )
-        except Exception as e:
-            logger.exception(e)
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
-        return client, params
-
-
-class LogTimeChartAPIView(LogBaseAPIView):
-    def handle(self, request, code, module_name):
-        """查询 [日志数量 x 时间] 直方图"""
-        client, params = self._gen_client(request, serializers.AppLogQuerySLZ)
-        # 过滤掉 stderr, stdout
-        log_type = LogType(params["log_type"])
-        if log_type == LogType.STRUCTURED:
-            client.query_conditions.add_exclude_conditions(stream=["stderr", "stdout"])
-        elif log_type == LogType.INGRESS:
-            client.query_conditions.add_terms_conditions(stream=["stdout"])
-
-        try:
-            data = client.get_log_count_histogram()
-        except RequestError:
-            raise error_codes.QUERY_REQUEST_ERROR
-        except Exception:
-            logger.exception("failed to get count histogram")
-            raise error_codes.QUERY_LOG_FAILED
-
-        return Response(ResponseWrapper.parse_obj({"code": 0, "data": data}).dict())
-
-    @swagger_auto_schema(
-        query_serializer=serializers.AppLogQuerySLZ(),
-        tags=["日志搜索"],
-    )
-    def get(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-    @swagger_auto_schema(
-        query_serializer=serializers.AppLogQuerySLZ(), tags=["日志搜索"], request_body=SimpleDomainSpecialLanguage
-    )
-    def post(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-
-class LogFiltersAPIView(LogBaseAPIView):
-    def handle(self, request, code, module_name):
-        """获取日志筛选条件列表"""
-        client, params = self._gen_client(request, serializers.AppLogQuerySLZ)
-        try:
-            log_type = LogType(params["log_type"])
-            include_es_fields = False
-            count_num = 200
-            if log_type == LogType.STRUCTURED:
-                # 过滤掉 stderr, stdout
-                client.query_conditions.add_exclude_conditions(stream=["stderr", "stdout"])
-                include_es_fields = True
-            elif log_type == LogType.STANDARD_OUTPUT:
-                # 仅查询 stderr, stdout
-                client.query_conditions.add_terms_conditions(stream=["stderr", "stdout"])
-            elif log_type == LogType.INGRESS:
-                client.query_conditions.add_terms_conditions(stream=["stdout"])
-                include_es_fields = True
-
-            data = client.get_field_filters(include_es_fields=include_es_fields, count_num=count_num)
-        except RequestError:
-            raise error_codes.QUERY_REQUEST_ERROR
-        except Exception:
-            logger.exception("failed to get log")
-            raise error_codes.QUERY_LOG_FAILED
-
-        return Response(ResponseWrapper.parse_obj({"code": 0, "data": data}).dict())
-
-    @swagger_auto_schema(
-        query_serializer=serializers.AppLogQuerySLZ(),
-        tags=["日志搜索"],
-    )
-    def get(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-    @swagger_auto_schema(
-        query_serializer=serializers.AppLogQuerySLZ(), tags=["日志搜索"], request_body=SimpleDomainSpecialLanguage
-    )
-    def post(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-
-class StructuredLogAPIView(LogBaseAPIView):
-    def handle(self, request, code, module_name):
-        """
-        获取「结构化」日志列表, 带分页
-        """
-        client, params = self._gen_client(request, serializers.AppLogListQuerySLZ)
-        # 过滤掉 stderr, stdout
-        client.query_conditions.add_exclude_conditions(stream=["stderr", "stdout"])
-        page = params["page"]
-        page_size = params["page_size"]
-
-        try:
-            data = client.query_logs(page, page_size)
         except RequestError:
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
-            raise error_codes.QUERY_LOG_FAILED
+            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
 
-        LOG_SEARCH_COUNTER.labels(
-            environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
-        ).inc()
+        logs = cattr.structure(
+            {
+                "logs": clean_logs(list(response), log_config.search_params),
+                "total": total,
+                "dsl": json.dumps(search.to_dict()),
+            },
+            Logs[self.line_model],  # type: ignore
+        )
+        return Response(data=self.logs_serializer_class(logs).data)
 
-        if data is None:
-            logger.error(
-                "Can't not query log list from es for app: %s, module: %s",
-                client.app_filter.app_code,
-                client.app_filter.module_name,
-            )
-            raise error_codes.QUERY_REQUEST_ERROR
-        return Response(ResponseWrapper(code=0, data=data).dict())
+    def aggregate_date_histogram(self, request, code, module_name):
+        """统计日志的日志数-事件直方图"""
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search()
 
-    @swagger_auto_schema(query_serializer=serializers.AppLogListQuerySLZ(), tags=["日志搜索"])
-    def get(self, request, code, module_name):
-        return self.handle(request, code, module_name)
+        response = log_client.aggregate_date_histogram(
+            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+        )
+        date_histogram = cattr.structure(
+            {
+                **clean_histogram_buckets(response),
+                "dsl": json.dumps(search.to_dict()),
+            },
+            DateHistogram,
+        )
+        return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
-    @swagger_auto_schema(
-        query_serializer=serializers.AppLogListQuerySLZ(),
-        tags=["日志搜索"],
-        request_body=SimpleDomainSpecialLanguage,
-    )
-    def post(self, request, code, module_name):
-        return self.handle(request, code, module_name)
+    def aggregate_fields_filters(self, request, code, module_name):
+        """统计日志的字段分布"""
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search()
+
+        fields_filters = log_client.aggregate_fields_filters(
+            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+        )
+        return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 
-class StandardOutputLogAPIView(LogBaseAPIView):
-    def handle(self, request, code, module_name):
-        """
-        标准日志输出 API
-        """
-        client, params = self._gen_client(request, serializers.ESScrollSLZ)
-        # 仅查询 stderr, stdout
-        client.query_conditions.add_terms_conditions(stream=["stderr", "stdout"])
+class StdoutLogAPIView(LogAPIView):
+    # TODO: 支持根据 scroll id 查询
+    line_model = StandardOutputLogLine
+    log_type = LogType.STANDARD_OUTPUT
+    logs_serializer_class = serializers.StandardOutputLogsSLZ
 
-        scroll_id = params["scroll_id"]
+    def query_logs_scroll(self, request, code, module_name):
+        """查询标准输出日志"""
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search()
+
         try:
-            scroll = client.query_scrollable_logs(scroll_id)
-        except ScanError as e:
-            # 大概率是 scroll_id 失效
+            response, total = log_client.execute_search(
+                index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            )
+        except ScanError:
+            # scan 失败大概率是 scroll_id 失效
             logger.exception("scroll_id 失效, 日志查询失败")
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询快照失效, 请刷新后重试。')) from e
-        except RequestError:
-            logger.exception("query request error")
-            raise error_codes.QUERY_REQUEST_ERROR
-        except Exception:
-            logger.exception("failed to get log")
-            raise error_codes.QUERY_LOG_FAILED
-
-        return Response(ResponseWrapper.parse_obj({"code": 0, "data": scroll}).dict())
-
-    @swagger_auto_schema(query_serializer=serializers.ESScrollSLZ(), tags=["日志搜索"])
-    def get(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-    @swagger_auto_schema(
-        query_serializer=serializers.ESScrollSLZ(),
-        tags=["日志搜索"],
-        request_body=SimpleDomainSpecialLanguage,
-    )
-    def post(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-
-class IngressLogAPIView(LogBaseAPIView):
-    """Ingress 接入层日志查询"""
-
-    def handle(self, request, code, module_name):
-        """
-        获取「结构化」日志列表, 带分页
-        """
-        client, params = self._gen_client(request=request, slz_class=serializers.AppIngressListQuerySLZ)
-        client.query_conditions.add_terms_conditions(stream=["stdout"])
-        page = params["page"]
-        page_size = params["page_size"]
-
-        try:
-            data = client.query_logs(page, page_size)
+            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询快照失效, 请刷新后重试。'))
         except RequestError:
             raise error_codes.QUERY_REQUEST_ERROR
-        except UnknownEngineAppNameError as e:
-            raise error_codes.QUERY_REQUEST_ERROR.f(str(e))
         except Exception:
-            logger.exception("failed to get log")
-            raise error_codes.QUERY_LOG_FAILED
+            logger.exception("failed to get logs")
+            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
 
-        LOG_SEARCH_COUNTER.labels(
-            environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
-        ).inc()
+        logs = cattr.structure(
+            {
+                "logs": clean_logs(list(response), log_config.search_params),
+                "total": total,
+                "dsl": json.dumps(search.to_dict()),
+                # TODO: 设置 scroll_id
+                "scroll_id": "TODO",
+            },
+            Logs[self.line_model],  # type: ignore
+        )
+        return Response(data=self.logs_serializer_class(logs).data)
 
-        if data is None:
-            logger.error(
-                "Can't not query log list from es for app: %s, module: %s",
-                client.app_filter.app_code,
-                client.app_filter.module_name,
-            )
-            raise error_codes.QUERY_REQUEST_ERROR
-        return Response(ResponseWrapper(code=0, data=data).dict())
 
-    @swagger_auto_schema(query_serializer=serializers.AppLogListQuerySLZ(), tags=["日志搜索"])
-    def get(self, request, code, module_name):
-        return self.handle(request, code, module_name)
+class StructuredLogAPIView(LogAPIView):
+    line_model = StructureLogLine
+    log_type = LogType.STRUCTURED
+    logs_serializer_class = serializers.StructureLogsSLZ
 
-    @swagger_auto_schema(
-        query_serializer=serializers.AppLogListQuerySLZ(),
-        tags=["日志搜索"],
-        request_body=SimpleDomainSpecialLanguage,
-    )
-    def post(self, request, code, module_name):
-        return self.handle(request, code, module_name)
+
+class IngressLogAPIView(LogAPIView):
+    line_model = IngressLogLine
+    log_type = LogType.INGRESS
+    logs_serializer_class = serializers.IngressLogSLZ
 
 
 class SysStructuredLogAPIView(StructuredLogAPIView):
     permission_classes: List = []
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def get(self, request, code, module_name):
-        return self.handle(request, code, module_name)
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def post(self, request, code, module_name):
-        return self.handle(request, code, module_name)
+    def query_logs(self, request, code, module_name):
+        return super().query_logs(request, code, module_name)

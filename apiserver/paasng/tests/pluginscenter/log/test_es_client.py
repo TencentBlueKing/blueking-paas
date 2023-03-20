@@ -18,7 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.pluginscenter.log.client import ESLogClient, FieldFilter
+from paasng.pluginscenter.log.client import ESLogClient
+from paasng.utils.es_log.models import FieldFilter
 
 
 @pytest.mark.parametrize(

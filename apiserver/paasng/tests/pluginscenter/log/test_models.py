@@ -21,7 +21,8 @@ import datetime
 import pytest
 import pytz
 
-from paasng.pluginscenter.log.models import FieldFilter, count_filters_options, flatten_structure, format_timestamp
+from paasng.utils.es_log.misc import count_filters_options, flatten_structure, format_timestamp
+from paasng.utils.es_log.models import FieldFilter
 
 
 @pytest.mark.parametrize(

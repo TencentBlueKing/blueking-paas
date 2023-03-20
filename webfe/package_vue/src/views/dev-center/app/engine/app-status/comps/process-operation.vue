@@ -817,7 +817,7 @@
             });
             this.isDateChange = false;
         },
-        destroyed () {
+        beforedestroy () {
             this.closeServerPush();
             this.closeLogDetail();
         },
@@ -1453,6 +1453,7 @@
             },
 
             watchServerPush () {
+                this.serverEvent && this.serverEvent.close();
                 const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
                 this.cloudServerEvent = new EventSource(url, {
                     withCredentials: true
@@ -1484,7 +1485,7 @@
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
                         this.watchServerPush();
-                    }, 5000);
+                    }, 10000);
                 };
 
                 // 服务结束

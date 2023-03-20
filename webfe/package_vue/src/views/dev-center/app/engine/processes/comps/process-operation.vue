@@ -790,8 +790,7 @@
                 },
                 dateShortCut: dateShortCut,
                 initDateTimeRange: [initStartDate, initEndDate],
-                isDatePickerOpen: false,
-                errorInterval: true
+                isDatePickerOpen: false
             };
         },
         computed: {
@@ -803,6 +802,9 @@
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            envEventData () {
+                return this.$store.state.envEventData;
             }
         },
         watch: {
@@ -1457,11 +1459,12 @@
             },
 
             watchServerPush () {
-                this.serverEvent && this.serverEvent.close();
+                if (this.envEventData.includes(this.environment)) return;
                 const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
                 this.serverEvent = new EventSource(url, {
                     withCredentials: true
                 });
+                this.$store.commit('updataEnvEventData', [this.environment]);
 
                 // 收藏服务推送消息
                 this.serverEvent.onmessage = (event) => {
@@ -1482,15 +1485,13 @@
 
                 // 服务异常
                 this.serverEvent.onerror = (event) => {
-                    if (!this.errorInterval) return;
                     // 异常后主动关闭，否则会继续重连
                     console.error(this.$t('推送异常'), event);
-                    this.errorInterval = false;
                     this.serverEvent.close();
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
-                        this.errorInterval = true;
+                        this.$store.commit('updataEnvEventData', []);
                         this.watchServerPush();
                     }, 10000);
                 };
@@ -1502,6 +1503,7 @@
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
+                        this.$store.commit('updataEnvEventData', []);
                         this.watchServerPush();
                     }, 5000);
                 });

@@ -767,6 +767,9 @@
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            envEventData () {
+                return this.$store.state.envEventData;
             }
         },
         watch: {
@@ -1392,11 +1395,14 @@
             },
 
             watchServerPush () {
+                console.log('this.envEventData', this.envEventData, this.environment);
+                if (this.envEventData.includes(this.environment)) return;
                 this.serverEvent && this.serverEvent.close();
                 const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
                 this.cloudServerEvent = new EventSource(url, {
                     withCredentials: true
                 });
+                this.$store.commit('updataEnvEventData', [this.environment]);
 
                 // 收藏服务推送消息
                 this.cloudServerEvent.onmessage = (event) => {
@@ -1423,6 +1429,7 @@
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
+                        this.$store.commit('updataEnvEventData', []);
                         this.watchServerPush();
                     }, 10000);
                 };
@@ -1434,6 +1441,7 @@
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
+                        this.$store.commit('updataEnvEventData', []);
                         this.watchServerPush();
                     }, 5000);
                 });

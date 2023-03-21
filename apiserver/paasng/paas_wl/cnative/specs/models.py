@@ -224,10 +224,10 @@ class AppModelDeploy(TimestampedModel):
         wl_app: WlApp,
         credential_refs: List[ImageCredentialRef],
     ) -> None:
-        # 检查 annotations 中的各个值，如果占用 paas 保留的前缀，则 pop 掉
-        for key in manifest.metadata.annotations:
-            if key.startswith(BKPAAS_RESERVED_ANNO_PREFIX):
-                manifest.metadata.annotations.pop(key)
+        # 检查 annotations 中的各个值，确保没有占用 paas 保留的前缀
+        manifest.metadata.annotations = {
+            k: v for k, v in manifest.metadata.annotations.items() if not k.startswith(BKPAAS_RESERVED_ANNO_PREFIX)
+        }
 
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.pk)

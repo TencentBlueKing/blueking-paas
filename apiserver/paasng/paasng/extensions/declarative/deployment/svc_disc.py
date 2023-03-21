@@ -28,8 +28,8 @@ from django.conf import settings
 from django.utils.encoding import force_bytes, force_str
 
 from paas_wl.cluster.models import Cluster
+from paasng.engine.configurations.provider import env_vars_providers
 from paasng.engine.constants import AppEnvName
-from paasng.engine.deploy.config import env_vars_providers
 from paasng.engine.models import Deployment
 from paasng.extensions.declarative.deployment.resources import BkSaaSItem
 from paasng.extensions.declarative.models import DeploymentDescription

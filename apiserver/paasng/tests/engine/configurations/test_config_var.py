@@ -23,37 +23,13 @@ from unittest import mock
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 
-from paasng.engine.deploy.config.env_vars import EnvVariablesProviders, get_env_variables
+from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.models.config_var import ConfigVar
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from tests.utils.mocks.engine import mock_cluster_service
 
 pytestmark = pytest.mark.django_db
-
-
-def test_providers(bk_stag_env, bk_deployment):
-    providers = EnvVariablesProviders()
-
-    @providers.register_env
-    def test_get_vars(env):
-        return {'FOO': 'bar', 'FOOBAR': 'z'}
-
-    @providers.register_env
-    def test_get_vars_2(env):
-        return {'FOO': '1', 'BAR': str(env.id)}
-
-    @providers.register_deploy
-    def test_get_vars_deploy(deployment):
-        return {'DEP': str(deployment.id)}
-
-    assert providers.gather(bk_stag_env) == {'FOO': '1', 'BAR': str(bk_stag_env.id), 'FOOBAR': 'z'}
-    assert providers.gather(bk_stag_env, bk_deployment) == {
-        'FOO': '1',
-        'BAR': str(bk_stag_env.id),
-        'FOOBAR': 'z',
-        'DEP': str(bk_deployment.id),
-    }
 
 
 class TestGetEnvVariables:

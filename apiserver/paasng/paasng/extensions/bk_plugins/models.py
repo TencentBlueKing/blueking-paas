@@ -30,7 +30,7 @@ from django.utils import timezone
 from pydantic import BaseModel, PrivateAttr
 
 from paasng.accounts.utils import id_to_username
-from paasng.engine.deploy.config import env_vars_providers
+from paasng.engine.configurations.provider import env_vars_providers
 from paasng.extensions.bk_plugins.constants import PluginTagIdType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment

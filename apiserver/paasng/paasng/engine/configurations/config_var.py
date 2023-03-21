@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -16,9 +15,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Env variables related functions"""
-from collections import OrderedDict
-from typing import Callable, Dict, Optional
+"""Config variables related functions"""
+from typing import Dict, Optional
 
 from django.conf import settings
 
@@ -26,50 +24,11 @@ from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import ServiceSharingManager
 from paasng.engine.models import Deployment
 from paasng.engine.models.config_var import generate_blobstore_env_vars, generate_builtin_env_vars, get_config_vars
+from paasng.engine.networking import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.publish.entrance.exposer import get_bk_doc_url_prefix
 
-from .ingress import AppDefaultDomains, AppDefaultSubpaths
-
-
-def _make_id(target):
-    if hasattr(target, '__func__'):
-        return (id(target.__self__), id(target.__func__))
-    return id(target)
-
-
-class EnvVariablesProviders:
-    """Allow registering extra env variables functions for applications"""
-
-    def __init__(self):
-        self._registered_funcs_env = OrderedDict()
-        self._registered_funcs_deploy = OrderedDict()
-
-    def register_env(self, func: Callable):
-        """Register a function with env argument"""
-        # Use id to avoid duplicated registrations
-        self._registered_funcs_env[_make_id(func)] = func
-        return func
-
-    def register_deploy(self, func: Callable):
-        """Register a function with deployment argument"""
-        self._registered_funcs_deploy[_make_id(func)] = func
-        return func
-
-    def gather(self, env: ModuleEnvironment, deployment: Optional[Deployment] = None) -> Dict:
-        """Gather all env variables for given env
-
-        :param deployment: if given, the result will include deployment-scoped env variables
-        """
-        result = {}
-        for func in self._registered_funcs_env.values():
-            result.update(func(env))
-        if deployment:
-            for func in self._registered_funcs_deploy.values():
-                result.update(func(deployment))
-        return result
-
-
-env_vars_providers = EnvVariablesProviders()
+from .provider import env_vars_providers
 
 
 def get_env_variables(
@@ -86,8 +45,6 @@ def get_env_variables(
     :param deployment: Optional deployment object to get vars defined in description file
     :returns: Dict of env vars
     """
-    from paasng.publish.entrance.exposer import get_bk_doc_url_prefix
-
     result = {}
     engine_app = env.get_engine_app()
 

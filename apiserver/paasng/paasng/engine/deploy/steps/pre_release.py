@@ -21,8 +21,8 @@ from typing import Dict
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from django.utils.translation import gettext as _
 
+from paasng.engine.configurations import get_env_variables
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.config import get_env_variables
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.infra.models_utils import update_engine_app_config
 from paasng.engine.deploy.infra.output import Style

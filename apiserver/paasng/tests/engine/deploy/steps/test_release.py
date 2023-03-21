@@ -79,7 +79,7 @@ class TestApplicationReleaseMgr:
         ), mock.patch('paasng.engine.deploy.steps.release.EngineDeployClient') as mocked_client_r, mock.patch(
             'paasng.engine.deploy.workflow.flow.EngineDeployClient'
         ), mock.patch(
-            'paasng.engine.deploy.config.ingress.EngineDeployClient'
+            'paasng.engine.networking.ingress.EngineDeployClient'
         ):
             faked_release_id = uuid.uuid4().hex
             mocked_client_r().create_release.return_value = faked_release_id

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Dict
 
-from paasng.engine.deploy.config import env_vars_providers
+from paasng.engine.configurations.provider import env_vars_providers
 from paasng.engine.models import Deployment
 from paasng.extensions.declarative.models import DeploymentDescription
 

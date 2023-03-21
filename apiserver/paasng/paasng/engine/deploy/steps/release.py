@@ -23,14 +23,15 @@ from typing import Optional
 
 from django.utils.translation import gettext as _
 
+from paasng.engine.configurations import get_env_variables
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.config import AppDefaultDomains, AppDefaultSubpaths, get_env_variables
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.infra.models_utils import get_processes_by_build, update_engine_app_config
 from paasng.engine.deploy.workflow import DeployStep
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.models.processes import ProcessManager
+from paasng.engine.networking import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.signals import on_release_created
 from paasng.platform.applications.models import ModuleEnvironment
 

@@ -31,8 +31,8 @@ from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
+from paasng.engine.configurations import get_env_variables
 from paasng.engine.constants import BuildStatus, JobStatus
-from paasng.engine.deploy.config import get_env_variables
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.infra.output import Style
 from paasng.engine.deploy.infra.source import (

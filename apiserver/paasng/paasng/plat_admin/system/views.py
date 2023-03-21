@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, List, Union, cast
 
+from django.conf import settings
 from django.http.response import Http404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -33,15 +34,19 @@ from paasng.plat_admin.system.applications import (
     SimpleAppSource,
     get_contact_info,
     query_uni_apps_by_ids,
+    query_uni_apps_by_keyword,
     query_uni_apps_by_username,
 )
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
+    BasicAppSLZ,
     ContactInfo,
     QueryUniApplicationsByID,
     QueryUniApplicationsByUserName,
+    SearchApplicationSLZ,
     UniversalAppSLZ,
 )
+from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -106,6 +111,31 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         username = data['username']
         uni_apps = query_uni_apps_by_username(username)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
+
+    @swagger_auto_schema(
+        tags=['SYSTEMAPI'], responses={200: BasicAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
+    )
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    def list_applications(self, request):
+        """查询应用基本信息，可根据 id 或者 name 模糊搜索"""
+        serializer = SearchApplicationSLZ(data=request.query_params)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            # if keyword do not match regex, then return none
+            return Response({'count': 0, 'results': []})
+
+        params = serializer.data
+        keyword = params.get('keyword')
+
+        language = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
+        applications = query_uni_apps_by_keyword(keyword, language)
+
+        # Paginate results
+        paginator = MaxLimitOffsetPagination()
+        applications = paginator.paginate_queryset(applications, request, self)
+        serializer = BasicAppSLZ(applications, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):

@@ -20,6 +20,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.applications.utils import RE_APP_SEARCH
 from paasng.platform.modules.models import Module
 from paasng.utils.serializers import UserNameField
 
@@ -117,3 +118,12 @@ class ModuleEnvBasicSLZ(serializers.ModelSerializer):
 
 class AddonCredentialsSLZ(serializers.Serializer):
     credentials = serializers.DictField(child=serializers.CharField())
+
+
+class SearchApplicationSLZ(serializers.Serializer):
+    keyword = serializers.RegexField(RE_APP_SEARCH, max_length=20, default="", allow_blank=False)
+
+
+class BasicAppSLZ(serializers.Serializer):
+    code = serializers.CharField(help_text="应用ID")
+    name = serializers.CharField(help_text="应用名称")

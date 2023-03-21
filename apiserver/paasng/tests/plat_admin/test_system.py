@@ -21,6 +21,7 @@ from unittest import mock
 import arrow
 import pytest
 from django.conf import settings
+from django.utils.translation import get_language
 
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound
 from paasng.engine.constants import OperationTypes
@@ -30,6 +31,7 @@ from paasng.plat_admin.system.applications import (
     query_default_apps_by_ids,
     query_legacy_apps_by_ids,
     query_uni_apps_by_ids,
+    query_uni_apps_by_keyword,
     str_username,
 )
 from tests.engine.setup_utils import create_fake_deployment
@@ -70,6 +72,26 @@ class TestQueryUniApps:
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
         assert results[legacy_app.code].name == legacy_app.name
+
+    @pytest.mark.parametrize(
+        "keyword, expected_count",
+        [
+            ("", 2),
+            ("bk_app", 1),
+            ("legacy_app", 1),
+        ],
+    )
+    def test_query_by_keyword(self, bk_app, keyword, expected_count):
+        legacy_app = create_legacy_application()
+
+        if keyword == "bk_app":
+            keyword = bk_app.code
+        elif keyword == "legacy_app":
+            keyword = legacy_app.name
+
+        language = get_language()
+        result = query_uni_apps_by_keyword(keyword, language)
+        assert len(result) == expected_count
 
 
 class TestGetContactInfo:

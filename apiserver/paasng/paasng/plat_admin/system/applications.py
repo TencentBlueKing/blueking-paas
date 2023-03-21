@@ -20,13 +20,14 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 from dataclasses import dataclass
+from operator import attrgetter
 from typing import Any, Collection, Dict, List, Optional
 
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import BasicUser, User
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import Application, ModuleEnvironment, UserApplicationFilter
@@ -37,8 +38,10 @@ from .constants import SimpleAppSource
 from .legacy import LegacyAppNormalizer, query_concrete_apps
 
 try:
+    from paasng.platform.legacydb_te.adaptors import AppAdaptor
     from paasng.platform.legacydb_te.models import LApplication
 except ImportError:
+    from paasng.platform.legacydb.adaptors import AppAdaptor  # type: ignore
     from paasng.platform.legacydb.models import LApplication
 
 
@@ -143,7 +146,6 @@ def query_uni_apps_by_username(username: str) -> List[UniSimpleApp]:
 
 
 def query_default_apps_by_username(username: str) -> List[UniSimpleApp]:
-
     user = BasicUser(settings.USER_TYPE, username)
     applications = UserApplicationFilter(user).filter()
 
@@ -201,3 +203,29 @@ def query_recent_deployment_operators(operations: QuerySet, days_range: int) -> 
         return list(operations.filter(created__gte=earliest_date).values_list("operator", flat=True).distinct())
     except ModuleEnvironmentOperations.DoesNotExist:
         return []
+
+
+@dataclass
+class AppBasicInfo:
+    """Basic information for application"""
+
+    code: str
+    name: str
+
+
+def query_uni_apps_by_keyword(keyword: str, language: Optional[Any]):
+    """Query application basic info by keywords (APP ID, APP Name)"""
+    name_field = 'name_en' if language == "en" else 'name'
+    applications = Application.objects.filter(
+        Q(name__icontains=keyword) | Q(name_en__icontains=keyword) | Q(code__icontains=keyword)
+    ).values('code', name_field)
+
+    uni_apps = [AppBasicInfo(code=app['code'], name=app[name_field]) for app in applications]
+
+    # 从 PaaS2.0 中查询应用信息
+    with legacy_db.session_scope() as session:
+        legacy_applications = AppAdaptor(session=session).get_by_keyword(keyword)
+    uni_apps.extend([AppBasicInfo(code=app['code'], name=app[name_field]) for app in legacy_applications])
+
+    # 默认按应用ID排序
+    return sorted(uni_apps, key=attrgetter("code"))

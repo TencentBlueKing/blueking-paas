@@ -22,7 +22,7 @@ from celery import shared_task
 from django.utils.translation import gettext as _
 
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.engine.configurations import ImageCredentialManager
+from paasng.engine.configurations.image import ImageCredentialManager
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.infra.output import Style
 from paasng.engine.deploy.infra.source import get_app_description_handler, get_processes

@@ -36,7 +36,7 @@ from paasng.extensions.declarative.models import DeploymentDescription
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import get_preallocated_address
+from paasng.publish.entrance.preallocated import get_preallocated_address
 
 logger = logging.getLogger(__name__)
 

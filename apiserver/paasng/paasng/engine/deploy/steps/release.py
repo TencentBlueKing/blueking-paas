@@ -23,7 +23,7 @@ from typing import Optional
 
 from django.utils.translation import gettext as _
 
-from paasng.engine.configurations import get_env_variables
+from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.deploy.infra.models_utils import get_processes_by_build, update_engine_app_config

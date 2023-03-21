@@ -24,9 +24,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
 from django.conf import settings
 from django.utils.functional import cached_property
 
-from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
-from paas_wl.networking.ingress.models import AutoGenDomain
-from paas_wl.networking.ingress.utils import guess_default_service_name
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.misc import OutputStream
@@ -210,20 +207,6 @@ class EngineDeployClient:
         for line in build_proc.output_stream.lines.all().order_by('created'):
             lines.append({'stream': line.stream, 'line': line.line, 'created': line.created})
         return lines
-
-    def update_domains(self, domains: List[Dict]):
-        """Update an engine app's domains"""
-        default_service_name = guess_default_service_name(self.wl_app)
-        # Assign domains to app
-        domain_objs = [AutoGenDomain(**d) for d in domains]
-        assign_custom_hosts(self.wl_app, domains=domain_objs, default_service_name=default_service_name)
-
-    def update_subpaths(self, subpaths: List[Dict]):
-        """Update an engine app's subpaths"""
-        default_service_name = guess_default_service_name(self.wl_app)
-        # Assign subpaths to app
-        subpath_vals = [d['subpath'] for d in subpaths]
-        assign_subpaths(self.wl_app, subpath_vals, default_service_name=default_service_name)
 
     def upsert_image_credentials(self, registry: str, username: str, password: str):
         """Update an engine app's image credentials, which will be used to pull image."""

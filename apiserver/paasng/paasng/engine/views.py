@@ -52,6 +52,10 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
+from paasng.engine.configurations.config_var import (
+    generate_env_vars_by_region_and_env,
+    generate_env_vars_for_bk_platform,
+)
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
 from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.infra.models_utils import initialize_deployment
@@ -60,13 +64,7 @@ from paasng.engine.deploy.steps.release import create_release
 from paasng.engine.deploy.workflow import DeploymentCoordinator
 from paasng.engine.deploy.workflow.protections import ModuleEnvDeployInspector
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
-from paasng.engine.models.config_var import (
-    ENVIRONMENT_NAME_FOR_GLOBAL,
-    ConfigVar,
-    add_prefix_to_key,
-    generate_env_vars_by_region_and_env,
-    generate_env_vars_for_bk_platform,
-)
+from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar, add_prefix_to_key
 from paasng.engine.models.deployment import Deployment, interrupt_deployment
 from paasng.engine.models.managers import (
     ConfigVarManager,
@@ -107,7 +105,8 @@ from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url, get_preallocated_url
+from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.publish.entrance.preallocated import get_preallocated_url
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
 

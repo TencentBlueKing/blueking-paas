@@ -22,13 +22,13 @@ import cattr
 import pytest
 
 from paas_wl.cluster.models import IngressConfig
-from paasng.engine.configurations import get_env_variables
+from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.constants import AppEnvName
-from paasng.engine.networking import AppDefaultSubpaths
+from paasng.engine.networking import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestAppDefaultSubpaths:
@@ -128,3 +128,15 @@ class TestAppDefaultSubpaths:
         with mock_cluster_service():
             envs = get_env_variables(bk_app.get_default_module().get_envs("stag"))
         assert envs[sub_path_key] == request.getfixturevalue(expected)
+
+    def test_sync(self, bk_stag_env, with_wl_apps):
+        with mock.patch('paasng.engine.networking.ingress.assign_subpaths') as mocker:
+            AppDefaultSubpaths(bk_stag_env).sync()
+            assert mocker.called
+
+
+class TestAppDefaultDomains:
+    def test_sync(self, bk_stag_env, with_wl_apps):
+        with mock.patch('paasng.engine.networking.ingress.assign_custom_hosts') as mocker:
+            AppDefaultDomains(bk_stag_env).sync()
+            assert mocker.called

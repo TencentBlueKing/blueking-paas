@@ -3,7 +3,9 @@ from typing import Dict, List
 
 from django.conf import settings
 
-from paasng.engine.deploy.engine_svc import EngineDeployClient
+from paas_wl.networking.ingress.managers import assign_custom_hosts, assign_subpaths
+from paas_wl.networking.ingress.models import AutoGenDomain
+from paas_wl.networking.ingress.utils import guess_default_service_name
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.region.models import get_region
@@ -17,7 +19,6 @@ class AppDefaultDomains:
     def __init__(self, env: ModuleEnvironment):
         self.env = env
         self.engine_app = env.get_engine_app()
-        self.engine_client = EngineDeployClient(self.engine_app)
 
         self.domains: List[Domain] = []
         self.initialize_domains()
@@ -33,7 +34,12 @@ class AppDefaultDomains:
     def sync(self):
         """Sync app's default subdomains to engine"""
         domains = [d.as_dict() for d in self.domains]
-        self.engine_client.update_domains(domains)
+
+        wl_app = self.engine_app.to_wl_obj()
+        default_service_name = guess_default_service_name(wl_app)
+        # Assign domains to app
+        domain_objs = [AutoGenDomain(**d) for d in domains]
+        assign_custom_hosts(wl_app, domains=domain_objs, default_service_name=default_service_name)
 
     def as_env_vars(self) -> Dict:
         """Return current subdomains as env vars"""
@@ -51,7 +57,6 @@ class AppDefaultSubpaths:
 
     def __init__(self, env: ModuleEnvironment):
         self.env = env
-        self.engine_client = EngineDeployClient(env.get_engine_app())
         self.subpaths_service = ModuleEnvSubpaths(self.env)
         self.subpaths = self.subpaths_service.all()
 
@@ -59,7 +64,11 @@ class AppDefaultSubpaths:
         """Sync app's default subpaths to engine"""
         subpaths = [d.as_dict() for d in self.subpaths]
         if subpaths:
-            self.engine_client.update_subpaths(subpaths)
+            wl_app = self.env.wl_app
+            default_service_name = guess_default_service_name(wl_app)
+            # Assign subpaths to app
+            subpath_vals = [d['subpath'] for d in subpaths]
+            assign_subpaths(wl_app, subpath_vals, default_service_name=default_service_name)
 
     def as_env_vars(self) -> Dict:
         """Return current subpath as env vars"""

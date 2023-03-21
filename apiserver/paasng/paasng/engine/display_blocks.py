@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tags import DeployPhaseTag
+from paasng.publish.entrance.preallocated import get_preallocated_url
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -148,8 +149,6 @@ class AccessInfo(DisplayBlock):
 
     @classmethod
     def get_detail(cls, engine_app: 'EngineApp') -> dict:
-        from paasng.publish.entrance.exposer import get_preallocated_url
-
         info = get_preallocated_url(engine_app.env)
         if info is None:
             return {}

@@ -152,6 +152,7 @@ class MainInfoMigration(BaseMigration):
             runtime_labels = {"category": APP_CATEGORY.LEGACY_APP.value}
         # 绑定初始运行环境，老版本的镜像可能已经被隐藏，需要显示指定查询所有的镜像
         initializer.bind_runtime_by_labels(runtime_labels, contain_hidden=True)
+        initializer.initialize_log_config()
 
     def migrate(self):
         # 第三方应用（非引擎应用）仅创建默认模块，不创建 engine 相关信息

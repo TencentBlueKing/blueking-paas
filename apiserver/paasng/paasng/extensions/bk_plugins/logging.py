@@ -25,11 +25,11 @@ from attrs import converters, define, field, fields
 from django.conf import settings
 
 from paasng.extensions.bk_plugins.models import BkPlugin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.client import instantiate_log_client
 from paasng.platform.log.filters import ElasticSearchFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
-from paasng.platform.modules.models import Module
-from paasng.utils.es_log.misc import clean_logs
+from paasng.platform.log.utils import clean_logs
 from paasng.utils.es_log.models import Logs
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -109,23 +109,24 @@ class PluginLoggingClient:
     def make_search(self, trace_id: str) -> SmartSearch:
         """构造日志查询语句"""
         module = self.application.get_module(module_name=self._module_name)
+        env = module.get_envs(environment="prod")
         smart_time_range = SmartTimeRange(time_range=self._default_time_range)
-        query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module)
-        search = self._make_base_search(module, search_params=query_config.search_params, time_range=smart_time_range)
+        query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env)
+        search = self._make_base_search(env=env, search_params=query_config.search_params, time_range=smart_time_range)
         return search.filter(**{'json.trace_id': [trace_id]})
 
     def _make_base_search(
         self,
-        module: Module,
+        env: ModuleEnvironment,
         search_params: ElasticSearchParams,
         time_range: SmartTimeRange,
         limit: int = 200,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
-        plugin_filter = ElasticSearchFilter(module=module, search_params=search_params)
+        plugin_filter = ElasticSearchFilter(env=env, search_params=search_params)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
-        search = plugin_filter.filter_by_module(search)
+        search = plugin_filter.filter_by_env(search)
         search = plugin_filter.filter_by_builtin_filters(search)
         search = plugin_filter.filter_by_builtin_excludes(search)
         return search.limit_offset(limit=limit, offset=offset)

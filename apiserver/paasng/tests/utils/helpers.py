@@ -106,6 +106,8 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
             module.save()
             module_initializer.initialize_with_template(repo_type, repo_url)
 
+        module_initializer.initialize_log_config()
+
 
 class BaseTestCaseWithApp(TestCase):
     """Base class with an application was pre-created"""
@@ -390,7 +392,10 @@ def _mock_wl_services_in_creation():
         "paasng.cnative.services.create_cnative_app_model_resource"
     ), mock.patch(
         "paasng.cnative.services.EnvClusterService"
-    ):
+    ), mock.patch(
+        "paasng.platform.log.shim.EnvClusterService"
+    ) as fake_log:
+        fake_log().get_cluster().has_feature_flag.return_value = False
         yield
 
 

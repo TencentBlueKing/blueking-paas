@@ -47,6 +47,9 @@ class LogClientProtocol(Protocol):
     def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
         """aggregate fields filters"""
 
+    def get_mappings(self, index: str, timeout: int) -> dict:
+        """query the mappings in es"""
+
 
 class BKLogClient:
     """BKLogClient is an implement of LogClientProtocol, the log search backend is bk log search"""
@@ -99,6 +102,10 @@ class BKLogClient:
         filters = {field: FieldFilter(name=field, key=field) for field in resp["data"]["select_fields_order"]}
         return count_filters_options(list(Response(search.search, resp["data"])), filters)
 
+    def get_mappings(self, index: str, timeout: int) -> dict:
+        """query the mappings in es"""
+        raise NotImplementedError
+
     def _call_api(self, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
@@ -149,6 +156,13 @@ class ESLogClient:
             self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),
         )
         return count_filters_options(list(response), self._get_properties_filters(index=index, timeout=timeout))
+
+    def get_mappings(self, index: str, timeout: int) -> dict:
+        """query the mappings in es"""
+        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
+        docs_mappings: Dict = first_mapping["mappings"]
+        return docs_mappings
 
     def _get_response_count(self, index: str, search: SmartSearch, timeout: int, response: Response) -> int:
         """get total field from es response if it had, or send a count response to es"""

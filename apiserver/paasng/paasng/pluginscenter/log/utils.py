@@ -16,29 +16,29 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from pydantic import BaseModel, Field
+from elasticsearch_dsl.response import Hit
+from rest_framework.fields import get_attribute
 
-logger = logging.getLogger(__name__)
-
-
-# DSL 建模
-class DSLQueryItem(BaseModel):
-    """简化的 dsl-query 结构
-    目前只支持: query_string/terms 两种查询方式
-    query_string: 使用 ES 的 query_string 搜索
-    terms: 精准匹配(根据 field 过滤 的场景)
-    """
-
-    query_string: str = Field(None, description="使用 `query_string` 语法进行搜索")
-    terms: Dict[str, List[str]] = Field({}, description="多值精准匹配")
-    exclude: Dict[str, List[str]] = Field({}, description="terms取反, 非标准 DSL")
+from paasng.pluginscenter.definitions import ElasticSearchParams
+from paasng.utils.es_log.misc import flatten_structure, format_timestamp
 
 
-class SimpleDomainSpecialLanguage(BaseModel):
-    """简化的 dsl 结构"""
-
-    query: DSLQueryItem
-    sort: Optional[Dict] = Field({}, description='排序，e.g. {"response_time": "desc", "other": "asc"}')
+def clean_logs(
+    logs: List[Hit],
+    search_params: ElasticSearchParams,
+) -> List[Dict]:
+    """从 ES 日志中提取 PaaS 的字段"""
+    cleaned = []
+    for log in logs:
+        cleaned.append(
+            {
+                "timestamp": format_timestamp(
+                    get_attribute(log, search_params.timeField.split(".")), search_params.timeFormat
+                ),
+                "message": get_attribute(log, search_params.messageField.split(".")),
+                "raw": flatten_structure(log.to_dict(), None),
+            }
+        )
+    return cleaned

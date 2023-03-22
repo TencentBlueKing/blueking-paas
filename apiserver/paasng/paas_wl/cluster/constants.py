@@ -46,6 +46,8 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     INGRESS_USE_REGEX = FeatureFlagField(label=_("Ingress路径是否使用正则表达式"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸监控
     ENABLE_BK_MONITOR = FeatureFlagField(label=_("支持蓝鲸监控"), default=False)
+    # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器
+    ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
 
     @classmethod
     def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:

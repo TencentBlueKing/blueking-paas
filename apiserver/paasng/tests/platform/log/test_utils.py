@@ -16,13 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import datetime
 from typing import Dict, List
-from unittest import mock
 
 import pytest
 
-from paasng.platform.log.utils import detect_indexes, get_es_term
+from paasng.platform.log.utils import get_es_term
 
 
 class TestUtils:
@@ -39,109 +37,6 @@ class TestUtils:
             return _wrapper
 
         return _make_stats_indexes_fake_resp
-
-    @pytest.mark.parametrize(
-        "pattern, expected, start_time, end_time, indexes",
-        [
-            # 正常匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.01"],
-                "2020-12-30 00:00:00",
-                "2021-01-01 08:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 时区问题, 导致无匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2021-01-01 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # pattern 不匹配
-            (
-                "k8s_app_log_sz-(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2021-01-01 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 时间范围不匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2020-12-31 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 未填写必须部分
-            (
-                "k8s_app_log_szp-",
-                ValueError,
-                "2020-12-30 00:00:00",
-                "2020-12-31 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 未填写具体的 pattern 主体
-            (
-                "(?P<date>.+)",
-                [],
-                "2020-12-30 00:00:00",
-                "2021-01-02 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 匹配多个
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02"],
-                "2020-12-30 00:00:00",
-                "2021-01-02 08:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 时区问题, 导致仅到匹配一个
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.01"],
-                "2020-12-30 00:00:00",
-                "2021-01-02 00:00:00",
-                ["k8s_app_log_szp-2021.01.01", "k8s_app_log_szp-2021.01.02", "k8s_app_log_szp-2021.01.03"],
-            ),
-            # 包含 grokfailure 情况下匹配
-            (
-                "k8s_app_log_szp-(?P<date>.+)",
-                ["k8s_app_log_szp-2021.01.02"],
-                "2020-12-30 00:00:00",
-                "2021-01-02 08:00:00",
-                [
-                    "k8s_app_log_szp-grokfailure-2021.01.01",
-                    "k8s_app_log_szp-grokfailure-2021.01.02",
-                    "k8s_app_log_szp-2021.01.02",
-                    "k8s_app_log_szp-2021.01.03",
-                ],
-            ),
-        ],
-    )
-    def test_detect_indexes(self, pattern, expected, start_time, end_time, indexes, make_stats_indexes_fake_resp):
-        """探测 indexes"""
-        with mock.patch('elasticsearch.client.Transport.perform_request') as perform_request:
-            perform_request.side_effect = make_stats_indexes_fake_resp(indexes)
-
-            if type(expected) is type and issubclass(expected, Exception):
-                with pytest.raises(expected):
-                    detect_indexes(
-                        datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S"),
-                        datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S"),
-                        pattern,
-                    )
-            else:
-                assert set(expected) == set(
-                    detect_indexes(
-                        datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S"),
-                        datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S"),
-                        pattern,
-                    )
-                )
 
     @pytest.mark.parametrize(
         "query_term,mappings,expected",

@@ -36,6 +36,7 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log import serializers
 from paasng.platform.log.client import instantiate_log_client
 from paasng.platform.log.constants import LogType
@@ -43,10 +44,9 @@ from paasng.platform.log.dsl import SimpleDomainSpecialLanguage
 from paasng.platform.log.filters import ElasticSearchFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
-from paasng.platform.log.utils import parse_simple_dsl_to_dsl
-from paasng.platform.modules.models import Module
+from paasng.platform.log.utils import clean_logs, parse_simple_dsl_to_dsl
 from paasng.utils.error_codes import error_codes
-from paasng.utils.es_log.misc import clean_histogram_buckets, clean_logs
+from paasng.utils.es_log.misc import clean_histogram_buckets
 from paasng.utils.es_log.models import DateHistogram, Logs
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -64,19 +64,19 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         # LOG_SEARCH_COUNTER.labels(
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
-        module = self.get_module_via_path()
-        log_config = self._get_log_query_config(module, process_type=self.request.query_params.get("process_type"))
+        env = self.get_env_via_path()
+        log_config = self._get_log_query_config(env, process_type=self.request.query_params.get("process_type"))
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
-    def make_search(self):
+    def make_search(self, mappings: dict):
         """构造日志查询语句"""
+        env = self.get_env_via_path()
         params = self.request.query_params
-        module = self.get_module_via_path()
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
-        query_config = self._get_log_query_config(module, process_type=params.get("process_type"))
-        search = self._make_base_search(module, search_params=query_config.search_params, time_range=smart_time_range)
+        query_config = self._get_log_query_config(env, process_type=params.get("process_type"))
+        search = self._make_base_search(env, search_params=query_config.search_params, time_range=smart_time_range)
 
         if self.request.data:
             try:
@@ -84,38 +84,37 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             except ValidationError:
                 logger.exception("error log query conditions")
                 raise error_codes.QUERY_REQUEST_ERROR
-            # TODO: 查询 mappings
-            dsl = parse_simple_dsl_to_dsl(query_conditions, mappings={})
+            dsl = parse_simple_dsl_to_dsl(query_conditions, mappings=mappings)
             search = search.query(dsl)
         return search
 
     def _make_base_search(
         self,
-        module: Module,
+        env: ModuleEnvironment,
         search_params: ElasticSearchParams,
         time_range: SmartTimeRange,
         limit: int = 200,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
-        plugin_filter = ElasticSearchFilter(module=module, search_params=search_params)
+        plugin_filter = ElasticSearchFilter(env=env, search_params=search_params)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
-        search = plugin_filter.filter_by_module(search)
+        search = plugin_filter.filter_by_env(search)
         search = plugin_filter.filter_by_builtin_filters(search)
         search = plugin_filter.filter_by_builtin_excludes(search)
         return search.limit_offset(limit=limit, offset=offset)
 
-    def _get_log_query_config(self, module: Module, process_type: Optional[str] = None):
+    def _get_log_query_config(self, env: ModuleEnvironment, process_type: Optional[str] = None):
         """获取日志查询配置"""
         log_type = self.log_type
         if log_type == LogType.INGRESS:
-            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module).ingress
+            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
         elif log_type == LogType.STANDARD_OUTPUT:
-            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module).stdout
+            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
         else:
             if process_type is None:
-                raise
-            log_config = ProcessLogQueryConfig.objects.get(module=module, process_type=process_type).json
+                raise ValueError("structured log must provide `process_type` field")
+            log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
         return log_config
 
 
@@ -126,7 +125,11 @@ class LogAPIView(LogBaseAPIView):
     def query_logs(self, request, code, module_name):
         """查询日志"""
         log_client, log_config = self.instantiate_log_client()
-        search = self.make_search()
+        search = self.make_search(
+            mappings=log_client.get_mappings(
+                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            )
+        )
 
         try:
             response, total = log_client.execute_search(
@@ -151,7 +154,11 @@ class LogAPIView(LogBaseAPIView):
     def aggregate_date_histogram(self, request, code, module_name):
         """统计日志的日志数-事件直方图"""
         log_client, log_config = self.instantiate_log_client()
-        search = self.make_search()
+        search = self.make_search(
+            mappings=log_client.get_mappings(
+                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            )
+        )
 
         response = log_client.aggregate_date_histogram(
             index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
@@ -168,7 +175,11 @@ class LogAPIView(LogBaseAPIView):
     def aggregate_fields_filters(self, request, code, module_name):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()
-        search = self.make_search()
+        search = self.make_search(
+            mappings=log_client.get_mappings(
+                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            )
+        )
 
         fields_filters = log_client.aggregate_fields_filters(
             index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
@@ -185,7 +196,7 @@ class StdoutLogAPIView(LogAPIView):
     def query_logs_scroll(self, request, code, module_name):
         """查询标准输出日志"""
         log_client, log_config = self.instantiate_log_client()
-        search = self.make_search()
+        search = self.make_search(mappings={})
 
         try:
             response, total = log_client.execute_search(

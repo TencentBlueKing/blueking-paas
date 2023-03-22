@@ -25,7 +25,7 @@ from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.modules.models import Module
+from paasng.platform.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
 
 
@@ -41,9 +41,9 @@ class ElasticSearchHost(BaseModel):
 
     host: str
     port: int
-    http_auth: str = Field(..., alias="httpAuth", description="形如 username:password 的凭证对")
-    url_prefix: str = Field("", alias="urlPrefix")
-    use_ssl: bool = Field(False, alias="useSSL")
+    http_auth: str = Field(..., description="形如 username:password 的凭证对")
+    url_prefix: str = ""
+    use_ssl: bool = Field(False)
 
 
 @registry
@@ -57,14 +57,6 @@ class ElasticSearchParams(BaseModel):
     termTemplate: Dict[str, str] = Field(description="搜索语句模板, 例如 {'app_code.keyword': '{{ app_code }}'};")
     builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
     builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
-    # paas 的标准输出日志过滤条件
-    # termTemplate = {'app_code.keyword': '{{ app_code }}'}
-    # builtinFilters = {"environment.keyword": "prod", "stream": ["stderr", "stdout"]}
-
-    # paas 的结构化日志过滤条件
-    # termTemplate = {'app_code.keyword': '{{ app_code }}'}
-    # builtinFilters = {"environment.keyword": "prod"}
-    # builtinExcludes = {"stream.keyword": ["stderr", "stdout"]}
 
 
 @registry
@@ -106,14 +98,6 @@ class ProcessStructureLogCollectorConfig(AuditedModel):
 class ElasticSearchConfig(UuidAuditedModel):
     """ES查询配置"""
 
-    # TODO: 兼容 ELK 方案
-    # 1. 根据 settings 配置生成 ElasticSearchConfig(collector_config_id必须非数字, 避免冲突)
-    # 2, 当使用 ELK 方案时, 自动为应用关联内置的 ElasticSearchConfig
-    # TODO: 完成内置采集项的初始化
-    # 1. python 语言的程序使用独特的采集项, 以 json.asctime 作为时间字段
-    # 2. 其他语言共用另一份采集项配置
-    # 3. 所有应用的标准输出共用一份采集项配置
-    # 4. 所有应用的访问入职共用一份采集项配置
     # TODO: 支持云原生应用
     collector_config_id = models.CharField(_("采集配置ID"), unique=True, help_text="采集配置ID", max_length=64)
     backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ", max_length=16)
@@ -127,21 +111,34 @@ class ElasticSearchConfig(UuidAuditedModel):
 
 
 class ProcessLogQueryConfigManager(models.Manager):
-    def select_process_irrelevant(self, module: Optional[Module] = None):
+    def select_process_irrelevant(self, env: Optional[ModuleEnvironment] = None):
         # 兼容关联查询(RelatedManager)的接口
-        if module is None:
+        if env is None:
             if hasattr(self, "instance"):
-                module = self.instance
+                env = self.instance
             else:
-                raise TypeError("select_process_irrelevant() 1 required positional argument: 'module'")
-        return self.filter(module=module, process_type="-").get()
+                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
+        return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
+
+    def get_by_process_type(self, process_type: str, env: Optional[ModuleEnvironment] = None):
+        # 兼容关联查询(RelatedManager)的接口
+        if env is None:
+            if hasattr(self, "instance"):
+                env = self.instance
+            else:
+                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
+        try:
+            self.filter(env=env, process_type=process_type).get()
+        except ProcessLogQueryConfig.DoesNotExist:
+            # get all process placeholder as fallback
+            return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
 
 class ProcessLogQueryConfig(UuidAuditedModel):
     """进程日志查询配置"""
 
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
-    process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True)
+    env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
+    process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True, help_text="默认配置使用 ")
 
     stdout = models.ForeignKey(
         ElasticSearchConfig,

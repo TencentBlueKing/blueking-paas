@@ -25,8 +25,8 @@ import jinja2
 from attrs import define, field
 from rest_framework.fields import get_attribute
 
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.models import ElasticSearchParams
-from paasng.platform.modules.models import Module
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.text import calculate_percentage
 
@@ -78,18 +78,19 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
 
 
 class ElasticSearchFilter:
-    def __init__(self, module: Module, search_params: ElasticSearchParams):
-        self.application = module.application
-        self.module = module
+    def __init__(self, env: ModuleEnvironment, search_params: ElasticSearchParams):
+        self.env = env
+        self.module = env.module
+        self.application = env.application
         self.search_params = search_params
 
-    def filter_by_module(self, search: SmartSearch) -> SmartSearch:
+    def filter_by_env(self, search: SmartSearch) -> SmartSearch:
         """为搜索增加插件相关过滤条件"""
         context = {
             "app_code": self.application.code,
             "module_name": self.module.name,
             "region": self.application.region,
-            "engine_app_names": [env.get_engine_app().name.replace("_", "0us0") for env in self.module.get_envs()],
+            "engine_app_name": self.env.get_engine_app().name.replace("_", "0us0"),
         }
         fields = self.search_params.termTemplate.copy()
         for k, v in fields.items():

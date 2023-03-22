@@ -22,11 +22,9 @@ from typing import Dict, List, Literal, Optional, Union
 
 import arrow
 from _operator import attrgetter
-from elasticsearch_dsl.response import Hit
 from elasticsearch_dsl.response.aggs import FieldBucketData
 from rest_framework.fields import get_attribute
 
-from paasng.pluginscenter.definitions import ElasticSearchParams
 from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.text import calculate_percentage
 
@@ -55,27 +53,8 @@ def flatten_structure(structured_fields: Dict, parent: Optional[str] = None) -> 
     return ret
 
 
-def clean_logs(
-    logs: List[Hit],
-    search_params: ElasticSearchParams,
-) -> List[Dict]:
-    """从 ES 日志中提取插件开发中心关心的字段"""
-    cleaned = []
-    for log in logs:
-        cleaned.append(
-            {
-                "timestamp": format_timestamp(
-                    get_attribute(log, search_params.timeField.split(".")), search_params.timeFormat
-                ),
-                "message": get_attribute(log, search_params.messageField.split(".")),
-                "raw": flatten_structure(log.to_dict(), None),
-            }
-        )
-    return cleaned
-
-
 def clean_histogram_buckets(buckets: FieldBucketData) -> Dict:
-    """从 ES 聚合桶中提取插件开发中心关心的字段"""
+    """从 ES 聚合桶中提取 PaaS 关心的字段"""
     series = []
     timestamps = []
     for bucket in buckets:

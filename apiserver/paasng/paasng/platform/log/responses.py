@@ -21,6 +21,9 @@ from typing import Any, Dict, Optional
 
 from attrs import converters, define, field, fields
 
+from paasng.platform.log.exceptions import LogLineInfoBrokenError
+from paasng.platform.log.utils import get_field_form_raw
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,11 +33,22 @@ class StandardOutputLogLine:
 
     timestamp: int
     message: str
+    raw: Dict[str, Any]
 
-    region: str
-    app_code: str
-    environment: str
-    process_id: Optional[str]
+    region: str = field(init=False, converter=converters.optional(str))
+    app_code: str = field(init=False, converter=converters.optional(str))
+    module_name: str = field(init=False, converter=converters.optional(str))
+    environment: str = field(init=False, converter=converters.optional(str))
+    process_id: str = field(init=False, converter=converters.optional(str))
+    stream: str = field(init=False, converter=converters.optional(str))
+
+    def __attrs_post_init__(self):
+        for attr in fields(type(self)):
+            if not attr.init:
+                getter = get_field_form_raw(attr.name)
+                if "getter" in attr.metadata:
+                    getter = attr.metadata["getter"]
+                setattr(self, attr.name, getter(self.raw))
 
 
 @define
@@ -43,14 +57,29 @@ class StructureLogLine:
 
     timestamp: int
     message: str
-    # key: json.*
-    # e.g. json.funcName
-    detail: Dict[str, Any]
+    raw: Dict[str, Any]
 
-    region: str
-    app_code: str
-    environment: str
-    process_id: Optional[str]
+    region: str = field(init=False, converter=converters.optional(str))
+    app_code: str = field(init=False, converter=converters.optional(str))
+    module_name: str = field(init=False, converter=converters.optional(str))
+    environment: str = field(init=False, converter=converters.optional(str))
+    process_id: str = field(init=False, converter=converters.optional(str))
+    stream: str = field(init=False, converter=converters.optional(str))
+
+    def __attrs_post_init__(self):
+        for attr in fields(type(self)):
+            if not attr.init:
+                getter = get_field_form_raw(attr.name)
+                if "getter" in attr.metadata:
+                    getter = attr.metadata["getter"]
+                setattr(self, attr.name, getter(self.raw))
+
+
+def get_engine_app_name(raw_log: Dict):
+    if "engine_app_name" not in raw_log:
+        raise LogLineInfoBrokenError("engine_app_name")
+    # ingress 日志是从 serviceName 解析的 engine_app_name，下划线已经转换成 0us0
+    return raw_log["engine_app_name"].replace("0us0", "_")
 
 
 @define
@@ -60,6 +89,10 @@ class IngressLogLine:
     timestamp: int
     message: str
     raw: Dict
+
+    engine_app_name: Optional[str] = field(
+        init=False, converter=converters.optional(str), metadata={"getter": get_engine_app_name}
+    )
 
     method: Optional[str] = field(init=False, converter=converters.optional(str))
     path: Optional[str] = field(init=False, converter=converters.optional(str))
@@ -73,4 +106,5 @@ class IngressLogLine:
     def __attrs_post_init__(self):
         for attr in fields(type(self)):
             if not attr.init:
-                setattr(self, attr.name, self.raw.get(attr.name))
+                getter = attr.metadata.get("getter") or get_field_form_raw(attr.name)
+                setattr(self, attr.name, getter(self.raw))

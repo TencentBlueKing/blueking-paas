@@ -34,11 +34,10 @@ from django.core.management.base import BaseCommand, CommandError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.infra.models_utils import initialize_deployment
-from paasng.engine.deploy.infra.output import Style
-from paasng.engine.deploy.runner import DeployTaskRunner
-from paasng.engine.deploy.workflow import DeploymentCoordinator, ServerSendEvent
+from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.models.deployment import Deployment
+from paasng.engine.utils.output import Style
+from paasng.engine.workflow import DeploymentCoordinator, ServerSendEvent
 from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.utils.error_codes import error_codes

@@ -23,8 +23,8 @@ import pytest
 
 from paas_wl.cluster.models import IngressConfig
 from paasng.engine.configurations.config_var import get_env_variables
+from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.constants import AppEnvName
-from paasng.engine.networking import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.engine import mock_cluster_service
 
@@ -42,9 +42,9 @@ class TestAppDefaultSubpaths:
             IngressConfig,
         )
         with mock.patch(
-            "paasng.engine.networking.ingress.ModuleEnvSubpaths.get_ingress_config"
+            "paasng.engine.configurations.ingress.ModuleEnvSubpaths.get_ingress_config"
         ) as get_ingress_config, mock.patch(
-            "paasng.publish.entrance.exposer.get_module_clusters"
+            "paasng.publish.entrance.preallocated.get_module_clusters"
         ) as get_module_clusters:
             get_ingress_config.return_value = dummy_ingress_config
             get_module_clusters.return_value = {
@@ -130,13 +130,13 @@ class TestAppDefaultSubpaths:
         assert envs[sub_path_key] == request.getfixturevalue(expected)
 
     def test_sync(self, bk_stag_env, with_wl_apps):
-        with mock.patch('paasng.engine.networking.ingress.assign_subpaths') as mocker:
+        with mock.patch('paasng.engine.configurations.ingress.assign_subpaths') as mocker:
             AppDefaultSubpaths(bk_stag_env).sync()
             assert mocker.called
 
 
 class TestAppDefaultDomains:
     def test_sync(self, bk_stag_env, with_wl_apps):
-        with mock.patch('paasng.engine.networking.ingress.assign_custom_hosts') as mocker:
+        with mock.patch('paasng.engine.configurations.ingress.assign_custom_hosts') as mocker:
             AppDefaultDomains(bk_stag_env).sync()
             assert mocker.called

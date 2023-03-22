@@ -27,7 +27,7 @@ from paasng.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.dev_resources.sourcectl.models import GitProject
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
 from paasng.engine.constants import DeployConditions
-from paasng.engine.deploy.workflow.protections import (
+from paasng.engine.workflow.protections import (
     EnvProtectionCondition,
     ModuleEnvDeployInspector,
     PluginTagValidationCondition,

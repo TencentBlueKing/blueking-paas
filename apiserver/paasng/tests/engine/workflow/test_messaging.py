@@ -19,9 +19,9 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.workflow.messaging import MessageStepMatcher, ServerSendEvent
 from paasng.engine.models import DeployPhase, DeployPhaseTypes
 from paasng.engine.models.steps import DeployStep, DeployStepMeta
+from paasng.engine.workflow.messaging import MessageStepMatcher, ServerSendEvent
 
 pytestmark = pytest.mark.django_db
 

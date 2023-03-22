@@ -23,16 +23,17 @@ from typing import Optional
 
 from django.utils.translation import gettext as _
 
+from paasng.engine.configurations.building import get_processes_by_build
 from paasng.engine.configurations.config_var import get_env_variables
+from paasng.engine.configurations.image import update_image_runtime_config
+from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.engine_svc import EngineDeployClient
-from paasng.engine.deploy.infra.models_utils import get_processes_by_build, update_engine_app_config
-from paasng.engine.deploy.workflow import DeployStep
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.models.processes import ProcessManager
-from paasng.engine.networking import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.signals import on_release_created
+from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class ApplicationReleaseMgr(DeployStep):
             ProcessManager(self.engine_app).sync_processes_specs(processes)
 
         with self.procedure(_('更新应用配置')):
-            update_engine_app_config(
+            update_image_runtime_config(
                 self.engine_app,
                 self.deployment.version_info,
                 image_pull_policy=self.deployment.advanced_options.image_pull_policy,
@@ -108,7 +109,7 @@ def create_release(env: ModuleEnvironment, build_id: str, deployment: Optional[D
     else:
         # NOTE: 更新环境变量时的 Pod 滚动时没有 deployment, 需要从 engine 中查询 procfile
         # TODO: 直接使用上一次成功的 deployment 中记录的 procfile
-        procfile = get_processes_by_build(engine_app=env.engine_app, build_id=build_id)
+        procfile = get_processes_by_build(build_id)
         deployment_id = None
 
     extra_envs = get_env_variables(env, deployment=deployment)

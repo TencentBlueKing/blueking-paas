@@ -21,11 +21,11 @@ from unittest import mock
 
 import pytest
 
-from paasng.engine.deploy.exceptions import DeployShouldAbortError
-from paasng.engine.deploy.infra.output import ConsoleStream
-from paasng.engine.deploy.workflow.flow import DeploymentCoordinator, DeployProcedure
+from paasng.engine.exceptions import DeployShouldAbortError
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
+from paasng.engine.utils.output import ConsoleStream
+from paasng.engine.workflow.flow import DeploymentCoordinator, DeployProcedure
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils.mocks.engine import mock_cluster_service
 

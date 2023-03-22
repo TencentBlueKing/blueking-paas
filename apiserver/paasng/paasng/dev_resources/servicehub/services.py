@@ -30,7 +30,7 @@ from django.conf import settings
 from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
 
-from paasng.engine.helpers import get_application_cluster
+from paas_wl.cluster.shim import get_application_cluster
 from paasng.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 

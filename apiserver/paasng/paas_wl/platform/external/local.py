@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Optional
 
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.steps.release import ApplicationReleaseMgr
+from paasng.engine.deploy.release import ApplicationReleaseMgr
 from paasng.engine.models import Deployment
 from paasng.engine.models.offline import OfflineOperation
 from paasng.platform.applications.models import ModuleEnvironment

@@ -22,8 +22,8 @@ from typing import Dict, Optional, Type
 
 from blue_krill.async_utils.poll_task import TaskPoller
 
-from paasng.engine.deploy.workflow import DeploymentCoordinator
 from paasng.engine.models import Deployment
+from paasng.engine.workflow import DeploymentCoordinator
 
 logger = logging.getLogger(__name__)
 

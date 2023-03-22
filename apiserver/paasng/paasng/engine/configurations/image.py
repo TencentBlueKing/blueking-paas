@@ -16,13 +16,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder
+from paasng.engine.constants import ImagePullPolicy, RuntimeType
 from paasng.extensions.smart_app.conf import bksmart_settings
 from paasng.extensions.smart_app.utils import SMartImageManager
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
+
+if TYPE_CHECKING:
+    from paasng.dev_resources.sourcectl.models import VersionInfo
+    from paasng.engine.models import EngineApp
 
 
 @dataclass
@@ -57,3 +63,68 @@ class ImageCredentialManager:
         if repo_full_url and username and password:
             return ImageCredential(registry=repo_full_url, username=username, password=password)
         return None
+
+
+class RuntimeImageInfo:
+    """提供与当前应用匹配的运行时环境信息的工具"""
+
+    def __init__(self, engine_app: 'EngineApp', version_info: 'VersionInfo'):
+        self.engine_app = engine_app
+        self.module = engine_app.env.module
+        self.version_info: 'VersionInfo' = version_info
+        self.module_spec = ModuleSpecs(self.module)
+
+    @property
+    def type(self) -> RuntimeType:
+        """返回当前 engine_app 的运行时的类型, buildpack 或者 custom_image"""
+        return self.module_spec.runtime_type
+
+    @property
+    def image(self) -> Optional[str]:
+        """返回当前 engine_app 启动的镜像"""
+        if self.type == RuntimeType.CUSTOM_IMAGE:
+            repo_url = self.module.get_source_obj().get_repo_url()
+            reference = self.version_info.revision
+            return f"{repo_url}:{reference}"
+        elif self.module.get_source_origin() == SourceOrigin.S_MART and self.version_info.version_type == "image":
+            from paasng.extensions.smart_app.utils import SMartImageManager
+
+            named = SMartImageManager(self.module).get_image_info(self.version_info.revision)
+            return f"{named.domain}/{named.name}:{named.tag}"
+
+        slugrunner = self.module.slugrunners.last()
+        return getattr(slugrunner, "full_image", '')
+
+    @property
+    def endpoint(self) -> List:
+        """返回当前 engine_app 镜像启动的 endpoint"""
+        if self.type == RuntimeType.CUSTOM_IMAGE:
+            return ["env"]
+        # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
+        slugrunner = self.module.slugrunners.last()
+        metadata: Dict = getattr(slugrunner, "metadata", {})
+        return metadata.get("endpoint", ['bash', '/runner/init'])
+
+
+def update_image_runtime_config(
+    engine_app: 'EngineApp',
+    version_info: 'VersionInfo',
+    image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT,
+):
+    """Update the image runtime config of the given engine app"""
+    runtime = RuntimeImageInfo(engine_app=engine_app, version_info=version_info)
+    runtime_dict = {
+        "image": runtime.image,
+        "type": runtime.type,
+        "endpoint": runtime.endpoint,
+        "image_pull_policy": image_pull_policy.value,
+    }
+
+    # Update the config property of WlApp object
+    wl_app = engine_app.to_wl_obj()
+    config = wl_app.latest_config
+    config.runtime = runtime_dict
+    config.save(update_fields=['runtime'])
+
+    # Refresh resource requirements
+    config.refresh_res_reqs()

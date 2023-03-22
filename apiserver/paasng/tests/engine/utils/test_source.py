@@ -29,16 +29,16 @@ from django_dynamic_fixture import G
 from paasng.dev_resources.sourcectl.exceptions import DoesNotExistsOnServer
 from paasng.dev_resources.sourcectl.models import SourcePackage
 from paasng.dev_resources.sourcectl.utils import generate_temp_dir, generate_temp_file
-from paasng.engine.deploy.exceptions import DeployShouldAbortError
-from paasng.engine.deploy.infra.output import ConsoleStream
-from paasng.engine.deploy.infra.source import (
+from paasng.engine.exceptions import DeployShouldAbortError
+from paasng.engine.models import Deployment
+from paasng.engine.utils.output import ConsoleStream
+from paasng.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
     get_processes,
     get_source_package_path,
 )
-from paasng.engine.models import Deployment
 from paasng.extensions.declarative.constants import CELERY_BEAT_PROCESS, CELERY_PROCESS, WEB_PROCESS
 from paasng.extensions.declarative.deployment.controller import DeploymentDescription
 from paasng.extensions.declarative.handlers import get_desc_handler
@@ -285,8 +285,8 @@ class TestDownloadSourceToDir:
 
     @pytest.fixture(autouse=True)
     def mocked_ctl(self):
-        with mock.patch('paasng.engine.deploy.infra.source.get_repo_controller'), mock.patch(
-            'paasng.engine.deploy.infra.source.PackageController'
+        with mock.patch('paasng.engine.utils.source.get_repo_controller'), mock.patch(
+            'paasng.engine.utils.source.PackageController'
         ):
             yield
 

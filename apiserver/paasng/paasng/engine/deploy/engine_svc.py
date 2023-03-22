@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 """Engine services module
 """
 import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
+from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict
 
 from django.conf import settings
 from django.utils.functional import cached_property
@@ -33,8 +33,8 @@ from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.tasks import release_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.workloads.images.models import AppImageCredential
+from paasng.engine.configurations.building import SlugbuilderInfo
 from paasng.engine.constants import JobStatus
-from paasng.engine.helpers import SlugbuilderInfo
 from paasng.engine.models.deployment import Deployment
 
 if TYPE_CHECKING:
@@ -153,16 +153,6 @@ class EngineDeployClient:
         command = self.wl_app.command_set.get(pk=command_id)
         return [{'stream': line.stream, 'line': line.line, 'created': line.created} for line in command.lines]
 
-    def update_config(self, runtime: Dict[str, Any]):
-        """Update engine-app's config"""
-        # Save runtime field
-        config = self.wl_app.latest_config
-        config.runtime = runtime  # type: ignore
-        config.save(update_fields=['runtime'])
-
-        # Refresh resource requirements
-        config.refresh_res_reqs()
-
     def create_release(
         self, build_id: str, deployment_id: Optional[str], extra_envs: Dict[str, str], procfile: Dict[str, str]
     ) -> str:
@@ -190,10 +180,6 @@ class EngineDeployClient:
             procfile=procfile,
         )
         return str(build.uuid)
-
-    def get_procfile(self, build_id: str) -> Dict:
-        """Get the procfile by build id"""
-        return Build.objects.get(pk=build_id).procfile
 
     def get_build_process(self, build_process_id: str) -> BuildProcess:
         """Get current status of build process"""

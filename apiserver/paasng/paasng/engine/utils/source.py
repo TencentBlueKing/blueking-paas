@@ -12,10 +12,10 @@ from paasng.dev_resources.sourcectl.controllers.package import PackageController
 from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetProcfileError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.repo_controller import get_repo_controller
-from paasng.engine.deploy.exceptions import DeployShouldAbortError
-from paasng.engine.deploy.infra.metadata import get_metadata_reader
-from paasng.engine.deploy.infra.output import DeployStream, Style
+from paasng.engine.configurations.source_file import get_metadata_reader
+from paasng.engine.exceptions import DeployShouldAbortError
 from paasng.engine.models import Deployment, EngineApp
+from paasng.engine.utils.output import DeployStream, Style
 from paasng.extensions.declarative.handlers import DescriptionHandler, get_desc_handler
 from paasng.extensions.declarative.models import DeploymentDescription
 from paasng.extensions.smart_app.patcher import SourceCodePatcherWithDBDriver

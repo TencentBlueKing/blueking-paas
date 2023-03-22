@@ -22,17 +22,17 @@ from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, Po
 from django.utils.translation import gettext as _
 
 from paasng.engine.configurations.config_var import get_env_variables
+from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.constants import JobStatus
+from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.engine_svc import EngineDeployClient
-from paasng.engine.deploy.infra.models_utils import update_engine_app_config
-from paasng.engine.deploy.infra.output import Style
-from paasng.engine.deploy.steps.base import DeployPoller
-from paasng.engine.deploy.steps.release import ApplicationReleaseMgr
-from paasng.engine.deploy.workflow import DeploymentCoordinator, DeploymentStateMgr, DeployStep
+from paasng.engine.deploy.release import ApplicationReleaseMgr
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.signals import pre_phase_start
+from paasng.engine.utils.output import Style
+from paasng.engine.workflow import DeploymentCoordinator, DeploymentStateMgr, DeployStep
 from paasng.platform.modules.constants import DeployHookType
 
 
@@ -52,7 +52,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
             return ApplicationReleaseMgr.from_deployment_id(self.deployment.id).start()
 
         with self.procedure(_('更新应用配置')):
-            update_engine_app_config(
+            update_image_runtime_config(
                 self.engine_app,
                 self.deployment.version_info,
                 image_pull_policy=self.deployment.advanced_options.image_pull_policy,

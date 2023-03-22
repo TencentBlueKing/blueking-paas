@@ -22,11 +22,12 @@ from django.conf import settings
 
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import ServiceSharingManager
+from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv
 from paasng.engine.models import Deployment
 from paasng.engine.models.config_var import add_prefix_to_key, get_config_vars
-from paasng.engine.networking import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.platform.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.region.app import BuiltInEnvsRegionHelper
@@ -187,8 +188,6 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, str]
 
 def generate_blobstore_env_vars(engine_app: 'EngineApp') -> Dict[str, str]:
     """Generate blobstore env vars by engine_app"""
-    from paasng.platform.modules.helpers import ModuleRuntimeManager
-
     m = ModuleRuntimeManager(engine_app.env.module)
     if not m.is_need_blobstore_env:
         return {}

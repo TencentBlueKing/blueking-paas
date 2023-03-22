@@ -58,11 +58,8 @@ from paasng.engine.configurations.config_var import (
 )
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
 from paasng.engine.deploy.engine_svc import get_all_logs
-from paasng.engine.deploy.infra.models_utils import initialize_deployment
-from paasng.engine.deploy.runner import DeployTaskRunner
-from paasng.engine.deploy.steps.release import create_release
-from paasng.engine.deploy.workflow import DeploymentCoordinator
-from paasng.engine.deploy.workflow.protections import ModuleEnvDeployInspector
+from paasng.engine.deploy.release import create_release
+from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
 from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar, add_prefix_to_key
 from paasng.engine.models.deployment import Deployment, interrupt_deployment
@@ -97,6 +94,8 @@ from paasng.engine.serializers import (
     QueryOperationsSLZ,
     ResourceMetricsSLZ,
 )
+from paasng.engine.workflow import DeploymentCoordinator
+from paasng.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import AppEnvironment, AppFeatureFlag

@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.steps.release import ApplicationReleaseMgr
+from paasng.engine.deploy.release import ApplicationReleaseMgr
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
@@ -46,7 +46,7 @@ def auto_binding_phases(bk_prod_env, bk_deployment):
 
 @pytest.fixture(autouse=True)
 def setup_mocks():
-    with mock.patch('paasng.engine.deploy.steps.release.ProcessManager'):
+    with mock.patch('paasng.engine.deploy.release.ProcessManager'):
         yield
 
 
@@ -54,18 +54,18 @@ class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""
 
     def test_failed_when_create_release(self, bk_deployment, auto_binding_phases):
-        with mock.patch('paasng.engine.deploy.infra.output.RedisChannelStream') as mocked_stream, mock.patch(
-            'paasng.engine.deploy.infra.models_utils.EngineDeployClient'
-        ) as mocked_client_p, mock.patch(
-            'paasng.engine.deploy.steps.release.EngineDeployClient'
+        with mock.patch('paasng.engine.utils.output.RedisChannelStream') as mocked_stream, mock.patch(
+            'paasng.engine.deploy.release.update_image_runtime_config'
+        ) as mocked_update_image, mock.patch(
+            'paasng.engine.deploy.release.EngineDeployClient'
         ) as mocked_client_r, mock.patch(
-            'paasng.engine.deploy.workflow.flow.EngineDeployClient'
+            'paasng.engine.workflow.flow.EngineDeployClient'
         ):
             mocked_client_r().create_release.side_effect = RuntimeError('can not create release')
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
 
-            assert mocked_client_p().update_config.called
+            assert mocked_update_image.called
             assert mocked_stream().write_title.called
 
             # Validate deployment data
@@ -74,14 +74,14 @@ class TestApplicationReleaseMgr:
             assert deployment.err_detail == 'can not create release'
 
     def test_start_normal(self, bk_deployment, auto_binding_phases):
-        with mock.patch('paasng.engine.deploy.infra.output.RedisChannelStream'), mock.patch(
-            'paasng.engine.deploy.infra.models_utils.EngineDeployClient'
-        ), mock.patch('paasng.engine.deploy.steps.release.EngineDeployClient') as mocked_client_r, mock.patch(
-            'paasng.engine.deploy.workflow.flow.EngineDeployClient'
+        with mock.patch('paasng.engine.utils.output.RedisChannelStream'), mock.patch(
+            'paasng.engine.deploy.release.EngineDeployClient'
+        ) as mocked_client_r, mock.patch('paasng.engine.deploy.release.update_image_runtime_config'), mock.patch(
+            'paasng.engine.workflow.flow.EngineDeployClient'
         ), mock.patch(
-            'paasng.engine.networking.ingress.AppDefaultDomains.sync'
+            'paasng.engine.configurations.ingress.AppDefaultDomains.sync'
         ), mock.patch(
-            'paasng.engine.networking.ingress.AppDefaultSubpaths.sync'
+            'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
         ):
             faked_release_id = uuid.uuid4().hex
             mocked_client_r().create_release.return_value = faked_release_id

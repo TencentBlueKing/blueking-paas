@@ -27,6 +27,7 @@ from attrs import asdict, define
 
 from paas_wl.networking.ingress.addrs import EnvAddresses
 from paas_wl.workloads.processes.controllers import env_is_running
+from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
@@ -303,7 +304,6 @@ def refresh_module_domains(module: Module):
     """Refresh a module's domains, you should call the function when module's exposed_url_type
     has been changed or application's default module was updated.
     """
-    from paasng.engine.networking import AppDefaultDomains
 
     for env in module.envs.all():
         if not env.is_running():
@@ -315,8 +315,6 @@ def refresh_module_subpaths(module: Module) -> None:
     """Refresh a module's subpaths, you should call the function when module's exposed_url_type
     has been changed or application's default module was updated.
     """
-    from paasng.engine.networking import AppDefaultSubpaths
-
     for env in module.envs.all():
         if not env.is_running():
             continue

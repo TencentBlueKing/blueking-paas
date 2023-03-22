@@ -28,7 +28,7 @@ from paasng.engine.constants import JobStatus
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
 if TYPE_CHECKING:
-    from paasng.engine.deploy.infra.output import DeployStream
+    from paasng.engine.utils.output import DeployStream
 
 logger = logging.getLogger(__name__)
 

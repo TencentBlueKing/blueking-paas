@@ -33,9 +33,14 @@ from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.constants import BuildStatus, JobStatus
+from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.engine_svc import EngineDeployClient
-from paasng.engine.deploy.infra.output import Style
-from paasng.engine.deploy.infra.source import (
+from paasng.engine.deploy.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.models import Deployment
+from paasng.engine.models.phases import DeployPhaseTypes
+from paasng.engine.signals import post_phase_end, pre_appenv_build, pre_phase_start
+from paasng.engine.utils.output import Style
+from paasng.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
@@ -43,9 +48,7 @@ from paasng.engine.deploy.infra.source import (
     get_source_package_path,
     tag_module_from_source_files,
 )
-from paasng.engine.deploy.steps.base import DeployPoller
-from paasng.engine.deploy.steps.pre_release import ApplicationPreReleaseExecutor
-from paasng.engine.deploy.workflow import (
+from paasng.engine.workflow import (
     DeploymentCoordinator,
     DeploymentStateMgr,
     DeployProcedure,
@@ -53,9 +56,6 @@ from paasng.engine.deploy.workflow import (
     MessageParser,
     MessageStepMatcher,
 )
-from paasng.engine.models import Deployment
-from paasng.engine.models.phases import DeployPhaseTypes
-from paasng.engine.signals import post_phase_end, pre_appenv_build, pre_phase_start
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.constants import AppFeatureFlag

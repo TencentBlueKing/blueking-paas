@@ -16,21 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Utilities related with models
-"""
 import logging
 from copy import deepcopy
 from typing import Dict, Optional
 
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.engine.constants import ImagePullPolicy, OperationTypes
-from paasng.engine.deploy.engine_svc import EngineDeployClient
-from paasng.engine.deploy.infra.source import get_source_dir
-from paasng.engine.helpers import RuntimeInfo
-from paasng.engine.models import Deployment, EngineApp
+from paasng.engine.constants import OperationTypes, RuntimeType
+from paasng.engine.deploy.building import start_build, start_build_error_callback
+from paasng.engine.deploy.image_release import deploy_image
+from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.operations import ModuleEnvironmentOperations
+from paasng.engine.signals import pre_appenv_deploy
+from paasng.engine.utils.source import get_source_dir
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.specs import ModuleSpecs
 
 logger = logging.getLogger(__name__)
 
@@ -75,28 +76,33 @@ def initialize_deployment(
     return deployment
 
 
-def update_engine_app_config(
-    engine_app: EngineApp,
-    version_info: VersionInfo,
-    image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT,
-):
-    """Update engine app's configs by calling remote service"""
-    runtime = RuntimeInfo(engine_app=engine_app, version_info=version_info)
-    client = EngineDeployClient(engine_app)
-    return client.update_config(
-        runtime={
-            "image": runtime.image,
-            "type": runtime.type,
-            "endpoint": runtime.endpoint,
-            "image_pull_policy": image_pull_policy.value,
-        },
-    )
+class DeployTaskRunner:
+    """Start a deploy task.
 
+    :param deployment: An initialized deployment object.
+    """
 
-# TODO: Remove this function
-def get_processes_by_build(engine_app: EngineApp, build_id: str) -> Dict[str, str]:
-    engine_client = EngineDeployClient(engine_app)
-    processes = engine_client.get_procfile(build_id)
-    if not processes:
-        raise RuntimeError("can't find processes in engine")
-    return processes
+    def __init__(self, deployment: Deployment):
+        self.deployment = deployment
+        self.module = deployment.app_environment.module
+
+    def start(self):
+        pre_appenv_deploy.send(self.deployment.app_environment, deployment=self.deployment)
+
+        deployment_id = self.deployment.id
+        logger.debug('Starting new deployment: %s for Module: %s...', deployment_id, self.module)
+        if self.require_build():
+            start_build.apply_async(args=(deployment_id,), link_error=start_build_error_callback.s())
+        else:
+            # TODO: deploy_image 修改成更符合 not require_build 的名称
+            deploy_image.apply_async(args=(deployment_id,))
+
+    def require_build(self) -> bool:
+        if ModuleSpecs(self.module).runtime_type == RuntimeType.CUSTOM_IMAGE:
+            return False
+        elif (
+            self.module.get_source_origin() == SourceOrigin.S_MART
+            and self.deployment.version_info.version_type == "image"
+        ):
+            return False
+        return True

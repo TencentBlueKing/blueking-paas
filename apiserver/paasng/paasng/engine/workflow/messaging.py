@@ -4,8 +4,8 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Optional
 
-from paasng.engine.deploy.infra.output import RedisChannelStream
 from paasng.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
+from paasng.engine.utils.output import RedisChannelStream
 
 if TYPE_CHECKING:
     from paasng.engine.models.phases import DeployPhase

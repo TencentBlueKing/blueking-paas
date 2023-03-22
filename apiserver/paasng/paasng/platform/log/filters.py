@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 from collections import defaultdict
 from operator import attrgetter
@@ -27,6 +28,7 @@ from rest_framework.fields import get_attribute
 
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.models import ElasticSearchParams
+from paasng.platform.modules.models import Module
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.text import calculate_percentage
 
@@ -77,25 +79,9 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
     return sorted(result, key=attrgetter("total", "key"), reverse=True)
 
 
-class ElasticSearchFilter:
-    def __init__(self, env: ModuleEnvironment, search_params: ElasticSearchParams):
-        self.env = env
-        self.module = env.module
-        self.application = env.application
+class ESFilter:
+    def __init__(self, search_params: ElasticSearchParams):
         self.search_params = search_params
-
-    def filter_by_env(self, search: SmartSearch) -> SmartSearch:
-        """为搜索增加插件相关过滤条件"""
-        context = {
-            "app_code": self.application.code,
-            "module_name": self.module.name,
-            "region": self.application.region,
-            "engine_app_name": self.env.get_engine_app().name.replace("_", "0us0"),
-        }
-        fields = self.search_params.termTemplate.copy()
-        for k, v in fields.items():
-            fields[k] = jinja2.Template(v).render(**context)
-        return search.filter("term", **fields)
 
     def filter_by_builtin_filters(self, search: SmartSearch) -> SmartSearch:
         """根据 params 配置的 builtinFilters 添加过滤条件"""
@@ -117,4 +103,54 @@ class ElasticSearchFilter:
                 search = search.exclude("term", **{key: value})
             else:
                 search = search.exclude("terms", **{key: value})
+        return search
+
+
+tmpl_converters = {"@json": lambda v: json.loads(v), "@jinja": lambda v, context: jinja2.Template(v).render(**context)}
+
+
+class EnvFilter(ESFilter):
+    def __init__(self, env: ModuleEnvironment, search_params: ElasticSearchParams):
+        super().__init__(search_params=search_params)
+        self.env = env
+        self.module = env.module
+        self.application = env.application
+
+    def filter_by_env(self, search: SmartSearch) -> SmartSearch:
+        """为搜索增加环境相关过滤条件"""
+        context = {
+            "app_code": self.application.code,
+            "module_name": self.module.name,
+            "region": self.application.region,
+            "engine_app_name": self.env.get_engine_app().name.replace("_", "0us0"),
+            "engine_app_names": [self.env.get_engine_app().name.replace("_", "0us0")],
+        }
+        fields = self.search_params.termTemplate.copy()
+        for k, v in fields.items():
+            fields[k] = jinja2.Template(v).render(**context)
+        return search.filter("term", **fields)
+
+
+class ModuleFilter(ESFilter):
+    def __init__(self, module: Module, search_params: ElasticSearchParams):
+        super().__init__(search_params=search_params)
+        self.module = module
+        self.application = module.application
+
+    def filter_by_module(self, search: SmartSearch) -> SmartSearch:
+        """为搜索增加模块相关过滤条件"""
+        context = {
+            "app_code": self.application.code,
+            "module_name": self.module.name,
+            "region": self.application.region,
+            "engine_app_names": [env.get_engine_app().name.replace("_", "0us0") for env in self.module.get_envs()],
+        }
+        term_fields = self.search_params.termTemplate.copy()
+        for k, v in term_fields.items():
+            term_fields[k] = jinja2.Template(v).render(**context)
+
+        if "engine_app_name" in term_fields:
+            search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
+        if term_fields:
+            search = search.filter("term", **term_fields)
         return search

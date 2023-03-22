@@ -16,31 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List
-
-from elasticsearch_dsl.response import Hit
-
-from paasng.pluginscenter.definitions import ElasticSearchParams
-from paasng.utils.es_log.misc import flatten_structure, format_timestamp
+from django.apps import AppConfig
 
 
-def clean_logs(
-    logs: List[Hit],
-    search_params: ElasticSearchParams,
-) -> List[Dict]:
-    """从 ES 日志中提取 PaaS 的字段"""
-    cleaned = []
-    for log in logs:
-        raw = flatten_structure(log.to_dict(), None)
-        if hasattr(log.meta, "highlight") and log.meta.highlight:
-            for k, v in log.meta.highlight.to_dict().items():
-                raw[k] = "".join(v)
-
-        cleaned.append(
-            {
-                "timestamp": format_timestamp(raw[search_params.timeField], search_params.timeFormat),
-                "message": raw[search_params.messageField],
-                "raw": raw,
-            }
-        )
-    return cleaned
+class LogAppConfig(AppConfig):
+    name = 'paasng.platform.log'

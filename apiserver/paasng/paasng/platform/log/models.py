@@ -120,7 +120,7 @@ class ProcessLogQueryConfigManager(models.Manager):
                 raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
         return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
-    def get_by_process_type(self, process_type: str, env: Optional[ModuleEnvironment] = None):
+    def get_by_process_type(self, process_type: Optional[str], env: Optional[ModuleEnvironment] = None):
         # 兼容关联查询(RelatedManager)的接口
         if env is None:
             if hasattr(self, "instance"):

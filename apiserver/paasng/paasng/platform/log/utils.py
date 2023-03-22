@@ -132,6 +132,10 @@ def clean_logs(
     for log in logs:
         raw = flatten_structure(log.to_dict(), None)
         raw = _log_adaptor(raw)
+        if hasattr(log.meta, "highlight") and log.meta.highlight:
+            for k, v in log.meta.highlight.to_dict().items():
+                raw[k] = "".join(v)
+
         cleaned.append(
             {
                 "timestamp": format_timestamp(

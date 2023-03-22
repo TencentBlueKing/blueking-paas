@@ -18,38 +18,22 @@ to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
-from paasng.utils.basic import ChoicesEnum
-
 # 如果日志配置是所有进程通用的, process_type 填充为 "-"
 DEFAULT_LOG_CONFIG_PLACEHOLDER = "-"
 
 
-class LogTimeType(ChoicesEnum):
-    """
-    日志搜索-日期范围类型
-    """
+class LogTimeChoices(str, StructuredEnum):
+    """日志搜索-日期范围可选值"""
 
-    TYPE_5m = "5m"
-    TYPE_1h = "1h"
-    TYPE_3h = "3h"
-    TYPE_6h = "6h"
-    TYPE_12h = "12h"
-    TYPE_1d = "1d"
-    TYPE_3d = "3d"
-    TYPE_7d = "7d"
-    TYPE_CUSTOMIZED = "customized"
-
-    _choices_labels = (
-        (TYPE_5m, "5分钟"),
-        (TYPE_1h, "1小时"),
-        (TYPE_3h, "3小时"),
-        (TYPE_6h, "6小时"),
-        (TYPE_12h, "12小时"),
-        (TYPE_1d, "1天"),
-        (TYPE_3d, "3天"),
-        (TYPE_7d, "7天"),
-        (TYPE_CUSTOMIZED, "自定义"),
-    )
+    FIVE_MINUTES = EnumField("5m", label="5分钟")
+    ONE_HOUR = EnumField("1h", label="1小时")
+    THREE_HOURS = EnumField("3h", label="3小时")
+    SIX_HOURS = EnumField("6h", label="6小时")
+    TWELVE_HOURS = EnumField("12h", label="12小时")
+    ONE_DAY = EnumField("1d", label="1天")
+    THREE_DAYS = EnumField("3d", label="3天")
+    SEVEN_DAYS = EnumField("7d", label="7天")
+    CUSTOMIZED = EnumField("customized", label="自定义")
 
 
 class LogType(str, StructuredEnum):

@@ -36,6 +36,7 @@ from paasng.utils.es_log.search import SmartSearch
 class LogClientProtocol(Protocol):
     """LogClient protocol, all log search backend should abide this protocol"""
 
+    # TODO: 支持文本高亮
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with search"""
 

@@ -21,6 +21,8 @@
 */
 import http from '@/api';
 import bartOptions from '@/json/bar_chart_default';
+import moment from 'moment';
+
 // store
 const state = {
   chartData: bartOptions,
@@ -47,10 +49,12 @@ const mutations = {
       type: 'bar',
       data: data.series
     }];
-    const timeline = data.timeline.map(item => {
+    const timestamps = data.timestamps.map(item => {
+      // 时间处理
+      item = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
       return item.substring(5);
     });
-    chartOptions.xAxis.data = timeline;
+    chartOptions.xAxis.data = timestamps;
     chartOptions.tooltip = {
       trigger: 'item',
       showDelay: 0,
@@ -132,17 +136,19 @@ function queryStringify (params) {
 const actions = {
   getChartData ({ commit, state }, { appCode, moduleId, params, filter }) {
     const queryString = queryStringify(params);
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/timechart/?${queryString}`;
+    const logType = params['log_type'] === 'STRUCTURED' ? 'structured' : 'ingress';
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/date_histogram/?${queryString}`;
 
     return http.post(url, filter).then(res => {
-      commit('updateChartData', res.data);
+      commit('updateChartData', res);
       return res;
     });
   },
 
   getFilterData ({ commit, state }, { appCode, moduleId, params }) {
     const queryString = queryStringify(params);
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/filters/?${queryString}`;
+    const logType = params['log_type'] === 'STRUCTURED' ? 'structured' : 'ingress';
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/fields_filters/?${queryString}`;
     return http.get(url);
   },
 
@@ -150,7 +156,7 @@ const actions = {
     const queryString = queryStringify(params);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/structured/list/?page=${page}&page_size=${pageSize}&${queryString}`;
     return http.post(url, filter).then(res => {
-      commit('updateLogList', res.data.logs);
+      commit('updateLogList', res.logs);
       return res;
     });
   },
@@ -159,14 +165,14 @@ const actions = {
     const queryString = queryStringify(params);
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/ingress/list/?page=${page}&page_size=${pageSize}&${queryString}`;
     return http.post(url, filter).then(res => {
-      commit('updateAccessLogList', res.data.logs);
+      commit('updateAccessLogList', res.logs);
       return res;
     });
   },
 
   getStreamLogList ({ commit, state }, { appCode, moduleId, params, scrollId, filter }) {
     const queryString = queryStringify(params);
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/standard_output/list/?${queryString}`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/stdout/list/?${queryString}`;
     return http.post(url, filter);
   }
 };

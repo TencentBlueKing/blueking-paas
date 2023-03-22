@@ -23,6 +23,7 @@ from typing import ClassVar, List, Optional, Type
 import cattr
 from django.conf import settings
 from django.utils.translation import gettext as _
+from drf_yasg.utils import swagger_auto_schema
 from elasticsearch.exceptions import RequestError
 from elasticsearch.helpers import ScanError
 from pydantic import ValidationError
@@ -41,7 +42,7 @@ from paasng.platform.log import serializers
 from paasng.platform.log.client import instantiate_log_client
 from paasng.platform.log.constants import LogType
 from paasng.platform.log.dsl import SimpleDomainSpecialLanguage
-from paasng.platform.log.filters import ElasticSearchFilter
+from paasng.platform.log.filters import EnvFilter, ModuleFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.platform.log.utils import clean_logs, parse_simple_dsl_to_dsl
@@ -64,19 +65,17 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         # LOG_SEARCH_COUNTER.labels(
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
-        env = self.get_env_via_path()
-        log_config = self._get_log_query_config(env, process_type=self.request.query_params.get("process_type"))
+        log_config = self._get_log_query_config(process_type=self.request.query_params.get("process_type"))
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
     def make_search(self, mappings: dict):
         """构造日志查询语句"""
-        env = self.get_env_via_path()
         params = self.request.query_params
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
-        query_config = self._get_log_query_config(env, process_type=params.get("process_type"))
-        search = self._make_base_search(env, search_params=query_config.search_params, time_range=smart_time_range)
+        query_config = self._get_log_query_config(process_type=params.get("process_type"))
+        search = self._make_base_search(search_params=query_config.search_params, time_range=smart_time_range)
 
         if self.request.data:
             try:
@@ -90,31 +89,33 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
 
     def _make_base_search(
         self,
-        env: ModuleEnvironment,
         search_params: ElasticSearchParams,
         time_range: SmartTimeRange,
         limit: int = 200,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
-        plugin_filter = ElasticSearchFilter(env=env, search_params=search_params)
+        env = self.get_env_via_path()
+        es_filter = EnvFilter(env=env, search_params=search_params)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
-        search = plugin_filter.filter_by_env(search)
-        search = plugin_filter.filter_by_builtin_filters(search)
-        search = plugin_filter.filter_by_builtin_excludes(search)
+        search = es_filter.filter_by_env(search)
+        search = es_filter.filter_by_builtin_filters(search)
+        search = es_filter.filter_by_builtin_excludes(search)
         return search.limit_offset(limit=limit, offset=offset)
 
-    def _get_log_query_config(self, env: ModuleEnvironment, process_type: Optional[str] = None):
+    def _get_log_query_config(self, process_type: Optional[str] = None):
         """获取日志查询配置"""
+        env = self.get_env_via_path()
         log_type = self.log_type
         if log_type == LogType.INGRESS:
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
         elif log_type == LogType.STANDARD_OUTPUT:
             log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
         else:
-            if process_type is None:
+            try:
+                log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
+            except ProcessLogQueryConfig.DoesNotExist:
                 raise ValueError("structured log must provide `process_type` field")
-            log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
         return log_config
 
 
@@ -122,7 +123,11 @@ class LogAPIView(LogBaseAPIView):
     line_model: ClassVar[Type]
     logs_serializer_class: ClassVar[Type[Serializer]]
 
-    def query_logs(self, request, code, module_name):
+    @swagger_auto_schema(
+        query_serializer=serializers.LogQueryParamsSLZ,
+        # request_body=serializers.LogQueryBodySLZ,
+    )
+    def query_logs(self, request, code, module_name, environment):
         """查询日志"""
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
@@ -133,7 +138,10 @@ class LogAPIView(LogBaseAPIView):
 
         try:
             response, total = log_client.execute_search(
-                index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+                index=log_config.search_params.indexPattern,
+                search=search,
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+                highlight_fields=[log_config.search_params.messageField],
             )
         except RequestError:
             raise error_codes.QUERY_REQUEST_ERROR
@@ -151,7 +159,7 @@ class LogAPIView(LogBaseAPIView):
         )
         return Response(data=self.logs_serializer_class(logs).data)
 
-    def aggregate_date_histogram(self, request, code, module_name):
+    def aggregate_date_histogram(self, request, code, module_name, environment):
         """统计日志的日志数-事件直方图"""
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
@@ -172,7 +180,7 @@ class LogAPIView(LogBaseAPIView):
         )
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
-    def aggregate_fields_filters(self, request, code, module_name):
+    def aggregate_fields_filters(self, request, code, module_name, environment):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
@@ -193,7 +201,7 @@ class StdoutLogAPIView(LogAPIView):
     log_type = LogType.STANDARD_OUTPUT
     logs_serializer_class = serializers.StandardOutputLogsSLZ
 
-    def query_logs_scroll(self, request, code, module_name):
+    def query_logs_scroll(self, request, code, module_name, environment):
         """查询标准输出日志"""
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(mappings={})
@@ -237,9 +245,74 @@ class IngressLogAPIView(LogAPIView):
     logs_serializer_class = serializers.IngressLogSLZ
 
 
+class LegacyLogAPIView(LogAPIView):
+    def query_logs(self, request, code, module_name, environment=None):
+        return super().query_logs(request, code, module_name, environment)
+
+    def aggregate_date_histogram(self, request, code, module_name, environment=None):
+        return super().aggregate_date_histogram(request, code, module_name, environment)
+
+    def aggregate_fields_filters(self, request, code, module_name, environment=None):
+        return super().aggregate_fields_filters(request, code, module_name, environment)
+
+    def _get_log_query_config_by_env(self, env: ModuleEnvironment, process_type: Optional[str] = None):
+        log_type = self.log_type
+        if log_type == LogType.INGRESS:
+            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
+        elif log_type == LogType.STANDARD_OUTPUT:
+            log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).stdout
+        else:
+            try:
+                log_config = ProcessLogQueryConfig.objects.get_by_process_type(process_type=process_type, env=env).json
+            except ProcessLogQueryConfig.DoesNotExist:
+                raise ValueError("structured log must provide `process_type` field")
+        return log_config
+
+    def _get_log_query_config(self, process_type: Optional[str] = None):
+        module = self.get_module_via_path()
+        stag = module.get_envs("stag")
+        prod = module.get_envs("prod")
+        stag_config = self._get_log_query_config_by_env(stag, process_type=process_type)
+        prod_config = self._get_log_query_config_by_env(prod, process_type=process_type)
+        if stag_config != prod_config:
+            raise ValueError("`env` field must be specified for this module")
+        return prod_config
+
+    def _make_base_search(
+        self, search_params: ElasticSearchParams, time_range: SmartTimeRange, limit: int = 200, offset: int = 0
+    ) -> SmartSearch:
+        module = self.get_module_via_path()
+
+        es_filter = ModuleFilter(module=module, search_params=search_params)
+        search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
+        search = es_filter.filter_by_module(search)
+        search = es_filter.filter_by_builtin_filters(search)
+        search = es_filter.filter_by_builtin_excludes(search)
+        return search.limit_offset(limit=limit, offset=offset)
+
+
+class LegacyStdoutLogAPIView(LegacyLogAPIView):
+    # TODO: 支持根据 scroll id 查询
+    line_model = StandardOutputLogLine
+    log_type = LogType.STANDARD_OUTPUT
+    logs_serializer_class = serializers.StandardOutputLogsSLZ
+
+
+class LegacyStructuredLogAPIView(LegacyLogAPIView):
+    line_model = StructureLogLine
+    log_type = LogType.STRUCTURED
+    logs_serializer_class = serializers.StructureLogsSLZ
+
+
+class LegacyIngressLogAPIView(LegacyLogAPIView):
+    line_model = IngressLogLine
+    log_type = LogType.INGRESS
+    logs_serializer_class = serializers.IngressLogSLZ
+
+
 class SysStructuredLogAPIView(StructuredLogAPIView):
     permission_classes: List = []
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def query_logs(self, request, code, module_name):
+    def query_logs(self, request, code, module_name, environment):
         return super().query_logs(request, code, module_name)

@@ -34,11 +34,15 @@ from paasng.pluginscenter.definitions import PluginBackendAPIResource
 from paasng.pluginscenter.thirdparty.utils import make_client
 from paasng.utils.es_log.search import SmartSearch
 
+_default_highlight: Tuple[str] = ()  # type: ignore
+
 
 class LogClientProtocol(Protocol):
     """LogClient protocol, all log search backend should abide this protocol"""
 
-    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
+    def execute_search(
+        self, index: str, search: SmartSearch, timeout: int, highlight_fields: Tuple[str] = _default_highlight
+    ) -> Tuple[Response, int]:
         """search log from index with search"""
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
@@ -61,7 +65,9 @@ class BKLogClient:
             PluginBackendAPIResource(apiName="log-search", path="esquery_dsl/", method="POST"), bk_username=bk_username
         )
 
-    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
+    def execute_search(
+        self, index: str, search: SmartSearch, timeout: int, highlight_fields: Tuple[str] = _default_highlight
+    ) -> Tuple[Response, int]:
         """search log from index with body and params, implement with bk-log"""
         data = {
             "indices": index,
@@ -121,8 +127,11 @@ class ESLogClient:
         self.host = host
         self._client = Elasticsearch(hosts=[host.dict()])
 
-    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
+    def execute_search(
+        self, index: str, search: SmartSearch, timeout: int, highlight_fields: Tuple[str] = _default_highlight
+    ) -> Tuple[Response, int]:
         """search log from index with body and params, implement with es client"""
+        search = search.highlight(*highlight_fields)
         response = Response(
             search.search,
             self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),

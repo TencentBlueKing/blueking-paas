@@ -27,7 +27,7 @@ from django.conf import settings
 from paasng.extensions.bk_plugins.models import BkPlugin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.client import instantiate_log_client
-from paasng.platform.log.filters import ElasticSearchFilter
+from paasng.platform.log.filters import EnvFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.utils import clean_logs
 from paasng.utils.es_log.models import Logs
@@ -124,7 +124,7 @@ class PluginLoggingClient:
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
-        plugin_filter = ElasticSearchFilter(env=env, search_params=search_params)
+        plugin_filter = EnvFilter(env=env, search_params=search_params)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
         search = plugin_filter.filter_by_env(search)
         search = plugin_filter.filter_by_builtin_filters(search)

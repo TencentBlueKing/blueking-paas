@@ -16,10 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
-from .constants import LogTimeType, LogType
+from paasng.utils.es_log.time_range import SmartTimeRange
+
+from .constants import LogTimeChoices
 
 
 class StandardOutputLogLineSLZ(serializers.Serializer):
@@ -68,6 +70,7 @@ class IngressLogLineSLZ(serializers.Serializer):
 
     timestamp = serializers.IntegerField(help_text="时间戳")
     message = serializers.CharField(help_text="日志内容")
+
     method = serializers.CharField(help_text="请求方法", default=None)
     path = serializers.CharField(help_text="请求路径", default=None)
     status_code = serializers.IntegerField(help_text="状态码", default=None)
@@ -103,34 +106,38 @@ class LogFieldFilterSLZ(serializers.Serializer):
     total = serializers.IntegerField(help_text="该字段在日志(top200)出现的频次")
 
 
-class AppLogQuerySLZ(serializers.Serializer):
-    time_range = serializers.ChoiceField(choices=LogTimeType.get_choices(), required=True)
-    start_time = serializers.CharField(required=False)
-    end_time = serializers.CharField(required=False)
-    log_type = serializers.ChoiceField(required=False, default=LogType.STRUCTURED.value, choices=LogType.get_choices())
+class LogQueryParamsSLZ(serializers.Serializer):
+    """查询日志的 query 参数"""
+
+    time_range = serializers.ChoiceField(choices=LogTimeChoices.get_choices(), required=True)
+    start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
+    offset = serializers.IntegerField(default=0, help_text="偏移量=页码*每页数量")
+    limit = serializers.IntegerField(default=100, help_text="每页数量")
+    scroll_id = serializers.CharField(required=False)
 
     def validate(self, attrs):
-        if attrs['time_range'] != "customized":
-            return attrs
-
-        if not all(key in attrs for key in ['start_time', 'end_time']):
-            raise serializers.ValidationError(_("自定义 time_range 时需要传入 start_time & end_time"))
-
+        try:
+            time_range = SmartTimeRange(
+                time_range=attrs["time_range"],
+                start_time=attrs.get("start_time"),
+                end_time=attrs.get("end_time"),
+            )
+        except ValueError as e:
+            raise ValidationError({"time_range": str(e)})
+        attrs["smart_time_range"] = time_range
         return attrs
 
 
-class AppLogListQuerySLZ(AppLogQuerySLZ):
-    # only for list
-    page = serializers.IntegerField(min_value=1, required=True)
-    page_size = serializers.IntegerField(min_value=1, required=True)
+class LogQueryDSLSLZ(serializers.Serializer):
+    """查询日志的 DSL 参数"""
+
+    query_string = serializers.CharField(help_text="查询语句", default="", allow_blank=True)
+    terms = serializers.DictField(help_text="多值精准匹配", default=dict)
+    exclude = serializers.DictField(help_text="terms 取反", default=dict)
 
 
-class AppIngressListQuerySLZ(AppLogQuerySLZ):
-    # only for list
-    page = serializers.IntegerField(min_value=1, required=True)
-    page_size = serializers.IntegerField(min_value=1, required=True)
-    log_type = serializers.ChoiceField(required=False, default=LogType.INGRESS.value, choices=LogType.get_choices())
+class LogQueryBodySLZ(serializers.Serializer):
+    """查询日志的 body 参数"""
 
-
-class ESScrollSLZ(AppLogQuerySLZ):
-    scroll_id = serializers.CharField(required=False, default=None)
+    query = LogQueryDSLSLZ()

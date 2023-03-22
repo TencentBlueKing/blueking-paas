@@ -47,18 +47,20 @@ def setup_elk_model():
     stdout_search_params = ElasticSearchParams(
         indexPattern=settings.ES_K8S_LOG_INDEX_PATTERNS.replace("(?P<date>.+)", "*"),
         timeField="@timestamp",
-        timeFormat="timestamp[s]",
+        timeFormat="datetime",
         messageField="json.message",
-        termTemplate={"app_code.keyword": "{{ app_code }}"},
+        termTemplate={"app_code": "{{ app_code }}"},
         # 结构化日志与标准输出日志共用 index, 通过 stream.keyword 来区分日志类型
-        builtinFilters={"stream.keyword": ["stderr", "stdout"]},
+        builtinFilters={"stream": ["stderr", "stdout"]},
         builtinExcludes={},
     )
     ElasticSearchConfig.objects.update_or_create(
         collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID,
         backend_type="es",
-        elastic_search_host=host,
-        search_params=stdout_search_params,
+        defaults={
+            "elastic_search_host": host,
+            "search_params": stdout_search_params,
+        },
     )
     # 结构化日志
 
@@ -68,37 +70,40 @@ def setup_elk_model():
     structured_search_params = ElasticSearchParams(
         indexPattern=settings.ES_K8S_LOG_INDEX_PATTERNS.replace("(?P<date>.+)", "*"),
         timeField="@timestamp",
-        timeFormat="timestamp[s]",
+        timeFormat="datetime",
         messageField="json.message",
-        termTemplate={"app_code.keyword": "{{ app_code }}"},
+        termTemplate={"app_code": "{{ app_code }}"},
         builtinFilters={},
         # 结构化日志与标准输出日志共用 index, 通过 stream.keyword 来区分日志类型
-        builtinExcludes={"stream.keyword": ["stderr", "stdout"]},
+        builtinExcludes={"stream": ["stderr", "stdout"]},
     )
     ElasticSearchConfig.objects.update_or_create(
         collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID,
         backend_type="es",
-        elastic_search_host=host,
-        search_params=structured_search_params,
+        defaults={
+            "elastic_search_host": host,
+            "search_params": structured_search_params,
+        },
     )
     # Ingress 日志
-    # TODO: 确认规则
     ingress_search_params = ElasticSearchParams(
-        indexPattern=settings.ES_K8S_LOG_INDEX_PATTERNS.replace("(?P<date>.+)", "*"),
+        indexPattern=settings.ES_K8S_LOG_INDEX_NGINX_PATTERNS.replace("(?P<date>.+)", "*"),
         timeField="@timestamp",
-        timeFormat="timestamp[s]",
+        timeFormat="datetime",
         messageField="json.message",
         # ingress 日志是从 serviceName 解析的 engine_app_name，下划线已经转换成 0us0
         # 因此查日志时需要将下划线转换成 0us0 才能搜索到
-        termTemplate={"engine_app_name.keyword": "{{ engine_app_name | replace('_', '0us0') }}"},
-        builtinFilters={"stream.keyword": ["stdout"]},
+        termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"},
+        builtinFilters={"stream": ["stdout"]},
         builtinExcludes={},
     )
     ElasticSearchConfig.objects.update_or_create(
         collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID,
         backend_type="es",
-        elastic_search_host=host,
-        search_params=ingress_search_params,
+        defaults={
+            "elastic_search_host": host,
+            "search_params": ingress_search_params,
+        },
     )
 
 
@@ -124,7 +129,7 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     # 1. python 语言的程序使用独特的采集项, 以 json.asctime 作为时间字段
     # 2. 其他语言共用另一份采集项配置
     # 3. 所有应用的标准输出共用一份采集项配置
-    # 4. 所有应用的访问入职共用一份采集项配置
+    # 4. 所有应用的访问日志共用一份采集项配置
 
 
 def setup_env_log_model(env: ModuleEnvironment):

@@ -980,8 +980,8 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # --------------
 # 应用日志相关配置
 # --------------
-
-LOG_COLLECTOR_TYPE = "ELK"
+# 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
+LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get('ELASTICSEARCH_HOSTS', [{'host': 'localhost', 'port': "9200"}])

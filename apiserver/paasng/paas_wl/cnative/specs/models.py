@@ -42,7 +42,6 @@ from .constants import (
     BKAPP_REGION_ANNO_KEY,
     BKPAAS_ADDONS_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
-    BKPAAS_RESERVED_ANNO_PREFIX,
     DEFAULT_PROCESS_NAME,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -224,11 +223,6 @@ class AppModelDeploy(TimestampedModel):
         wl_app: WlApp,
         credential_refs: List[ImageCredentialRef],
     ) -> None:
-        # 检查 annotations 中的各个值，如果占用 paas 保留的前缀，则 pop 掉
-        for key in manifest.metadata.annotations:
-            if key.startswith(BKPAAS_RESERVED_ANNO_PREFIX):
-                manifest.metadata.annotations.pop(key)
-
         # inject bkapp deploy info
         manifest.metadata.annotations[BKPAAS_DEPLOY_ID_ANNO_KEY] = str(self.pk)
 

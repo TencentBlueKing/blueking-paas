@@ -20,14 +20,21 @@ import logging
 
 import pytest
 
+from paas_wl.cnative.specs.constants import DeployStatus
 from paasng.engine.constants import JobStatus
 from paasng.platform.operations.constant import OperationType
-from paasng.platform.operations.models import AppDeploymentOperationObj, ApplicationLatestOp, Operation
+from paasng.platform.operations.models import (
+    AppDeploymentOperationObj,
+    ApplicationLatestOp,
+    CNativeAppDeployOperationObj,
+    Operation,
+)
 from tests.engine.setup_utils import create_fake_deployment
+from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
 logger = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestAppLatestOp:
@@ -89,10 +96,25 @@ class TestAppDeploymentOperationObj:
             (JobStatus.INTERRUPTED, '中断了生产环境的部署过程'),
         ],
     )
-    def test_failed_deployment(self, status, expected_text, bk_module):
+    def test_deployment(self, status, expected_text, bk_module):
         deployment = create_fake_deployment(bk_module)
         deployment.status = status
         deployment.save(update_fields=['status'])
 
-        operation = AppDeploymentOperationObj.create_operation_from_deployment(deployment)
+        operation = AppDeploymentOperationObj.create_from_deployment(deployment)
+        assert operation.get_operate_display() == expected_text
+
+
+class TestCNativeAppDeployOperationObj:
+    @pytest.mark.parametrize(
+        'status,expected_text',
+        [
+            (DeployStatus.READY, '成功部署预发布环境'),
+            (DeployStatus.ERROR, '尝试部署预发布环境失败'),
+            (DeployStatus.PENDING, '尝试部署预发布环境失败'),
+        ],
+    )
+    def test_failed_deployment(self, bk_stag_env, bk_user, status, expected_text):
+        deploy = create_cnative_deploy(bk_stag_env, bk_user, status)
+        operation = CNativeAppDeployOperationObj.create_from_deploy(deploy)
         assert operation.get_operate_display() == expected_text

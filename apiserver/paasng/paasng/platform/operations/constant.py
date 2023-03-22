@@ -36,6 +36,7 @@ class OperationType(ChoicesEnum):
     DEPLOY_APPLICATION = 14
     CREATE_MODULE = 15
     DELETE_MODULE = 16
+    DEPLOY_CNATIVE_APP = 17
 
     OFFLINE_MARKET = 10
     RELEASE_TO_MARKET = 17
@@ -44,8 +45,7 @@ class OperationType(ChoicesEnum):
     APPLY_PERM_FOR_CLOUD_API = 21
     RENEW_PERM_FOR_CLOUD_API = 22
 
-    # Deprecated values
-    # 以下事件类型已弃用，目前没有任何动作会产生这类事件
+    # Deprecated 以下事件类型已弃用，目前没有任何动作会产生这类事件
     DEPLOY_STAGE = 2
     DEPLOY_PRODUCT = 3
     OFFLINE_APPLICATION_PROD_ENVIRONMENT_WITH_MARKET = 13

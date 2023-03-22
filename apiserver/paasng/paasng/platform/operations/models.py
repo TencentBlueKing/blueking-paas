@@ -25,6 +25,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
+from paas_wl.cnative.specs.models import AppModelDeploy
 from paasng.engine.constants import JobStatus
 from paasng.engine.models import Deployment
 from paasng.platform.applications.models import Application
@@ -126,10 +127,7 @@ class AppDeploymentOperationObj(OperationObj):
     default_op_type = OP.DEPLOY_APPLICATION
     values_type = DeployOpValues
 
-    _env_name_map = {
-        'stag': _('预发布'),
-        'prod': _('生产'),
-    }
+    _env_name_map = {'stag': _('预发布'), 'prod': _('生产')}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -139,7 +137,7 @@ class AppDeploymentOperationObj(OperationObj):
             self.extra_values = self.values_type(env_name='', has_succeeded=False)
 
     @classmethod
-    def create_operation_from_deployment(cls, deployment: Deployment):
+    def create_from_deployment(cls, deployment: Deployment):
         """Construct an operation object by deployment"""
         application = deployment.app_environment.application
         operation = Operation(
@@ -178,6 +176,49 @@ class AppDeploymentOperationObj(OperationObj):
             return _('中断了{env_name}环境的部署过程')
         else:
             return _('尝试部署{env_name}环境失败')
+
+
+class CNativeAppDeployOperationObj(OperationObj):
+    """Operation object: paas_wl.cnative.specs.models.AppModelDeploy"""
+
+    default_op_type = OP.DEPLOY_CNATIVE_APP
+    values_type = DeployOpValues
+
+    _env_name_map = {'stag': _('预发布'), 'prod': _('生产')}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            self.extra_values = self.values_type(**self.operation.extra_values)
+        except TypeError:
+            self.extra_values = self.values_type(env_name='', has_succeeded=False)
+
+    @classmethod
+    def create_from_deploy(cls, deploy: AppModelDeploy):
+        """Construct an operation object by deployment"""
+        application = Application.objects.get(id=deploy.application_id)
+        operation = Operation(
+            region=deploy.region,
+            type=cls.default_op_type.value,
+            application=application,
+            user=deploy.operator,
+            source_object_id=deploy.pk,
+            module_name=deploy.module.name,
+            extra_values=asdict(
+                cls.values_type(
+                    env_name=deploy.environment_name,
+                    has_succeeded=deploy.has_succeeded(),
+                    status=deploy.status,
+                )
+            ),
+        )
+        operation.save()
+        return operation
+
+    def get_text_display(self) -> str:
+        text_tmpl = _('成功部署{env_name}环境') if self.extra_values.has_succeeded else _('尝试部署{env_name}环境失败')
+        env_name = _(self._env_name_map.get(self.extra_values.env_name, '未知'))
+        return text_tmpl.format(env_name=env_name)
 
 
 class AppOfflineOperationObj(OperationObj):
@@ -264,6 +305,7 @@ class ApplyCloudApiOperationObj(OperationObj):
 
 _operation_cls_map = {
     OP.DEPLOY_APPLICATION: AppDeploymentOperationObj,
+    OP.DEPLOY_CNATIVE_APP: CNativeAppDeployOperationObj,
     OP.PROCESS_START: ProcessOperationObj,
     OP.PROCESS_STOP: ProcessOperationObj,
     OP.CREATE_MODULE: CreateModuleOperationObj,

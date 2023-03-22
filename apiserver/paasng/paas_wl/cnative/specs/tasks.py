@@ -27,6 +27,7 @@ from django.utils import timezone
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
+from paas_wl.cnative.specs.signals import post_cnative_env_deploy
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,8 @@ class DeployStatusHandler(CallbackHandler):
         else:
             logger.info('Update AppModelDeploy status with data: %s', result.data)
             update_status(dp, result.data['state'], last_transition_time=result.data['last_update'])
+        # 在部署流程结束后，发送信号触发操作审计等后续步骤
+        post_cnative_env_deploy.send(dp.environment, deploy=dp)
 
 
 def update_status(dp: AppModelDeploy, state: ModelResState, last_transition_time: Optional[datetime.datetime] = None):

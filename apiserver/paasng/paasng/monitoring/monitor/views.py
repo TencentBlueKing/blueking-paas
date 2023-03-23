@@ -54,7 +54,6 @@ from .serializers import AlertRuleSLZ, AlertSLZ, ListAlertRulesSLZ, ListAlertsSL
 
 
 class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(responses={200: EventRecordListSLZ}, request_body=EventRecordListQuerySLZ, tags=["查询告警记录"])
@@ -83,7 +82,7 @@ class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
         request_slz.is_valid(True)
 
         results = []
-        applications = {i.code: i for i in UserApplicationFilter(request.user).filter(order_by=["code"])}
+        applications = {i.code: i for i in UserApplicationFilter(request.user).filter(order_by=["name"])}
 
         # query only when applications is not empty
         if applications:
@@ -106,7 +105,6 @@ class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(responses={200: EventRecordDetailsSLZ}, tags=["查询告警记录详情"])
@@ -123,7 +121,6 @@ class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(
@@ -149,7 +146,6 @@ class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
 
 
 class EventGenreView(ViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
 
     @swagger_auto_schema(responses={200: EventGenreListSLZ}, query_serializer=EventGenreListQuerySLZ, tags=["查询告警类型"])

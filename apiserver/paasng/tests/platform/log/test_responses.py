@@ -63,7 +63,6 @@ def make_fake_hit():
                 'ns': 622628538,
                 'app_code': 'fake_code',
                 'process_type': 'fake_process_id',
-                'process_id': 'fake_process_id',
             },
             'sort': [1607412300622, 622628538],
         }
@@ -106,6 +105,8 @@ class TestStructureLogLine:
                     'stream': 'stderr',
                     'ns': 622628538,
                     'app_code': 'fake_code',
+                    'process_type': 'fake_process_id',
+                    # 源数据的 process_type 被复制成 process_id
                     'process_id': 'fake_process_id',
                 },
             ),
@@ -201,6 +202,8 @@ class TestIngressLogLine:
                     'stream': 'stderr',
                     'ns': 622628538,
                     'app_code': 'fake_code',
+                    'process_type': 'fake_process_id',
+                    # 源数据的 process_type 被复制成 process_id
                     'process_id': 'fake_process_id',
                     # ingress 日志字段
                     "engine_app_name": "aaa",

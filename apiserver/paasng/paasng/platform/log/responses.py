@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def init_field_form_raw(self):
     for attr in fields(type(self)):
         if not attr.init:
-            getter = attr.metadata.get(attr.name) or get_field_form_raw(attr.name)
+            getter = attr.metadata.get("getter") or get_field_form_raw(attr.name)
             setattr(self, attr.name, getter(self.raw))
     for k, v in self.raw.items():
         if v is NOT_SET:

@@ -21,10 +21,12 @@ import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from paas_wl.cnative.specs.models import AppModelDeploy
+from paas_wl.cnative.specs.signals import post_cnative_env_deploy
 from paasng.engine.constants import JobStatus, OperationTypes
 from paasng.engine.models import Deployment, ModuleEnvironmentOperations
 from paasng.engine.signals import post_appenv_deploy
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import (
     module_environment_offline_event,
     module_environment_offline_success,
@@ -38,6 +40,7 @@ from paasng.platform.operations.models import (
     AppDeploymentOperationObj,
     ApplicationLatestOp,
     AppOfflineOperationObj,
+    CNativeAppDeployOperationObj,
     Operation,
 )
 from paasng.publish.market.constant import AppState
@@ -178,9 +181,15 @@ def on_offline(sender, offline_instance, environment, **kwargs):
 
 
 @receiver(post_appenv_deploy)
-def on_deploy_finished(sender: ApplicationEnvironment, deployment: Deployment, **kwargs):
+def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwargs):
     """Create new operation record when a deployment has finished"""
-    AppDeploymentOperationObj.create_operation_from_deployment(deployment)
+    AppDeploymentOperationObj.create_from_deployment(deployment)
+
+
+@receiver(post_cnative_env_deploy)
+def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy, **kwargs):
+    """当云原生应用部署完成后，记录操作审计记录"""
+    CNativeAppDeployOperationObj.create_from_deploy(deploy)
 
 
 @receiver(post_save)

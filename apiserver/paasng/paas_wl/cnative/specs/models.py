@@ -215,6 +215,9 @@ class AppModelDeploy(TimestampedModel):
         data["status"] = {"conditions": []}
         return data
 
+    def has_succeeded(self):
+        return self.status == DeployStatus.READY
+
     def _inject_annotations(
         self,
         manifest: BkAppResource,

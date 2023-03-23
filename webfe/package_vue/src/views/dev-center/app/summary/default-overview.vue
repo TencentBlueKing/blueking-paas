@@ -251,7 +251,9 @@
                   class="middle pl10 pr10"
                 >
                   <div data-test-id="summary_box_cpuCharts">
+                    <!-- 使用v-show是因为需要及时获取ref并调用 -->
                     <div
+                      v-show="isProcessDataReady || isChartLoading"
                       class="resource-charts active"
                     >
                       <div class="chart-box summary-chart-box">
@@ -259,7 +261,6 @@
                           {{ $t('CPU使用率') }}
                         </div>
                         <strong class="title"> {{ $t('单位：核') }} </strong>
-                        <!-- 使用v-show是因为需要及时获取ref并调用 -->
                         <chart
                           v-show="isResourceChartLine"
                           ref="cpuLine"
@@ -294,6 +295,12 @@
                           <table-empty empty />
                         </div>
                       </div>
+                    </div>
+                    <div
+                      v-if="!isProcessDataReady && !isChartLoading"
+                      class="ps-no-result"
+                    >
+                      <table-empty empty />
                     </div>
                   </div>
                 </div>

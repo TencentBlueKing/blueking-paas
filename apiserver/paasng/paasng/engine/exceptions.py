@@ -54,9 +54,21 @@ class DuplicateNameInSamePhaseError(Exception):
         super().__init__(self.message, args, kwargs)
 
 
-class InternalEventFormatError(Exception):
-    """部署阶段 内部事件格式错误"""
-
-
 class DeployInterruptionFailed(Exception):
     """Unable to interrupt a deployment"""
+
+
+class DeployShouldAbortError(Exception):
+    """Raise this exception when a deploy procedure should be aborted.
+    Using this exception means that the error reason can be displayed to users directly.
+
+    :param reason: The user-friendly reason to be displayed on screen and recorded in database
+    :param exc: Raw exception object
+    """
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(self.reason)
+
+    def __str__(self):
+        return self.reason

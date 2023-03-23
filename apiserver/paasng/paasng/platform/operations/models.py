@@ -169,11 +169,11 @@ class AppDeploymentOperationObj(OperationObj):
     @staticmethod
     def get_tmpl_from_status(status: JobStatus):
         if status == JobStatus.SUCCESSFUL:
-            return _('成功部署{env_name}环境')
+            return _('成功部署{env_name}')
         elif status == JobStatus.INTERRUPTED:
-            return _('中断了{env_name}环境的部署过程')
+            return _('中断了{env_name}的部署过程')
         else:
-            return _('尝试部署{env_name}环境失败')
+            return _('尝试部署{env_name}失败')
 
 
 class CNativeAppDeployOperationObj(OperationObj):
@@ -212,7 +212,7 @@ class CNativeAppDeployOperationObj(OperationObj):
         return operation
 
     def get_text_display(self) -> str:
-        text_tmpl = _('成功部署{env_name}环境') if self.extra_values.has_succeeded else _('尝试部署{env_name}环境失败')
+        text_tmpl = _('成功部署{env_name}') if self.extra_values.has_succeeded else _('尝试部署{env_name}失败')
         env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
         return text_tmpl.format(env_name=env_name)
 

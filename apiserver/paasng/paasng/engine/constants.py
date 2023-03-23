@@ -53,7 +53,7 @@ class JobStatus(str, StructuredEnum):
 
 
 class BuildStatus(str, StructuredEnum):
-    """While `BuildStatus` has same members with `JobStatus`, differnet statuses might be added in the future"""
+    """While `BuildStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = 'successful'
     FAILED = 'failed'
@@ -64,6 +64,15 @@ class BuildStatus(str, StructuredEnum):
     def get_finished_states(cls) -> List[str]:
         """获取已完成的状态"""
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
+
+
+class ReleaseStatus(str, StructuredEnum):
+    """While `ReleaseStatus` has same members with `JobStatus`, different statuses might be added in the future"""
+
+    SUCCESSFUL = 'successful'
+    FAILED = 'failed'
+    PENDING = 'pending'
+    INTERRUPTED = 'interrupted'
 
 
 class DeployEventStatus(ChoicesEnum):

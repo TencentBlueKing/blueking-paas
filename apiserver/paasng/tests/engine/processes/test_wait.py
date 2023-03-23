@@ -21,14 +21,14 @@ import datetime
 import time
 import uuid
 from contextlib import contextmanager
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from unittest import mock
 
 import pytest
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingStatus
 from django.dispatch import receiver
 
-from paas_wl.release_controller.process.wait import (
+from paasng.engine.processes.wait import (
     AbortedDetails,
     AbortedDetailsPolicy,
     DynamicReadyTimeoutPolicy,
@@ -38,7 +38,9 @@ from paas_wl.release_controller.process.wait import (
     WaitForReleaseAllReady,
     processes_updated,
 )
-from paas_wl.workloads.processes.models import Process
+
+if TYPE_CHECKING:
+    from paas_wl.workloads.processes.models import Process
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -51,7 +53,7 @@ def metadata():
 @pytest.fixture
 def poller_mocker():
     @contextmanager
-    def core(poller, processes: List[Process], last_processes: Optional[List[Process]] = None):
+    def core(poller, processes: 'List[Process]', last_processes: 'Optional[List[Process]]' = None):
         with mock.patch.object(poller, "_get_last_processes") as last, mock.patch.object(
             poller, "_get_current_processes"
         ) as current:
@@ -83,17 +85,17 @@ class TestDynamicReadyTimeoutPolicy:
 
 
 class TestWaitForAllStopped:
-    def test_still_running(self, wl_app, process, metadata, poller_mocker):
-        poller = WaitForAllStopped(params={'wl_app_id': wl_app.pk}, metadata=metadata)
+    def test_still_running(self, bk_stag_env, process, metadata, poller_mocker):
+        poller = WaitForAllStopped(params={'env_id': bk_stag_env.id}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
 
         assert status.status == PollingStatus.DOING
 
-    def test_all_stopped(self, wl_app, process, metadata, poller_mocker):
+    def test_all_stopped(self, bk_stag_env, process, metadata, poller_mocker):
         # Stop all processes
         process.instances = []
-        poller = WaitForAllStopped(params={'wl_app_id': wl_app.pk}, metadata=metadata)
+        poller = WaitForAllStopped(params={'env_id': bk_stag_env.id}, metadata=metadata)
         with poller_mocker(poller, [process]):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -105,7 +107,7 @@ class TestWaitForAllStopped:
             (False, True),
         ],
     )
-    def test_broadcast(self, enabled, events_is_empty, wl_app, process, metadata, poller_mocker):
+    def test_broadcast(self, enabled, events_is_empty, bk_stag_env, process, metadata, poller_mocker):
         received_events = []
 
         @receiver(processes_updated)
@@ -117,7 +119,7 @@ class TestWaitForAllStopped:
 
         # Mark current query as the second try
         metadata.queried_count = 1
-        poller = WaitForAllStopped(params={'wl_app_id': wl_app.pk, 'broadcast_enabled': enabled}, metadata=metadata)
+        poller = WaitForAllStopped(params={'env_id': bk_stag_env.id, 'broadcast_enabled': enabled}, metadata=metadata)
         with poller_mocker(poller, [process], [last_process]):
             _ = poller.query()
 
@@ -128,27 +130,27 @@ class TestWaitForAllStopped:
 
 
 class TestWaitForReleaseAllReady:
-    def test_not_ready(self, wl_app, metadata, process, poller_mocker):
+    def test_not_ready(self, bk_stag_env, metadata, process, poller_mocker):
         processes = [process]
-        poller = WaitForReleaseAllReady(params={'wl_app_id': wl_app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'env_id': bk_stag_env.id, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DOING
 
-    def test_ready(self, wl_app, metadata, process, instance, poller_mocker):
+    def test_ready(self, bk_stag_env, metadata, process, instance, poller_mocker):
         processes = [process]
         process.version = 10
         instance.version = 10
         instance.ready = True
-        poller = WaitForReleaseAllReady(params={'wl_app_id': wl_app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'env_id': bk_stag_env.id, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
 
-    def test_aborted_by_dynamic_timeout(self, wl_app, process, poller_mocker):
+    def test_aborted_by_dynamic_timeout(self, bk_stag_env, process, poller_mocker):
         processes = [process]
         metadata = PollingMetadata(retries=0, query_started_at=0, queried_count=0)
-        poller = WaitForReleaseAllReady(params={'wl_app_id': wl_app.pk, 'release_version': '10'}, metadata=metadata)
+        poller = WaitForReleaseAllReady(params={'env_id': bk_stag_env.id, 'release_version': '10'}, metadata=metadata)
         with poller_mocker(poller, processes):
             status = poller.query()
         assert status.status == PollingStatus.DONE
@@ -173,30 +175,18 @@ class TestTooManyRestartsPolicy:
 
 
 class TestUserInterruptedPolicy:
-    @pytest.fixture
-    def fake_deployment(self):
-        deployment = mock.MagicMock(pk=uuid.uuid4().hex)
-
-        def retrieve_deployment(deployment_id):
-            if deployment_id != deployment.pk:
-                raise Exception
-            return deployment
-
-        with mock.patch("paas_wl.release_controller.process.wait.get_local_plat_client") as mocked:
-            mocked().retrieve_deployment.side_effect = retrieve_deployment
-            yield deployment
-
-    def test_no_deployment_id(self, fake_deployment):
+    def test_no_deployment_id(self):
         ret = UserInterruptedPolicy().evaluate([], 0, extra_params={})
         assert ret is False
 
-    def test_wrong_deployment_id(self, fake_deployment):
+    def test_wrong_deployment_id(self):
         ret = UserInterruptedPolicy().evaluate([], 0, extra_params={'deployment_id': uuid.uuid4().hex})
         assert ret is False
 
-    def test_int_requested(self, fake_deployment):
-        fake_deployment.release_int_requested_at = datetime.datetime.now()
-        ret = UserInterruptedPolicy().evaluate([], 0, extra_params={'deployment_id': fake_deployment.pk})
+    def test_int_requested(self, bk_deployment):
+        bk_deployment.release_int_requested_at = datetime.datetime.now()
+        bk_deployment.save()
+        ret = UserInterruptedPolicy().evaluate([], 0, extra_params={'deployment_id': bk_deployment.pk})
         assert ret is True
 
 

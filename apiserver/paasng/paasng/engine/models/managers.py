@@ -18,18 +18,15 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from textwrap import dedent
-from typing import TYPE_CHECKING, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, List, Optional, Type
 
 import yaml
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Model
-from django.utils.translation import gettext as _
 from pydantic import BaseModel
 
-from paas_wl.resources.tasks import archive_env
 from paasng.engine.constants import JobStatus, RuntimeType
-from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, OfflineOperationExistError, StepNotInPresetListError
+from paasng.engine.exceptions import NoUnlinkedDeployPhaseError, StepNotInPresetListError
 from paasng.engine.models import ConfigVar
 from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 from paasng.engine.models.deployment import Deployment
@@ -37,7 +34,6 @@ from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
 from paasng.engine.phases_steps.display_blocks import get_display_blocks_by_type
 from paasng.engine.phases_steps.picker import DeployStepPicker
-from paasng.platform.applications.signals import module_environment_offline_event
 from paasng.platform.modules.specs import ModuleSpecs
 
 if TYPE_CHECKING:
@@ -45,65 +41,6 @@ if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
-
-
-class OfflineManager:
-    def __init__(self, env: 'ModuleEnvironment'):
-        self.env = env
-
-    def has_been_offline(self, latest_deployment: Deployment) -> Tuple[Optional[OfflineOperation], bool]:
-        """是否处于下架状态，是则同时返回最近一次的 OfflineOperation"""
-        try:
-            latest_offline_operation = OfflineOperation.objects.filter(app_environment=self.env).latest_succeeded()
-        except OfflineOperation.DoesNotExist:
-            pass
-        else:
-            # 如果存在已下架成功记录，并且比最近一次部署成功记录更新，说明应用已经是下架过了，则不再重复下架
-            if latest_offline_operation.created > latest_deployment.created:
-                logger.info("the module has been offline, just skip")
-                return latest_offline_operation, True
-
-        return None, False
-
-    def get_latest_succeeded_deployment(self):
-        return Deployment.objects.filter_by_env(env=self.env).latest_succeeded()
-
-    def perform_env_offline(self, operator: str):
-        """可重入的下架操作，返回 OfflineOperation"""
-        # raise DoseNotExist 即说明没有成功部署，那么也不存在下架的必要
-        deployment = self.get_latest_succeeded_deployment()
-        latest_offline_operation, has_been_offline = self.has_been_offline(deployment)
-        if has_been_offline:
-            return latest_offline_operation
-
-        try:
-            OfflineOperation.objects.filter(app_environment=self.env).get_latest_resumable(
-                max_resumable_seconds=settings.ENGINE_OFFLINE_RESUMABLE_SECS
-            )
-        except OfflineOperation.DoesNotExist:
-            pass
-        else:
-            # 存在正在下架操作，不再重复发起
-            raise OfflineOperationExistError(_("存在正在进行的下架任务"))
-
-        offline_operation = OfflineOperation.objects.create(
-            operator=operator,
-            app_environment=self.env,
-            source_type=deployment.source_type,
-            source_location=deployment.source_location,
-            source_version_type=deployment.source_version_type,
-            source_version_name=deployment.source_version_name,
-            source_revision=deployment.source_revision,
-            source_comment=deployment.source_comment,
-        )
-
-        # send offline event to create operation record
-        module_environment_offline_event.send(
-            sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
-        )
-
-        archive_env(self.env, str(offline_operation.pk))
-        return offline_operation
 
 
 class DeployOperationManager:

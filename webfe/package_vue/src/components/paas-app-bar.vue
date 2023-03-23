@@ -121,7 +121,7 @@
               href="javascript: void(0);"
               class="module-name time-text"
             >
-              <i class="paasng-icon paasng-clock icon-time-cls" />
+              <i class="paasng-icon paasng-time icon-time-cls" />
               {{ curTime.text }}
               <i class="paasng-icon paasng-angle-line-down icon-down-cls" />
             </a>
@@ -362,7 +362,8 @@
         }
 
         .icon-time-cls {
-            font-size: 14px !important;
+            font-size: 13px !important;
+            transform: scale(1) !important;
         }
         .icon-down-cls {
             font-size: 13px !important;

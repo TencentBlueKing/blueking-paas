@@ -240,6 +240,7 @@
             '$route' () {
                 if (this.curFeatureAnalytics) {
                     this.refresh();
+                    this.getAnalysisConfig();
                 } else {
                     this.getAppliedPermissionApi();
                 }
@@ -633,6 +634,7 @@
         }
         .info-button {
             font-size: 12px;
+            font-weight: normal;
         }
     }
 

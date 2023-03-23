@@ -261,6 +261,7 @@
                 flex-direction: column;
                 justify-content: space-around;
                 .tip {
+                    padding-bottom: 3px;
                     // 虚线
                     @include dashed(8px);
                 }

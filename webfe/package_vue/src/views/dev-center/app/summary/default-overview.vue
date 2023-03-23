@@ -19,14 +19,13 @@
     >
       <!-- 应用资源使用信息 -->
       <overview-top-info
-        v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed"
         class="default-top-info"
         :app-info="topInfo"
       />
       <div class="overview-middle">
         <template v-if="!loading">
+          <!-- v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed" -->
           <div
-            v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed"
             class="summary-content"
           >
             <!-- 访问日志 -->
@@ -60,7 +59,7 @@
                     :key="k"
                     class="header-info"
                   >
-                    <span class="header-env">{{ k === 'stag' ? $t('预发布环境') : $t('正式环境') }}</span>
+                    <span class="header-env">{{ k === 'stag' ? $t('预发布环境') : $t('正式环境') }}:</span>
                     <span :class="['header-env', 'pl10', { 'not-deployed': !data.is_deployed }]">{{ data.is_deployed ? $t('已部署') : $t('未部署') }}</span>
                     <bk-button
                       v-if="data.is_deployed"
@@ -231,6 +230,10 @@
               >
                 <div class="header-warp justify-between">
                   <div data-test-id="summary_header_select">
+                    <i
+                      class="paasng-icon paasng-bold"
+                      :class="activeResource.length ? 'paasng-down-shape':'paasng-right-shape'"
+                    />
                     <span class="header-title">{{ $t('资源用量') }}</span>
                     <span
                       v-if="curEnvName"
@@ -248,9 +251,7 @@
                   class="middle pl10 pr10"
                 >
                   <div data-test-id="summary_box_cpuCharts">
-                    <!-- 使用v-show是因为需要及时获取ref并调用 -->
                     <div
-                      v-show="isProcessDataReady || isChartLoading"
                       class="resource-charts active"
                     >
                       <div class="chart-box summary-chart-box">
@@ -258,12 +259,20 @@
                           {{ $t('CPU使用率') }}
                         </div>
                         <strong class="title"> {{ $t('单位：核') }} </strong>
+                        <!-- 使用v-show是因为需要及时获取ref并调用 -->
                         <chart
+                          v-show="isResourceChartLine"
                           ref="cpuLine"
                           :options="cpuLine"
                           auto-resize
                           style="width: 100%; height: 235px;"
                         />
+                        <div
+                          v-if="!isResourceChartLine && !isChartLoading"
+                          class="ps-no-result"
+                        >
+                          <table-empty empty />
+                        </div>
                       </div>
                       <div class="chart-box summary-chart-box">
                         <div class="type-title">
@@ -272,19 +281,19 @@
                         <strong class="title"> {{ $t('单位：MB') }} </strong>
                         <!-- 未部署展示无数据 -->
                         <chart
+                          v-show="isResourceChartLine"
                           ref="memLine"
                           :options="memLine"
                           auto-resize
                           style="width: 100%; height: 235px;"
                         />
+                        <div
+                          v-if="!isResourceChartLine && !isChartLoading"
+                          class="ps-no-result"
+                        >
+                          <table-empty empty />
+                        </div>
                       </div>
-                    </div>
-                    <!-- 是否需要空状态 -->
-                    <div
-                      v-if="!isProcessDataReady && !isChartLoading"
-                      class="ps-no-result"
-                    >
-                      <table-empty empty />
                     </div>
                   </div>
                 </div>
@@ -292,25 +301,6 @@
             </bk-collapse>
           </div>
 
-          <!-- 没有部署tips -->
-          <div
-            v-else
-            class="coding"
-            data-test-id="summary_box_empty"
-          >
-            <template v-if="!loading">
-              <h2> {{ $t('应用尚未部署，暂无运行数据！') }} </h2>
-              <p> {{ $t('你可以根据以下操作解决此问题') }} </p>
-              <div class="none-summary-controls">
-                <router-link
-                  :to="{ name: 'appDeployForStag', params: { id: appCode, moduleId: curModuleId } }"
-                  class="bk-button bk-primary bk-button-large"
-                >
-                  {{ $t('部署至预发布环境') }}
-                </router-link>
-              </div>
-            </template>
-          </div>
           <div
             class="overview-sub-fright"
             data-test-id="summary_content_detail"
@@ -496,7 +486,8 @@
                 resourceUsageRange: '24h',
                 activeModuleId: '',
                 changIndex: 0,
-                chartDataCache: {}
+                chartDataCache: {},
+                isResourceChartLine: true
             };
         },
         computed: {
@@ -698,22 +689,27 @@
                     series: []
                 });
                 if (chart) {
-                    chart.resize();
                     chart.showLoading({
                         text: this.$t('正在加载'),
                         color: '#30d878',
                         textColor: '#fff',
                         maskColor: '#FCFCFD'
                     });
+                    // 防止初始渲染图表宽度问题
+                    setTimeout(() => {
+                        chart.resize();
+                    }, 50);
                 }
                 if (memChart) {
-                    memChart.resize();
                     memChart.showLoading({
                         text: this.$t('正在加载'),
                         color: '#30d878',
                         textColor: '#fff',
                         maskColor: '#FCFCFD'
                     });
+                    setTimeout(() => {
+                        memChart.resize();
+                    }, 50);
                 }
             },
 
@@ -752,6 +748,7 @@
              * @param {String} type
              */
             async getProcessMetric (conf, type = 'all') {
+                this.isResourceChartLine = true;
                 const fetchData = (metricType) => {
                     const params = {
                         appCode: this.appCode,
@@ -820,10 +817,16 @@
                     }
                 } catch (e) {
                     this.clearChart();
+                    // 未部署显示空状态
+                    setTimeout(() => {
+                        this.isResourceChartLine = false;
+                    }, 500);
                 } finally {
                     this.isChartLoading = false;
                     this.isProcessDataReady = true;
-                    this.hideProcessLoading();
+                    setTimeout(() => {
+                        this.hideProcessLoading();
+                    }, 500);
                 }
             },
 
@@ -834,6 +837,7 @@
              * @param  {Object} ref 图表对象
              */
             renderChart (instanceData, type, ref) {
+                this.isResourceChartLine = true;
                 const series = [];
                 let xAxisData = [];
                 instanceData.forEach(item => {
@@ -1279,6 +1283,9 @@
         }
         .collapse-select{
            background: F5F7FA !important;
+        }
+        .search-chart-wrap .bk-select .bk-select-name {
+            padding: 0 18px 0 3px;
         }
     }
 </style>

@@ -17,6 +17,9 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from django.conf import settings
+from django.utils import translation
+from django.utils.deprecation import MiddlewareMixin
+from django.utils.translation import trans_real as trans
 from whitenoise.middleware import WhiteNoiseMiddleware
 
 
@@ -56,3 +59,21 @@ class AutoDisableCSRFMiddleware:
         if getattr(settings, 'DEBUG_FORCE_DISABLE_CSRF', False):
             request._dont_enforce_csrf_checks = True
         return self.get_response(request)
+
+
+class ApiLanguageMiddleware(MiddlewareMixin):
+    """Set the language for API requests"""
+
+    def process_request(self, request):
+        # When current request was authenticated by bk_paas's non-cookie middleware(# eg. APIgateway JWT Token),
+        # the language information will be obtained from the request header
+        if getattr(request, '_bkpaas_auth_authenticated_from_non_cookies', False):
+            try:
+                language = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
+                language = trans.get_supported_language_variant(language)
+            except Exception:
+                language = settings.LANGUAGE_CODE
+
+            if language:
+                translation.activate(language)
+                request.LANGUAGE_CODE = translation.get_language()

@@ -16,10 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination, _positive_int
 
 
 class MaxLimitOffsetPagination(LimitOffsetPagination):
     """限制最大分页数"""
 
-    max_limit = 1000
+    # 最多只能取 1000 条数据
+    max_limit = 100
+    max_offset = 900
+
+    def get_offset(self, request):
+        """LimitOffsetPagination 的 get_limit() 中处理了 max_limit"""
+        try:
+            return _positive_int(request.query_params[self.offset_query_param], strict=True, cutoff=self.max_offset)
+        except (KeyError, ValueError):
+            return 0

@@ -55,23 +55,27 @@ class AppAdaptor:
 
     def get_by_keyword(self, keyword: str) -> List[Dict[str, str]]:
         """Query application info not in PaaS3.0 by keywords (APP ID, APP Name)"""
-        # 模糊匹配的关键字
-        fuzzy_keyword = f"%{keyword}%"
-        apps = (
+        legacy_apps = (
             self.session.query(self.model)
             .filter(
-                or_(
-                    self.model.name.like(fuzzy_keyword),
-                    self.model.name_en.like(fuzzy_keyword),
-                    self.model.code.like(fuzzy_keyword),
-                ),
                 self.model.from_paasv3 == 0,
                 self.model.migrated_to_paasv3 == 0,
                 self.model.is_lapp == 0,
             )
-            .all()
+            .order_by(self.model.code)
         )
-        return [{"code": app.code, "name": app.name, "name_en": app.name} for app in apps]
+
+        if keyword:
+            # 模糊匹配的关键字
+            fuzzy_keyword = f"%{keyword}%"
+            legacy_apps = legacy_apps.filter(
+                or_(
+                    self.model.name.like(fuzzy_keyword),
+                    self.model.name_en.like(fuzzy_keyword),
+                    self.model.code.like(fuzzy_keyword),
+                )
+            )
+        return [{"code": app.code, "name": app.name, "name_en": app.name} for app in legacy_apps]
 
     def update(self, code: str, data: dict) -> int:
         """

@@ -19,7 +19,6 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, List, Union, cast
 
-from django.conf import settings
 from django.http.response import Http404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -116,23 +115,20 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         tags=['SYSTEMAPI'], responses={200: BasicAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
     )
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def list_applications(self, request):
-        """查询应用基本信息，可根据 id 或者 name 模糊搜索"""
+    def list_minimal_app(self, request):
+        """查询多平台应用基本信息，可根据 id 或者 name 模糊搜索, 最多只返回 1000 条数据"""
         serializer = SearchApplicationSLZ(data=request.query_params)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except Exception:
-            # if keyword do not match regex, then return none
-            return Response({'count': 0, 'results': []})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
 
-        params = serializer.data
-        keyword = params.get('keyword')
+        paginator = MaxLimitOffsetPagination()
+        offset = paginator.get_offset(request)
+        limit = paginator.get_limit(request)
 
-        language = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
-        applications = query_uni_apps_by_keyword(keyword, language)
+        keyword = data.get('keyword')
+        applications = query_uni_apps_by_keyword(keyword, offset, limit)
 
         # Paginate results
-        paginator = MaxLimitOffsetPagination()
         applications = paginator.paginate_queryset(applications, request, self)
         serializer = BasicAppSLZ(applications, many=True)
         return paginator.get_paginated_response(serializer.data)

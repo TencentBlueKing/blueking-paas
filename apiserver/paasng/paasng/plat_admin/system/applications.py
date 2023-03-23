@@ -20,7 +20,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 from dataclasses import dataclass
-from operator import attrgetter
 from typing import Any, Collection, Dict, List, Optional
 
 from bkpaas_auth import get_user_by_user_id
@@ -28,6 +27,7 @@ from bkpaas_auth.models import BasicUser, User
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, QuerySet
+from django.utils.translation import get_language
 
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.applications.models import Application, ModuleEnvironment, UserApplicationFilter
@@ -206,26 +206,38 @@ def query_recent_deployment_operators(operations: QuerySet, days_range: int) -> 
 
 
 @dataclass
-class AppBasicInfo:
-    """Basic information for application"""
+class UniMinimalApp:
+    """Minimal information for application"""
 
     code: str
     name: str
 
 
-def query_uni_apps_by_keyword(keyword: str, language: Optional[Any]):
-    """Query application basic info by keywords (APP ID, APP Name)"""
+def query_uni_apps_by_keyword(keyword: str, offset: int, limit: int) -> List[UniMinimalApp]:
+    """Query application basic info by keywords (APP ID, APP Name)
+
+    :param keyword: APP ID or APP Name
+    :param offset: the offset of the query
+    :param limit: the limit of the query
+    """
+    # 应用名称的字段需要根据请求语言来确定
+    language = get_language()
     name_field = 'name_en' if language == "en" else 'name'
-    applications = Application.objects.filter(
-        Q(name__icontains=keyword) | Q(name_en__icontains=keyword) | Q(code__icontains=keyword)
-    ).values('code', name_field)
 
-    uni_apps = [AppBasicInfo(code=app['code'], name=app[name_field]) for app in applications]
+    # 蓝鲸统一的规范，默认排序为字母顺序，而不是按最近创建时间排序
+    default_apps = Application.objects.all().order_by('code')
+    if keyword:
+        default_apps = default_apps.filter(Q(code__icontains=keyword) | Q(name__icontains=keyword))
 
-    # 从 PaaS2.0 中查询应用信息
+    apps_list = [
+        UniMinimalApp(code=app['code'], name=app[name_field]) for app in default_apps.values('code', name_field)
+    ]
+    # 如果应用数量大于请求数，则直接返回，不再查询 legacy app
+    if default_apps.count() > (offset + limit):
+        return apps_list
+
     with legacy_db.session_scope() as session:
-        legacy_applications = AppAdaptor(session=session).get_by_keyword(keyword)
-    uni_apps.extend([AppBasicInfo(code=app['code'], name=app[name_field]) for app in legacy_applications])
+        legacy_apps = AppAdaptor(session=session).get_by_keyword(keyword)
+    apps_list.extend([UniMinimalApp(code=app['code'], name=app[name_field]) for app in legacy_apps])
 
-    # 默认按应用ID排序
-    return sorted(uni_apps, key=attrgetter("code"))
+    return apps_list

@@ -115,4 +115,9 @@ urlpatterns = [
         views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
         name='sys.api.logs.structured',
     ),
+    url(
+        r'sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$',
+        views.LegacySysStructuredLogAPIView.as_view({"post": "query_logs"}),
+        name='sys.api.logs.structured.legacy',
+    ),
 ]

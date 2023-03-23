@@ -202,7 +202,6 @@ class LogAPIView(LogBaseAPIView):
                 "logs": clean_logs(list(response), log_config.search_params),
                 "total": total,
                 "dsl": json.dumps(search.to_dict()),
-                # TODO: 设置 scroll_id
                 "scroll_id": response._scroll_id,
             },
             Logs[self.line_model],  # type: ignore
@@ -350,4 +349,13 @@ class SysStructuredLogAPIView(StructuredLogAPIView):
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment):
-        return super().query_logs(request, code, module_name)
+        return super().query_logs(request, code, module_name, environment)
+
+
+class LegacySysStructuredLogAPIView(LegacyLogAPIMixin, SysStructuredLogAPIView):
+    permission_classes: List = []
+
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    def query_logs(self, request, code, module_name, environment=None):
+        # TODO: 调整成以前的返回值格式
+        return super().query_logs(request, code, module_name, environment)

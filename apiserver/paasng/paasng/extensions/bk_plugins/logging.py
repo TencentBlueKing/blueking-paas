@@ -80,17 +80,18 @@ class PluginLoggingClient:
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(trace_id)
 
-        # TODO: 支持 query_scrollable_logs
-        response, total = log_client.execute_search(
-            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+        response, total = log_client.execute_scroll_search(
+            index=log_config.search_params.indexPattern,
+            search=search,
+            timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+            scroll_id=scroll_id,
         )
         logs = cattr.structure(
             {
                 "logs": clean_logs(list(response), log_config.search_params),
                 "total": total,
                 "dsl": json.dumps(search.to_dict()),
-                # TODO: 设置 scroll_id
-                "scroll_id": scroll_id,
+                "scroll_id": response._scroll_id,
             },
             Logs[StructureLogLine],
         )

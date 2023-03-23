@@ -31,16 +31,15 @@ from paas_wl.cluster.pools import ContextConfigurationPoolMap
 
 logger = logging.getLogger(__name__)
 
-_k8s_global_configuration_pool_map = None
 
-
+@lru_cache
 def get_global_configuration_pool() -> Dict[str, HAEndpointPool]:
-    """Get the global config pool object"""
-    global _k8s_global_configuration_pool_map
-    if _k8s_global_configuration_pool_map is None:
-        _k8s_global_configuration_pool_map = ContextConfigurationPoolMap.from_db()
+    """Get the global config pool object.
 
-    return _k8s_global_configuration_pool_map
+    NOTE: This function is cached for performance. When the clusters have been updated,
+    the cache must be cleared.
+    """
+    return ContextConfigurationPoolMap.from_db()
 
 
 class EnhancedApiClient(BaseApiClient):

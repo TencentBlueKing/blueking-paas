@@ -21,10 +21,10 @@ from unittest import mock
 import pytest
 
 from paasng.dev_resources.sourcectl.models import VersionInfo
-from paasng.engine.helpers import RuntimeInfo
+from paasng.engine.configurations.image import RuntimeImageInfo, update_image_runtime_config
 from paasng.platform.modules.constants import SourceOrigin
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ class TestRuntimeInfo:
     def test_image(self, bk_module_full, version, source_origin, expected):
         bk_module_full.source_origin = source_origin.value
         bk_module_full.save()
-        runtime_info = RuntimeInfo(bk_module_full.get_envs("prod").get_engine_app(), version)
+        runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app(), version)
         with mock.patch.object(runtime_info.module, "get_source_obj") as m:
             m().get_repo_url.return_value = "docker.io/library/python"
 
@@ -53,6 +53,11 @@ class TestRuntimeInfo:
     def test_type(self, bk_module_full, version, source_origin, expected):
         bk_module_full.source_origin = source_origin.value
         bk_module_full.save()
-        runtime_info = RuntimeInfo(bk_module_full.get_envs("prod").get_engine_app(), version)
+        runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app(), version)
 
         assert runtime_info.type == expected
+
+
+class TestUpdateImageRuntimeConfig:
+    def test_normal(self, bk_module, bk_deployment, with_wl_apps):
+        update_image_runtime_config(bk_module.get_envs("prod").engine_app, bk_deployment.version_info)

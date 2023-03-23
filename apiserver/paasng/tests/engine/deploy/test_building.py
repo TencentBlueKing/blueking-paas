@@ -45,14 +45,16 @@ class TestApplicationBuilder:
 
     @pytest.fixture
     def mock_get_app_yaml(self):
-        with mock.patch('paasng.engine.deploy.metadata.MetaDataFileReader.get_app_desc') as mocked_get_app_yaml:
+        with mock.patch(
+            'paasng.engine.configurations.source_file.MetaDataFileReader.get_app_desc'
+        ) as mocked_get_app_yaml:
             mocked_get_app_yaml.side_effect = GetAppYamlError('')
             yield
 
     def test_failed_when_parsing_processes(self, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
-            'paasng.engine.deploy.metadata.MetaDataFileReader.get_procfile'
-        ) as mocked_get_procfile, mock.patch('paasng.engine.deploy.infras.RedisChannelStream') as mocked_stream:
+            'paasng.engine.configurations.source_file.MetaDataFileReader.get_procfile'
+        ) as mocked_get_procfile, mock.patch('paasng.engine.utils.output.RedisChannelStream') as mocked_stream:
             mocked_get_procfile.side_effect = GetProcfileError('Invalid Procfile format')
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
             builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
@@ -72,13 +74,12 @@ class TestApplicationBuilder:
 
     def test_failed_when_upload_source(self, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
-            'paasng.engine.deploy.metadata.MetaDataFileReader.get_procfile'
+            'paasng.engine.configurations.source_file.MetaDataFileReader.get_procfile'
         ) as mocked_get_procfile, mock.patch(
             'paasng.engine.deploy.building.ApplicationBuilder.compress_and_upload'
         ) as mocked_c_and_upload, mock.patch(
-            'paasng.engine.deploy.infras.RedisChannelStream'
+            'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream:
-
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             mocked_c_and_upload.side_effect = RuntimeError("Unable to upload")
 
@@ -97,17 +98,16 @@ class TestApplicationBuilder:
 
     def test_start_normal(self, init_tmpls, bk_deployment_full, mock_get_app_yaml):
         with mock.patch(
-            'paasng.engine.deploy.metadata.MetaDataFileReader.get_procfile'
+            'paasng.engine.configurations.source_file.MetaDataFileReader.get_procfile'
         ) as mocked_get_procfile, mock.patch(
             'paasng.engine.deploy.building.ApplicationBuilder.compress_and_upload'
         ), mock.patch(
             'paasng.engine.deploy.building.BuildProcessPoller'
         ) as mocked_poller, mock.patch(
-            'paasng.engine.deploy.infras.RedisChannelStream'
+            'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream, mock.patch(
-            'paasng.engine.deploy.infras.EngineDeployClient'
+            'paasng.engine.workflow.flow.EngineDeployClient'
         ) as mocked_client:
-
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex

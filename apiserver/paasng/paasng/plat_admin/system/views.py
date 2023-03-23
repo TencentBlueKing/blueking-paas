@@ -28,7 +28,7 @@ from rest_framework.response import Response
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
-from paasng.engine.display_blocks import ServicesInfo
+from paasng.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
     get_contact_info,

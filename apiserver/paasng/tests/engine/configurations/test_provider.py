@@ -16,19 +16,32 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import pytest
+
+from paasng.engine.configurations.provider import EnvVariablesProviders
+
+pytestmark = pytest.mark.django_db
 
 
-class DeployShouldAbortError(Exception):
-    """Raise this exception when a deploy procedure should be aborted.
-    Using this exception means that the error reason can be displayed to users directly.
+def test_providers(bk_stag_env, bk_deployment):
+    providers = EnvVariablesProviders()
 
-    :param reason: The user-friendly reason to be displayed on screen and recorded in database
-    :param exc: Raw exception object
-    """
+    @providers.register_env
+    def test_get_vars(env):
+        return {'FOO': 'bar', 'FOOBAR': 'z'}
 
-    def __init__(self, reason: str):
-        self.reason = reason
-        super().__init__(self.reason)
+    @providers.register_env
+    def test_get_vars_2(env):
+        return {'FOO': '1', 'BAR': str(env.id)}
 
-    def __str__(self):
-        return self.reason
+    @providers.register_deploy
+    def test_get_vars_deploy(deployment):
+        return {'DEP': str(deployment.id)}
+
+    assert providers.gather(bk_stag_env) == {'FOO': '1', 'BAR': str(bk_stag_env.id), 'FOOBAR': 'z'}
+    assert providers.gather(bk_stag_env, bk_deployment) == {
+        'FOO': '1',
+        'BAR': str(bk_stag_env.id),
+        'FOOBAR': 'z',
+        'DEP': str(bk_deployment.id),
+    }

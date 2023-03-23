@@ -16,13 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.models import Cluster
 from paas_wl.networking.egress.misc import ClusterEgressIps, get_cluster_egress_ips
 from paas_wl.platform.applications.models import WlApp
 from paasng.platform.applications.models import ModuleEnvironment
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import Application
 
 
 def get_cluster_egress_info(cluster_name: str) -> ClusterEgressIps:
@@ -93,3 +96,10 @@ def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):
     latest_config.cluster = cluster.name
     latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
     latest_config.save()
+
+
+def get_application_cluster(application: 'Application') -> Cluster:
+    """Return the cluster name of app's default module"""
+    default_module = application.get_default_module()
+    env = default_module.envs.get(environment='prod')
+    return EnvClusterService(env).get_cluster()

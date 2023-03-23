@@ -19,7 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 
 from paasng.engine.models import Deployment, DeployPhaseTypes
-from paasng.engine.models.steps import DeployStepMeta, DeployStepPicker, StepMetaSet
+from paasng.engine.models.steps import DeployStepMeta, StepMetaSet
+from paasng.engine.phases_steps.picker import DeployStepPicker
 from paasng.platform.modules.helpers import ModuleRuntimeBinder
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner
 

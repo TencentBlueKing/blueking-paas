@@ -172,7 +172,6 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
 
 # Preparations for release end
 
-
 try:
     from .protections_ext import register_extra_conditions
 

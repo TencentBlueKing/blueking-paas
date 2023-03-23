@@ -96,7 +96,7 @@ class TestAppDeploymentOperationObj:
             (JobStatus.INTERRUPTED, '中断了生产环境的部署过程'),
         ],
     )
-    def test_deployment(self, status, expected_text, bk_module):
+    def test_create_from_deployment(self, status, expected_text, bk_module):
         deployment = create_fake_deployment(bk_module)
         deployment.status = status
         deployment.save(update_fields=['status'])
@@ -114,7 +114,7 @@ class TestCNativeAppDeployOperationObj:
             (DeployStatus.PENDING, '尝试部署预发布环境失败'),
         ],
     )
-    def test_failed_deployment(self, bk_stag_env, bk_user, status, expected_text):
+    def test_create_from_deploy(self, bk_stag_env, bk_user, status, expected_text):
         deploy = create_cnative_deploy(bk_stag_env, bk_user, status)
         operation = CNativeAppDeployOperationObj.create_from_deploy(deploy)
         assert operation.get_operate_display() == expected_text

@@ -26,7 +26,7 @@ from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
 from paas_wl.cnative.specs.models import AppModelDeploy
-from paasng.engine.constants import JobStatus
+from paasng.engine.constants import AppEnvName, JobStatus
 from paasng.engine.models import Deployment
 from paasng.platform.applications.models import Application
 from paasng.platform.operations.constant import OperationType as OP
@@ -127,8 +127,6 @@ class AppDeploymentOperationObj(OperationObj):
     default_op_type = OP.DEPLOY_APPLICATION
     values_type = DeployOpValues
 
-    _env_name_map = {'stag': _('预发布'), 'prod': _('生产')}
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
@@ -165,7 +163,7 @@ class AppDeploymentOperationObj(OperationObj):
             status = JobStatus.SUCCESSFUL if self.extra_values.has_succeeded else JobStatus.FAILED
 
         text_tmpl = self.get_tmpl_from_status(status)
-        env_name = _(self._env_name_map.get(self.extra_values.env_name, '未知'))
+        env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
         return text_tmpl.format(env_name=env_name)
 
     @staticmethod
@@ -183,8 +181,6 @@ class CNativeAppDeployOperationObj(OperationObj):
 
     default_op_type = OP.DEPLOY_CNATIVE_APP
     values_type = DeployOpValues
-
-    _env_name_map = {'stag': _('预发布'), 'prod': _('生产')}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -217,7 +213,7 @@ class CNativeAppDeployOperationObj(OperationObj):
 
     def get_text_display(self) -> str:
         text_tmpl = _('成功部署{env_name}环境') if self.extra_values.has_succeeded else _('尝试部署{env_name}环境失败')
-        env_name = _(self._env_name_map.get(self.extra_values.env_name, '未知'))
+        env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
         return text_tmpl.format(env_name=env_name)
 
 

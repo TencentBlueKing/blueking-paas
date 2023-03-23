@@ -38,8 +38,8 @@ from paasng.plat_admin.system.applications import (
 )
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
-    BasicAppSLZ,
     ContactInfo,
+    MinimalAppSLZ,
     QueryUniApplicationsByID,
     QueryUniApplicationsByUserName,
     SearchApplicationSLZ,
@@ -112,7 +112,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
 
     @swagger_auto_schema(
-        tags=['SYSTEMAPI'], responses={200: BasicAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
+        tags=['SYSTEMAPI'], responses={200: MinimalAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
     )
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list_minimal_app(self, request):
@@ -130,7 +130,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
 
         # Paginate results
         applications = paginator.paginate_queryset(applications, request, self)
-        serializer = BasicAppSLZ(applications, many=True)
+        serializer = MinimalAppSLZ(applications, many=True)
         return paginator.get_paginated_response(serializer.data)
 
 

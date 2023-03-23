@@ -16,11 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 from django.conf import settings
 from django.utils import translation
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.translation import trans_real as trans
 from whitenoise.middleware import WhiteNoiseMiddleware
+
+logger = logging.getLogger(__name__)
 
 
 class WhiteNoiseRespectPrefixMiddleware(WhiteNoiseMiddleware):
@@ -61,17 +65,21 @@ class AutoDisableCSRFMiddleware:
         return self.get_response(request)
 
 
-class ApiLanguageMiddleware(MiddlewareMixin):
+class APILanguageMiddleware(MiddlewareMixin):
     """Set the language for API requests"""
 
     def process_request(self, request):
-        # When current request was authenticated by bk_paas's non-cookie middleware(# eg. APIgateway JWT Token),
-        # the language information will be obtained from the request header
-        if getattr(request, '_bkpaas_auth_authenticated_from_non_cookies', False):
+        # The current request for the system API authenticated by bk_paas's non-cookie middleware (# eg.
+        # API gateway JWT Token) will obtain the language information from the request header
+        full_path = request.get_full_path()
+        is_sys_url = full_path.startswith(settings.SITE_URL + "sys/api/")
+
+        if is_sys_url and getattr(request, '_bkpaas_auth_authenticated_from_non_cookies', False):
+            language = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
             try:
-                language = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
                 language = trans.get_supported_language_variant(language)
-            except Exception:
+            except LookupError:
+                logger.warning("The language %s is not supported. ", language)
                 language = settings.LANGUAGE_CODE
 
             if language:

@@ -123,6 +123,6 @@ class SearchApplicationSLZ(serializers.Serializer):
     keyword = serializers.CharField(default="", allow_blank=False, help_text="应用ID、应用名称")
 
 
-class BasicAppSLZ(serializers.Serializer):
+class MinimalAppSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用ID")
     name = serializers.CharField(help_text="应用名称")

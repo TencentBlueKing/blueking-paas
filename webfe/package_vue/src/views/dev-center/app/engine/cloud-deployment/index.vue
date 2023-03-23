@@ -253,14 +253,19 @@
             },
 
             async deployDialog (env) {
-                try {
-                   const res = await this.$refs.square.formDataValidate();
-                   if (res) {
-                       this.buttonLoading = true;
-                       this.getCloudAppInfo(env);
-                   }
-                } catch (error) {
-                    console.error(error);
+                if (this.deployModule === 'process') { // 进程配置需要单独处理下
+                    try {
+                       const res = await this.$refs.square.formDataValidate();
+                       if (res) {
+                           this.buttonLoading = true;
+                           this.getCloudAppInfo(env);
+                       }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                } else {
+                    this.buttonLoading = true;
+                    this.getCloudAppInfo(env);
                 }
             },
 

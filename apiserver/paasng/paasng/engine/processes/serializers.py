@@ -39,7 +39,3 @@ class WebConsoleResultSLZ(serializers.Serializer):
     code = serializers.IntegerField(help_text="状态码")
     message = serializers.CharField(help_text="消息")
     request_id = serializers.CharField(help_text="请求 ID")
-
-
-class ProcessFilterQuerySLZ(serializers.Serializer):
-    release_id = serializers.CharField(default=None, help_text="需要过滤的发布实例id")

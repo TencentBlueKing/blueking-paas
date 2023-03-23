@@ -16,11 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Type
 
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tags import DeployPhaseTag
+from paasng.engine.models.phases import DeployPhaseTypes
+from paasng.publish.entrance.preallocated import get_preallocated_url
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -148,8 +150,6 @@ class AccessInfo(DisplayBlock):
 
     @classmethod
     def get_detail(cls, engine_app: 'EngineApp') -> dict:
-        from paasng.publish.entrance.exposer import get_preallocated_url
-
         info = get_preallocated_url(engine_app.env)
         if info is None:
             return {}
@@ -173,3 +173,21 @@ class CustomDomainInfo(DisplayBlock):
         return {
             cls.name: [dict(env=engine_app.env.environment, domain=d.to_exposed_url().url.hostname) for d in domains]
         }
+
+
+def get_display_blocks_by_type(phase_type: DeployPhaseTypes) -> List[Type[DisplayBlock]]:
+    """Get display blocks by deploy phase type
+
+    :param phase_type: The deploy phase type
+    :return: A list of display block types
+    """
+    map_: Dict[DeployPhaseTypes, List[Type[DisplayBlock]]] = {
+        DeployPhaseTypes.PREPARATION: [SourceInfo, ServicesInfo, PrepareHelpDocs],
+        DeployPhaseTypes.BUILD: [RuntimeInfo, BuildHelpDocs],
+        DeployPhaseTypes.RELEASE: [
+            AccessInfo,
+            CustomDomainInfo,
+            ReleaseHelpDocs,
+        ],
+    }
+    return map_[phase_type]

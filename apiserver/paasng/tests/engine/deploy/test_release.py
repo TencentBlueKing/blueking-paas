@@ -54,18 +54,18 @@ class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""
 
     def test_failed_when_create_release(self, bk_deployment, auto_binding_phases):
-        with mock.patch('paasng.engine.deploy.infras.RedisChannelStream') as mocked_stream, mock.patch(
-            'paasng.engine.deploy.preparations.EngineDeployClient'
-        ) as mocked_client_p, mock.patch(
+        with mock.patch('paasng.engine.utils.output.RedisChannelStream') as mocked_stream, mock.patch(
+            'paasng.engine.deploy.release.update_image_runtime_config'
+        ) as mocked_update_image, mock.patch(
             'paasng.engine.deploy.release.EngineDeployClient'
         ) as mocked_client_r, mock.patch(
-            'paasng.engine.deploy.infras.EngineDeployClient'
+            'paasng.engine.workflow.flow.EngineDeployClient'
         ):
             mocked_client_r().create_release.side_effect = RuntimeError('can not create release')
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
 
-            assert mocked_client_p().update_config.called
+            assert mocked_update_image.called
             assert mocked_stream().write_title.called
 
             # Validate deployment data
@@ -74,10 +74,14 @@ class TestApplicationReleaseMgr:
             assert deployment.err_detail == 'can not create release'
 
     def test_start_normal(self, bk_deployment, auto_binding_phases):
-        with mock.patch('paasng.engine.deploy.infras.RedisChannelStream'), mock.patch(
-            'paasng.engine.deploy.preparations.EngineDeployClient'
-        ), mock.patch('paasng.engine.deploy.release.EngineDeployClient') as mocked_client_r, mock.patch(
-            'paasng.engine.deploy.infras.EngineDeployClient'
+        with mock.patch('paasng.engine.utils.output.RedisChannelStream'), mock.patch(
+            'paasng.engine.deploy.release.EngineDeployClient'
+        ) as mocked_client_r, mock.patch('paasng.engine.deploy.release.update_image_runtime_config'), mock.patch(
+            'paasng.engine.workflow.flow.EngineDeployClient'
+        ), mock.patch(
+            'paasng.engine.configurations.ingress.AppDefaultDomains.sync'
+        ), mock.patch(
+            'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
         ):
             faked_release_id = uuid.uuid4().hex
             mocked_client_r().create_release.return_value = faked_release_id

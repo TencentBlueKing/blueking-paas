@@ -23,8 +23,8 @@ from urllib.parse import urlparse
 
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import EnvExposedURL, get_addresses, get_exposed_url, list_custom_addresses
-from paasng.publish.entrance.utils import default_port_map
+from paasng.publish.entrance.exposer import get_addresses, get_exposed_url, list_custom_addresses
+from paasng.publish.entrance.utils import EnvExposedURL, default_port_map
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import AvailableAddress, MarketConfig
 

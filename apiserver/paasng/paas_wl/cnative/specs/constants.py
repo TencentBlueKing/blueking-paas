@@ -23,8 +23,6 @@ from paas_wl.workloads.processes.constants import AppEnvName  # noqa
 
 DEFAULT_PROCESS_NAME = 'web'
 
-# PaaS 平台保留的注解前缀
-BKPAAS_RESERVED_ANNO_PREFIX = "bkapp.paas.bk.tencent.com"
 # 注解中存储当前应用是否启用白名单功能的键名
 ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
 # workloads 注入到 annotations 的部署ID字段

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import logging
 from dataclasses import asdict
-from typing import Dict, Iterator, List, Mapping, Optional, Tuple, Union
+from typing import Collection, Dict, Iterator, List, Mapping, Optional, Tuple, Union
 
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
@@ -30,7 +30,7 @@ from django.utils import timezone
 from pydantic import BaseModel, PrivateAttr
 
 from paasng.accounts.utils import id_to_username
-from paasng.engine.deploy.env_vars import env_vars_providers
+from paasng.engine.configurations.provider import env_vars_providers
 from paasng.extensions.bk_plugins.constants import PluginTagIdType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
@@ -90,6 +90,10 @@ class BkPluginProfile(OwnerTimestampedModel):
     api_gw_id = models.IntegerField('已绑定的 API 网关 ID', null=True)
     api_gw_last_synced_at = models.DateTimeField('最近一次同步网关的时间', null=True)
 
+    # 预设的插件使用方，创建插件时指定的插件使用方
+    # 在插件部署、或者用户手动在基本信息页面修改插件使用方信息时，才会在 APIGW 上创建网关并给插件使用方授权
+    pre_distributor_codes = models.JSONField("预设的插件使用方的 code 列表", blank=True, null=True)
+
     objects = BkPluginProfileManager()
 
     @property
@@ -100,6 +104,12 @@ class BkPluginProfile(OwnerTimestampedModel):
     def is_synced(self) -> bool:
         """Plugin's API Gateway resource has been synced or not"""
         return bool(self.api_gw_id)
+
+    @property
+    def pre_distributors(self) -> Optional[Collection["BkPluginDistributor"]]:
+        if not self.pre_distributor_codes:
+            return None
+        return BkPluginDistributor.objects.filter(code_name__in=self.pre_distributor_codes)
 
     def get_tag_info(self) -> Optional[dict]:
         """Plugin's tag information, expected to be returned in the API for plugin list and basic info"""

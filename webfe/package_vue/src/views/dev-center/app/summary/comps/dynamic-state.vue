@@ -77,84 +77,18 @@
         background: rgba(87, 163, 241, 1);
     }
 
-    .dynamic-list li:nth-child(1):before {
-        border: solid 1px rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(1):after {
-        background: rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(2):before {
-        border: solid 1px rgba(87, 163, 241, 0.9);
-    }
-
-    .dynamic-list li:nth-child(2):after {
-        background: rgba(87, 163, 241, 0.9);
-    }
-
-    .dynamic-list li:nth-child(3):before {
-        border: solid 1px rgba(87, 163, 241, 0.8);
-    }
-
-    .dynamic-list li:nth-child(3):after {
-        background: rgba(87, 163, 241, 0.8);
-    }
-
-    .dynamic-list li:nth-child(4):before {
-        border: solid 1px rgba(87, 163, 241, 0.7);
-    }
-
-    .dynamic-list li:nth-child(4):after {
-        background: rgba(87, 163, 241, 0.7);
-    }
-
-    .dynamic-list li:nth-child(5):before {
-        border: solid 1px rgba(87, 163, 241, 0.6);
-    }
-
-    .dynamic-list li:nth-child(5):after {
-        background: rgba(87, 163, 241, 0.6);
-    }
-
-    .dynamic-list li:nth-child(6):before {
-        border: solid 1px rgba(87, 163, 241, 0.5);
-    }
-
-    .dynamic-list li:nth-child(6):after {
-        background: rgba(87, 163, 241, 0.5);
-    }
-
-    .dynamic-list li:nth-child(7):before {
-        border: solid 1px rgba(87, 163, 241, 0.4);
-    }
-
-    .dynamic-list li:nth-child(7):after {
-        background: rgba(87, 163, 241, 0.4);
-    }
-
-    .dynamic-list li:nth-child(8):before {
-        border: solid 1px rgba(87, 163, 241, 0.3);
-    }
-
-    .dynamic-list li:nth-child(8):after {
-        background: rgba(87, 163, 241, 0.3);
-    }
-
-    .dynamic-list li:nth-child(9):before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(9):after {
-        background: rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(10):before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(10):after {
-        background: rgba(87, 163, 241, 0.2);
+    $a: 10;
+    @for $i from 1 through 10 {
+        $step: ($a - $i + 1) / 10;
+        @if $step <= 0.2 {
+            $step: 0.2;
+        }
+        .dynamic-list li:nth-child(#{$i}):before {
+            border: solid 1px rgba(87, 163, 241, $step);
+        }
+        .dynamic-list li:nth-child(#{$i}):after {
+            background: rgba(87, 163, 241, $step);
+        }
     }
 
     .dynamic-list li:last-child:before {

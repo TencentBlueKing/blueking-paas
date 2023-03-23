@@ -4,6 +4,7 @@
     class="right-main"
   >
     <app-top-bar
+      ref="appTopBarRef"
       data-test-id="summary_bar_moduleList"
       :title="$t('应用概览')"
       :is-overview="true"
@@ -66,7 +67,7 @@
                       class="pl10"
                       theme="primary"
                       text
-                      @click="handleItemClick(k, 'access')"
+                      @click="handleItemClick(k, 'access', key)"
                     >
                       {{ $t('访问') }}
                     </bk-button>
@@ -74,7 +75,7 @@
                       class="pl10"
                       theme="primary"
                       text
-                      @click="handleItemClick(k, 'deploy')"
+                      @click="handleItemClick(k, 'deploy', key)"
                     >
                       {{ $t('部署') }}
                     </bk-button>
@@ -103,7 +104,7 @@
                           class="pl10"
                           theme="primary"
                           text
-                          @click="handleItemClick(k, 'access')"
+                          @click="handleItemClick(k, 'access', key)"
                         >
                           {{ $t('访问') }}
                         </bk-button>
@@ -111,7 +112,7 @@
                           class="pl10"
                           theme="primary"
                           text
-                          @click="handleItemClick(k, 'deploy')"
+                          @click="handleItemClick(k, 'deploy', key)"
                         >
                           {{ $t('部署') }}
                         </bk-button>
@@ -1165,8 +1166,7 @@
             },
 
             // 点击访问或者部署
-            handleItemClick (env, type) {
-                const appDeployInfo = env === 'stag' ? this.releaseStatusStag : this.releaseStatusProd;
+            handleItemClick (env, type, moduleName) {
                 const appRouterInfo = env === 'stag' ? {
                             name: 'appDeploy',
                             params: {
@@ -1182,8 +1182,13 @@
                             }
                         };
                 if (type === 'access') { // 访问
-                    window.open(appDeployInfo.url, '_blank');
+                    const url = this.overViewData[moduleName]['envs'][env]['exposed_link'].url;
+                    window.open(url, '_blank');
                 } else { // 部署
+                    const toModule = this.curAppModuleList.find(module => module.name === moduleName);
+                    if (toModule) {
+                        this.$refs.appTopBarRef.handleModuleSelect(toModule);
+                    }
                     this.$router.push(appRouterInfo);
                 }
             },

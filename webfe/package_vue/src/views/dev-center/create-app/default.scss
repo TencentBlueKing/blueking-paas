@@ -124,6 +124,17 @@
     margin-right: 10px;
     &.template {
         line-height: 48px;
+        flex: 0 0 90px !important;
+    }
+    &::after {
+        height: 8px;
+        line-height: 1;
+        content: '*';
+        color: #EA3636;
+        font-size: 12px;
+        display: inline-block;
+        vertical-align: middle;
+        padding-left: 5px;
     }
 }
 
@@ -237,7 +248,6 @@ input.ps-form-control {
 }
 
 .form-actions {
-    text-align: center;
     margin: 24px 0 18px;
 }
 
@@ -255,7 +265,6 @@ input.ps-form-control {
         padding: 12px 18px;
     }
     .submit-mr{
-        background: #1768EF;
         font-size: 14px;
     }
 }
@@ -419,6 +428,16 @@ input.ps-form-control {
         cursor: pointer;
         &:hover {
             color: #699df4;
+        }
+    }
+
+    &.frame-wrapper {
+        display: flex;
+        .frame-placeholder {
+            width: 90px;
+        }
+        .frame-panel {
+            flex: 1;
         }
     }
 }

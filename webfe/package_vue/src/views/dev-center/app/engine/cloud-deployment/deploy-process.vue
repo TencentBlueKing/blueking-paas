@@ -214,6 +214,8 @@
               <bk-input
                 v-model="formData.replicas"
                 type="number"
+                :max="5"
+                :min="1"
                 style="width: 150px"
               />
             </bk-form-item>

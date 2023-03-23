@@ -553,8 +553,8 @@
                 };
 
                 const category = navTree.find(item => item.name === 'appPermissions');
-                if (type && nav[type]) {
-                    category && category.children.push(nav[type]);
+                if (category && type && nav[type]) {
+                    category.children.push(nav[type]);
                 }
 
                 return navTree;

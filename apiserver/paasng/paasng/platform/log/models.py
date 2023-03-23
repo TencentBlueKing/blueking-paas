@@ -58,6 +58,8 @@ class ElasticSearchParams(BaseModel):
     builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
     builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
 
+    filedMatcher: Optional[str] = Field(default=None, description="字段设置的白名单正则匹配表达式, 设置该字段可将某些字段从「字段设置」列表中隐藏")
+
 
 @registry
 class BKLogConfig(BaseModel):

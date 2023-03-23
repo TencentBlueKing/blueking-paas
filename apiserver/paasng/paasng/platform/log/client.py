@@ -18,10 +18,11 @@ to the current version of the project delivered to anyone in the future.
 """
 from functools import reduce
 from operator import add
-from typing import Dict, List, Protocol, Tuple
+from typing import Dict, List, Optional, Protocol, Tuple
 
 from django.conf import settings
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import ScanError
 from elasticsearch_dsl.aggs import DateHistogram
 from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
@@ -34,16 +35,17 @@ from paasng.pluginscenter.definitions import PluginBackendAPIResource
 from paasng.pluginscenter.thirdparty.utils import make_client
 from paasng.utils.es_log.search import SmartSearch
 
-_default_highlight: Tuple[str] = ()  # type: ignore
-
 
 class LogClientProtocol(Protocol):
     """LogClient protocol, all log search backend should abide this protocol"""
 
-    def execute_search(
-        self, index: str, search: SmartSearch, timeout: int, highlight_fields: Tuple[str] = _default_highlight
-    ) -> Tuple[Response, int]:
+    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with search"""
+
+    def execute_scroll_search(
+        self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
+    ) -> Tuple[Response, int]:
+        """search log(scrolling) from index with search"""
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """aggregate time-based histogram"""
@@ -65,9 +67,7 @@ class BKLogClient:
             PluginBackendAPIResource(apiName="log-search", path="esquery_dsl/", method="POST"), bk_username=bk_username
         )
 
-    def execute_search(
-        self, index: str, search: SmartSearch, timeout: int, highlight_fields: Tuple[str] = _default_highlight
-    ) -> Tuple[Response, int]:
+    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with bk-log"""
         data = {
             "indices": index,
@@ -76,6 +76,12 @@ class BKLogClient:
         }
         resp = self._call_api(data, timeout)
         return Response(search.search, resp["data"]), resp["data"]["hits"]["total"]
+
+    def execute_scroll_search(
+        self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
+    ) -> Tuple[Response, int]:
+        """search log(scrolling) from index with search"""
+        raise NotImplementedError("TODO: 确认日志平台接口 /esquery_scroll/ 是否可用")
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """aggregate time-based histogram"""
@@ -110,7 +116,7 @@ class BKLogClient:
 
     def get_mappings(self, index: str, timeout: int) -> dict:
         """query the mappings in es"""
-        raise NotImplementedError
+        raise NotImplementedError("TODO: 确认日志平台接口 /esquery_mapping/ 是否可用")
 
     def _call_api(self, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
@@ -127,15 +133,37 @@ class ESLogClient:
         self.host = host
         self._client = Elasticsearch(hosts=[host.dict()])
 
-    def execute_search(
-        self, index: str, search: SmartSearch, timeout: int, highlight_fields: Tuple[str] = _default_highlight
-    ) -> Tuple[Response, int]:
+    def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with es client"""
-        search = search.highlight(*highlight_fields)
         response = Response(
             search.search,
             self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),
         )
+        return (response, self._get_response_count(index, search, timeout, response))
+
+    def execute_scroll_search(
+        self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
+    ) -> Tuple[Response, int]:
+        """search log(scrolling) from index with search"""
+        if scroll_id:
+            response = Response(
+                search.search,
+                self._client.scroll(scroll_id=scroll_id, params={"scroll": scroll, "request_timeout": timeout}),
+            )
+        else:
+            response = Response(
+                search.search,
+                self._client.search(
+                    body=search.to_dict(), scroll=scroll, index=index, params={"request_timeout": timeout}
+                ),
+            )
+        if not response.success():
+            failed = response._shards.failed
+            total = response._shards.total
+            raise ScanError(
+                scroll_id,
+                'Scroll request has failed on %d shards out of %d.' % (failed, total),
+            )
         return (response, self._get_response_count(index, search, timeout, response))
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:

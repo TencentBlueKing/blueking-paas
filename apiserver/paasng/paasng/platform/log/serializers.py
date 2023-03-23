@@ -34,6 +34,7 @@ class StandardOutputLogLineSLZ(serializers.Serializer):
     app_code = serializers.CharField()
     environment = serializers.CharField()
     process_id = serializers.CharField(allow_null=True, allow_blank=True)
+    pod_name = serializers.CharField(required=True, help_text="Pod名称")
 
 
 class StandardOutputLogsSLZ(serializers.Serializer):
@@ -42,6 +43,7 @@ class StandardOutputLogsSLZ(serializers.Serializer):
     logs = StandardOutputLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    scroll_id = serializers.CharField(required=True)
 
 
 class StructureLogLineSLZ(serializers.Serializer):
@@ -114,7 +116,7 @@ class LogQueryParamsSLZ(serializers.Serializer):
     end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
     offset = serializers.IntegerField(default=0, help_text="偏移量=页码*每页数量")
     limit = serializers.IntegerField(default=100, help_text="每页数量")
-    scroll_id = serializers.CharField(required=False)
+    scroll_id = serializers.CharField(required=False, help_text="仅标准输出日志需要该字段")
 
     def validate(self, attrs):
         try:

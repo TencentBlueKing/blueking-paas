@@ -18,7 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 import logging
-from typing import ClassVar, List, Optional, Type
+import re
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Tuple, Type
 
 import cattr
 from django.conf import settings
@@ -68,7 +69,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         log_config = self._get_log_query_config(process_type=self.request.query_params.get("process_type"))
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
-    def make_search(self, mappings: dict):
+    def make_search(self, mappings: dict, highlight_fields: Optional[Tuple] = None):
         """构造日志查询语句"""
         params = self.request.query_params
         smart_time_range = SmartTimeRange(
@@ -77,6 +78,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         query_config = self._get_log_query_config(process_type=params.get("process_type"))
         search = self._make_base_search(search_params=query_config.search_params, time_range=smart_time_range)
 
+        highlight_query = {}
         if self.request.data:
             try:
                 query_conditions = SimpleDomainSpecialLanguage(**self.request.data)
@@ -84,7 +86,12 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
                 logger.exception("error log query conditions")
                 raise error_codes.QUERY_REQUEST_ERROR
             dsl = parse_simple_dsl_to_dsl(query_conditions, mappings=mappings)
+            highlight_query = dsl.to_dict()
             search = search.query(dsl)
+
+        # 顺序很重要, querystring 在 simple dsl 里, highlight_fields 必须在 search.query(dsl) 后面
+        if highlight_query and highlight_fields:
+            search = search.highlight(*highlight_fields, highlight_query=highlight_query)
         return search
 
     def _make_base_search(
@@ -125,7 +132,7 @@ class LogAPIView(LogBaseAPIView):
 
     @swagger_auto_schema(
         query_serializer=serializers.LogQueryParamsSLZ,
-        # request_body=serializers.LogQueryBodySLZ,
+        request_body=serializers.LogQueryBodySLZ,
     )
     def query_logs(self, request, code, module_name, environment):
         """查询日志"""
@@ -133,7 +140,8 @@ class LogAPIView(LogBaseAPIView):
         search = self.make_search(
             mappings=log_client.get_mappings(
                 log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
-            )
+            ),
+            highlight_fields=("*", "*.*"),
         )
 
         try:
@@ -141,7 +149,6 @@ class LogAPIView(LogBaseAPIView):
                 index=log_config.search_params.indexPattern,
                 search=search,
                 timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
-                highlight_fields=[log_config.search_params.messageField],
             )
         except RequestError:
             raise error_codes.QUERY_REQUEST_ERROR
@@ -159,6 +166,53 @@ class LogAPIView(LogBaseAPIView):
         )
         return Response(data=self.logs_serializer_class(logs).data)
 
+    @swagger_auto_schema(
+        query_serializer=serializers.LogQueryParamsSLZ,
+        request_body=serializers.LogQueryBodySLZ,
+    )
+    def query_logs_scroll(self, request, code, module_name, environment):
+        """查询标准输出日志"""
+        log_client, log_config = self.instantiate_log_client()
+        search = self.make_search(
+            mappings=log_client.get_mappings(
+                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            ),
+            highlight_fields=(log_config.search_params.messageField,),
+        )
+
+        try:
+            response, total = log_client.execute_scroll_search(
+                index=log_config.search_params.indexPattern,
+                search=search,
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+                scroll_id=request.query_params.get("scroll_id"),
+            )
+        except ScanError:
+            # scan 失败大概率是 scroll_id 失效
+            logger.exception("scroll_id 失效, 日志查询失败")
+            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询快照失效, 请刷新后重试。'))
+        except RequestError:
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("failed to get logs")
+            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
+
+        logs = cattr.structure(
+            {
+                "logs": clean_logs(list(response), log_config.search_params),
+                "total": total,
+                "dsl": json.dumps(search.to_dict()),
+                # TODO: 设置 scroll_id
+                "scroll_id": response._scroll_id,
+            },
+            Logs[self.line_model],  # type: ignore
+        )
+        return Response(data=self.logs_serializer_class(logs).data)
+
+    @swagger_auto_schema(
+        query_serializer=serializers.LogQueryParamsSLZ,
+        request_body=serializers.LogQueryBodySLZ,
+    )
     def aggregate_date_histogram(self, request, code, module_name, environment):
         """统计日志的日志数-事件直方图"""
         log_client, log_config = self.instantiate_log_client()
@@ -180,6 +234,10 @@ class LogAPIView(LogBaseAPIView):
         )
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
+    @swagger_auto_schema(
+        query_serializer=serializers.LogQueryParamsSLZ,
+        request_body=serializers.LogQueryBodySLZ,
+    )
     def aggregate_fields_filters(self, request, code, module_name, environment):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()
@@ -192,6 +250,9 @@ class LogAPIView(LogBaseAPIView):
         fields_filters = log_client.aggregate_fields_filters(
             index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
         )
+        if log_config.search_params.filedMatcher:
+            matcher = re.compile(log_config.search_params.filedMatcher)
+            fields_filters = [f for f in fields_filters if matcher.fullmatch(f.key)]
         return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 
@@ -200,37 +261,6 @@ class StdoutLogAPIView(LogAPIView):
     line_model = StandardOutputLogLine
     log_type = LogType.STANDARD_OUTPUT
     logs_serializer_class = serializers.StandardOutputLogsSLZ
-
-    def query_logs_scroll(self, request, code, module_name, environment):
-        """查询标准输出日志"""
-        log_client, log_config = self.instantiate_log_client()
-        search = self.make_search(mappings={})
-
-        try:
-            response, total = log_client.execute_search(
-                index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
-            )
-        except ScanError:
-            # scan 失败大概率是 scroll_id 失效
-            logger.exception("scroll_id 失效, 日志查询失败")
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询快照失效, 请刷新后重试。'))
-        except RequestError:
-            raise error_codes.QUERY_REQUEST_ERROR
-        except Exception:
-            logger.exception("failed to get logs")
-            raise error_codes.QUERY_LOG_FAILED.f(_('日志查询失败，请稍后再试。'))
-
-        logs = cattr.structure(
-            {
-                "logs": clean_logs(list(response), log_config.search_params),
-                "total": total,
-                "dsl": json.dumps(search.to_dict()),
-                # TODO: 设置 scroll_id
-                "scroll_id": "TODO",
-            },
-            Logs[self.line_model],  # type: ignore
-        )
-        return Response(data=self.logs_serializer_class(logs).data)
 
 
 class StructuredLogAPIView(LogAPIView):
@@ -245,9 +275,21 @@ class IngressLogAPIView(LogAPIView):
     logs_serializer_class = serializers.IngressLogSLZ
 
 
-class LegacyLogAPIView(LogAPIView):
+if TYPE_CHECKING:
+    _MixinBase = LogAPIView
+else:
+    _MixinBase = object
+
+
+class LegacyLogAPIMixin(_MixinBase):
+    # LegacyLogAPIMixin 是支持按模块查询日志的兼容性代码
+    # 由于日志查询的重构复杂度高, 要求一步到位完全重构成按环境查询需要较长的排期
+    # 待前端按照新接口(环境维度)重构后, 删除 legacy api
     def query_logs(self, request, code, module_name, environment=None):
         return super().query_logs(request, code, module_name, environment)
+
+    def query_logs_scroll(self, request, code, module_name, environment=None):
+        return super().query_logs_scroll(request, code, module_name, environment)
 
     def aggregate_date_histogram(self, request, code, module_name, environment=None):
         return super().aggregate_date_histogram(request, code, module_name, environment)
@@ -291,23 +333,16 @@ class LegacyLogAPIView(LogAPIView):
         return search.limit_offset(limit=limit, offset=offset)
 
 
-class LegacyStdoutLogAPIView(LegacyLogAPIView):
-    # TODO: 支持根据 scroll id 查询
-    line_model = StandardOutputLogLine
-    log_type = LogType.STANDARD_OUTPUT
-    logs_serializer_class = serializers.StandardOutputLogsSLZ
+class LegacyStdoutLogAPIView(LegacyLogAPIMixin, StdoutLogAPIView):
+    ...
 
 
-class LegacyStructuredLogAPIView(LegacyLogAPIView):
-    line_model = StructureLogLine
-    log_type = LogType.STRUCTURED
-    logs_serializer_class = serializers.StructureLogsSLZ
+class LegacyStructuredLogAPIView(LegacyLogAPIMixin, StructuredLogAPIView):
+    ...
 
 
-class LegacyIngressLogAPIView(LegacyLogAPIView):
-    line_model = IngressLogLine
-    log_type = LogType.INGRESS
-    logs_serializer_class = serializers.IngressLogSLZ
+class LegacyIngressLogAPIView(LegacyLogAPIMixin, IngressLogAPIView):
+    ...
 
 
 class SysStructuredLogAPIView(StructuredLogAPIView):

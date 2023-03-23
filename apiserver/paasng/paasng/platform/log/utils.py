@@ -82,23 +82,15 @@ def _log_adaptor(raw_log: Dict[str, Any]):
     """调整 log 字段"""
     # 如果 region 不存在, 将 kubernetes.labels.region 重命名为 region
     raw_log["region"] = raw_log.get("region") or raw_log.get("kubernetes.labels.region") or NOT_SET
-    # 仅保留 region 字段
-    raw_log.pop("kubernetes.labels.region", None)
 
     # 如果 app_code 不存在, 将 kubernetes.labels.app_code 重命名为 app_code
     raw_log["app_code"] = raw_log.get("app_code") or raw_log.get("kubernetes.labels.app_code") or NOT_SET
-    # 仅保留 app_code 字段
-    raw_log.pop("kubernetes.labels.app_code", None)
 
     # 如果 module_name 不存在, 将 kubernetes.labels.module_name 重命名为 app_code
     raw_log["module_name"] = raw_log.get("module_name") or raw_log.get("kubernetes.labels.module_name") or NOT_SET
-    # 仅保留 module_name 字段
-    raw_log.pop("kubernetes.labels.module_name", None)
 
     # 如果 environment 不存在, 将 kubernetes.labels.env 重命名为 app_code
     raw_log["environment"] = raw_log.get("environment") or raw_log.get("kubernetes.labels.env") or NOT_SET
-    # 仅保留 environment 字段
-    raw_log.pop("kubernetes.labels.env", None)
 
     # 如果 process_id 不存在, 将 process_type 或 kubernetes.labels.process_id 重命名为 process_id
     raw_log["process_id"] = (
@@ -107,9 +99,9 @@ def _log_adaptor(raw_log: Dict[str, Any]):
         or raw_log.get("kubernetes.labels.process_id")
         or NOT_SET
     )
-    # 仅保留 process_id 字段
-    raw_log.pop("process_type", None)
-    raw_log.pop("kubernetes.labels.process_id", None)
+
+    # 如果 pod_name 不存在, 将 kubernetes.pod.name 重命名为 pod_name
+    raw_log["pod_name"] = raw_log.get("pod_name") or raw_log.get("kubernetes.pod.name") or NOT_SET
 
     return raw_log
 

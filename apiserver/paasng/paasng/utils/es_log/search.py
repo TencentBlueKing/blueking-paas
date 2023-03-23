@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Dict, Optional
+
 from django.conf import settings
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import Q, Query
@@ -57,12 +59,13 @@ class SmartSearch:
         self.search = self.search.query(dsl)
         return self
 
-    def highlight(self, *fields: str):
+    def highlight(self, *fields: str, highlight_query: Optional[Dict]):
         """request highlighting of some fields"""
-        if self.search.query:
-            highlight_query = self.search.query.to_dict()
-        else:
-            highlight_query = Q().to_dict()
+        if not highlight_query:
+            if self.search.query:
+                highlight_query = self.search.query.to_dict()
+            else:
+                highlight_query = Q().to_dict()
         self.search = (
             self.search.highlight(*fields, number_of_fragments=0)
             .highlight_options(pre_tags=[pre_tag], post_tags=[post_tag], require_field_match=False)

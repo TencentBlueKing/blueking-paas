@@ -22,9 +22,19 @@ from typing import Any, Dict, Optional
 from attrs import converters, define, field, fields
 
 from paasng.platform.log.exceptions import LogLineInfoBrokenError
-from paasng.platform.log.utils import get_field_form_raw
+from paasng.platform.log.utils import NOT_SET, get_field_form_raw
 
 logger = logging.getLogger(__name__)
+
+
+def init_field_form_raw(self):
+    for attr in fields(type(self)):
+        if not attr.init:
+            getter = attr.metadata.get(attr.name) or get_field_form_raw(attr.name)
+            setattr(self, attr.name, getter(self.raw))
+    for k, v in self.raw.items():
+        if v is NOT_SET:
+            self.raw[k] = None
 
 
 @define
@@ -41,14 +51,9 @@ class StandardOutputLogLine:
     environment: str = field(init=False, converter=converters.optional(str))
     process_id: str = field(init=False, converter=converters.optional(str))
     stream: str = field(init=False, converter=converters.optional(str))
+    pod_name: str = field(init=False, converter=converters.optional(str))
 
-    def __attrs_post_init__(self):
-        for attr in fields(type(self)):
-            if not attr.init:
-                getter = get_field_form_raw(attr.name)
-                if "getter" in attr.metadata:
-                    getter = attr.metadata["getter"]
-                setattr(self, attr.name, getter(self.raw))
+    __attrs_post_init__ = init_field_form_raw
 
 
 @define
@@ -66,13 +71,7 @@ class StructureLogLine:
     process_id: str = field(init=False, converter=converters.optional(str))
     stream: str = field(init=False, converter=converters.optional(str))
 
-    def __attrs_post_init__(self):
-        for attr in fields(type(self)):
-            if not attr.init:
-                getter = get_field_form_raw(attr.name)
-                if "getter" in attr.metadata:
-                    getter = attr.metadata["getter"]
-                setattr(self, attr.name, getter(self.raw))
+    __attrs_post_init__ = init_field_form_raw
 
 
 def get_engine_app_name(raw_log: Dict):
@@ -103,8 +102,4 @@ class IngressLogLine:
     user_agent: Optional[str] = field(init=False, converter=converters.optional(str))
     http_version: Optional[str] = field(init=False, converter=converters.optional(str))
 
-    def __attrs_post_init__(self):
-        for attr in fields(type(self)):
-            if not attr.init:
-                getter = attr.metadata.get("getter") or get_field_form_raw(attr.name)
-                setattr(self, attr.name, getter(self.raw))
+    __attrs_post_init__ = init_field_form_raw

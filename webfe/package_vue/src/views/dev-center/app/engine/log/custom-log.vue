@@ -418,7 +418,7 @@
                     options[field.name] = [];
                     field.list.forEach(item => {
                         options[field.name].push({
-                            text: item.text,
+                            text: String(item.text),
                             value: item.id
                         });
                     });
@@ -474,7 +474,6 @@
                 });
                 this.renderIndex++;
                 this.hideAllFilterPopover();
-                this.loadData(false);
             }
         },
         beforeRouteLeave (to, from, next) {

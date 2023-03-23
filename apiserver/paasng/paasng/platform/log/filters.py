@@ -37,18 +37,25 @@ logger = logging.getLogger(__name__)
 
 @define
 class FieldFilter:
-    # 查询字段的title
+    """字段选择器
+    :param name: 查询字段的 title
+    :param key: query_term: get 参数中的 key
+    :param options: 该 field 的可选项
+    :param total: 该 field 出现的总次数
+    """
+
     name: str
-    # query_term: get参数中的key
     key: str
-    # 该field的可选项
     options: List[Tuple[str, str]] = field(factory=list)
-    # 该 field 出现的总次数
     total: int = 0
 
 
 def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:
-    """统计 ES 日志的可选字段, 并填充到 filters 的 options"""
+    """从日志样本(logs) 中统计 ES 日志的字段分布, 返回对应的 FieldFilters
+
+    :param logs: 日志样本
+    :param properties: 需要统计的ES 字段
+    """
     # 在内存中统计 filters 的可选值
     field_counter: Dict[str, Counter] = defaultdict(Counter)
     log_fields = [(f, f.split(".")) for f in properties.keys()]
@@ -149,6 +156,9 @@ class ModuleFilter(ESFilter):
         for k, v in term_fields.items():
             term_fields[k] = jinja2.Template(v).render(**context)
 
+        # 目前只有查询 Ingress 日志时需要用 terms 过滤多字段
+        # 接入日志平台后查询日志的交互需要调整, 不能再在模块维度查询日志
+        # 待前端重构后即可删除这些兼容性代码, 暂不考虑在 search_params 中添加 terms 相关的模板渲染字段
         if "engine_app_name" in term_fields:
             search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
         if term_fields:

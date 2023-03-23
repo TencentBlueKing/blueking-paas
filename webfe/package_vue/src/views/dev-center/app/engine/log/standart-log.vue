@@ -70,7 +70,7 @@
             v-if="isShowDate"
             class="mr10"
             style="min-width: 140px;"
-          >{{ log.timestamp }}</span>
+          >{{ formatTime(log.timestamp) }}</span>
           <div>
             <span
               v-if="log.process_id.length < 5"
@@ -129,6 +129,7 @@
     import xss from 'xss';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -445,8 +446,8 @@
                         params,
                         filter
                     });
-                    this.lastScrollId = res.data.scroll_id;
-                    const data = res.data.logs.reverse();
+                    this.lastScrollId = res.scroll_id;
+                    const data = res.logs.reverse();
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
                         item.podShortName = item.pod_name.split('-').reverse()[0];
@@ -457,7 +458,7 @@
                     } else {
                         this.bindScrollLoading();
                     }
-                    this.streamLogCount = res.data.total;
+                    this.streamLogCount = res.total;
 
                     if (this.isScrollLoading) {
                         this.streamLogList = [...data, ...this.streamLogList];
@@ -493,7 +494,7 @@
 
                 try {
                     const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
-                    const data = res.data;
+                    const data = res;
                     data.forEach(item => {
                         const condition = {
                             id: item.key,
@@ -593,6 +594,10 @@
 
             updateEmptyDarkConfig () {
                 this.emptyDarkConf.keyword = this.logParams.keyword;
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

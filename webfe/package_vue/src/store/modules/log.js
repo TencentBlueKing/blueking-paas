@@ -149,7 +149,7 @@ const actions = {
     const queryString = queryStringify(params);
     const logType = params['log_type'] === 'STRUCTURED' ? 'structured' : 'ingress';
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/fields_filters/?${queryString}`;
-    return http.get(url);
+    return http.post(url);
   },
 
   getLogList ({ commit, state }, { appCode, moduleId, params, page, pageSize, filter }) {

@@ -131,7 +131,7 @@ class ESLogClient:
 
     def __init__(self, host: ElasticSearchHost):
         self.host = host
-        self._client = Elasticsearch(hosts=[host.dict()])
+        self._client = Elasticsearch(hosts=[host.dict(exclude_none=True)])
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with es client"""

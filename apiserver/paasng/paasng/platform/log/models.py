@@ -41,7 +41,7 @@ class ElasticSearchHost(BaseModel):
 
     host: str
     port: int
-    http_auth: str = Field(..., description="形如 username:password 的凭证对")
+    http_auth: Optional[str] = Field(None, description="形如 username:password 的凭证对")
     url_prefix: str = ""
     use_ssl: bool = Field(False)
 

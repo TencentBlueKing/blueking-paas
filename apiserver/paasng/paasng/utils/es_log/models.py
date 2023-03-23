@@ -47,11 +47,14 @@ class DateHistogram:
 
 @define
 class FieldFilter:
-    # 查询字段的title
+    """字段选择器
+    :param name: 查询字段的 title
+    :param key: query_term: get 参数中的 key
+    :param options: 该 field 的可选项
+    :param total: 该 field 出现的总次数
+    """
+
     name: str
-    # query_term: get参数中的key
     key: str
-    # 该field的可选项
     options: List[Tuple[str, str]] = field(factory=list)
-    # 该 field 出现的总次数
     total: int = 0

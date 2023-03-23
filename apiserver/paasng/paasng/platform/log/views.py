@@ -87,7 +87,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.QUERY_REQUEST_ERROR
             dsl = parse_simple_dsl_to_dsl(query_conditions, mappings=mappings)
             highlight_query = dsl.to_dict()
-            search = search.query(dsl)
+            search = search.query(dsl).sort({k: {"order": v} for k, v in query_conditions.sort.items()})
 
         # 顺序很重要, querystring 在 simple dsl 里, highlight_fields 必须在 search.query(dsl) 后面
         if highlight_query and highlight_fields:

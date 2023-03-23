@@ -59,6 +59,10 @@ class SmartSearch:
         self.search = self.search.query(dsl)
         return self
 
+    def sort(self, keys: Dict):
+        self.search = self.search.sort(keys)
+        return self
+
     def highlight(self, *fields: str, highlight_query: Optional[Dict]):
         """request highlighting of some fields"""
         if not highlight_query:

@@ -20,34 +20,19 @@ import json
 import logging
 from collections import defaultdict
 from operator import attrgetter
-from typing import Counter, Dict, List, Tuple
+from typing import Counter, Dict, List
 
 import jinja2
-from attrs import define, field
 from rest_framework.fields import get_attribute
 
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.models import ElasticSearchParams
 from paasng.platform.modules.models import Module
+from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.text import calculate_percentage
 
 logger = logging.getLogger(__name__)
-
-
-@define
-class FieldFilter:
-    """字段选择器
-    :param name: 查询字段的 title
-    :param key: query_term: get 参数中的 key
-    :param options: 该 field 的可选项
-    :param total: 该 field 出现的总次数
-    """
-
-    name: str
-    key: str
-    options: List[Tuple[str, str]] = field(factory=list)
-    total: int = 0
 
 
 def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:
@@ -132,10 +117,18 @@ class EnvFilter(ESFilter):
             "engine_app_name": self.env.get_engine_app().name.replace("_", "0us0"),
             "engine_app_names": [self.env.get_engine_app().name.replace("_", "0us0")],
         }
-        fields = self.search_params.termTemplate.copy()
-        for k, v in fields.items():
-            fields[k] = jinja2.Template(v).render(**context)
-        return search.filter("term", **fields)
+        term_fields = self.search_params.termTemplate.copy()
+        for k, v in term_fields.items():
+            term_fields[k] = jinja2.Template(v).render(**context)
+
+        # 目前只有查询 Ingress 日志时需要用 terms 过滤多字段
+        # 接入日志平台后查询日志的交互需要调整, 不能再在模块维度查询日志
+        # 待前端重构后即可删除这些兼容性代码, 暂不考虑在 search_params 中添加 terms 相关的模板渲染字段
+        if "engine_app_name" in term_fields and "tojson" in self.search_params.termTemplate["engine_app_name"]:
+            search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
+        if term_fields:
+            search = search.filter("term", **term_fields)
+        return search
 
 
 class ModuleFilter(ESFilter):
@@ -160,6 +153,8 @@ class ModuleFilter(ESFilter):
         # 接入日志平台后查询日志的交互需要调整, 不能再在模块维度查询日志
         # 待前端重构后即可删除这些兼容性代码, 暂不考虑在 search_params 中添加 terms 相关的模板渲染字段
         if "engine_app_name" in term_fields:
+            if "tojson" not in self.search_params.termTemplate["engine_app_name"]:
+                raise ValueError("engine_app_name template must be using will tojson filter")
             search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
         if term_fields:
             search = search.filter("term", **term_fields)

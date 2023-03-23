@@ -20,44 +20,103 @@ from typing import Dict, List
 
 import pytest
 
-from paasng.platform.log.utils import get_es_term
+from paasng.platform.log.dsl import SimpleDomainSpecialLanguage
+from paasng.platform.log.utils import get_es_term, parse_simple_dsl_to_dsl
 
 
-class TestUtils:
-    @pytest.fixture
-    def make_stats_indexes_fake_resp(self):
-        def _make_stats_indexes_fake_resp(indexes: List[str]):
-            def _wrapper(*args, **kwargs):
-                results: Dict[str, Dict] = {}
-                for index in indexes:
-                    results[index] = {}
+@pytest.fixture
+def make_stats_indexes_fake_resp():
+    def _make_stats_indexes_fake_resp(indexes: List[str]):
+        def _wrapper(*args, **kwargs):
+            results: Dict[str, Dict] = {}
+            for index in indexes:
+                results[index] = {}
 
-                return {"indices": results}
+            return {"indices": results}
 
-            return _wrapper
+        return _wrapper
 
-        return _make_stats_indexes_fake_resp
+    return _make_stats_indexes_fake_resp
 
-    @pytest.mark.parametrize(
-        "query_term,mappings,expected",
-        [
-            ("dd", {"dd": {"type": "text"}}, "dd.keyword"),
-            ("dd", {"dd": {"type": "int"}}, "dd"),
-            ("dd", {"dd": {"type": "keyword"}}, "dd"),
-            ("dd", {"xxx": {"type": "keyword"}}, "dd"),
-            ("json.levelname", {"json": {"properties": {"levelname": {"type": "text"}}}}, "json.levelname.keyword"),
-            ("json.levelname", {"json": {"properties": {"levelname": {"type": "keyword"}}}}, "json.levelname"),
-            (
-                "json.levelname.no",
-                {"json": {"properties": {"levelname": {"properties": {"no": {"type": "keyword"}}}}}},
-                "json.levelname.no",
+
+@pytest.mark.parametrize(
+    "query_term,mappings,expected",
+    [
+        ("dd", {"dd": {"type": "text"}}, "dd.keyword"),
+        ("dd", {"dd": {"type": "int"}}, "dd"),
+        ("dd", {"dd": {"type": "keyword"}}, "dd"),
+        ("dd", {"xxx": {"type": "keyword"}}, "dd"),
+        ("json.levelname", {"json": {"properties": {"levelname": {"type": "text"}}}}, "json.levelname.keyword"),
+        ("json.levelname", {"json": {"properties": {"levelname": {"type": "keyword"}}}}, "json.levelname"),
+        (
+            "json.levelname.no",
+            {"json": {"properties": {"levelname": {"properties": {"no": {"type": "keyword"}}}}}},
+            "json.levelname.no",
+        ),
+        (
+            "json.levelname.no",
+            {"json": {"properties": {"levelname": {"properties": {"no": {"type": "text"}}}}}},
+            "json.levelname.no.keyword",
+        ),
+    ],
+)
+def test_get_es_term(query_term, mappings, expected):
+    assert get_es_term(query_term, mappings) == expected
+
+
+@pytest.mark.parametrize(
+    "dsl, mappings, expected",
+    [
+        (
+            SimpleDomainSpecialLanguage(query={"query_string": "foo"}),
+            {},
+            {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+        ),
+        (
+            SimpleDomainSpecialLanguage(query={"query_string": "foo", "terms": {"app_code": {"foo"}}}),
+            {},
+            {
+                'bool': {
+                    'must': [
+                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+                        {'terms': {'app_code': ['foo']}},
+                    ]
+                }
+            },
+        ),
+        (
+            SimpleDomainSpecialLanguage(query={"query_string": "foo", "terms": {"app_code": ["foo"]}}),
+            {"app_code": {"type": "text"}},
+            {
+                'bool': {
+                    'must': [
+                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+                        {'terms': {'app_code.keyword': ['foo']}},
+                    ]
+                }
+            },
+        ),
+        (
+            SimpleDomainSpecialLanguage(
+                query={
+                    "query_string": "foo",
+                    "terms": {"app_code": ["foo"]},
+                    "exclude": {"module_name": ["bar"]},
+                },
+                sort={"response_time": "desc"},
             ),
-            (
-                "json.levelname.no",
-                {"json": {"properties": {"levelname": {"properties": {"no": {"type": "text"}}}}}},
-                "json.levelname.no.keyword",
-            ),
-        ],
-    )
-    def test_get_es_term(self, query_term, mappings, expected):
-        assert get_es_term(query_term, mappings) == expected
+            {"app_code": {"type": "text"}},
+            {
+                'bool': {
+                    'must': [
+                        {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
+                        {'terms': {'app_code.keyword': ['foo']}},
+                    ],
+                    'must_not': [{'terms': {'module_name': ['bar']}}],
+                }
+            },
+        ),
+    ],
+)
+def test_parse_simple_dsl_to_dsl(dsl, mappings, expected):
+    assert parse_simple_dsl_to_dsl(dsl, mappings).to_dict() == expected

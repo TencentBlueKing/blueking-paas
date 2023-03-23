@@ -151,14 +151,6 @@
                         class="empty-warp"
                       >
                         <table-empty empty />
-                        <ul class="chart-legend">
-                          <li>
-                            <span class="dot warning" /> PV
-                          </li>
-                          <li>
-                            <span class="dot primary" /> UV
-                          </li>
-                        </ul>
                       </div>
                     </div>
                   </div>

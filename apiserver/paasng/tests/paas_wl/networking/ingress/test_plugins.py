@@ -42,7 +42,7 @@ class TestModuleAccessControl:
             'access_control': {
                 '_lookup_field': 'region',
                 'data': {
-                    settings.FOR_TESTS_DEFAULT_REGION: {
+                    settings.DEFAULT_REGION_NAME: {
                         'dj_admin_ip_range_map': 'inner',
                         'redis_server_name': 'local',
                     }

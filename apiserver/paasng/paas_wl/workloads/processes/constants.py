@@ -22,13 +22,6 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 PROCESS_NAME_KEY = "bkapp.paas.bk.tencent.com/process-name"
 
 
-class AppEnvName(str, StructuredEnum):
-    """The default environment names"""
-
-    STAG = EnumField('stag', label="预发布环境")
-    PROD = EnumField('prod', label="生产环境")
-
-
 class ProcessUpdateType(str, StructuredEnum):
     """Type of updating processes"""
 

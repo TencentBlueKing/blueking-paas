@@ -27,7 +27,7 @@ from paas_wl.resources.base.base import EnhancedApiClient
 from paas_wl.resources.base.exceptions import ResourceMissing
 from paas_wl.resources.base.kres import PatchType
 from paas_wl.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.processes.constants import AppEnvName
+from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import ModuleEnvironment
 
 from .exceptions import ProcNotDeployed, ProcNotFoundInRes

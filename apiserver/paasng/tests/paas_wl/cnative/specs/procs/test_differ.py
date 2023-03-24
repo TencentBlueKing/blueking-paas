@@ -22,7 +22,7 @@ import pytest
 
 from paas_wl.cnative.specs.models import create_app_resource
 from paas_wl.cnative.specs.procs.differ import ProcReplicasChange, diff_replicas
-from paas_wl.workloads.processes.constants import AppEnvName
+from paasng.engine.constants import AppEnvName
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

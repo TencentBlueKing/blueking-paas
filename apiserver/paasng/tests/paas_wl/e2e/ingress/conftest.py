@@ -43,7 +43,7 @@ def ingress_nginx_ns():
 @pytest.fixture(scope="session")
 def cluster(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        return get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION)
+        return get_default_cluster_by_region(settings.DEFAULT_REGION_NAME)
 
 
 @pytest.fixture(scope="session")
@@ -122,7 +122,7 @@ def http_ingress_domain(echo_hostname, root_path, foo_path, multi_layer_path_end
 @pytest.fixture(scope="module")
 def e2e_app(namespace_maker, django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        app = G(WlApp, region=settings.FOR_TESTS_DEFAULT_REGION, structure={"web": 1}, name=random_resource_name())
+        app = G(WlApp, region=settings.DEFAULT_REGION_NAME, structure={"web": 1}, name=random_resource_name())
         G(
             Config,
             app=app,

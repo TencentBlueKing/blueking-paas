@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 class TestAppConfigVarManager:
     def test_app_configvar_generate(self):
         wl_app = create_wl_app(
-            force_app_info={"name": "bkapp-test_me-stag", "region": settings.FOR_TESTS_DEFAULT_REGION},
+            force_app_info={"name": "bkapp-test_me-stag", "region": settings.DEFAULT_REGION_NAME},
             paas_app_code='test_me',
             environment='stag',
         )

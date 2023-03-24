@@ -34,7 +34,7 @@ def build_default_cluster():
 
     cluster = Cluster(
         name=CLUSTER_NAME_FOR_TESTING,
-        region=settings.FOR_TESTS_DEFAULT_REGION,
+        region=settings.DEFAULT_REGION_NAME,
         is_default=True,
         ingress_config=cattr.structure(
             {

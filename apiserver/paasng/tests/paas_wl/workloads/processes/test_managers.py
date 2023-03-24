@@ -169,12 +169,12 @@ class TestExtractTypeFromName:
         'name,namespace,proc_type',
         [
             (
-                f'{settings.FOR_TESTS_DEFAULT_REGION}-bkapp-foo-prod-web-gunicorn-deployment',
+                f'{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment',
                 'bkapp-foo-prod',
                 'web',
             ),
             (
-                f'{settings.FOR_TESTS_DEFAULT_REGION}-bkapp-foo-prod-web-gunicorn-deployment-858bf9c468-rms24',
+                f'{settings.DEFAULT_REGION_NAME}-bkapp-foo-prod-web-gunicorn-deployment-858bf9c468-rms24',
                 'bkapp-foo-prod',
                 'web',
             ),

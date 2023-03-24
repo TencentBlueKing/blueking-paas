@@ -38,7 +38,7 @@ def create_wl_app(
     default_environment = random.choice(["stag", "prod"])
     default_app_name = 'app-' + get_random_string(length=12).lower()
     app_info = {
-        "region": settings.FOR_TESTS_DEFAULT_REGION,
+        "region": settings.DEFAULT_REGION_NAME,
         "name": default_app_name,
         "structure": {"web": 1, "worker": 1},
         "owner": str(owner or create_user(username="somebody")),

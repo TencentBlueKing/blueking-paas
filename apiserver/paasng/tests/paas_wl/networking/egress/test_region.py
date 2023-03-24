@@ -30,7 +30,7 @@ from tests.paas_wl.utils.basic import random_resource_name
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-REGION_NAME = settings.FOR_TESTS_DEFAULT_REGION
+REGION_NAME = settings.DEFAULT_REGION_NAME
 
 
 class TestCommandGenState:

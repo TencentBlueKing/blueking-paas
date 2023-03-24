@@ -230,7 +230,6 @@ MONITOR_CONFIG = settings.get('MONITOR_CONFIG', {})
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
-FOR_TESTS_DEFAULT_REGION = settings.get('FOR_TESTS_DEFAULT_REGION', 'default')
 
 FOR_TESTS_APISERVER_URL = settings.get('FOR_TESTS_APISERVER_URL', 'http://localhost:28080')
 FOR_TESTS_CA_DATA = settings.get('FOR_TESTS_CA_DATA', '')

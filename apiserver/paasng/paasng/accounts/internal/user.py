@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 #
 #   - "default"：默认值，暂无特殊用途
 #   - "internal-sys"：apiserver 与 workloads 等服务互调系统级 API 时使用
-#   - "service-proxy"：网关往 PaaS 的后端微服务透传请求时使用，JWT 通常会携带用户 ID 信息
 #   - "internal_platform"：调用 PaaS 增强服务的系统级 API 时使用
 
 

@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 from typing import Dict, List
 
 import cattr
@@ -24,6 +23,8 @@ from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
+from paas_wl.admin.serializers.processes import ProcessSpecPlanSLZ
+from paas_wl.workloads.processes.models import ProcessSpecPlan
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.engine.constants import AppEnvName
@@ -32,10 +33,7 @@ from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.region.models import get_all_regions
-from paasng.service_proxy.views import SvcWorkloadsProxyView
 from paasng.utils.text import remove_prefix
-
-proxy = SvcWorkloadsProxyView.as_view()
 
 
 def get_path(request: Request) -> str:
@@ -50,20 +48,24 @@ class ProcessSpecPlanManageView(GenericTemplateView):
     """ProcessSpecPlan 管理页"""
 
     name = "应用资源方案"
+    serializer_class = ProcessSpecPlanSLZ
+    queryset = ProcessSpecPlan.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/platformmgr/process_spec_plans.html"
 
     def get_context_data(self, **kwargs):
-        self.paginator.default_limit = 10
+        self.paginator.default_limit = 2
+        self.paginator.request = self.request
+        kwargs.update(self.request.query_params)
         if 'view' not in kwargs:
             kwargs['view'] = self
 
-        remote_context = json.loads(proxy(self.request, path=get_path(self.request)).getvalue())
-        kwargs.update(remote_context)
         kwargs["env_choices"] = [{"value": value, "text": text} for value, text in AppEnvName.get_choices()]
         kwargs["region_list"] = [
             {"value": region.name, "text": region.display_name} for region in get_all_regions().values()
         ]
+        kwargs["process_spec_plan_list"] = self.list(self.request, *self.args, **self.kwargs)
+        kwargs['pagination'] = self.get_pagination_context(self.request)
         return kwargs
 
     def get(self, request, *args, **kwargs):

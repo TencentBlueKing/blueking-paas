@@ -33,8 +33,8 @@ def cluster_creator(ca_data, cert_data, key_data):
     def get_or_create(cluster_name: str, servers: List[Dict], token_value: Optional[str] = None):
         cluster = Cluster.objects.register_cluster(
             name=cluster_name,
-            region=settings.FOR_TESTS_DEFAULT_REGION,
-            is_default=not Cluster.objects.filter(region=settings.FOR_TESTS_DEFAULT_REGION).exists(),
+            region=settings.DEFAULT_REGION_NAME,
+            is_default=not Cluster.objects.filter(region=settings.DEFAULT_REGION_NAME).exists(),
             ca_data=ca_data,
             cert_data=cert_data,
             key_data=key_data,

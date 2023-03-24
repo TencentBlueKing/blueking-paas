@@ -40,7 +40,6 @@ class AppResVerManager:
 
     def __init__(self, app: 'WlApp'):
         self.app = app
-        self.client = get_client_by_app(app)
 
     @property
     def curr_version(self) -> 'MapperPack':
@@ -48,9 +47,10 @@ class AppResVerManager:
         latest_config = self.app.latest_config
 
         # 一般对于只读的操作，都只需要直接读取当前版本
+        client = get_client_by_app(self.app)
         return get_mapper_version(
             target=latest_config.metadata.get(self._mapper_version_term) or settings.LEGACY_MAPPER_VERSION,
-            init_kwargs=dict(client=self.client),
+            init_kwargs=dict(client=client),
         )
 
     def update(self, version: str):

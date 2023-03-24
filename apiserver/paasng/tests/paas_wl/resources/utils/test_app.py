@@ -38,7 +38,7 @@ class TestProcessScheduler:
     def test_update_process_deploy_info(
         self,
     ):
-        region = settings.FOR_TESTS_DEFAULT_REGION
+        region = settings.DEFAULT_REGION_NAME
         self.release.config.node_selector = {"non": "xxx"}
         self.release.config.tolerations = [{'key': 'key-1', 'operator': 'Equal'}]
         self.release.config.domain = "sdfsdfsdf"

@@ -33,6 +33,12 @@ urlpatterns = [
         SysUniApplicationViewSet.as_view({'get': 'query_by_username'}),
         name='sys.api.uni_applications.list_by_username',
     ),
+    # 分页查询应用基本信息
+    url(
+        'sys/api/uni_applications/list/minimal/$',
+        SysUniApplicationViewSet.as_view({'get': 'list_minimal_app'}),
+        name='sys.api.uni_applications.list_minimal_app',
+    ),
     re_path(
         make_app_pattern(suffix="/lesscode/query_db_credentials", prefix='sys/api/bkapps/applications/'),
         LessCodeSystemAPIViewSet.as_view({"get": "query_db_credentials"}),

@@ -198,6 +198,7 @@ MIDDLEWARE = [
     'paasng.accounts.internal.user.SysUserFromVerifiedClientMiddleware',
     # Other utilities middlewares
     'paasng.utils.middlewares.AutoDisableCSRFMiddleware',
+    'paasng.utils.middlewares.APILanguageMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 

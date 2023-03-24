@@ -32,6 +32,7 @@ from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleE
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
+from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 from .configurations import generate_builtin_configurations, merge_envvars
@@ -46,7 +47,6 @@ from .constants import (
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
-    AppEnvName,
     DeployStatus,
 )
 from .v1alpha1.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata

@@ -19,8 +19,6 @@ to the current version of the project delivered to anyone in the future.
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.workloads.processes.constants import AppEnvName  # noqa
-
 DEFAULT_PROCESS_NAME = 'web'
 
 # 注解中存储当前应用是否启用白名单功能的键名

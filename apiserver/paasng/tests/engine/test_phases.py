@@ -67,7 +67,7 @@ class TestDeployPhase:
         [(JobStatus.FAILED, {}), (JobStatus.FAILED, {"sss": "xxx"}), (JobStatus.SUCCESSFUL, {"sss": "xxx"})],
     )
     def test_mark_and_write_to_steam(self, preparation_phase, status, extra_info):
-        with mock.patch('paasng.engine.deploy.infras.RedisChannelStream') as mocked_stream:
+        with mock.patch('paasng.engine.utils.output.RedisChannelStream') as mocked_stream:
             preparation_phase.mark_and_write_to_steam(mocked_stream(), status, extra_info)
 
             assert preparation_phase.status == status.value

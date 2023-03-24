@@ -393,7 +393,7 @@ class ApplicationMemberRoleOnlySLZ(serializers.Serializer):
 class ApplicationListDetailedSLZ(serializers.Serializer):
     """Serializer for detailed app list"""
 
-    valid_order_by_fields = ('code', 'created', 'latest_operated_at')
+    valid_order_by_fields = ('code', 'created', 'latest_operated_at', 'name')
     exclude_collaborated = serializers.BooleanField(default=False)
     include_inactive = serializers.BooleanField(default=False)
     region = serializers.ListField(required=False)
@@ -401,7 +401,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     search_term = serializers.CharField(required=False)
     source_origin = serializers.ChoiceField(required=False, allow_null=True, choices=SourceOrigin.get_choices())
     type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), required=False)
-    order_by = serializers.CharField(default='-created')
+    order_by = serializers.CharField(default='name')
     prefer_marked = serializers.BooleanField(default=True)
 
     def validate_order_by(self, value):

@@ -184,11 +184,9 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(request_body=CreateDeploySerializer, responses={"200": DeployPrepResultSLZ()})
     def prepare(self, request, code, module_name, environment):
-        """每次部署前调用，接收的参数与部署一致，返回需用户关注的二次确认信息，比如
-        某些进程的副本数将被重写，等等。
+        """每次部署前调用，接收的参数与部署一致，返回需用户关注的二次确认信息，比如某些进程的副本数将被重写，等等。
 
-        - 客户端：当 `proc_replicas_changes` 没有数据时，不展示额外信息，只显示普通的
-          二次确认框
+        - 客户端：当 `proc_replicas_changes` 没有数据时，不展示额外信息，只显示普通的二次确认框
         """
         env = self.get_env_via_path()
         slz = CreateDeploySerializer(data=request.data)

@@ -35,7 +35,8 @@ from paasng.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
-from paasng.engine.models.steps import DeployStepPicker
+from paasng.engine.phases_steps.display_blocks import get_display_blocks_by_type
+from paasng.engine.phases_steps.picker import DeployStepPicker
 from paasng.platform.applications.signals import module_environment_offline_event
 from paasng.platform.modules.specs import ModuleSpecs
 
@@ -218,7 +219,7 @@ class DeployDisplayBlockRenderer:
         # A: 因为很多信息是没有办法在应用创建拿到的，如果要存这些信息，那么需要引入信息及时同步的复杂度
         # 所以每次请求 deploy skeleton 时，都需要实时渲染一次
         info = dict()
-        for b in DeployPhaseTypes.get_display_blocks(DeployPhaseTypes(phase_obj.type)):
+        for b in get_display_blocks_by_type(DeployPhaseTypes(phase_obj.type)):
             info.update(b.get_detail(engine_app=phase_obj.engine_app))
         return info
 

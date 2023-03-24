@@ -19,15 +19,10 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from paas_wl.cluster.shim import Cluster, EnvClusterService
-from paasng.engine.constants import RuntimeType
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.specs import ModuleSpecs
+from paas_wl.platform.applications.models.build import Build
 
 if TYPE_CHECKING:
-    from paasng.dev_resources.sourcectl.models import VersionInfo
     from paasng.engine.models import EngineApp
-    from paasng.platform.applications.models import Application
     from paasng.platform.modules.models.module import Module
     from paasng.platform.modules.models.runtime import AppBuildPack, AppSlugBuilder
 
@@ -83,49 +78,12 @@ class SlugbuilderInfo:
         return cls.from_module(app.env.module)
 
 
-class RuntimeInfo:
-    """解析与 Deployment 相关的运行时环境信息的工具"""
+def get_processes_by_build(build_id: str) -> Dict[str, str]:
+    """Get processes by build id
 
-    def __init__(self, engine_app: 'EngineApp', version_info: 'VersionInfo'):
-        self.engine_app = engine_app
-        self.module = engine_app.env.module
-        self.version_info: 'VersionInfo' = version_info
-        self.module_spec = ModuleSpecs(self.module)
-
-    @property
-    def type(self) -> RuntimeType:
-        """返回当前 engine_app 的运行时的类型, buildpack 或者 custom_image"""
-        return self.module_spec.runtime_type
-
-    @property
-    def image(self) -> Optional[str]:
-        """返回当前 engine_app 启动的镜像"""
-        if self.type == RuntimeType.CUSTOM_IMAGE:
-            repo_url = self.module.get_source_obj().get_repo_url()
-            reference = self.version_info.revision
-            return f"{repo_url}:{reference}"
-        elif self.module.get_source_origin() == SourceOrigin.S_MART and self.version_info.version_type == "image":
-            from paasng.extensions.smart_app.utils import SMartImageManager
-
-            named = SMartImageManager(self.module).get_image_info(self.version_info.revision)
-            return f"{named.domain}/{named.name}:{named.tag}"
-
-        slugrunner = self.module.slugrunners.last()
-        return getattr(slugrunner, "full_image", '')
-
-    @property
-    def endpoint(self) -> List:
-        """返回当前 engine_app 镜像启动的 endpoint"""
-        if self.type == RuntimeType.CUSTOM_IMAGE:
-            return ["env"]
-        # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
-        slugrunner = self.module.slugrunners.last()
-        metadata: Dict = getattr(slugrunner, "metadata", {})
-        return metadata.get("endpoint", ['bash', '/runner/init'])
-
-
-def get_application_cluster(application: 'Application') -> Cluster:
-    """Return the cluster name of app's default module"""
-    default_module = application.get_default_module()
-    env = default_module.envs.get(environment='prod')
-    return EnvClusterService(env).get_cluster()
+    :raise: RuntimeError when build not found
+    """
+    processes = Build.objects.get(pk=build_id).procfile
+    if not processes:
+        raise RuntimeError("can't find processes in engine")
+    return processes

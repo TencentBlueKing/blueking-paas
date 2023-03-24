@@ -26,7 +26,7 @@ from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import SourceTypeSpecConfig
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.publish.entrance.exposer import get_bk_doc_url_prefix
+from paasng.publish.entrance.preallocated import get_bk_doc_url_prefix
 
 
 class SourceTypeSpecManageView(GenericTemplateView):

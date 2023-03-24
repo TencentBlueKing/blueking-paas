@@ -201,7 +201,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         params = serializer.data
 
         applications = UserApplicationFilter(request.user).filter(
-            order_by=['code'],
+            order_by=['name'],
             include_inactive=params["include_inactive"],
             source_origin=params.get("source_origin", None),
         )
@@ -255,7 +255,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         keyword = params.get('keyword')
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params['include_inactive'], order_by=['code', 'name'], search_term=keyword
+            include_inactive=params['include_inactive'], order_by=['name'], search_term=keyword
         )
 
         if params.get("prefer_marked"):

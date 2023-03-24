@@ -199,6 +199,12 @@
               <div style="width: 110px; float: right">
                 <bk-radio-group v-model="sortValue">
                   <bk-radio
+                    value="name"
+                    style="display: block; margin: 4px 0 0 0;"
+                  >
+                    {{ $t('应用名称') }}
+                  </bk-radio>
+                  <bk-radio
                     value="-created"
                     style="display: block; margin: 4px 0 0 0;"
                   >
@@ -679,7 +685,7 @@
                     limit: 10,
                     limitList: [5, 10, 20, 50]
                 },
-                sortValue: '-created',
+                sortValue: 'name',
                 // fetchParams
                 fetchParams: {
                     // 等于 filterKey
@@ -692,7 +698,7 @@
                     include_inactive: false,
                     // limit
                     limit: 0,
-                    order_by: '-created'
+                    order_by: 'name'
                 },
                 // app数量, 不考虑筛选情况
                 appNumInfo: {
@@ -1075,7 +1081,7 @@
                     regionList: ['ieod', 'tencent', 'clouds'],
                     type: false
                 };
-                this.sortValue = '-created';
+                this.sortValue = 'name';
                 this.filterKey = '';
                 this.fetchAppList();
             },

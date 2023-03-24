@@ -32,7 +32,7 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
 from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
-from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
@@ -54,6 +54,10 @@ def django_db_setup(django_db_setup, django_db_blocker):
     """Create default cluster for testing"""
     with django_db_blocker.unblock():
         with transaction.atomic():
+            # Clear cached configuration pool before creating default cluster in case
+            # there are some stale configurations in the pool.
+            get_global_configuration_pool.cache_clear()
+
             cluster = create_default_cluster()
             setup_default_client(cluster)
 

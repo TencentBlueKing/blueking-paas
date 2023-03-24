@@ -103,7 +103,11 @@
             }
         },
         created () {
-            this.init();
+          this.$store.commit('updataEnvEventData', []);
+          this.init();
+        },
+        beforedestroy () {
+          this.$store.commit('updataEnvEventData', ['stag', 'prod']);
         },
         methods: {
             init () {

@@ -70,7 +70,7 @@ class ApplicationsSearchViewset(ViewSet):
         slz.is_valid(raise_exception=True)
 
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=True, order_by=['code', 'name'], search_term=slz.data['keyword']
+            include_inactive=True, order_by=['name'], search_term=slz.data['keyword']
         )
         paged_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
         return Response(AppSearchResultSLZ({'results': paged_applications, 'count': applications.count()}).data)

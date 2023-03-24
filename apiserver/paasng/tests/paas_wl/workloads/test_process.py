@@ -64,7 +64,7 @@ class TestProcessManager:
     def setUp(self):
         self.app = create_wl_app(
             force_app_info={
-                "region": settings.FOR_TESTS_DEFAULT_REGION,
+                "region": settings.DEFAULT_REGION_NAME,
                 "name": "bkapp-lala_la-stag",
                 "structure": {"web": 1, "worker1": 1, "worker2": 1},
             }
@@ -84,7 +84,7 @@ class TestProcessManager:
         assert sample_process.type == "web"
         assert sample_process.app.namespace == "bkapp-lala0us0la-stag"
         assert sample_process.app.name == "bkapp-lala_la-stag"
-        assert sample_process.app.region == settings.FOR_TESTS_DEFAULT_REGION
+        assert sample_process.app.region == settings.DEFAULT_REGION_NAME
 
     def test_assemble_processes(self):
         release = create_wl_release(

@@ -50,7 +50,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 DummyObjectList = namedtuple('DummyObjectList', 'items metadata')
 
 # Make a shortcut name
-RG = settings.FOR_TESTS_DEFAULT_REGION
+RG = settings.DEFAULT_REGION_NAME
 
 
 class TestClientProcess:
@@ -191,7 +191,6 @@ class TestClientBuild:
         ), patch(
             "paas_wl.resources.base.controllers.WaitPodDelete.wait"
         ):
-
             scheduler_client.build_slug(template=pod_template)
             assert kpod_get.called
             assert kpod_create_or_update.called
@@ -221,7 +220,6 @@ class TestClientBuild:
         with patch('paas_wl.resources.base.kres.NameBasedOperations.get_or_create', namespace_create), patch(
             'paas_wl.resources.base.kres.KNamespace.wait_for_default_sa', namespace_check
         ), patch('paas_wl.resources.base.kres.NameBasedOperations.get', kpod_get):
-
             with pytest.raises(ResourceDuplicate):
                 scheduler_client.build_slug(template=pod_template)
 

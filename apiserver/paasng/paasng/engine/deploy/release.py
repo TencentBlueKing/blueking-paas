@@ -51,6 +51,7 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure(_('更新进程配置')):
+            # only sync `command` field in release
             processes = [{"name": name, "command": command} for name, command in self.deployment.procfile.items()]
             ProcessManager(self.engine_app).sync_processes_specs(processes)
 

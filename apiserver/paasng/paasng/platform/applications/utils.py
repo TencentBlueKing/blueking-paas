@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from django.db import transaction
@@ -245,14 +244,6 @@ def get_app_overview(application: Application) -> dict:
 
         data[module.name] = module_info
     return data
-
-
-@dataclass
-class BasicDeplpyInfo:
-    """部署基本信息"""
-
-    operator: str
-    deploy_time: str
 
 
 def get_latest_deployment_basic_info(application: Application, env: ModuleEnvironment) -> Optional[dict]:

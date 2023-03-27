@@ -16,9 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Generic, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Tuple, TypedDict, TypeVar
 
 from attr import define, field
+
+
+class FlattenLog(TypedDict):
+    """
+    :param timestamp: linux timestamp(seconds)
+    :param message: log message field
+    :param raw: flatten es log, can get field by es format, e.g. "json.message"
+    """
+
+    timestamp: int
+    message: str
+    raw: Dict[str, Any]
+
 
 MLine = TypeVar("MLine")
 

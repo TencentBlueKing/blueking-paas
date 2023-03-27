@@ -22,15 +22,24 @@ from typing import Any, Dict, Optional
 from attrs import converters, define, field, fields
 
 from paasng.platform.log.exceptions import LogLineInfoBrokenError
-from paasng.platform.log.utils import NOT_SET, get_field_form_raw
+from paasng.platform.log.utils import NOT_SET, generate_field_extractor
 
 logger = logging.getLogger(__name__)
 
 
 def init_field_form_raw(self):
+    """extract extra log field from raw, All fields except for FlattenLog are extra fields.
+
+    default getter will try to set attr to raw[attr.name]
+    If the attr.name is not the field name in raw, you can set getter in metadata the override the getter
+
+    e.g.
+
+    plugin_code: str = field(init=False, metadata={"getter": get_field_form_raw("app_code")})
+    """
     for attr in fields(type(self)):
         if not attr.init:
-            getter = attr.metadata.get("getter") or get_field_form_raw(attr.name)
+            getter = attr.metadata.get("getter") or generate_field_extractor(attr.name)
             setattr(self, attr.name, getter(self.raw))
     for k, v in self.raw.items():
         if v is NOT_SET:
@@ -39,7 +48,20 @@ def init_field_form_raw(self):
 
 @define
 class StandardOutputLogLine:
-    """标准输出日志结构"""
+    """标准输出日志结构
+
+    :param timestamp: field in FlattenLog
+    :param message: field in FlattenLog
+    :param raw: field in FlattenLog
+
+    :param region: [deprecated] app region
+    :param app_code: [deprecated] app_code
+    :param module_name: [deprecated] module_name
+    :param environment: [deprecated] runtime environment(stag/prod)
+    :param process_id: process_id
+    :param stream: stream, such as "django", "celery", "stdout"
+    :param pod_name: [required] pod_name, The name of the pod that logs are generated from.
+    """
 
     timestamp: int
     message: str
@@ -51,14 +73,26 @@ class StandardOutputLogLine:
     environment: str = field(init=False, converter=converters.optional(str))
     process_id: str = field(init=False, converter=converters.optional(str))
     stream: str = field(init=False, converter=converters.optional(str))
-    pod_name: str = field(init=False, converter=converters.optional(str))
+    pod_name: str = field(init=False)
 
     __attrs_post_init__ = init_field_form_raw
 
 
 @define
 class StructureLogLine:
-    """结构化日志结构"""
+    """结构化日志结构
+
+    :param timestamp: field in FlattenLog
+    :param message: field in FlattenLog
+    :param raw: field in FlattenLog
+
+    :param region: [deprecated] app region
+    :param app_code: [deprecated] app_code
+    :param module_name: [deprecated] module_name
+    :param environment: [deprecated] runtime environment(stag/prod)
+    :param process_id: process_id
+    :param stream: stream, such as "django", "celery", "stdout"
+    """
 
     timestamp: int
     message: str
@@ -83,7 +117,24 @@ def get_engine_app_name(raw_log: Dict):
 
 @define
 class IngressLogLine:
-    """ingress 访问日志结构"""
+    """ingress 访问日志结构
+
+    :param timestamp: field in FlattenLog
+    :param message: field in FlattenLog
+    :param raw: field in FlattenLog
+
+
+    :param engine_app_name: [deprecated] engine_app_name
+
+    :param method: [required] method, The HTTP method used in the request
+    :param path: [required] path, The URL path of the request
+    :param status_code: [required] status_code, The HTTP status code of the response
+    :param response_time: [required] response_time, The response time in seconds
+    :param client_ip: [required] client_ip, The IP address of the client
+    :param bytes_sent: [required] bytes_sent, The number of bytes sent in the response
+    :param user_agent: [required] user_agent, The user agent string of the client
+    :param http_version: [required] http_version, The HTTP version used in the request
+    """
 
     timestamp: int
     message: str

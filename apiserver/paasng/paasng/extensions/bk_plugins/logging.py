@@ -18,18 +18,19 @@ to the current version of the project delivered to anyone in the future.
 """
 """Logging facilities for bk-plugins"""
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import cattr
-from attrs import converters, define, field, fields
+from attrs import converters, define, field
 from django.conf import settings
 
 from paasng.extensions.bk_plugins.models import BkPlugin
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.log.client import instantiate_log_client
+from paasng.platform.log.client import LogClientProtocol, instantiate_log_client
 from paasng.platform.log.filters import EnvFilter
-from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
-from paasng.platform.log.utils import clean_logs
+from paasng.platform.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
+from paasng.platform.log.responses import init_field_form_raw
+from paasng.platform.log.utils import clean_logs, generate_field_extractor
 from paasng.utils.es_log.models import Logs
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -37,24 +38,38 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 
 @define
 class StructureLogLine:
-    """结构化日志结构"""
+    """结构化日志结构
+    :param timestamp: field in FlattenLog
+    :param message: field in FlattenLog
+    :param raw: field in FlattenLog
+
+    :param detail: alias of raw. This is the field before refactoring. It is kept for compatibility purposes.
+    :param region: [deprecated] app region
+    :param plugin_code: alais of app_code.
+    :param environment: [deprecated] runtime environment(stag/prod), plugin app should on be "prod"
+    :param process_id: process_id
+    :param stream: stream, such as "django", "celery", "stdout"
+    :param ts: [deprecated]datetime string, use timestamp(utc) instead
+    """
 
     timestamp: int
     message: str
+    raw: Dict[str, Any]
 
-    # key: json.*
-    # e.g. json.funcName
-    detail: Dict[str, Any]
-
-    region: str
-    plugin_code: str = field(init=False, converter=converters.optional(str))
-    environment: str
-    process_id: Optional[str]
+    # extra useful field, will be extracted from the same field in raw
+    detail: Dict[str, Any] = field(init=False)
+    region: str = field(init=False, converter=converters.optional(str))
+    plugin_code: str = field(
+        init=False, converter=converters.optional(str), metadata={"getter": generate_field_extractor("app_code")}
+    )
+    environment: str = field(init=False, converter=converters.optional(str))
+    process_id: Optional[str] = field(init=False, converter=converters.optional(str))
+    stream: str = field(init=False, converter=converters.optional(str))
+    ts: str = field(init=False, converter=converters.optional(str))
 
     def __attrs_post_init__(self):
-        for attr in fields(type(self)):
-            if not attr.init:
-                setattr(self, attr.name, self.detail.get(attr.name))
+        self.detail = self.raw
+        init_field_form_raw(self)
 
 
 class PluginLoggingClient:
@@ -97,7 +112,7 @@ class PluginLoggingClient:
         )
         return logs
 
-    def instantiate_log_client(self):
+    def instantiate_log_client(self) -> Tuple[LogClientProtocol, ElasticSearchConfig]:
         """初始化日志查询客户端"""
         # TODO: 统计 LOG_SEARCH_COUNTER 指标
         # LOG_SEARCH_COUNTER.labels(
@@ -108,7 +123,10 @@ class PluginLoggingClient:
         return instantiate_log_client(log_config=log_config, bk_username="blueking"), log_config
 
     def make_search(self, trace_id: str) -> SmartSearch:
-        """构造日志查询语句"""
+        """构造日志查询语句
+
+        :param trace_id: "trace_id" is an identifier for filtering logs
+        """
         module = self.application.get_module(module_name=self._module_name)
         env = module.get_envs(environment="prod")
         smart_time_range = SmartTimeRange(time_range=self._default_time_range)

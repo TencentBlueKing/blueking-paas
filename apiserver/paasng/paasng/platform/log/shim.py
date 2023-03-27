@@ -35,10 +35,8 @@ ELK_STRUCTURED_COLLECTOR_CONFIG_ID = "elk-structured"
 ELK_INGRESS_COLLECTOR_CONFIG_ID = "elk-ingress"
 
 
-def setup_elk_model():
+def setup_platform_elk_model():
     """初始化 ELK 日志方案的数据库模型 - 平台维度"""
-    if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
-        return
     host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
     # 标准输出日志
     # paas 的标准输出日志过滤条件
@@ -63,7 +61,6 @@ def setup_elk_model():
         },
     )
     # 结构化日志
-
     # paas 的结构化日志过滤条件
     # termTemplate = {'app_code.keyword': '{{ app_code }}'}
     # builtinExcludes = {"stream.keyword": ["stderr", "stdout"]}
@@ -109,9 +106,9 @@ def setup_elk_model():
     )
 
 
-def setup_default_elk_model(env: ModuleEnvironment):
+def setup_saas_elk_model(env: ModuleEnvironment):
     """初始化 ELK 日志方案的数据库模型 - SaaS 维度"""
-    setup_elk_model()
+    setup_platform_elk_model()
     stdout_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID)
     structured_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID)
     ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
@@ -138,4 +135,6 @@ def setup_env_log_model(env: ModuleEnvironment):
     cluster = EnvClusterService(env).get_cluster()
     if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
         return setup_default_bk_log_model(env)
-    return setup_default_elk_model(env)
+    if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
+        raise ValueError("ELK is not supported")
+    return setup_saas_elk_model(env)

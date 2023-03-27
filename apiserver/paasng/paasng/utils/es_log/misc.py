@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from collections import Counter, defaultdict
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import arrow
 from _operator import attrgetter
@@ -31,7 +31,7 @@ from paasng.utils.text import calculate_percentage
 logger = logging.getLogger(__name__)
 
 
-def flatten_structure(structured_fields: Dict, parent: Optional[str] = None) -> Dict:
+def flatten_structure(structured_fields: Dict, parent: Optional[str] = None) -> Dict[str, Any]:
     """接收一个包含层级关系的结构体，并将其扁平化，返回转换后的结构体
 
     :param structured_fields: 包含层级关系的结构体
@@ -39,7 +39,7 @@ def flatten_structure(structured_fields: Dict, parent: Optional[str] = None) -> 
 
     :return: 转换后的扁平化结构体
     """
-    ret = dict()
+    ret: Dict[str, Any] = dict()
     for sub_key, value in structured_fields.items():
         if parent is None:
             key = sub_key

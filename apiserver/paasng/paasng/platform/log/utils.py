@@ -29,6 +29,7 @@ from elasticsearch_dsl.response import Hit
 from paasng.platform.log.exceptions import LogLineInfoBrokenError
 from paasng.platform.log.models import ElasticSearchParams
 from paasng.utils.es_log.misc import flatten_structure, format_timestamp
+from paasng.utils.es_log.models import FlattenLog
 
 if TYPE_CHECKING:
     from .dsl import SimpleDomainSpecialLanguage
@@ -78,18 +79,22 @@ def get_es_term(query_term: str, mappings: dict) -> str:
 NOT_SET = object()
 
 
-def _log_adaptor(raw_log: Dict[str, Any]):
-    """调整 log 字段"""
-    # 如果 region 不存在, 将 kubernetes.labels.region 重命名为 region
+def rename_log_fields(raw_log: Dict[str, Any]):
+    """调整 log 字段名称"""
+    # [deprecated] 如果 region 不存在, 将 kubernetes.labels.region 重命名为 region
+    # TODO: 去掉 region 字段
     raw_log["region"] = raw_log.get("region") or raw_log.get("kubernetes.labels.region") or NOT_SET
 
-    # 如果 app_code 不存在, 将 kubernetes.labels.app_code 重命名为 app_code
+    # [deprecated] 如果 app_code 不存在, 将 kubernetes.labels.app_code 重命名为 app_code
+    # TODO: 去掉 app_code 字段
     raw_log["app_code"] = raw_log.get("app_code") or raw_log.get("kubernetes.labels.app_code") or NOT_SET
 
-    # 如果 module_name 不存在, 将 kubernetes.labels.module_name 重命名为 app_code
+    # [deprecated] 如果 module_name 不存在, 将 kubernetes.labels.module_name 重命名为 app_code
+    # TODO: 去掉 module_name 字段
     raw_log["module_name"] = raw_log.get("module_name") or raw_log.get("kubernetes.labels.module_name") or NOT_SET
 
-    # 如果 environment 不存在, 将 kubernetes.labels.env 重命名为 app_code
+    # [deprecated] 如果 environment 不存在, 将 kubernetes.labels.env 重命名为 app_code
+    # TODO: 去掉 environment 字段
     raw_log["environment"] = raw_log.get("environment") or raw_log.get("kubernetes.labels.env") or NOT_SET
 
     # 如果 process_id 不存在, 将 process_type 或 kubernetes.labels.process_id 重命名为 process_id
@@ -106,7 +111,12 @@ def _log_adaptor(raw_log: Dict[str, Any]):
     return raw_log
 
 
-def get_field_form_raw(field_key: str) -> Callable:
+def generate_field_extractor(field_key: str) -> Callable:
+    """返回一个函数，用于从原始日志字典中提取指定字段的值
+
+    :param field_key: 要提取值的字段名称(ES语法, 例如 json.message)
+    """
+
     def core(raw_log: Dict[str, Any]):
         if field_key not in raw_log or raw_log[field_key] is NOT_SET:
             raise LogLineInfoBrokenError(field_key)
@@ -118,23 +128,23 @@ def get_field_form_raw(field_key: str) -> Callable:
 def clean_logs(
     logs: List[Hit],
     search_params: ElasticSearchParams,
-) -> List[Dict]:
+) -> List[FlattenLog]:
     """从 ES 日志中提取 PaaS 的字段"""
-    cleaned = []
+    cleaned: List[FlattenLog] = []
     for log in logs:
         raw = flatten_structure(log.to_dict(), None)
-        raw = _log_adaptor(raw)
+        raw = rename_log_fields(raw)
         if hasattr(log.meta, "highlight") and log.meta.highlight:
             for k, v in log.meta.highlight.to_dict().items():
                 raw[k] = "".join(v)
 
         cleaned.append(
-            {
-                "timestamp": format_timestamp(
-                    get_field_form_raw(search_params.timeField)(raw), search_params.timeFormat
+            FlattenLog(
+                timestamp=format_timestamp(
+                    generate_field_extractor(search_params.timeField)(raw), search_params.timeFormat
                 ),
-                "message": get_field_form_raw(search_params.messageField)(raw),
-                "raw": raw,
-            }
+                message=generate_field_extractor(search_params.messageField)(raw),
+                raw=raw,
+            )
         )
     return cleaned

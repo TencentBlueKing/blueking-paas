@@ -51,7 +51,10 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_BK_MONITOR = FeatureFlagField(label=_("支持蓝鲸监控"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(
-        label=_("使用蓝鲸日志平台方案采集日志"), default=settings.LOG_COLLECTOR_TYPE == LogCollectorType.BK_LOG
+        # 如果 LOG_COLLECTOR_TYPE 设置成 BK_LOG(即只用蓝鲸日志采集链路)
+        # 那么平台将不支持 1.12(含)以下的 k8s 集群
+        label=_("使用蓝鲸日志平台方案采集日志"),
+        default=settings.LOG_COLLECTOR_TYPE == LogCollectorType.BK_LOG,
     )
 
     @classmethod

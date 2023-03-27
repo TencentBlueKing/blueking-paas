@@ -25,6 +25,7 @@ from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
+from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
@@ -101,6 +102,14 @@ class CNativeProcSpecSLZ(serializers.Serializer):
     max_replicas = serializers.IntegerField()
     cpu_limit = serializers.CharField()
     memory_limit = serializers.CharField()
+    resource_limit_quota = serializers.SerializerMethodField(read_only=True)
+
+    def get_resource_limit_quota(self, obj: CNativeProcSpec) -> dict:
+        # 内存的单位为 Mi
+        memory_quota = int(parse_quantity(obj.memory_limit) / (1024 * 1024))
+        # CPU 的单位为 m
+        cpu_quota = int(parse_quantity(obj.cpu_limit) * 1000)
+        return {"cpu": cpu_quota, "memory": memory_quota}
 
 
 class UpdateProcessSLZ(serializers.Serializer):

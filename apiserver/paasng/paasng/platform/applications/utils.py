@@ -18,14 +18,14 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from django.db import transaction
-from kubernetes.utils.quantity import parse_quantity
 
 from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.procs import get_proc_specs
+from paas_wl.workloads.processes.drf_serializers import CNativeProcSpecSLZ
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.processes import ProcessManager
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
@@ -278,18 +278,11 @@ def get_latest_deployment_basic_info(application: Application, env: ModuleEnviro
 def get_processes_specs(application: Application, env: ModuleEnvironment) -> List[Dict]:
     """获取应用的进程配置信息"""
     if application.type != ApplicationType.CLOUD_NATIVE.value:
-        return ProcessManager(env).list_processes_specs()
+        return ProcessManager(env.engine_app).list_processes_specs()
 
     cloud_native_spec_list = []
     cloud_native_specs = get_proc_specs(env)
     # 将云原生应用的资源用量转换为数字
     for _spec in cloud_native_specs:
-        # 内存的单位为 Mi
-        memory_quota = int(parse_quantity(_spec.memory_limit) / (1024 * 1024))
-        # CPU 的单位为 m
-        cpu_quota = int(parse_quantity(_spec.cpu_limit) * 1000)
-
-        spec_dict = asdict(_spec)
-        spec_dict['resource_limit_quota'] = {"cpu": cpu_quota, "memory": memory_quota}
-        cloud_native_spec_list.append(spec_dict)
+        cloud_native_spec_list.append(CNativeProcSpecSLZ(_spec).data)
     return cloud_native_spec_list

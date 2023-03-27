@@ -260,7 +260,7 @@ def get_latest_deployment_basic_info(application: Application, env: ModuleEnviro
             return None
 
     # AppModelDeploy 和 Deployment 表中基本信息内容（operator、created）字段定义一致
-    return {"operator": latest_dp.operator.username, "deploy_time": latest_dp.created.strftime("%Y-%m-%d %H:%M:%S")}
+    return {"operator": latest_dp.operator.username, "deploy_time": latest_dp.isoformat(sep=" ", timespec="seconds")}
 
 
 def get_processes_specs(application: Application, env: ModuleEnvironment) -> List[Dict]:
@@ -268,9 +268,4 @@ def get_processes_specs(application: Application, env: ModuleEnvironment) -> Lis
     if application.type != ApplicationType.CLOUD_NATIVE.value:
         return ProcessManager(env.engine_app).list_processes_specs()
 
-    cloud_native_spec_list = []
-    cloud_native_specs = get_proc_specs(env)
-    # 将云原生应用的资源用量转换为数字
-    for _spec in cloud_native_specs:
-        cloud_native_spec_list.append(CNativeProcSpecSLZ(_spec).data)
-    return cloud_native_spec_list
+    return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data

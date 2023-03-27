@@ -255,7 +255,7 @@ class BasicDeplpyInfo:
     deploy_time: str
 
 
-def get_latest_deployment_basic_info(application: Application, env: ModuleEnvironment) -> Optional[BasicDeplpyInfo]:
+def get_latest_deployment_basic_info(application: Application, env: ModuleEnvironment) -> Optional[dict]:
     """获取应用的最近部署信息"""
     if application.type == ApplicationType.CLOUD_NATIVE.value:
         try:
@@ -269,10 +269,7 @@ def get_latest_deployment_basic_info(application: Application, env: ModuleEnviro
             return None
 
     # AppModelDeploy 和 Deployment 表中基本信息内容（operator、created）字段定义一致
-    return BasicDeplpyInfo(
-        operator=latest_dp.operator.username,
-        deploy_time=latest_dp.created.strftime("%Y-%m-%d %H:%M:%S"),
-    )
+    return {"operator": latest_dp.operator.username, "deploy_time": latest_dp.created.strftime("%Y-%m-%d %H:%M:%S")}
 
 
 def get_processes_specs(application: Application, env: ModuleEnvironment) -> List[Dict]:

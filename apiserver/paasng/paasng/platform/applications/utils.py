@@ -260,7 +260,10 @@ def get_latest_deployment_basic_info(application: Application, env: ModuleEnviro
             return None
 
     # AppModelDeploy 和 Deployment 表中基本信息内容（operator、created）字段定义一致
-    return {"operator": latest_dp.operator.username, "deploy_time": latest_dp.isoformat(sep=" ", timespec="seconds")}
+    return {
+        "operator": latest_dp.operator.username,
+        "deploy_time": latest_dp.created.isoformat(sep=" ", timespec="seconds"),
+    }
 
 
 def get_processes_specs(application: Application, env: ModuleEnvironment) -> List[Dict]:

@@ -121,8 +121,7 @@ class ArchiveResultHandler(CallbackHandler):
     def finish_archive(self, operation_id: str, status: ReleaseStatus, error_detail: str):
         """Finish archive operation"""
         offline_op = OfflineOperation.objects.get(id=operation_id)
-        # TODO: transfer ReleaseStatus to JobStatus
-        job_status = JobStatus(status.value)
+        job_status = status.to_job_status()
         if job_status == JobStatus.SUCCESSFUL:
             offline_op.set_successful()
         else:

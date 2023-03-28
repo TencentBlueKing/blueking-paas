@@ -43,9 +43,6 @@ from paasng.platform.applications.models import ModuleEnvironment
 logger = logging.getLogger(__name__)
 
 
-logger = logging.getLogger(__name__)
-
-
 class ApplicationReleaseMgr(DeployStep):
     """The release manager"""
 
@@ -117,8 +114,7 @@ class ReleaseResultHandler(CallbackHandler):
     def finish_release(self, deployment_id: str, status: ReleaseStatus, error_detail: str):
         """Finish the release"""
         mgr = ApplicationReleaseMgr.from_deployment_id(deployment_id)
-        # TODO: transfer ReleaseStatus to JobStatus
-        mgr.callback_release(JobStatus(status.value), error_detail)
+        mgr.callback_release(status.to_job_status(), error_detail)
 
     def get_error_detail(self, result: CallbackResult) -> typing.Tuple[bool, str]:
         """Get detailed error message. if error message was empty, release was considered succeeded
@@ -149,8 +145,12 @@ class ReleaseResultHandler(CallbackHandler):
 
 
 def create_release(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
-    """Create a new release by calling engine's API
+    """Create a new release for the given environment. If the optional deployment
+    object is given, will start a async waiting procedure which waits for the release
+    to be finished.
 
+    :param env: The environment to create the release for.
+    :param build_id: The ID of the finished build object.
     :param deployment: if not given, will try using the latest succeed deployment for getting desc env vars
     :return: The ID of the created release object.
     """

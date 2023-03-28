@@ -74,6 +74,12 @@ class ReleaseStatus(str, StructuredEnum):
     PENDING = 'pending'
     INTERRUPTED = 'interrupted'
 
+    def to_job_status(self) -> JobStatus:
+        """Transform to `JobStatus`"""
+        # Do type transformation directly because two types are sharing the same
+        # members currently.
+        return JobStatus(self.value)
+
 
 class DeployEventStatus(ChoicesEnum):
     """部署事件状态"""

@@ -81,10 +81,10 @@ def make_container_status(state: dict, last_state: dict):
 @pytest.mark.parametrize(
     "container_statuses, expected",
     [
-        ([], "containers are not in terminated or waiting state"),
+        ([], None),
         (
             [make_container_status({}, {})],
-            "containers are not in terminated or waiting state",
+            None,
         ),
         (
             [make_container_status({"terminated": {"message": "foo", "exitCode": 1}}, {})],

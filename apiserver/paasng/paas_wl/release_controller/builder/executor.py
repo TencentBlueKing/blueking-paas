@@ -100,7 +100,11 @@ class BuildProcessExecutor:
                 )
             else:
                 health_status = check_pod_health_status(pod)
-                self.stream.write_message(Style.Error(health_status.message))
+                msg = (
+                    health_status.message
+                    or f"containers are not in terminated or waiting state and pod status: {pod.status.phase}"
+                )
+                self.stream.write_message(Style.Error(msg))
         except PodNotSucceededError as e:
             # Load the latest content from database, if an interruption was requested for current bp
             self.bp.refresh_from_db()

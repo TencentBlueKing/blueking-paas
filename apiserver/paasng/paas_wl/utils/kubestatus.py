@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import json
-import logging
 from typing import List, Optional, Type, TypeVar, Union
 
 import kubernetes.client.models as kmodels
@@ -26,8 +25,6 @@ from blue_krill.data_types.enum import StructuredEnum
 from blue_krill.text import remove_prefix
 from kubernetes.client import ApiClient
 from kubernetes.dynamic.resource import ResourceField, ResourceInstance
-
-logger = logging.getLogger(__name__)
 
 
 class HealthStatusType(StructuredEnum):
@@ -148,15 +145,12 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901
         )
 
 
-def get_any_container_fail_message(pod: kmodels.V1Pod) -> str:
+def get_any_container_fail_message(pod: kmodels.V1Pod) -> Optional[str]:
     """获取 Pod 其中一个容器的失败信息"""
     for ctr in pod.status.container_statuses or []:
         if fail_message := get_container_fail_message(ctr):
             return fail_message
-
-    fail_message = "containers are not in terminated or waiting state"
-    logger.error(f"{fail_message} and pod.status.phase is {pod.status.phase}")
-    return fail_message
+    return None
 
 
 def get_container_fail_message(ctr: kmodels.V1ContainerStatus) -> Optional[str]:

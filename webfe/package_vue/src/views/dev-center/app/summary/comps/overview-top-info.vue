@@ -40,7 +40,7 @@
           <i class="paasng-icon paasng-alert" />
         </div>
         <div class="description">
-          <h4>0</h4>
+          <h4>{{ appInfo.data.alarmCount }}</h4>
           <p>{{ $t('告警数量') }}</p>
         </div>
       </div>

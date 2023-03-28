@@ -25,7 +25,6 @@
       />
       <div class="overview-middle">
         <template v-if="!loading">
-          <!-- v-if="releaseStatusStag.hasDeployed || releaseStatusProd.hasDeployed" -->
           <div
             class="summary-content"
           >
@@ -170,7 +169,9 @@
                 v-if="isProcessDataReady && !isChartLoading"
                 class="search-chart-wrap"
               >
+                <!-- 进程列表 -->
                 <bk-select
+                  v-if="curEnvProcesses.length"
                   v-model="curProcessName"
                   style="width: 116px; font-weight: normal;"
                   class="fr collapse-select mb10 mr10"
@@ -185,7 +186,9 @@
                     :name="option.name"
                   />
                 </bk-select>
+                <!-- 环境列表，该环境没有模块信息，不需要显示 -->
                 <bk-select
+                  v-if="curProcessEnvList.length"
                   v-model="curEnvName"
                   style="width: 116px; font-weight: normal;"
                   class="fr collapse-select mb10 mr10"
@@ -194,7 +197,7 @@
                   @selected="handlerProcessSelecte('env')"
                 >
                   <bk-option
-                    v-for="option in envData"
+                    v-for="option in curProcessEnvList"
                     :id="option.name"
                     :key="option.name"
                     :name="option.label"
@@ -330,58 +333,6 @@
     import dynamicState from './comps/dynamic-state';
     import { cloneDeep } from 'lodash';
 
-    // A data formatter for released info
-    class ReleasedInfoFormatter {
-        constructor (envName, respData) {
-            this.envName = envName;
-            this.respData = respData;
-        }
-
-        format () {
-            const latestInfo = this.respData.deployment || this.respData.offline;
-            const result = {
-                env: this.envName,
-                hasDeployed: true,
-                branch: latestInfo.repo.name,
-                username: latestInfo.operator.username,
-                time: latestInfo.created,
-                url: this.respData.exposed_link.url,
-                proc: [],
-                isEnvOfflined: !this.respData.deployment
-            };
-
-            this.respData.processes.forEach((item) => {
-                result.proc.push(this.formatProcess(item));
-            });
-            return result;
-        }
-
-        formatProcess (data) {
-            for (const processName in data) {
-                const details = data[processName];
-                let statusText = i18n.t('正在运行');
-                if (details.target_status === 'stop') {
-                    statusText = i18n.t('已停止');
-                }
-
-                return {
-                    name: processName,
-                    status: statusText
-                };
-            }
-        }
-    }
-
-    const DEFAULT_RELEASE_STATUS = {
-        hasDeployed: false,
-        branch: 'trunk',
-        isEnvOfflined: true,
-        username: '',
-        time: '',
-        url: '',
-        proc: []
-    };
-
     const timeMap = {
         '1d': '24h',
         '3d': '72h',
@@ -405,8 +356,6 @@
             return {
                 loading: true,
                 trunkUrl: '',
-                releaseStatusStag: { ...DEFAULT_RELEASE_STATUS },
-                releaseStatusProd: { ...DEFAULT_RELEASE_STATUS },
                 operationsList: [],
                 interval: 3600,
                 current: -1,
@@ -456,8 +405,6 @@
                         }
                     }
                 ],
-                curCpuActive: '1h',
-                curMemActive: '1h',
                 activeName: [],
                 overViewData: {},
                 renderChartIndex: 0,
@@ -487,7 +434,8 @@
                 activeModuleId: '',
                 changIndex: 0,
                 chartDataCache: {},
-                isResourceChartLine: true
+                isResourceChartLine: true,
+                curProcessEnvList: []
             };
         },
         computed: {
@@ -521,21 +469,33 @@
                 }
                 return 'MM-DD';
             },
-            curEnv () {
-                if (!this.releaseStatusProd.isEnvOfflined) {
-                    return 'prod';
-                } else if (!this.releaseStatusStag.isEnvOfflined) {
-                    return 'stag';
-                }
-                return 'stag';
+            // 模块列表
+            curAppModuleList () {
+                const moduleList = [];
+                for (const moduleName in this.overViewData) {
+                    // 对应模块下的进程
+                    const curProcesses = this.getProcessList(moduleName);
+                    if (curProcesses.length) {
+                        moduleList.push({ name: moduleName });
+                    }
+                };
+                return moduleList;
             },
             curEnvProcesses () {
-                if (this.releaseStatusProd && !this.releaseStatusProd.isEnvOfflined) {
-                    return this.releaseStatusProd.proc.filter(item => item.status === this.$t('正在运行'));
-                } else if (this.releaseStatusStag && !this.releaseStatusStag.isEnvOfflined) {
-                    return this.releaseStatusStag.proc.filter(item => item.status === this.$t('正在运行'));
+                let processes = [];
+                for (const moduleName in this.overViewData) {
+                    // 当前环境下的进程信息
+                    if (this.curModuleName === moduleName) {
+                        processes = this.overViewData[moduleName]['envs'][this.curEnvName]['processes'];
+                    }
+                };
+                if (processes.length) {
+                    processes = processes.map(process => {
+                        const key = Object.keys(process)[0];
+                        return process[key];
+                    });
                 }
-                return [];
+                return processes;
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
@@ -552,9 +512,29 @@
                     if (this.changIndex !== 0) {
                         this.$nextTick(() => {
                             this.showInstanceChart(this.activeModuleId);
-                            this.showProcessResource(this.curEnvName);
+                            this.showProcessResource();
+                            this.getAlarmData();
                         });
                     }
+                }
+            },
+            curEnvProcesses: {
+                handler () {
+                    if (this.curEnvProcesses.length) {
+                        this.curProcessName = this.curEnvProcesses[0].name;
+                    } else {
+                        this.curProcessName = '';
+                    }
+                },
+                deep: true
+            },
+            curModuleName (moduleName) {
+                // 当前模块下的环境列表
+                this.curProcessEnvList = this.getProcessList();
+                const curEnvData = this.curProcessEnvList.filter(env => env.name === this.curEnvName);
+                // 若当前模块没有对应环境的进程，默认选中第一个
+                if (!curEnvData.length) {
+                    this.curEnvName = this.curProcessEnvList[0].name;
                 }
             }
         },
@@ -572,17 +552,15 @@
                 this.isProcessDataReady = false;
 
                 this.curProcessName = '';
-                this.releaseStatusStag = { ...DEFAULT_RELEASE_STATUS };
-                this.releaseStatusProd = { ...DEFAULT_RELEASE_STATUS };
                 this.appDevLang = this.curAppModule.language;
                 await this.getOverViewData();
-                this.fetchAllDeployedInfos();
                 // 获取动态
                 this.getModuleOperations();
                 if (this.curAppModule && this.curAppModule.repo) {
                     this.trunkUrl = this.curAppModule.repo.trunk_url || '';
                     this.sourceType = this.curAppModule.repo.source_type || '';
                 }
+                this.getAlarmData();
             },
             initDate () {
                 const end = new Date();
@@ -590,17 +568,6 @@
                 this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
                 this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
                 this.curTime = this.dateShortCut[0];
-            },
-            fetchDeployedInfo (envName) {
-                const info = new Promise((resolve, reject) => {
-                    this.$http.get(BACKEND_URL + '/api/bkapps/applications/' + this.appCode + '/modules/' + this.curModuleId + '/envs/' + envName + '/released_state/?with_processes=true')
-                        .then((resp) => {
-                            resolve(new ReleasedInfoFormatter(envName, resp).format());
-                        }, (res) => {
-                            reject(new Error('not deployed'));
-                        });
-                });
-                return info;
             },
             // 最新动态
             getModuleOperations () {
@@ -612,41 +579,14 @@
                     }
                 });
             },
-            async fetchAllDeployedInfos () {
-                try {
-                    this.releaseStatusStag = await this.fetchDeployedInfo('stag');
-                } catch (e) {
-                    this.releaseStatusStag.hasDeployed = false;
-                    this.loading = false;
-                }
-
-                try {
-                    this.releaseStatusProd = await this.fetchDeployedInfo('prod');
-                } catch (e) {
-                    this.releaseStatusProd.hasDeployed = false;
-                } finally {
-                    setTimeout(() => {
-                        this.loading = false;
-                    }, 500);
-                }
-
-                if (!this.curModuleName) {
-                    this.getOverViewData();
-                }
-
-                // 资源视图优先展示生产环境
-                this.$nextTick(async () => {
-                    this.handleCollapseClick(Object.keys(this.overViewData));
+            getPrcessData () {
+                this.$nextTick(() => {
+                    this.handleCollapseClick(this.activeName);
+                    // 显示图标loading
                     this.showProcessLoading();
-                    const prodProcess = this.releaseStatusProd.proc.find(item => item.status === this.$t('正在运行'));
-                    const stagProcess = this.releaseStatusStag.proc.find(item => item.status === this.$t('正在运行'));
-                    if (!this.releaseStatusProd.isEnvOfflined && prodProcess) {
-                        this.curProcessName = prodProcess.name;
-                        // 获取资源用量图表数据
-                        this.showProcessResource('prod');
-                    } else if (!this.releaseStatusStag.isEnvOfflined && stagProcess) {
-                        this.curProcessName = stagProcess.name;
-                        this.showProcessResource('stag');
+                    this.isResourceChartLine = true;
+                    if (this.curEnvProcesses.length) {
+                        this.showProcessResource();
                     } else {
                         setTimeout(() => {
                             this.isChartLoading = false;
@@ -661,8 +601,7 @@
              * 切换process时回调
              */
             handlerProcessSelecte (type) {
-                // 清空图标数据
-                this.showProcessResource(this.curEnvName);
+                this.showProcessResource();
             },
 
             /**
@@ -726,7 +665,7 @@
             /**
              * 显示进程指标数据
              */
-            showProcessResource (env) {
+            showProcessResource () {
                 const process = this.curEnvProcesses.find(item => {
                     return item.name === this.curProcessName;
                 });
@@ -737,8 +676,16 @@
                         cpuChart: this.$refs.cpuLine,
                         memChart: this.$refs.memLine,
                         process: process,
-                        env: env
+                        env: this.curEnvName
                     });
+                } else {
+                    this.showProcessLoading();
+                    this.isResourceChartLine = true;
+                    // 清空图表数据
+                    this.clearChart();
+                    setTimeout(() => {
+                        this.isResourceChartLine = false;
+                    }, 500);
                 }
             },
 
@@ -929,7 +876,7 @@
                         moduleId: this.curModuleId
                     },
                     query: {
-                        focus: this.curEnv
+                        focus: this.curEnvName
                     }
                 });
             },
@@ -940,7 +887,8 @@
                     this.overViewData = await this.$store.dispatch('overview/getOverViewInfo', {appCode: this.appCode});
                     // 默认展开第一个
                     if (Object.keys(this.overViewData).length) {
-                        this.activeName = Object.keys(this.overViewData)[0];
+                        this.activeName = [Object.keys(this.overViewData)[0]];
+                        // 第一项为展开数据
                         this.curModuleName = Object.keys(this.overViewData)[0];
 
                         // 获取资源用量
@@ -948,6 +896,8 @@
                         const processesLen = this.getProcessesLength();
                         this.$set(this.topInfo.data, 'processesLen', processesLen);
                     }
+                    // 初始化环境下拉框数据
+                    this.curProcessEnvList = this.getProcessList();
                 } catch (error) {
                     this.$paasMessage({
                         theme: 'error',
@@ -956,8 +906,20 @@
                 } finally {
                     setTimeout(() => {
                         this.loading = false;
-                    }, 500);
+                        this.getPrcessData();
+                    }, 300);
                 }
+            },
+
+            // 获取对应环境下的进程
+            getProcessList (moduleName) {
+                const curModuleName = moduleName || this.curModuleName;
+                return this.envData.filter(env => {
+                    const processes = this.overViewData[curModuleName]['envs'][env.name]['processes'] || [];
+                    if (processes.length) {
+                        return true;
+                    }
+                });
             },
 
             handleCollapseClick (data) {
@@ -1016,23 +978,14 @@
                     const appCode = this.appCode;
                     const moduleId = this.activeModuleId;
 
-                    const start = this.dateRange.startTime + ' 00:00';
-                    const end = this.dateRange.endTime + ' 23:59';
-                    const getEndDate = () => {
-                        const curTime = new Date(end).getTime();
-                        const nowTime = new Date().getTime();
-                        if (curTime > nowTime) {
-                            return formatDate(new Date());
-                        }
-                        return formatDate(end);
-                    };
+                    const { start, end } = this.getEndDate();
                     const backendType = this.backendType;
 
                     this.defaultRange = this.resourceUsageRange === '24h' ? '1h' : '1d';
 
                     const params = {
                         'start_time': start,
-                        'end_time': getEndDate(),
+                        'end_time': end,
                         'interval': this.defaultRange
                     };
 
@@ -1160,9 +1113,18 @@
 
             // 文案
             releaseInfoText (env) {
-                const appDeployInfo = env === 'stag' ? this.releaseStatusStag : this.releaseStatusProd;
-                return `${appDeployInfo.username} 于 ${this.smartTime(appDeployInfo.time, 'smartShorten')} 
-                ${appDeployInfo.isEnvOfflined ? this.$t('下架') : this.$t('部署')}`;
+                const appDeployInfo = this.getEnvData(env);
+                appDeployInfo.deployment = appDeployInfo.deployment || {};
+                return `${appDeployInfo.deployment.operator} 于 ${this.smartTime(appDeployInfo.deployment.deploy_time, 'smartShorten')} 
+                ${appDeployInfo.is_deployed ? this.$t('下架') : this.$t('部署')}`;
+            },
+
+            getEnvData (env) {
+                const activeModuleName = typeof this.activeName === 'string' ? this.activeName : this.activeName[0];
+                if (activeModuleName) {
+                    return this.overViewData[activeModuleName]['envs'][env] || { deployment: {} };
+                }
+                return {};
             },
 
             // 点击访问或者部署
@@ -1206,8 +1168,49 @@
                     endTime: date[1]
                 };
                 this.curTime = this.dateShortCut.find(t => t.id === id) || {};
-                console.log('time', timeMap[this.curTime.id]);
                 this.resourceUsageRange = timeMap[this.curTime.id];
+            },
+
+            // 获取告警数据
+            async getAlarmData () {
+                const { start, end } = this.getEndDate();
+
+                const params = {
+                    code: this.appCode,
+                    search: {
+                        'start_before': start,
+                        'start_after': end
+                    }
+                };
+
+                try {
+                    const res = await this.$store.dispatch('alarm/getPersonalAlarmList', params);
+                    this.$set(this.topInfo.data, 'alarmCount', res.count || 0);
+                } catch (e) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: e.detail || e.message || this.$t('接口异常')
+                    });
+                }
+            },
+
+            getEndDate () {
+                const start = this.dateRange.startTime + ' 00:00';
+                const end = this.dateRange.endTime + ' 23:59';
+
+                const getEndDate = () => {
+                    const curTime = new Date(end).getTime();
+                    const nowTime = new Date().getTime();
+                    if (curTime > nowTime) {
+                        return formatDate(new Date());
+                    }
+                    return formatDate(end);
+                };
+
+                return {
+                    start,
+                    end: getEndDate(end)
+                };
             },
 
             // 计算当前应用使用资源用量

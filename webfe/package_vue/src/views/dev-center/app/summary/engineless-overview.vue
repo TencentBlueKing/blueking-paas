@@ -263,8 +263,6 @@
         methods: {
             init () {
                 if (this.curFeatureAnalytics) {
-                    // 获取网站访问量
-                    this.getChartData();
                     this.getAnalysisConfig();
                 }
                 this.getModuleOperations();

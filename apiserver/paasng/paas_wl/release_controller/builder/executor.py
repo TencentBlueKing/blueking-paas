@@ -89,6 +89,9 @@ class BuildProcessExecutor:
                 build_instance = self.create_and_bind_build_instance(metadata=metadata)
                 self.stream.write_message('Generated build id: %s' % build_instance.uuid)
         except ReadTargetStatusTimeout as e:
+            logger.exception(
+                f"builder pod did not reach the target status within the timeout period during deploy[{self.bp}]"
+            )
             self.bp.update_status(BuildStatus.FAILED)
             pod = e.extra_value
             if pod is None:

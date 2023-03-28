@@ -145,12 +145,12 @@ def check_pod_health_status(pod: kmodels.V1Pod) -> HealthStatus:  # noqa: C901
         )
 
 
-def get_any_container_fail_message(pod: kmodels.V1Pod) -> Optional[str]:
+def get_any_container_fail_message(pod: kmodels.V1Pod) -> str:
     """获取 Pod 其中一个容器的失败信息"""
     for ctr in pod.status.container_statuses or []:
         if fail_message := get_container_fail_message(ctr):
             return fail_message
-    return None
+    return f"container is not in terminated or waiting state and pod.status.phase is {pod.status.phase}"
 
 
 def get_container_fail_message(ctr: kmodels.V1ContainerStatus) -> Optional[str]:

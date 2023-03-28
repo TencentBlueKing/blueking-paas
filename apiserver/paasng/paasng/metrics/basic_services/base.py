@@ -16,11 +16,25 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Root URLs
-"""
-from django.urls import include, re_path
+from typing import Any
 
-urlpatterns = [
-    re_path(r'', include('paas_wl.metrics.urls')),
-    re_path(r'^', include('paas_wl.platform.system_api.urls')),
-]
+from prometheus_client.core import GaugeMetricFamily, Metric
+
+
+class GaugeMetric:
+    name = 'gauge'
+    description = 'gauge metric'
+
+    @classmethod
+    def calc_value(self) -> Any:
+        """获取值"""
+
+    @classmethod
+    def calc_metric(cls) -> Metric:
+        """获取 metric"""
+        return GaugeMetricFamily(cls.name, cls.description, cls.calc_value())
+
+    @classmethod
+    def describe_metric(cls) -> Metric:
+        """获取 metric 描述"""
+        return GaugeMetricFamily(cls.name, cls.description)

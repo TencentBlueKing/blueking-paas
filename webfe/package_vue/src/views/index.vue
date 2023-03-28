@@ -107,7 +107,7 @@
                     </router-link>
                   </template>
                   <template v-else>
-                    <router-link :to="{ name: 'appBaseInfo', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                    <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
                       <img
                         :src="recordItem.applogo"
                         width="38px"

@@ -22,53 +22,12 @@ from typing import Dict, Optional
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
-from paas_wl.platform.applications.models.release import Release
 from paas_wl.release_controller.hooks.models import Command
-from paas_wl.release_controller.process.callbacks import ArchiveResultHandler, ReleaseResultHandler
-from paas_wl.release_controller.process.wait import wait_for_all_stopped, wait_for_release
-from paas_wl.resources.actions.archive import ArchiveOperationController
-from paas_wl.resources.actions.deploy import AppDeploy
 from paas_wl.resources.actions.exec import AppCommandExecutor
 from paas_wl.utils.redisdb import get_default_redis
 from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
-from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
-
-
-def release_app(
-    release: Release,
-    deployment_id: Optional[str],
-    extra_envs: Dict,
-):
-    """execute Release
-
-    :param release: the release instance
-    :param deployment_id: RedisStreamChannel id
-    :param extra_envs:
-    """
-    wl_app = release.app
-    AppDeploy(app=wl_app, release=release, extra_envs=extra_envs).perform()
-
-    # NOTE: 更新环境变量时触发的 release 不提供 deployment_id, 此时无需触发 wait_for_release
-    if deployment_id:
-        wait_for_release(
-            wl_app=wl_app,
-            release_version=release.version,
-            result_handler=ReleaseResultHandler,
-            extra_params={"deployment_id": deployment_id},
-        )
-
-
-def archive_env(env: ModuleEnvironment, operation_id: str):
-    """stop all processes of the app"""
-    ArchiveOperationController(env=env, operation_id=operation_id).start()
-
-    wait_for_all_stopped(
-        wl_app=env.wl_app,
-        result_handler=ArchiveResultHandler,
-        extra_params={"operation_id": operation_id},
-    )
 
 
 @shared_task

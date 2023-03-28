@@ -27,10 +27,11 @@ from django.utils.functional import cached_property
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.misc import OutputStream
+from paas_wl.platform.applications.models.release import Release
 from paas_wl.release_controller.builder import tasks as builder_task
 from paas_wl.resources import tasks as scheduler_tasks
+from paas_wl.resources.actions.deploy import AppDeploy
 from paas_wl.resources.base.exceptions import KubeException
-from paas_wl.resources.tasks import release_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.engine.configurations.building import SlugbuilderInfo
@@ -155,8 +156,11 @@ class EngineDeployClient:
 
     def create_release(
         self, build_id: str, deployment_id: Optional[str], extra_envs: Dict[str, str], procfile: Dict[str, str]
-    ) -> str:
-        """Create a new release"""
+    ) -> Release:
+        """Create a new release
+
+        :return: The created release object.
+        """
         build = Build.objects.get(pk=build_id)
         release = build.app.release_set.new(
             # TODO: Set the correct owner value
@@ -166,11 +170,12 @@ class EngineDeployClient:
         )
 
         try:
-            release_app(release=release, deployment_id=deployment_id, extra_envs=extra_envs)
+            wl_app = release.app
+            AppDeploy(app=wl_app, release=release, extra_envs=extra_envs).perform()
         except KubeException:
             # TODO: Wrap exception and re-raise
             raise
-        return str(release.uuid)
+        return release
 
     def create_build(self, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
         """Create the **fake** build for Image Type App"""

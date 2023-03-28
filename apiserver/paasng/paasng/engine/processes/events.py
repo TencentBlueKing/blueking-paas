@@ -22,8 +22,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Dict, Iterator, List, Tuple
 
-from paas_wl.release_controller.process.models import PlainInstance, PlainProcess
-from paas_wl.release_controller.process.utils import diff_list
+from paasng.engine.processes.models import PlainInstance, PlainProcess
+from paasng.engine.processes.utils import diff_list
 
 logger = logging.getLogger(__name__)
 

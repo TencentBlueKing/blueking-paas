@@ -20,12 +20,14 @@ import uuid
 from unittest import mock
 
 import pytest
+from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.release import ApplicationReleaseMgr
+from paasng.engine.constants import JobStatus, ReleaseStatus
+from paasng.engine.deploy.release import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.engine.models import Deployment, DeployPhaseTypes
 from paasng.engine.models.managers import DeployPhaseManager
 from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.poll_task import FakeTaskPoller
 
 pytestmark = pytest.mark.django_db
 
@@ -84,7 +86,7 @@ class TestApplicationReleaseMgr:
             'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
         ):
             faked_release_id = uuid.uuid4().hex
-            mocked_client_r().create_release.return_value = faked_release_id
+            mocked_client_r().create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
 
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
@@ -95,3 +97,58 @@ class TestApplicationReleaseMgr:
             assert deployment.release_id.hex == faked_release_id
             assert deployment.status == JobStatus.PENDING.value
             assert deployment.err_detail is None
+
+
+class TestReleaseResultHandler:
+    """Tests for ReleaseResultHandler"""
+
+    @pytest.fixture
+    def deployment_id(self):
+        return str(uuid.uuid4())
+
+    @pytest.mark.parametrize(
+        'result,status,error_detail',
+        [
+            (
+                CallbackResult(status=CallbackStatus.EXCEPTION),
+                ReleaseStatus.FAILED,
+                'Release failed, internal error',
+            ),
+            (CallbackResult(status=CallbackStatus.NORMAL), ReleaseStatus.SUCCESSFUL, ''),
+            (
+                CallbackResult(status=CallbackStatus.NORMAL, data={'aborted': False}),
+                ReleaseStatus.SUCCESSFUL.value,
+                '',
+            ),
+            (
+                # `data` is not a valid AbortedDetails object
+                CallbackResult(status=CallbackStatus.NORMAL, data={'aborted': True}),
+                ReleaseStatus.SUCCESSFUL,
+                '',
+            ),
+            (
+                CallbackResult(
+                    status=CallbackStatus.NORMAL,
+                    data={'aborted': True, 'policy': {'reason': 'foo', 'name': 'foo_policy'}},
+                ),
+                ReleaseStatus.FAILED,
+                'Release aborted, reason: foo',
+            ),
+            (
+                CallbackResult(
+                    status=CallbackStatus.NORMAL,
+                    data={'aborted': True, 'policy': {'reason': 'foo', 'name': 'foo_policy', 'is_interrupted': True}},
+                ),
+                ReleaseStatus.INTERRUPTED,
+                'Release aborted, reason: foo',
+            ),
+        ],
+    )
+    def test_failed(self, result, status, error_detail, deployment_id):
+        with mock.patch("paasng.engine.deploy.release.ReleaseResultHandler.finish_release") as mocked:
+            ReleaseResultHandler().handle(
+                result, FakeTaskPoller.create({'extra_params': {'deployment_id': deployment_id}})
+            )
+
+        assert mocked.call_count == 1
+        assert mocked.call_args[0] == (deployment_id, status, error_detail)

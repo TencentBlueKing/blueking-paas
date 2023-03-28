@@ -22,16 +22,16 @@ from typing import Dict, Iterable
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.dispatch.dispatcher import receiver
 
-from paas_wl.release_controller.process.events import (
+from paasng.engine.processes.events import (
     ProcessBaseEvent,
     ProcessEvent,
     ProcessEventType,
     ProcInstEvent,
     ProcInstEventType,
 )
-from paas_wl.release_controller.process.wait import processes_updated
-from paas_wl.utils.redisdb import get_default_redis
-from paas_wl.utils.stream import ConsoleStream, RedisChannelStream, Stream
+from paasng.engine.processes.wait import processes_updated
+from paasng.engine.utils.output import ConsoleStream, DeployStream, RedisChannelStream
+from paasng.platform.core.storages.redisdb import get_default_redis
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 def _on_processes_updated(sender, events: Iterable[ProcessBaseEvent], extra_params: Dict, **kwargs):
     """Update stream when processes was updated"""
     deployment_id = extra_params.get('deployment_id')
-    stream: Stream
+    stream: DeployStream
 
     if deployment_id:
         channel = StreamChannel(deployment_id, get_default_redis())

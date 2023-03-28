@@ -1288,11 +1288,15 @@
 
                 // 转为显示单位
                 return {
-                    cpuStag: (cpuStag / 1000).toFixed(2),
-                    cpuProd: (cpuProd / 1000).toFixed(2),
-                    memStag: (memStag / 1024).toFixed(2),
-                    memProd: (memProd / 1024).toFixed(2)
+                    cpuStag: this.unitConvert(cpuStag, 1000),
+                    cpuProd: this.unitConvert(cpuProd, 1000),
+                    memStag: this.unitConvert(memStag, 1024),
+                    memProd: this.unitConvert(memProd, 1024)
                 };
+            },
+
+            unitConvert (value, divisor) {
+                return parseFloat((value / divisor).toFixed(2));
             },
 
             getProcessesLength () {

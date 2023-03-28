@@ -1215,8 +1215,8 @@
                 const params = {
                     code: this.appCode,
                     search: {
-                        'start_before': start,
-                        'start_after': end
+                        'start_before': end,
+                        'start_after': start
                     }
                 };
 

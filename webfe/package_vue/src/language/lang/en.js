@@ -1320,7 +1320,7 @@ export default {
   '地址复制成功！': 'Copied success!',
   '地址复制失败！': 'Copy failed!',
   '你可以根据以下操作解决此类问题': 'You can solve this kind of problem by doing the following',
-  '平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能': 'The platform provides app engines, Add-ons, cloud API permissions, app market and other features for such apps',
+  '平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能。': 'The platform provides app engines, Add-ons, cloud API permissions, app market and other features for such apps.',
   '应用 ID': 'APP ID',
   '格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符': 'Incorrect format, can only contain: lowercase letters, numbers, hyphens (-), initial letter must be a letter, length less than 16 characters',
   '由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符': 'Consists of lowercase letters, numbers, hyphens (-), the first letter must be a letter and less than 16 characters long',

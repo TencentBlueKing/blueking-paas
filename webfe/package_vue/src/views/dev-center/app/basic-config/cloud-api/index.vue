@@ -122,6 +122,10 @@
         },
         created () {
             this.isPlugin = this.$route.meta && this.$route.meta.isGetAppInfo;
+            const tabActive = this.$route.params.tabActive;
+            if (tabActive) {
+                this.active = tabActive;
+            }
         },
         methods: {
             toLink (type) {

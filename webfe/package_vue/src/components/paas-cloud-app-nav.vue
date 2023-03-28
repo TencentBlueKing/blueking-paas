@@ -75,6 +75,8 @@
                 region: 'ieod',
                 roleAllowRouters: {
                     administrator: [
+                        // 概览
+                        'appSummary',
                         // 应用编排
                         'cloudAppDeploy',
                         // 应用编排 - 进程配置
@@ -107,6 +109,8 @@
                         'docuManagement'
                     ],
                     developer: [
+                        // 概览
+                        'appSummary',
                         // 应用编排
                         'cloudAppDeploy',
                         // 应用编排 - 进程配置
@@ -137,6 +141,8 @@
                         'docuManagement'
                     ],
                     operator: [
+                        // 概览
+                        'appSummary',
                         // 应用编排
                         'cloudAppDeploy',
                         // 应用编排 - 进程配置
@@ -547,8 +553,8 @@
                 };
 
                 const category = navTree.find(item => item.name === 'appPermissions');
-                if (type && nav[type]) {
-                    category && category.children.push(nav[type]);
+                if (category && type && nav[type]) {
+                    category.children.push(nav[type]);
                 }
 
                 return navTree;

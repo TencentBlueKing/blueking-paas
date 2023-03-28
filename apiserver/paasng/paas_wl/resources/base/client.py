@@ -27,7 +27,13 @@ from paas_wl.networking.ingress.managers.service import ProcDefaultServices
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.release_controller.hooks.entities import Command
 from paas_wl.resources.base.base import get_client_by_cluster_name
-from paas_wl.resources.base.controllers import BuildHandler, CommandHandler, NamespacesHandler, ProcessesHandler
+from paas_wl.resources.base.controllers import (
+    BuildHandler,
+    CommandHandler,
+    NamespacesHandler,
+    ProcAutoScalingHandler,
+    ProcessesHandler,
+)
 from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.base.kres import KNode, set_default_options
 from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
@@ -83,6 +89,7 @@ class K8sScheduler:
         self.namespace_handler = NamespacesHandler(**init_params)
         self.command_handler = CommandHandler(**init_params)
         self.credential_handler = credentials_kmodel
+        self.auto_scaling_handler = ProcAutoScalingHandler(**init_params)
 
     # Node start
     # WARNING: Node methods returns the raw data structure from kubernetes instead of transform it

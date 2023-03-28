@@ -16,26 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.base.kres import BaseKresource
 
 
-class KServiceMonitor(BaseKresource):
-    kind = "ServiceMonitor"
-
-
-class BkApp(BaseKresource):
-    """CRD: App model resource feature"""
-
-    kind = 'BkApp'
-
-
-class DomainGroupMapping(BaseKresource):
-    """CRD: Mapping between BkApp and DomainGroups"""
-
-    kind = 'DomainGroupMapping'
-
-
-class GPA(BaseKresource):
-    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
-
-    kind = 'GeneralPodAutoscaler'
+class AutoScalingUnsupported(Exception):
+    """AutoScaling Unsupported"""

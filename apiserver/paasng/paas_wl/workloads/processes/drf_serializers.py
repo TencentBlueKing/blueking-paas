@@ -26,6 +26,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
 from paas_wl.platform.applications.models import Release
+from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
 
@@ -103,17 +104,40 @@ class CNativeProcSpecSLZ(serializers.Serializer):
     memory_limit = serializers.CharField()
 
 
+class ScaleMetricSLZ(serializers.Serializer):
+    """扩缩容指标"""
+
+    name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
+    type = serializers.ChoiceField(required=True, choices=ScalingMetricType.get_choices())
+    value = serializers.IntegerField(required=True, help_text=_('资源指标值/百分比'))
+
+
+class ScalingConfigSLZ(serializers.Serializer):
+    """扩缩容配置"""
+
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
+    metrics = serializers.ListField(child=ScaleMetricSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
+
+
 class UpdateProcessSLZ(serializers.Serializer):
     """Serializer for updating processes"""
 
     process_type = serializers.CharField(required=True)
     operate_type = serializers.ChoiceField(required=True, choices=ProcessUpdateType.get_django_choices())
-    target_replicas = serializers.IntegerField(required=False, min_value=1, help_text='仅操作类型为 scale 时使用')
+    target_replicas = serializers.IntegerField(required=False, min_value=1, help_text=_('目标进程副本数'))
+    autoscaling = serializers.BooleanField(required=False, default=False, help_text=_('是否开启自动扩缩容'))
+    scaling_config = ScalingConfigSLZ(required=False, help_text=_('进程扩缩容配置'))
 
-    def validate(self, data: Dict) -> Dict:
-        if data['operate_type'] == ProcessUpdateType.SCALE and not data.get('target_replicas'):
+    def validate(self, attrs: Dict) -> Dict:
+        if attrs['operate_type'] == ProcessUpdateType.SCALE and not attrs.get('target_replicas'):
             raise ValidationError(_('当操作类型为 scale 时，必须提供有效的 target_replicas'))
-        return data
+
+        if attrs['operate_type'] == ProcessUpdateType.SCALE_V2:
+            if attrs['autoscaling'] and not attrs.get('scaling_config'):
+                raise ValidationError(_('当启用自动扩缩容时，必须提供有效的 scaling_config'))
+
+        return attrs
 
 
 class ListProcessesSLZ(serializers.Serializer):

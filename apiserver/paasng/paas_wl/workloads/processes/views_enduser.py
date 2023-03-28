@@ -35,6 +35,7 @@ from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.platform.system_api.serializers import ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
+from paas_wl.workloads.autoscaling.models import ScalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.controllers import get_proc_mgr, judge_operation_frequent
 from paas_wl.workloads.processes.drf_serializers import (
@@ -81,13 +82,18 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         wl_app = self.get_wl_app_via_path()
         process_type = data["process_type"]
         operate_type = data["operate_type"]
-        target_replicas = data.get("target_replicas")
+        target_replicas = data.get('target_replicas')
+        # 如果参数中包含自动扩缩容信息，则进行类型转换
+        scaling_config = ScalingConfig(**data['scaling_config']) if data.get('scaling_config') else None
+
         try:
             judge_operation_frequent(wl_app, process_type, self._operation_interval)
         except ProcessOperationTooOften as e:
             raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
-        self._perform_update(module_env, operate_type, process_type, target_replicas)
+        self._perform_update(
+            module_env, operate_type, process_type, data['autoscaling'], target_replicas, scaling_config
+        )
 
         # Create application operation log
         op_type = self.get_logging_operate_type(operate_type)
@@ -114,13 +120,17 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         module_env: ModuleEnvironment,
         operate_type: str,
         process_type: str,
+        autoscaling: bool,
         target_replicas: Optional[int] = None,
+        scaling_config: Optional[ScalingConfig] = None,
     ):
         ctl = get_proc_mgr(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
                 assert target_replicas
                 ctl.scale(process_type, target_replicas)
+            elif operate_type == ProcessUpdateType.SCALE_V2:
+                ctl.scale_v2(process_type, autoscaling, target_replicas, scaling_config)  # type: ignore
             elif operate_type == ProcessUpdateType.STOP:
                 ctl.stop(process_type)
             elif operate_type == ProcessUpdateType.START:

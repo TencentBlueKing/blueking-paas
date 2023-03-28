@@ -16,26 +16,35 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.base.kres import BaseKresource
+import logging
+from dataclasses import dataclass
+from typing import List
+
+from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
+
+logger = logging.getLogger(__name__)
 
 
-class KServiceMonitor(BaseKresource):
-    kind = "ServiceMonitor"
+@dataclass
+class ScalingMetric:
+    """扩缩容指标配置"""
+
+    # 指标名称：cpu / memory
+    name: ScalingMetricName
+    # 指标类型：AverageValue / Utilization
+    type: ScalingMetricType
+    # 指标值：当类型为 Utilization 时，单位为 %
+    # 当类型为 AverageValue 时，单位为 m(cpu)/Mi(memory)
+    value: int
 
 
-class BkApp(BaseKresource):
-    """CRD: App model resource feature"""
+@dataclass
+class ScalingConfig:
+    """扩缩容配置"""
 
-    kind = 'BkApp'
-
-
-class DomainGroupMapping(BaseKresource):
-    """CRD: Mapping between BkApp and DomainGroups"""
-
-    kind = 'DomainGroupMapping'
-
-
-class GPA(BaseKresource):
-    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
-
-    kind = 'GeneralPodAutoscaler'
+    # 最小副本数量
+    min_replicas: int
+    # 最大副本数量
+    max_replicas: int
+    # 扩缩容指标（资源 cpu/memory 等）
+    metrics: List[ScalingMetric]

@@ -48,7 +48,7 @@ from paas_wl.utils.kubestatus import (
     extract_exit_code,
     parse_pod,
 )
-from paas_wl.workloads.autoscaling.entities import ProcAutoScaling
+from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.processes.models import Process
 
 if TYPE_CHECKING:
@@ -530,17 +530,18 @@ class CommandHandler(PodScheduleHandler):
         return arrow.get(pod.start_time) + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
 
 
-class ProcAutoScalingHandler(ResourceHandlerBase):
+class ProcAutoscalingHandler(ResourceHandlerBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.manager = AppEntityManager(ProcAutoScaling)
+        self.manager = AppEntityManager(ProcAutoscaling)
 
-    def deploy(self, scaling: ProcAutoScaling):
+    def deploy(self, scaling: ProcAutoscaling):
         """向集群中下发 GPA （创建/更新）"""
-        # TODO implement me
-        pass
+        try:
+            self.manager.update(scaling, "replace", allow_not_concrete=False)
+        except AppEntityNotFound:
+            self.manager.create(scaling)
 
-    def delete(self, scaling: ProcAutoScaling):
+    def delete(self, scaling: ProcAutoscaling):
         """删除集群中的 GPA"""
-        # TODO implement me
-        pass
+        self.manager.delete(scaling, non_grace_period=True)

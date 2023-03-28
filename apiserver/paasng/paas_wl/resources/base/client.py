@@ -31,11 +31,12 @@ from paas_wl.resources.base.controllers import (
     BuildHandler,
     CommandHandler,
     NamespacesHandler,
-    ProcAutoScalingHandler,
+    ProcAutoscalingHandler,
     ProcessesHandler,
 )
 from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.base.kres import KNode, set_default_options
+from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmodel
 from paas_wl.workloads.processes.models import Process
 
@@ -89,7 +90,7 @@ class K8sScheduler:
         self.namespace_handler = NamespacesHandler(**init_params)
         self.command_handler = CommandHandler(**init_params)
         self.credential_handler = credentials_kmodel
-        self.auto_scaling_handler = ProcAutoScalingHandler(**init_params)
+        self.autoscaling_handler = ProcAutoscalingHandler(**init_params)
 
     # Node start
     # WARNING: Node methods returns the raw data structure from kubernetes instead of transform it
@@ -219,3 +220,14 @@ class K8sScheduler:
         """确保应用镜像的访问凭证存在"""
         credentials = ImageCredentials.load_from_app(app)
         self.credential_handler.upsert(credentials)
+
+    ###################
+    # autoscaling API #
+    ###################
+    def deploy_autoscaling(self, scaling: ProcAutoscaling):
+        """为某进程下发/更新自动扩缩容配置"""
+        self.autoscaling_handler.deploy(scaling)
+
+    def remove_autoscaling(self, scaling: ProcAutoscaling):
+        """移除某进程的自动扩缩容配置, 若资源原本不存在，则跳过"""
+        self.autoscaling_handler.delete(scaling)

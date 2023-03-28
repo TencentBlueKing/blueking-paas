@@ -18,5 +18,5 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class AutoScalingUnsupported(Exception):
-    """AutoScaling Unsupported"""
+class AutoscalingUnsupported(Exception):
+    """Autoscaling Unsupported"""

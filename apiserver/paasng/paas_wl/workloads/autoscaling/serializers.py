@@ -27,48 +27,48 @@ from paas_wl.resources.base.kres import KDeployment
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer, GVKConfig
 from paas_wl.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricType
-from paas_wl.workloads.autoscaling.exceptions import AutoScalingUnsupported
-from paas_wl.workloads.autoscaling.models import ScalingConfig, ScalingMetric
+from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingMetric
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
 from paas_wl.workloads.processes.models import Process
 from paas_wl.workloads.processes.serializers import ProcessSerializer
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.autoscaling.entities import ProcAutoScaling
+    from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 
 
-class ProcAutoScalingDeserializer(AppEntityDeserializer['ProcAutoScaling']):
-    """Deserializer for ProcAutoScaling"""
+class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
+    """Deserializer for ProcAutoscaling"""
 
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoScaling':
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
         """Get scaling config from gpa spec
 
         :param app: workloads app
         :param kube_data: k8s GPA
-        :return: ProcAutoScaling
+        :return: ProcAutoscaling
         """
         if app.type == WlAppType.DEFAULT:
-            proc_auto_scaling = self._deserialize_for_default_app(app, kube_data)
+            proc_autoscaling = self._deserialize_for_default_app(app, kube_data)
         elif app.type == WlAppType.CLOUD_NATIVE:
-            proc_auto_scaling = self._deserialize_for_cnative_app(app, kube_data)
+            proc_autoscaling = self._deserialize_for_cnative_app(app, kube_data)
         else:
             raise ValueError('unsupported app type: {}'.format(app.type))
 
-        return proc_auto_scaling
+        return proc_autoscaling
 
-    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoScaling':
+    def _deserialize_for_default_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
         """deserialize process auto scaling config for default type(Heroku) app"""
         return self.entity_type(
             app=app,
             name=self._get_process_type(kube_data),
-            spec=ScalingConfig(
+            spec=AutoscalingConfig(
                 min_replicas=kube_data.spec.minReplicas,
                 max_replicas=kube_data.spec.maxReplicas,
                 metrics=self._parse_metrics(kube_data),
             ),
         )
 
-    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoScaling':
+    def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
         """deserialize process auto scaling config for cloud native type app"""
         raise NotImplementedError('work in progress')
 
@@ -124,16 +124,16 @@ class ProcAutoScalingDeserializer(AppEntityDeserializer['ProcAutoScaling']):
         raise ValueError('unsupported metric name: {}'.format(metric_name))
 
 
-class ProcAutoScalingSerializer(AppEntitySerializer['ProcAutoScaling']):
+class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
     """Serializer for process auto scaling"""
 
     api_version = 'autoscaling.tkex.tencent.com/v1alpha1'
 
-    def get_res_name(self, obj: 'ProcAutoScaling', **kwargs) -> str:
+    def get_res_name(self, obj: 'ProcAutoscaling', **kwargs) -> str:
         """根据规则，生成 GPA 资源名称"""
         return f"{obj.app.scheduler_safe_name}--{obj.name}"
 
-    def serialize(self, obj: 'ProcAutoScaling', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
+    def serialize(self, obj: 'ProcAutoscaling', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         manifest: Dict[str, Any] = {
             'apiVersion': self.get_apiversion(),
             'kind': obj.Meta.kres_class.kind,
@@ -176,13 +176,13 @@ class ProcAutoScalingSerializer(AppEntitySerializer['ProcAutoScaling']):
         return {'name': metric.name, 'target': {'type': metric.type, value_key: value}}
 
     @staticmethod
-    def _gen_scale_target_ref(obj: 'ProcAutoScaling', **kwargs) -> Dict[str, str]:
+    def _gen_scale_target_ref(obj: 'ProcAutoscaling', **kwargs) -> Dict[str, str]:
         """生成 GPA 控制的资源信息"""
         # 普通应用只有成功部署过，才能设置自动扩缩容
         try:
             release = Release.objects.get_latest(obj.app, ignore_failed=True)
         except Release.DoesNotExist:
-            raise AutoScalingUnsupported("autoscaling can't be used because no successful release found.")
+            raise AutoscalingUnsupported("autoscaling can't be used because no successful release found.")
 
         with get_client_by_app(obj.app) as client:
             kres_client = KDeployment(client, api_version='')

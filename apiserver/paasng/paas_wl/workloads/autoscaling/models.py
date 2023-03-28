@@ -39,8 +39,8 @@ class ScalingMetric:
 
 
 @dataclass
-class ScalingConfig:
-    """扩缩容配置"""
+class AutoscalingConfig:
+    """自动扩缩容配置"""
 
     # 最小副本数量
     min_replicas: int

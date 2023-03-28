@@ -24,18 +24,21 @@
               v-bk-tooltips="$t('所有进程 CPU limit 的总和')"
               class="tip"
             >CPU:</span>
-            {{ appInfo.data.cpuStag }}{{ $t('核（生产）') }}、{{ appInfo.data.cpuProd }}{{ $t('核（预发布）') }}
+            {{ appInfo.data.cpuProd }}{{ $t('核（生产）') }}、{{ appInfo.data.cpuStag }}{{ $t('核（预发布）') }}
           </p>
           <p>
             <span
               v-bk-tooltips="$t('所有进程 Memory limit 的总和')"
               class="tip"
             >{{ $t('内存') }}:</span>
-            {{ appInfo.data.memStag }}G（{{ $t('生产') }}）、{{ appInfo.data.memProd }}G（{{ $t('预发布') }}）
+            {{ appInfo.data.memProd }}G（{{ $t('生产') }}）、{{ appInfo.data.memStag }}G（{{ $t('预发布') }}）
           </p>
         </div>
       </div>
-      <div class="alarm">
+      <div
+        v-if="!isCloud"
+        class="alarm"
+      >
         <div class="icon-box mr8">
           <i class="paasng-icon paasng-alert" />
         </div>
@@ -114,6 +117,9 @@
                 type: Object
             },
             isModule: {
+                type: Boolean
+            },
+            isCloud: {
                 type: Boolean
             }
         },

@@ -22,6 +22,7 @@
       <overview-top-info
         class="default-top-info"
         :app-info="topInfo"
+        :is-cloud="isCloudApp"
       />
       <div class="overview-middle">
         <template v-if="!loading">
@@ -116,42 +117,43 @@
                           {{ $t('部署') }}
                         </bk-button>
                       </div>
-
-                      <!-- 折线图内容 部署了才展示内容-->
-                      <div
-                        v-if="data.is_deployed"
-                        ref="chartWarp"
-                        class="chart-warp"
-                      >
-                        <chart
-                          :key="renderChartIndex"
-                          :ref="k + key"
-                          :options="envChartOption[k]"
-                          auto-resize
-                          style="width: 100%; height: 220px;"
-                        />
-                        <ul class="chart-legend">
-                          <li
-                            :class="{ 'active': chartFilterType.pv }"
-                            @click="handleChartFilte('pv', k)"
-                          >
-                            <span class="dot warning" /> PV
-                          </li>
-                          <li
-                            :class="{ 'active': chartFilterType.uv }"
-                            @click="handleChartFilte('uv', k)"
-                          >
-                            <span class="dot primary" /> UV
-                          </li>
-                        </ul>
-                      </div>
-                      <!-- 空状态 -->
-                      <div
-                        v-else
-                        class="empty-warp"
-                      >
-                        <table-empty empty />
-                      </div>
+                      <template v-if="!isCloudApp">
+                        <!-- 折线图内容 部署了才展示内容-->
+                        <div
+                          v-if="data.is_deployed"
+                          ref="chartWarp"
+                          class="chart-warp"
+                        >
+                          <chart
+                            :key="renderChartIndex"
+                            :ref="k + key"
+                            :options="envChartOption[k]"
+                            auto-resize
+                            style="width: 100%; height: 220px;"
+                          />
+                          <ul class="chart-legend">
+                            <li
+                              :class="{ 'active': chartFilterType.pv }"
+                              @click="handleChartFilte('pv', k)"
+                            >
+                              <span class="dot warning" /> PV
+                            </li>
+                            <li
+                              :class="{ 'active': chartFilterType.uv }"
+                              @click="handleChartFilte('uv', k)"
+                            >
+                              <span class="dot primary" /> UV
+                            </li>
+                          </ul>
+                        </div>
+                        <!-- 空状态 -->
+                        <div
+                          v-else
+                          class="empty-warp"
+                        >
+                          <table-empty empty />
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -237,7 +239,7 @@
                     >
                       <a
                         href="javascript: void(0);"
-                        @click="goProcessView"
+                        @click="goProcessDetail"
                       > {{ $t('查看详情') }} </a>
                     </span>
                   </div>
@@ -499,6 +501,9 @@
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            isCloudApp () {
+                return this.curAppInfo.application.type === 'cloud_native';
             }
         },
         watch: {
@@ -534,7 +539,7 @@
                 const curEnvData = this.curProcessEnvList.filter(env => env.name === this.curEnvName);
                 // 若当前模块没有对应环境的进程，默认选中第一个
                 if (!curEnvData.length) {
-                    this.curEnvName = this.curProcessEnvList[0].name;
+                    this.curEnvName = this.curProcessEnvList.length !== 0 ? this.curProcessEnvList[0].name : 'stag';
                 }
             }
         },
@@ -560,7 +565,9 @@
                     this.trunkUrl = this.curAppModule.repo.trunk_url || '';
                     this.sourceType = this.curAppModule.repo.source_type || '';
                 }
-                this.getAlarmData();
+                if (!this.isCloudApp) {
+                    this.getAlarmData();
+                }
             },
             initDate () {
                 const end = new Date();
@@ -868,17 +875,18 @@
             /**
              * 跳转到进程详情页面
              */
-            goProcessView () {
-                this.$router.push({
-                    name: 'appProcess',
+            goProcessDetail () {
+                const query = {
+                    name: this.isCloudApp ? 'appStatus' : 'appProcess',
                     params: {
                         id: this.appCode,
                         moduleId: this.curModuleId
                     },
                     query: {
-                        focus: this.curEnvName
+                        env: this.curEnvName
                     }
-                });
+                };
+                this.$router.push(query);
             },
 
             // 概览数据接口
@@ -906,6 +914,7 @@
                 } finally {
                     setTimeout(() => {
                         this.loading = false;
+                        // 云原生应用不需要对应图表数据
                         this.getPrcessData();
                     }, 300);
                 }
@@ -1143,16 +1152,33 @@
                                 focus: 'prod'
                             }
                         };
-                if (type === 'access') { // 访问
+                // 访问
+                if (type === 'access') {
                     const url = this.overViewData[moduleName]['envs'][env]['exposed_link'].url;
                     window.open(url, '_blank');
-                } else { // 部署
-                    const toModule = this.curAppModuleList.find(module => module.name === moduleName);
-                    if (toModule) {
-                        this.$refs.appTopBarRef.handleModuleSelect(toModule);
+                } else {
+                    if (this.isCloudApp) {
+                        // 应用编排
+                        this.toAppOrchestration();
+                    } else {
+                        const toModule = this.curAppModuleList.find(module => module.name === moduleName);
+                        if (toModule) {
+                            // 切换对应模块
+                            this.$refs.appTopBarRef.handleModuleSelect(toModule);
+                        }
+                        this.$router.push(appRouterInfo);
                     }
-                    this.$router.push(appRouterInfo);
                 }
+            },
+
+            // 应用编排
+            toAppOrchestration () {
+                this.$router.push({
+                    name: 'cloudAppDeployForProcess',
+                    params: {
+                        id: this.appCode
+                    }
+                });
             },
 
             // 切换pv/uv
@@ -1228,9 +1254,9 @@
                             // 每一项 processes
                             const stagProcess = stagProcessList[i];
                             for (const nameStag in stagProcess) {
-                                const maxReplicas = stagProcess[nameStag]['max_replicas'];
-                                cpuStag += stagProcess[nameStag]['resource_limit_quota']['cpu'] * maxReplicas;
-                                memStag += stagProcess[nameStag]['resource_limit_quota']['memory'] * maxReplicas;
+                                const targetReplicas = stagProcess[nameStag]['target_replicas'];
+                                cpuStag += stagProcess[nameStag]['resource_limit_quota']['cpu'] * targetReplicas;
+                                memStag += stagProcess[nameStag]['resource_limit_quota']['memory'] * targetReplicas;
                             };
                         };
                     }
@@ -1241,9 +1267,9 @@
                         for (const i in prodProcessList) {
                             const prodProcess = prodProcessList[i];
                             for (const nameProd in prodProcess) {
-                                const maxReplicas = prodProcess[nameProd]['max_replicas'];
-                                cpuProd += prodProcess[nameProd]['resource_limit_quota']['cpu'] * maxReplicas;
-                                memProd += prodProcess[nameProd]['resource_limit_quota']['memory'] * maxReplicas;
+                                const targetReplicas = prodProcess[nameProd]['target_replicas'];
+                                cpuProd += prodProcess[nameProd]['resource_limit_quota']['cpu'] * targetReplicas;
+                                memProd += prodProcess[nameProd]['resource_limit_quota']['memory'] * targetReplicas;
                             };
                         };
                     }
@@ -1251,8 +1277,8 @@
 
                 // 转为显示单位
                 return {
-                    cpuStag: Math.floor(cpuStag / 1000),
-                    cpuProd: Math.floor(cpuProd / 1000),
+                    cpuStag: (cpuStag / 1000).toFixed(2),
+                    cpuProd: (cpuProd / 1000).toFixed(2),
                     memStag: memStag / 1024,
                     memProd: memProd / 1024
                 };

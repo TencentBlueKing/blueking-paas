@@ -113,7 +113,7 @@
             init () {
                 this.loadAdvisedDocLinks();
                 // 获取当前tab项
-                if (this.$route.query && this.$route.query.focus === 'prod') {
+                if (this.$route.query && this.$route.query.env === 'prod') {
                     this.environment = 'prod';
                 }
             },

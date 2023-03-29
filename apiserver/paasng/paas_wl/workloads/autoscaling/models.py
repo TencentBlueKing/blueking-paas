@@ -16,13 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
 from dataclasses import dataclass
 from typing import List
 
 from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass

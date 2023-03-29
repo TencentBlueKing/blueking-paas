@@ -85,16 +85,16 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
     def _parse_metrics(self, gpa: ResourceInstance) -> List[ScalingMetric]:
         """Parse metrics for general pod autoscaler resource"""
         metrics: List[ScalingMetric] = []
-        for metric in gpa.spec.metric.metrics:
+        for m in gpa.spec.metric.metrics:
             # 目前只有 ResourcesMetricSource，不支持其他类型的 metric
-            if metric.type != ScalingMetricSourceType.RESOURCE:
-                raise ValueError('unsupported metric source type: {}'.format(metric.type))
+            if m.type != ScalingMetricSourceType.RESOURCE:
+                raise ValueError('unsupported metric source type: {}'.format(m.type))
 
-            metric.append(
+            metrics.append(
                 ScalingMetric(
-                    name=metric.resource.name,
-                    type=metric.resource.target.type,
-                    value=self._parse_metric_value(metric.resource.target, metric.resource.name),
+                    name=m.resource.name,
+                    type=m.resource.target.type,
+                    value=self._parse_metric_value(m.resource.target, m.resource.name),
                 )
             )
 

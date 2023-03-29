@@ -157,7 +157,7 @@ class Migration(migrations.Migration):
                 ('storage', models.CharField(max_length=16, verbose_name='存储方式')),
                 ('category', paasng.pluginscenter.models.definitions.PluginBackendAPIResourceField()),
                 ('api', paasng.pluginscenter.models.definitions.PluginBackendAPIField(null=True)),
-                ('extra_fields', paasng.pluginscenter.models.definitions.PluginExtraFieldField(default=dict)),
+                ('extra_fields', models.JSONField(default=dict)),
                 ('pd', models.OneToOneField(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='market_info_definition', to='pluginscenter.plugindefinition')),
             ],
             options={
@@ -195,7 +195,7 @@ class Migration(migrations.Migration):
                 ('release_method', models.CharField(max_length=16, verbose_name='发布方式')),
                 ('repository_group', models.CharField(max_length=255, verbose_name='插件代码初始化仓库组')),
                 ('api', paasng.pluginscenter.models.definitions.PluginBackendAPIField()),
-                ('extra_fields', paasng.pluginscenter.models.definitions.PluginExtraFieldField(default=dict)),
+                ('extra_fields', models.JSONField(default=dict)),
                 ('pd', models.OneToOneField(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='basic_info_definition', to='pluginscenter.plugindefinition')),
             ],
             options={

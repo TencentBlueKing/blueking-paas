@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, List
+from typing import List
 
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
@@ -43,7 +43,6 @@ ReleaseStageDefinitionField = make_json_field("ReleaseStageDefinitionField", Lis
 PluginLogConfigField = make_json_field("PluginLogConfigField", PluginLogConfig)
 PluginCreateApprovalField = make_json_field("PluginCreateApprovalField", PluginCreateApproval)
 PluginCodeTemplateListField = make_json_field("PluginCodeTemplateListField", List[PluginCodeTemplate])
-PluginExtraFieldField = make_json_field("PluginExtraFieldField", Dict[str, FieldSchema])
 PluginConfigColumnDefinitionField = make_json_field(
     "PluginConfigColumnDefinitionField", List[PluginConfigColumnDefinition]
 )
@@ -77,7 +76,7 @@ class PluginBasicInfoDefinition(AuditedModel):
     repository_group = models.CharField(verbose_name="插件代码初始化仓库组", max_length=255)
     api: PluginBackendAPI = PluginBackendAPIField()
     sync_members: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
-    extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields = models.JSONField(default=dict)
 
     @classmethod
     def get_languages(cls) -> List[str]:
@@ -99,7 +98,7 @@ class PluginMarketInfoDefinition(AuditedModel):
     storage = models.CharField(verbose_name="存储方式", max_length=16)
     category: PluginBackendAPIResource = PluginBackendAPIResourceField()
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
-    extra_fields = PluginExtraFieldField(default=dict)
+    extra_fields = models.JSONField(default=dict)
 
 
 class PluginConfigInfoDefinition(AuditedModel):

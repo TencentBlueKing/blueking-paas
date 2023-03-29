@@ -121,7 +121,7 @@ class PluginBasicInfoDefinition(BaseModel):
     releaseMethod: Literal["code", "sourcePackage", "image"] = Field(description="插件发布方式")
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
-    extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFields: dict = Field(default_factory=dict)
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
 
@@ -157,7 +157,7 @@ class PluginMarketInfoDefinition(BaseModel):
     )
     category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
-    extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFields: dict = Field(default_factory=dict)
     # TODO: visibleRange
 
 
@@ -171,7 +171,7 @@ class ReleaseRevisionDefinition(BaseModel):
     versionNo: Literal["automatic", "revision", "commit-hash", "self-fill"] = Field(
         description="版本号生成规则, 自动生成(automatic)," "与代码版本一致(revision)," "与提交哈希一致(commit-hash)," "用户自助填写(self-fill)"
     )
-    extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
+    extraFields: dict = Field(default_factory=dict)
     api: Optional[PluginBackendAPI] = Field(description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口")
 
 

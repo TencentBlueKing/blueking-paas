@@ -21,6 +21,7 @@ import json
 import logging
 from typing import Dict, Optional
 
+import cattr
 from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -37,6 +38,7 @@ from paas_wl.platform.external.client import get_local_plat_client
 from paas_wl.platform.system_api.serializers import ProcSpecsSerializer
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
+from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.controllers import get_proc_mgr, judge_operation_frequent
@@ -86,7 +88,9 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operate_type = data["operate_type"]
         target_replicas = data.get('target_replicas')
         # 如果参数中包含自动扩缩容信息，则进行类型转换
-        scaling_config = AutoscalingConfig(**data['scaling_config']) if data.get('scaling_config') else None
+        scaling_config = None
+        if conf := data.get('scaling_config'):
+            scaling_config = cattr.structure(conf, AutoscalingConfig)
 
         try:
             judge_operation_frequent(wl_app, process_type, self._operation_interval)
@@ -142,6 +146,8 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except ProcessNotFound as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 未定义") from e
         except ScaleProcessError as e:
+            raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
+        except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
 

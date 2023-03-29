@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
+from dataclasses import asdict
 from typing import Dict, List, Protocol
 
 from django.utils import timezone
@@ -146,7 +147,11 @@ class AppProcessesController:
         proc_spec = self._get_spec(proc_type)
         # 普通应用：最大副本数 <= 进程规格方案允许的最大副本数
         if scaling_config.max_replicas > proc_spec.plan.max_replicas:
-            raise ValueError("max_replicas in scale spec is more than plan's max_replicas")
+            raise ScaleProcessError(f"max_replicas in scaling config can't more than {proc_spec.plan.max_replicas}")
+
+        proc_spec.autoscaling = True
+        proc_spec.scaling_config = asdict(scaling_config)
+        proc_spec.save(update_fields=['autoscaling', 'scaling_config', 'updated'])
 
         self.client.deploy_autoscaling(scaling)
 

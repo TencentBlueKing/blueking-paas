@@ -538,9 +538,9 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
     def deploy(self, scaling: ProcAutoscaling):
         """向集群中下发 GPA （创建/更新）"""
         try:
-            self.manager.update(scaling, "replace", allow_not_concrete=False)
+            self.manager.update(scaling, "replace", mapper_version=self.mapper_version, allow_not_concrete=True)
         except AppEntityNotFound:
-            self.manager.create(scaling)
+            self.manager.create(scaling, mapper_version=self.mapper_version)
 
     def delete(self, scaling: ProcAutoscaling):
         """删除集群中的 GPA"""

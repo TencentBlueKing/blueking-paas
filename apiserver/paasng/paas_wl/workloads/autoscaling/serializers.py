@@ -137,7 +137,11 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         manifest: Dict[str, Any] = {
             'apiVersion': self.get_apiversion(),
             'kind': obj.Meta.kres_class.kind,
-            'metadata': {'name': self.get_res_name(obj), 'annotations': {PROCESS_NAME_KEY: obj.name}},
+            'metadata': {
+                'namespace': obj.app.namespace,
+                'name': self.get_res_name(obj),
+                'annotations': {PROCESS_NAME_KEY: obj.name},
+            },
             'spec': {
                 'minReplicas': obj.spec.min_replicas,
                 'maxReplicas': obj.spec.max_replicas,

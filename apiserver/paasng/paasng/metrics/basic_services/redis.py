@@ -20,10 +20,11 @@ from blue_krill.monitoring.probe.base import ProbeSet
 
 from paasng.monitoring.healthz.probes import PlatformRedisProbe
 
+from .base import GaugeMetric
 
-class RedisAvailableMetric:
+
+class RedisAvailableMetric(GaugeMetric):
     name = 'redis_service'
-    metric_type = 'gauge'
     description = 'redis service available'
 
     @classmethod

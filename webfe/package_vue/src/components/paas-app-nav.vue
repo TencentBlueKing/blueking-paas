@@ -189,7 +189,7 @@
                             if (nav.name === 'appMarketing') {
                                 nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
                             }
-                            return ['appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
+                            return ['appSummary', 'appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
                         });
                     }
 

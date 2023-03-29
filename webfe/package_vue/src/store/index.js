@@ -43,6 +43,7 @@ import alarm from './modules/alarm';
 import docuManagement from './modules/docu-management';
 import cloudApi from './modules/cloud-api';
 import credential from './modules/credential';
+import overview from './modules/overview';
 import plugin from './modules/plugin';
 import pluginMembers from './modules/plugin-members';
 import http from '@/api';
@@ -415,6 +416,7 @@ export default new Vuex.Store({
     docuManagement,
     cloudApi,
     credential,
+    overview,
     // 插件开发者中心
     plugin,
     pluginMembers

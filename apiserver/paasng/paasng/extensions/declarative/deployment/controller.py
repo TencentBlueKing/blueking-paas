@@ -62,7 +62,10 @@ class DeploymentDeclarativeController:
             },
         )
         # Bind ProcessSpec if necessary
-        self.sync_processes_specs(desc.processes)
+        if desc.processes:
+            self.sync_processes_specs(desc.processes)
+        else:
+            logger.debug("The description file does not define processes, deployment pk: %s", self.deployment.pk)
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
 

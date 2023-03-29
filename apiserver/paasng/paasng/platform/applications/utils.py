@@ -18,13 +18,17 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from typing import Optional
+from typing import Dict, List, Optional
 
 from django.db import transaction
 
+from paas_wl.cnative.specs.models import AppModelDeploy
+from paas_wl.cnative.specs.procs import get_proc_specs
+from paas_wl.workloads.processes.drf_serializers import CNativeProcSpecSLZ
+from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.processes import ProcessManager
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
@@ -198,6 +202,10 @@ def get_app_overview(application: Application) -> dict:
                                 }
                             },
                         ]
+                        "deployment": {
+                            "operator": "admin",
+                            "deploy_time": "2023-03-14 16:15:19"
+                        }
                     },
                     'prod': {
                         "is_deployed": False, # 未部署，则不需要展示该模块的访问地址等信息
@@ -220,14 +228,47 @@ def get_app_overview(application: Application) -> dict:
             exposed_link = get_exposed_url(module_env)
 
             # 进程信息
-            _specs = ProcessManager(module_env.engine_app).list_processes_specs()
+            _specs = get_processes_specs(application, module_env)
             specs = [{spec['name']: spec} for spec in _specs]
+
+            latest_dp = None
+            if is_deployed:
+                latest_dp = get_latest_deployment_basic_info(application, module_env)
 
             module_info['envs'][env] = {
                 'is_deployed': is_deployed,
                 'exposed_link': {"url": exposed_link.address if exposed_link else None},
                 'processes': specs,
+                'deployment': latest_dp,
             }
 
         data[module.name] = module_info
     return data
+
+
+def get_latest_deployment_basic_info(application: Application, env: ModuleEnvironment) -> Optional[dict]:
+    """获取应用的最近部署信息"""
+    if application.type == ApplicationType.CLOUD_NATIVE.value:
+        try:
+            latest_dp = AppModelDeploy.objects.filter_by_env(env).latest("created")
+        except AppModelDeploy.DoesNotExist:
+            return None
+    else:
+        try:
+            latest_dp = Deployment.objects.filter_by_env(env=env).latest_succeeded()
+        except Deployment.DoesNotExist:
+            return None
+
+    # AppModelDeploy 和 Deployment 表中基本信息内容（operator、created）字段定义一致
+    return {
+        "operator": latest_dp.operator.username,
+        "deploy_time": latest_dp.created.isoformat(sep=" ", timespec="seconds"),
+    }
+
+
+def get_processes_specs(application: Application, env: ModuleEnvironment) -> List[Dict]:
+    """获取应用的进程配置信息"""
+    if application.type != ApplicationType.CLOUD_NATIVE.value:
+        return ProcessManager(env.engine_app).list_processes_specs()
+
+    return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data

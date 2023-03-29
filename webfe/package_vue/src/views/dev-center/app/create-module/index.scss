@@ -218,7 +218,6 @@ input.ps-form-control {
 }
 
 .form-actions {
-    text-align: center;
     margin: 24px 0 18px;
 }
 
@@ -643,8 +642,14 @@ input::-webkit-input-placeholder {
 
 .form-actions{
     .ps-btn-primary{
-        background: #1768EF;
         font-size: 14px;
+        background: #3a84ff;
+        &:hover {
+            
+            background-color: #699df4;
+            border-color: #699df4;
+            opacity: 1;
+        }
     }
     .ps-btn-isdisabled{
         background-color: #dcdee5 !important;

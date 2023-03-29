@@ -16,11 +16,23 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Root URLs
-"""
-from django.urls import include, re_path
+import pytest
 
-urlpatterns = [
-    re_path(r'', include('paas_wl.metrics.urls')),
-    re_path(r'^', include('paas_wl.platform.system_api.urls')),
-]
+from paasng.engine.processes.models import PlainInstance, PlainProcess
+
+
+@pytest.fixture
+def instance():
+    return PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)
+
+
+@pytest.fixture()
+def process(instance):
+    return PlainProcess(
+        name="web",
+        version=1,
+        replicas=1,
+        type="web",
+        command="foo",
+        instances=[instance],
+    )

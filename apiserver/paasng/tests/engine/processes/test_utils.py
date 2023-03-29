@@ -18,21 +18,28 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.release_controller.process.models import PlainInstance, PlainProcess
+from paasng.engine.processes.models import PlainInstance, PlainProcess
+from paasng.engine.processes.utils import ProcessesSnapshotStore
+
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 @pytest.fixture
-def instance():
-    return PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)
-
-
-@pytest.fixture()
-def process(instance):
+def process():
+    """A Process object"""
+    inst = PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)
     return PlainProcess(
         name="web",
         version=1,
         replicas=1,
         type="web",
         command="foo",
-        instances=[instance],
+        instances=[inst],
     )
+
+
+class TestProcessesSnapshotStore:
+    def test_save_then_get(self, bk_stag_env, process):
+        store = ProcessesSnapshotStore(bk_stag_env)
+        store.save([process])
+        assert store.get() == [process]

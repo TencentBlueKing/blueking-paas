@@ -23,6 +23,7 @@ import logging
 from typing import Optional
 
 import arrow
+from prometheus_client.core import GaugeMetricFamily
 
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.metrics.collector import cb_metric_collector
@@ -79,20 +80,25 @@ def deployment_is_frozen(deployment: Deployment, since: datetime.datetime) -> bo
     return last_line_created < arrow.get(since)
 
 
-class FrozenDeployMentsMetric:
+class FrozenDeploymentsMetric:
     name = 'frozen_deployments'
-    metric_type = 'gauge'
     description = 'count of frozen deployments'
 
     @classmethod
-    def calc_value(cls) -> int:
-        # Cached version of `count_frozen_deployments` function
+    def calc_metric(cls) -> GaugeMetricFamily:
+        """获取 metric"""
         cached_count_frozen_deployments = cache_region.cache_on_arguments(namespace='v1', expiration_time=60)(
             count_frozen_deployments
         )
-        return cached_count_frozen_deployments()
+        value = cached_count_frozen_deployments()
+        return GaugeMetricFamily(cls.name, cls.description, value)
+
+    @classmethod
+    def describe_metric(cls) -> GaugeMetricFamily:
+        """描述 metric"""
+        return GaugeMetricFamily(cls.name, cls.description)
 
 
 def register_metrics():
     """Register metrics for engine app"""
-    cb_metric_collector.add(FrozenDeployMentsMetric)
+    cb_metric_collector.add(FrozenDeploymentsMetric)

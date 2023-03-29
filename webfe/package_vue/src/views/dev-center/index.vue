@@ -368,7 +368,7 @@
                     :class="appItem.expanded ? 'expanded' : ''"
                   > {{ $t('共') }}&nbsp; {{ appItem.application.modules.length }} &nbsp;{{ $t('个模块') }} <i
                     class="paasng-icon unfold-icon"
-                    :class="appItem.expanded ? 'paasng-angle-up' : 'paasng-angle-down'"
+                    :class="appItem.expanded ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
                   />
                   </span>
                 </template>
@@ -381,14 +381,17 @@
                   <!-- 外链应用 -->
                   <bk-button
                     theme="primary"
-                    class="mr8"
                     text
+                    ext-cls="link-btn-cls"
                     @click="toCloudAPI(appItem)"
                   >
                     {{ $t('申请云API权限') }}
                     <i class="paasng-icon paasng-keys cloud-icon" />
                   </bk-button>
-                  <span v-bk-tooltips.top="{ content: $t('应用未设置访问路径'), disabled: appItem.market_config.source_tp_url }">
+                  <span
+                    v-bk-tooltips.top="{ content: $t('应用未设置访问路径'), disabled: appItem.market_config.source_tp_url }"
+                    class="link-btn-cls right-text"
+                  >
                     <bk-button
                       theme="primary"
                       text
@@ -409,6 +412,7 @@
                     <bk-button
                       :disabled="!appItem.application.deploy_info.stag.deployed"
                       text
+                      ext-cls="link-btn-cls"
                       @click="visitLink(appItem, 'stag')"
                     >
                       <template v-if="!appItem.application.deploy_info.stag.deployed">
@@ -425,7 +429,7 @@
                     <bk-button
                       :disabled="!appItem.application.deploy_info.prod.deployed"
                       text
-                      style="margin-left: 18px;"
+                      ext-cls="link-btn-cls right-text"
                       @click="visitLink(appItem, 'prod')"
                     >
                       <template v-if="!appItem.application.deploy_info.prod.deployed">
@@ -842,11 +846,7 @@
             },
 
             toPage (appItem) {
-                if (appItem.application.config_info.engine_enabled) {
-                    this.toAppSummary(appItem);
-                    return;
-                }
-                this.toAppBaseInfo(appItem);
+                this.toAppSummary(appItem);
             },
 
             pageChange (page) {
@@ -1184,6 +1184,9 @@
             }
             &:hover {
                 box-shadow: 0px 3px 6px 0px rgba(99, 101, 110, .1);
+                .visit-operate .app-operation-section button i {
+                    opacity: 1;
+                }
             }
         }
         .ps-no-result {
@@ -1300,7 +1303,7 @@
             }
             .module-info {
                 display: inline-block;
-                width: 36%;
+                width: 34%;
                 cursor: pointer;
                 &:hover {
                     .module-name {
@@ -1314,7 +1317,7 @@
                     display: inline-block;
                     margin: 0 4px;
                     width: 200px;
-                    height: 60px;
+                    height: 65px;
                     overflow: hidden;
                     vertical-align: middle;
                     color: #63656e;
@@ -1324,6 +1327,7 @@
                             display: inline-block;
                         }
                     }
+                    // 图标默认为隐藏
                     .unfold-icon {
                         display: none;
                         position: relative;
@@ -1335,6 +1339,7 @@
             }
             .visit-operate {
                 display: inline-block;
+                width: 21%;
             }
         }
         .item-content {
@@ -1400,19 +1405,23 @@
         line-height: 32px;
         margin-top: 3px;
         border: 1px solid #c4c6cc;
-        border-radius: 0 2px 2px 0;
+        border-radius: 2px;
         background: #fff;
         cursor: pointer;
         z-index: 1;
-        color: #979BA5;
+        color: #63656E;
         font-size: 12px;
         &:hover {
             color: #3a84ff;
+            p .paasng-icon {
+                color: #3a84ff !important;
+            }
         }
         p {
-            padding-left: 14px;
+            text-align: center;
             .paasng-icon {
                 font-size: 12px;
+                color: #979BA5;
             }
         }
     }
@@ -1424,13 +1433,14 @@
                 position: relative;
                 top: 2px;
                 font-size: 20px;
+                opacity: 0;
             }
             i.cloud-icon {
                 left: -3px;
             }
-            &.mr8 {
-                margin-right: 8px;
-            }
+        }
+        .right-text {
+            margin-left: 14px;
         }
     }
 
@@ -1795,6 +1805,10 @@
         width: 1180px;
     }
     .module-tr-empty {
-      height: 280px;
+        height: 280px;
+    }
+    .link-btn-cls {
+        display: inline-block;
+        height: 100%;
     }
 </style>

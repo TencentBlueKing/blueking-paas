@@ -16,30 +16,25 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import pytest
+from typing import Any
 
-from paas_wl.release_controller.process.models import PlainInstance, PlainProcess
-from paas_wl.release_controller.process.utils import ProcessesSnapshotStore
-
-pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
+from prometheus_client.core import GaugeMetricFamily, Metric
 
 
-@pytest.fixture
-def process():
-    """A Process object"""
-    inst = PlainInstance(name="instance-foo", version=1, process_type="web", ready=False)
-    return PlainProcess(
-        name="web",
-        version=1,
-        replicas=1,
-        type="web",
-        command="foo",
-        instances=[inst],
-    )
+class GaugeMetric:
+    name = 'gauge'
+    description = 'gauge metric'
 
+    @classmethod
+    def calc_value(self) -> Any:
+        """获取值"""
 
-class TestProcessesSnapshotStore:
-    def test_save_then_get(self, wl_app, process):
-        store = ProcessesSnapshotStore(wl_app)
-        store.save([process])
-        assert store.get() == [process]
+    @classmethod
+    def calc_metric(cls) -> Metric:
+        """获取 metric"""
+        return GaugeMetricFamily(cls.name, cls.description, cls.calc_value())
+
+    @classmethod
+    def describe_metric(cls) -> Metric:
+        """获取 metric 描述"""
+        return GaugeMetricFamily(cls.name, cls.description)

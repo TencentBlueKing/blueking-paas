@@ -17,12 +17,13 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from paas_wl.workloads.processes.models import Process, Status
+if TYPE_CHECKING:
+    from paas_wl.workloads.processes.models import Process, Status
 
 
-def condense_processes(processes: List[Process]) -> 'List[PlainProcess]':
+def condense_processes(processes: 'List[Process]') -> 'List[PlainProcess]':
     """Condense processes by removing unrelated fields to save space."""
     plain = []
     for p in processes:
@@ -80,7 +81,7 @@ class PlainProcess:
     replicas: int
     type: str
     command: str
-    status: Optional[Status] = None
+    status: 'Optional[Status]' = None
     instances: List[PlainInstance] = field(default_factory=list)
 
     def is_all_ready(self, expected_version: int) -> bool:

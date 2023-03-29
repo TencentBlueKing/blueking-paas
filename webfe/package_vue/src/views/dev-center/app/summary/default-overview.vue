@@ -60,14 +60,14 @@
                     :key="k"
                     class="header-info"
                   >
-                    <span class="header-env">{{ k === 'stag' ? $t('预发布环境') : $t('正式环境') }}:</span>
+                    <span class="header-env">{{ k === 'stag' ? $t('预发布环境') : $t('生产环境') }}:</span>
                     <span :class="['header-env', 'pl10', { 'not-deployed': !data.is_deployed }]">{{ data.is_deployed ? $t('已部署') : $t('未部署') }}</span>
                     <bk-button
                       v-if="data.is_deployed"
                       class="pl10"
                       theme="primary"
                       text
-                      @click="handleItemClick(k, 'access', key)"
+                      @click="(e) => handleItemClick(k, 'access', key, e)"
                     >
                       {{ $t('访问') }}
                     </bk-button>
@@ -75,7 +75,7 @@
                       class="pl10"
                       theme="primary"
                       text
-                      @click="handleItemClick(k, 'deploy', key)"
+                      @click="(e) => handleItemClick(k, 'deploy', key, e)"
                     >
                       {{ $t('部署') }}
                     </bk-button>
@@ -90,7 +90,7 @@
                     >
                       <div class="info-env mb10">
                         <div class="env-name">
-                          {{ k === 'stag' ? $t('预发布环境') : $t('正式环境') }}
+                          {{ k === 'stag' ? $t('预发布环境') : $t('生产环境') }}
                         </div>
                         <span class="span" />
                         <div
@@ -1148,7 +1148,9 @@
             },
 
             // 点击访问或者部署
-            handleItemClick (env, type, moduleName) {
+            handleItemClick (env, type, moduleName, $event) {
+                $event && $event.stopPropagation();
+
                 const appRouterInfo = env === 'stag' ? {
                             name: 'appDeploy',
                             params: {

@@ -24,14 +24,14 @@
               v-bk-tooltips="$t('所有进程 CPU limit 的总和')"
               class="tip"
             >CPU:</span>
-            {{ appInfo.data.cpuProd }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag }}{{ $t('核（预发布）') }}
+            {{ appInfo.data.cpuProd || '-- ' }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag || '-- ' }}{{ $t('核（预发布）') }}
           </p>
           <p>
             <span
               v-bk-tooltips="$t('所有进程 Memory limit 的总和')"
               class="tip"
             >{{ $t('内存') }}:</span>
-            {{ appInfo.data.memProd }}G（{{ $t('生产环境') }}）、{{ appInfo.data.memStag }}G（{{ $t('预发布') }}）
+            {{ appInfo.data.memProd || '-- ' }}G（{{ $t('生产环境') }}）、{{ appInfo.data.memStag || '-- ' }}G（{{ $t('预发布') }}）
           </p>
         </div>
       </div>

@@ -36,6 +36,22 @@ class HumanizeDateTimeField(serializers.DateTimeField):
         return arrow.get(value).humanize(locale="zh")
 
 
+class ScaleMetricSLZ(serializers.Serializer):
+    """扩缩容指标"""
+
+    name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
+    type = serializers.ChoiceField(required=True, choices=ScalingMetricType.get_choices())
+    value = serializers.IntegerField(required=True, help_text=_('资源指标值/百分比'))
+
+
+class ScalingConfigSLZ(serializers.Serializer):
+    """扩缩容配置"""
+
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
+    metrics = serializers.ListField(child=ScaleMetricSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
+
+
 class InstanceForDisplaySLZ(serializers.Serializer):
     """Common serializer for representing Instance object, removes some extra
     large and sensitive fields such as "envs" """
@@ -64,14 +80,14 @@ class ProcessSpecSLZ(serializers.Serializer):
     """Serializer for representing process packages
 
     Need to convert the resource limit to a number:
-        "resource_limit": {
-                    "cpu": "100m",
-                    "memory": "64Mi"
-                }
-        "resource_limit_quota": {
-                    "cpu": 100,
-                    "memory": 64
-                }
+    "resource_limit": {
+        "cpu": "100m",
+        "memory": "64Mi"
+    }
+    "resource_limit_quota": {
+        "cpu": 100,
+        "memory": 64
+    }
     """
 
     name = serializers.CharField()
@@ -83,6 +99,8 @@ class ProcessSpecSLZ(serializers.Serializer):
     plan_id = serializers.CharField(source="plan.id")
     plan_name = serializers.CharField(source="plan.name")
     resource_limit_quota = serializers.SerializerMethodField(read_only=True)
+    autoscaling = serializers.BooleanField()
+    scaling_config = ScalingConfigSLZ()
 
     def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
         limits = obj.plan.limits
@@ -102,22 +120,6 @@ class CNativeProcSpecSLZ(serializers.Serializer):
     max_replicas = serializers.IntegerField()
     cpu_limit = serializers.CharField()
     memory_limit = serializers.CharField()
-
-
-class ScaleMetricSLZ(serializers.Serializer):
-    """扩缩容指标"""
-
-    name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
-    type = serializers.ChoiceField(required=True, choices=ScalingMetricType.get_choices())
-    value = serializers.IntegerField(required=True, help_text=_('资源指标值/百分比'))
-
-
-class ScalingConfigSLZ(serializers.Serializer):
-    """扩缩容配置"""
-
-    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
-    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
-    metrics = serializers.ListField(child=ScaleMetricSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
 
 
 class UpdateProcessSLZ(serializers.Serializer):

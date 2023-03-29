@@ -20,10 +20,11 @@ from blue_krill.monitoring.probe.base import ProbeSet
 
 from paasng.monitoring.healthz.probes import PlatformBlobStoreProbe
 
+from .base import GaugeMetric
 
-class BlobStoreAvailableMetric:
+
+class BlobStoreAvailableMetric(GaugeMetric):
     name = 'blob_store_service'
-    metric_type = 'gauge'
     description = 'blob_store service available'
 
     @classmethod

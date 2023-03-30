@@ -132,7 +132,7 @@ def test_make_create_plugin_validator_conflict(pd, plugin, field, value, expecte
         "name_zh_cn": "FLAG",
         "name": "FLAG",
         "template": plugin.template.name,
-        "extra_fields": {"email": "foo@example.com"},
+        "extra_fields": {"email": "foo@example.com", "distributor_codes": []},
     }
     slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
     assert not slz.is_valid()

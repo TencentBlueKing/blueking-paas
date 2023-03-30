@@ -48,7 +48,6 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', dest="dry_run", help="dry run", action="store_true")
 
     def handle(self, identifier, env, dry_run, *args, **options):
-
         file_path = Path(settings.BASE_DIR) / 'support-files' / 'plugin' / f'{identifier}-{env}.yaml'
         with open(file_path, 'r', encoding='utf-8') as f:
             data = yaml.load(f)
@@ -79,7 +78,6 @@ class Command(BaseCommand):
                 'features': pd_data.features,
             },
         )
-
         # 插件基本信息
         models.PluginBasicInfoDefinition.objects.update_or_create(
             pd=pd,

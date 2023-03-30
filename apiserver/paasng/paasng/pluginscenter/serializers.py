@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from typing import Dict, Optional, Type
 
 import arrow
+import cattr
 import semver
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
@@ -237,12 +238,8 @@ class TemplateChoiceField(serializers.ChoiceField):
         return self.choices[super().to_internal_value(data)]
 
 
-def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
-    """Generate fields for validating data according to the given field_schema"""
-    _type = field_schema.type
-    if _type == "array":
-        return serializers.ListField()
-
+def make_string_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate a Field for verifying a string according to the given field_schema"""
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
@@ -253,6 +250,23 @@ def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
     if field_schema.pattern:
         return serializers.RegexField(regex=field_schema.pattern, **init_kwargs)
     return serializers.CharField(**init_kwargs)
+
+
+def make_array_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate a Field for verifying a array according to the given field_schema"""
+    child_field_schema = cattr.structure(field_schema.items, FieldSchema)
+    child_field = make_json_schema_field(child_field_schema)
+    return serializers.ListField(child=child_field)
+
+
+def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate fields for validating data according to the given field_schema"""
+    type_ = field_schema.type
+    if type_ == "array":
+        return make_array_field(field_schema)
+    elif type_ == "string":
+        return make_string_field(field_schema)
+    raise NotImplementedError(f"NotImplemented field type: {type_} for plugin's extraFields")
 
 
 def make_extra_fields_slz(extra_fields: Dict[str, FieldSchema]) -> Type[serializers.Serializer]:

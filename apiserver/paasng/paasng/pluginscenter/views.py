@@ -245,7 +245,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     def update(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
-        slz = serializers.make_plugin_slz_class(pd, creation=False)(data=request.data)
+        slz = serializers.make_plugin_slz_class(pd, creation=False)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 

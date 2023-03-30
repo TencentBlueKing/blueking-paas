@@ -27,21 +27,18 @@ from django.conf import settings
 from paasng.extensions.bk_plugins.models import BkPlugin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.client import LogClientProtocol, instantiate_log_client
+from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.platform.log.filters import EnvFilter
 from paasng.platform.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
-from paasng.platform.log.responses import init_field_form_raw
-from paasng.platform.log.utils import clean_logs, generate_field_extractor
-from paasng.utils.es_log.models import Logs
+from paasng.platform.log.utils import clean_logs
+from paasng.utils.es_log.models import LogLine, Logs, extra_field
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
 
 
 @define
-class StructureLogLine:
+class StructureLogLine(LogLine):
     """结构化日志结构
-    :param timestamp: field in FlattenLog
-    :param message: field in FlattenLog
-    :param raw: field in FlattenLog
 
     :param detail: alias of raw. This is the field before refactoring. It is kept for compatibility purposes.
     :param region: [deprecated] app region
@@ -52,24 +49,18 @@ class StructureLogLine:
     :param ts: [deprecated]datetime string, use timestamp(utc) instead
     """
 
-    timestamp: int
-    message: str
-    raw: Dict[str, Any]
-
     # extra useful field, will be extracted from the same field in raw
     detail: Dict[str, Any] = field(init=False)
-    region: str = field(init=False, converter=converters.optional(str))
-    plugin_code: str = field(
-        init=False, converter=converters.optional(str), metadata={"getter": generate_field_extractor("app_code")}
-    )
-    environment: str = field(init=False, converter=converters.optional(str))
-    process_id: Optional[str] = field(init=False, converter=converters.optional(str))
-    stream: str = field(init=False, converter=converters.optional(str))
-    ts: str = field(init=False, converter=converters.optional(str))
+    region: str = extra_field(converter=converters.optional(str))
+    plugin_code: str = extra_field(source="app_code", converter=converters.optional(str))
+    environment: str = extra_field(converter=converters.optional(str))
+    process_id: Optional[str] = extra_field(converter=converters.optional(str))
+    stream: str = extra_field(converter=converters.optional(str))
+    ts: str = extra_field(converter=converters.optional(str))
 
     def __attrs_post_init__(self):
         self.detail = self.raw
-        init_field_form_raw(self)
+        super().__attrs_post_init__()
 
 
 class PluginLoggingClient:
@@ -128,6 +119,7 @@ class PluginLoggingClient:
         :param trace_id: "trace_id" is an identifier for filtering logs
         """
         module = self.application.get_module(module_name=self._module_name)
+        # 插件应用只部署 prod 环境
         env = module.get_envs(environment="prod")
         smart_time_range = SmartTimeRange(time_range=self._default_time_range)
         query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env)
@@ -139,7 +131,7 @@ class PluginLoggingClient:
         env: ModuleEnvironment,
         search_params: ElasticSearchParams,
         time_range: SmartTimeRange,
-        limit: int = 200,
+        limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""

@@ -18,11 +18,13 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 
+import cattr
 import pytest
 import pytz
+from attrs import converters, define
 
 from paasng.utils.es_log.misc import count_filters_options, flatten_structure, format_timestamp
-from paasng.utils.es_log.models import FieldFilter
+from paasng.utils.es_log.models import FieldFilter, LogLine, extra_field
 
 
 @pytest.mark.parametrize(
@@ -102,3 +104,50 @@ def test_count_filters_options(logs, filters, expected):
 )
 def test_flatten_structure(structured_fields, parent, expected_output):
     assert flatten_structure(structured_fields, parent) == expected_output
+
+
+def _build_extra_data(data):
+    return {"message": "", "timestamp": 0, "raw": data}
+
+
+def _build_expected(data):
+    return {"message": "", "timestamp": 0, **data}
+
+
+@pytest.mark.parametrize(
+    "extra_fields, data, expected",
+    [
+        (
+            {
+                "plugin_code": extra_field("app_code"),
+            },
+            _build_extra_data({"app_code": "foo"}),
+            _build_expected({"plugin_code": "foo"}),
+        ),
+        (
+            {
+                "plugin_code": extra_field("app_code", converter=converters.optional(str)),
+            },
+            _build_extra_data({"app_code": 1}),
+            _build_expected({"plugin_code": "1"}),
+        ),
+        (
+            {
+                "plugin_code": extra_field("app_code", converter=converters.optional(str)),
+            },
+            _build_extra_data({"app_code": None}),
+            _build_expected({"plugin_code": None}),
+        ),
+        (
+            {
+                "plugin_code": extra_field(lambda raw: raw["???????????"], converter=converters.optional(str)),
+            },
+            _build_extra_data({"???????????": 0}),
+            _build_expected({"plugin_code": "0"}),
+        ),
+    ],
+)
+def test_extra_field(extra_fields, data, expected):
+    model_class = define(type("dummy", (LogLine,), extra_fields))
+    log = cattr.structure(data, model_class)  # type: ignore
+    assert cattr.unstructure(log) == {**expected, "raw": data["raw"]}

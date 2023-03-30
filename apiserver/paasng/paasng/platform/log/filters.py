@@ -73,6 +73,7 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
 
 class ESFilter:
     """ESFilter will modify the filtering conditions of the search based on the search_params.
+
     :param search_params: ElasticSearchParams
     """
 
@@ -107,6 +108,7 @@ tmpl_converters = {"@json": lambda v: json.loads(v), "@jinja": lambda v, context
 
 class EnvFilter(ESFilter):
     """EnvFilter will modify the filtering conditions of the search based on the search_params and env context
+
     :param env: ModuleEnvironment context to filter
     :param search_params: ElasticSearchParams
     """
@@ -142,6 +144,7 @@ class EnvFilter(ESFilter):
 
 class ModuleFilter(ESFilter):
     """ModuleFilter will modify the filtering conditions of the search based on the search_params and module context
+
     [Deprecated]
     :param module: Module context to filter
     :param search_params: ElasticSearchParams

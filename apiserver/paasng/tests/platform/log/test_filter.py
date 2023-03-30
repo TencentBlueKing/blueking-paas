@@ -152,6 +152,7 @@ class TestEnvFilter:
     @pytest.fixture
     def engine_app(self, env):
         engine_app = env.get_engine_app()
+        # 测试下划线转换成 0us0 的逻辑
         engine_app.name = "bkapp-foo_bar-stag"
         engine_app.save()
         return engine_app
@@ -219,6 +220,7 @@ class TestModuleFilter:
     @pytest.fixture
     def stag_engine_app(self, bk_stag_env):
         engine_app = bk_stag_env.get_engine_app()
+        # 测试下划线转换成 0us0 的逻辑
         engine_app.name = "bkapp-foo_bar-stag"
         engine_app.save()
         return engine_app
@@ -226,6 +228,7 @@ class TestModuleFilter:
     @pytest.fixture
     def prod_engine_app(self, bk_prod_env):
         engine_app = bk_prod_env.get_engine_app()
+        # 测试下划线转换成 0us0 的逻辑
         engine_app.name = "bkapp-foo_bar-prod"
         engine_app.save()
         return engine_app

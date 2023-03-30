@@ -41,12 +41,12 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log import serializers
 from paasng.platform.log.client import instantiate_log_client
-from paasng.platform.log.constants import LogType
-from paasng.platform.log.dsl import SimpleDomainSpecialLanguage
+from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
+from paasng.platform.log.dsl import SearchRequestSchema
 from paasng.platform.log.filters import EnvFilter, ModuleFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
-from paasng.platform.log.utils import clean_logs, parse_simple_dsl_to_dsl
+from paasng.platform.log.utils import clean_logs, parse_request_to_es_dsl
 from paasng.utils.error_codes import error_codes
 from paasng.utils.es_log.misc import clean_histogram_buckets
 from paasng.utils.es_log.models import DateHistogram, Logs
@@ -81,11 +81,11 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         highlight_query = {}
         if self.request.data:
             try:
-                query_conditions = SimpleDomainSpecialLanguage(**self.request.data)
+                query_conditions = SearchRequestSchema(**self.request.data)
             except ValidationError:
                 logger.exception("error log query conditions")
                 raise error_codes.QUERY_REQUEST_ERROR
-            dsl = parse_simple_dsl_to_dsl(query_conditions, mappings=mappings)
+            dsl = parse_request_to_es_dsl(query_conditions, mappings=mappings)
             highlight_query = dsl.to_dict()
             search = search.query(dsl).sort({k: {"order": v} for k, v in query_conditions.sort.items()})
 
@@ -98,7 +98,7 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         self,
         search_params: ElasticSearchParams,
         time_range: SmartTimeRange,
-        limit: int = 200,
+        limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
@@ -320,7 +320,11 @@ class LegacyLogAPIMixin(_MixinBase):
         return prod_config
 
     def _make_base_search(
-        self, search_params: ElasticSearchParams, time_range: SmartTimeRange, limit: int = 200, offset: int = 0
+        self,
+        search_params: ElasticSearchParams,
+        time_range: SmartTimeRange,
+        limit: int = DEFAULT_LOG_BATCH_SIZE,
+        offset: int = 0,
     ) -> SmartSearch:
         module = self.get_module_via_path()
 

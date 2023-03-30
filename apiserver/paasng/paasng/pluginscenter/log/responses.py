@@ -16,44 +16,35 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+from typing import Optional
 
-from attrs import converters, define, field, fields
+from attrs import converters, define, fields
+
+from paasng.utils.es_log.models import LogLine, extra_field
 
 
 @define
-class StandardOutputLogLine:
+class StandardOutputLogLine(LogLine):
     """标准输出日志结构"""
 
-    timestamp: int
-    message: str
-
 
 @define
-class StructureLogLine:
+class StructureLogLine(LogLine):
     """结构化日志结构"""
 
-    timestamp: int
-    message: str
-    raw: Dict
-
 
 @define
-class IngressLogLine:
+class IngressLogLine(LogLine):
     """ingress 访问日志结构"""
 
-    timestamp: int
-    message: str
-    raw: Dict
-
-    method: Optional[str] = field(init=False, converter=converters.optional(str))
-    path: Optional[str] = field(init=False, converter=converters.optional(str))
-    status_code: Optional[int] = field(init=False, converter=converters.optional(int))
-    response_time: Optional[float] = field(init=False, converter=converters.optional(float))
-    client_ip: Optional[str] = field(init=False, converter=converters.optional(str))
-    bytes_sent: Optional[int] = field(init=False, converter=converters.optional(int))
-    user_agent: Optional[str] = field(init=False, converter=converters.optional(str))
-    http_version: Optional[str] = field(init=False, converter=converters.optional(str))
+    method: Optional[str] = extra_field(converter=converters.optional(str))
+    path: Optional[str] = extra_field(converter=converters.optional(str))
+    status_code: Optional[int] = extra_field(converter=converters.optional(int))
+    response_time: Optional[float] = extra_field(converter=converters.optional(float))
+    client_ip: Optional[str] = extra_field(converter=converters.optional(str))
+    bytes_sent: Optional[int] = extra_field(converter=converters.optional(int))
+    user_agent: Optional[str] = extra_field(converter=converters.optional(str))
+    http_version: Optional[str] = extra_field(converter=converters.optional(str))
 
     def __attrs_post_init__(self):
         for attr in fields(type(self)):

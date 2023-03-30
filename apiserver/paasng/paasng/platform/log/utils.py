@@ -21,23 +21,22 @@ import operator
 from functools import reduce
 from itertools import chain
 from operator import and_
-from typing import TYPE_CHECKING, Any, Callable, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from elasticsearch_dsl.query import Q, Query
 from elasticsearch_dsl.response import Hit
 
-from paasng.platform.log.exceptions import LogLineInfoBrokenError
 from paasng.platform.log.models import ElasticSearchParams
 from paasng.utils.es_log.misc import flatten_structure, format_timestamp
-from paasng.utils.es_log.models import FlattenLog
+from paasng.utils.es_log.models import NOT_SET, FlattenLog, field_extractor_factory
 
 if TYPE_CHECKING:
-    from .dsl import SimpleDomainSpecialLanguage
+    from .dsl import SearchRequestSchema
 
 logger = logging.getLogger(__name__)
 
 
-def parse_simple_dsl_to_dsl(dsl: 'SimpleDomainSpecialLanguage', mappings: dict) -> Query:
+def parse_request_to_es_dsl(dsl: 'SearchRequestSchema', mappings: dict) -> Query:
     # use `MatchAll` as fallback
     query_string = (
         Q("query_string", query=dsl.query.query_string, analyze_wildcard=True) if dsl.query.query_string else Q()
@@ -76,9 +75,6 @@ def get_es_term(query_term: str, mappings: dict) -> str:
         return query_term
 
 
-NOT_SET = object()
-
-
 def rename_log_fields(raw_log: Dict[str, Any]):
     """调整 log 字段名称"""
     # [deprecated] 如果 region 不存在, 将 kubernetes.labels.region 重命名为 region
@@ -111,25 +107,11 @@ def rename_log_fields(raw_log: Dict[str, Any]):
     return raw_log
 
 
-def generate_field_extractor(field_key: str) -> Callable:
-    """返回一个函数，用于从原始日志字典中提取指定字段的值
-
-    :param field_key: 要提取值的字段名称(ES语法, 例如 json.message)
-    """
-
-    def core(raw_log: Dict[str, Any]):
-        if field_key not in raw_log or raw_log[field_key] is NOT_SET:
-            raise LogLineInfoBrokenError(field_key)
-        return raw_log[field_key]
-
-    return core
-
-
 def clean_logs(
     logs: List[Hit],
     search_params: ElasticSearchParams,
 ) -> List[FlattenLog]:
-    """从 ES 日志中提取 PaaS 的字段"""
+    """从 ES 日志中转换成扁平化的 FlattenLog, 方便后续对日志字段的提取"""
     cleaned: List[FlattenLog] = []
     for log in logs:
         raw = flatten_structure(log.to_dict(), None)
@@ -141,9 +123,9 @@ def clean_logs(
         cleaned.append(
             FlattenLog(
                 timestamp=format_timestamp(
-                    generate_field_extractor(search_params.timeField)(raw), search_params.timeFormat
+                    field_extractor_factory(search_params.timeField)(raw), search_params.timeFormat
                 ),
-                message=generate_field_extractor(search_params.messageField)(raw),
+                message=field_extractor_factory(search_params.messageField)(raw),
                 raw=raw,
             )
         )

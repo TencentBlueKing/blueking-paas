@@ -21,12 +21,15 @@ from operator import add
 from typing import Dict, List, Optional, Protocol, Tuple
 
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import ScanError
 from elasticsearch_dsl.aggs import DateHistogram
 from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
+from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
+from paasng.platform.log.exceptions import LogQueryError
 from paasng.platform.log.filters import FieldFilter, count_filters_options
 from paasng.platform.log.models import BKLogConfig, ElasticSearchConfig, ElasticSearchHost
 
@@ -40,7 +43,7 @@ class LogClientProtocol(Protocol):
     """LogClient protocol, all log search backend should abide this protocol"""
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
-        """search log from index with search"""
+        """Search log from index with search"""
 
     def execute_scroll_search(
         self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
@@ -48,13 +51,16 @@ class LogClientProtocol(Protocol):
         """search log(scrolling) from index with search"""
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
-        """aggregate time-based histogram"""
+        """Aggregate time-based histogram"""
 
     def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
-        """aggregate fields filters"""
+        """Aggregate fields filters"""
 
     def get_mappings(self, index: str, timeout: int) -> dict:
-        """query the mappings in es"""
+        """query the mappings in es
+
+        :raises LogQueryError: when no mappings found
+        """
 
 
 class BKLogClient:
@@ -84,7 +90,7 @@ class BKLogClient:
         raise NotImplementedError("TODO: 确认日志平台接口 /esquery_scroll/ 是否可用")
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
-        """aggregate time-based histogram"""
+        """Aggregate time-based histogram"""
         agg = DateHistogram(
             field=search.time_field,
             interval=search.time_range.detect_date_histogram_interval(),
@@ -103,8 +109,8 @@ class BKLogClient:
 
     def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
         """aggregate fields filter"""
-        # 拉取最近 200 条日志, 用于统计字段分布
-        search = search.limit_offset(limit=200, offset=0)
+        # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
+        search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
         data = {
             "indices": index,
             "scenario_id": self.config.scenarioID,
@@ -167,7 +173,7 @@ class ESLogClient:
         return (response, self._get_response_count(index, search, timeout, response))
 
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
-        """aggregate time-based histogram"""
+        """Aggregate time-based histogram"""
         agg = DateHistogram(
             field=search.time_field,
             interval=search.time_range.detect_date_histogram_interval(),
@@ -186,8 +192,8 @@ class ESLogClient:
 
     def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
         """aggregate fields filter"""
-        # 拉取最近 200 条日志, 用于统计字段分布
-        search = search.limit_offset(limit=200, offset=0)
+        # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
+        search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
         response = Response(
             search.search,
             self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),
@@ -197,6 +203,10 @@ class ESLogClient:
     def get_mappings(self, index: str, timeout: int) -> dict:
         """query the mappings in es"""
         all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
+        # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
+        if not all_mappings:
+            raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
         first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
         docs_mappings: Dict = first_mapping["mappings"]
         return docs_mappings
@@ -214,11 +224,14 @@ class ESLogClient:
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
         all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        if not all_mappings:
+            raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
         first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
         docs_mappings: Dict = first_mapping["mappings"]
         return {f.name: f for f in self._clean_property([], docs_mappings)}
 
-    def _clean_property(self, nested_name: List[str], mapping: Dict) -> List[FieldFilter]:
+    @classmethod
+    def _clean_property(cls, nested_name: List[str], mapping: Dict) -> List[FieldFilter]:
         """transform ES mapping to List[FieldFilter], will handle nested property by recursion
 
         Example Mapping:
@@ -246,7 +259,7 @@ class ESLogClient:
             ]
         if "properties" in mapping:
             nested_fields = [
-                self._clean_property(nested_name + [name], value) for name, value in mapping["properties"].items()
+                cls._clean_property(nested_name + [name], value) for name, value in mapping["properties"].items()
             ]
             return reduce(add, nested_fields)
         return []

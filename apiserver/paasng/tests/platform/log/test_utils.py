@@ -20,8 +20,8 @@ from typing import Dict, List
 
 import pytest
 
-from paasng.platform.log.dsl import SimpleDomainSpecialLanguage
-from paasng.platform.log.utils import get_es_term, parse_simple_dsl_to_dsl
+from paasng.platform.log.dsl import SearchRequestSchema
+from paasng.platform.log.utils import get_es_term, parse_request_to_es_dsl
 
 
 @pytest.fixture
@@ -65,15 +65,15 @@ def test_get_es_term(query_term, mappings, expected):
 
 
 @pytest.mark.parametrize(
-    "dsl, mappings, expected",
+    "query_conditions, mappings, expected",
     [
         (
-            SimpleDomainSpecialLanguage(query={"query_string": "foo"}),
+            SearchRequestSchema(query={"query_string": "foo"}),
             {},
             {'query_string': {'query': 'foo', 'analyze_wildcard': True}},
         ),
         (
-            SimpleDomainSpecialLanguage(query={"query_string": "foo", "terms": {"app_code": {"foo"}}}),
+            SearchRequestSchema(query={"query_string": "foo", "terms": {"app_code": {"foo"}}}),
             {},
             {
                 'bool': {
@@ -85,7 +85,7 @@ def test_get_es_term(query_term, mappings, expected):
             },
         ),
         (
-            SimpleDomainSpecialLanguage(query={"query_string": "foo", "terms": {"app_code": ["foo"]}}),
+            SearchRequestSchema(query={"query_string": "foo", "terms": {"app_code": ["foo"]}}),
             {"app_code": {"type": "text"}},
             {
                 'bool': {
@@ -97,7 +97,7 @@ def test_get_es_term(query_term, mappings, expected):
             },
         ),
         (
-            SimpleDomainSpecialLanguage(
+            SearchRequestSchema(
                 query={
                     "query_string": "foo",
                     "terms": {"app_code": ["foo"]},
@@ -118,5 +118,5 @@ def test_get_es_term(query_term, mappings, expected):
         ),
     ],
 )
-def test_parse_simple_dsl_to_dsl(dsl, mappings, expected):
-    assert parse_simple_dsl_to_dsl(dsl, mappings).to_dict() == expected
+def test_parse_request_to_es_dsl(query_conditions, mappings, expected):
+    assert parse_request_to_es_dsl(query_conditions, mappings).to_dict() == expected

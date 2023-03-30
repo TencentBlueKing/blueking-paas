@@ -20,7 +20,7 @@ import json
 from typing import Dict
 from unittest import mock
 
-import cattrs
+import cattr
 import pytest
 from elasticsearch_dsl.aggs import DateHistogram
 from elasticsearch_dsl.response import Hit
@@ -63,7 +63,7 @@ def test_query_standard_output_logs(pd, plugin, log_client, time_range):
     ], 20
 
     logs = query_standard_output_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattrs.unstructure(logs.logs) == [
+    assert cattr.unstructure(logs.logs) == [
         {'timestamp': 1, 'message': 'foo'},
         {'timestamp': 2, 'message': 'bar'},
     ]
@@ -83,7 +83,7 @@ def test_query_structure_logs(pd, plugin, log_client, time_range):
     ], 20
 
     logs = query_structure_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattrs.unstructure(logs.logs) == [
+    assert cattr.unstructure(logs.logs) == [
         {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json.message': 'foo', 'other': 'FOO'}},
         {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json.message': 'bar', 'other': 'BAR'}},
     ]
@@ -129,7 +129,7 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
     ], 20
 
     logs = query_ingress_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattrs.unstructure(logs.logs) == [
+    assert cattr.unstructure(logs.logs) == [
         {
             'timestamp': 1,
             'message': 'foo',

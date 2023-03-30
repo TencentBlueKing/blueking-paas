@@ -17,43 +17,19 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
-from attrs import converters, define, field, fields
+from attrs import converters, define
 
 from paasng.platform.log.exceptions import LogLineInfoBrokenError
-from paasng.platform.log.utils import NOT_SET, generate_field_extractor
+from paasng.utils.es_log.models import LogLine, extra_field
 
 logger = logging.getLogger(__name__)
 
 
-def init_field_form_raw(self):
-    """extract extra log field from raw, All fields except for FlattenLog are extra fields.
-
-    default getter will try to set attr to raw[attr.name]
-    If the attr.name is not the field name in raw, you can set getter in metadata the override the getter
-
-    e.g.
-
-    plugin_code: str = field(init=False, metadata={"getter": get_field_form_raw("app_code")})
-    """
-    for attr in fields(type(self)):
-        if not attr.init:
-            getter = attr.metadata.get("getter") or generate_field_extractor(attr.name)
-            setattr(self, attr.name, getter(self.raw))
-    for k, v in self.raw.items():
-        if v is NOT_SET:
-            self.raw[k] = None
-
-
 @define
-class StandardOutputLogLine:
+class StandardOutputLogLine(LogLine):
     """标准输出日志结构
-
-    :param timestamp: field in FlattenLog
-    :param message: field in FlattenLog
-    :param raw: field in FlattenLog
-
     :param region: [deprecated] app region
     :param app_code: [deprecated] app_code
     :param module_name: [deprecated] module_name
@@ -63,29 +39,18 @@ class StandardOutputLogLine:
     :param pod_name: [required] pod_name, The name of the pod that logs are generated from.
     """
 
-    timestamp: int
-    message: str
-    raw: Dict[str, Any]
-
-    region: str = field(init=False, converter=converters.optional(str))
-    app_code: str = field(init=False, converter=converters.optional(str))
-    module_name: str = field(init=False, converter=converters.optional(str))
-    environment: str = field(init=False, converter=converters.optional(str))
-    process_id: str = field(init=False, converter=converters.optional(str))
-    stream: str = field(init=False, converter=converters.optional(str))
-    pod_name: str = field(init=False)
-
-    __attrs_post_init__ = init_field_form_raw
+    region: Optional[str] = extra_field(converter=converters.optional(str))
+    app_code: Optional[str] = extra_field(converter=converters.optional(str))
+    module_name: Optional[str] = extra_field(converter=converters.optional(str))
+    environment: Optional[str] = extra_field(converter=converters.optional(str))
+    process_id: Optional[str] = extra_field(converter=converters.optional(str))
+    stream: Optional[str] = extra_field(converter=converters.optional(str))
+    pod_name: str = extra_field(converter=str)
 
 
 @define
-class StructureLogLine:
+class StructureLogLine(LogLine):
     """结构化日志结构
-
-    :param timestamp: field in FlattenLog
-    :param message: field in FlattenLog
-    :param raw: field in FlattenLog
-
     :param region: [deprecated] app region
     :param app_code: [deprecated] app_code
     :param module_name: [deprecated] module_name
@@ -94,18 +59,12 @@ class StructureLogLine:
     :param stream: stream, such as "django", "celery", "stdout"
     """
 
-    timestamp: int
-    message: str
-    raw: Dict[str, Any]
-
-    region: str = field(init=False, converter=converters.optional(str))
-    app_code: str = field(init=False, converter=converters.optional(str))
-    module_name: str = field(init=False, converter=converters.optional(str))
-    environment: str = field(init=False, converter=converters.optional(str))
-    process_id: str = field(init=False, converter=converters.optional(str))
-    stream: str = field(init=False, converter=converters.optional(str))
-
-    __attrs_post_init__ = init_field_form_raw
+    region: Optional[str] = extra_field(converter=converters.optional(str))
+    app_code: Optional[str] = extra_field(converter=converters.optional(str))
+    module_name: Optional[str] = extra_field(converter=converters.optional(str))
+    environment: Optional[str] = extra_field(converter=converters.optional(str))
+    process_id: Optional[str] = extra_field(converter=converters.optional(str))
+    stream: Optional[str] = extra_field(converter=converters.optional(str))
 
 
 def get_engine_app_name(raw_log: Dict):
@@ -116,14 +75,8 @@ def get_engine_app_name(raw_log: Dict):
 
 
 @define
-class IngressLogLine:
+class IngressLogLine(LogLine):
     """ingress 访问日志结构
-
-    :param timestamp: field in FlattenLog
-    :param message: field in FlattenLog
-    :param raw: field in FlattenLog
-
-
     :param engine_app_name: [deprecated] engine_app_name
 
     :param method: [required] method, The HTTP method used in the request
@@ -136,21 +89,14 @@ class IngressLogLine:
     :param http_version: [required] http_version, The HTTP version used in the request
     """
 
-    timestamp: int
-    message: str
-    raw: Dict
+    # [deprecated] 好像没有地方用到这个属性, 确定不需要就删了
+    engine_app_name: Optional[str] = extra_field(source=get_engine_app_name, converter=converters.optional(str))
 
-    engine_app_name: Optional[str] = field(
-        init=False, converter=converters.optional(str), metadata={"getter": get_engine_app_name}
-    )
-
-    method: Optional[str] = field(init=False, converter=converters.optional(str))
-    path: Optional[str] = field(init=False, converter=converters.optional(str))
-    status_code: Optional[int] = field(init=False, converter=converters.optional(int))
-    response_time: Optional[float] = field(init=False, converter=converters.optional(float))
-    client_ip: Optional[str] = field(init=False, converter=converters.optional(str))
-    bytes_sent: Optional[int] = field(init=False, converter=converters.optional(int))
-    user_agent: Optional[str] = field(init=False, converter=converters.optional(str))
-    http_version: Optional[str] = field(init=False, converter=converters.optional(str))
-
-    __attrs_post_init__ = init_field_form_raw
+    method: Optional[str] = extra_field(converter=converters.optional(str))
+    path: Optional[str] = extra_field(converter=converters.optional(str))
+    status_code: Optional[int] = extra_field(converter=converters.optional(int))
+    response_time: Optional[float] = extra_field(converter=converters.optional(float))
+    client_ip: Optional[str] = extra_field(converter=converters.optional(str))
+    bytes_sent: Optional[int] = extra_field(converter=converters.optional(int))
+    user_agent: Optional[str] = extra_field(converter=converters.optional(str))
+    http_version: Optional[str] = extra_field(converter=converters.optional(str))

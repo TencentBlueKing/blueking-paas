@@ -48,5 +48,5 @@ from paasng.utils.es_log.models import FieldFilter
     ],
 )
 def test_clean_property(nested_name, mapping, expected):
-    client = ESLogClient.__new__(ESLogClient)
-    assert client._clean_property(nested_name, mapping) == expected
+    # 测试 _clean_property 无需构造真正的 ESLogClient 实例
+    assert ESLogClient._clean_property(nested_name, mapping) == expected

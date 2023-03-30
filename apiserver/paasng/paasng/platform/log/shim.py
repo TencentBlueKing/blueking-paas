@@ -47,7 +47,7 @@ def setup_platform_elk_model():
         timeField="@timestamp",
         timeFormat="datetime",
         messageField="json.message",
-        termTemplate={"app_code": "{{ app_code }}"},
+        termTemplate={"app_code": "{{ app_code }}", "module_name": "{{ module_name }}"},
         # 结构化日志与标准输出日志共用 index, 通过 stream.keyword 来区分日志类型
         builtinFilters={"stream": ["stderr", "stdout"]},
         builtinExcludes={},
@@ -69,7 +69,7 @@ def setup_platform_elk_model():
         timeField="@timestamp",
         timeFormat="datetime",
         messageField="json.message",
-        termTemplate={"app_code": "{{ app_code }}"},
+        termTemplate={"app_code": "{{ app_code }}", "module_name": "{{ module_name }}"},
         builtinFilters={},
         # 结构化日志与标准输出日志共用 index, 通过 stream.keyword 来区分日志类型
         builtinExcludes={"stream": ["stderr", "stdout"]},

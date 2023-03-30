@@ -46,16 +46,6 @@ urlpatterns = [
         views.StdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
         name='api.logs.stdout.query_logs',
     ),
-    # re_path(
-    #     make_app_pattern(r'/log/stdout/date_histogram/$', include_envs=False),
-    #     views.StdoutLogAPIView.as_view({"post": "aggregate_date_histogram"}),
-    #     name='api.logs.stdout.aggregate_date_histogram',
-    # ),
-    # re_path(
-    #     make_app_pattern(r'/log/stdout/fields_filters/$', include_envs=False),
-    #     views.StdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
-    #     name='api.logs.stdout.aggregate_fields_filters',
-    # ),
     # Ingress 日志
     re_path(
         make_app_pattern(r'/log/ingress/list/$'),
@@ -76,7 +66,7 @@ urlpatterns = [
     re_path(
         make_app_pattern(r'/log/structured/list/$', include_envs=False),
         views.LegacyStructuredLogAPIView.as_view({"post": "query_logs"}),
-        name='api.logs.structured.query_logs',
+        name='api.logs.structured.query_logs.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/structured/date_histogram/$', include_envs=False),
@@ -91,12 +81,12 @@ urlpatterns = [
     re_path(
         make_app_pattern(r'/log/stdout/list/$', include_envs=False),
         views.LegacyStdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
-        name='api.logs.stdout.query_logs',
+        name='api.logs.stdout.query_logs.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/list/$', include_envs=False),
         views.LegacyIngressLogAPIView.as_view({"post": "query_logs"}),
-        name='api.logs.ingress.query_logs',
+        name='api.logs.ingress.query_logs.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/date_histogram/$', include_envs=False),

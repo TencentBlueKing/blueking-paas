@@ -20,6 +20,8 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 # 如果日志配置是所有进程通用的, process_type 填充为 "-"
 DEFAULT_LOG_CONFIG_PLACEHOLDER = "-"
+# 默认查询日志的分片大小
+DEFAULT_LOG_BATCH_SIZE = 200
 
 
 class LogTimeChoices(str, StructuredEnum):

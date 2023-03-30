@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 # DSL 建模
-class DSLQueryItem(BaseModel):
-    """简化的 dsl-query 结构
-    目前只支持: query_string/terms 两种查询方式
+class SearchQueryItem(BaseModel):
+    """类似于 es-dsl-query 的结构, 目前只支持: query_string/terms 两种查询方式
+
     :param query_string: 使用 ES 的 query_string 搜索
     :param terms: 精准匹配(根据 field 过滤 的场景)
     :param exclude: 精确过滤(根据 field 过滤 的场景)
@@ -35,15 +35,15 @@ class DSLQueryItem(BaseModel):
 
     query_string: str = Field(None, description="使用 `query_string` 语法进行搜索")
     terms: Dict[str, List[str]] = Field({}, description="多值精准匹配")
-    exclude: Dict[str, List[str]] = Field({}, description="terms取反, 非标准 DSL")
+    exclude: Dict[str, List[str]] = Field({}, description="terms取反, 非标准 ES DSL")
 
 
-class SimpleDomainSpecialLanguage(BaseModel):
-    """简化的 dsl 结构, 前端查询日志时的查询协议
+class SearchRequestSchema(BaseModel):
+    """日志查询请求的 request body 格式
 
     :param query: 日志查询条件
     :param sort: 日志排序条件
     """
 
-    query: DSLQueryItem
-    sort: Dict = Field(default_factory=dict, description='排序，e.g. {"response_time": "desc", "other": "asc"}')
+    query: SearchQueryItem
+    sort: Dict = Field(default_factory=dict, description='排序，例如. {"response_time": "desc", "other": "asc"}')

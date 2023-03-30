@@ -29,7 +29,7 @@ def clean_logs(
     logs: List[Hit],
     search_params: ElasticSearchParams,
 ) -> List[FlattenLog]:
-    """从 ES 日志中提取 PaaS 的字段"""
+    """从 ES 日志中转换成扁平化的 FlattenLog, 方便后续对日志字段的提取"""
     cleaned: List[FlattenLog] = []
     for log in logs:
         raw = flatten_structure(log.to_dict(), None)

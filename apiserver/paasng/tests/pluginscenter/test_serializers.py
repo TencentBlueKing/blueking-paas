@@ -62,7 +62,12 @@ def make_translate_fields(field, value) -> Dict:
             {'id': [ErrorDetail(string='请确保这个字段不能超过 10 个字符。', code='max_length')]},
         ),
         (
-            {"id": 1, "name": "2", "template": "foo", "extra_fields": {"email": "foo@example.com"}},
+            {
+                "id": 1,
+                "name": "2",
+                "template": "foo",
+                "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
+            },
             True,
             {
                 "id": "1",
@@ -76,7 +81,7 @@ def make_translate_fields(field, value) -> Dict:
                     },
                     PluginCodeTemplate,
                 ),
-                "extra_fields": {"email": "foo@example.com"},
+                "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
             },
         ),
         (
@@ -85,7 +90,12 @@ def make_translate_fields(field, value) -> Dict:
             {"id": [ErrorDetail(string=_("This value does not match the required pattern."), code="invalid")]},
         ),
         (
-            {"id": "1", "name": "2", "template": "foo", "extra_fields": {"email": "invalid.email"}},
+            {
+                "id": "1",
+                "name": "2",
+                "template": "foo",
+                "extra_fields": {"email": "invalid.email", "distributor_codes": []},
+            },
             False,
             {
                 "extra_fields": {

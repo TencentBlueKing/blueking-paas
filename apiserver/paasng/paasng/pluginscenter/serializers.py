@@ -237,8 +237,12 @@ class TemplateChoiceField(serializers.ChoiceField):
         return self.choices[super().to_internal_value(data)]
 
 
-def make_string_field(field_schema: FieldSchema) -> serializers.Field:
-    """Generate a Field for verifying a string according to the given field_schema"""
+def make_json_schema_field(field_schema: FieldSchema) -> serializers.Field:
+    """Generate fields for validating data according to the given field_schema"""
+    _type = field_schema.type
+    if _type == "array":
+        return serializers.ListField()
+
     init_kwargs = {
         "label": field_schema.title,
         "help_text": field_schema.description,
@@ -256,14 +260,14 @@ def make_extra_fields_slz(extra_fields: Dict[str, FieldSchema]) -> Type[serializ
     return type(
         "ExtraFieldSLZ",
         (serializers.Serializer,),
-        {key: make_string_field(field) for key, field in extra_fields.items()},
+        {key: make_json_schema_field(field) for key, field in extra_fields.items()},
     )
 
 
 def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[serializers.Serializer]:
     """generate a SLZ for verifying the creation/update of "Plugin" according to the PluginDefinition definition"""
     fields = {
-        "name": I18NExtend(make_string_field(pd.basic_info_definition.name_schema)),
+        "name": I18NExtend(make_json_schema_field(pd.basic_info_definition.name_schema)),
         "extra_fields": make_extra_fields_slz(pd.basic_info_definition.extra_fields)(default=dict),
         "Meta": type(
             "Meta",
@@ -279,7 +283,7 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
         ),
     }
     if creation:
-        fields["id"] = make_string_field(pd.basic_info_definition.id_schema)
+        fields["id"] = make_json_schema_field(pd.basic_info_definition.id_schema)
         fields["template"] = TemplateChoiceField(
             choices=[(template.id, template) for template in pd.basic_info_definition.init_templates]
         )

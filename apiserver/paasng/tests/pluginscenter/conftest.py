@@ -102,7 +102,18 @@ def pd():
             "email": {
                 "pattern": r"[\w'.%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,4}",
                 "description": "电子邮箱",
-            }
+            },
+            "distributor_codes": {
+                "title": "插件使用方",
+                "type": "array",
+                "items": {"type": "string"},
+                "ui:component": {
+                    "name": "select",
+                    "props": {
+                        "remoteConfig": {"url": "/api/bk_plugin_distributors/", "label": "name", "value": "code_name"},
+                    },
+                },
+            },
         },
         api={
             "create": make_api_resource("create-instance"),

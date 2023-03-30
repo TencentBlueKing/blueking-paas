@@ -113,6 +113,7 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
 
     excepted = gpa_manifest
     excepted['metadata']['name'] = f"{wl_app.scheduler_safe_name}--{process.name}"
+    excepted['metadata']['namespace'] = wl_app.namespace
     excepted['spec']['scaleTargetRef']['name'] = f"{wl_app.scheduler_safe_name}--{process.name}"
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 

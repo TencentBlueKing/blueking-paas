@@ -964,14 +964,24 @@
         },
         watch: {
             appInfo () {
-                this.init();
+                // 云原生应用无需请求模块接口
+                if (this.curAppModule.repo && this.curAppModule.repo.type) {
+                    this.init();
+                }
             },
             '$route' () {
                 this.resetParams();
-                this.init();
+                if (this.curAppModule.repo && this.curAppModule.repo.type) {
+                    this.init();
+                }
             },
             'curAppModule.name' (val) {
                 this.getLessCode();
+            },
+            'curAppModule.repo' (repo) {
+                if (!repo) {
+                    this.curAppModule.repo = {};
+                }
             }
         },
         created () {
@@ -1076,7 +1086,7 @@
 
                     if (this.curAppModule.repo.type !== 'bk_svn') {
                         const match = this.gitExtendConfig[this.selectedSourceControlType];
-                        match.selectedRepoUrl = this.curAppModule.repo.trunk_url;
+                        match.selectedRepoUrl = this.curAppModule.repo.trunk_url || '';
                         match.sourceDir = this.curAppModule.repo.source_dir || '';
                         if (match.authInfo) {
                             match.authInfo.account = this.curAppModule.repo_auth_info.username;
@@ -1356,7 +1366,7 @@
                         this.selectedSourceControlType = this.curAppModule.repo.type;
                         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
                         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
-                        if (this.curAppModule.repo.type !== 'bk_svn') {
+                        if (this.curAppModule.repo.type !== 'bk_svn' && this.gitExtendConfig[this.curAppModule.repo.type]) {
                             this.gitExtendConfig[this.curAppModule.repo.type].selectedRepoUrl = this.curAppModule.repo.trunk_url;
                             this.gitExtendConfig[this.curAppModule.repo.type].sourceDir = this.curAppModule.repo.source_dir || '';
                         }

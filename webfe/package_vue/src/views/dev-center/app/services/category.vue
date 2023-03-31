@@ -118,11 +118,11 @@
                       class="ps-btn ps-btn-default ps-btn-disabled"
                     >
                       <template v-if="item.specifications.length">
-                        <span> {{ $t('配置并启用服务') }} </span>
+                        <span v-dashed> {{ $t('配置并启用服务') }} </span>
                       </template>
                       <template v-else>
                         <section>
-                          <span> {{ $t('启用服务') }} </span>
+                          <span v-dashed> {{ $t('启用服务') }} </span>
                         </section>
                       </template>
                     </a>

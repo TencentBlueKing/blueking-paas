@@ -545,7 +545,10 @@
                           size="small"
                           disabled
                         >
-                          <span v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"> {{ $t('点击创建新模块') }} </span>
+                          <span
+                            v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
+                            v-dashed
+                          > {{ $t('点击创建新模块') }} </span>
                         </bk-button>
                       </td>
                     </tr>

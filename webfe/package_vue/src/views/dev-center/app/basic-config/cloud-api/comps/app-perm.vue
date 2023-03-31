@@ -177,7 +177,7 @@
           >
             <template slot-scope="props">
               <span
-                v-bk-tooltips="props.row.description"
+                v-bk-tooltips="{ content: props.row.description, disabled: props.row.description === '' }"
                 v-html="highlightDesc(props.row)"
               />
             </template>

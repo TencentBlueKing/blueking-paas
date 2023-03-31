@@ -2109,5 +2109,6 @@ export default {
   '应用类型': 'App type',
   '已部署': 'Deployed',
   '未部署': 'Undeployed',
-  '已申请权限的 API': 'Authorized API'
+  '已申请权限的 API': 'Authorized API',
+  '实例名': 'Instance name'
 };

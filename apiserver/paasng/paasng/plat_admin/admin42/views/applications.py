@@ -47,14 +47,14 @@ class ApplicationListView(GenericTemplateView):
     """Application列表 的模板视图"""
 
     name = "应用列表"
-    queryset = Application.objects.all()
+    queryset = Application.objects.all().order_by("-last_deployed_date")
     serializer_class = ApplicationSLZ
     template_name = "admin42/applications/list_applications.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [ApplicationFilterBackend]
 
     def get_context_data(self, **kwargs):
-        self.paginator.default_limit = 10
+        self.paginator.default_limit = 100
         if 'view' not in kwargs:
             kwargs['view'] = self
 

@@ -59,6 +59,11 @@
         </bk-table-column>
         <bk-table-column label="应用名称" prop="name"></bk-table-column>
         <bk-table-column label="版本" prop="region"></bk-table-column>
+        <bk-table-column label="资源配额" prop="resource_quotas" width="300">
+            <template slot-scope="props">
+                <span>$[props.row.resource_quotas.memory]G / $[props.row.resource_quotas.memory]核</span>
+            </template>
+        </bk-table-column>
         <bk-table-column label="创建时间" prop="created">
             <template slot-scope="props">
                 <span v-bk-tooltips="{content: props.row.created }">$[props.row.created_humanized] </span>
@@ -66,11 +71,6 @@
         </bk-table-column>
         <bk-table-column label="开发语言" prop="language"></bk-table-column>
         <bk-table-column label="创建人" prop="owner"></bk-table-column>
-<!--        <bk-table-column label="已申请资源配额" prop="resource_quotas" width="300">-->
-<!--            <template slot-scope="props">-->
-<!--                <json-pretty :data="props.row.resource_quotas" show-length highlight-mouseover-node :deep="2"></json-pretty>-->
-<!--            </template>-->
-<!--        </bk-table-column>-->
     </bk-table>
     <pagination
         class="mt15"

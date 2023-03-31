@@ -59,6 +59,8 @@ class ApplicationListView(GenericTemplateView):
             kwargs['view'] = self
 
         data = self.list(self.request, *self.args, **self.kwargs)
+
+        data = sorted(data, key=lambda item: item['resource_quotas']['memory'], reverse=True)
         kwargs['application_list'] = data
         kwargs['pagination'] = self.get_pagination_context(self.request)
         return kwargs

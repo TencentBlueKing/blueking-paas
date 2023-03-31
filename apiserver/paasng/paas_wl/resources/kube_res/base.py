@@ -536,8 +536,8 @@ class WaitDelete(Generic[AET]):
 
 @dataclass
 class Schedule:
-    """调度定义"""
+    """A schedule restriction for a resource(App)"""
 
     cluster_name: str
-    tolerations: list
-    node_selector: dict
+    tolerations: List
+    node_selector: Dict

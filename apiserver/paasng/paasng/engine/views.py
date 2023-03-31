@@ -59,11 +59,12 @@ from paasng.engine.configurations.config_var import (
 from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
 from paasng.engine.deploy.archive import OfflineManager
 from paasng.engine.deploy.engine_svc import get_all_logs
+from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.deploy.release import create_release
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
 from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar, add_prefix_to_key
-from paasng.engine.models.deployment import Deployment, interrupt_deployment
+from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.managers import ConfigVarManager, DeployPhaseManager, ExportedConfigVars, PlainConfigVar
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations

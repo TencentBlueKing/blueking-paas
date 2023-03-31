@@ -19,7 +19,7 @@ import abc
 import json
 import sys
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.conf import settings
@@ -27,6 +27,9 @@ from django.conf import settings
 from paasng.engine.models import Deployment
 from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.utils import termcolors
+
+if TYPE_CHECKING:
+    from paas_wl.platform.applications.models.misc import OutputStream
 
 
 def make_style(*args, **kwargs):
@@ -144,7 +147,49 @@ class ConsoleStream(DeployStream):
         return cls()
 
 
-def get_default_stream(deployment: Deployment):
+class MessageWriter(Protocol):
+    """A protocol for types which has output_stream field"""
+
+    output_stream: 'OutputStream'
+
+
+class ModelStream:
+    """Stream using model's output_stream field"""
+
+    def __init__(self, model: MessageWriter):
+        self.model = model
+
+    def write_message(self, message, stream='STDOUT'):
+        """Write message to output stream"""
+        message = self.cleanup_message(message)
+        self.model.output_stream.write(line=message, stream=stream)
+
+    @staticmethod
+    def cleanup_message(message):
+        # Remove bad characters output by slugbuilder
+        # NOTE: Only `ModelStream` use this method to cleanup message at this moment,
+        # consider to make other stream classes to use this method if needed.
+        return message.replace('\x1b[1G', '')
+
+
+class MixedStream(RedisChannelStream):
+    """A stream which writes to both model's output_stream and redis channel, use
+    a fan-out pattern.
+
+    :param model: A model which has output_stream field
+    :param steam_channel: A redis channel stream
+    """
+
+    def __init__(self, model: MessageWriter, stream_channel: StreamChannel):
+        self.model_stream = ModelStream(model)
+        super().__init__(stream_channel)
+
+    def write_message(self, message, stream='STDOUT'):
+        self.model_stream.write_message(message, stream)
+        super().write_message(message, stream)
+
+
+def get_default_stream(deployment: Deployment) -> RedisChannelStream:
     stream_channel = StreamChannel(deployment.id, redis_db=get_default_redis())
     stream_channel.initialize()
     return RedisChannelStream(stream_channel)

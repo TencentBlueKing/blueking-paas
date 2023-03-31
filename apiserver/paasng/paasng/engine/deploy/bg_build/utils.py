@@ -18,24 +18,27 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import os
+import urllib.parse
 from typing import TYPE_CHECKING, Dict, Optional
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
-from paas_wl.cluster.utils import get_cluster_by_app
+# NOTE: Import kube resource related modules from paas_wl
 from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
-from paas_wl.release_controller.builder.infras import Runtime, Schedule, SlugBuilderTemplate
-from paas_wl.release_controller.builder.utils import get_envs_for_pypi
-from paas_wl.resources.utils.basic import get_full_node_selector, get_full_tolerations
-from paas_wl.utils.blobstore import make_blob_store
+from paas_wl.release_controller.models import PodImageRuntime
+from paas_wl.resources.utils.app import get_schedule_config
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
+from paasng.engine.configurations.building import SlugBuilderTemplate
+from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
     from paas_wl.platform.applications.models import WlApp
 
 logger = logging.getLogger(__name__)
+
+# TODO: Refactor this module to engine.configurations
 
 
 def generate_builder_name(app: 'WlApp') -> str:
@@ -141,10 +144,16 @@ def prepare_slugbuilder_template(app: 'WlApp', env_vars: Dict, metadata: Optiona
     return SlugBuilderTemplate(
         name=generate_builder_name(app),
         namespace=app.namespace,
-        runtime=Runtime(image=image, envs=env_vars or {}, image_pull_secrets=[{"name": PULL_SECRET_NAME}]),
-        schedule=Schedule(
-            cluster_name=get_cluster_by_app(app).name,
-            node_selector=get_full_node_selector(app),
-            tolerations=get_full_tolerations(app),
-        ),
+        runtime=PodImageRuntime(image=image, envs=env_vars or {}, image_pull_secrets=[{"name": PULL_SECRET_NAME}]),
+        schedule=get_schedule_config(app),
     )
+
+
+def get_envs_for_pypi(index_url):
+    """Produce the environment variables for python buildpack, such as:
+
+    PIP_INDEX_URL: http://pypi.douban.com/simple/
+    PIP_INDEX_HOST: pypi.douban.com
+    """
+    parsed = urllib.parse.urlparse(index_url)
+    return {'PIP_INDEX_URL': index_url, 'PIP_INDEX_HOST': parsed.netloc}

@@ -66,21 +66,20 @@ class DeployProcedure:
         self.title = title
         self.deployment = deployment
         self.phase = phase
-
         self.step_obj = self._get_step_obj(title)
 
     def __enter__(self):
         self.stream.write_title(f'{self.TITLE_PREFIX}{self.title}')
 
         if self.step_obj:
-            self.step_obj.mark_and_write_to_steam(self.stream, JobStatus.PENDING)
+            self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             if self.step_obj:
-                self.step_obj.mark_and_write_to_steam(self.stream, JobStatus.SUCCESSFUL)
+                self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
 
             return False
 
@@ -102,14 +101,15 @@ class DeployProcedure:
         self.stream.write_message(msg, StreamType.STDERR)
 
         if self.step_obj:
-            self.step_obj.mark_and_write_to_steam(self.stream, JobStatus.FAILED)
+            self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
         if self.phase:
-            self.phase.mark_and_write_to_steam(self.stream, JobStatus.FAILED)
+            self.phase.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
         return False
 
     def _get_step_obj(self, title: str) -> Optional['DeployStepModel']:
         if not self.deployment:
             return None
+
         logger.debug("trying to get step by title<%s>", title)
         try:
             return self.phase.get_step_by_name(title)

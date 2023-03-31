@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.platform.applications.models.build import Build
+from paas_wl.release_controller.models import PodImageRuntime
+from paas_wl.resources.kube_res.base import Schedule
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -87,3 +89,19 @@ def get_processes_by_build(build_id: str) -> Dict[str, str]:
     if not processes:
         raise RuntimeError("can't find processes in engine")
     return processes
+
+
+@dataclass
+class SlugBuilderTemplate:
+    """The Template to run the slug-builder Pod
+
+    :param name: the name of the Pod
+    :param namespace: the namespace of the Pod
+    :param runtime: Runtime Info of the Pod, including image, pullSecrets, command, args and so on.
+    :param schedule: Schedule Rule of the Pod, including tolerations and node_selector.
+    """
+
+    name: str
+    namespace: str
+    runtime: PodImageRuntime
+    schedule: Schedule

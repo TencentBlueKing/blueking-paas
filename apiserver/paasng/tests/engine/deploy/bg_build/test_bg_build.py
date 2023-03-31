@@ -21,37 +21,32 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
-from paas_wl.release_controller.builder.executor import BuildProcessExecutor
-from paas_wl.utils.constants import BuildStatus
-from paas_wl.utils.stream import ConsoleStream
-from tests.paas_wl.utils.build import create_build_proc
+from paasng.engine.constants import BuildStatus
+from paasng.engine.deploy.bg_build.bg_build import BuildProcessExecutor
+from paasng.engine.handlers import attach_all_phases
+from paasng.engine.utils.output import ConsoleStream
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestBuildProcessExecutor:
-    def test_create_and_bind_build_instance(self, wl_app):
-        bp = create_build_proc(wl_app)
-        bpe = BuildProcessExecutor(bp, ConsoleStream())
+    def test_create_and_bind_build_instance(self, bk_deployment_full, build_proc):
+        attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
-        assert bp.status != BuildStatus.SUCCESSFUL.value, "build_process status 初始值异常"
+        bpe = BuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
         build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"]))
-        assert str(bp.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
+        assert str(build_proc.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
         assert build_instance.owner == settings.BUILDER_USERNAME, "build instance 绑定 owner 异常"
         assert build_instance.procfile == ["sth"], "build instance 绑定 procfile 异常"
-        assert bp.status == BuildStatus.SUCCESSFUL.value, "build_process status 未设置为 SUCCESSFUL"
+        assert build_proc.status == BuildStatus.SUCCESSFUL.value, "build_process status 未设置为 SUCCESSFUL"
 
-    def test_execute(self, wl_app):
-        bp = create_build_proc(wl_app)
-        bpe = BuildProcessExecutor(bp, ConsoleStream())
+    def test_execute(self, bk_deployment_full, build_proc):
+        attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
+        bpe = BuildProcessExecutor(bk_deployment_full, build_proc, ConsoleStream())
         # TODO: Too much mocks, both tests and codes need refactor
-        with mock.patch("paas_wl.resources.base.client.K8sScheduler.get_build_log"), mock.patch(
-            "paas_wl.resources.base.client.K8sScheduler.wait_build_succeeded"
-        ), mock.patch(
-            "paas_wl.release_controller.builder.executor.BuildProcessExecutor.start_slugbuilder"
-        ), mock.patch(
-            "paas_wl.resources.base.controllers.KPod.wait_for_status"
-        ):
+        with mock.patch("paasng.engine.deploy.bg_build.bg_build.BuildProcessExecutor.start_slugbuilder"), mock.patch(
+            "paasng.engine.deploy.bg_build.bg_build.get_scheduler_client_by_app"
+        ), mock.patch('paasng.engine.deploy.bg_build.utils.get_schedule_config'):
             bpe.execute()
-        assert bp.status == BuildStatus.SUCCESSFUL.value, "部署失败"
+        assert build_proc.status == BuildStatus.SUCCESSFUL.value, "部署失败"

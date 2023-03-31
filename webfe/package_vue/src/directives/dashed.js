@@ -16,20 +16,12 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-import copy from './copy';
-import charts from './charts';
-import dashed from './dashed';
-
-const directives = {
-  copy,
-  charts,
-  dashed
-};
-
-export default {
-  install (Vue) {
-    Object.keys(directives).forEach((key) => {
-      Vue.directive(key, directives[key]);
-    });
+const dashed = {
+  bind (el, { value, modifiers }) {
+    const width = value || '';
+    el.classList.add(`v-text-toolips-dashed${width}`);
+    el.style.paddingBottom = '3px';
   }
 };
+
+export default dashed;

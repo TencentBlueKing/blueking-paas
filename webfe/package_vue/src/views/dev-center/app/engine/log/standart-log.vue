@@ -24,7 +24,7 @@
           v-for="(filter) of streamLogFilters"
           :key="filter.value"
         >
-          <span class="filter-value">实例名: {{ filter.text }}</span>
+          <span class="filter-value">{{ $t('实例名') }}: {{ filter.text }}</span>
         </li>
       </ul>
       <span
@@ -79,6 +79,7 @@
             <span
               v-else
               v-bk-tooltips.right="{ theme: 'light', content: log.process_id }"
+              v-dashed="9"
               style="cursor: pointer;"
             >{{ processIdSlice(log.process_id) }}</span>
           </div>
@@ -93,7 +94,10 @@
               class="pod-name"
               @click="handleAddStreamLogFilters(log)"
             >
-              <span v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }">{{ log.podShortName }}</span>
+              <span
+                v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }"
+                v-dashed="9"
+              >{{ log.podShortName }}</span>
             </div>
           </template>
           <pre

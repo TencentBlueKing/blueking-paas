@@ -384,7 +384,10 @@
                     class="bottom-middle"
                   >
                     <!-- <a href="#"> {{ $t('功能说明') }} </a> 待确定路径-->
-                    <p style="color: #3a84ff;height: 30px;"> {{ $t('功能说明') }} </p>
+                    <span
+                      v-dashed
+                      style="color: #3a84ff;height: 30px;"
+                    > {{ $t('功能说明') }} </span>
                   </span>
                 </label>
               </bk-form-item>

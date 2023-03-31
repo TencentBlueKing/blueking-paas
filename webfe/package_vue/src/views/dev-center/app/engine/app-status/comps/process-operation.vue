@@ -155,7 +155,10 @@
                             class="paasng-icon"
                             :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
                           />
-                          <span v-bk-tooltips="{content: getInstanceStateToolTips(instance)}">{{ instance.state }}</span>
+                          <span
+                            v-bk-tooltips="{content: getInstanceStateToolTips(instance)}"
+                            v-dashed
+                          >{{ instance.state }}</span>
                         </td>
                         <td class="time">
                           <template v-if="instance.date_time !== 'Invalid date'">

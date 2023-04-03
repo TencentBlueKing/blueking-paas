@@ -21,7 +21,6 @@ import json
 import logging
 from typing import Dict, Optional
 
-import cattr
 from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -88,9 +87,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operate_type = data["operate_type"]
         target_replicas = data.get('target_replicas')
         # 如果参数中包含自动扩缩容信息，则进行类型转换
-        scaling_config = None
-        if conf := data.get('scaling_config'):
-            scaling_config = cattr.structure(conf, AutoscalingConfig)
+        scaling_config = data.get('scaling_config')
 
         try:
             judge_operation_frequent(wl_app, process_type, self._operation_interval)
@@ -133,10 +130,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         ctl = get_proc_mgr(module_env)
         try:
             if operate_type == ProcessUpdateType.SCALE:
-                assert target_replicas
-                ctl.scale(process_type, target_replicas)
-            elif operate_type == ProcessUpdateType.SCALE_V2:
-                ctl.scale_v2(process_type, autoscaling, target_replicas, scaling_config)  # type: ignore
+                ctl.scale(process_type, autoscaling, target_replicas, scaling_config)
             elif operate_type == ProcessUpdateType.STOP:
                 ctl.stop(process_type)
             elif operate_type == ProcessUpdateType.START:

@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 from uuid import UUID
 
 import arrow
@@ -28,6 +28,7 @@ from rest_framework.serializers import ValidationError
 from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
 from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
 
@@ -121,6 +122,15 @@ class ScaleMetricSLZ(serializers.Serializer):
     name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
     type = serializers.ChoiceField(required=True, choices=ScalingMetricType.get_choices())
     value = serializers.IntegerField(required=True, help_text=_('资源指标值/百分比'))
+    raw_value = serializers.SerializerMethodField()
+
+    def get_raw_value(self, attrs) -> Union[str, int]:
+        """获取带单位的字面值"""
+        if attrs['type'] == ScalingMetricType.AVERAGE_VALUE:
+            value_tmpl = '{}m' if attrs['name'] == ScalingMetricName.CPU else '{}Mi'
+            return value_tmpl.format(attrs['value'])
+
+        return attrs['value']
 
 
 class ScalingConfigSLZ(serializers.Serializer):
@@ -141,14 +151,22 @@ class UpdateProcessSLZ(serializers.Serializer):
     scaling_config = ScalingConfigSLZ(required=False, help_text=_('进程扩缩容配置'))
 
     def validate(self, attrs: Dict) -> Dict:
-        if attrs['operate_type'] == ProcessUpdateType.SCALE and not attrs.get('target_replicas'):
-            raise ValidationError(_('当操作类型为 scale 时，必须提供有效的 target_replicas'))
-
-        if attrs['operate_type'] == ProcessUpdateType.SCALE_V2:
-            if attrs['autoscaling'] and not attrs.get('scaling_config'):
-                raise ValidationError(_('当启用自动扩缩容时，必须提供有效的 scaling_config'))
+        if attrs['operate_type'] == ProcessUpdateType.SCALE:
+            if attrs['autoscaling']:
+                if not attrs.get('scaling_config'):
+                    raise ValidationError(_('当启用自动扩缩容时，必须提供有效的 scaling_config'))
+            elif not attrs.get('target_replicas'):
+                raise ValidationError(_('当操作类型为扩缩容时，必须提供有效的 target_replicas'))
 
         return attrs
+
+    def validate_scaling_config(self, config: Dict) -> Optional[AutoscalingConfig]:
+        if not config:
+            return None
+        try:
+            return AutoscalingConfig(**config)
+        except Exception:
+            raise ValidationError(_('scaling_config 配置格式有误'))
 
 
 class ListProcessesSLZ(serializers.Serializer):

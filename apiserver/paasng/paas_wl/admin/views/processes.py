@@ -133,7 +133,12 @@ class ProcessSpecManageViewSet(GenericViewSet):
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=wl_app.pk, name=process_type)
         ctl = get_proc_mgr(get_env_by_wl_app(wl_app))
         if process_spec.target_replicas != int(data["target_replicas"]):
-            ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
+            ctl.scale(
+                process_spec.name,
+                autoscaling=False,
+                target_replicas=int(data["target_replicas"]),
+                scaling_config=None,
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

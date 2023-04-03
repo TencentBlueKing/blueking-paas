@@ -228,6 +228,6 @@ class K8sScheduler:
         """为某进程下发/更新自动扩缩容配置"""
         self.autoscaling_handler.deploy(scaling)
 
-    def remove_autoscaling(self, scaling: ProcAutoscaling):
+    def disable_autoscaling(self, scaling: ProcAutoscaling):
         """移除某进程的自动扩缩容配置, 若资源原本不存在，则跳过"""
         self.autoscaling_handler.delete(scaling)

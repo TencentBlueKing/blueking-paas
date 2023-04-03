@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import logging
 from dataclasses import asdict
-from typing import Dict, List, Protocol
+from typing import Dict, List, Optional, Protocol
 
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -30,11 +30,14 @@ from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.platform.applications.models import Release, WlApp
+from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
+from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.resources.base.kres import KDeployment
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
@@ -55,10 +58,13 @@ class ProcController(Protocol):
     def stop(self, proc_type: str):
         ...
 
-    def scale(self, proc_type: str, target_replicas: int):
-        ...
-
-    def scale_v2(self, proc_type: str, autoscaling: bool, target_replicas: int, scaling_config: AutoscalingConfig):
+    def scale(
+        self,
+        proc_type: str,
+        autoscaling: bool = False,
+        target_replicas: Optional[int] = None,
+        scaling_config: Optional[AutoscalingConfig] = None,
+    ):
         ...
 
 
@@ -106,13 +112,38 @@ class AppProcessesController:
         except Exception as e:
             raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
-    def scale(self, proc_type: str, target_replicas: int):
+    def scale(
+        self,
+        proc_type: str,
+        autoscaling: bool = False,
+        target_replicas: Optional[int] = None,
+        scaling_config: Optional[AutoscalingConfig] = None,
+    ):
+        """Scale process to the `target_replicas` or set an autoscaling policy."""
+        cluster = get_cluster_by_app(self.app)
+        if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_AUTOSCALING):
+            if not autoscaling:
+                return self._scale(proc_type, target_replicas)
+
+            raise AutoscalingUnsupported("autoscaling can't be used because cluster unsupported.")
+
+        scaling = self._build_proc_autoscaling(cluster.name, proc_type, scaling_config)
+        if autoscaling:
+            return self._deploy_autoscaling(scaling)
+
+        self._disable_autoscaling(scaling)
+        return self._scale(proc_type, target_replicas)
+
+    def _scale(self, proc_type: str, target_replicas: Optional[int]):
         """Scale a process to target replicas, WILL update the service if necessary
 
         :param proc_type: process type
         :param target_replicas: the expected replicas, '0' for stop
         :raises: ValueError when target_replicas is too big
         """
+        if not target_replicas:
+            raise ValueError('target_replicas required when scale process')
+
         proc_spec = self._get_spec(proc_type)
         proc_spec.target_replicas = target_replicas
         proc_spec.target_status = (
@@ -125,35 +156,28 @@ class AppProcessesController:
         except Exception as e:
             raise ScaleProcessError(f"scale {proc_spec.name} failed, reason: {e}")
 
-    def scale_v2(self, proc_type: str, autoscaling: bool, target_replicas: int, scaling_config: AutoscalingConfig):
-        """Based on the `scale_spec`, this operator can either scale a process to the `target_replicas`
-        or set an autoscaling policy. If needed, it may also update the service.
-
-        :param proc_type: process type
-        :param scale_spec: the scale spec, target_replicas and autoscaling policy included
-        :raises: ValueError when target_replicas/max_replicas is too big
-        :raises: AutoscalingUnsupported when cluster which current process deployed not support autoscaling
-        """
-        scaling = ProcAutoscaling(app=self.app, name=proc_type, spec=scaling_config)
-        if not autoscaling:
-            self.client.remove_autoscaling(scaling)
-            return self.scale(proc_type, target_replicas)
-
-        # 检查当前部署集群是否支持自动扩缩容
-        cluster = get_cluster_by_app(self.app)
-        if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_AUTOSCALING):
-            raise AutoscalingUnsupported('current cluster does not support autoscaling')
-
-        proc_spec = self._get_spec(proc_type)
+    def _deploy_autoscaling(self, scaling: ProcAutoscaling):
+        """Set autoscaling policy for process"""
+        proc_spec = self._get_spec(scaling.name)
         # 普通应用：最大副本数 <= 进程规格方案允许的最大副本数
-        if scaling_config.max_replicas > proc_spec.plan.max_replicas:
+        if scaling.spec.max_replicas > proc_spec.plan.max_replicas:
             raise ScaleProcessError(f"max_replicas in scaling config can't more than {proc_spec.plan.max_replicas}")
 
         proc_spec.autoscaling = True
-        proc_spec.scaling_config = asdict(scaling_config)
+        proc_spec.scaling_config = asdict(scaling.spec)
         proc_spec.save(update_fields=['autoscaling', 'scaling_config', 'updated'])
 
         self.client.deploy_autoscaling(scaling)
+
+    def _disable_autoscaling(self, scaling: ProcAutoscaling):
+        """Remove process's autoscaling policy"""
+        proc_spec = self._get_spec(scaling.name)
+
+        proc_spec.autoscaling = False
+        proc_spec.scaling_config = {}
+        proc_spec.save(update_fields=['autoscaling', 'scaling_config', 'updated'])
+
+        self.client.disable_autoscaling(scaling)
 
     def _prepare_process(self, name: str) -> Process:
         """Create Process object by name, reads properties from different sources:
@@ -168,6 +192,21 @@ class AppProcessesController:
             return ProcessSpec.objects.get(engine_app_id=self.app.uuid, name=proc_type)
         except ProcessSpec.DoesNotExist:
             raise ProcessNotFound(proc_type)
+
+    def _build_proc_autoscaling(
+        self, cluster_name: str, proc_type: str, scaling_config: Optional[AutoscalingConfig]
+    ) -> ProcAutoscaling:
+        if not scaling_config:
+            raise ValueError('scaling_config required when set autoscaling policy')
+
+        kres_client = KDeployment(get_client_by_cluster_name(cluster_name), api_version='')
+        target_ref = AutoscalingTargetRef(
+            api_version=kres_client.get_preferred_version(),
+            kind=kres_client.kind,
+            name=AppResVerManager(self.app).curr_version.deployment(process=self._prepare_process(proc_type)).name,
+        )
+
+        return ProcAutoscaling(app=self.app, name=proc_type, spec=scaling_config, target_ref=target_ref)
 
 
 def list_proc_specs(wl_app: WlApp) -> List[Dict]:
@@ -213,19 +252,26 @@ class CNativeProcController:
         """Start a process"""
         # TODO: Read target replicas from existed resource to maintain consistency
         default_replicas = 1
-        return self.scale(proc_type, default_replicas)
+        return self.scale(proc_type, target_replicas=default_replicas)
 
     def stop(self, proc_type: str):
         """Stop a process by setting replicas to zero"""
-        return self.scale(proc_type, 0)
+        return self.scale(proc_type, target_replicas=0)
 
-    def scale(self, proc_type: str, target_replicas: int):
-        """Scale a process to target replicas
+    def scale(
+        self,
+        proc_type: str,
+        autoscaling: bool = False,
+        target_replicas: Optional[int] = None,
+        scaling_config: Optional[AutoscalingConfig] = None,
+    ):
+        """Scale process to the `target_replicas` or set an autoscaling policy."""
+        if autoscaling:
+            raise NotImplementedError('work in progress')
 
-        :param proc_type: process type
-        :param target_replicas: the expected replicas, '0' for stop
-        :raises: ValueError when target_replicas is too big
-        """
+        if not target_replicas:
+            raise ValueError('target_replicas required when scale process')
+
         if target_replicas > self.HARD_LIMIT_COUNT:
             raise ValueError(f"target_replicas can't be greater than {self.HARD_LIMIT_COUNT}")
 
@@ -233,9 +279,6 @@ class CNativeProcController:
             ProcReplicas(self.env).scale(proc_type, target_replicas)
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
-
-    def scale_v2(self, proc_type: str, autoscaling: bool, target_replicas: int, scaling_config: AutoscalingConfig):
-        raise NotImplementedError("work in progress")
 
 
 def get_proc_mgr(env: ModuleEnvironment) -> ProcController:

@@ -26,7 +26,7 @@ from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.kube_res.base import GVKConfig
 from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingMetric
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef, ScalingMetric
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
 from paas_wl.workloads.processes.models import Process
 
@@ -97,10 +97,27 @@ def scaling(wl_app) -> ProcAutoscaling:
             min_replicas=2,
             max_replicas=5,
             metrics=[
-                ScalingMetric(name=ScalingMetricName.CPU, type=ScalingMetricType.AVERAGE_VALUE, value=1000),
-                ScalingMetric(name=ScalingMetricName.MEMORY, type=ScalingMetricType.UTILIZATION, value=80),
-                ScalingMetric(name=ScalingMetricName.MEMORY, type=ScalingMetricType.AVERAGE_VALUE, value=256),
+                ScalingMetric(
+                    name=ScalingMetricName.CPU,
+                    type=ScalingMetricType.AVERAGE_VALUE,
+                    raw_value="1000m",
+                ),
+                ScalingMetric(
+                    name=ScalingMetricName.MEMORY,
+                    type=ScalingMetricType.UTILIZATION,
+                    raw_value=80,
+                ),
+                ScalingMetric(
+                    name=ScalingMetricName.MEMORY,
+                    type=ScalingMetricType.AVERAGE_VALUE,
+                    raw_value="256Mi",
+                ),
             ],
+        ),
+        target_ref=AutoscalingTargetRef(
+            kind='Deployment',
+            api_version='apps/v1',
+            name="bkapp-xx123-stag--web",
         ),
     )
 
@@ -114,7 +131,6 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
     excepted = gpa_manifest
     excepted['metadata']['name'] = f"{wl_app.scheduler_safe_name}--{process.name}"
     excepted['metadata']['namespace'] = wl_app.namespace
-    excepted['spec']['scaleTargetRef']['name'] = f"{wl_app.scheduler_safe_name}--{process.name}"
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 
 

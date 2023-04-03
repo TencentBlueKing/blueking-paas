@@ -19,19 +19,13 @@ to the current version of the project delivered to anyone in the future.
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from kubernetes.dynamic import ResourceInstance
-from kubernetes.utils import parse_quantity
 
 from paas_wl.platform.applications.constants import WlAppType
-from paas_wl.platform.applications.models import Release, WlApp
-from paas_wl.resources.base.kres import KDeployment
-from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer, GVKConfig
-from paas_wl.resources.utils.basic import get_client_by_app
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricType
-from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingMetric
+from paas_wl.platform.applications.models import WlApp
+from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
+from paas_wl.workloads.autoscaling.constants import ScalingMetricSourceType, ScalingMetricType
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef, ScalingMetric
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
-from paas_wl.workloads.processes.models import Process
-from paas_wl.workloads.processes.serializers import ProcessSerializer
 
 if TYPE_CHECKING:
     from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
@@ -66,6 +60,11 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
                 max_replicas=kube_data.spec.maxReplicas,
                 metrics=self._parse_metrics(kube_data),
             ),
+            target_ref=AutoscalingTargetRef(
+                api_version=kube_data.spec.scaleTargetRef.apiVersion,
+                kind=kube_data.spec.scaleTargetRef.kind,
+                name=kube_data.spec.scaleTargetRef.name,
+            ),
         )
 
     def _deserialize_for_cnative_app(self, app: WlApp, kube_data: ResourceInstance) -> 'ProcAutoscaling':
@@ -94,34 +93,22 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
                 ScalingMetric(
                     name=m.resource.name,
                     type=m.resource.target.type,
-                    value=self._parse_metric_value(m.resource.target, m.resource.name),
+                    raw_value=self._get_metric_raw_value(m.resource.target),
                 )
             )
 
         return metrics
 
-    def _parse_metric_value(self, metric_target: Dict[str, Union[str, int]], metric_name: ScalingMetricName) -> int:
+    def _get_metric_raw_value(self, metric_target: Dict[str, Union[str, int]]) -> Union[str, int]:
         """将 gpa 配置中的 averageValue/averageUtilization 转换为统一的数值"""
-        if metric_target['type'] == ScalingMetricType.UTILIZATION:
-            return int(metric_target['averageUtilization'])
+        metric_type = metric_target['type']
+        if metric_type == ScalingMetricType.UTILIZATION:
+            return metric_target['averageUtilization']
 
-        elif metric_target['type'] == ScalingMetricType.AVERAGE_VALUE:
-            return self._parse_average_value(str(metric_target['averageValue']), metric_name)
+        if metric_type == ScalingMetricType.AVERAGE_VALUE:
+            return metric_target['averageValue']
 
-        raise ValueError('unsupported metric type: {}'.format(metric_target['type']))
-
-    @staticmethod
-    def _parse_average_value(raw_val: str, metric_name: ScalingMetricName) -> int:
-        """将 gpa 配置中的 averageValue 去除单位做转换
-        例如：1000m, cpu -> 1000, 512Mi, memory -> 512
-        """
-        if metric_name == ScalingMetricName.CPU:
-            return int(parse_quantity(raw_val) * 1000)
-
-        if metric_name == ScalingMetricName.MEMORY:
-            return int(parse_quantity(raw_val) / (1024 * 1024))
-
-        raise ValueError('unsupported metric name: {}'.format(metric_name))
+        raise ValueError('unsupported metric type: {}'.format(metric_type))
 
 
 class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
@@ -145,7 +132,11 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
             'spec': {
                 'minReplicas': obj.spec.min_replicas,
                 'maxReplicas': obj.spec.max_replicas,
-                'scaleTargetRef': self._gen_scale_target_ref(obj, **kwargs),
+                'scaleTargetRef': {
+                    'apiVersion': obj.target_ref.api_version,
+                    'kind': obj.target_ref.kind,
+                    'name': obj.target_ref.name,
+                },
                 'metric': {
                     'metrics': [
                         {'type': 'Resource', 'resource': self._gen_resource_metric_source(metric)}
@@ -161,46 +152,17 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         """
         根据指定的指标信息，生成对应的 k8s ResourceMetricSource
 
-        :returns:
         CPU 绝对数值 -> {"name": "cpu", "target": {"type": "AverageValue", "averageValue": "1000m"}}
         内存 绝对数值 -> {"name": "memory", "target": {"type": "AverageValue", "averageValue": "512Mi"}}
         CPU 使用率百分比 -> {"name": "cpu", "target": {"type": Utilization, "averageUtilization": 80}}
         """
         if metric.type == ScalingMetricType.UTILIZATION:
             # 资源使用率百分比
-            value_key, value = 'averageUtilization', metric.value
+            value_key = 'averageUtilization'
         elif metric.type == ScalingMetricType.AVERAGE_VALUE:
             # 资源使用绝对数值
             value_key = 'averageValue'
-            value_tmpl = '{}m' if metric.name == ScalingMetricName.CPU else '{}Mi'
-            value = value_tmpl.format(metric.value)  # type: ignore
         else:
             raise ValueError('unsupported metric type: {}'.format(metric.type))
 
-        return {'name': metric.name, 'target': {'type': metric.type, value_key: value}}
-
-    @staticmethod
-    def _gen_scale_target_ref(obj: 'ProcAutoscaling', **kwargs) -> Dict[str, str]:
-        """生成 GPA 控制的资源信息"""
-        # 普通应用只有成功部署过，才能设置自动扩缩容
-        try:
-            release = Release.objects.get_latest(obj.app, ignore_failed=True)
-        except Release.DoesNotExist:
-            raise AutoscalingUnsupported("autoscaling can't be used because no successful release found.")
-
-        with get_client_by_app(obj.app) as client:
-            kres_client = KDeployment(client, api_version='')
-            gvk_config = GVKConfig(
-                server_version=kres_client.version['kubernetes']['gitVersion'],
-                kind=kres_client.kind,
-                preferred_apiversion=kres_client.get_preferred_version(),
-                available_apiversions=kres_client.get_available_versions(),
-            )
-
-        proc = Process.from_release(obj.name, release)
-        proc_slz = ProcessSerializer(Process, gvk_config=gvk_config)
-        return {
-            'apiVersion': proc_slz.get_apiversion(),
-            'kind': Process.Meta.kres_class.kind,
-            'name': proc_slz.get_res_name(proc, **kwargs),
-        }
+        return {'name': metric.name, 'target': {'type': metric.type, value_key: metric.raw_value}}

@@ -169,7 +169,7 @@ class BlueKingApplicationOauthMixin:
         return cls(
             auth_url=settings.TOKEN_AUTH_ENDPOINT,
             refresh_url=settings.TOKEN_REFRESH_ENDPOINT,
-            # 借用了 bkpaas-atuh 的配置项
+            # 借用了 bkpaas-auth 的配置项
             validate_url=settings.BKAUTH_TOKEN_CHECK_ENDPOINT,
             app_code=settings.CLI_AUTH_CODE,
             app_secret=settings.CLI_AUTH_SECRET,
@@ -181,7 +181,7 @@ class BlueKingApplicationOauthMixin:
         return cls(
             auth_url=settings.TOKEN_AUTH_ENDPOINT,
             refresh_url=settings.TOKEN_REFRESH_ENDPOINT,
-            # 借用了 bkpaas-atuh 的配置项
+            # 借用了 bkpaas-auth 的配置项
             validate_url=settings.BKAUTH_TOKEN_CHECK_ENDPOINT,
             app_code=settings.BKAUTH_TOKEN_APP_CODE,
             app_secret=settings.BKAUTH_TOKEN_SECRET_KEY,

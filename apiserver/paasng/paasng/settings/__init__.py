@@ -360,7 +360,7 @@ LOGGING = {
         },
         'simple': {'format': '%(levelname)s %(message)s'},
     },
-    'filters': {'request_id': {'()': 'paasng.utils.log.RequestIDFilter'}},
+    'filters': {'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'}},
     'handlers': {
         'null': {'level': LOG_LEVEL, 'class': 'logging.NullHandler'},
         'mail_admins': {'level': LOG_LEVEL, 'class': 'django.utils.log.AdminEmailHandler'},
@@ -980,6 +980,9 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # --------------
 # 应用日志相关配置
 # --------------
+# 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
+# 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
+LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get('ELASTICSEARCH_HOSTS', [{'host': 'localhost', 'port': "9200"}])

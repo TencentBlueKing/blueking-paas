@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import List, Tuple
 
+import cattr
 from django.db.transaction import atomic
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
@@ -126,7 +127,7 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
 
         client = PluginLoggingClient(get_plugin_or_404(code))
         logs = client.query(data['trace_id'], data.get('scroll_id'))
-        return Response(logs.dict())
+        return Response(data=cattr.unstructure(logs))
 
 
 def get_plugin_or_404(code: str) -> BkPlugin:

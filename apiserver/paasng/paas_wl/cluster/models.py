@@ -302,7 +302,7 @@ class EnhancedConfiguration(Configuration):
 
     :param cert_file: client-side certificate file
     :param key_file: client-side key file
-    :parma token: bearer token
+    :param token: bearer token
     """
 
     @classmethod

@@ -24,6 +24,8 @@ from logstash import formatter
 
 from .local import local
 
+logger = logging.getLogger('root')
+
 
 class LogstashRedisHandler(logging.Handler):
     def __init__(self, redis_url, queue_name='', message_type='logstash', tags=None):
@@ -54,6 +56,3 @@ class RequestIDFilter(logging.Filter):
     def filter(self, record):
         record.request_id = local.request_id
         return True
-
-
-logger = logging.getLogger('root')

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.pluginscenter.log.client import ESLogClient
+from paasng.platform.log.client import ESLogClient
 from paasng.utils.es_log.models import FieldFilter
 
 
@@ -48,4 +48,5 @@ from paasng.utils.es_log.models import FieldFilter
     ],
 )
 def test_clean_property(nested_name, mapping, expected):
+    # 测试 _clean_property 无需构造真正的 ESLogClient 实例
     assert ESLogClient._clean_property(nested_name, mapping) == expected

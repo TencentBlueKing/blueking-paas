@@ -16,366 +16,155 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-from operator import itemgetter
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Tuple, Type, Union
+from functools import partial
+from typing import Dict, List, Literal, Optional, Type, Union
 
-from django.core.exceptions import ObjectDoesNotExist
-from elasticsearch import Elasticsearch
-from elasticsearch_dsl import AttrDict, Index
-from elasticsearch_dsl.response import Response
-from pydantic import BaseModel, Field, parse_obj_as, root_validator, validator
+import cattr
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from pydantic import BaseModel, Field
 
-from paasng.engine.models import EngineApp
-from paasng.platform.log.constants import LOG_QUERY_FIELDS, ESField
-from paasng.platform.log.exceptions import LogLineInfoBrokenError, UnknownEngineAppNameError
-from paasng.utils.datetime import trans_ts_to_local
-
-logger = logging.getLogger(__name__)
+from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
 
 
-class ResponseWrapper(BaseModel):
-    # TODO: 目前整个 PaaS 项目大多数接口都没有嵌套类似的 Wrapper, 因此计划是下个迭代里 **直接去掉**
-    code: int
-    data: Union[List[BaseModel], BaseModel, None]
+def registry(pydantic_model: Type[BaseModel]):
+    cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
+    cattr.register_unstructure_hook(pydantic_model, partial(pydantic_model.dict, by_alias=True))
+    return pydantic_model
 
 
-class FieldFilter(BaseModel):
-    name: str = Field(..., description="查询字段的title")
-    chinese_name: Optional[str] = Field(..., description="展示用名称")
-    key: str = Field(..., description="query_term: get参数中的key")
-    options: List[Tuple[str, str]] = Field(..., description="该field的可选项")
+@registry
+class ElasticSearchHost(BaseModel):
+    """ES 配置, 字段命名保持 elasticsearch 的格式"""
+
+    host: str
+    port: int
+    http_auth: Optional[str] = Field(None, description="形如 username:password 的凭证对")
+    url_prefix: str = ""
+    use_ssl: bool = Field(False)
 
 
-class LogLine(BaseModel):
-    region: str
-    app_code: str
-    environment: str
-    process_id: Optional[str]
-    stream: str
-    message: str
-    # key: json.*
-    # e.g. json.funcName
-    detail: Dict[str, Any]
-    ts: str
+@registry
+class ElasticSearchParams(BaseModel):
+    """ES 搜索相关配置"""
 
-    @staticmethod
-    def _get_message(log) -> str:
-        # 替换高亮文案
-        if hasattr(log.meta, "highlight"):
-            for attrs in log.meta.highlight:
-                highlighted = "".join(log.meta.highlight[attrs])
-                attrs = attrs.split(".")
-                # 不带 .
-                if len(attrs) <= 1:
-                    log[attrs[0]] = highlighted
-                    continue
-                # 带 . 要按层级进去赋值
-                container = log
-                for attr in attrs:
-                    if isinstance(container, AttrDict) and isinstance(container[attr], AttrDict):
-                        container = container[attr]
-                    else:
-                        container[attr] = highlighted
-                        break
+    indexPattern: str = Field(description="索引模板")
+    timeField: str = Field(default="@timestamp", description="时间字段")
+    timeFormat: Literal["timestamp[s]", "timestamp[ns]", "datetime"] = Field(default="timestamp[s]")
+    messageField: str = Field(default="json.message", description="消息字段")
+    termTemplate: Dict[str, str] = Field(description="搜索语句模板, 例如 {'app_code.keyword': '{{ app_code }}'};")
+    builtinFilters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的过滤条件")
+    builtinExcludes: Dict[str, Union[str, List[str]]] = Field(default_factory=dict, description="内置的排除条件")
 
-        try:
-            message = log["json"]["message"]
-        except KeyError:
-            logger.warning("log <%s> is not json format(filebeat did not fullfill json field)", log)
-            message = "<日志解析异常，请以 JSON 格式输出>"
-
-        return message
-
-    @classmethod
-    def _get_detail(cls, log, message: str):
-        try:
-            fields = log.json.to_dict()
-        except AttributeError:
-            fields = {"message": message}
-
-        return dict(
-            sorted(
-                cls.parse_structured_properties(parent="json", structured_fields=fields).items(),
-                key=itemgetter(0),
-            )
-        )
-
-    @classmethod
-    def check_key_field_exist(cls, log: dict, key_fields: List[str]):
-        for k in key_fields:
-            if k not in log:
-                raise LogLineInfoBrokenError(k)
-
-    @classmethod
-    def get_app_identifiers(cls, log) -> dict:
-        cls.check_key_field_exist(log, ["app_code", "environment"])
-
-        return {
-            "app_code": log["app_code"],
-            "environment": log["environment"],
-        }
-
-    @classmethod
-    def parse_from_es_log(cls, log) -> 'LogLine':
-        message = cls._get_message(log)
-        detail = cls._get_detail(log, message)
-
-        if "process_id" not in log and "process_type" not in log:
-            # process_type 作为兼容字段，并不需要显式抛出
-            raise LogLineInfoBrokenError("process_id")
-
-        cls.check_key_field_exist(log, ["region", "stream", "@timestamp"])
-        obj = {
-            "region": log["region"],
-            "process_id": log["process_id"] if "process_id" in log else log["process_type"],
-            "stream": log["stream"],
-            "message": message,
-            "detail": detail,
-            "ts": trans_ts_to_local(log["@timestamp"]),
-        }
-        obj.update(cls.get_app_identifiers(log))
-        return cls.parse_obj(obj)
-
-    @classmethod
-    def parse_structured_properties(cls, parent, structured_fields):
-        """将结构化的属性铺平展开, 方便前端取值"""
-        ret = dict()
-        for sub_field, value in structured_fields.items():
-            key = f"{parent}.{sub_field}"
-            if isinstance(value, Mapping):
-                sub = cls.parse_structured_properties(key, value)
-                ret.update(sub)
-                continue
-            ret[key] = value
-        return ret
+    filedMatcher: Optional[str] = Field(default=None, description="字段设置的白名单正则匹配表达式, 设置该字段可将某些字段从「字段设置」列表中隐藏")
 
 
-class IngressLogLine(LogLine):
-    """Ingress 日志行"""
+@registry
+class BKLogConfig(BaseModel):
+    """日志平台的查询配置"""
 
-    AVAILABLE_FIELDS: ClassVar[List] = [
-        "method",
-        "path",
-        "status_code",
-        "response_time",
-        "client_ip",
-        "bytes_sent",
-        "user_agent",
-        "http_version",
-    ]
-
-    @classmethod
-    def _get_detail(cls, log, message: str):
-        return {x: log[x] for x in cls.AVAILABLE_FIELDS}
-
-    @classmethod
-    def get_app_identifiers(cls, log) -> dict:
-        cls.check_key_field_exist(log, ["engine_app_name"])
-
-        try:
-            # ingress 日志是从 serviceName 解析的 engine_app_name，默认已经被 engine 将下划线转换了
-            engine_app = EngineApp.objects.get(name=log["engine_app_name"].replace("0us0", "_"))
-            return {
-                "app_code": engine_app.env.module.application.code,
-                "environment": engine_app.env.environment,
-            }
-        except ObjectDoesNotExist:
-            logger.exception("engine app <%s> does not exist, please check", log["engine_app_name"])
-            # 当无法从 engine_app_name 中解析出 app_code & env 抛出异常
-            raise UnknownEngineAppNameError(f"Unknown engine_app_name: {log['engine_app_name']}")
+    scenarioID: Literal["log", "bkdata"] = Field(default="log", description="接入场景")
+    bkdataDataToken: Optional[str] = Field(description="数据平台认证Token")
+    bkdataAuthenticationMethod: Optional[Literal["token", "user"]] = Field(description="数据平台认证方式")
 
 
-class Pagination(BaseModel):
-    page: int
-    page_size: int
-    total: int
+@registry
+class ContainerLogCollectorConfig(BaseModel):
+    """容器日志采集配置"""
+
+    paths: List[str] = Field(default_factory=list, min_items=1, description="日志路径")
+    data_encoding: Optional[str] = Field(..., description="日志字符集")
 
 
-class LogPage(BaseModel):
-    page: Pagination
-    logs: List[LogLine]
+ElasticSearchHostField = make_json_field("ElasticSearchHostField", ElasticSearchHost)
+BKLogConfigField = make_json_field("BKLogConfigField", BKLogConfig)
+ElasticSearchParamsField = make_json_field("ElasticSearchParamsField", ElasticSearchParams)
+ContainerLogCollectorConfigField = make_json_field("ContainerLogCollectorConfigField", ContainerLogCollectorConfig)
 
-    line_class: ClassVar[Type[LogLine]] = LogLine
 
-    @validator("logs", pre=True)
-    @classmethod
-    def cast_logs(cls, value) -> List[LogLine]:
-        if isinstance(value, Response):
-            log_lines = []
-            for es_log in value:
-                try:
-                    log_lines.append(cls.line_class.parse_from_es_log(es_log))
-                except LogLineInfoBrokenError as e:
-                    logger.warning("log line<%s>: %s", es_log, e)
-                    continue
+class ProcessStructureLogCollectorConfig(AuditedModel):
+    """进程结构化日志采集配置"""
 
-            return log_lines
-        else:
-            return parse_obj_as(List[LogLine], value)
+    collector_config_id = models.BigAutoField(_("采集配置ID"), primary_key=True)
 
-    @staticmethod
-    def get_field_parent() -> str:
-        return "json"
+    # TODO: 二期功能, 支持管理日志采集规则
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
+    env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
+    process_type = models.CharField(help_text="进程类型(名称)", max_length=16)
 
-    @staticmethod
-    def get_es_dict(mapping: dict) -> dict:
-        return mapping["mappings"]["properties"]["json"]
+    config = ContainerLogCollectorConfigField(null=True)
 
-    @staticmethod
-    def parse_structured_properties(es_dict, parent: Optional[str] = "") -> Dict[str, ESField]:
-        fields = {}
-        for field, detail in es_dict["properties"].items():
-            if parent:
-                key = f"{parent}.{field}"
+
+class ElasticSearchConfig(UuidAuditedModel):
+    """ES查询配置"""
+
+    # TODO: 支持云原生应用
+    collector_config_id = models.CharField(_("采集配置ID"), unique=True, help_text="采集配置ID", max_length=64)
+    backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ", max_length=16)
+    elastic_search_host: Optional[ElasticSearchHost] = ElasticSearchHostField(
+        null=True, help_text="required when backend_type is 'es'"
+    )
+    bk_log_config: Optional[BKLogConfig] = BKLogConfigField(
+        null=True, help_text="required when backend_type is 'bkLog'"
+    )
+    search_params: ElasticSearchParams = ElasticSearchParamsField(help_text="ES 搜索相关配置")
+
+
+class ProcessLogQueryConfigManager(models.Manager):
+    def select_process_irrelevant(self, env: Optional[ModuleEnvironment] = None):
+        # 兼容关联查询(RelatedManager)的接口
+        if env is None:
+            if hasattr(self, "instance"):
+                env = self.instance
             else:
-                key = field
+                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
+        return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
-            if "properties" in detail:
-                # NOTE: 先不允许过滤多层结构
-                # fields.update(self.parse_structured_properties(key, es_dict=detail))
-                continue
-
-            fields[key] = ESField.parse_obj({"query_term": key, "title": key, "chinese_name": key})
-        return fields
-
-    @classmethod
-    def filter_fields(cls, client: Elasticsearch, es_index: Index):
-        """查询 _mapping, 获取日志 `json.*` 下的所有 `properties`"""
-        fields: Dict[str, ESField] = {}
-        dirty_field = set()
-        # 遍历所有 indexes, 获取 json.* 里记录的字段名
-        for mapping in es_index.get_mapping().values():
-            for field_name, es_field in cls.parse_structured_properties(
-                cls.get_es_dict(mapping), cls.get_field_parent()
-            ).items():
-                if field_name in fields and fields[field_name] != es_field:
-                    logger.warning("字段 %s 在不同 index 中的类型不一致", field_name)
-                    dirty_field.add(field_name)
-                    continue
-                fields[field_name] = es_field
-
-        for field in dirty_field:
-            del fields[field]
-        return fields
+    def get_by_process_type(self, process_type: Optional[str], env: Optional[ModuleEnvironment] = None):
+        # 兼容关联查询(RelatedManager)的接口
+        if env is None:
+            if hasattr(self, "instance"):
+                env = self.instance
+            else:
+                raise TypeError("select_process_irrelevant() 1 required positional argument: 'env'")
+        try:
+            self.filter(env=env, process_type=process_type).get()
+        except ProcessLogQueryConfig.DoesNotExist:
+            # get all process placeholder as fallback
+            return self.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).get()
 
 
-class IngressLogPage(LogPage):
-    line_class = IngressLogLine
+class ProcessLogQueryConfig(UuidAuditedModel):
+    """进程日志查询配置"""
 
-    @staticmethod
-    def get_field_parent() -> str:
-        return ""
+    env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
+    process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True, help_text="默认配置使用 ")
 
-    @staticmethod
-    def get_es_dict(mapping: dict) -> dict:
-        return mapping["mappings"]
+    stdout = models.ForeignKey(
+        ElasticSearchConfig,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        help_text="标准输出日志配置",
+        null=True,
+        related_name="related_stdout",
+    )
+    json = models.ForeignKey(
+        ElasticSearchConfig,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        help_text="结构化日志配置",
+        null=True,
+        related_name="related_json",
+    )
+    ingress = models.ForeignKey(
+        ElasticSearchConfig,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        help_text="接入层日志配置",
+        null=True,
+        related_name="related_ingress",
+    )
 
-
-class StandardOutputLogLine(BaseModel):
-    environment: str = Field(..., description="部署环境")
-    process_id: str = Field(..., description="应用进程")
-    pod_name: str = Field(..., description="实例名")
-    message: str
-    timestamp: str
-
-    @classmethod
-    def parse_from_es_log(cls, log) -> 'StandardOutputLogLine':
-        if hasattr(log.meta, "highlight") and "json.message" in log.meta.highlight:
-            message = "".join(log.meta.highlight["json.message"])
-        else:
-            message = log.json.message
-
-        return cls(
-            environment=log.environment,
-            process_id=log.process_id,
-            pod_name=log.pod_name,
-            message=message,
-            timestamp=trans_ts_to_local(log["@timestamp"]),
-        )
-
-
-class StandardOutputLogScroll(BaseModel):
-    scroll_id: str
-    logs: List[StandardOutputLogLine]
-    total: int = 0
-
-    @validator("logs", pre=True)
-    @classmethod
-    def cast_logs(cls, value):
-        if isinstance(value, Response):
-            return [StandardOutputLogLine.parse_from_es_log(es_log) for es_log in value]
-        else:
-            return parse_obj_as(List[StandardOutputLogLine], value)
-
-
-class LogCountTimeHistogram(BaseModel):
-    """日志数量 x 时间 直方图"""
-
-    series: List[int] = Field(..., description="按时间排序的值")
-    timeline: List[str] = Field(..., description="Series 中对应位置记录的时间点")
-
-
-# DSL 建模
-class DSLQueryItem(BaseModel):
-    """简化的 dsl-query 结构
-    目前只支持: query_string/terms 两种查询方式
-    query_string: 使用 ES 的 query_string 搜索
-    terms: 精准匹配(根据 field 过滤 的场景)
-    """
-
-    query_string: str = Field(None, description="使用 `query_string` 语法进行搜索")
-    terms: Dict[str, List[str]] = Field({}, description="多值精准匹配")
-    exclude: Dict[str, List[str]] = Field({}, description="terms取反, 非标准 DSL")
-
-    @root_validator(pre=True)
-    @classmethod
-    def transfer_query_term_to_es_term(cls, values: Dict):
-        # 将 query_term 转换成 es_term
-        terms = values.get("terms", {})
-        exclude = values.get("exclude", {})
-
-        for container in [terms, exclude]:
-            for regular_field in LOG_QUERY_FIELDS:
-                if regular_field.query_term in container:
-                    v = container.pop(regular_field.query_term)
-                    container[regular_field.query_term] = v
-        return values
-
-
-class SimpleDomainSpecialLanguage(BaseModel):
-    """简化的 dsl 结构"""
-
-    query: DSLQueryItem
-    sort: Optional[Dict] = Field({}, description='排序，e.g. {"response_time": "desc", "other": "asc"}')
-
-    def add_terms_conditions(self, **kwargs):
-        kwargs = self.query.parse_obj(dict(terms=kwargs)).dict()
-        self.query.terms.update(kwargs["terms"])
-        return self
-
-    def add_exclude_conditions(self, **kwargs):
-        kwargs = self.query.parse_obj(dict(exclude=kwargs)).dict()
-        self.query.exclude.update(kwargs["exclude"])
-        return self
-
-    def remove_terms_condition(self, key):
-        return self.remove_conditions_core("terms", key)
-
-    def remove_exclude_conditions(self, key):
-        return self.remove_conditions_core("exclude", key)
-
-    def remove_conditions_core(self, cond_type: str, key):
-        if cond_type not in ["terms", "exclude"]:
-            raise NotImplementedError
-
-        if key in getattr(self.query, cond_type):
-            getattr(self.query, cond_type).pop(key, None)
-
-        return self
-
-    def remove_regular_conditions(self, mappings: dict):
-        for regular_field in LOG_QUERY_FIELDS:
-            self.remove_terms_condition(regular_field.get_es_term(mappings))
-            self.remove_terms_condition(regular_field.query_term)
-        return self
+    objects = ProcessLogQueryConfigManager()

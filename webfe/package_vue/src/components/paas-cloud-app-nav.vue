@@ -444,7 +444,7 @@
                         });
                     } else {
                         this.$router.push({
-                            name: 'appBaseInfo',
+                            name: 'appSummary',
                             params: {
                                 id: this.curAppInfo.application.code
                             }

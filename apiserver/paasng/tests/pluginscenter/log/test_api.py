@@ -69,7 +69,7 @@ def test_query_standard_output_logs(pd, plugin, log_client, time_range):
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
-        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}, {'term': {}}]}},
+        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}]}},
         'sort': [{'@timestamp': {'order': 'desc'}}],
         'size': 100,
         'from': 0,
@@ -89,7 +89,7 @@ def test_query_structure_logs(pd, plugin, log_client, time_range):
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
-        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}, {'term': {}}]}},
+        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}]}},
         'sort': [{'@timestamp': {'order': 'desc'}}],
         'size': 100,
         'from': 0,

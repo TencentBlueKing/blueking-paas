@@ -138,7 +138,9 @@ class EnvFilter(ESFilter):
         if "engine_app_name" in term_fields and "tojson" in self.search_params.termTemplate["engine_app_name"]:
             search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
         if term_fields:
-            search = search.filter("term", **term_fields)
+            # [term] query doesn't support multiple fields
+            for k, v in term_fields.items():
+                search = search.filter("term", **{k: v})
         return search
 
 
@@ -175,5 +177,7 @@ class ModuleFilter(ESFilter):
                 raise ValueError("engine_app_name template must be using will tojson filter")
             search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
         if term_fields:
-            search = search.filter("term", **term_fields)
+            # [term] query doesn't support multiple fields
+            for k, v in term_fields.items():
+                search = search.filter("term", **{k: v})
         return search

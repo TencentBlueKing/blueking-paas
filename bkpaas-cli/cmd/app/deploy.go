@@ -20,7 +20,21 @@ package app
 
 import (
 	"fmt"
+
+	"github.com/spf13/cobra"
 )
+
+// NewCmdDeploy returns a Command instance for 'app deploy' sub command
+func NewCmdDeploy() *cobra.Command {
+	return &cobra.Command{
+		Use:                   "view",
+		Short:                 "Deploy PaaSv3 application",
+		DisableFlagsInUseLine: true,
+		Run: func(cmd *cobra.Command, args []string) {
+			deployApp()
+		},
+	}
+}
 
 // 应用部署
 func deployApp() {

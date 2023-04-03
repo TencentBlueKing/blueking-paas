@@ -18,19 +18,19 @@
 
 package action
 
-type HeroKuAppDeployer struct{}
+type DefaultAppDeployer struct{}
 
-func (n HeroKuAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
+func (n DefaultAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (n HeroKuAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
+func (n DefaultAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-var _ Deployer = HeroKuAppDeployer{}
+var _ Deployer = DefaultAppDeployer{}
 
 type CNativeAppDeployer struct{}
 

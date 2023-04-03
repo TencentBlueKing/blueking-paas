@@ -19,51 +19,34 @@
 package app
 
 import (
-	"os"
-
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
+	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 )
 
-// OpTypeView 操作类型：查看
-const OpTypeView = "config"
-
-// OpTypeDeploy 操作类型：部署
-const OpTypeDeploy = "deploy"
-
 var appCode, appModule, appEnv string
+
+var appLongDesc = `
+Deploy PaasV3 application using subcommands like "bkpaas-cli app deploy"
+
+TODO 补充描述内容
+`
 
 // NewCmd create application command
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "app",
-		Short: "Manage PaaSv3 application",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			// check user is authenticated
-			if !account.IsUserAuthorized() {
-				color.Red("User unauthorized! Please use `bkpaas-cli login` to login")
-				os.Exit(1)
-			}
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			// TODO 重构，做子命令改造，不再使用 args 区分操作
-			if len(args) == 0 {
-				color.Red("operator kind (%s / %s) is required", OpTypeView, OpTypeDeploy)
-			}
-			switch args[0] {
-			case OpTypeView:
-				displayAppInfo(appCode, appModule, appEnv)
-			case OpTypeDeploy:
-				deployApp()
-			default:
-				color.Red("unknown operator type: (%s)", args[0])
-			}
-		},
+		Use:                   "app",
+		Short:                 "Manage PaaSv3 application",
+		Long:                  appLongDesc,
+		DisableFlagsInUseLine: true,
+		Run:                   cmdUtil.DefaultSubCmdRun(),
 	}
+	// 配置信息查看
+	cmd.AddCommand(NewCmdView())
+	// 蓝鲸应用部署
+	cmd.AddCommand(NewCmdDeploy())
 
-	// flag 解析
+	// flag 解析 TODO 确认 flags 继承情况
 	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
 	cmd.Flags().StringVarP(&appModule, "module", "", "default", "module name")
 	cmd.Flags().StringVarP(&appEnv, "env", "", "prod", "environment (stag/prod)")

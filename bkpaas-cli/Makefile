@@ -65,7 +65,7 @@ tidy: ## 执行 go mod tidy
 	go mod tidy
 
 .PHONY: test
-test: tidy
+test: tidy ## 执行 ginkgo 单元测试
 	$(GINKGO) --cover --coverprofile cover.out ./...
 
 .PHONY: lint

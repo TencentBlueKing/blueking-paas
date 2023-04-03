@@ -20,6 +20,7 @@ package account
 
 import (
 	"encoding/json"
+	"net/http"
 
 	"github.com/TencentBlueKing/gopkg/mapx"
 	"github.com/parnurzeal/gorequest"
@@ -34,7 +35,7 @@ func IsUserAuthorized() bool {
 		Param("access_token", config.G.AccessToken).
 		End()
 
-	if resp.StatusCode != 200 || errs != nil {
+	if resp.StatusCode != http.StatusOK || errs != nil {
 		return false
 	}
 
@@ -50,8 +51,8 @@ func IsUserAuthorized() bool {
 	rtx := mapx.GetStr(authResp, "data.id_providers.rtx.username")
 	uin := mapx.GetStr(authResp, "data.id_providers.uin.username")
 	// 兼容两种鉴权身份，任意身份一致即允许通过
-	if rtx != config.G.Username && uin != config.G.Username {
-		return false
+	if rtx == config.G.Username || uin == config.G.Username {
+		return true
 	}
-	return true
+	return false
 }

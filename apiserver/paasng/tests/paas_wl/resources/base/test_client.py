@@ -26,7 +26,7 @@ from django.conf import settings
 from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.release_controller.models import PodImageRuntime
+from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.base.controllers import BuildHandler
 from paas_wl.resources.base.exceptions import (
     PodAbsentError,
@@ -164,7 +164,7 @@ class TestClientBuild:
         return SlugBuilderTemplate(
             name="slug-builder",
             namespace="bkapp-foo-stag",
-            runtime=PodImageRuntime(image="blueking-fake.com:8090/bkpaas/slugrunner:latest", envs={"test": "1"}),
+            runtime=ContainerRuntimeSpec(image="blueking-fake.com:8090/bkpaas/slugrunner:latest", envs={"test": "1"}),
             schedule=Schedule(
                 cluster_name="",
                 node_selector={},

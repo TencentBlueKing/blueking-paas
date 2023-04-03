@@ -20,7 +20,7 @@ from unittest import mock
 
 import pytest
 
-from paasng.engine.utils.output import ConsoleStream, MixedStream, ModelStream
+from paasng.engine.utils.output import ConsoleStream, ModelStream, RedisWithModelStream
 
 pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
@@ -55,7 +55,7 @@ class TestConsoleStream:
 
 class TestMixStream:
     def test_write_message(self, build_proc):
-        bps = MixedStream(build_proc, mock.MagicMock())
+        bps = RedisWithModelStream(build_proc, mock.MagicMock())
         bps.write_message("message")
         bps.write_message("write \n message test")
         assert build_proc.output_stream.lines.count() == 2
@@ -65,5 +65,5 @@ class TestMixStream:
         ]
 
     def test_write_title(self, build_proc):
-        MixedStream(build_proc, mock.MagicMock()).write_title("title")
+        RedisWithModelStream(build_proc, mock.MagicMock()).write_title("title")
         assert build_proc.output_stream.lines.count() == 0, "title should not be saved"

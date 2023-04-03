@@ -27,7 +27,7 @@ from django.conf import settings
 # NOTE: Import kube resource related modules from paas_wl
 from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
-from paas_wl.release_controller.models import PodImageRuntime
+from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 from paasng.engine.configurations.building import SlugBuilderTemplate
@@ -90,7 +90,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
         env_vars.update(settings.BUILD_EXTRA_ENV_VARS)
     # Inject pip index url
     if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
-        env_vars.update(get_envs_for_pypi(settings.PYTHON_BUILDPACK_PIP_INDEX_URL))
+        env_vars.update(get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL))
 
     if metadata:
         update_env_vars_with_metadata(env_vars, metadata)
@@ -144,12 +144,14 @@ def prepare_slugbuilder_template(app: 'WlApp', env_vars: Dict, metadata: Optiona
     return SlugBuilderTemplate(
         name=generate_builder_name(app),
         namespace=app.namespace,
-        runtime=PodImageRuntime(image=image, envs=env_vars or {}, image_pull_secrets=[{"name": PULL_SECRET_NAME}]),
+        runtime=ContainerRuntimeSpec(
+            image=image, envs=env_vars or {}, image_pull_secrets=[{"name": PULL_SECRET_NAME}]
+        ),
         schedule=get_schedule_config(app),
     )
 
 
-def get_envs_for_pypi(index_url):
+def get_envs_from_pypi_url(index_url: str) -> Dict[str, str]:
     """Produce the environment variables for python buildpack, such as:
 
     PIP_INDEX_URL: http://pypi.douban.com/simple/

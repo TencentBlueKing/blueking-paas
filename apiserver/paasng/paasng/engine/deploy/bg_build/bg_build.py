@@ -42,7 +42,7 @@ from paasng.engine.deploy.bg_build.utils import (
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
-from paasng.engine.utils.output import ConsoleStream, DeployStream, MixedStream, Style
+from paasng.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream, Style
 from paasng.engine.workflow import DeployStep
 from paasng.platform.core.storages.redisdb import get_default_redis
 
@@ -58,7 +58,8 @@ _FOLLOWING_LOGS_TIMEOUT = 300
 
 @shared_task
 def start_bg_build_process(deploy_id, bp_id, stream_channel_id=None, metadata=None):
-    """Start a new build process in the background
+    """Start a new build process which starts a builder to build a slug and deploy
+    it to the app cluster.
 
     :param deploy_id: The ID of the deployment object.
     :param bp_id: The ID of the build process object.
@@ -70,7 +71,7 @@ def start_bg_build_process(deploy_id, bp_id, stream_channel_id=None, metadata=No
     if stream_channel_id:
         stream_channel = StreamChannel(stream_channel_id, redis_db=get_default_redis())
         stream_channel.initialize()
-        stream = MixedStream(build_process, stream_channel)
+        stream = RedisWithModelStream(build_process, stream_channel)
     else:
         stream = ConsoleStream()
 
@@ -82,7 +83,7 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
     """Interrupt a build process
 
     :return: Whether the build process was successfully interrupted.
-    :raise: DeployInterruptionFailed if the build process is not interruptable.
+    :raises: DeployInterruptionFailed if the build process is not interruptable.
     """
     bp = BuildProcess.objects.get(pk=bp_id)
     if not bp.check_interruption_allowed():

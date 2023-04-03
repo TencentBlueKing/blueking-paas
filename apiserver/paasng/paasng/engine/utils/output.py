@@ -172,9 +172,9 @@ class ModelStream:
         return message.replace('\x1b[1G', '')
 
 
-class MixedStream(RedisChannelStream):
-    """A stream which writes to both model's output_stream and redis channel, use
-    a fan-out pattern.
+class RedisWithModelStream(RedisChannelStream):
+    """A modified redis channel stream which writes message to both model's output_stream
+    and redis channel.
 
     :param model: A model which has output_stream field
     :param steam_channel: A redis channel stream

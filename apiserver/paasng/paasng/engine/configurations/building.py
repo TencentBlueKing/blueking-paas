@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.platform.applications.models.build import Build
-from paas_wl.release_controller.models import PodImageRuntime
+from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.kube_res.base import Schedule
 
 if TYPE_CHECKING:
@@ -103,5 +103,5 @@ class SlugBuilderTemplate:
 
     name: str
     namespace: str
-    runtime: PodImageRuntime
+    runtime: ContainerRuntimeSpec
     schedule: Schedule

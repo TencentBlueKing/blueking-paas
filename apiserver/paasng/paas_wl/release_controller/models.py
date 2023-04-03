@@ -5,8 +5,10 @@ from paasng.engine.constants import ImagePullPolicy
 
 
 @dataclass
-class PodImageRuntime:
-    """The runtime info of a Pod which contains image, command and other info."""
+class ContainerRuntimeSpec:
+    """The runtime specification of a container which contains image, command and
+    other info. Used for building Command and SlugBuilderTemplate.
+    """
 
     image: str
     # The actual command for starting the container

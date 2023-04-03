@@ -28,7 +28,7 @@ from paas_wl.platform.applications.models.managers.app_configvar import AppConfi
 from paasng.engine.deploy.bg_build.utils import (
     generate_builder_env_vars,
     generate_slug_path,
-    get_envs_for_pypi,
+    get_envs_from_pypi_url,
     prepare_slugbuilder_template,
     update_env_vars_with_metadata,
 )
@@ -49,7 +49,7 @@ class TestEnvVars:
             for k, v in settings.BUILD_EXTRA_ENV_VARS.items():
                 assert env_vars.pop(k) == v, f"{k} 与预期不符"
         if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
-            for k, v in get_envs_for_pypi(settings.PYTHON_BUILDPACK_PIP_INDEX_URL).items():
+            for k, v in get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL).items():
                 assert env_vars.pop(k) == v, f"{k} 与预期不符"
         app_config_var = AppConfigVarManager(app=wl_app).get_envs()
         for key in app_config_var.keys() & env_vars.keys():
@@ -97,7 +97,7 @@ class TestUtils:
         assert slug_tmpl.schedule.node_selector == {}
 
 
-def test_get_envs_for_pypi():
-    ret = get_envs_for_pypi('http://pypi.douban.com')
+def test_get_envs_from_pypi_url():
+    ret = get_envs_from_pypi_url('http://pypi.douban.com')
     assert ret['PIP_INDEX_URL'] == 'http://pypi.douban.com'
     assert ret['PIP_INDEX_HOST'] == 'pypi.douban.com'

@@ -18,10 +18,9 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
-from blue_krill.redis_tools.messaging import StreamChannelSubscriber
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -56,7 +55,6 @@ from paasng.engine.workflow import DeploymentCoordinator, DeploymentStateMgr, De
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.constants import AppFeatureFlag
-from paasng.platform.core.storages.redisdb import get_default_redis
 from paasng.platform.modules.models.module import Module
 from paasng.utils.blobstore import make_blob_store
 
@@ -241,15 +239,6 @@ class BuildProcessPoller(DeployPoller):
     max_retries_on_error = 10
     overall_timeout_seconds = 60 * 15
     default_retry_delay_seconds = 2
-
-    @staticmethod
-    def get_subscriber(channel_id) -> Optional[StreamChannelSubscriber]:
-        subscriber = StreamChannelSubscriber(channel_id, redis_db=get_default_redis())
-        channel_state = subscriber.get_channel_state()
-        if channel_state == 'none':
-            return None
-
-        return subscriber
 
     def query(self) -> PollingResult:
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])

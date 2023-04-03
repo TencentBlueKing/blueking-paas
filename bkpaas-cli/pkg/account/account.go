@@ -19,28 +19,27 @@
 package account
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/TencentBlueKing/gopkg/mapx"
-	"github.com/parnurzeal/gorequest"
+	"github.com/levigross/grequests"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
 // IsUserAuthorized 检查用户认证情况（AccessToken 准确 & 未过期 & 身份与 Username 一致）
 func IsUserAuthorized() bool {
-	resp, body, errs := gorequest.New().
-		Get(config.G.CheckTokenUrl).
-		Param("access_token", config.G.AccessToken).
-		End()
+	ro := grequests.RequestOptions{
+		Params: map[string]string{"access_token": config.G.AccessToken},
+	}
+	resp, err := grequests.Get(config.G.CheckTokenUrl, &ro)
 
-	if resp.StatusCode != http.StatusOK || errs != nil {
+	if resp.StatusCode != http.StatusOK || err != nil {
 		return false
 	}
 
 	authResp := map[string]any{}
-	if err := json.Unmarshal([]byte(body), &authResp); err != nil {
+	if err = resp.JSON(&authResp); err != nil {
 		return false
 	}
 

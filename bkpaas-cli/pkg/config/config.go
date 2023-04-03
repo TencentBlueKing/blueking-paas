@@ -21,6 +21,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -40,6 +41,11 @@ func LoadConf(filePath string) (*GlobalConf, error) {
 	if err = yaml.Unmarshal(yamlFile, conf); err != nil {
 		return nil, err
 	}
+
+	// post format check
+	conf.PaaSUrl = strings.TrimSuffix(conf.PaaSUrl, "/")
+	conf.PaaSApigwUrl = strings.TrimSuffix(conf.PaaSApigwUrl, "/")
+
 	// init global config
 	G = conf
 	return conf, nil

@@ -27,7 +27,7 @@ import (
 // NewCmdDeploy returns a Command instance for 'app deploy' sub command
 func NewCmdDeploy() *cobra.Command {
 	return &cobra.Command{
-		Use:                   "view",
+		Use:                   "deploy",
 		Short:                 "Deploy PaaSv3 application",
 		DisableFlagsInUseLine: true,
 		Run: func(cmd *cobra.Command, args []string) {

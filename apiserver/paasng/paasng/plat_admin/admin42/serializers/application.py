@@ -44,8 +44,12 @@ class ResQuotasAggregation:
             processes_specs = get_processes_specs(self.app, app_env)
 
             for _specs in processes_specs:
-                quotas[app_env.environment]["memory_total"] += _specs["resource_limit_quota"]['memory']
-                quotas[app_env.environment]["cpu_total"] += _specs["resource_limit_quota"]['cpu']
+                quotas[app_env.environment]["memory_total"] += (
+                    _specs["resource_limit_quota"]['memory'] * _specs['target_replicas']
+                )
+                quotas[app_env.environment]["cpu_total"] += (
+                    _specs["resource_limit_quota"]['cpu'] * _specs['target_replicas']
+                )
 
         return quotas
 

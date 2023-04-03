@@ -26,6 +26,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
+from paasng.dev_resources.servicehub.constants import LEGACY_PLAN_ID
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
 from paasng.dev_resources.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
 from paasng.dev_resources.servicehub.remote.exceptions import UnsupportedOperationError
@@ -129,6 +130,12 @@ class ApplicationServicesManageViewSet(GenericViewSet, ApplicationCodeInPathMixi
             instance_rel = mixed_service_mgr.get_instance_rel_by_instance_id(service, instance_id)
         except SvcAttachmentDoesNotExist:
             raise Http404
+
+        # 迁移应用不能回收资源
+        # 因为关联的方案不能重新分配实例的方案
+        # 迁移前先在 paas2.0的 open_paas 表中将数据库信息修改外预期迁移后的数据库信息后，再开始迁移工作
+        if instance_rel.get_plan().uuid == LEGACY_PLAN_ID:
+            raise error_codes.FEATURE_FLAG_DISABLED.f(_("迁移应用不支持回收增强服务实例"))
 
         if instance_rel.is_provisioned():
             instance_rel.recycle_resource()

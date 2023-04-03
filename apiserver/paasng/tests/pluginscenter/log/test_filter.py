@@ -71,15 +71,7 @@ class TestElasticSearchFilter:
                 ElasticSearchParams(
                     indexPattern="", termTemplate={"foo": "{{ plugin_id }}", "FOO": "{{ plugin_id | upper }}"}
                 ),
-                {
-                    'query': {
-                        'bool': {
-                            'filter': [
-                                {'term': {'foo': 'foo', 'FOO': 'FOO'}},
-                            ]
-                        }
-                    }
-                },
+                {'query': {'bool': {'filter': [{'term': {'foo': 'foo'}}, {'term': {'FOO': 'FOO'}}]}}},
             ),
         ],
     )

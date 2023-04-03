@@ -29,6 +29,7 @@ class TestLegacyStructuredLogAPIView:
     def test_dsl(self, api_client, bk_app, bk_module):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/structured/list/?time_range=1h"
         with mock.patch("paasng.platform.log.views.instantiate_log_client") as client_factory:
+            client_factory().get_mappings.return_value = {"app_code": {"type": "text"}}
             # 无任何日志
             client_factory().execute_search.return_value = ([], 0)
             response = api_client.post(
@@ -51,7 +52,8 @@ class TestLegacyStructuredLogAPIView:
                 'bool': {
                     'filter': [
                         {'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}},
-                        {'term': {'app_code': bk_app.code}},
+                        # mappings 返回类型是 text, 因此添加了 .keyword
+                        {'term': {'app_code.keyword': bk_app.code}},
                         {'term': {'module_name': bk_module.name}},
                         {'bool': {'must_not': [{'terms': {'stream': ['stderr', 'stdout']}}]}},
                     ],

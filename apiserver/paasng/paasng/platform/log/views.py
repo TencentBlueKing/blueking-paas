@@ -46,6 +46,7 @@ from paasng.platform.log.dsl import SearchRequestSchema
 from paasng.platform.log.filters import EnvFilter, ModuleFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
+from paasng.platform.log.shim import setup_env_log_model
 from paasng.platform.log.utils import clean_logs, parse_request_to_es_dsl
 from paasng.utils.error_codes import error_codes
 from paasng.utils.es_log.misc import clean_histogram_buckets
@@ -313,6 +314,9 @@ class LegacyLogAPIMixin(_MixinBase):
         module = self.get_module_via_path()
         stag = module.get_envs("stag")
         prod = module.get_envs("prod")
+        # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
+        setup_env_log_model(stag)
+        setup_env_log_model(prod)
         stag_config = self._get_log_query_config_by_env(stag, process_type=process_type)
         prod_config = self._get_log_query_config_by_env(prod, process_type=process_type)
         if stag_config != prod_config:

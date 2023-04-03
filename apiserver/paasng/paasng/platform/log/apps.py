@@ -16,12 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.apps import AppConfig
 
 
-class DeployEventStatus(StructuredEnum):
-    """部署事件状态"""
-
-    STARTED = EnumField('started', '已开始')
-    FINISHED = EnumField('finished', '正常结束')
-    ABORTED = EnumField('aborted', '异常结束')
+class LogAppConfig(AppConfig):
+    name = 'paasng.platform.log'

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TencentBlueKing is pleased to support the open source community by making
 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -15,14 +16,5 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import urllib3
-
-from paas_wl.release_controller.builder.utils import get_envs_for_pypi
-
-urllib3.disable_warnings()
-
-
-def test_get_envs_for_pypi():
-    ret = get_envs_for_pypi('http://pypi.douban.com')
-    assert ret['PIP_INDEX_URL'] == 'http://pypi.douban.com'
-    assert ret['PIP_INDEX_HOST'] == 'pypi.douban.com'
+# 默认查询日志的分片大小
+DEFAULT_LOG_BATCH_SIZE = 200

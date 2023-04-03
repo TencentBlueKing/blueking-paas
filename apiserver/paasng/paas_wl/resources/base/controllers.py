@@ -52,9 +52,9 @@ from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.processes.models import Process
 
 if TYPE_CHECKING:
-    from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
     from paas_wl.resources.base.base import EnhancedApiClient
     from paas_wl.resources.base.generation import MapperPack
+    from paasng.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -435,7 +435,7 @@ class CommandHandler(PodScheduleHandler):
         return command_kmodel.delete(existed)
 
     def interrupt_command(self, command: Command) -> bool:
-        """Interrupt build pod by deleting it, this method will wait up to 1 second before a SIGKILL
+        """Interrupt a command pod by deleting it, this method will wait up to 1 second before a SIGKILL
         signal was sent.
 
         :param namespace: namespace where run the command.

@@ -18,10 +18,12 @@
 
 import copy from './copy';
 import charts from './charts';
+import dashed from './dashed';
 
 const directives = {
   copy,
-  charts
+  charts,
+  dashed
 };
 
 export default {

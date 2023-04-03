@@ -81,23 +81,6 @@ class ReleaseStatus(str, StructuredEnum):
         return JobStatus(self.value)
 
 
-class DeployEventStatus(ChoicesEnum):
-    """部署事件状态"""
-
-    STARTED = 'started'
-    FINISHED = 'finished'
-    ABORTED = 'aborted'
-
-    @classmethod
-    def get_job_status(cls, event_status: 'DeployEventStatus') -> 'JobStatus':
-        """通过 Event Status 映射到 Job Status"""
-        return JobStatus(
-            {cls.STARTED: JobStatus.PENDING, cls.FINISHED: JobStatus.SUCCESSFUL, cls.ABORTED: JobStatus.FAILED}[
-                event_status
-            ]
-        )
-
-
 class OperationTypes(ChoicesEnum):
     OFFLINE = 'offline'
     ONLINE = 'online'

@@ -41,9 +41,9 @@ from paas_wl.workloads.images.entities import ImageCredentials, credentials_kmod
 from paas_wl.workloads.processes.models import Process
 
 if TYPE_CHECKING:
-    from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
     from paas_wl.resources.base.base import EnhancedApiClient
     from paas_wl.resources.base.generation import MapperPack
+    from paasng.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
 

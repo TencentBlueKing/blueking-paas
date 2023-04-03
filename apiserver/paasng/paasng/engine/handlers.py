@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 def start_phase(sender: 'DeployStepMemObj', phase: DeployPhaseTypes, **kwargs):
     """开启 阶段"""
     phase_obj = sender.deployment.deployphase_set.get(type=phase)
-    phase_obj.mark_and_write_to_steam(sender.stream, JobStatus.PENDING)
+    phase_obj.mark_and_write_to_stream(sender.stream, JobStatus.PENDING)
 
 
 @receiver(post_phase_end)
@@ -52,10 +52,10 @@ def end_phase(sender, status: JobStatus, phase: DeployPhaseTypes, **kwargs):
     :param phase: 部署所属阶段
     """
     phase_obj = sender.deployment.deployphase_set.get(type=phase)
-    phase_obj.mark_and_write_to_steam(sender.stream, status)
+    phase_obj.mark_and_write_to_stream(sender.stream, status)
 
     for step in phase_obj.get_unfinished_steps():
-        step.mark_and_write_to_steam(sender.stream, status)
+        step.mark_and_write_to_stream(sender.stream, status)
 
 
 @receiver(pre_appenv_deploy)

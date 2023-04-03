@@ -146,4 +146,3 @@ class TestAppCommandExecutor:
         )
         assert hook.status == CommandStatus.INTERRUPTED
         assert hook.exit_code == 1
-        assert "pre-release phase aborted." in caplog.text

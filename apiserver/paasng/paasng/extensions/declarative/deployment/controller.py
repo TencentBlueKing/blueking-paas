@@ -17,13 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict
+from typing import Dict, List
 
 import cattr
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.platform.api import upsert_app_monitor
+from paas_wl.workloads.processes.models import DeclarativeProcess
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.processes import ProcessManager
@@ -53,6 +54,8 @@ class DeploymentDeclarativeController:
             defaults={
                 'env_variables': desc.get_env_variables(ConfigVarEnvName(self.deployment.app_environment.environment)),
                 'runtime': {
+                    # TODO: Only save desc.processes into DeploymentDescription
+                    # The synchronization of processes_spec should be delayed until the RELEASE stage
                     'processes': cattr.unstructure(desc.processes),
                     'svc_discovery': cattr.unstructure(desc.svc_discovery),
                     "source_dir": desc.source_dir,
@@ -61,7 +64,7 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
-        # Bind ProcessSpec if necessary
+        # TODO: The synchronization of processes_spec should be delayed until the RELEASE stage
         if desc.processes:
             self.sync_processes_specs(desc.processes)
         else:
@@ -76,15 +79,18 @@ class DeploymentDeclarativeController:
 
         try:
             process_manager.sync_processes_specs(
-                [
-                    {
-                        "name": process_name,
-                        "command": process.command,
-                        "replicas": process.replicas,
-                        "plan": process.plan,
-                    }
-                    for process_name, process in processes.items()
-                ]
+                cattr.structure(
+                    [
+                        {
+                            "name": process_name,
+                            "command": process.command,
+                            "replicas": process.replicas,
+                            "plan": process.plan,
+                        }
+                        for process_name, process in processes.items()
+                    ],
+                    List[DeclarativeProcess],
+                )
             )
         except Exception as e:
             raise ControllerError(_("同步进程信息时出现异常，请检查应用描述文件或联系平台管理员")) from e

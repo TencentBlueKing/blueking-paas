@@ -16,9 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from elasticsearch_dsl import Search
+from typing import Dict, Optional
 
-from paasng.pluginscenter.log.utils import SmartTimeRange
+from django.conf import settings
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import Q, Query
+
+from paasng.utils.es_log.time_range import SmartTimeRange
+
+pre_tag: str = settings.BK_LOG_HIGHLIGHT_TAG[0]
+post_tag: str = settings.BK_LOG_HIGHLIGHT_TAG[1]
 
 
 class SmartSearch:
@@ -45,6 +52,29 @@ class SmartSearch:
     def limit_offset(self, limit: int = 100, offset: int = 0):
         """page filter by limit and offset"""
         self.search = self.search.extra(size=limit, from_=offset)
+        return self
+
+    def query(self, dsl: Query):
+        """query by dsl"""
+        self.search = self.search.query(dsl)
+        return self
+
+    def sort(self, keys: Dict):
+        self.search = self.search.sort(keys)
+        return self
+
+    def highlight(self, *fields: str, highlight_query: Optional[Dict]):
+        """request highlighting of some fields"""
+        if not highlight_query:
+            if self.search.query:
+                highlight_query = self.search.query.to_dict()
+            else:
+                highlight_query = Q().to_dict()
+        self.search = (
+            self.search.highlight(*fields, number_of_fragments=0)
+            .highlight_options(pre_tags=[pre_tag], post_tags=[post_tag], require_field_match=False)
+            .highlight_options(highlight_query=highlight_query)
+        )
         return self
 
     def to_dict(self, count: bool = False):

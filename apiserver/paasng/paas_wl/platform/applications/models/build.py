@@ -58,7 +58,7 @@ class Build(UuidAuditedModel):
         if self.env_variables:
             return self.env_variables
         # NOTE: 理论上 envs 环境变量应该在创建 Build 时固化, 这里兼容了未增加 envs 字段前未生成 env_variables 的情况
-        from paas_wl.release_controller.builder.procedures import generate_launcher_env_vars
+        from paasng.engine.deploy.bg_build.utils import generate_launcher_env_vars
 
         self.env_variables = generate_launcher_env_vars(self.slug_path)
         self.save(update_fields=["env_variables", "updated"])

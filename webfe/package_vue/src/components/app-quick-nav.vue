@@ -11,7 +11,6 @@
           slot="trigger"
           href="javascript:"
           class="overview-title-icon fright"
-          @click="getAppLinks"
         >
           <i class="paasng-icon paasng-angle-down" />
         </a>
@@ -216,15 +215,16 @@
                     stag: '',
                     prod: ''
                 };
-                this.getAppLinks();
             },
             filterKey (newVal, oldVal) {
                 if (newVal === '' && oldVal !== '') {
                     this.propsfilterKey = '';
                     this.$refs.searchAppList.enterSelect();
                 }
+            },
+            appCode () {
+                this.getAppLinks();
             }
-
         },
         mounted () {
             bus.$on('market_switch', () => {
@@ -288,7 +288,7 @@
                 if (this.curAppInfo.web_config.engine_enabled) {
                     ['stag', 'prod'].forEach(env => {
                         this.$store.dispatch('fetchAppExposedLinkUrl', {
-                            appCode: this.$route.params.id,
+                            appCode: this.appCode,
                             env
                         }).then(link => {
                             this.appLinks[env] = link;

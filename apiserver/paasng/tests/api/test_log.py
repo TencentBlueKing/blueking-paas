@@ -51,7 +51,8 @@ class TestLegacyStructuredLogAPIView:
                 'bool': {
                     'filter': [
                         {'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}},
-                        {'term': {'app_code': bk_app.code, 'module_name': bk_module.name}},
+                        {'term': {'app_code': bk_app.code}},
+                        {'term': {'module_name': bk_module.name}},
                         {'bool': {'must_not': [{'terms': {'stream': ['stderr', 'stdout']}}]}},
                     ],
                     'must': [

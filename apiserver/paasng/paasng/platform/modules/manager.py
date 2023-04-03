@@ -30,11 +30,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-
-from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.platform.api import create_app_ignore_duplicated, delete_module_related_res, update_metadata_by_env
-
+from paas_wl.platform.applications.constants import WlAppType
 from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.dev_resources.servicehub.sharing import SharingReferencesManager
@@ -46,6 +44,7 @@ from paasng.engine.constants import RuntimeType
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
+from paasng.platform.log.shim import setup_env_log_model
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, get_image_labels_by_module
@@ -69,14 +68,6 @@ class ModuleInitializer:
     def __init__(self, module: Module):
         self.module = module
         self.application = self.module.application
-
-    def list_engine_app_names(self) -> List[str]:
-        """列举当前所有的 engine app name"""
-        names = []
-        for env in self.default_environments:
-            names.append(self.make_engine_app_name(env))
-
-        return names
 
     def make_engine_app_name(self, env: str) -> str:
         # 兼容考虑，如果模块名为 default 则不在 engine 名字中插入 module 名
@@ -210,6 +201,10 @@ class ModuleInitializer:
         # 语言要求的构建工具
         helper.bind_buildpacks_by_module_language()
 
+    def initialize_log_config(self):
+        for env in self.module.get_envs():
+            setup_env_log_model(env)
+
     def _get_or_create_engine_app(self, name: str) -> EngineApp:
         """Create or get existed engine app by given name"""
         info = create_app_ignore_duplicated(self.application.region, name, WlAppType.DEFAULT)
@@ -260,6 +255,9 @@ def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
         with _humanize_exception(_('绑定初始运行环境失败，请稍候再试'), 'bind default runtime'):
             module_initializer.bind_default_runtime()
 
+    with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
+        module_initializer.initialize_log_config()
+
     return ModuleInitResult(source_init_result={})
 
 
@@ -306,6 +304,9 @@ def initialize_module(
         # bind heroku runtime, such as slug builder/runner and buildpacks
         with _humanize_exception('bind_default_runtime', _('绑定初始运行环境失败，请稍候再试')):
             module_initializer.bind_default_runtime()
+
+    with _humanize_exception("initialize_log_config", _("日志模块初始化失败, 请稍候再试")):
+        module_initializer.initialize_log_config()
 
     return ModuleInitResult(source_init_result=source_init_result)
 

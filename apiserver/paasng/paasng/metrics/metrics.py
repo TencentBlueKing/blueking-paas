@@ -52,9 +52,6 @@ DEPLOYMENT_STATUS_COUNTER = Counter(
 )
 DEPLOYMENT_INFO_COUNTER = Counter("deploy_operation", "", ("source_type", "environment", "status"))
 
-# 日志
-LOG_SEARCH_COUNTER = Counter('log_search', "", ("environment", "stream"))
-
 # 增强服务
 SERVICE_BIND_COUNTER = Counter('service_bind', "", ("service", "region"))
 SERVICE_PROVISION_COUNTER = Counter('service_provision', "", ("environment", "service", "plan"))

@@ -20,8 +20,8 @@ import pytest
 from elasticsearch_dsl import Search
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
-from paasng.pluginscenter.log import SmartSearch
 from paasng.pluginscenter.log.filters import ElasticSearchFilter
+from paasng.utils.es_log.search import SmartSearch
 
 pytestmark = pytest.mark.django_db
 

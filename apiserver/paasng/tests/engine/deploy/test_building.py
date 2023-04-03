@@ -106,12 +106,12 @@ class TestApplicationBuilder:
         ) as mocked_poller, mock.patch(
             'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream, mock.patch(
-            'paasng.engine.workflow.flow.EngineDeployClient'
-        ) as mocked_client:
+            'paasng.engine.deploy.building.start_build_process'
+        ) as mocker_start_build_process:
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
-            mocked_client().start_build_process.return_value = faked_build_process_id
+            mocker_start_build_process.return_value = faked_build_process_id
 
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
             builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
@@ -124,14 +124,15 @@ class TestApplicationBuilder:
             assert deployment.err_detail is None
 
             # Validate "start_build_process" arguments
-            assert mocked_client().start_build_process.called
+            assert mocker_start_build_process.called
             (
+                _,
                 version,
                 stream_channel_id,
                 source_tar_path,
                 procfile,
                 env_vars,
-            ) = mocked_client().start_build_process.call_args[0]
+            ) = mocker_start_build_process.call_args[0]
             assert version.revision == deployment.source_revision
             assert stream_channel_id == str(bk_deployment_full.id)
             assert source_tar_path != ''

@@ -101,7 +101,7 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
             raise DuplicateNameInSamePhaseError(name)
 
     def get_sorted_steps(self) -> List['DeployStep']:
-        from paasng.engine.phases_steps.picker import DeployStepPicker
+        from paasng.engine.phases_steps.steps import DeployStepPicker
 
         names = list(
             DeployStepPicker.pick(engine_app=self.engine_app).list_sorted_step_names(DeployPhaseTypes(self.type))

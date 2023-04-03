@@ -30,8 +30,8 @@ from typing_extensions import Literal
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
-from paas_wl.release_controller.entities import Runtime
 from paas_wl.release_controller.hooks.models import Command as CommandModel
+from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import (
     AppEntity,
@@ -97,7 +97,7 @@ class CommandDeserializer(AppEntityDeserializer['Command']):
             # Pod 描述性信息
             app=app,
             name=kube_data.metadata.name,
-            runtime=Runtime(
+            runtime=ContainerRuntimeSpec(
                 image=main_container.image,
                 command=main_container.command,
                 args=main_container.args,
@@ -216,7 +216,7 @@ class Command(AppEntity):
     :param main_container_fail_message: 主容器执行失败的原因
     """
 
-    runtime: Runtime
+    runtime: ContainerRuntimeSpec
     schedule: Schedule
     # 持久化字段(annotations)
     pk: str
@@ -244,7 +244,7 @@ class Command(AppEntity):
         return cls(
             app=command.app,
             name=CommandKubeAdaptor(command).get_pod_name(),
-            runtime=Runtime(
+            runtime=ContainerRuntimeSpec(
                 image=command.config.get_image(),
                 # 平台镜像默认的 command 应当是 bash /runner/init, 这里应该如何兼容用户自定义镜像呢？
                 # 例如, 将 command 覆盖为 exec ?

@@ -487,7 +487,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Shanghai'
 CELERY_ENABLE_UTC = False
 
-CELERY_IMPORTS = ["paas_wl.release_controller.builder.tasks", "paas_wl.resources.tasks"]
+CELERY_IMPORTS = ["paas_wl.resources.tasks"]
 CELERY_BROKER_TRANSPORT_OPTIONS = settings.get('CELERY_BROKER_TRANSPORT_OPTIONS', {})
 
 if not CELERY_BROKER_TRANSPORT_OPTIONS and is_redis_backend(CELERY_BROKER_URL):

@@ -73,7 +73,7 @@ class ApplicationReleaseMgr(DeployStep):
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(release_id=release_id)
         step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
-        step_obj.mark_and_write_to_steam(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+        step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
 
     def sync_entrance_configs(self):
         """Sync app's default subdomains/subpaths with engine backend"""
@@ -91,7 +91,7 @@ class ApplicationReleaseMgr(DeployStep):
             self.deployment.app_environment.save()
 
         step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
-        step_obj.mark_and_write_to_steam(self.stream, status)
+        step_obj.mark_and_write_to_stream(self.stream, status)
         self.state_mgr.update(release_status=status)
         self.state_mgr.finish(status, err_detail=error_detail, write_to_stream=True)
 

@@ -18,9 +18,10 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.engine.models import Deployment, DeployPhaseTypes
-from paasng.engine.models.steps import DeployStepMeta, StepMetaSet
-from paasng.engine.phases_steps.picker import DeployStepPicker
+from paasng.engine.constants import JobStatus
+from paasng.engine.models import Deployment, DeployPhase, DeployPhaseTypes
+from paasng.engine.models.steps import DeployStep, DeployStepMeta, StepMetaSet
+from paasng.engine.phases_steps.steps import DeployStepPicker, update_step_by_line
 from paasng.platform.modules.helpers import ModuleRuntimeBinder
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner
 
@@ -128,3 +129,123 @@ class TestDeployStepPicker:
         meta_set = DeployStepPicker.pick(bk_deployment.get_engine_app())
         assert meta_set.name == "default"
         assert meta_set.is_default
+
+
+class TestUpdateStepByLine:
+    """Test update_step_by_line function"""
+
+    @pytest.fixture
+    def phase_factory(self, bk_deployment):
+        """Return a factory function to create a phase"""
+
+        def _make(phase_type: DeployPhaseTypes, pattern_maps: dict):
+            phase = DeployPhase.objects.create(
+                type=phase_type.value, engine_app=bk_deployment.get_engine_app(), deployment=bk_deployment
+            )
+
+            for step_name, patterns in pattern_maps.items():
+                meta = DeployStepMeta.objects.create(
+                    phase=phase_type.value,
+                    name=step_name,
+                    started_patterns=patterns[0],
+                    finished_patterns=patterns[1],
+                )
+
+                DeployStep.objects.create(name=step_name, phase=phase, meta=meta)
+            return phase
+
+        return _make
+
+    @pytest.mark.parametrize(
+        "lines,pattern_maps,expected",
+        [
+            (
+                ["xxxx", "yyyy", "qqq"],
+                {
+                    "aa": (["xxx"], ["yyy"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "successful", "bb": "pending"},
+            ),
+            (
+                ["xxxx", "yyyy"],
+                {
+                    "aa": (["xxx"], ["yyy"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "successful", "bb": None},
+            ),
+            (
+                ["xxxx", "www"],
+                {
+                    "aa": (["xxx"], ["yyy"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "pending", "bb": "successful"},
+            ),
+            (
+                ["asdfasdf", "uiuiui"],
+                {
+                    "aa": (["xxx"], ["yyy"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": None, "bb": None},
+            ),
+            (
+                ["-- asdfasdf -- ", "xxx xxx"],
+                {
+                    "aa": (["-- .+ --"], ["xxx .+"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "successful", "bb": None},
+            ),
+            (
+                [
+                    "\u001b[0m\u001b[1m-----> Step setup begin\n",
+                    "\u001b[0m\u001b[3m * Step setup done, duration 4.350117102s\n",
+                ],
+                {
+                    "aa": ([".+-----> Step detect begin"], [".+Step setup done.+"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "successful", "bb": None},
+            ),
+            (
+                [
+                    "\u001b[0m\u001b[m-----> Creating runtime environment\n",
+                    "\u001b[0m\u001b[m-----> Installing binaries\n",
+                ],
+                {
+                    "aa": ([".+Creating runtime environment"], [".+Installing binaries"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "successful", "bb": None},
+            ),
+            (
+                [
+                    "\u001b[0m\u001b[1m-----> Step build begin\n",
+                    "\u001b[0m\u001b[1m-----> Build success\n",
+                ],
+                {
+                    "aa": ([".+Step build begin"], [".+-----> Build success"]),
+                    "bb": (["qqq"], ["www"]),
+                },
+                {"aa": "successful", "bb": None},
+            ),
+        ],
+    )
+    def test_match_and_update(self, lines, pattern_maps, phase_factory, expected):
+        phase = phase_factory(DeployPhaseTypes.BUILD, pattern_maps)
+        saved_maps = {
+            JobStatus.PENDING: phase.get_started_pattern_map(),
+            JobStatus.SUCCESSFUL: phase.get_finished_pattern_map(),
+        }
+
+        for line in lines:
+            update_step_by_line(line, saved_maps, phase)
+
+        steps_status = {}
+        for x in phase.steps.all().values("name", "status"):
+            steps_status[x["name"]] = x["status"]
+
+        assert steps_status == expected

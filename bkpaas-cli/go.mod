@@ -11,6 +11,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/cobra v1.6.1
 	gopkg.in/yaml.v3 v3.0.1
 )

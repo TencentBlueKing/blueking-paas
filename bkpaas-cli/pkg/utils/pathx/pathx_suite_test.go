@@ -16,31 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package path
+package pathx_test
 
 import (
-	"fmt"
-	"path/filepath"
-	"runtime"
+	"testing"
 
-	"github.com/mitchellh/go-homedir"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// GetCurPKGPath 获取当前包的目录
-func GetCurPKGPath() string {
-	// skip == 1 表示获取上一层函数位置
-	_, file, _, ok := runtime.Caller(1)
-	if !ok {
-		panic("get current pkg's path failed")
-	}
-	return filepath.Dir(file)
-}
-
-// GetHomeDir 获取当前用户 Home 目录
-func GetHomeDir() string {
-	dir, err := homedir.Dir()
-	if err != nil {
-		panic(fmt.Sprintf("get home dir failed: %s", err))
-	}
-	return dir
+func TestPath(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "utils/pathx Suite")
 }

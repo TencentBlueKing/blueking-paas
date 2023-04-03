@@ -20,12 +20,12 @@ package action
 
 type DefaultAppDeployer struct{}
 
-func (n DefaultAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
+func (d DefaultAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (n DefaultAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
+func (d DefaultAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -34,12 +34,12 @@ var _ Deployer = DefaultAppDeployer{}
 
 type CNativeAppDeployer struct{}
 
-func (C CNativeAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
+func (d CNativeAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (C CNativeAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
+func (d CNativeAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
 	// TODO implement me
 	panic("implement me")
 }

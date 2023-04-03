@@ -24,11 +24,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCmdDeploy returns a Command instance for 'app view' sub command
+// NewCmdView returns a Command instance for 'app view' sub command
 func NewCmdView() *cobra.Command {
 	return &cobra.Command{
 		Use:                   "view",
-		Short:                 "View PaaSv3 application info",
+		Short:                 "View PaaS application info",
 		DisableFlagsInUseLine: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			displayAppInfo(appCode, appModule, appEnv)
@@ -39,5 +39,5 @@ func NewCmdView() *cobra.Command {
 // 在命令行中展示指定的蓝鲸应用信息
 func displayAppInfo(code, module, env string) {
 	// TODO 调用 API 获取蓝鲸应用信息
-	fmt.Println("implement me...")
+	fmt.Println("Implement me...")
 }

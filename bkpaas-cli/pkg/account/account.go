@@ -23,35 +23,49 @@ import (
 
 	"github.com/TencentBlueKing/gopkg/mapx"
 	"github.com/levigross/grequests"
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
-// IsUserAuthorized 检查用户认证情况（AccessToken 准确 & 未过期 & 身份与 Username 一致）
-func IsUserAuthorized() bool {
+// AuthApiErr Token 鉴权 API 异常
+var AuthApiErr = errors.New("Auth API unavailable")
+
+// AuthApiRespErr Token 鉴权 API 返回格式异常
+var AuthApiRespErr = errors.New("Auth API response not json format")
+
+// TokenExpiredOrInvalid Token 过期或无效
+var TokenExpiredOrInvalid = errors.New("AccessToken expired or invalid")
+
+// FetchUsernameFailedErr 其他无法获取用户名的情况
+var FetchUsernameFailedErr = errors.New("Unable to fetch username")
+
+// FetchUserNameByAccessToken 通过 AccessToken 获取用户名信息
+func FetchUserNameByAccessToken(accessToken string) (string, error) {
 	ro := grequests.RequestOptions{
-		Params: map[string]string{"access_token": config.G.AccessToken},
+		Params: map[string]string{"access_token": accessToken},
 	}
 	resp, err := grequests.Get(config.G.CheckTokenUrl, &ro)
 
 	if resp.StatusCode != http.StatusOK || err != nil {
-		return false
+		return "", AuthApiErr
 	}
 
 	authResp := map[string]any{}
 	if err = resp.JSON(&authResp); err != nil {
-		return false
+		return "", AuthApiRespErr
 	}
 
 	if !mapx.GetBool(authResp, "result") {
-		return false
+		return "", TokenExpiredOrInvalid
 	}
 
-	rtx := mapx.GetStr(authResp, "data.id_providers.rtx.username")
-	uin := mapx.GetStr(authResp, "data.id_providers.uin.username")
-	// 兼容两种鉴权身份，任意身份一致即允许通过
-	if rtx == config.G.Username || uin == config.G.Username {
-		return true
+	if rtx := mapx.GetStr(authResp, "data.id_providers.rtx.username"); rtx != "" {
+		return rtx, nil
 	}
-	return false
+
+	if uin := mapx.GetStr(authResp, "data.id_providers.uin.username"); uin != "" {
+		return uin, nil
+	}
+	return "", FetchUsernameFailedErr
 }

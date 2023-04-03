@@ -10,5 +10,5 @@ checkTokenUrl: https://apigw.example.com/auth/check_token/
 # 用户名（英文名）
 username: admin
 
-# AccessToken 访问 APIGW 的身份凭证
+# AccessToken 访问 apigw 的身份凭证
 accessToken: ""

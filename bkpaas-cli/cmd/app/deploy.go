@@ -28,7 +28,7 @@ import (
 func NewCmdDeploy() *cobra.Command {
 	return &cobra.Command{
 		Use:                   "deploy",
-		Short:                 "Deploy PaaSv3 application",
+		Short:                 "Deploy PaaS application",
 		DisableFlagsInUseLine: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			deployApp()
@@ -39,5 +39,5 @@ func NewCmdDeploy() *cobra.Command {
 // 应用部署
 func deployApp() {
 	// TODO 执行应用部署操作
-	fmt.Println("implement me...")
+	fmt.Println("Implement me...")
 }

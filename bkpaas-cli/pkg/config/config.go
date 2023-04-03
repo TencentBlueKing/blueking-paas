@@ -21,28 +21,36 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/common/envs"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/envx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/pathx"
+)
+
+// 以下变量值可通过环境变量指定
+var (
+	// ConfigFilePath 配置文件所在路径
+	ConfigFilePath = envx.Get("BKPAAS_CLI_CONFIG", filepath.Join(pathx.GetHomeDir(), ".blueking-paas", "config.yaml"))
 )
 
 // G is a global configuration instance that can be used in code logic
-var G *GlobalConf
+var G *Conf
 
 // LoadConf load config from file
-func LoadConf(filePath string) (*GlobalConf, error) {
+func LoadConf(filePath string) (*Conf, error) {
 	yamlFile, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	conf := &GlobalConf{}
+	conf := &Conf{}
 	if err = yaml.Unmarshal(yamlFile, conf); err != nil {
 		return nil, err
 	}
 
-	// post format check
+	// 配置项检查，去除尾斜杠
 	conf.PaaSUrl = strings.TrimSuffix(conf.PaaSUrl, "/")
 	conf.PaaSApigwUrl = strings.TrimSuffix(conf.PaaSApigwUrl, "/")
 
@@ -63,8 +71,8 @@ func DumpConf(filePath string) error {
 	return nil
 }
 
-// GlobalConf is bkpaas-cli global config
-type GlobalConf struct {
+// Conf is bkpaas-cli's config
+type Conf struct {
 	// PaaSApigwUrl PaaS 平台注册的蓝鲸网关访问地址
 	PaaSApigwUrl string `yaml:"paasApigwUrl"`
 	// PaaSUrl PaaS 平台访问地址
@@ -73,14 +81,14 @@ type GlobalConf struct {
 	CheckTokenUrl string `yaml:"checkTokenUrl"`
 	// Username 用户名
 	Username string `yaml:"username"`
-	// AccessToken Apigw 访问凭证
+	// AccessToken apigw 访问凭证
 	AccessToken string `yaml:"accessToken"`
 }
 
-func (c *GlobalConf) String() string {
+func (c *Conf) String() string {
 	return fmt.Sprintf(
 		"configFilePath: %s\n\npaasApigwUrl: %s\npaasUrl: %s\ncheckTokenUrl: %s\nusername: %s\naccessToken: [REDACTED]",
-		envs.ConfigFilePath,
+		ConfigFilePath,
 		G.PaaSApigwUrl,
 		G.PaaSUrl,
 		G.CheckTokenUrl,

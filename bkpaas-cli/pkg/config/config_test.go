@@ -25,11 +25,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/path"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/pathx"
 )
 
 var _ = Describe("TestConfig", func() {
-	confFilePath := path.GetCurPKGPath() + "/../../etc/conf.yaml"
+	confFilePath := pathx.GetCurPKGPath() + "/../../etc/conf.yaml"
 
 	It("TestLoadConfig", func() {
 		conf, err := config.LoadConf(confFilePath)

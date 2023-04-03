@@ -20,6 +20,7 @@ package login
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
@@ -27,7 +28,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/common/envs"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
@@ -44,19 +44,14 @@ func NewCmd() *cobra.Command {
 
 // 用户登录
 func userLogin() {
-	var username string
-
-	fmt.Printf(">>> Username: ")
-	if _, err := fmt.Scanln(&username); err != nil {
-		color.Red("failed to read username, error: " + err.Error())
-		return
-	}
-
-	color.Cyan("Now we will open your browser and access the access_token api.")
+	color.Cyan("Now we will open your browser...")
 	color.Cyan("Please copy and paste the access_token from your browser.")
 
+	// wait 2 seconds for user read tips
+	time.Sleep(2 * time.Second)
+
 	if err := browser.OpenURL(config.G.PaaSUrl + "/backend/api/accounts/oauth/token/"); err != nil {
-		color.Red("failed to open browser, error: " + err.Error())
+		color.Red("Failed to open browser, error: " + err.Error())
 		return
 	}
 
@@ -64,21 +59,23 @@ func userLogin() {
 	fmt.Printf(">>> AccessToken: ")
 	accessToken, err := gopass.GetPasswdMasked()
 	if err != nil {
-		color.Red("failed to read access token, error: " + err.Error())
+		color.Red("Failed to read access token, error: " + err.Error())
+		return
+	}
+
+	fmt.Printf("User login... ")
+	username, err := account.FetchUserNameByAccessToken(string(accessToken))
+	if err != nil {
+		color.Red("Fail!")
+		color.Red(err.Error())
 		return
 	}
 
 	// update global config and dump to file
 	config.G.Username = username
 	config.G.AccessToken = string(accessToken)
-	if err = config.DumpConf(envs.ConfigFilePath); err != nil {
-		color.Red("failed to dump config, error: " + err.Error())
+	if err = config.DumpConf(config.ConfigFilePath); err != nil {
+		color.Red("Failed to dump config, error: " + err.Error())
 	}
-
-	fmt.Printf("User login... ")
-	if account.IsUserAuthorized() {
-		color.Green("success!")
-	} else {
-		color.Red("fail!")
-	}
+	color.Green("Success!")
 }

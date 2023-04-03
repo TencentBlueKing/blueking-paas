@@ -24,14 +24,13 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/TencentBlueKing/blueking-paas/client/cmd"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/common/envs"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
 func main() {
 	// load global config ...
-	if _, err := config.LoadConf(envs.ConfigFilePath); err != nil {
-		color.Red("failed to load config, error: " + err.Error())
+	if _, err := config.LoadConf(config.ConfigFilePath); err != nil {
+		color.Red("Failed to load config, error: " + err.Error())
 		os.Exit(1)
 	}
 

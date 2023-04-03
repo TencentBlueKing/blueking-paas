@@ -16,15 +16,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package envs
+package pathx
 
 import (
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/envx"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/path"
+	"fmt"
+	"path/filepath"
+	"runtime"
+
+	"github.com/mitchellh/go-homedir"
 )
 
-// 以下变量值可通过环境变量指定
-var (
-	// ConfigFilePath 配置文件所在路径
-	ConfigFilePath = envx.Get("BKPAAS_CLI_CONFIG", path.GetHomeDir()+"/.blueking-paas/config.yaml")
-)
+// GetCurPKGPath 获取当前包的目录
+func GetCurPKGPath() string {
+	// skip == 1 表示获取上一层函数位置
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("get current pkg's pathx failed")
+	}
+	return filepath.Dir(file)
+}
+
+// GetHomeDir 获取当前用户 Home 目录
+func GetHomeDir() string {
+	dir, err := homedir.Dir()
+	if err != nil {
+		panic(fmt.Sprintf("get home dir failed: %s", err))
+	}
+	return dir
+}

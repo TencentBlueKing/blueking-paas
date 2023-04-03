@@ -27,7 +27,7 @@ import (
 var appCode, appModule, appEnv string
 
 var appLongDesc = `
-Deploy PaasV3 application using subcommands like "bkpaas-cli app deploy"
+Deploy PaaS application using subcommands like "bkpaas-cli app deploy"
 
 TODO 补充描述内容
 `
@@ -36,7 +36,7 @@ TODO 补充描述内容
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "app",
-		Short:                 "Manage PaaSv3 application",
+		Short:                 "Manage PaaS application",
 		Long:                  appLongDesc,
 		DisableFlagsInUseLine: true,
 		Run:                   cmdUtil.DefaultSubCmdRun(),

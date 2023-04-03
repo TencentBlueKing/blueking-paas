@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package path_test
+package pathx_test
 
 import (
 	"strings"
@@ -24,17 +24,17 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/path"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/pathx"
 )
 
 var _ = Describe("TestPath", func() {
 	It("TestGetCurPKGPath", func() {
-		curPkgPath := path.GetCurPKGPath()
-		Expect(strings.HasSuffix(curPkgPath, "pkg/utils/path")).To(BeTrue())
+		curPkgPath := pathx.GetCurPKGPath()
+		Expect(strings.HasSuffix(curPkgPath, "pkg/utils/pathx")).To(BeTrue())
 	})
 
 	It("TestGetHomeDir", func() {
-		homeDir := path.GetHomeDir()
+		homeDir := pathx.GetHomeDir()
 		Expect(homeDir != "").To(BeTrue())
 	})
 })

@@ -11,8 +11,7 @@ bkpaas-cli 是蓝鲸开发者中心提供的命令行工具，支持应用基础
 bkpaas-cli 提供交互式的用户登录能力，需要你执行 `bkpaas-cli login` 命令以进行登录。
 
 ```shell
->>> Username: admin  // 输入你的用户名
-Now we will open your browser and access the access_token api.
+Now we will open your browser...
 Please copy and paste the access_token from your browser.
 >>> AccessToken: ******  // 从唤起的浏览器窗口中复制并粘贴你的 AccessToken
 User login... success!

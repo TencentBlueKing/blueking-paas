@@ -556,7 +556,7 @@
                     start_time: this.logParams.start_time,
                     end_time: this.logParams.end_time,
                     time_range: this.logParams.time_range,
-                    log_type: this.tabActive === 'customLog' ? 'STRUCTURED' : 'STANDARD_OUTPUT'
+                    log_type: 'STRUCTURED'
                 };
             },
 
@@ -805,11 +805,11 @@
                                 text: option[0]
                             });
                         });
-                        if (condition.id === 'environment') {
+                        if (condition.name === 'environment') {
                             this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
+                        } else if (condition.name === 'process_id') {
                             this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
+                        } else if (condition.name === 'stream') {
                             this.streamList = condition.list;
                         } else {
                             fieldList.push(condition);

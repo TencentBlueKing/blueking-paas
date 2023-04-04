@@ -76,6 +76,7 @@ const mutations = {
     state.processList = [];
   },
 
+  // TODO: 删除 updateFilterData/updateLogList/updateAccessLogList 等函数
   updateFilterData (state, data) {
     const filters = [];
     const fieldList = [];
@@ -92,11 +93,11 @@ const mutations = {
           text: option[0]
         });
       });
-      if (condition.id === 'environment') {
+      if (condition.name === 'environment') {
         state.envList = condition.list;
-      } else if (condition.id === 'process_id') {
+      } else if (condition.name === 'process_id') {
         state.processList = condition.list;
-      } else if (condition.id === 'stream') {
+      } else if (condition.name === 'stream') {
         state.streamList = condition.list;
       } else {
         fieldList.push(condition);
@@ -136,7 +137,8 @@ function queryStringify (params) {
 const actions = {
   getChartData ({ commit, state }, { appCode, moduleId, params, filter }) {
     const queryString = queryStringify(params);
-    const logType = params['log_type'] === 'STRUCTURED' ? 'structured' : 'ingress';
+    const logTypeChoices = {STRUCTURED: 'structured', STANDARD_OUTPUT: 'stdout', INGRESS: 'ingress'};
+    const logType = logTypeChoices[params['log_type']];
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/date_histogram/?${queryString}`;
 
     return http.post(url, filter).then(res => {
@@ -147,7 +149,8 @@ const actions = {
 
   getFilterData ({ commit, state }, { appCode, moduleId, params }) {
     const queryString = queryStringify(params);
-    const logType = params['log_type'] === 'STRUCTURED' ? 'structured' : 'ingress';
+    const logTypeChoices = {STRUCTURED: 'structured', STANDARD_OUTPUT: 'stdout', INGRESS: 'ingress'};
+    const logType = logTypeChoices[params['log_type']];
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/${logType}/fields_filters/?${queryString}`;
     return http.post(url);
   },

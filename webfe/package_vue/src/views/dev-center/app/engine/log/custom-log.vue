@@ -556,7 +556,7 @@
                     start_time: this.logParams.start_time,
                     end_time: this.logParams.end_time,
                     time_range: this.logParams.time_range,
-                    log_type: this.tabActive === 'customLog' ? 'STRUCTURED' : 'STANDARD_OUTPUT'
+                    log_type: 'STRUCTURED'
                 };
             },
 

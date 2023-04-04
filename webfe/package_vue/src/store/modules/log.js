@@ -76,6 +76,7 @@ const mutations = {
     state.processList = [];
   },
 
+  // TODO: 删除 updateFilterData/updateLogList/updateAccessLogList 等函数
   updateFilterData (state, data) {
     const filters = [];
     const fieldList = [];
@@ -92,11 +93,11 @@ const mutations = {
           text: option[0]
         });
       });
-      if (condition.id === 'environment') {
+      if (condition.name === 'environment') {
         state.envList = condition.list;
-      } else if (condition.id === 'process_id') {
+      } else if (condition.name === 'process_id') {
         state.processList = condition.list;
-      } else if (condition.id === 'stream') {
+      } else if (condition.name === 'stream') {
         state.streamList = condition.list;
       } else {
         fieldList.push(condition);

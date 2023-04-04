@@ -27,5 +27,5 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "utils/envx Suite")
+	RunSpecs(t, "pkg/config Suite")
 }

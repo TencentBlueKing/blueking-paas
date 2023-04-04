@@ -24,19 +24,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCmdDeploy returns a Command instance for 'app deploy' sub command
-func NewCmdDeploy() *cobra.Command {
+// NewCmdGetInfo returns a Command instance for 'app get-info' sub command
+func NewCmdGetInfo() *cobra.Command {
 	return &cobra.Command{
-		Use:   "deploy",
-		Short: "Deploy PaaS application",
+		Use:   "get-info",
+		Short: "Get PaaS application info",
 		Run: func(cmd *cobra.Command, args []string) {
-			deployApp()
+			displayAppInfo(appCode, appModule, appEnv)
 		},
 	}
 }
 
-// 应用部署
-func deployApp() {
-	// TODO 执行应用部署操作
+// 在命令行中展示指定的蓝鲸应用信息
+func displayAppInfo(code, module, env string) {
+	// TODO 调用 API 获取蓝鲸应用信息
 	fmt.Println("Implement me...")
 }

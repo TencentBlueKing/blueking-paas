@@ -16,28 +16,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package app
+package apiresources
 
 import (
-	"fmt"
+	"net/http"
 
-	"github.com/spf13/cobra"
+	"github.com/levigross/grequests"
+
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
-// NewCmdView returns a Command instance for 'app view' sub command
-func NewCmdView() *cobra.Command {
-	return &cobra.Command{
-		Use:                   "view",
-		Short:                 "View PaaS application info",
-		DisableFlagsInUseLine: true,
-		Run: func(cmd *cobra.Command, args []string) {
-			displayAppInfo(appCode, appModule, appEnv)
-		},
+// 蓝鲸 apigw api 调用入口
+type apigwRequester struct{}
+
+func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
+	ro := grequests.RequestOptions{
+		Params: map[string]string{"access_token": accessToken},
 	}
+	resp, err := grequests.Get(config.G.CheckTokenUrl, &ro)
+
+	if resp.StatusCode != http.StatusOK || err != nil {
+		return nil, AuthApiErr
+	}
+
+	authResp := map[string]any{}
+	if err = resp.JSON(&authResp); err != nil {
+		return nil, AuthApiRespErr
+	}
+	return authResp, nil
 }
 
-// 在命令行中展示指定的蓝鲸应用信息
-func displayAppInfo(code, module, env string) {
-	// TODO 调用 API 获取蓝鲸应用信息
-	fmt.Println("Implement me...")
-}
+// DefaultRequester 默认 API 调用入口
+var DefaultRequester Requester = &apigwRequester{}

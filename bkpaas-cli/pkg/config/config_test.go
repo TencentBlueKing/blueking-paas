@@ -19,6 +19,7 @@
 package config_test
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -30,12 +31,14 @@ import (
 
 var _ = Describe("TestConfig", func() {
 	confFilePath := pathx.GetCurPKGPath() + "/../../etc/conf.yaml"
+	config.ConfigFilePath = confFilePath
 
 	It("TestLoadConfig", func() {
 		conf, err := config.LoadConf(confFilePath)
 		Expect(err).Should(BeNil())
 
 		Expect(conf.PaaSApigwUrl).To(Equal("http://bkapi.example.com/api/bkpaas3"))
+		Expect(conf.CheckTokenUrl).To(Equal("https://apigw.example.com/auth/check_token/"))
 		Expect(conf.PaaSUrl).To(Equal("https://bkpaas3.example.com"))
 		Expect(conf.Username).To(Equal("admin"))
 		Expect(conf.AccessToken).To(Equal(""))
@@ -56,5 +59,20 @@ var _ = Describe("TestConfig", func() {
 		Expect(conf.AccessToken).To(Equal("a_fake_access_token"))
 
 		_ = os.Remove(tmpFile.Name())
+	})
+
+	It("TestString", func() {
+		conf, err := config.LoadConf(confFilePath)
+		Expect(err).Should(BeNil())
+
+		excepted := fmt.Sprintf(
+			"configFilePath: %s\n\npaasApigwUrl: %s\npaasUrl: %s\ncheckTokenUrl: %s\nusername: %s\naccessToken: [REDACTED]",
+			confFilePath,
+			"http://bkapi.example.com/api/bkpaas3",
+			"https://bkpaas3.example.com",
+			"https://apigw.example.com/auth/check_token/",
+			"admin",
+		)
+		Expect(conf.String()).To(Equal(excepted))
 	})
 })

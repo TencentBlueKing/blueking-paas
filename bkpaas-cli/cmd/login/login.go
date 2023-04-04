@@ -71,11 +71,12 @@ func userLogin() {
 		return
 	}
 
+	color.Green("Success!")
+
 	// update global config and dump to file
 	config.G.Username = username
 	config.G.AccessToken = string(accessToken)
 	if err = config.DumpConf(config.ConfigFilePath); err != nil {
 		color.Red("Failed to dump config, error: " + err.Error())
 	}
-	color.Green("Success!")
 }

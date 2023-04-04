@@ -27,5 +27,5 @@ import (
 
 func TestEnvx(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "utils/envx Suite")
+	RunSpecs(t, "pkg/utils/envx Suite")
 }

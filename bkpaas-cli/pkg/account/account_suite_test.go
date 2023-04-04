@@ -16,27 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package app
+package account_test
 
 import (
-	"fmt"
+	"testing"
 
-	"github.com/spf13/cobra"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// NewCmdDeploy returns a Command instance for 'app deploy' sub command
-func NewCmdDeploy() *cobra.Command {
-	return &cobra.Command{
-		Use:   "deploy",
-		Short: "Deploy PaaS application",
-		Run: func(cmd *cobra.Command, args []string) {
-			deployApp()
-		},
-	}
-}
-
-// 应用部署
-func deployApp() {
-	// TODO 执行应用部署操作
-	fmt.Println("Implement me...")
+func TestAccount(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "pkg/account Suite")
 }

@@ -39,10 +39,13 @@ func NewCmd() *cobra.Command {
 		Short:                 "Manage PaaS application",
 		Long:                  appLongDesc,
 		DisableFlagsInUseLine: true,
-		Run:                   cmdUtil.DefaultSubCmdRun(),
+		PreRun: func(cmd *cobra.Command, args []string) {
+			// TODO 补充身份检查
+		},
+		Run: cmdUtil.DefaultSubCmdRun(),
 	}
 	// 配置信息查看
-	cmd.AddCommand(NewCmdView())
+	cmd.AddCommand(NewCmdGetInfo())
 	// 蓝鲸应用部署
 	cmd.AddCommand(NewCmdDeploy())
 

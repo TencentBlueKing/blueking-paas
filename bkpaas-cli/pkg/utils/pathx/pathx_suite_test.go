@@ -27,5 +27,5 @@ import (
 
 func TestPath(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "utils/pathx Suite")
+	RunSpecs(t, "pkg/utils/pathx Suite")
 }

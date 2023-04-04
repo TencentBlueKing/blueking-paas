@@ -73,7 +73,7 @@ def setup_platform_elk_model():
         builtinFilters={},
         # 结构化日志与标准输出日志共用 index, 通过 stream.keyword 来区分日志类型
         builtinExcludes={"stream": ["stderr", "stdout"]},
-        filedMatcher=r"json\..*",
+        filedMatcher=r"json\..*|environment|process_id|stream",
     )
     ElasticSearchConfig.objects.update_or_create(
         collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID,
@@ -94,7 +94,7 @@ def setup_platform_elk_model():
         termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"},
         builtinFilters={"stream": ["stdout"]},
         builtinExcludes={},
-        filedMatcher=r"client_ip|bytes_sent|user_agent|http_version",
+        filedMatcher=r"client_ip|bytes_sent|user_agent|http_version|environment|process_id|stream",
     )
     ElasticSearchConfig.objects.update_or_create(
         collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID,

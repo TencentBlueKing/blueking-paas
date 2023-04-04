@@ -21,8 +21,8 @@ from unittest import mock
 
 import pytest
 
+from paasng.engine.deploy.interruptions import interrupt_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed
-from paasng.engine.models.deployment import interrupt_deployment
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
 
@@ -43,7 +43,7 @@ class TestInterruptDeployment:
             deployment.build_process_id = str(uuid.uuid4().hex)
             deployment.save()
 
-        with mock.patch('paasng.engine.models.deployment.interrupt_build_proc') as mocked_interrupt:
+        with mock.patch('paasng.engine.deploy.interruptions.interrupt_build_proc') as mocked_interrupt:
             interrupt_deployment(deployment, bk_user)
             assert mocked_interrupt.called is engine_called
 

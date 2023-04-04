@@ -20,13 +20,14 @@ import json
 import logging
 from collections import defaultdict
 from operator import attrgetter
-from typing import Counter, Dict, List
+from typing import Counter, Dict, List, Optional
 
 import jinja2
 from rest_framework.fields import get_attribute
 
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.log.models import ElasticSearchParams
+from paasng.platform.log.utils import get_es_term
 from paasng.platform.modules.models import Module
 from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
@@ -77,8 +78,9 @@ class ESFilter:
     :param search_params: ElasticSearchParams
     """
 
-    def __init__(self, search_params: ElasticSearchParams):
+    def __init__(self, search_params: ElasticSearchParams, mappings: Optional[Dict] = None):
         self.search_params = search_params
+        self.mappings = mappings or {}
 
     def filter_by_builtin_filters(self, search: SmartSearch) -> SmartSearch:
         """根据 params 配置的 builtinFilters 添加过滤条件"""
@@ -86,9 +88,9 @@ class ESFilter:
             return search
         for key, value in self.search_params.builtinFilters.items():
             if isinstance(value, str):
-                search = search.filter("term", **{key: value})
+                search = search.filter("term", **{get_es_term(key, self.mappings): value})
             else:
-                search = search.filter("terms", **{key: value})
+                search = search.filter("terms", **{get_es_term(key, self.mappings): value})
         return search
 
     def filter_by_builtin_excludes(self, search: SmartSearch) -> SmartSearch:
@@ -97,9 +99,9 @@ class ESFilter:
             return search
         for key, value in self.search_params.builtinExcludes.items():
             if isinstance(value, str):
-                search = search.exclude("term", **{key: value})
+                search = search.exclude("term", **{get_es_term(key, self.mappings): value})
             else:
-                search = search.exclude("terms", **{key: value})
+                search = search.exclude("terms", **{get_es_term(key, self.mappings): value})
         return search
 
 
@@ -113,8 +115,8 @@ class EnvFilter(ESFilter):
     :param search_params: ElasticSearchParams
     """
 
-    def __init__(self, env: ModuleEnvironment, search_params: ElasticSearchParams):
-        super().__init__(search_params=search_params)
+    def __init__(self, env: ModuleEnvironment, search_params: ElasticSearchParams, mappings: Optional[Dict] = None):
+        super().__init__(search_params=search_params, mappings=mappings)
         self.env = env
         self.module = env.module
         self.application = env.application
@@ -136,9 +138,14 @@ class EnvFilter(ESFilter):
         # 接入日志平台后查询日志的交互需要调整, 不能再在模块维度查询日志
         # 待前端重构后即可删除这些兼容性代码, 暂不考虑在 search_params 中添加 terms 相关的模板渲染字段
         if "engine_app_name" in term_fields and "tojson" in self.search_params.termTemplate["engine_app_name"]:
-            search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
+            search = search.filter(
+                "terms",
+                **{get_es_term("engine_app_name", self.mappings): json.loads(term_fields.pop("engine_app_name"))}
+            )
         if term_fields:
-            search = search.filter("term", **term_fields)
+            # [term] query doesn't support multiple fields
+            for k, v in term_fields.items():
+                search = search.filter("term", **{get_es_term(k, self.mappings): v})
         return search
 
 
@@ -150,8 +157,8 @@ class ModuleFilter(ESFilter):
     :param search_params: ElasticSearchParams
     """
 
-    def __init__(self, module: Module, search_params: ElasticSearchParams):
-        super().__init__(search_params=search_params)
+    def __init__(self, module: Module, search_params: ElasticSearchParams, mappings: Optional[Dict] = None):
+        super().__init__(search_params=search_params, mappings=mappings)
         self.module = module
         self.application = module.application
 
@@ -173,7 +180,12 @@ class ModuleFilter(ESFilter):
         if "engine_app_name" in term_fields:
             if "tojson" not in self.search_params.termTemplate["engine_app_name"]:
                 raise ValueError("engine_app_name template must be using will tojson filter")
-            search = search.filter("terms", engine_app_name=json.loads(term_fields.pop("engine_app_name")))
+            search = search.filter(
+                "terms",
+                **{get_es_term("engine_app_name", self.mappings): json.loads(term_fields.pop("engine_app_name"))}
+            )
         if term_fields:
-            search = search.filter("term", **term_fields)
+            # [term] query doesn't support multiple fields
+            for k, v in term_fields.items():
+                search = search.filter("term", **{get_es_term(k, self.mappings): v})
         return search

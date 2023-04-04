@@ -28,7 +28,7 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base.bcs_client import BCSClient
 from paas_wl.workloads.processes.controllers import get_processes_status, list_proc_specs
-from paas_wl.workloads.processes.models import ProcessSpecManager
+from paas_wl.workloads.processes.models import DeclarativeProcess, ProcessSpecManager
 from paas_wl.workloads.processes.readers import process_kmodel
 from paasng.engine.models import EngineApp
 
@@ -91,7 +91,7 @@ class ProcessManager:
     def wl_app(self) -> WlApp:
         return self.app.to_wl_obj()
 
-    def sync_processes_specs(self, processes: List[Dict]):
+    def sync_processes_specs(self, processes: List[DeclarativeProcess]):
         """Sync specs by plain ProcessSpec structure
 
         :param processes: plain process spec structure,

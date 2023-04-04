@@ -25,7 +25,13 @@ from django.conf import settings
 
 from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.base.client import K8sScheduler
-from paas_wl.resources.utils.basic import get_client_by_app
+from paas_wl.resources.kube_res.base import Schedule
+from paas_wl.resources.utils.basic import (
+    get_client_by_app,
+    get_cluster_by_app,
+    get_full_node_selector,
+    get_full_tolerations,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,4 +51,13 @@ def get_scheduler_client_by_app(app: 'WlApp') -> 'K8sScheduler':
         settings.K8S_DEFAULT_CONNECT_TIMEOUT,
         settings.K8S_DEFAULT_READ_TIMEOUT,
         AppResVerManager(app).curr_version,
+    )
+
+
+def get_schedule_config(app: 'WlApp') -> 'Schedule':
+    """Get the schedule config of an app."""
+    return Schedule(
+        cluster_name=get_cluster_by_app(app).name,
+        node_selector=get_full_node_selector(app),
+        tolerations=get_full_tolerations(app),
     )

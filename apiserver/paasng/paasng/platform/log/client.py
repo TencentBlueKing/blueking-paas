@@ -208,7 +208,7 @@ class ESLogClient:
         if not all_mappings:
             raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
         first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
-        docs_mappings: Dict = first_mapping["mappings"]
+        docs_mappings: Dict = first_mapping["mappings"]["properties"]
         return docs_mappings
 
     def _get_response_count(self, index: str, search: SmartSearch, timeout: int, response: Response) -> int:

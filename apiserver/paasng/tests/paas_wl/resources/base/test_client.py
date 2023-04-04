@@ -26,9 +26,7 @@ from django.conf import settings
 from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
-from paas_wl.release_controller.builder.procedures import generate_builder_name
-from paas_wl.release_controller.entities import Runtime
+from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.base.controllers import BuildHandler
 from paas_wl.resources.base.exceptions import (
     PodAbsentError,
@@ -42,6 +40,8 @@ from paas_wl.resources.kube_res.base import Schedule
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.kubestatus import parse_pod
 from paas_wl.workloads.processes.managers import AppProcessManager
+from paasng.engine.configurations.building import SlugBuilderTemplate
+from paasng.engine.deploy.bg_build.utils import generate_builder_name
 
 from .test_kres import construct_foo_pod
 
@@ -164,7 +164,7 @@ class TestClientBuild:
         return SlugBuilderTemplate(
             name="slug-builder",
             namespace="bkapp-foo-stag",
-            runtime=Runtime(image="blueking-fake.com:8090/bkpaas/slugrunner:latest", envs={"test": "1"}),
+            runtime=ContainerRuntimeSpec(image="blueking-fake.com:8090/bkpaas/slugrunner:latest", envs={"test": "1"}),
             schedule=Schedule(
                 cluster_name="",
                 node_selector={},

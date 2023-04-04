@@ -46,6 +46,7 @@ from paasng.platform.log.dsl import SearchRequestSchema
 from paasng.platform.log.filters import EnvFilter, ModuleFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
+from paasng.platform.log.shim import setup_env_log_model
 from paasng.platform.log.utils import clean_logs, parse_request_to_es_dsl
 from paasng.utils.error_codes import error_codes
 from paasng.utils.es_log.misc import clean_histogram_buckets
@@ -76,7 +77,9 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
         query_config = self._get_log_query_config(process_type=params.get("process_type"))
-        search = self._make_base_search(search_params=query_config.search_params, time_range=smart_time_range)
+        search = self._make_base_search(
+            search_params=query_config.search_params, time_range=smart_time_range, mappings=mappings
+        )
 
         highlight_query = {}
         if self.request.data:
@@ -97,13 +100,15 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
     def _make_base_search(
         self,
         search_params: ElasticSearchParams,
+        mappings: dict,
         time_range: SmartTimeRange,
         limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
         env = self.get_env_via_path()
-        es_filter = EnvFilter(env=env, search_params=search_params)
+        # 需要根据 mappings 来确定字段查询条件是否需要加 keyword
+        es_filter = EnvFilter(env=env, search_params=search_params, mappings=mappings)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
         search = es_filter.filter_by_env(search)
         search = es_filter.filter_by_builtin_filters(search)
@@ -313,6 +318,9 @@ class LegacyLogAPIMixin(_MixinBase):
         module = self.get_module_via_path()
         stag = module.get_envs("stag")
         prod = module.get_envs("prod")
+        # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
+        setup_env_log_model(stag)
+        setup_env_log_model(prod)
         stag_config = self._get_log_query_config_by_env(stag, process_type=process_type)
         prod_config = self._get_log_query_config_by_env(prod, process_type=process_type)
         if stag_config != prod_config:
@@ -322,13 +330,14 @@ class LegacyLogAPIMixin(_MixinBase):
     def _make_base_search(
         self,
         search_params: ElasticSearchParams,
+        mappings: dict,
         time_range: SmartTimeRange,
         limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
     ) -> SmartSearch:
         module = self.get_module_via_path()
-
-        es_filter = ModuleFilter(module=module, search_params=search_params)
+        # 需要根据 mappings 来确定字段查询条件是否需要加 keyword
+        es_filter = ModuleFilter(module=module, search_params=search_params, mappings=mappings)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
         search = es_filter.filter_by_module(search)
         search = es_filter.filter_by_builtin_filters(search)

@@ -104,7 +104,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
             step = self.phase.get_step_by_name(_("执行部署前置命令"))
         except StepNotInPresetListError:
             return
-        step.mark_and_write_to_steam(stream=self.stream, status=status)
+        step.mark_and_write_to_stream(stream=self.stream, status=status)
 
 
 class CommandPoller(DeployPoller):

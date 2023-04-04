@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
+from typing import Optional
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
@@ -54,6 +55,7 @@ from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
 
 logger = logging.getLogger(__name__)
@@ -150,34 +152,25 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # Add current timestamp in name to avoid conflicts
         default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
 
-        # TODO: Integrity Check
-        deployment = AppModelDeploy.objects.create(
-            application_id=application.id,
-            module_id=module.id,
-            environment_name=env.environment,
-            name=default_name,
-            revision=revision,
-            status=DeployStatus.PENDING.value,
-            operator=request.user,
-        )
-
+        deployment = None
+        deployed_manifest = None
         try:
+            # TODO: Integrity Check
+            deployment = AppModelDeploy.objects.create(
+                application_id=application.id,
+                module_id=module.id,
+                environment_name=env.environment,
+                name=default_name,
+                revision=revision,
+                status=DeployStatus.PENDING.value,
+                operator=request.user,
+            )
             deployed_manifest = deploy(env, deployment.build_manifest(env, credential_refs=credential_refs))
-        except UnprocessibleEntityError as e:
-            # 格式错误类异常（422）允许将错误信息提供给用户
-            raise error_codes.DEPLOY_BKAPP_FAILED.f(
-                f"app: {application.code}, env: {environment}, summary: {e.summary()}"
-            )
         except Exception as e:
-            logger.exception(
-                "failed to deploy bkapp, app: %s, code: %s, env: %s, reason: %s",
-                application.name,
-                application.code,
-                environment,
-                e,
-            )
-            raise error_codes.DEPLOY_BKAPP_FAILED.f(f"app: {application.code}, env: {environment}")
+            self._handle_deploy_failed(application, environment, deployment=deployment, exception=e)
 
+        assert deployment is not None
+        # TODO: 统计成功 metrics
         # Poll status in background
         AppModelDeployStatusPoller.start({'deploy_id': deployment.id}, DeployStatusHandler)
         return Response(deployed_manifest)
@@ -208,6 +201,32 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return AppModelDeploy.objects.filter(
             application_id=application.id, module_id=module.id, environment_name=self.kwargs["environment"]
         )
+
+    def _handle_deploy_failed(
+        self, application: Application, environment: str, deployment: Optional[AppModelDeploy], exception: Exception
+    ):
+        # TODO: 统计失败 metrics
+        # DEPLOYMENT_INFO_COUNTER.labels(
+        #     source_type=module.source_type, environment=self.kwargs["environment"], status="failed"
+        # ).inc()
+        if deployment is not None:
+            deployment.status = DeployStatus.ERROR
+            deployment.save(update_fields=["status", "updated"])
+
+        if isinstance(exception, UnprocessibleEntityError):
+            # 格式错误类异常（422）允许将错误信息提供给用户
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(
+                f"app: {application.code}, env: {environment}, summary: {exception.summary()}"
+            )
+
+        logger.exception(
+            "failed to deploy bkapp, app: %s, code: %s, env: %s, reason: %s",
+            application.name,
+            application.code,
+            environment,
+            exception,
+        )
+        raise error_codes.DEPLOY_BKAPP_FAILED.f(f"app: {application.code}, env: {environment}")
 
 
 class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):

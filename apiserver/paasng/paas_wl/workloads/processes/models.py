@@ -110,14 +110,14 @@ class ProcessSpecManager:
     def __init__(self, wl_app: 'WlApp'):
         self.wl_app = wl_app
 
-    def sync(self, processes: List[Dict]):
+    def sync(self, processes: List['DeclarativeProcess']):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: plain process spec structure,
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
         """
-        processes_map = {process["name"]: process for process in processes}
+        processes_map: Dict[str, 'DeclarativeProcess'] = {process.name: process for process in processes}
         environment = get_metadata(self.wl_app).environment
 
         # Hardcode proc_type to "process" because no other values is supported at this moment.
@@ -136,15 +136,15 @@ class ProcessSpecManager:
         adding_proc_specs = [process for name, process in processes_map.items() if name not in existed_procs_name]
         spec_create_bulks = []
         for process in adding_proc_specs:
-            target_replicas = process.get("replicas") or self.get_default_replicas(process["name"], environment)
+            target_replicas = process.replicas or self.get_default_replicas(process.name, environment)
             plan = default_process_spec_plan
-            if plan_name := process.get("plan"):
+            if plan_name := process.plan:
                 plan = self.get_plan(plan_name, default_process_spec_plan)
 
             process_spec = ProcessSpec(
                 type=proc_type,
                 region=self.wl_app.region,
-                name=process["name"],
+                name=process.name,
                 engine_app_id=self.wl_app.pk,
                 target_replicas=target_replicas,
                 plan=plan,
@@ -157,19 +157,19 @@ class ProcessSpecManager:
         updating_proc_specs = [process for name, process in processes_map.items() if name in existed_procs_name]
         spec_update_bulks = []
         for process in updating_proc_specs:
-            process_spec = proc_specs.get(name=process["name"])
+            process_spec = proc_specs.get(name=process.name)
             changed = False
-            if plan_name := process.get("plan"):
+            if plan_name := process.plan:
                 if plan := self.get_plan(plan_name, None):
                     changed = True
                     process_spec.plan = plan
-            if replicas := process.get("replicas"):
+            if replicas := process.replicas:
                 changed = True
                 process_spec.target_replicas = replicas
             if changed:
                 spec_update_bulks.append(process_spec)
         if spec_update_bulks:
-            ProcessSpec.objects.bulk_update(spec_update_bulks, ["target_replicas", "plan"])
+            ProcessSpec.objects.bulk_update(spec_update_bulks, ["target_replicas", "plan", "updated"])
 
     @staticmethod
     def get_default_replicas(process_type: str, environment: str):
@@ -199,6 +199,21 @@ def initialize_default_proc_spec_plans():
 
 
 # Django models end
+
+
+@dataclass
+class DeclarativeProcess:
+    """This class declare process which can be used to sync process spec
+
+    :param command: 启动指令
+    :param replicas: 副本数
+    :param plan: 资源方案名称
+    """
+
+    name: str
+    command: str
+    replicas: Optional[int] = None
+    plan: Optional[str] = None
 
 
 @dataclass

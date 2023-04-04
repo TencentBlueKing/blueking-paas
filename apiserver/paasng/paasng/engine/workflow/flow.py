@@ -26,6 +26,7 @@ import redis
 from django.utils.encoding import force_text
 from django.utils.translation import gettext as _
 
+from paasng.dev_resources.servicehub import exceptions
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.exceptions import DeployShouldAbortError, StepNotInPresetListError
@@ -65,28 +66,27 @@ class DeployProcedure:
         self.title = title
         self.deployment = deployment
         self.phase = phase
-
         self.step_obj = self._get_step_obj(title)
 
     def __enter__(self):
         self.stream.write_title(f'{self.TITLE_PREFIX}{self.title}')
 
         if self.step_obj:
-            self.step_obj.mark_and_write_to_steam(self.stream, JobStatus.PENDING)
+            self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             if self.step_obj:
-                self.step_obj.mark_and_write_to_steam(self.stream, JobStatus.SUCCESSFUL)
+                self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
 
             return False
 
         # Only exception `DeployShouldAbortError` should be outputed directly into the stream,
         # While other exceptions should be masked as "Unknown error" instead for better user
         # experience.
-        if exc_type in [DeployShouldAbortError]:
+        if exc_type in [DeployShouldAbortError, exceptions.ProvisionInstanceError]:
             msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
                 title=Style.Title(self.title), reason=Style.Warning(exc_val)
             )
@@ -101,14 +101,15 @@ class DeployProcedure:
         self.stream.write_message(msg, StreamType.STDERR)
 
         if self.step_obj:
-            self.step_obj.mark_and_write_to_steam(self.stream, JobStatus.FAILED)
+            self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
         if self.phase:
-            self.phase.mark_and_write_to_steam(self.stream, JobStatus.FAILED)
+            self.phase.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
         return False
 
     def _get_step_obj(self, title: str) -> Optional['DeployStepModel']:
         if not self.deployment:
             return None
+
         logger.debug("trying to get step by title<%s>", title)
         try:
             return self.phase.get_step_by_name(title)

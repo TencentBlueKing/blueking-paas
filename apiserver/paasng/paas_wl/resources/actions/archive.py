@@ -21,6 +21,7 @@ import logging
 from typing import Optional
 
 from paas_wl.monitoring.app_monitor.managers import make_bk_monitor_controller
+from paas_wl.platform.applications.models import Release
 from paas_wl.workloads.processes.controllers import get_proc_mgr
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -41,5 +42,6 @@ class ArchiveOperationController:
     def stop_all_processes(self):
         """Stop all processes"""
         ctl = get_proc_mgr(env=self.env)
-        for spec in self.env.wl_app.process_specs.all():
-            ctl.stop(proc_type=spec.name)
+        release = Release.objects.get_latest(self.env.wl_app)
+        for proc_type in release.get_procfile().keys():
+            ctl.stop(proc_type=proc_type)

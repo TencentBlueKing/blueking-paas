@@ -46,6 +46,11 @@ urlpatterns = [
         views.StdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
         name='api.logs.stdout.query_logs',
     ),
+    re_path(
+        make_app_pattern(r'/log/stdout/fields_filters/$'),
+        views.StdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        name='api.logs.stdout.aggregate_fields_filters',
+    ),
     # Ingress 日志
     re_path(
         make_app_pattern(r'/log/ingress/list/$'),
@@ -82,6 +87,11 @@ urlpatterns = [
         make_app_pattern(r'/log/stdout/list/$', include_envs=False),
         views.LegacyStdoutLogAPIView.as_view({"post": "query_logs_scroll"}),
         name='api.logs.stdout.query_logs.legacy',
+    ),
+    re_path(
+        make_app_pattern(r'/log/stdout/fields_filters/$', include_envs=False),
+        views.LegacyStdoutLogAPIView.as_view({"post": "aggregate_fields_filters"}),
+        name='api.logs.stdout.aggregate_fields_filters.legacy',
     ),
     re_path(
         make_app_pattern(r'/log/ingress/list/$', include_envs=False),

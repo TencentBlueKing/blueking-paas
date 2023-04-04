@@ -27,8 +27,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.procs import get_proc_specs
 from paas_wl.networking.ingress.utils import get_service_dns_name
 from paas_wl.platform.applications.constants import WlAppType
@@ -166,9 +164,6 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # For cloud-native apps: Attach ProcessSpec-like data which have fewer
         # properties, it's useful for the client when implementing process actions
         data['cnative_proc_specs'] = CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
-
-        # attach autoscaling feature flag
-        data['enable_autoscaling'] = get_cluster_by_app(wl_app).has_feature_flag(ClusterFeatureFlag.ENABLE_AUTOSCALING)
         return Response(data)
 
     @rate_limits_by_user(UserAction.WATCH_PROCESS, window_size=60, threshold=10)

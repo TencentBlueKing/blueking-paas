@@ -49,7 +49,7 @@ def gpa_manifest() -> Dict[str, Any]:
         'apiVersion': 'autoscaling.tkex.tencent.com/v1alpha1',
         'kind': 'GeneralPodAutoscaler',
         'metadata': {
-            'name': 'bkapp-xx123-stag--web',
+            'name': 'web',
             'annotations': {
                 'bkapp.paas.bk.tencent.com/process-name': 'web',
             },
@@ -126,10 +126,10 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
     process = Process.from_release(type_="web", release=wl_release)
 
     serializer = ProcAutoscalingSerializer(ProcAutoscaling, gpa_gvk_config)
-    assert serializer.get_res_name(scaling) == f"{wl_app.scheduler_safe_name}--{process.name}"
+    assert serializer.get_res_name(scaling) == process.name
 
     excepted = gpa_manifest
-    excepted['metadata']['name'] = f"{wl_app.scheduler_safe_name}--{process.name}"
+    excepted['metadata']['name'] = process.name
     excepted['metadata']['namespace'] = wl_app.namespace
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 

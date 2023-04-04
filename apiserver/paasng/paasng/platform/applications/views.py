@@ -37,7 +37,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.shim import RegionClusterService
+from paas_wl.cluster.utils import get_cluster_by_app
 from paasng.accessories.bk_lesscode.client import make_bk_lesscode_client
 from paasng.accessories.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
@@ -908,6 +910,14 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
     def list(self, request, code):
         application = self.get_application()
         return Response(application.feature_flag.get_application_features())
+
+    @swagger_auto_schema(tags=["特性标记"])
+    @perm_classes([application_perm_class(AppAction.VIEW_BASIC_INFO)], policy='merge')
+    def list_with_env(self, request, code, module_name, environment):
+        """根据应用部署环境获取 FeatureFlag 信息，适用于需要区分环境的场景"""
+        cluster = get_cluster_by_app(self.get_wl_app_via_path())
+        response_data = {ff: cluster.has_feature_flag(ff) for ff in [ClusterFeatureFlag.ENABLE_AUTOSCALING]}
+        return Response(response_data)
 
     @swagger_auto_schema(tags=["特性标记"])
     @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy='merge')

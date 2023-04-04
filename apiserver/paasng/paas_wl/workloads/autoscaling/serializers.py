@@ -54,7 +54,7 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         """deserialize process auto scaling config for default type(Heroku) app"""
         return self.entity_type(
             app=app,
-            name=self._get_process_type(kube_data),
+            name=kube_data.metadata.name,
             spec=AutoscalingConfig(
                 min_replicas=kube_data.spec.minReplicas,
                 max_replicas=kube_data.spec.maxReplicas,
@@ -71,16 +71,6 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         """deserialize process auto scaling config for cloud native type app"""
         raise NotImplementedError('work in progress')
 
-    @staticmethod
-    def _get_process_type(gpa: ResourceInstance) -> str:
-        """Get process type for general pod autoscaler resource"""
-        process_type = gpa.metadata.annotations.get(PROCESS_NAME_KEY)
-        if process_type:
-            return process_type
-
-        # 如果 gpa 的注解中没有 PROCESS_NAME_KEY，则通过 gpa 的名称来解析出 process_type
-        return gpa.metadata.name.split('-')[-1]
-
     def _parse_metrics(self, gpa: ResourceInstance) -> List[ScalingMetric]:
         """Parse metrics for general pod autoscaler resource"""
         metrics: List[ScalingMetric] = []
@@ -93,20 +83,20 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
                 ScalingMetric(
                     name=m.resource.name,
                     type=m.resource.target.type,
-                    raw_value=self._get_metric_raw_value(m.resource.target),
+                    value=self._get_metric_value(m.resource.target),
                 )
             )
 
         return metrics
 
-    def _get_metric_raw_value(self, metric_target: Dict[str, Union[str, int]]) -> Union[str, int]:
+    def _get_metric_value(self, metric_target: Dict[str, Union[str, int]]) -> str:
         """将 gpa 配置中的 averageValue/averageUtilization 转换为统一的数值"""
         metric_type = metric_target['type']
         if metric_type == ScalingMetricType.UTILIZATION:
-            return metric_target['averageUtilization']
+            return str(metric_target['averageUtilization'])
 
         if metric_type == ScalingMetricType.AVERAGE_VALUE:
-            return metric_target['averageValue']
+            return str(metric_target['averageValue'])
 
         raise ValueError('unsupported metric type: {}'.format(metric_type))
 
@@ -116,17 +106,13 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
 
     api_version = 'autoscaling.tkex.tencent.com/v1alpha1'
 
-    def get_res_name(self, obj: 'ProcAutoscaling', **kwargs) -> str:
-        """根据规则，生成 GPA 资源名称"""
-        return f"{obj.app.scheduler_safe_name}--{obj.name}"
-
     def serialize(self, obj: 'ProcAutoscaling', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
         manifest: Dict[str, Any] = {
             'apiVersion': self.get_apiversion(),
             'kind': obj.Meta.kres_class.kind,
             'metadata': {
                 'namespace': obj.app.namespace,
-                'name': self.get_res_name(obj),
+                'name': obj.name,
                 'annotations': {PROCESS_NAME_KEY: obj.name},
             },
             'spec': {
@@ -158,11 +144,12 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         """
         if metric.type == ScalingMetricType.UTILIZATION:
             # 资源使用率百分比
-            value_key = 'averageUtilization'
+            value_key, value = 'averageUtilization', int(metric.value)
+
         elif metric.type == ScalingMetricType.AVERAGE_VALUE:
             # 资源使用绝对数值
-            value_key = 'averageValue'
+            value_key, value = 'averageValue', metric.value  # type: ignore
         else:
             raise ValueError('unsupported metric type: {}'.format(metric.type))
 
-        return {'name': metric.name, 'target': {'type': metric.type, value_key: metric.raw_value}}
+        return {'name': metric.name, 'target': {'type': metric.type, value_key: value}}

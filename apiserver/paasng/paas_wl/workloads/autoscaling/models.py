@@ -17,9 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
-from typing import List, Union
-
-from kubernetes.utils import parse_quantity
+from typing import List
 
 from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
 
@@ -32,25 +30,9 @@ class ScalingMetric:
     name: ScalingMetricName
     # 指标类型：AverageValue / Utilization
     type: ScalingMetricType
-    # 指标值：当类型为 Utilization 时，值为整数类型（单位 %）
-    # 当类型为 AverageValue 时，值为字符串，单位为 m(cpu)/Mi(memory)
-    raw_value: Union[str, int]
-
-    @property
-    def value(self):
-        if self.type == ScalingMetricType.UTILIZATION:
-            return int(self.raw_value)
-
-        if self.type == ScalingMetricType.AVERAGE_VALUE:
-            if self.name == ScalingMetricName.CPU:
-                return int(parse_quantity(self.raw_value) * 1000)
-
-            if self.name == ScalingMetricName.MEMORY:
-                return int(parse_quantity(self.raw_value) / (1024 * 1024))
-
-            raise ValueError('unsupported metric name: {}'.format(self.name))
-
-        raise ValueError('unsupported metric type: {}'.format(self.type))
+    # 指标值：百分比（Utilization）单位为 %
+    # 或绝对数值（AverageValue）单位应为 m(cpu)/Mi(memory)
+    value: str
 
 
 @dataclass

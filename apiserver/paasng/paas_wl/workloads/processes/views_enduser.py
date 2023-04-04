@@ -83,10 +83,10 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_OPERATE_PROCESS.f('环境已下架')
 
         wl_app = self.get_wl_app_via_path()
-        process_type = data["process_type"]
-        operate_type = data["operate_type"]
+        process_type = data['process_type']
+        operate_type = data['operate_type']
+        autoscaling = data['autoscaling']
         target_replicas = data.get('target_replicas')
-        # 如果参数中包含自动扩缩容信息，则进行类型转换
         scaling_config = data.get('scaling_config')
 
         try:
@@ -94,9 +94,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except ProcessOperationTooOften as e:
             raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
-        self._perform_update(
-            module_env, operate_type, process_type, data['autoscaling'], target_replicas, scaling_config
-        )
+        self._perform_update(module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config)
 
         # Create application operation log
         op_type = self.get_logging_operate_type(operate_type)

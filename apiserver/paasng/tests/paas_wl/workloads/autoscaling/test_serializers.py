@@ -100,17 +100,17 @@ def scaling(wl_app) -> ProcAutoscaling:
                 ScalingMetric(
                     name=ScalingMetricName.CPU,
                     type=ScalingMetricType.AVERAGE_VALUE,
-                    raw_value="1000m",
+                    value="1000m",
                 ),
                 ScalingMetric(
                     name=ScalingMetricName.MEMORY,
                     type=ScalingMetricType.UTILIZATION,
-                    raw_value=80,
+                    value="80",
                 ),
                 ScalingMetric(
                     name=ScalingMetricName.MEMORY,
                     type=ScalingMetricType.AVERAGE_VALUE,
-                    raw_value="256Mi",
+                    value="256Mi",
                 ),
             ],
         ),

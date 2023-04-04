@@ -538,10 +538,13 @@ class ProcAutoscalingHandler(ResourceHandlerBase):
     def deploy(self, scaling: ProcAutoscaling):
         """向集群中下发 GPA （创建/更新）"""
         try:
-            self.manager.update(scaling, "replace", mapper_version=self.mapper_version, allow_not_concrete=True)
+            existed = self.manager.get(app=scaling.app, name=scaling.name)
+            scaling._kube_data = existed._kube_data
         except AppEntityNotFound:
-            self.manager.create(scaling, mapper_version=self.mapper_version)
+            self.manager.create(scaling)
+        else:
+            self.manager.update(scaling, "patch", allow_not_concrete=True, content_type='application/merge-patch+json')
 
     def delete(self, scaling: ProcAutoscaling):
         """删除集群中的 GPA"""
-        self.manager.delete(scaling, non_grace_period=True)
+        self.manager.delete_by_name(scaling.app, scaling.name)

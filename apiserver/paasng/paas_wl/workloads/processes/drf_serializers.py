@@ -16,10 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 from uuid import UUID
 
 import arrow
+import cattr
 from django.utils.translation import ugettext_lazy as _
 from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
@@ -121,16 +122,7 @@ class ScaleMetricSLZ(serializers.Serializer):
 
     name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
     type = serializers.ChoiceField(required=True, choices=ScalingMetricType.get_choices())
-    value = serializers.IntegerField(required=True, help_text=_('资源指标值/百分比'))
-    raw_value = serializers.SerializerMethodField()
-
-    def get_raw_value(self, attrs) -> Union[str, int]:
-        """获取带单位的字面值"""
-        if attrs['type'] == ScalingMetricType.AVERAGE_VALUE:
-            value_tmpl = '{}m' if attrs['name'] == ScalingMetricName.CPU else '{}Mi'
-            return value_tmpl.format(attrs['value'])
-
-        return attrs['value']
+    value = serializers.CharField(required=True, help_text=_('资源指标值/百分比'))
 
 
 class ScalingConfigSLZ(serializers.Serializer):
@@ -164,9 +156,9 @@ class UpdateProcessSLZ(serializers.Serializer):
         if not config:
             return None
         try:
-            return AutoscalingConfig(**config)
-        except Exception:
-            raise ValidationError(_('scaling_config 配置格式有误'))
+            return cattr.structure(config, AutoscalingConfig)
+        except Exception as e:
+            raise ValidationError(_('scaling_config 配置格式有误：{}').format(e))
 
 
 class ListProcessesSLZ(serializers.Serializer):

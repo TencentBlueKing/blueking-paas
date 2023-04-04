@@ -45,7 +45,10 @@
         </template>
         <template v-else>
           <div class="empty-wrapper">
-            <i class="bk-icon icon-empty" />
+            <table-empty
+              :keyword="tableEmptyConf.keyword"
+              @clear-filter="clearFilter"
+            />
           </div>
         </template>
       </div>
@@ -81,7 +84,10 @@
                     'box-shadow': '0 2px 6px 0 rgba(0, 0, 0, .2)',
                     'min-height': 'calc(100vh - 175px)'
                 },
-                curSelect: ''
+                curSelect: '',
+                tableEmptyConf: {
+                    keyword: ''
+                }
             };
         },
         computed: {
@@ -127,6 +133,7 @@
                     const regex = new RegExp('(' + payload + ')', 'gi');
                     return (item.name && !!item.name.match(regex)) || (item.description && !!item.description.match(regex));
                 });
+                this.updateTableEmptyConfig();
             },
 
             // 根据query参数选择对应网关
@@ -194,6 +201,14 @@
                     return item.description.replace(regex, '<filtermark>$1</filtermark>');
                 }
                 return this.$t('暂无描述');
+            },
+
+            clearFilter () {
+                this.searchValue = '';
+            },
+
+            updateTableEmptyConfig () {
+                this.tableEmptyConf.keyword = this.searchValue;
             }
         }
     };
@@ -287,6 +302,8 @@
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
+                overflow: hidden;
+                width: 100%;
                 i {
                     font-size: 36px;
                     color: #c3cdd7;

@@ -328,19 +328,29 @@
                 <bk-form-item
                   :rules="varRules.key"
                   :property="'key'"
-                  style="flex: 1 1 25%;"
+                  style="flex: 1 1 25%; width: 0;"
                 >
-                  <bk-input
-                    v-model="varItem.key"
-                    placeholder="KEY"
-                    :clearable="false"
-                    :readonly="isReadOnlyRow(index)"
-                  />
+                  <template v-if="isReadOnlyRow(index)">
+                    <div
+                      v-bk-tooltips="{ content: varItem.key, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
+                      class="desc-form-content"
+                    >
+                      {{ varItem.key }}
+                    </div>
+                  </template>
+                  <template v-else>
+                    <bk-input
+                      v-model="varItem.key"
+                      placeholder="KEY"
+                      :clearable="false"
+                      :readonly="isReadOnlyRow(index)"
+                    />
+                  </template>
                 </bk-form-item>
                 <bk-form-item
                   :rules="varRules.value"
                   :property="'value'"
-                  style="flex: 1 1 25%;"
+                  style="flex: 1 1 25%; width: 0;"
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
@@ -362,7 +372,7 @@
                 <bk-form-item
                   :rules="varRules.description"
                   :property="'description'"
-                  style="flex: 1 1 25%;"
+                  style="flex: 1 1 25%; width: 0;"
                 >
                   <template v-if="isReadOnlyRow(index)">
                     <div
@@ -1634,6 +1644,7 @@
 </style>
 
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .variable-instruction {
         font-size: 14px;
         color: #7b7d8a;
@@ -1716,10 +1727,10 @@
             text-align: left;
             font-size: 12px;
             color: #63656e;
-            overflow: hidden;
             background-color: #fafbfd;
             vertical-align: middle;
             cursor: default;
+            @include ellipsis;
         }
         .bk-inline-form {
             display: flex;

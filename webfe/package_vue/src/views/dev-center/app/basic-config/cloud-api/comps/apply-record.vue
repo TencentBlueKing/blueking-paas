@@ -735,7 +735,8 @@
                     this.tableEmptyConf.keyword = 'placeholder';
                     return;
                 }
-                this.tableEmptyConf.keyword = '';
+                // 恒定条件不展示清空交互
+                this.tableEmptyConf.keyword = '$CONSTANT';
             }
         }
     };

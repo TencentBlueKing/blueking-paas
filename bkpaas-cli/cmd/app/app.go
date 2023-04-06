@@ -19,8 +19,13 @@
 package app
 
 import (
+	"os"
+
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 )
 
@@ -28,8 +33,6 @@ var appCode, appModule, appEnv string
 
 var appLongDesc = `
 Deploy PaaS application using subcommands like "bkpaas-cli app deploy"
-
-TODO 补充描述内容
 `
 
 // NewCmd create application command
@@ -39,8 +42,11 @@ func NewCmd() *cobra.Command {
 		Short:                 "Manage PaaS application",
 		Long:                  appLongDesc,
 		DisableFlagsInUseLine: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			// TODO 补充身份检查
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if !account.IsUserAuthorized(config.G.AccessToken) {
+				color.Red("User unauthorized! Please use `bkpaas-cli login` to login")
+				os.Exit(1)
+			}
 		},
 		Run: cmdUtil.DefaultSubCmdRun(),
 	}
@@ -49,11 +55,5 @@ func NewCmd() *cobra.Command {
 	// 蓝鲸应用部署
 	cmd.AddCommand(NewCmdDeploy())
 
-	// flag 解析 TODO 确认 flags 继承情况
-	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
-	cmd.Flags().StringVarP(&appModule, "module", "", "default", "module name")
-	cmd.Flags().StringVarP(&appEnv, "env", "", "prod", "environment (stag/prod)")
-	// 必须指定 appCode
-	_ = cmd.MarkFlagRequired("code")
 	return cmd
 }

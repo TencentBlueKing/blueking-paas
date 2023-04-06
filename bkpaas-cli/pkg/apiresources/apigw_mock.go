@@ -21,6 +21,7 @@ package apiresources
 // MockedRequester Mocked api 调用入口
 type MockedRequester struct{}
 
+// CheckToken ...
 func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) {
 	// 请求失败的情况
 	if accessToken == "cause_auth_err" {
@@ -84,6 +85,39 @@ func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) 
 				},
 				"uin": map[string]any{
 					"username": "admin2",
+				},
+			},
+		},
+	}, nil
+}
+
+// GetAppInfo ...
+func (r MockedRequester) GetAppInfo(appCode string) (map[string]any, error) {
+	return map[string]any{
+		"application": map[string]any{
+			"code":        appCode,
+			"name":        "test-app",
+			"region":      "region",
+			"region_name": "默认版",
+			"type":        "default",
+			"modules": []any{
+				map[string]any{
+					"name": "default",
+					"repo": map[string]any{
+						"type":         "github",
+						"display_name": "Opensource Community Github",
+						"repo_url":     "https://github.com/octocat/Hello-World.git",
+					},
+					"clusters": map[string]any{
+						"stag": map[string]any{
+							"name":           "default",
+							"bcs_cluster_id": "BCS-K8S-12345",
+						},
+						"prod": map[string]any{
+							"name":           "dev",
+							"bcs_cluster_id": "",
+						},
+					},
 				},
 			},
 		},

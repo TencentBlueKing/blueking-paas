@@ -51,6 +51,6 @@ type Deployer interface {
 type Viewer interface {
 	// Fetch 请求 PaaS API，获取应用某类信息
 	Fetch(appCode string) (map[string]any, error)
-	// String 将某类应用信息转换成可展示的字符串
-	String(info map[string]any) (string, error)
+	// Render 将某类应用信息转换成可展示的字符串
+	Render(info map[string]any) (string, error)
 }

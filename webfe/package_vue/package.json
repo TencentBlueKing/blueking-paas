@@ -5,7 +5,7 @@
   "author": "paas-v3",
   "private": true,
   "scripts": {
-    "dev:te": "cross-env NODE_ENV=development APP_VERSION=te node build/dev-server.js",
+    "dev:te": "APP_VERSION=te bk-cli-service-webpack dev",
     "dev:ee": "cross-env NODE_ENV=development APP_VERSION=ee node build/dev-server.js",
     "dev:ce": "cross-env NODE_ENV=development APP_VERSION=ce node build/dev-server.js",
     "build:te": "cross-env NODE_ENV=production APP_VERSION=te node build/build.js",

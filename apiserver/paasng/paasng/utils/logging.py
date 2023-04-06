@@ -24,7 +24,8 @@ from logstash import formatter
 
 from .local import local
 
-logger = logging.getLogger('root')
+# logging 模块只往标准输出打日志, 避免出现对 redis 的循环依赖
+logger = logging.getLogger("console")
 
 
 class LogstashRedisHandler(logging.Handler):

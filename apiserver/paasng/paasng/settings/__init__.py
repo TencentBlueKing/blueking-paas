@@ -387,6 +387,7 @@ LOGGING = {
         "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
         "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "iam": {"level": settings.get('IAM_LOG_LEVEL', "ERROR"), "handlers": _default_handlers, "propagate": False},
     },
 }

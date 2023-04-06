@@ -106,24 +106,3 @@ Modules:
 }
 
 var _ Viewer = &BasicInfoViewer{}
-
-type AddonsInfoViewer struct{}
-
-// NewAddonsInfoViewer ...
-func NewAddonsInfoViewer() *AddonsInfoViewer {
-	return &AddonsInfoViewer{}
-}
-
-// Fetch 调用 API 获取应用增强服务信息
-func (v *AddonsInfoViewer) Fetch(appCode string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-// Render 将应用增强服务信息渲染为展示用的字符串
-func (v *AddonsInfoViewer) Render(info map[string]any) (string, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-var _ Viewer = &AddonsInfoViewer{}

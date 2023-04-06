@@ -18,25 +18,10 @@
 
 package action
 
-// DeployOptions 部署时需要使用的配置
-type DeployOptions struct {
-	AppCode       string
-	AppType       string
-	GitUrl        string
-	Branch        string
-	Module        string
-	DeployEnv     string
-	BkAppManifest map[string]any
-}
-
-// DeployInfo 部署相关信息
-type DeployInfo struct {
-	DeployInfo string
-}
-
-// DeployResult 部署结果
-type DeployResult struct {
-	Logs string
+// AppInfo 应用信息接口
+type AppInfo interface {
+	// String 将应用信息转换成可打印展示的字符串
+	String() string
 }
 
 // Deployer 部署器接口
@@ -50,7 +35,5 @@ type Deployer interface {
 // Viewer 各类应用信息查询接口
 type Viewer interface {
 	// Fetch 请求 PaaS API，获取应用某类信息
-	Fetch(appCode string) (map[string]any, error)
-	// Render 将某类应用信息转换成可展示的字符串
-	Render(info map[string]any) (string, error)
+	Fetch(appCode string) (AppInfo, error)
 }

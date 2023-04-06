@@ -32,26 +32,26 @@ var _ = Describe("TestFetch", func() {
 	})
 
 	It("TestAppBasicInfoViewer", func() {
-		excepted := map[string]any{
-			"code":    "test-code",
-			"name":    "test-app",
-			"region":  "默认版",
-			"appType": "default",
-			"modules": []map[string]any{
+		excepted := action.AppBasicInfo{
+			Code:    "test-code",
+			Name:    "test-app",
+			Region:  "默认版",
+			AppType: "default",
+			Modules: []action.ModuleBasicInfo{
 				{
-					"name":     "default",
-					"repoType": "Opensource Community Github",
-					"repoUrl":  "https://github.com/octocat/Hello-World.git",
-					"envs": []map[string]any{
+					Name:     "default",
+					RepoType: "Opensource Community Github",
+					RepoURL:  "https://github.com/octocat/Hello-World.git",
+					Envs: []action.EnvBasicInfo{
 						{
-							"name":        "stag",
-							"clusterName": "default",
-							"clusterId":   "BCS-K8S-12345",
+							Name:        "stag",
+							ClusterName: "default",
+							ClusterID:   "BCS-K8S-12345",
 						},
 						{
-							"name":        "prod",
-							"clusterName": "dev",
-							"clusterId":   "",
+							Name:        "prod",
+							ClusterName: "dev",
+							ClusterID:   "",
 						},
 					},
 				},
@@ -63,7 +63,6 @@ var _ = Describe("TestFetch", func() {
 		Expect(info).To(Equal(excepted))
 		Expect(err).To(BeNil())
 
-		_, err = viewer.Render(info)
-		Expect(err).To(BeNil())
+		Expect(info.String() != "").To(BeTrue())
 	})
 })

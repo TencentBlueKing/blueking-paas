@@ -256,7 +256,7 @@ class LogAPIView(LogBaseAPIView):
         )
         if log_config.search_params.filedMatcher:
             matcher = re.compile(log_config.search_params.filedMatcher)
-            fields_filters = [f for f in fields_filters if matcher.fullmatch(f.key)]
+            fields_filters = [f for f in fields_filters if matcher.fullmatch(f.name)]
         return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 

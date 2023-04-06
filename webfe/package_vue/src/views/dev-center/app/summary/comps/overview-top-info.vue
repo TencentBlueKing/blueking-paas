@@ -11,7 +11,7 @@
       <div class="process-info flex-more">
         <div class="left">
           <div class="icon-box mr8">
-            <i class="paasng-icon paasng-process" />
+            <i class="paasng-icon paasng-process-2" />
           </div>
           <div class="description">
             <h4>{{ appInfo.data.processesLen }}</h4>

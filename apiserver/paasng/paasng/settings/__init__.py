@@ -584,6 +584,7 @@ HEALTHZ_PROBES = settings.get(
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
+        'paasng.monitoring.healthz.probes.BKIAMProbe',
     ],
 )
 

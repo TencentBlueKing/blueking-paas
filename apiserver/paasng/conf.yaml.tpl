@@ -162,6 +162,8 @@
 #   - paasng.monitoring.healthz.probes.PlatformMysqlProbe
 #   - paasng.monitoring.healthz.probes.PlatformRedisProbe
 #   - paasng.monitoring.healthz.probes.ServiceHubProbe
+#   - paasng.monitoring.healthz.probes.PlatformBlobStoreProbe
+#   - paasng.monitoring.healthz.probes.BKIAMProbe
 
 ## 蓝鲸的组件 API 的 Healthz 地址
 # COMPONENT_SYSTEM_HEALTHZ_URL: ''

@@ -27,7 +27,7 @@ from django.conf import settings
 from paas_wl.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
-from paas_wl.utils.configs import RegionAwareConfig
+from paasng.utils.configs import RegionAwareConfig
 
 if TYPE_CHECKING:
     from paas_wl.networking.ingress.entities.ingress import PIngressDomain

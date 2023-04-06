@@ -22,30 +22,52 @@ from typing import Dict, Optional
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
-from paas_wl.release_controller.hooks.models import Command
+from paas_wl.release_controller.hooks.models import Command, CommandTemplate
 from paas_wl.resources.actions.exec import AppCommandExecutor
-from paas_wl.utils.redisdb import get_default_redis
-from paas_wl.utils.stream import ConsoleStream, MixedStream, Stream
+from paasng.engine.utils.output import ConsoleStream, DeployStream, RedisWithModelStream
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.core.storages.redisdb import get_default_redis
 
 logger = logging.getLogger(__name__)
 
 
+def exec_command(
+    env: ModuleEnvironment,
+    command_template: CommandTemplate,
+    operator: str,
+    stream_channel_id: Optional[str] = None,
+    extra_envs: Optional[Dict] = None,
+):
+    """run a command in a built slug."""
+    wl_app = env.wl_app
+    build = wl_app.build_set.get(pk=command_template.build_id)
+    cmd_obj = wl_app.command_set.new(
+        type_=command_template.type_,
+        command=command_template.command,
+        build=build,
+        operator=operator,
+    )
+    execute_bg_command.delay(cmd_obj.uuid, stream_channel_id=stream_channel_id, extra_envs=extra_envs or {})
+    return str(cmd_obj.uuid)
+
+
 @shared_task
-def run_command(uuid: str, stream_channel_id: Optional[str] = None, extra_envs: Optional[Dict] = None):
+def execute_bg_command(uuid: str, stream_channel_id: Optional[str] = None, extra_envs: Optional[Dict] = None):
     """execute a command.
 
     :param uuid: pk of Command
     :param stream_channel_id: RedisStreamChannel id
+    :param extra_envs: extra env vars
     """
     command = Command.objects.get(pk=uuid)
-    stream: Stream
+    stream: DeployStream
     executor: AppCommandExecutor
 
     # Make a new channel if stream_channel_id is given
     if stream_channel_id:
         stream_channel = StreamChannel(stream_channel_id, redis_db=get_default_redis())
         stream_channel.initialize()
-        stream = MixedStream(command, stream_channel)
+        stream = RedisWithModelStream(command, stream_channel)
     else:
         stream = ConsoleStream()
 

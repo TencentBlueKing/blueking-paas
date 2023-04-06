@@ -55,6 +55,12 @@ class CommandType(str, StructuredEnum):
         else:
             return "command"
 
+    @classmethod
+    def _missing_(cls, value):
+        if value == "pre_release_hook":
+            return cls.PRE_RELEASE_HOOK
+        return super()._missing_(value)
+
 
 def make_enum_choices(obj):
     """Make django field choices form enum"""

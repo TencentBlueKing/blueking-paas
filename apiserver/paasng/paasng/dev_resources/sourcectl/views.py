@@ -199,8 +199,7 @@ class GitRepoViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def handle_exception(self, exc):
-        logger.exception("unable to fetch repo list: %s", exc)
-
+        # Return a well-formatted response for OauthAuthorizationRequired exception
         if isinstance(exc, OauthAuthorizationRequired):
             return Response(
                 {
@@ -211,8 +210,8 @@ class GitRepoViewSet(viewsets.ViewSet):
                 },
                 403,
             )
-
-        return super().handle_exception(exc)
+        else:
+            return super().handle_exception(exc)
 
     def get_repo_list(self, request, source_control_type):
         """通过用户绑定的 access_token 查询对应仓库列表

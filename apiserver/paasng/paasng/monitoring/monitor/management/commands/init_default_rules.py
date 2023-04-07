@@ -17,10 +17,8 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import time
-from typing import List, Optional
 
 from django.core.management.base import BaseCommand
-from django.db.models import QuerySet
 
 from paasng.monitoring.monitor.alert_rules.ascode import exceptions
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
@@ -34,30 +32,22 @@ class Command(BaseCommand):
         parser.add_argument('--apps', nargs='*', help='specified app code list. optional, default: all')
 
     def handle(self, *args, **options):
-        app_qs = self._get_app_qs(options.get('apps'))
+        app_codes = options.get('apps')
+
+        app_qs = Application.objects.filter(is_active=True, is_deleted=False)
+        if app_codes:
+            app_qs = app_qs.filter(code__in=app_codes)
 
         for app in app_qs:
             # sleep 1s, 减小对监控接口的压力
+            self.stdout.write('Waiting for one second before sending the request to initialize the rules ...')
             time.sleep(1)
             self._init_rules(app)
-
-    def _get_app_qs(self, apps: Optional[List[str]]) -> QuerySet:
-        if not apps:
-            return Application.objects.filter(is_active=True, is_deleted=False)
-
-        app_qs = Application.objects.filter(code__in=apps, is_active=True, is_deleted=False)
-
-        if app_qs.count() != len(apps):
-            valid_apps = app_qs.values_list('code', flat=True)
-            invalid_apps = set(apps) - set(valid_apps)
-            self.stdout.write(self.style.WARNING(f"apps({', '.join(invalid_apps)}) does not exist or is offline"))
-
-        return app_qs
 
     def _init_rules(self, app: Application):
         try:
             AlertRuleManager(app).init_rules()
         except exceptions.AsCodeAPIError as e:
-            self.stdout.write(self.style.ERROR(f'Init default alert rules for {app.code} failed: {e}'))
+            self.stdout.write(self.style.ERROR(f'Initialize default alert rules for {app.code} failed: {e}'))
         else:
-            self.stdout.write(self.style.SUCCESS(f'Init default alert rules for {app.code} success'))
+            self.stdout.write(self.style.SUCCESS(f'Initialize default alert rules for {app.code} success'))

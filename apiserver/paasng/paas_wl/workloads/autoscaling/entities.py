@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 from paas_wl.resources.base import crd
 from paas_wl.resources.kube_res.base import AppEntity
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
 
 
@@ -29,7 +29,7 @@ class ProcAutoscaling(AppEntity):
     """自动伸缩实例定义"""
 
     spec: AutoscalingConfig
-    target_ref: AutoscalingTargetRef
+    target_ref: ScalingObjectRef
 
     class Meta:
         kres_class = crd.GPA

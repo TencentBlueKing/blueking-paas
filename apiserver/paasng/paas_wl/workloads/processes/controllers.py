@@ -37,7 +37,7 @@ from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
 from paas_wl.workloads.processes.constants import ProcessTargetStatus
 from paas_wl.workloads.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
 from paas_wl.workloads.processes.managers import AppProcessManager
@@ -200,7 +200,7 @@ class AppProcessesController:
             raise ValueError('scaling_config required when set autoscaling policy')
 
         kres_client = KDeployment(get_client_by_cluster_name(cluster_name), api_version='')
-        target_ref = AutoscalingTargetRef(
+        target_ref = ScalingObjectRef(
             api_version=kres_client.get_preferred_version(),
             kind=kres_client.kind,
             name=AppResVerManager(self.app).curr_version.deployment(process=self._prepare_process(proc_type)).name,

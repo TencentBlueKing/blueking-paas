@@ -19,12 +19,6 @@ to the current version of the project delivered to anyone in the future.
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
-class ScalingMetricSourceType(str, StructuredEnum):
-    """扩缩容指标来源类型"""
-
-    RESOURCE = EnumField('Resource')
-
-
 class ScalingMetricName(str, StructuredEnum):
     """扩缩容指标名称"""
 
@@ -32,8 +26,16 @@ class ScalingMetricName(str, StructuredEnum):
     MEMORY = EnumField('memory')
 
 
-class ScalingMetricType(str, StructuredEnum):
+class ScalingMetricSourceType(str, StructuredEnum):
     """扩缩容指标类型"""
+
+    RESOURCE = EnumField('Resource')
+    PODS = EnumField('Pods')
+    OBJECT = EnumField('Object')
+
+
+class ScalingMetricTargetType(str, StructuredEnum):
+    """扩缩容指标计量类型"""
 
     UTILIZATION = EnumField('Utilization')
     AVERAGE_VALUE = EnumField('AverageValue')
@@ -42,7 +44,6 @@ class ScalingMetricType(str, StructuredEnum):
 class ScalingEnvName(str, StructuredEnum):
     """扩缩容生效环境"""
 
-    # TODO 普通应用暂时使用不上，云原生应用会用到
     STAG = EnumField('stag', label='仅测试环境')
     PROD = EnumField('prod', label='仅生产环境')
     GLOBAL = EnumField('_global_', label='所有环境')

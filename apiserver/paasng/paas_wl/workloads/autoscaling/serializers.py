@@ -23,8 +23,8 @@ from kubernetes.dynamic import ResourceInstance
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
-from paas_wl.workloads.autoscaling.constants import ScalingMetricSourceType, ScalingMetricType
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef, ScalingMetric
+from paas_wl.workloads.autoscaling.constants import ScalingMetricSourceType, ScalingMetricTargetType
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingMetric, ScalingObjectRef
 from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
                 max_replicas=kube_data.spec.maxReplicas,
                 metrics=self._parse_metrics(kube_data),
             ),
-            target_ref=AutoscalingTargetRef(
+            target_ref=ScalingObjectRef(
                 api_version=kube_data.spec.scaleTargetRef.apiVersion,
                 kind=kube_data.spec.scaleTargetRef.kind,
                 name=kube_data.spec.scaleTargetRef.name,
@@ -75,15 +75,16 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
         """Parse metrics for general pod autoscaler resource"""
         metrics: List[ScalingMetric] = []
         for m in gpa.spec.metric.metrics:
-            # 目前只有 ResourcesMetricSource，不支持其他类型的 metric
+            # TODO 目前 MetricSource 只支持 Resources，需要支持 Pods & Object
             if m.type != ScalingMetricSourceType.RESOURCE:
                 raise ValueError('unsupported metric source type: {}'.format(m.type))
 
             metrics.append(
                 ScalingMetric(
+                    type=m.type,
                     name=m.resource.name,
-                    type=m.resource.target.type,
-                    value=self._get_metric_value(m.resource.target),
+                    target_type=m.resource.target.type,
+                    target_value=self._get_metric_value(m.resource.target),
                 )
             )
 
@@ -92,10 +93,10 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
     def _get_metric_value(self, metric_target: Dict[str, Union[str, int]]) -> str:
         """将 gpa 配置中的 averageValue/averageUtilization 转换为统一的数值"""
         metric_type = metric_target['type']
-        if metric_type == ScalingMetricType.UTILIZATION:
+        if metric_type == ScalingMetricTargetType.UTILIZATION:
             return str(metric_target['averageUtilization'])
 
-        if metric_type == ScalingMetricType.AVERAGE_VALUE:
+        if metric_type == ScalingMetricTargetType.AVERAGE_VALUE:
             return str(metric_target['averageValue'])
 
         raise ValueError('unsupported metric type: {}'.format(metric_type))
@@ -125,6 +126,7 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
                 },
                 'metric': {
                     'metrics': [
+                        # TODO 目前 MetricSource 只支持 Resources，需要支持 Pods & Object
                         {'type': 'Resource', 'resource': self._gen_resource_metric_source(metric)}
                         for metric in obj.spec.metrics
                     ]
@@ -142,14 +144,14 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         内存 绝对数值 -> {"name": "memory", "target": {"type": "AverageValue", "averageValue": "512Mi"}}
         CPU 使用率百分比 -> {"name": "cpu", "target": {"type": Utilization, "averageUtilization": 80}}
         """
-        if metric.type == ScalingMetricType.UTILIZATION:
+        if metric.target_type == ScalingMetricTargetType.UTILIZATION:
             # 资源使用率百分比
-            value_key, value = 'averageUtilization', int(metric.value)
+            value_key, value = 'averageUtilization', int(metric.target_value)
 
-        elif metric.type == ScalingMetricType.AVERAGE_VALUE:
+        elif metric.target_type == ScalingMetricTargetType.AVERAGE_VALUE:
             # 资源使用绝对数值
-            value_key, value = 'averageValue', metric.value  # type: ignore
+            value_key, value = 'averageValue', metric.target_value  # type: ignore
         else:
-            raise ValueError('unsupported metric type: {}'.format(metric.type))
+            raise ValueError('unsupported metric target type: {}'.format(metric.target_type))
 
-        return {'name': metric.name, 'target': {'type': metric.type, value_key: value}}
+        return {'name': metric.name, 'target': {'type': metric.target_type, value_key: value}}

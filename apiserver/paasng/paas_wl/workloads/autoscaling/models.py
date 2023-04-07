@@ -17,22 +17,35 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
+from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
+
+
+@dataclass
+class ScalingObjectRef:
+    """自动扩缩容资源引用"""
+
+    api_version: str
+    kind: str
+    name: str
 
 
 @dataclass
 class ScalingMetric:
     """扩缩容指标配置"""
 
+    # 指标来源类型
+    type: ScalingMetricSourceType
     # 指标名称：cpu / memory
     name: ScalingMetricName
-    # 指标类型：AverageValue / Utilization
-    type: ScalingMetricType
+    # 指标度量类型：AverageValue / Utilization
+    target_type: ScalingMetricTargetType
     # 指标值：百分比（Utilization）单位为 %
     # 或绝对数值（AverageValue）单位应为 m(cpu)/Mi(memory)
-    value: str
+    target_value: str
+    # 指标来源对象，搭配 Object Type 使用
+    described_object: Optional[ScalingObjectRef] = None
 
 
 @dataclass
@@ -45,12 +58,3 @@ class AutoscalingConfig:
     max_replicas: int
     # 扩缩容指标（资源 cpu/memory 等）
     metrics: List[ScalingMetric]
-
-
-@dataclass
-class AutoscalingTargetRef:
-    """自动扩缩容应用目标资源"""
-
-    api_version: str
-    kind: str
-    name: str

@@ -28,7 +28,7 @@ from rest_framework.serializers import ValidationError
 
 from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
+from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
@@ -117,12 +117,26 @@ class CNativeProcSpecSLZ(serializers.Serializer):
         return {"cpu": cpu_quota, "memory": memory_quota}
 
 
+class ScalingObjectRefSLZ(serializers.Serializer):
+    """资源引用"""
+
+    api_version = serializers.CharField(required=True)
+    kind = serializers.CharField(required=True)
+    name = serializers.CharField(required=True)
+
+
 class ScaleMetricSLZ(serializers.Serializer):
     """扩缩容指标"""
 
+    type = serializers.ChoiceField(
+        required=False,
+        default=ScalingMetricSourceType.RESOURCE,
+        choices=ScalingMetricSourceType.get_choices(),
+    )
     name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
-    type = serializers.ChoiceField(required=True, choices=ScalingMetricType.get_choices())
-    value = serializers.CharField(required=True, help_text=_('资源指标值/百分比'))
+    target_type = serializers.ChoiceField(required=True, choices=ScalingMetricTargetType.get_choices())
+    target_value = serializers.CharField(required=True, help_text=_('资源指标值/百分比'))
+    described_object = ScalingObjectRefSLZ(required=False)
 
 
 class ScalingConfigSLZ(serializers.Serializer):

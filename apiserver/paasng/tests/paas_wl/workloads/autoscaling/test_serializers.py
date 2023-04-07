@@ -24,9 +24,9 @@ from kubernetes.dynamic import ResourceInstance
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.kube_res.base import GVKConfig
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricType
+from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, AutoscalingTargetRef, ScalingMetric
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingMetric, ScalingObjectRef
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
 from paas_wl.workloads.processes.models import Process
 
@@ -98,23 +98,26 @@ def scaling(wl_app) -> ProcAutoscaling:
             max_replicas=5,
             metrics=[
                 ScalingMetric(
+                    type=ScalingMetricSourceType.RESOURCE,
                     name=ScalingMetricName.CPU,
-                    type=ScalingMetricType.AVERAGE_VALUE,
-                    value="1000m",
+                    target_type=ScalingMetricTargetType.AVERAGE_VALUE,
+                    target_value="1000m",
                 ),
                 ScalingMetric(
+                    type=ScalingMetricSourceType.RESOURCE,
                     name=ScalingMetricName.MEMORY,
-                    type=ScalingMetricType.UTILIZATION,
-                    value="80",
+                    target_type=ScalingMetricTargetType.UTILIZATION,
+                    target_value="80",
                 ),
                 ScalingMetric(
+                    type=ScalingMetricSourceType.RESOURCE,
                     name=ScalingMetricName.MEMORY,
-                    type=ScalingMetricType.AVERAGE_VALUE,
-                    value="256Mi",
+                    target_type=ScalingMetricTargetType.AVERAGE_VALUE,
+                    target_value="256Mi",
                 ),
             ],
         ),
-        target_ref=AutoscalingTargetRef(
+        target_ref=ScalingObjectRef(
             kind='Deployment',
             api_version='apps/v1',
             name="bkapp-xx123-stag--web",

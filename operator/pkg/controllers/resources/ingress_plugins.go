@@ -33,6 +33,7 @@ import (
 var (
 	registeredIngressPlugins []NginxIngressPlugin
 	accessControlTemplate    *template.Template
+	paasAnalysisTempalte     *template.Template
 )
 
 // NginxIngressPlugin ...
@@ -88,26 +89,78 @@ func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, do
 	return tpl.String()
 }
 
+// PaasAnalysisPlugin paas-analysis module for ingress
+type PaasAnalysisPlugin struct{}
+
+// MakeServerSnippet return server snippet for PA module
+func (p *PaasAnalysisPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+	return ""
+}
+
+// MakeConfigurationSnippet return configuration snippet for PA module
+func (p *PaasAnalysisPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+	if bkapp == nil || bkapp.Annotations == nil {
+		return ""
+	}
+
+	var siteId int64
+	var err error
+
+	// 未配置 anno key 或值非法时跳过注入 PA 的 snippet
+	if v, ok := bkapp.Annotations[v1alpha1.PaaSAnalysisSiteIDAnnoKey]; !ok {
+		return ""
+	} else if siteId, err = strconv.ParseInt(v, 10, 64); err != nil {
+		return ""
+	}
+
+	var tpl bytes.Buffer
+	if err = paasAnalysisTempalte.ExecuteTemplate(&tpl, "pa", struct {
+		PaaSAnalysisSiteID int64
+	}{
+		siteId,
+	}); err != nil {
+		return ""
+	}
+	println(tpl.String())
+	return tpl.String()
+}
+
 func init() {
 	var err error
 
 	accessControlTemplate, err = template.New("acl").Parse(dedent.Dedent(`
         # Blow content was configured by access-control plugin, do not edit
-
+        
         set $bkapp_app_code '{{ .Region }}-{{ .EngineAppName }}';
         set $bkapp_bk_app_code '{{ .AppCode }}';
         set $bkapp_region '{{ .Region }}';
         set $bkapp_env_name '{{ .Environment }}';
-
+        
         set $acc_redis_server_name '{{ .RedisConfigKey }}';
-
+        
         access_by_lua_file $module_access_path/main.lua;
-
+        
         # content of access-control plugin ends`))
 
 	if err != nil {
 		panic(fmt.Errorf("failed to new access control template: %w", err))
 	}
+
+	paasAnalysisTempalte, err = template.New("pa").
+		Parse(dedent.Dedent(`
+        # Blow content was configured by paas-analysis plugin, do not edit
+        
+        set $bkpa_site_id {{ .PaaSAnalysisSiteID }};
+        header_filter_by_lua_file $module_root/paas_analysis/main.lua;
+        
+        # content of paas-analysis plugin ends`))
+
+	if err != nil {
+		panic(fmt.Errorf("failed to new paas-analysis template: %w", err))
+	}
+
+	// PA 无需额外配置, 可以总是启用该插件
+	RegistryPlugin(&PaasAnalysisPlugin{})
 }
 
 // RegistryPlugin 注册插件

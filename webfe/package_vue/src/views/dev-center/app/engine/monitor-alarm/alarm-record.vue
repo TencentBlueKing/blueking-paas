@@ -924,8 +924,12 @@
             },
 
             updateTableEmptyConfig () {
+                const time = this.initDateTimeRange.some(Boolean);
                 if (this.keyword || this.curType || this.curEnv) {
                     this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                } else if (time) {
+                    this.tableEmptyConf.keyword = '$CONSTANT';
                     return;
                 }
                 this.tableEmptyConf.keyword = '';

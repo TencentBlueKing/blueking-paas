@@ -20,18 +20,21 @@
         >
           {{ $t('刷新') }}
         </span>
-        <div
-          v-else
-          class="search-empty-tips"
-        >
-          {{ $t('可以尝试 调整关键词 或') }}
-          <span
-            class="clear-search"
-            @click="handlerClearFilter"
+        <!-- 恒定条件不展示清空交互-->
+        <template v-else>
+          <div
+            v-if="keyword !== '$CONSTANT'"
+            class="search-empty-tips"
           >
-            {{ $t('清空搜索条件') }}
-          </span>
-        </div>
+            {{ $t('可以尝试 调整关键词 或') }}
+            <span
+              class="clear-search"
+              @click="handlerClearFilter"
+            >
+              {{ $t('清空搜索条件') }}
+            </span>
+          </div>
+        </template>
       </template>
     </bk-exception>
   </div>

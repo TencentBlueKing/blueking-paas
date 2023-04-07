@@ -341,6 +341,9 @@
             },
             curAppInfo () {
                 return this.$store.state.curAppInfo;
+            },
+            isCloudApp () {
+                return this.curAppInfo.application.type === 'cloud_native';
             }
         },
         inject: ['changeTab'],
@@ -472,8 +475,9 @@
 
                     // 应用未在生产环境成功部署
                     case 'deploy_prod_env':
+                        const name = this.isCloudApp ? 'cloudAppDeployForProcess' : 'appDeployForProd';
                         this.$router.push({
-                            name: 'appDeployForProd',
+                            name,
                             params: {
                                 id: this.appCode
                             }

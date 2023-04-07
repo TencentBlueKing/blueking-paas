@@ -24,7 +24,7 @@ import store from '@/store';
 import http from '@/api';
 import auth from '@/auth';
 import { bus } from '@/common/bus';
-import '@/common/jquery_tools';
+// import '@/common/jquery_tools';
 import {
   bkBadge, bkButton, bkLink, bkCheckbox, bkCheckboxGroup, bkCol, bkCollapse, bkCollapseItem, bkContainer, bkDatePicker,
   bkDialog, bkDropdownMenu, bkException, bkForm, bkFormItem, bkInfoBox, bkInput, bkLoading, bkMessage,

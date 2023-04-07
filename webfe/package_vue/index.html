@@ -10,19 +10,20 @@
     <div id="app"></div>
     <script>
       // 以下变量由后端服务输出填充
-      var process = {}
-      process.env = {
-        'BK_PAAS3_URL': '$BK_PAAS3_URL' || '', // 蓝鲸 PaaS3.0 平台访问地址
-        'BK_LOGIN_URL': '$BK_LOGIN_URL' || '', // 登录跳转地址
-        'BK_PAAS2_URL': '$BK_PAAS2_URL' || '', // 蓝鲸 PaaS2.0 平台访问地址，用于平台访问链接拼接
-        'BK_DOCS_URL_PREFIX': '$BK_DOCS_URL_PREFIX' || '', // 中心前缀，用于拼接文档地址
-        'BK_APIGW_URL': '$BK_APIGW_URL' || '', // API GW 访问地址
-        'BK_APIGW_DOC_URL': '$BK_APIGW_DOC_URL' || '', // API GW 文档中心地址
-        'BK_LESSCODE_URL': '$BK_LESSCODE_URL' || '', // 用于拼接 lesscode 的访问地址，bk_leescode 作为 Smart 应用部署到 PaaS3.0上
-        'BK_COMPONENT_API_URL': '$BK_COMPONENT_API_URL' || '', // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
-        'BK_ANALYSIS_JS': '$BK_ANALYSIS_JS' || '',  // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
-        'BK_PAAS_VERSION': '$BK_PAAS_VERSION' || ''
-      }
+      // var process = {}
+      // process.env = {
+      //   'BK_PAAS3_URL': '<%= process.env.BK_PAAS3_URL %>' || '', // 蓝鲸 PaaS3.0 平台访问地址
+      //   'BK_LOGIN_URL': '$BK_LOGIN_URL' || '', // 登录跳转地址
+      //   'BK_PAAS2_URL': '$BK_PAAS2_URL' || '', // 蓝鲸 PaaS2.0 平台访问地址，用于平台访问链接拼接
+      //   'BK_DOCS_URL_PREFIX': '$BK_DOCS_URL_PREFIX' || '', // 中心前缀，用于拼接文档地址
+      //   'BK_APIGW_URL': '$BK_APIGW_URL' || '', // API GW 访问地址
+      //   'BK_APIGW_DOC_URL': '$BK_APIGW_DOC_URL' || '', // API GW 文档中心地址
+      //   'BK_LESSCODE_URL': '$BK_LESSCODE_URL' || '', // 用于拼接 lesscode 的访问地址，bk_leescode 作为 Smart 应用部署到 PaaS3.0上
+      //   'BK_COMPONENT_API_URL': '$BK_COMPONENT_API_URL' || '', // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
+      //   'BK_ANALYSIS_JS': '$BK_ANALYSIS_JS' || '',  // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
+      //   'BK_PAAS_VERSION': '$BK_PAAS_VERSION' || ''
+      // }
+      const BACKEND_URL = '<%= process.env.BK_PAAS3_URL %>' + '/backend'
     </script>
     <script src="/static/runtime/runtime.js?version=<%= htmlWebpackPlugin.options.RELEASE_VERSION %>"></script>
     <script>

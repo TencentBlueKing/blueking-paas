@@ -17,7 +17,6 @@
   "devDependencies": {
     "@babel/core": "^7.6.4",
     "@babel/preset-env": "^7.6.3",
-    "autoprefixer": "^9.8.6",
     "babel-loader": "^8.0.6",
     "babel-plugin-import-bk-magic-vue": "^2.1.10",
     "bootstrap": "3.3.7",

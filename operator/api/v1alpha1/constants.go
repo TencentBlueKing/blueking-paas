@@ -70,7 +70,7 @@ const (
 	// DeployIDAnnoKey 注解中存储 bkpaas 部署ID的键名
 	DeployIDAnnoKey = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
 	// PaaSAnalysisSiteIDAnnoKey 注解中存储 PA site id 的键名
-	PaaSAnalysisSiteIDAnnoKey = "bkapp.paas.bk.tencent.com/paas-analysis.site_id"
+	PaaSAnalysisSiteIDAnnoKey = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
 )
 
 const (

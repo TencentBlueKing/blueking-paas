@@ -17,8 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import time
+from typing import List
 
 from django.core.management.base import BaseCommand
+from django.db.models import QuerySet
 
 from paasng.monitoring.monitor.alert_rules.ascode import exceptions
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
@@ -37,12 +39,20 @@ class Command(BaseCommand):
         app_qs = Application.objects.filter(is_active=True, is_deleted=False)
         if app_codes:
             app_qs = app_qs.filter(code__in=app_codes)
+            # 通过 --apps 指定应用时, 需要记录无效的 app_code
+            if len(app_qs) != len(app_codes):
+                self._write_invalid_codes(app_codes, app_qs)
 
         for app in app_qs:
             # sleep 1s, 减小对监控接口的压力
             self.stdout.write('Waiting for one second before sending the request to initialize alert rules ...')
             time.sleep(1)
             self._init_rules(app)
+
+    def _write_invalid_codes(self, app_codes: List[str], app_qs: QuerySet):
+        invalid_app_codes = set(app_codes) - set(app_qs.values_list('code', flat=True))
+        for code in invalid_app_codes:
+            self.stdout.write(self.style.ERROR(f'Initialize alert rules for {code} failed: app is invalid or offline'))
 
     def _init_rules(self, app: Application):
         try:

@@ -121,7 +121,6 @@ func (p *PaasAnalysisPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, dom
 	}); err != nil {
 		return ""
 	}
-	println(tpl.String())
 	return tpl.String()
 }
 

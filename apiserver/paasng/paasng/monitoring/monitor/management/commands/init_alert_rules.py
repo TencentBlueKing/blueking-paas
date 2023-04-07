@@ -26,7 +26,7 @@ from paasng.platform.applications.models import Application
 
 
 class Command(BaseCommand):
-    help = 'Init default alert rules for applications'
+    help = 'Initialize alert rules for applications'
 
     def add_arguments(self, parser):
         parser.add_argument('--apps', nargs='*', help='specified app code list. optional, default: all')
@@ -40,7 +40,7 @@ class Command(BaseCommand):
 
         for app in app_qs:
             # sleep 1s, 减小对监控接口的压力
-            self.stdout.write('Waiting for one second before sending the request to initialize the rules ...')
+            self.stdout.write('Waiting for one second before sending the request to initialize alert rules ...')
             time.sleep(1)
             self._init_rules(app)
 
@@ -48,6 +48,6 @@ class Command(BaseCommand):
         try:
             AlertRuleManager(app).init_rules()
         except exceptions.AsCodeAPIError as e:
-            self.stdout.write(self.style.ERROR(f'Initialize default alert rules for {app.code} failed: {e}'))
+            self.stdout.write(self.style.ERROR(f'Initialize alert rules for {app.code} failed: {e}'))
         else:
-            self.stdout.write(self.style.SUCCESS(f'Initialize default alert rules for {app.code} success'))
+            self.stdout.write(self.style.SUCCESS(f'Initialize alert rules for {app.code} success'))

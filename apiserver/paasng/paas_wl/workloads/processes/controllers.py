@@ -127,7 +127,7 @@ class AppProcessesController:
 
             raise AutoscalingUnsupported("autoscaling can't be used because cluster unsupported.")
 
-        scaling = self._build_proc_autoscaling(cluster.name, proc_type, scaling_config)
+        scaling = self._build_proc_autoscaling(cluster.name, proc_type, autoscaling, scaling_config)
         if autoscaling:
             return self._deploy_autoscaling(scaling)
 
@@ -194,9 +194,9 @@ class AppProcessesController:
             raise ProcessNotFound(proc_type)
 
     def _build_proc_autoscaling(
-        self, cluster_name: str, proc_type: str, scaling_config: Optional[AutoscalingConfig]
+        self, cluster_name: str, proc_type: str, autoscaling: bool, scaling_config: Optional[AutoscalingConfig]
     ) -> ProcAutoscaling:
-        if not scaling_config:
+        if autoscaling and not scaling_config:
             raise ValueError('scaling_config required when set autoscaling policy')
 
         kres_client = KDeployment(get_client_by_cluster_name(cluster_name), api_version='')
@@ -206,7 +206,7 @@ class AppProcessesController:
             name=AppResVerManager(self.app).curr_version.deployment(process=self._prepare_process(proc_type)).name,
         )
 
-        return ProcAutoscaling(app=self.app, name=proc_type, spec=scaling_config, target_ref=target_ref)
+        return ProcAutoscaling(self.app, proc_type, scaling_config, target_ref)  # type: ignore
 
 
 def list_proc_specs(wl_app: WlApp) -> List[Dict]:

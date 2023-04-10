@@ -174,7 +174,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 'product': application.product if hasattr(application, "product") else None,
                 'marked': application.id in marked_application_ids,
                 # 应用市场访问地址信息
-                'market_config': application.market_config,
+                'market_config': MarketConfig.objects.get_or_create_by_app(application)[0],
             }
             for application in page_applications
         ]

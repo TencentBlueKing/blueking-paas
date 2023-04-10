@@ -20,6 +20,7 @@ from typing import Dict, Optional
 from uuid import UUID
 
 import arrow
+import cattr
 from django.utils.translation import ugettext_lazy as _
 from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
@@ -27,6 +28,8 @@ from rest_framework.serializers import ValidationError
 
 from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
+from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
 
@@ -64,14 +67,14 @@ class ProcessSpecSLZ(serializers.Serializer):
     """Serializer for representing process packages
 
     Need to convert the resource limit to a number:
-        "resource_limit": {
-                    "cpu": "100m",
-                    "memory": "64Mi"
-                }
-        "resource_limit_quota": {
-                    "cpu": 100,
-                    "memory": 64
-                }
+    "resource_limit": {
+        "cpu": "100m",
+        "memory": "64Mi"
+    }
+    "resource_limit_quota": {
+        "cpu": 100,
+        "memory": 64
+    }
     """
 
     name = serializers.CharField()
@@ -83,6 +86,8 @@ class ProcessSpecSLZ(serializers.Serializer):
     plan_id = serializers.CharField(source="plan.id")
     plan_name = serializers.CharField(source="plan.name")
     resource_limit_quota = serializers.SerializerMethodField(read_only=True)
+    autoscaling = serializers.BooleanField()
+    scaling_config = serializers.JSONField()
 
     def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
         limits = obj.plan.limits
@@ -112,17 +117,62 @@ class CNativeProcSpecSLZ(serializers.Serializer):
         return {"cpu": cpu_quota, "memory": memory_quota}
 
 
+class ScalingObjectRefSLZ(serializers.Serializer):
+    """资源引用"""
+
+    api_version = serializers.CharField(required=True)
+    kind = serializers.CharField(required=True)
+    name = serializers.CharField(required=True)
+
+
+class ScaleMetricSLZ(serializers.Serializer):
+    """扩缩容指标"""
+
+    type = serializers.ChoiceField(
+        required=False,
+        default=ScalingMetricSourceType.RESOURCE,
+        choices=ScalingMetricSourceType.get_choices(),
+    )
+    name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
+    target_type = serializers.ChoiceField(required=True, choices=ScalingMetricTargetType.get_choices())
+    target_value = serializers.CharField(required=True, help_text=_('资源指标值/百分比'))
+    described_object = ScalingObjectRefSLZ(required=False)
+
+
+class ScalingConfigSLZ(serializers.Serializer):
+    """扩缩容配置"""
+
+    min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
+    max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
+    metrics = serializers.ListField(child=ScaleMetricSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
+
+
 class UpdateProcessSLZ(serializers.Serializer):
     """Serializer for updating processes"""
 
     process_type = serializers.CharField(required=True)
     operate_type = serializers.ChoiceField(required=True, choices=ProcessUpdateType.get_django_choices())
-    target_replicas = serializers.IntegerField(required=False, min_value=1, help_text='仅操作类型为 scale 时使用')
+    target_replicas = serializers.IntegerField(required=False, min_value=1, help_text=_('目标进程副本数'))
+    autoscaling = serializers.BooleanField(required=False, default=False, help_text=_('是否开启自动扩缩容'))
+    scaling_config = ScalingConfigSLZ(required=False, help_text=_('进程扩缩容配置'))
 
-    def validate(self, data: Dict) -> Dict:
-        if data['operate_type'] == ProcessUpdateType.SCALE and not data.get('target_replicas'):
-            raise ValidationError(_('当操作类型为 scale 时，必须提供有效的 target_replicas'))
-        return data
+    def validate(self, attrs: Dict) -> Dict:
+        if attrs['operate_type'] == ProcessUpdateType.SCALE:
+            if attrs['autoscaling']:
+                if not attrs.get('scaling_config'):
+                    raise ValidationError(_('当启用自动扩缩容时，必须提供有效的 scaling_config'))
+            elif not attrs.get('target_replicas'):
+                raise ValidationError(_('当操作类型为扩缩容时，必须提供有效的 target_replicas'))
+
+        return attrs
+
+    def validate_scaling_config(self, config: Dict) -> Optional[AutoscalingConfig]:
+        if not config:
+            return None
+        try:
+            return cattr.structure(config, AutoscalingConfig)
+        except Exception as e:
+            raise ValidationError(_('scaling_config 配置格式有误：{}').format(e))
 
 
 class ListProcessesSLZ(serializers.Serializer):

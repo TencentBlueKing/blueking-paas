@@ -27,6 +27,7 @@ class ProcessUpdateType(str, StructuredEnum):
 
     START = EnumField('start')
     STOP = EnumField('stop')
+    # scale 提供调整副本数量 & 自动扩缩容能力
     SCALE = EnumField('scale')
 
 

@@ -16,26 +16,22 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.base.kres import BaseKresource
+from dataclasses import dataclass
+
+from paas_wl.resources.base import crd
+from paas_wl.resources.kube_res.base import AppEntity
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingObjectRef
+from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
 
 
-class KServiceMonitor(BaseKresource):
-    kind = "ServiceMonitor"
+@dataclass
+class ProcAutoscaling(AppEntity):
+    """自动伸缩实例定义"""
 
+    spec: AutoscalingConfig
+    target_ref: ScalingObjectRef
 
-class BkApp(BaseKresource):
-    """CRD: App model resource feature"""
-
-    kind = 'BkApp'
-
-
-class DomainGroupMapping(BaseKresource):
-    """CRD: Mapping between BkApp and DomainGroups"""
-
-    kind = 'DomainGroupMapping'
-
-
-class GPA(BaseKresource):
-    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
-
-    kind = 'GeneralPodAutoscaler'
+    class Meta:
+        kres_class = crd.GPA
+        deserializer = ProcAutoscalingDeserializer
+        serializer = ProcAutoscalingSerializer

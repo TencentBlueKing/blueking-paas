@@ -26,12 +26,9 @@ from django.utils.functional import cached_property
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.release import Release
-from paas_wl.resources import tasks as scheduler_tasks
 from paas_wl.resources.actions.deploy import AppDeploy
 from paas_wl.resources.base.exceptions import KubeException
-from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.workloads.images.models import AppImageCredential
-from paasng.engine.constants import JobStatus
 from paasng.engine.models.deployment import Deployment
 
 
@@ -75,32 +72,6 @@ class EngineDeployClient:
         initializing because not data can be found in workloads module.
         """
         return self.engine_app.to_wl_obj()
-
-    def run_command(
-        self, build_id: str, command: str, stream_channel_id: str, operator: str, type_: str, extra_envs: Dict
-    ) -> str:
-        """run a command in a built slug."""
-        build = self.wl_app.build_set.get(pk=build_id)
-        cmd_obj = self.wl_app.command_set.new(
-            type_=CommandType(type_),
-            command=command,
-            build=build,
-            operator=operator,
-        )
-
-        scheduler_tasks.run_command.delay(
-            cmd_obj.uuid, stream_channel_id=stream_channel_id, extra_envs=extra_envs or {}
-        )
-        return str(cmd_obj.uuid)
-
-    def get_command_status(self, command_id: str) -> JobStatus:
-        """Get current status of command"""
-        command = self.wl_app.command_set.get(pk=command_id)
-
-        # TODO: Write a function which turn CommandStatus into JobStatus
-        if command.status == CommandStatus.SCHEDULED.value:
-            return JobStatus(CommandStatus.PENDING.value)
-        return JobStatus(command.status)
 
     def list_command_logs(self, command_id: str) -> List[LogLine]:
         """List all logs of command"""

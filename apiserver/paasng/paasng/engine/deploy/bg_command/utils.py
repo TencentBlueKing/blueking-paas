@@ -16,26 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.base.kres import BaseKresource
+from paas_wl.release_controller.hooks.entities import Command as CommandKModel
+from paas_wl.release_controller.hooks.models import Command as CommandModel
+from paas_wl.resources.utils.app import get_scheduler_client_by_app
 
 
-class KServiceMonitor(BaseKresource):
-    kind = "ServiceMonitor"
+def interrupt_command(command: 'CommandModel') -> bool:
+    """Interrupt a command.
 
-
-class BkApp(BaseKresource):
-    """CRD: App model resource feature"""
-
-    kind = 'BkApp'
-
-
-class DomainGroupMapping(BaseKresource):
-    """CRD: Mapping between BkApp and DomainGroups"""
-
-    kind = 'DomainGroupMapping'
-
-
-class GPA(BaseKresource):
-    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
-
-    kind = 'GeneralPodAutoscaler'
+    :param command: Command object
+    """
+    command.set_int_requested_at()
+    app = command.app
+    kmodel = CommandKModel.from_db_obj(command)
+    result = get_scheduler_client_by_app(app).interrupt_command(kmodel)
+    return result

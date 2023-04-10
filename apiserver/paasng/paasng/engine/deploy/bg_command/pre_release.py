@@ -21,11 +21,13 @@ from typing import Dict
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from django.utils.translation import gettext as _
 
+from paas_wl.release_controller.hooks.models import Command, CommandTemplate
+from paas_wl.utils.constants import CommandType
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.base import DeployPoller
-from paasng.engine.deploy.engine_svc import EngineDeployClient
+from paasng.engine.deploy.bg_command.tasks import exec_command
 from paasng.engine.deploy.release import ApplicationReleaseMgr
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models import Deployment
@@ -60,12 +62,15 @@ class ApplicationPreReleaseExecutor(DeployStep):
 
         with self.procedure(_('初始化指令执行环境')):
             extra_envs = get_env_variables(self.engine_app.env, deployment=self.deployment)
-            command_id = self.engine_client.run_command(
-                build_id=str(self.deployment.build_id),
-                command=hook.command,
+            command_id = exec_command(
+                self.engine_app.env,
+                command_template=CommandTemplate(
+                    build_id=str(self.deployment.build_id),
+                    command=hook.command,
+                    type=CommandType(hook.type),
+                ),
+                operator=str(self.deployment.operator),
                 stream_channel_id=str(self.deployment.id),
-                operator=self.deployment.operator.username,
-                type_=hook.type.value,  # type: ignore
                 extra_envs=extra_envs,
             )
 
@@ -115,8 +120,8 @@ class CommandPoller(DeployPoller):
     def query(self) -> PollingResult:
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])
 
-        client = EngineDeployClient(deployment.get_engine_app())
-        command_status = client.get_command_status(self.params['command_id'])
+        command = Command.objects.get(pk=self.params["command_id"])
+        command_status = command.status
 
         coordinator = DeploymentCoordinator(deployment.app_environment)
         # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
@@ -130,7 +135,7 @@ class CommandPoller(DeployPoller):
         else:
             poller_status = PollingStatus.DOING
 
-        result = {"command_status": command_status}
+        result = {"command_status": command_status.to_job_status()}
         return PollingResult(status=poller_status, data=result)
 
 

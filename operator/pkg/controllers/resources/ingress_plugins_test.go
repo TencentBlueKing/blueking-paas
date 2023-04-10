@@ -79,4 +79,34 @@ var _ = Describe("Test ingress_plugins.go", func() {
 			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(""))
 		})
 	})
+
+	Context("test PaasAnalysisPlugin", func() {
+		DescribeTable("test MakeConfigurationSnippet", func(initAction func(), expected string) {
+			By("init", initAction)
+
+			var plugin NginxIngressPlugin = &PaasAnalysisPlugin{}
+			Expect(plugin.MakeConfigurationSnippet(bkapp, nil)).To(Equal(expected))
+		},
+			Entry("when without app metadata", func() {}, ""),
+			Entry("when missing PaaSAnalysisSiteIDAnnoKey", func() { testing.WithAppInfoAnnotations(bkapp) }, ""),
+			Entry("when invalid PaaSAnalysisSiteIDAnnoKey", func() {
+				testing.WithAppInfoAnnotations(bkapp)
+				bkapp.Annotations[paasv1alpha1.PaaSAnalysisSiteIDAnnoKey] = "false"
+			}, ""),
+			Entry("normal case", func() {
+				testing.WithAppInfoAnnotations(bkapp)
+				bkapp.Annotations[paasv1alpha1.PaaSAnalysisSiteIDAnnoKey] = "1"
+			}, dedent.Dedent(`
+        # Blow content was configured by paas-analysis plugin, do not edit
+        
+        set $bkpa_site_id 1;
+        header_filter_by_lua_file $module_root/paas_analysis/main.lua;
+        
+        # content of paas-analysis plugin ends`)))
+
+		It("test MakeServerSnippet", func() {
+			var plugin NginxIngressPlugin = &PaasAnalysisPlugin{}
+			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(""))
+		})
+	})
 })

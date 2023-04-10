@@ -29,7 +29,7 @@ from paas_wl.resources.actions.exec import AppCommandExecutor
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType
-from paas_wl.utils.stream import ConsoleStream
+from paasng.engine.utils.output import ConsoleStream
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -68,8 +68,8 @@ class TestAppCommandExecutor:
 
         out, err = capsys.readouterr()
         assert (
-            out == 'Starting pre-release phase\nexecuting...\n'
-            '1\n2\npre-release phase execution succeed.\nCleaning up pre-release phase container\n'
+            out == 'Starting pre-release phase\n[TITLE]: executing...\n'
+            '1\n2\npre-release phase execution succeed.\n[TITLE]: Cleaning up pre-release phase container\n'
         )
         assert hook.status == CommandStatus.SUCCESSFUL
         assert hook.exit_code == 0
@@ -85,7 +85,7 @@ class TestAppCommandExecutor:
         assert (
             out
             == 'Starting pre-release phase\nPod is not created normally, please contact the cluster administrator.\n'
-            'Cleaning up pre-release phase container\n'
+            '[TITLE]: Cleaning up pre-release phase container\n'
         )
         assert hook.status == CommandStatus.FAILED
         assert hook.exit_code is None
@@ -109,8 +109,8 @@ class TestAppCommandExecutor:
 
         out, err = capsys.readouterr()
         assert (
-            out == 'Starting pre-release phase\nexecuting...\n'
-            '1\n2\nfailed with exit code 1\nCleaning up pre-release phase container\n'
+            out == 'Starting pre-release phase\n[TITLE]: executing...\n'
+            '1\n2\nfailed with exit code 1\n[TITLE]: Cleaning up pre-release phase container\n'
         )
         assert hook.status == CommandStatus.FAILED
         assert hook.exit_code == 1
@@ -141,8 +141,8 @@ class TestAppCommandExecutor:
 
         out, err = capsys.readouterr()
         assert (
-            out == 'Starting pre-release phase\nexecuting...\n'
-            '1\n2\npre-release phase aborted.\nCleaning up pre-release phase container\n'
+            out == 'Starting pre-release phase\n[TITLE]: executing...\n'
+            '1\n2\npre-release phase aborted.\n[TITLE]: Cleaning up pre-release phase container\n'
         )
         assert hook.status == CommandStatus.INTERRUPTED
         assert hook.exit_code == 1

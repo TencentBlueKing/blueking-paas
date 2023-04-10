@@ -102,4 +102,16 @@ class AlertRuleManager:
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""
         rules: List[AppAlertRule] = [config.to_alert_rule_obj() for config in rule_configs]
-        AppAlertRule.objects.bulk_create(rules)
+        for r in rules:
+            AppAlertRule.objects.update_or_create(
+                alert_code=r.alert_code,
+                application=r.application,
+                module=r.module,
+                environment=r.environment,
+                defaults={
+                    'display_name': r.display_name,
+                    'enabled': r.enabled,
+                    'threshold_expr': r.threshold_expr,
+                    'receivers': r.receivers,
+                },
+            )

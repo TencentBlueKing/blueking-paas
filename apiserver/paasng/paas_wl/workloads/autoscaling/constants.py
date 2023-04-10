@@ -16,26 +16,34 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.base.kres import BaseKresource
+from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
-class KServiceMonitor(BaseKresource):
-    kind = "ServiceMonitor"
+class ScalingMetricName(str, StructuredEnum):
+    """扩缩容指标名称"""
+
+    CPU = EnumField('cpu')
+    MEMORY = EnumField('memory')
 
 
-class BkApp(BaseKresource):
-    """CRD: App model resource feature"""
+class ScalingMetricSourceType(str, StructuredEnum):
+    """扩缩容指标类型"""
 
-    kind = 'BkApp'
-
-
-class DomainGroupMapping(BaseKresource):
-    """CRD: Mapping between BkApp and DomainGroups"""
-
-    kind = 'DomainGroupMapping'
+    RESOURCE = EnumField('Resource')
+    PODS = EnumField('Pods')
+    OBJECT = EnumField('Object')
 
 
-class GPA(BaseKresource):
-    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
+class ScalingMetricTargetType(str, StructuredEnum):
+    """扩缩容指标计量类型"""
 
-    kind = 'GeneralPodAutoscaler'
+    UTILIZATION = EnumField('Utilization')
+    AVERAGE_VALUE = EnumField('AverageValue')
+
+
+class ScalingEnvName(str, StructuredEnum):
+    """扩缩容生效环境"""
+
+    STAG = EnumField('stag', label='仅测试环境')
+    PROD = EnumField('prod', label='仅生产环境')
+    GLOBAL = EnumField('_global_', label='所有环境')

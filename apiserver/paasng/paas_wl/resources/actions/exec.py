@@ -46,7 +46,7 @@ class AppCommandExecutor:
 
     scheduler_client: K8sScheduler = field(init=False)
     kmodel: CommandKModel = field(init=False)
-    STEP_NAME: CommandType = field(init=False)
+    STEP_NAME: str = field(init=False)
 
     def __attrs_post_init__(self):
         if not self.command.build:

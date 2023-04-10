@@ -37,12 +37,12 @@ def exec_command(
     operator: str,
     stream_channel_id: Optional[str] = None,
     extra_envs: Optional[Dict] = None,
-):
+) -> str:
     """run a command in a built slug."""
     wl_app = env.wl_app
     build = wl_app.build_set.get(pk=command_template.build_id)
     cmd_obj = wl_app.command_set.new(
-        type_=command_template.type_,
+        type_=command_template.type,
         command=command_template.command,
         build=build,
         operator=operator,

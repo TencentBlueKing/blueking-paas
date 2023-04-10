@@ -22,7 +22,7 @@ from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, Po
 from django.utils.translation import gettext as _
 
 from paas_wl.release_controller.hooks.models import Command, CommandTemplate
-from paas_wl.utils.constants import CommandStatus, CommandType
+from paas_wl.utils.constants import CommandType
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.constants import JobStatus
@@ -67,7 +67,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
                 command_template=CommandTemplate(
                     build_id=str(self.deployment.build_id),
                     command=hook.command,
-                    type_=CommandType(hook.type),
+                    type=CommandType(hook.type),
                 ),
                 operator=str(self.deployment.operator),
                 stream_channel_id=str(self.deployment.id),
@@ -135,10 +135,7 @@ class CommandPoller(DeployPoller):
         else:
             poller_status = PollingStatus.DOING
 
-        # TODO: Write a function which turn CommandStatus into JobStatus
-        if command_status == CommandStatus.SCHEDULED:
-            command_status = CommandStatus.PENDING
-        result = {"command_status": JobStatus(command_status)}
+        result = {"command_status": command_status.to_job_status()}
         return PollingResult(status=poller_status, data=result)
 
 

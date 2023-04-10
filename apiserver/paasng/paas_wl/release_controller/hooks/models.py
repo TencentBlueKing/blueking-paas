@@ -38,12 +38,12 @@ class CommandTemplate:
     """This class declare command which can be used to execute
 
     :param command: 启动指令
-    :param type_: 指令类型
+    :param type: 指令类型
     :param build_id: 构建版本 id
     """
 
     command: str
-    type_: CommandType
+    type: CommandType
     build_id: str
 
 

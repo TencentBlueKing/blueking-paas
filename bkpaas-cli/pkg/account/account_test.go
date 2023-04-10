@@ -41,7 +41,7 @@ var _ = Describe("TestConfig", func() {
 			Expect(errors.Is(err, exceptedErr)).To(BeTrue())
 		},
 		Entry("auth api err case", "cause_auth_err", "", apiresources.AuthApiErr),
-		Entry("resp format err case", "cause_auth_resp_err", "", apiresources.AuthApiRespErr),
+		Entry("resp format err case", "cause_auth_resp_err", "", apiresources.ApiRespDecodeErr),
 		Entry("invalid access token case", "invalid_token", "", account.TokenExpiredOrInvalid),
 		Entry("no username err case", "no_username", "", account.FetchUsernameFailedErr),
 		Entry("username in rtx case", "username_in_rtx", "admin1", nil),

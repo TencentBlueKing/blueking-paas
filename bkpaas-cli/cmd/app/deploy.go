@@ -26,13 +26,20 @@ import (
 
 // NewCmdDeploy returns a Command instance for 'app deploy' sub command
 func NewCmdDeploy() *cobra.Command {
-	return &cobra.Command{
+	cmd := cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy PaaS application",
 		Run: func(cmd *cobra.Command, args []string) {
 			deployApp()
 		},
 	}
+
+	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
+	cmd.Flags().StringVarP(&appModule, "module", "", "default", "module name")
+	cmd.Flags().StringVarP(&appEnv, "env", "", "prod", "environment (stag/prod)")
+	_ = cmd.MarkFlagRequired("code")
+
+	return &cmd
 }
 
 // 应用部署

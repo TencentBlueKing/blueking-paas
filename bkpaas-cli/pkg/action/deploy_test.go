@@ -16,32 +16,22 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package action_test
 
-type BasicInfoViewer struct{}
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
-func (v BasicInfoViewer) String(info map[string]any) (string, error) {
-	// TODO implement me
-	panic("implement me")
-}
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
+)
 
-func (v BasicInfoViewer) Fetch(appCode string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
-}
+var _ = Describe("TestFetch", func() {
+	BeforeEach(func() {
+		apiresources.DefaultRequester = &apiresources.MockedRequester{}
+	})
 
-var _ Viewer = BasicInfoViewer{}
-
-type AddonsInfoViewer struct{}
-
-func (v AddonsInfoViewer) String(info map[string]any) (string, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (v AddonsInfoViewer) Fetch(appCode string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-var _ Viewer = AddonsInfoViewer{}
+	It("TestDefaultAppDeployer", func() {
+		// TODO 补充单元测试
+		Expect(nil).To(BeNil())
+	})
+})

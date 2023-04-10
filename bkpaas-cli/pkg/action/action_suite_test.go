@@ -16,24 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package action_test
 
-// AppInfo 应用信息接口
-type AppInfo interface {
-	// String 将应用信息转换成可打印展示的字符串
-	String() string
-}
+import (
+	"testing"
 
-// Deployer 部署器接口
-type Deployer interface {
-	// Exec 下发部署命令
-	Exec(opts DeployOptions) (DeployInfo, error)
-	// GetResult 获取应用部署结果
-	GetResult(info DeployInfo) (DeployResult, error)
-}
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
 
-// Retriever 各类应用信息查询接口
-type Retriever interface {
-	// Exec 请求 PaaS API，获取应用某类信息
-	Exec(appCode string) (AppInfo, error)
+func TestEnvx(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "pkg/action Suite")
 }

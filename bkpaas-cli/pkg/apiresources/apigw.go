@@ -19,6 +19,7 @@
 package apiresources
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/levigross/grequests"
@@ -26,9 +27,13 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
+// DefaultRequester 默认 API 调用入口
+var DefaultRequester Requester = &apigwRequester{}
+
 // 蓝鲸 apigw api 调用入口
 type apigwRequester struct{}
 
+// CheckToken 调用 Auth API 检查 accessToken 合法性
 func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 	ro := grequests.RequestOptions{
 		Params: map[string]string{"access_token": accessToken},
@@ -39,12 +44,33 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 		return nil, AuthApiErr
 	}
 
-	authResp := map[string]any{}
-	if err = resp.JSON(&authResp); err != nil {
-		return nil, AuthApiRespErr
+	respData := map[string]any{}
+	if err = resp.JSON(&respData); err != nil {
+		return nil, ApiRespDecodeErr
 	}
-	return authResp, nil
+	return respData, nil
 }
 
-// DefaultRequester 默认 API 调用入口
-var DefaultRequester Requester = &apigwRequester{}
+// GetAppInfo 获取应用基础信息
+func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
+	url := fmt.Sprintf("%s/bkapps/applications/%s/", config.G.PaaSApigwUrl, appCode)
+	resp, err := grequests.Get(url, &grequests.RequestOptions{Headers: r.headers()})
+
+	if resp.StatusCode != http.StatusOK || err != nil {
+		return nil, FetchAppInfoErr
+	}
+
+	respData := map[string]any{}
+	if err = resp.JSON(&respData); err != nil {
+		return nil, ApiRespDecodeErr
+	}
+	return respData, nil
+}
+
+// 生成访问 apigw 需要的 headers 信息
+func (r apigwRequester) headers() map[string]string {
+	return map[string]string{
+		"Content-Type":          "application/json",
+		"X-BKAPI-AUTHORIZATION": fmt.Sprintf("{\"access_token\": \"%s\"}", config.G.AccessToken),
+	}
+}

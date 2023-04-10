@@ -37,7 +37,7 @@ from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.constants import BuildStatus, JobStatus
 from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.bg_build.bg_build import start_bg_build_process
-from paasng.engine.deploy.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
 from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.phases_steps.steps import update_step_by_line

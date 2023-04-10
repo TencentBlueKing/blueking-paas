@@ -17,36 +17,38 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict
+from typing import Dict
 
+from attr import define, field
 from six import ensure_text
 
 from paas_wl.release_controller.hooks.entities import Command as CommandKModel
+from paas_wl.release_controller.hooks.models import Command
 from paas_wl.resources.actions.exceptions import BuildMissingError, CommandRerunError
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
-from paas_wl.resources.utils.app import get_scheduler_client_by_app
+from paas_wl.resources.utils.app import K8sScheduler, get_scheduler_client_by_app
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.kubestatus import check_pod_health_status
-from paas_wl.utils.termcolors import Style
-
-if TYPE_CHECKING:
-    from paas_wl.release_controller.hooks.models import Command as CommandModel
-    from paas_wl.utils.stream import Stream
+from paasng.engine.utils.output import DeployStream, Style
 
 logger = logging.getLogger(__name__)
-# Max timeout seconds for waiting the slugbuilder pod to become ready
+
+# Max timeout seconds for waiting the command executor pod to become ready
 _WAIT_FOR_READINESS_TIMEOUT = 300
 _FOLLOWING_LOGS_TIMEOUT = 300
 
 
-@dataclass
+@define
 class AppCommandExecutor:
-    command: 'CommandModel'
-    stream: 'Stream'
-    extra_envs: Dict = field(default_factory=dict)
+    command: 'Command'
+    stream: 'DeployStream'
+    extra_envs: Dict = field(factory=dict)
 
-    def __post_init__(self):
+    scheduler_client: K8sScheduler = field(init=False)
+    kmodel: CommandKModel = field(init=False)
+    STEP_NAME: str = field(init=False)
+
+    def __attrs_post_init__(self):
         if not self.command.build:
             # TODO: 支持镜像部署后, 需要调整判断的条件.
             raise BuildMissingError(f"no build related to command, app_name={self.command.app.name}")
@@ -122,15 +124,3 @@ class AppCommandExecutor:
         # it will transfer into "success/failed" immediately after "get_command_logs"
         # call finishes. So we will wait a reasonable long period such as 60 seconds.
         self.scheduler_client.wait_command_succeeded(command=self.kmodel, timeout=60)
-
-
-def interrupt_command(command: 'CommandModel') -> bool:
-    """Interrupt a command.
-
-    :param command: Command object
-    """
-    command.set_int_requested_at()
-    app = command.app
-    kmodel = CommandKModel.from_db_obj(command)
-    result = get_scheduler_client_by_app(app).interrupt_command(kmodel)
-    return result

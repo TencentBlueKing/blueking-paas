@@ -25,15 +25,15 @@ import (
 )
 
 // 应用基础信息查看
-type BasicInfoViewer struct{}
+type BasicInfoRetriever struct{}
 
-// NewBasicInfoViewer ...
-func NewBasicInfoViewer() *BasicInfoViewer {
-	return &BasicInfoViewer{}
+// NewBasicInfoRetriever ...
+func NewBasicInfoRetriever() *BasicInfoRetriever {
+	return &BasicInfoRetriever{}
 }
 
-// Fetch 调用 API 获取应用基础信息
-func (v *BasicInfoViewer) Fetch(appCode string) (AppInfo, error) {
+// Exec 调用 API 获取应用基础信息
+func (v *BasicInfoRetriever) Exec(appCode string) (AppInfo, error) {
 	appInfo, err := apiresources.DefaultRequester.GetAppInfo(appCode)
 	if err != nil {
 		return nil, err
@@ -71,4 +71,4 @@ func (v *BasicInfoViewer) Fetch(appCode string) (AppInfo, error) {
 	}, nil
 }
 
-var _ Viewer = &BasicInfoViewer{}
+var _ Retriever = &BasicInfoRetriever{}

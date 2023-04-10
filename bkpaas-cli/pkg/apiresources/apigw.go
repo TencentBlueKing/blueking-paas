@@ -31,9 +31,7 @@ import (
 var DefaultRequester Requester = &apigwRequester{}
 
 // 蓝鲸 apigw api 调用入口
-type apigwRequester struct {
-	headers map[string]string
-}
+type apigwRequester struct{}
 
 // CheckToken 调用 Auth API 检查 accessToken 合法性
 func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
@@ -48,7 +46,7 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 
 	respData := map[string]any{}
 	if err = resp.JSON(&respData); err != nil {
-		return nil, AuthApiRespErr
+		return nil, ApiRespDecodeErr
 	}
 	return respData, nil
 }
@@ -56,7 +54,7 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 // GetAppInfo 获取应用基础信息
 func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	url := fmt.Sprintf("%s/bkapps/applications/%s/", config.G.PaaSApigwUrl, appCode)
-	resp, err := grequests.Get(url, &grequests.RequestOptions{Headers: r.genHeaders()})
+	resp, err := grequests.Get(url, &grequests.RequestOptions{Headers: r.headers()})
 
 	if resp.StatusCode != http.StatusOK || err != nil {
 		return nil, FetchAppInfoErr
@@ -64,13 +62,13 @@ func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
 
 	respData := map[string]any{}
 	if err = resp.JSON(&respData); err != nil {
-		return nil, FetchAppInfoErr
+		return nil, ApiRespDecodeErr
 	}
 	return respData, nil
 }
 
 // 生成访问 apigw 需要的 headers 信息
-func (r apigwRequester) genHeaders() map[string]string {
+func (r apigwRequester) headers() map[string]string {
 	return map[string]string{
 		"Content-Type":          "application/json",
 		"X-BKAPI-AUTHORIZATION": fmt.Sprintf("{\"access_token\": \"%s\"}", config.G.AccessToken),

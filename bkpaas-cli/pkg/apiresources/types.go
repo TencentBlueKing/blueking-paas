@@ -25,8 +25,8 @@ import (
 // AuthApiErr Token 鉴权 API 异常
 var AuthApiErr = errors.New("Auth API unavailable")
 
-// AuthApiRespErr Token 鉴权 API 返回格式异常
-var AuthApiRespErr = errors.New("Auth API response not json format")
+// ApiRespDecodeErr API  返回格式异常
+var ApiRespDecodeErr = errors.New("Decode api response failed")
 
 // FetchAppInfoErr 无法获取蓝鲸应用基础信息
 var FetchAppInfoErr = errors.New("Failed to fetch application info")

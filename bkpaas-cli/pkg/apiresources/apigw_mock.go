@@ -30,7 +30,7 @@ func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) 
 
 	// 结果解析异常的情况
 	if accessToken == "cause_auth_resp_err" {
-		return nil, AuthApiRespErr
+		return nil, ApiRespDecodeErr
 	}
 
 	// 不合法的 AccessToken

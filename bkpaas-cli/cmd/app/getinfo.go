@@ -45,8 +45,8 @@ func NewCmdGetInfo() *cobra.Command {
 
 // 在命令行中展示指定的蓝鲸应用信息
 func displayAppInfo(appCode string) {
-	viewer := action.NewBasicInfoViewer()
-	appInfo, err := viewer.Fetch(appCode)
+	retriever := action.NewBasicInfoRetriever()
+	appInfo, err := retriever.Exec(appCode)
 	if err != nil {
 		color.Red("Failed to get application info")
 		return

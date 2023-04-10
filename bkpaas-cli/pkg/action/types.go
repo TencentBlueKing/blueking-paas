@@ -32,8 +32,8 @@ type Deployer interface {
 	GetResult(info DeployInfo) (DeployResult, error)
 }
 
-// Viewer 各类应用信息查询接口
-type Viewer interface {
-	// Fetch 请求 PaaS API，获取应用某类信息
-	Fetch(appCode string) (AppInfo, error)
+// Retriever 各类应用信息查询接口
+type Retriever interface {
+	// Exec 请求 PaaS API，获取应用某类信息
+	Exec(appCode string) (AppInfo, error)
 }

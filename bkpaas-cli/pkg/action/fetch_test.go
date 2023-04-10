@@ -31,7 +31,7 @@ var _ = Describe("TestFetch", func() {
 		apiresources.DefaultRequester = &apiresources.MockedRequester{}
 	})
 
-	It("TestAppBasicInfoViewer", func() {
+	It("TestAppBasicInfoRetriever", func() {
 		excepted := action.AppBasicInfo{
 			Code:    "test-code",
 			Name:    "test-app",
@@ -58,8 +58,8 @@ var _ = Describe("TestFetch", func() {
 			},
 		}
 
-		viewer := action.NewBasicInfoViewer()
-		info, err := viewer.Fetch("test-code")
+		retriever := action.NewBasicInfoRetriever()
+		info, err := retriever.Exec("test-code")
 		Expect(info).To(Equal(excepted))
 		Expect(err).To(BeNil())
 

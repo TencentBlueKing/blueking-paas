@@ -91,6 +91,16 @@ spec:
                 required:
                 - redisConfigKey
                 type: object
+              paaSAnalysisConfig:
+                description: PaaSAnalysisConfig contains the config for controlling
+                  ingress snippet about PA(paas-analysis) module
+                properties:
+                  enabled:
+                    description: Is PA enabled on the current cluster?
+                    type: boolean
+                required:
+                - enabled
+                type: object
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this

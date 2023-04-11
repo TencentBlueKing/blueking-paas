@@ -16,38 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from paas_wl.resources.base.kres import BaseKresource
+from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
-class KServiceMonitor(BaseKresource):
-    kind = "ServiceMonitor"
-
-
-class BkApp(BaseKresource):
-    """CRD: App model resource feature"""
-
-    kind = 'BkApp'
-
-
-class DomainGroupMapping(BaseKresource):
-    """CRD: Mapping between BkApp and DomainGroups"""
-
-    kind = 'DomainGroupMapping'
-
-
-class GPA(BaseKresource):
-    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
-
-    kind = 'GeneralPodAutoscaler'
-
-
-class Egress(BaseKresource):
-    """CRD: Egress, support fixed egress ip, provided by bcs"""
-
-    kind = 'Egress'
-
-
-class BKLogConfig(BaseKresource):
-    """CRD: BkLogConfig is the Schema for the bklogconfigs API"""
-
-    kind = "BkLogConfig"
+class BkLogConfigType(str, StructuredEnum):
+    STD_LOG = EnumField("std_log_config", label="标准输出日志")
+    CONTAINER_LOG = EnumField("container_log_config", label="容器日志")
+    NODE_LOG = EnumField("node_log_config", label="节点日志")

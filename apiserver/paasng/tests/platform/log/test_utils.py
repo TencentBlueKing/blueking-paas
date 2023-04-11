@@ -22,6 +22,8 @@ import pytest
 
 from paasng.platform.log.dsl import SearchRequestSchema
 from paasng.platform.log.utils import get_es_term, parse_request_to_es_dsl
+from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.es_log.misc import format_timestamp
 
 
 @pytest.fixture
@@ -120,3 +122,18 @@ def test_get_es_term(query_term, mappings, expected):
 )
 def test_parse_request_to_es_dsl(query_conditions, mappings, expected):
     assert parse_request_to_es_dsl(query_conditions, mappings).to_dict() == expected
+
+
+# 新的日志只返回 timestamp(时间戳)
+# 测试将 timestamp(时间戳) 转换成旧的 ts 字段的格式是否符合预期
+@pytest.mark.parametrize(
+    # es_timestamp 即 @timestamp 字段, 实际上这个字段存的是 datetime
+    "es_timestamp, expected_ts",
+    [
+        ("2023-04-11T11:13:58.102Z", "2023-04-11 19:13:58"),
+        ("2023-04-11T11:13:57.958Z", "2023-04-11 19:13:57"),
+    ],
+)
+def test_legacy_ts_field(es_timestamp: str, expected_ts):
+    timestamp = format_timestamp(es_timestamp, input_format="datetime")
+    assert convert_timestamp_to_str(timestamp) == expected_ts

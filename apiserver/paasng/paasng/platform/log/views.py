@@ -77,13 +77,20 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         :param time_field: ES 时间字段, 默认根据 time_field 排序
         :param highlight_fields: 字段高亮规则
         """
-        params = self.request.query_params
+        slz = serializers.LogQueryParamsSLZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
         )
         query_config = self._get_log_query_config(process_type=params.get("process_type"))
         search = self._make_base_search(
-            search_params=query_config.search_params, time_range=smart_time_range, mappings=mappings
+            search_params=query_config.search_params,
+            time_range=smart_time_range,
+            mappings=mappings,
+            limit=params["limit"],
+            offset=params["offset"],
         )
 
         highlight_query = {}
@@ -300,8 +307,8 @@ else:
     _MixinBase = object
 
 
-class LegacyLogAPIMixin(_MixinBase):
-    # LegacyLogAPIMixin 是支持按模块查询日志的兼容性代码
+class ModuleLogAPIMixin(_MixinBase):
+    # ModuleLogAPIMixin 是支持按模块查询日志的兼容性代码
     # 由于日志查询的重构复杂度高, 要求一步到位完全重构成按环境查询需要较长的排期
     # 待前端按照新接口(环境维度)重构后, 删除 legacy api
     def query_logs(self, request, code, module_name, environment=None):
@@ -360,15 +367,15 @@ class LegacyLogAPIMixin(_MixinBase):
         return search.limit_offset(limit=limit, offset=offset)
 
 
-class LegacyStdoutLogAPIView(LegacyLogAPIMixin, StdoutLogAPIView):
+class ModuleStdoutLogAPIView(ModuleLogAPIMixin, StdoutLogAPIView):
     ...
 
 
-class LegacyStructuredLogAPIView(LegacyLogAPIMixin, StructuredLogAPIView):
+class ModuleStructuredLogAPIView(ModuleLogAPIMixin, StructuredLogAPIView):
     ...
 
 
-class LegacyIngressLogAPIView(LegacyLogAPIMixin, IngressLogAPIView):
+class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView):
     ...
 
 
@@ -377,13 +384,4 @@ class SysStructuredLogAPIView(StructuredLogAPIView):
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment):
-        return super().query_logs(request, code, module_name, environment)
-
-
-class LegacySysStructuredLogAPIView(LegacyLogAPIMixin, SysStructuredLogAPIView):
-    permission_classes: List = []
-
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
-    def query_logs(self, request, code, module_name, environment=None):
-        # TODO: 调整成以前的返回值格式
         return super().query_logs(request, code, module_name, environment)

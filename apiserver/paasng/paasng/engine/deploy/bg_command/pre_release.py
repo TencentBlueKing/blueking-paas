@@ -22,7 +22,7 @@ from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, Po
 from django.utils.translation import gettext as _
 
 from paas_wl.release_controller.hooks.models import Command, CommandTemplate
-from paas_wl.utils.constants import CommandType
+from paas_wl.utils.constants import CommandStatus, CommandType
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.constants import JobStatus
@@ -121,16 +121,16 @@ class CommandPoller(DeployPoller):
         deployment = Deployment.objects.get(pk=self.params['deployment_id'])
 
         command = Command.objects.get(pk=self.params["command_id"])
-        command_status = command.status
+        command_status = CommandStatus(command.status)
 
         coordinator = DeploymentCoordinator(deployment.app_environment)
         # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
         if coordinator.status_polling_timeout:
-            command_status = JobStatus.FAILED
+            command_status = CommandStatus.FAILED
         else:
             coordinator.update_polling_time()
 
-        if command_status in JobStatus.get_finished_states():
+        if command_status in CommandStatus.get_finished_states():
             poller_status = PollingStatus.DONE
         else:
             poller_status = PollingStatus.DOING

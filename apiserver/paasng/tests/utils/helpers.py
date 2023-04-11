@@ -198,14 +198,16 @@ def create_app(
     return application
 
 
-def create_legacy_application():
-    """Create a simple legacy application, for testing purpose only"""
+def create_legacy_application(code: Optional[str] = None):
+    """Create a simple legacy application, for testing purpose only
+
+    :param code: The application code, default to a random string.
+    """
     session = legacy_db.get_scoped_session()
-    app_code = generate_random_string(length=12)
-    app_name = app_code
+    app_code = code if code else generate_random_string(length=12)
     values = dict(
         code=app_code,
-        name=app_name,
+        name=app_code,
         from_paasv3=0,
         migrated_to_paasv3=0,
         logo='',

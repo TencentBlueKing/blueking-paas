@@ -350,6 +350,7 @@ else:
 
 _default_handlers = ['console', 'logstash_redis']
 
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -360,7 +361,10 @@ LOGGING = {
         },
         'simple': {'format': '%(levelname)s %(message)s'},
     },
-    'filters': {'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'}},
+    'filters': {
+        'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'},
+        'bk_auth_trivial': {'()': 'paasng.utils.logging.BkAuthTrivialMsgFilter'},
+    },
     'handlers': {
         'null': {'level': LOG_LEVEL, 'class': 'logging.NullHandler'},
         'mail_admins': {'level': LOG_LEVEL, 'class': 'django.utils.log.AdminEmailHandler'},
@@ -382,6 +386,7 @@ LOGGING = {
         'commands': {'handlers': _default_handlers, 'level': LOG_LEVEL, 'propagate': False},
         # 设置第三方模块日志级别，避免日志过多
         'bkpaas_auth': {'level': 'WARNING'},
+        'bkpaas_auth.core.token': {'filters': ['bk_auth_trivial']},
         'apscheduler': {'level': 'WARNING'},
         'requests': {'level': 'ERROR'},
         "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},

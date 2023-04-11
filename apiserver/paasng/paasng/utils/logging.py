@@ -57,3 +57,13 @@ class RequestIDFilter(logging.Filter):
     def filter(self, record):
         record.request_id = local.request_id
         return True
+
+
+class BkAuthTrivialMsgFilter(logging.Filter):
+    """Ignore trivial log messages from bk-auth library"""
+
+    def filter(self, record):
+        # Below error messages are considered trivial
+        if '登录票据已过期' in record.getMessage():
+            return False
+        return True

@@ -59,6 +59,8 @@ class RequestIDFilter(logging.Filter):
         return True
 
 
+# TODO: Remove this filter when bkpaas-auth has fixed the logging issue by removing
+# the unnecessary error logs.
 class BkAuthTrivialMsgFilter(logging.Filter):
     """Ignore trivial log messages from bkpaas-auth library"""
 

@@ -70,8 +70,13 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         log_config = self._get_log_query_config(process_type=self.request.query_params.get("process_type"))
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
-    def make_search(self, mappings: dict, highlight_fields: Optional[Tuple] = None):
-        """构造日志查询语句"""
+    def make_search(self, mappings: dict, time_field: str, highlight_fields: Optional[Tuple] = None):
+        """构造日志查询语句
+
+        :param mappings: ES mappings
+        :param time_field: ES 时间字段, 默认根据 time_field 排序
+        :param highlight_fields: 字段高亮规则
+        """
         params = self.request.query_params
         smart_time_range = SmartTimeRange(
             time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
@@ -90,7 +95,13 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.QUERY_REQUEST_ERROR
             dsl = parse_request_to_es_dsl(query_conditions, mappings=mappings)
             highlight_query = dsl.to_dict()
-            search = search.query(dsl).sort({k: {"order": v} for k, v in query_conditions.sort.items()})
+            search = search.query(dsl)
+
+            # 除非指定了 time_field 的排序规则, 否则总是按照 desc 排序
+            sort_params = {time_field: {"order": "desc"}}
+            if query_conditions.sort:
+                sort_params.update({k: {"order": v} for k, v in query_conditions.sort.items()})
+            search = search.sort(sort_params)
 
         # 顺序很重要, querystring 在 simple dsl 里, highlight_fields 必须在 search.query(dsl) 后面
         if highlight_query and highlight_fields:
@@ -146,6 +157,7 @@ class LogAPIView(LogBaseAPIView):
             mappings=log_client.get_mappings(
                 log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
             ),
+            time_field=log_config.search_params.timeField,
             highlight_fields=("*", "*.*"),
         )
 
@@ -182,6 +194,7 @@ class LogAPIView(LogBaseAPIView):
             mappings=log_client.get_mappings(
                 log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
             ),
+            time_field=log_config.search_params.timeField,
             highlight_fields=(log_config.search_params.messageField,),
         )
 
@@ -223,7 +236,8 @@ class LogAPIView(LogBaseAPIView):
         search = self.make_search(
             mappings=log_client.get_mappings(
                 log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
-            )
+            ),
+            time_field=log_config.search_params.timeField,
         )
 
         response = log_client.aggregate_date_histogram(
@@ -248,7 +262,8 @@ class LogAPIView(LogBaseAPIView):
         search = self.make_search(
             mappings=log_client.get_mappings(
                 log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
-            )
+            ),
+            time_field=log_config.search_params.timeField,
         )
 
         fields_filters = log_client.aggregate_fields_filters(

@@ -101,8 +101,10 @@ class AsCodeClient:
 
     def _apply_rule_configs(self, configs: Dict):
         """同步告警配置到 bkmonitor"""
+        # TODO import_config 接口接入网关后, 调整为通过 apigw 访问
+        http_schema_url = settings.BK_MONITORV3_URL.replace('https', 'http')
         resp = requests.post(
-            url=f'{settings.BK_MONITORV3_URL}/rest/v2/as_code/import_config/',
+            url=f'{http_schema_url}/rest/v2/as_code/import_config/',
             json={
                 'bk_biz_id': settings.MONITOR_AS_CODE_CONF.get('bk_biz_id'),
                 'app': self.app_code,

@@ -40,7 +40,7 @@ class TestLegacyStructuredLogAPIView:
                         "terms": {"terms": ["foo", "bar"]},
                         "exclude": {"exclude": ["foo", "bar"]},
                     },
-                    "sort": {"ts": "asc"},
+                    "sort": {"some-field": "asc"},
                 },
             )
 
@@ -64,7 +64,7 @@ class TestLegacyStructuredLogAPIView:
                     'must_not': [{'terms': {'exclude': ['foo', 'bar']}}],
                 }
             },
-            'sort': [{'ts': {'order': 'asc'}}],
+            'sort': [{'@timestamp': {'order': 'desc'}, 'some-field': {'order': 'asc'}}],
             'size': 200,
             'from': 0,
             'highlight': {

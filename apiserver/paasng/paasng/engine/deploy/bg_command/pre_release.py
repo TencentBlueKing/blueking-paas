@@ -130,7 +130,7 @@ class CommandPoller(DeployPoller):
         else:
             coordinator.update_polling_time()
 
-        if command_status in JobStatus.get_finished_states():
+        if command_status in CommandStatus.get_finished_states():
             poller_status = PollingStatus.DONE
         else:
             poller_status = PollingStatus.DOING

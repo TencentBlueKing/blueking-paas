@@ -350,7 +350,6 @@ else:
 
 _default_handlers = ['console', 'logstash_redis']
 
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

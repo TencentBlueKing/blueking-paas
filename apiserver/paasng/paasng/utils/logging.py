@@ -60,7 +60,7 @@ class RequestIDFilter(logging.Filter):
 
 
 class BkAuthTrivialMsgFilter(logging.Filter):
-    """Ignore trivial log messages from bk-auth library"""
+    """Ignore trivial log messages from bkpaas-auth library"""
 
     def filter(self, record):
         # Below error messages are considered trivial

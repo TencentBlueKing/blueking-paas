@@ -70,6 +70,17 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         log_config = self._get_log_query_config(process_type=self.request.query_params.get("process_type"))
         return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
 
+    def parse_time_range(self) -> SmartTimeRange:
+        """parse time range from request.query_params"""
+        slz = serializers.LogQueryParamsSLZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        smart_time_range = SmartTimeRange(
+            time_range=params["time_range"], start_time=params.get("start_time"), end_time=params.get("end_time")
+        )
+        return smart_time_range
+
     def make_search(self, mappings: dict, time_field: str, highlight_fields: Optional[Tuple] = None):
         """构造日志查询语句
 
@@ -162,7 +173,9 @@ class LogAPIView(LogBaseAPIView):
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
             mappings=log_client.get_mappings(
-                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+                log_config.search_params.indexPattern,
+                time_range=self.parse_time_range(),
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             ),
             time_field=log_config.search_params.timeField,
             highlight_fields=("*", "*.*"),
@@ -199,7 +212,9 @@ class LogAPIView(LogBaseAPIView):
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
             mappings=log_client.get_mappings(
-                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+                log_config.search_params.indexPattern,
+                time_range=self.parse_time_range(),
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             ),
             time_field=log_config.search_params.timeField,
             highlight_fields=(log_config.search_params.messageField,),
@@ -242,7 +257,9 @@ class LogAPIView(LogBaseAPIView):
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
             mappings=log_client.get_mappings(
-                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+                log_config.search_params.indexPattern,
+                time_range=self.parse_time_range(),
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             ),
             time_field=log_config.search_params.timeField,
         )
@@ -268,7 +285,9 @@ class LogAPIView(LogBaseAPIView):
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
             mappings=log_client.get_mappings(
-                log_config.search_params.indexPattern, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+                log_config.search_params.indexPattern,
+                time_range=self.parse_time_range(),
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             ),
             time_field=log_config.search_params.timeField,
         )

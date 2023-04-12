@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from functools import reduce
 from operator import add
-from typing import Dict, List, Optional, Protocol, Tuple
+from typing import Dict, List, Optional, Protocol, Tuple, Union
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -36,7 +36,8 @@ from paasng.platform.log.models import BKLogConfig, ElasticSearchConfig, Elastic
 # TODO: 避免引用插件开发中心的代码, 提取通用组件
 from paasng.pluginscenter.definitions import PluginBackendAPIResource
 from paasng.pluginscenter.thirdparty.utils import make_client
-from paasng.utils.es_log.search import SmartSearch
+from paasng.utils.es_log.misc import filter_indexes_by_time_range
+from paasng.utils.es_log.search import SmartSearch, SmartTimeRange
 
 
 class LogClientProtocol(Protocol):
@@ -56,7 +57,7 @@ class LogClientProtocol(Protocol):
     def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
         """Aggregate fields filters"""
 
-    def get_mappings(self, index: str, timeout: int) -> dict:
+    def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es
 
         :raises LogQueryError: when no mappings found
@@ -120,9 +121,13 @@ class BKLogClient:
         filters = {field: FieldFilter(name=field, key=field) for field in resp["data"]["select_fields_order"]}
         return count_filters_options(list(Response(search.search, resp["data"])), filters)
 
-    def get_mappings(self, index: str, timeout: int) -> dict:
+    def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es"""
         raise NotImplementedError("TODO: 确认日志平台接口 /esquery_mapping/ 是否可用")
+
+    def _get_indexes(self, index: str, time_range: SmartSearch) -> List[str]:
+        """Get indexes within the time_range range from ES"""
+        raise NotImplementedError
 
     def _call_api(self, data, timeout: int):
         if self.config.bkdataAuthenticationMethod:
@@ -141,11 +146,12 @@ class ESLogClient:
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with es client"""
+        es_index = self._get_indexes(index, search.time_range, timeout)
         response = Response(
             search.search,
-            self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),
+            self._client.search(body=search.to_dict(), index=es_index, params={"request_timeout": timeout}),
         )
-        return (response, self._get_response_count(index, search, timeout, response))
+        return (response, self._get_response_count(es_index, search, timeout, response))
 
     def execute_scroll_search(
         self, index: str, search: SmartSearch, timeout: int, scroll_id: Optional[str] = None, scroll="5m"
@@ -157,10 +163,11 @@ class ESLogClient:
                 self._client.scroll(scroll_id=scroll_id, params={"scroll": scroll, "request_timeout": timeout}),
             )
         else:
+            es_index = self._get_indexes(index, search.time_range, timeout)
             response = Response(
                 search.search,
                 self._client.search(
-                    body=search.to_dict(), scroll=scroll, index=index, params={"request_timeout": timeout}
+                    body=search.to_dict(), scroll=scroll, index=es_index, params={"request_timeout": timeout}
                 ),
             )
         if not response.success():
@@ -182,10 +189,11 @@ class ESLogClient:
         )
         search.search.aggs.bucket('histogram', agg)
         search.limit_offset(0, 0)
+        es_index = self._get_indexes(index, search.time_range, timeout)
         return AggResponse(
             search.search.aggs,
             search.search,
-            self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout})[
+            self._client.search(body=search.to_dict(), index=es_index, params={"request_timeout": timeout})[
                 "aggregations"
             ],
         ).histogram
@@ -193,21 +201,21 @@ class ESLogClient:
     def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
         """aggregate fields filter"""
         # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
+        es_index = self._get_indexes(index, search.time_range, timeout)
         search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
         response = Response(
             search.search,
-            self._client.search(body=search.to_dict(), index=index, params={"request_timeout": timeout}),
+            self._client.search(body=search.to_dict(), index=es_index, params={"request_timeout": timeout}),
         )
-        return count_filters_options(list(response), self._get_properties_filters(index=index, timeout=timeout))
+        return count_filters_options(list(response), self._get_properties_filters(index=es_index, timeout=timeout))
 
-    def get_mappings(self, index: str, timeout: int) -> dict:
+    def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es"""
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
-        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
-        # Note: 避免 ES 会提前创建 index 导致无法查询到 mappings, 需要将空 properties 的 mappings 过滤掉
-        # Q: 为什么不根据时间来筛选 mappings?
-        # A: 因为 mappings 内容基本是不变的, 如果由于 mappings 不一致导致查询不到日志, 反而是日志写入的问题
+        es_index = self._get_indexes(index, time_range, timeout)
+        all_mappings = self._client.indices.get_mapping(es_index, params={"request_timeout": timeout})
+        # 由于手动创建会没有 properties, 需要将无 properties 的 mappings 过滤掉
         all_not_empty_mappings = {
             key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
         }
@@ -217,7 +225,16 @@ class ESLogClient:
         docs_mappings: Dict = first_mapping["mappings"]["properties"]
         return docs_mappings
 
-    def _get_response_count(self, index: str, search: SmartSearch, timeout: int, response: Response) -> int:
+    def _get_indexes(self, index: str, time_range: SmartTimeRange, timeout: int) -> List[str]:
+        """Get indexes within the time_range range from ES"""
+        # 为了避免 ES 会提前创建 index 导致无法查询到 mappings, 需要精准控制使用的 indexes
+        # 为了避免 ES indexes 未即时清理, 导致查询的 indexes 范围过大, 需要精准控制使用的 indexes
+        all_indexes = list(self._client.indices.get(index, params={"request_timeout": timeout}).keys())
+        return filter_indexes_by_time_range(all_indexes, time_range=time_range)
+
+    def _get_response_count(
+        self, index: Union[str, List[str]], search: SmartSearch, timeout: int, response: Response
+    ) -> int:
         """get total field from es response if it had, or send a count response to es"""
         if response.hits.total.relation == "eq":
             return response.hits.total.value
@@ -225,7 +242,7 @@ class ESLogClient:
             "count"
         ]
 
-    def _get_properties_filters(self, index: str, timeout: int) -> Dict[str, FieldFilter]:
+    def _get_properties_filters(self, index: Union[str, List[str]], timeout: int) -> Dict[str, FieldFilter]:
         """获取属性映射"""
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空

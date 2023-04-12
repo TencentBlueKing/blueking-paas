@@ -202,12 +202,18 @@ class ESLogClient:
 
     def get_mappings(self, index: str, timeout: int) -> dict:
         """query the mappings in es"""
-        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
-        if not all_mappings:
+        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        # Note: 避免 ES 会提前创建 index 导致无法查询到 mappings, 需要将空 properties 的 mappings 过滤掉
+        # Q: 为什么不根据时间来筛选 mappings?
+        # A: 因为 mappings 内容基本是不变的, 如果由于 mappings 不一致导致查询不到日志, 反而是日志写入的问题
+        all_not_empty_mappings = {
+            key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
+        }
+        if not all_not_empty_mappings:
             raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
-        first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
+        first_mapping = all_not_empty_mappings[sorted(all_not_empty_mappings, reverse=True)[0]]
         docs_mappings: Dict = first_mapping["mappings"]["properties"]
         return docs_mappings
 
@@ -224,9 +230,15 @@ class ESLogClient:
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
         all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
-        if not all_mappings:
+        # Note: 避免 ES 会提前创建 index 导致无法查询到 mappings, 需要将空 properties 的 mappings 过滤掉
+        # Q: 为什么不根据时间来筛选 mappings?
+        # A: 因为 mappings 内容基本是不变的, 如果由于 mappings 不一致导致查询不到日志, 反而是日志写入的问题
+        all_not_empty_mappings = {
+            key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
+        }
+        if not all_not_empty_mappings:
             raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
-        first_mapping = all_mappings[sorted(all_mappings, reverse=True)[0]]
+        first_mapping = all_not_empty_mappings[sorted(all_not_empty_mappings, reverse=True)[0]]
         docs_mappings: Dict = first_mapping["mappings"]
         return {f.name: f for f in self._clean_property([], docs_mappings)}
 

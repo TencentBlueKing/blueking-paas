@@ -136,26 +136,15 @@ def filter_indexes_by_time_range(indexes: List[str], time_range: "SmartTimeRange
             failure_match_indexes.append(index)
             continue
 
-        try:
-            date_str = match_result.groupdict()["date"]
-        except KeyError:
-            failure_match_indexes.append(index)
-            continue
-
+        date_str = match_result.groupdict()["date"]
         try:
             index_date = datetime.datetime.strptime(date_str, "%Y.%m.%d").date()
         except ValueError:
+            failure_match_indexes.append(index)
             continue
 
         if start_date <= index_date <= end_date:
             picked_indexes.append(index)
-    if picked_indexes:
-        return picked_indexes
-
     if failure_match_indexes:
-        if len(failure_match_indexes) == len(indexes):
-            logger.warning("failed to filter indexes, all indexes format is invalid")
-            return indexes
-        return failure_match_indexes
-    # 无 index 可用, 取最后 10 个
-    return indexes[-10:]
+        logger.debug("some indexes is invalid, %s", failure_match_indexes)
+    return picked_indexes

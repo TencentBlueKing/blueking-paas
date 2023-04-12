@@ -235,7 +235,10 @@ class ESLogClient:
                 index, metric="fielddata", params={"request_timeout": timeout, "level": "indices"}
             )["indices"].keys()
         )
-        return filter_indexes_by_time_range(all_indexes, time_range=time_range)
+        if filtered_indexes := filter_indexes_by_time_range(all_indexes, time_range=time_range):
+            return filtered_indexes
+        # 当无法匹配到 indexes 时, 实际上也会查询不到日志, 所以无需报错, 只需要返回一部分 index 提供给 ES 查询即可
+        return sorted(all_indexes)[-10:]
 
     def _get_response_count(
         self, index: Union[str, List[str]], search: SmartSearch, timeout: int, response: Response

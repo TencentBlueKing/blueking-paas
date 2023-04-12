@@ -25,12 +25,25 @@ from paasng.utils.es_log.time_range import SmartTimeRange
 
 @pytest.fixture
 def indexes():
-    return ["k8s_app_log_-2022.10.10", "k8s_app_log_-2022.10.11", "k8s_app_log_-2023.05.11", "k8s_app_log_-2023.05.22"]
+    return [
+        "k8s_app_log_-2022.10.10",
+        "k8s_app_log_-2022.10.11",
+        "k8s_app_log_-2023.05.11",
+        "k8s_app_log_-2023.05.22",
+    ] + ["k8s_app_log_-2023.5.23" + "k8s_app_log-2o23.05.24"]
 
 
 @pytest.mark.parametrize(
     "time_range, expected",
     [
+        (
+            SmartTimeRange(
+                time_range="customized",
+                start_time=arrow.get("2021-10-05").datetime,
+                end_time=arrow.get("2021-10-11").datetime,
+            ),
+            [],
+        ),
         (
             SmartTimeRange(
                 time_range="customized",
@@ -59,7 +72,7 @@ def indexes():
             SmartTimeRange(
                 time_range="customized",
                 start_time=arrow.get("2022-10-05").datetime,
-                end_time=arrow.get("2023-05-11").datetime,
+                end_time=arrow.get("2023-05-21").datetime,
             ),
             ["k8s_app_log_-2022.10.10", "k8s_app_log_-2022.10.11", "k8s_app_log_-2023.05.11"],
         ),

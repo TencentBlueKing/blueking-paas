@@ -168,6 +168,10 @@ class AppRuleConfigGenerator:
     def gen_initial_app_rule_configs(self) -> List[RuleConfig]:
         """generate initial app scoped alert rule configs"""
         rule_configs: List[RuleConfig] = []
+
+        if not DEFAULT_RULE_CONFIGS.get('app_scoped'):
+            return rule_configs
+
         for alert_code, alert_config in DEFAULT_RULE_CONFIGS['app_scoped'].items():
             rule_configs.extend(
                 [

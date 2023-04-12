@@ -260,6 +260,14 @@ class TestSysBkPluginLogsViewset:
         assert response.data["scroll_id"] == "scroll_id"
         assert response.data["logs"] == [
             {
+                # 至少需要确保以下字段正常
+                # plugin_code -> app.code
+                # environment
+                # process_id
+                # stream
+                # message
+                # detail
+                # ts
                 'timestamp': 1,
                 'message': '[bk-mark]???[/bk-mark]',
                 'raw': {

@@ -248,8 +248,6 @@ class ESLogClient:
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
         all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
         # Note: 避免 ES 会提前创建 index 导致无法查询到 mappings, 需要将空 properties 的 mappings 过滤掉
-        # Q: 为什么不根据时间来筛选 mappings?
-        # A: 因为 mappings 内容基本是不变的, 如果由于 mappings 不一致导致查询不到日志, 反而是日志写入的问题
         all_not_empty_mappings = {
             key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
         }

@@ -32,11 +32,5 @@ DEFAULT_RULE_CONFIGS = {
             'display_name': _('内存使用率过高'),
             'threshold_expr': '>= 0.95',  # 使用率 95%
         },
-    },
-    'app_scoped': {
-        'page_50x': {
-            'display_name': _('应用首页访问异常'),
-            'threshold_expr': '>= 500',
-        }
-    },
+    }
 }

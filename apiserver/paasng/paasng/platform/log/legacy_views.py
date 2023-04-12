@@ -23,7 +23,7 @@ from rest_framework.response import Response
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
-from paasng.platform.log.views import ModuleLogAPIMixin, ModuleStdoutLogAPIView
+from paasng.platform.log.views import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
 from paasng.utils.datetime import convert_timestamp_to_str
 
 
@@ -59,7 +59,7 @@ class LegacyStdoutLogAPIView(ModuleStdoutLogAPIView):
         return self.query_logs_scroll(request, code, module_name, environment=None)
 
 
-class LegacySysStructuredLogAPIView(ModuleLogAPIMixin):
+class LegacySysStructuredLogAPIView(ModuleStructuredLogAPIView):
     permission_classes: List = []
 
     # 网关名称 search_structured_log

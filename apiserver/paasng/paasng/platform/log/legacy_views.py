@@ -23,6 +23,7 @@ from rest_framework.response import Response
 
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
+from paasng.platform.log.serializers import LogQueryParamsSLZ
 from paasng.platform.log.views import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
 from paasng.utils.datetime import convert_timestamp_to_str
 
@@ -30,7 +31,7 @@ from paasng.utils.datetime import convert_timestamp_to_str
 class LegacyStdoutLogAPIView(ModuleStdoutLogAPIView):
     # 网关名称 search_standard_log_with_post
     def query_logs_scroll(self, request, code, module_name, environment=None):
-        response = super().query_logs_scroll(request, code, module_name, environment).data
+        response = super().query_logs_scroll(request, code, module_name, environment)
         data = response.data
         return Response(
             {
@@ -65,6 +66,11 @@ class LegacySysStructuredLogAPIView(ModuleStructuredLogAPIView):
     # 网关名称 search_structured_log
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment=None):
+        slz = LogQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+        offset = query_params["offset"]
+        limit = query_params["limit"]
         response = super().query_logs(request, code, module_name, environment)
         data = response.data
         return Response(
@@ -78,7 +84,6 @@ class LegacySysStructuredLogAPIView(ModuleStructuredLogAPIView):
                             "app_code": log["app_code"],
                             "environment": log["environment"],
                             "process_id": log["process_id"],
-                            "pod_name": log["pod_name"],
                             "stream": log["stream"],
                             "message": log["message"],
                             "detail": log["detail"],
@@ -87,8 +92,8 @@ class LegacySysStructuredLogAPIView(ModuleStructuredLogAPIView):
                         for log in data["logs"]
                     ],
                     "page": {
-                        "page": request.query_params.get("page"),
-                        "page_size": request.query_params.get("page_size"),
+                        "page": query_params.get("page") or (offset / limit + 1),
+                        "page_size": limit,
                         "total": data["total"],
                     },
                     "dsl": data["dsl"],

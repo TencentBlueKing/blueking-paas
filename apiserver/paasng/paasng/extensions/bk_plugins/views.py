@@ -118,6 +118,7 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginLogsViewset(viewsets.ViewSet):
     """Viewset for querying bk_plugin's logs"""
 
+    # 网关名称 list_bk_plugin_logs
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""

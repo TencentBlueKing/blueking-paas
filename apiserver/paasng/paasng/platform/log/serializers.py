@@ -55,6 +55,7 @@ class StructureLogLineSLZ(serializers.Serializer):
     app_code = serializers.CharField()
     environment = serializers.CharField()
     process_id = serializers.CharField(allow_null=True, allow_blank=True)
+    stream = serializers.CharField()
 
 
 class StructureLogsSLZ(serializers.Serializer):

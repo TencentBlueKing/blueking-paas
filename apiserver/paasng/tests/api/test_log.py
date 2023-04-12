@@ -25,7 +25,7 @@ from elasticsearch_dsl.response import Hit
 pytestmark = pytest.mark.django_db
 
 
-class TestLegacyStructuredLogAPIView:
+class TestModuleStructuredLogAPIView:
     def test_dsl(self, api_client, bk_app, bk_module):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/structured/list/?time_range=1h"
         with mock.patch("paasng.platform.log.views.instantiate_log_client") as client_factory:
@@ -65,7 +65,7 @@ class TestLegacyStructuredLogAPIView:
                 }
             },
             'sort': [{'@timestamp': {'order': 'desc'}, 'some-field': {'order': 'asc'}}],
-            'size': 200,
+            'size': 100,
             'from': 0,
             'highlight': {
                 'fields': {'*': {'number_of_fragments': 0}, '*.*': {'number_of_fragments': 0}},

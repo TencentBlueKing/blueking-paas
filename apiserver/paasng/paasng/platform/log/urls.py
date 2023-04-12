@@ -123,9 +123,7 @@ urlpatterns = [
 urlpatterns += [
     re_path(
         make_app_pattern(r'/log/standard_output/list/$', include_envs=False),
-        legacy_views.LegacyStdoutLogAPIView.as_view(
-            {"get": "query_logs_scroll_with_get", "post": "query_logs_scroll"}
-        ),
+        legacy_views.V1StdoutLogAPIView.as_view({"get": "query_logs_scroll_with_get", "post": "query_logs_scroll"}),
         name="api.logs.standard.list.deprecated",
     ),
     url(

@@ -28,8 +28,10 @@ from paasng.platform.log.views import ModuleStdoutLogAPIView, ModuleStructuredLo
 from paasng.utils.datetime import convert_timestamp_to_str
 
 
-class LegacyStdoutLogAPIView(ModuleStdoutLogAPIView):
+class V1StdoutLogAPIView(ModuleStdoutLogAPIView):
+    # 该接口已注册到 APIGW
     # 网关名称 search_standard_log_with_post
+    # 请勿随意修改该接口协议
     def query_logs_scroll(self, request, code, module_name, environment=None):
         response = super().query_logs_scroll(request, code, module_name, environment)
         data = response.data
@@ -55,7 +57,9 @@ class LegacyStdoutLogAPIView(ModuleStdoutLogAPIView):
             }
         )
 
+    # 该接口已注册到 APIGW
     # 网关名称 search_standard_log_with_get
+    # 请勿随意修改该接口协议
     def query_logs_scroll_with_get(self, request, code, module_name, environment=None):
         return self.query_logs_scroll(request, code, module_name, environment=None)
 
@@ -63,7 +67,9 @@ class LegacyStdoutLogAPIView(ModuleStdoutLogAPIView):
 class LegacySysStructuredLogAPIView(ModuleStructuredLogAPIView):
     permission_classes: List = []
 
+    # 该接口已注册到 APIGW
     # 网关名称 search_structured_log
+    # 请勿随意修改该接口协议
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment=None):
         slz = LogQueryParamsSLZ(data=request.query_params)

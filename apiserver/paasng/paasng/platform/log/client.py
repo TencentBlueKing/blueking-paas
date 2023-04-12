@@ -229,7 +229,12 @@ class ESLogClient:
         """Get indexes within the time_range range from ES"""
         # 为了避免 ES 会提前创建 index 导致无法查询到 mappings, 需要精准控制使用的 indexes
         # 为了避免 ES indexes 未即时清理, 导致查询的 indexes 范围过大, 需要精准控制使用的 indexes
-        all_indexes = list(self._client.indices.get(index, params={"request_timeout": timeout}).keys())
+        # Note: 使用 stats 接口优化查询性能
+        all_indexes = list(
+            self._client.indices.stats(
+                index, metric="fielddata", params={"request_timeout": timeout, "level": "indices"}
+            )["indices"].keys()
+        )
         return filter_indexes_by_time_range(all_indexes, time_range=time_range)
 
     def _get_response_count(

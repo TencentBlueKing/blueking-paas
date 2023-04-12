@@ -128,7 +128,7 @@ urlpatterns += [
     ),
     url(
         r'sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$',
-        legacy_views.LegacySysStructuredLogAPIView.as_view({"post": "query_logs"}),
+        legacy_views.V1SysStructuredLogAPIView.as_view({"post": "query_logs"}),
         name='sys.api.logs.structured.deprecated',
     ),
 ]

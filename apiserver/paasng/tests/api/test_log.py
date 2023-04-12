@@ -126,26 +126,26 @@ class TestModuleStructuredLogAPIView:
         # 测试日志的解析是否符合预期
         assert response.data["logs"] == [
             {
-                'timestamp': 1,
-                # 高亮
-                'message': '[bk-mark]???[/bk-mark]',
-                'detail': {
-                    '@timestamp': 1,
-                    # 扁平化
-                    'json.message': '[bk-mark]???[/bk-mark]',
-                    'one.two.three': 'four',
-                    'region': 'default',
-                    'app_code': bk_app.code,
-                    'module_name': bk_module.name,
-                    'environment': 'stag',
-                    'process_id': '1234567',
-                    'stream': 'foo',
-                    'pod_name': 'bar',
+                "timestamp": 1,
+                # # 高亮
+                "message": "[bk-mark]???[/bk-mark]",
+                "detail": {
+                    "@timestamp": 1,
+                    "json.message": "[bk-mark]???[/bk-mark]",
+                    "one.two.three": "four",
+                    "region": bk_app.region,
+                    "app_code": bk_app.code,
+                    "module_name": "default",
+                    "environment": "stag",
+                    "process_id": "1234567",
+                    "stream": "foo",
+                    "pod_name": "bar",
                 },
-                'region': bk_app.region,
-                'app_code': bk_app.code,
+                "region": bk_app.region,
+                "app_code": bk_app.code,
                 # 没有 module_name
-                'environment': 'stag',
-                'process_id': '1234567',
+                "environment": "stag",
+                "process_id": "1234567",
+                "stream": "foo",
             }
         ]

@@ -64,7 +64,7 @@ class V1StdoutLogAPIView(ModuleStdoutLogAPIView):
         return self.query_logs_scroll(request, code, module_name, environment=None)
 
 
-class LegacySysStructuredLogAPIView(ModuleStructuredLogAPIView):
+class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
     permission_classes: List = []
 
     # 该接口已注册到 APIGW

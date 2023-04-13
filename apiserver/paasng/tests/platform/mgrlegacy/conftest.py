@@ -34,7 +34,7 @@ def configure_ieod_region():
 
 
 @pytest.fixture
-def migration_instance_maker(bk_app):
+def migration_instance_maker(bk_app, legacy_app_code):
     def maker(migration_cls):
         instance = get_migration_instance(migration_cls)
         instance.context.app = bk_app

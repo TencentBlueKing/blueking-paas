@@ -43,27 +43,10 @@ def bk_app_init_rule_configs(bk_app):
     j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
 
     app_code = bk_app.code
-    app_scoped_configs = DEFAULT_RULE_CONFIGS['app_scoped']
     module_scoped_configs = DEFAULT_RULE_CONFIGS['module_scoped']
     notice_group_name = f"[{app_code}] {_('通知组')}"
 
     return {
-        f'rule/{app_code}_stag_page_50x.yaml': j2_env.get_template('page_50x.yaml.j2').render(
-            alert_rule_display_name=f"[{app_code}:stag] {app_scoped_configs['page_50x']['display_name']}",
-            app_code=app_code,
-            alert_rule_name=f'{app_code}_stag_page_50x',
-            enabled=True,
-            threshold_expr=app_scoped_configs['page_50x']['threshold_expr'],
-            notice_group_name=notice_group_name,
-        ),
-        f'rule/{app_code}_prod_page_50x.yaml': j2_env.get_template('page_50x.yaml.j2').render(
-            alert_rule_display_name=f"[{app_code}:prod] {app_scoped_configs['page_50x']['display_name']}",
-            app_code=app_code,
-            alert_rule_name=f'{app_code}_prod_page_50x',
-            enabled=True,
-            threshold_expr=app_scoped_configs['page_50x']['threshold_expr'],
-            notice_group_name=notice_group_name,
-        ),
         f'rule/{app_code}_default_stag_high_cpu_usage.yaml': j2_env.get_template('high_cpu_usage.yaml.j2').render(
             alert_rule_display_name=f"[{app_code}:default:stag] "
             f"{module_scoped_configs['high_cpu_usage']['display_name']}",

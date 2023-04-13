@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum by (pod, container_name, namespace) (rate(container_cpu_usage_seconds_total{container_name!="POD",namespace="{{ namespace }}",pod=~"{{ namespace }}--.*"}[2m])) / sum by (pod, container_name, namespace)(label_join(kube_pod_container_resource_limits_cpu_cores{namespace="{{ namespace }}",pod=~"{{ namespace }}--.*"}, "container_name", "", "container"))'
+  - metric: 'sum by (pod_name, container_name, namespace) (rate(container_cpu_usage_seconds_total{container_name!="POD",namespace="{{ namespace }}"}[2m])) / sum by (pod_name, container_name, namespace)(kube_pod_container_resource_limits_cpu_cores{namespace="{{ namespace }}"})'
     interval: 60
 
 detect: # 检测配置

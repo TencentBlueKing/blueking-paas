@@ -51,6 +51,7 @@ from paasng.platform.modules.manager import make_app_metadata as make_app_metada
 from paasng.platform.modules.models.module import Module
 from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
+from paasng.publish.sync_market.managers import AppManger
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
@@ -135,9 +136,17 @@ def legacy_app_code():
 @pytest.fixture(autouse=True)
 def auto_init_legacy_app(request):
     if "legacy_app_code" not in request.fixturenames:
+        yield
         return
+
     legacy_app_code = request.getfixturevalue("legacy_app_code")
     call_command("make_legacy_app_for_test", f"--code={legacy_app_code}", "--username=nobody", "--silence")
+
+    yield
+
+    # Clean the legacy app data after test
+    with legacy_db.session_scope() as session:
+        AppManger(session).delete_by_code(legacy_app_code)
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -310,7 +319,10 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
+    ), mock.patch(
+        'paasng.platform.applications.helpers.BKIAMClient',
+        new=StubBKIAMClient,
+    ), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(

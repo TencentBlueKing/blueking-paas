@@ -56,6 +56,8 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
         label=_("使用蓝鲸日志平台方案采集日志"),
         default=settings.LOG_COLLECTOR_TYPE == LogCollectorType.BK_LOG,
     )
+    # 低于 k8s 1.9 的集群无法支持 GPA
+    ENABLE_AUTOSCALING = FeatureFlagField(label=_("支持自动扩容"), default=False)
 
     @classmethod
     def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:

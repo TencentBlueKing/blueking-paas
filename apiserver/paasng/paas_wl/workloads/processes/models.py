@@ -82,14 +82,16 @@ class ProcessSpecPlan(models.Model):
 
 
 class ProcessSpec(TimestampedModel):
-    name = models.CharField(u'进程名称', max_length=32)
-    type = models.CharField(u'计算单元组类型（deprecated）', max_length=32)
+    name = models.CharField('进程名称', max_length=32)
+    type = models.CharField('计算单元组类型（deprecated）', max_length=32)
     engine_app = models.ForeignKey(
         'api.App', on_delete=models.DO_NOTHING, db_constraint=False, related_name='process_specs'
     )
-    target_replicas = models.IntegerField(u'期望副本数', default=1)
-    target_status = models.CharField(u'期望状态', max_length=32, default="start")
+    target_replicas = models.IntegerField('期望副本数', default=1)
+    target_status = models.CharField('期望状态', max_length=32, default="start")
     plan = models.ForeignKey(ProcessSpecPlan, on_delete=models.CASCADE)
+    autoscaling = models.BooleanField('是否启用自动扩缩容', default=False)
+    scaling_config = JSONField('自动扩缩容配置', default={})
 
     def save(self, *args, **kwargs):
         if self.target_replicas > self.plan.max_replicas:

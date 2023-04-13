@@ -24,7 +24,8 @@ from logstash import formatter
 
 from .local import local
 
-logger = logging.getLogger('root')
+# logging 模块只往标准输出打日志, 避免出现对 redis 的循环依赖
+logger = logging.getLogger("console")
 
 
 class LogstashRedisHandler(logging.Handler):
@@ -55,4 +56,16 @@ class RequestIDFilter(logging.Filter):
 
     def filter(self, record):
         record.request_id = local.request_id
+        return True
+
+
+# TODO: Remove this filter when bkpaas-auth has fixed the logging issue by removing
+# the unnecessary error logs.
+class BkAuthTrivialMsgFilter(logging.Filter):
+    """Ignore trivial log messages from bkpaas-auth library"""
+
+    def filter(self, record):
+        # Below error messages are considered trivial
+        if '登录票据已过期' in record.getMessage():
+            return False
         return True

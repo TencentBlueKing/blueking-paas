@@ -360,7 +360,10 @@ LOGGING = {
         },
         'simple': {'format': '%(levelname)s %(message)s'},
     },
-    'filters': {'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'}},
+    'filters': {
+        'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'},
+        'bk_auth_trivial': {'()': 'paasng.utils.logging.BkAuthTrivialMsgFilter'},
+    },
     'handlers': {
         'null': {'level': LOG_LEVEL, 'class': 'logging.NullHandler'},
         'mail_admins': {'level': LOG_LEVEL, 'class': 'django.utils.log.AdminEmailHandler'},
@@ -382,11 +385,13 @@ LOGGING = {
         'commands': {'handlers': _default_handlers, 'level': LOG_LEVEL, 'propagate': False},
         # 设置第三方模块日志级别，避免日志过多
         'bkpaas_auth': {'level': 'WARNING'},
+        'bkpaas_auth.core.token': {'filters': ['bk_auth_trivial']},
         'apscheduler': {'level': 'WARNING'},
         'requests': {'level': 'ERROR'},
         "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
         "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "iam": {"level": settings.get('IAM_LOG_LEVEL', "ERROR"), "handlers": _default_handlers, "propagate": False},
     },
 }
@@ -487,7 +492,6 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Shanghai'
 CELERY_ENABLE_UTC = False
 
-CELERY_IMPORTS = ["paas_wl.resources.tasks"]
 CELERY_BROKER_TRANSPORT_OPTIONS = settings.get('CELERY_BROKER_TRANSPORT_OPTIONS', {})
 
 if not CELERY_BROKER_TRANSPORT_OPTIONS and is_redis_backend(CELERY_BROKER_URL):
@@ -584,6 +588,7 @@ HEALTHZ_PROBES = settings.get(
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
+        'paasng.monitoring.healthz.probes.BKIAMProbe',
     ],
 )
 

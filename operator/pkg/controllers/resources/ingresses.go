@@ -44,6 +44,11 @@ const (
 	ServerSnippetAnnoKey        = "nginx.ingress.kubernetes.io/server-snippet"
 	ConfigurationSnippetAnnoKey = "nginx.ingress.kubernetes.io/configuration-snippet"
 	RewriteTargetAnnoKey        = "nginx.ingress.kubernetes.io/rewrite-target"
+	// SkipFilterCLBAnnoKey 由于 tke 集群默认会为没有绑定 CLB 的 Ingress 创建并绑定公网 CLB 的危险行为，
+	// bcs-webhook 会对下发/更新配置时没有指定 clb 的 Ingress 进行拦截，在关闭 tke 集群的 l7-lb-controller 组件后
+	// 可以在下发 Ingress 时候添加注解 bkbcs.tencent.com/skip-filter-clb: "true" 以跳过 bcs-webhook 的拦截
+	// l7-lb-controller 状态查询：kubectl get deploy l7-lb-controller -n kube-system
+	SkipFilterCLBAnnoKey = "bkbcs.tencent.com/skip-filter-clb"
 )
 
 // DomainSourceType is the source type for domain groups
@@ -176,6 +181,7 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 			Namespace: bkapp.Namespace,
 			Labels:    labels.AppDefault(bkapp),
 			Annotations: map[string]string{
+				SkipFilterCLBAnnoKey:        "true",
 				RewriteTargetAnnoKey:        makeRewriteTarget(),
 				ServerSnippetAnnoKey:        makeServerSnippet(bkapp, domains),
 				ConfigurationSnippetAnnoKey: makeConfigurationSnippet(bkapp, domains),
@@ -225,6 +231,7 @@ func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ing
 				Namespace: bkapp.Namespace,
 				Labels:    labels.AppDefault(bkapp),
 				Annotations: map[string]string{
+					SkipFilterCLBAnnoKey:        "true",
 					RewriteTargetAnnoKey:        makeRewriteTarget(),
 					ServerSnippetAnnoKey:        makeServerSnippet(bkapp, domains),
 					ConfigurationSnippetAnnoKey: makeConfigurationSnippet(bkapp, domains),

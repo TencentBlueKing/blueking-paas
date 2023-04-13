@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import List
 
-from paas_wl.utils.configs import get_region_aware
+from paasng.utils.configs import get_region_aware
 
 logger = logging.getLogger(__name__)
 

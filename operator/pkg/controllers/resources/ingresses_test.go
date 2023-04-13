@@ -107,6 +107,7 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(len(ingresses)).To(Equal(1))
 			Expect(ingresses[0].Name).To(Equal("demo-subdomain"))
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
+			Expect(ingresses[0].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
 		})
 	})
 
@@ -129,6 +130,7 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(names).To(Equal([]string{"custom-demo-foo.example.com", "custom-demo-with-name.example.com-1"}))
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
 			Expect(ingresses[1].Spec.Rules[0].Host).To(Equal("with-name.example.com"))
+			Expect(ingresses[1].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
 		})
 	})
 

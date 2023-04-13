@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
+from collections import OrderedDict, defaultdict
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from django.db import transaction
@@ -31,6 +33,7 @@ from paasng.platform.applications.constants import AppEnvironment, ApplicationTy
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
+from paasng.platform.core.storages.cache import region as cache_region
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
@@ -272,3 +275,39 @@ def get_processes_specs(application: Application, env: ModuleEnvironment) -> Lis
         return ProcessManager(env.engine_app).list_processes_specs()
 
     return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
+
+
+@dataclass
+class ResQuotasAggregation:
+    app: Application
+
+    def get_resource_quotas(self) -> dict:
+        quotas: dict = {"prod": defaultdict(int), "stag": defaultdict(int)}
+        for app_env in self.app.get_app_envs():
+            processes_specs = get_processes_specs(self.app, app_env)
+
+            for _specs in processes_specs:
+                quotas[app_env.environment]["memory_total"] += (
+                    _specs["resource_limit_quota"]['memory'] * _specs['target_replicas']
+                )
+                quotas[app_env.environment]["cpu_total"] += (
+                    _specs["resource_limit_quota"]['cpu'] * _specs['target_replicas']
+                )
+
+        # cpu 的单位从默认的 m 转为 核
+        cpu = sum([v["cpu_total"] for v in quotas.values()]) // 1000
+        # 内存的单位从默认的 Mi 转为 G
+        memory = sum([v["memory_total"] for v in quotas.values()]) // 1024
+        return {"cpu": cpu, "memory": memory}
+
+
+@cache_region.cache_on_arguments(namespace="app_resource", expiration_time=60 * 60 * 24)
+def cal_app_resource_quotas() -> dict:
+    """计算所有应用的资源配额，用于应用列表页面的排序展示"""
+    app_resource_quotas = OrderedDict()
+    for app in Application.objects.all():
+        quotas = ResQuotasAggregation(app).get_resource_quotas()
+        app_resource_quotas[app.code] = quotas
+    # 按内存的使用大小排序
+    sorted_app_quotas = OrderedDict(sorted(app_resource_quotas.items(), key=lambda x: x[1]['memory'], reverse=True))
+    return sorted_app_quotas

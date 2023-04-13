@@ -109,4 +109,4 @@ class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
 
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs_get(self, request, code, module_name, environment=None):
-        return super().query_logs(request, code, module_name, environment)
+        return self.query_logs(request, code, module_name, environment)

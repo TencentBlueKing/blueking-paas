@@ -224,6 +224,42 @@ class TestLegacySysStructuredLogAPIView:
 
 
 class TestSysBkPluginLogsViewset:
+    def test_dsl(self, sys_api_client, bk_plugin_app):
+        url = f"/sys/api/bk_plugins/{bk_plugin_app.code}/logs/?trace_id=foo&scroll_id=bar"
+        with mock.patch("paasng.extensions.bk_plugins.logging.instantiate_log_client") as client_factory:
+            client_factory().get_mappings.return_value = {"app_code": {"type": "text"}}
+            client_factory().execute_scroll_search.return_value = (
+                Response(
+                    Search(),
+                    {
+                        "hits": {"hits": []},
+                        "_scroll_id": "scroll_id",
+                    },
+                ),
+                0,
+            )
+            response = sys_api_client.get(url)
+        assert response.data["logs"] == []
+        # 测试 dsl 的拼接 是否符合预期
+        assert json.loads(response.data["dsl"]) == {
+            'query': {
+                'bool': {
+                    'filter': [
+                        {'range': {'@timestamp': {'gte': 'now-14d', 'lte': 'now'}}},
+                        # mappings 返回类型是 text, 因此添加了 .keyword
+                        {'term': {'app_code.keyword': bk_plugin_app.code}},
+                        # module_name 是硬编码的
+                        {'term': {'module_name': 'default'}},
+                        {'bool': {'must_not': [{'terms': {'stream': ['stderr', 'stdout']}}]}},
+                        {'term': {'json.trace_id': 'foo'}},
+                    ]
+                }
+            },
+            'sort': [{'@timestamp': {'order': 'desc'}}],
+            'size': 200,
+            'from': 0,
+        }
+
     def test_list(self, sys_api_client, bk_plugin_app):
         url = f"/sys/api/bk_plugins/{bk_plugin_app.code}/logs/?trace_id=foo&scroll_id=bar"
         with mock.patch("paasng.extensions.bk_plugins.logging.instantiate_log_client") as client_factory:

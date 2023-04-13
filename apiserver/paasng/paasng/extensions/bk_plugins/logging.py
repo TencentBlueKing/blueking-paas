@@ -30,7 +30,7 @@ from paasng.platform.log.client import LogClientProtocol, instantiate_log_client
 from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.platform.log.filters import EnvFilter
 from paasng.platform.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
-from paasng.platform.log.utils import clean_logs
+from paasng.platform.log.utils import clean_logs, get_es_term
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.es_log.models import LogLine, Logs, extra_field
 from paasng.utils.es_log.search import SmartSearch
@@ -85,7 +85,14 @@ class PluginLoggingClient:
         :param scroll_id: id for scrolling logs
         """
         log_client, log_config = self.instantiate_log_client()
-        search = self.make_search(trace_id)
+        search = self.make_search(
+            mappings=log_client.get_mappings(
+                index=log_config.search_params.indexPattern,
+                time_range=SmartTimeRange(time_range=self._default_time_range),
+                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+            ),
+            trace_id=trace_id,
+        )
 
         response, total = log_client.execute_scroll_search(
             index=log_config.search_params.indexPattern,
@@ -114,7 +121,7 @@ class PluginLoggingClient:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module.get_envs("prod")).json
         return instantiate_log_client(log_config=log_config, bk_username="blueking"), log_config
 
-    def make_search(self, trace_id: str) -> SmartSearch:
+    def make_search(self, mappings: dict, trace_id: str) -> SmartSearch:
         """构造日志查询语句
 
         :param trace_id: "trace_id" is an identifier for filtering logs
@@ -124,19 +131,22 @@ class PluginLoggingClient:
         env = module.get_envs(environment="prod")
         smart_time_range = SmartTimeRange(time_range=self._default_time_range)
         query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).json
-        search = self._make_base_search(env=env, search_params=query_config.search_params, time_range=smart_time_range)
-        return search.filter(**{'json.trace_id': [trace_id]})
+        search = self._make_base_search(
+            env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
+        )
+        return search.filter("term", **{get_es_term(query_term='json.trace_id', mappings=mappings): trace_id})
 
     def _make_base_search(
         self,
         env: ModuleEnvironment,
         search_params: ElasticSearchParams,
+        mappings: dict,
         time_range: SmartTimeRange,
         limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
-        plugin_filter = EnvFilter(env=env, search_params=search_params)
+        plugin_filter = EnvFilter(env=env, search_params=search_params, mappings=mappings)
         search = SmartSearch(time_field=search_params.timeField, time_range=time_range)
         search = plugin_filter.filter_by_env(search)
         search = plugin_filter.filter_by_builtin_filters(search)

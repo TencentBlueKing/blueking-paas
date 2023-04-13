@@ -25,7 +25,7 @@ from elasticsearch_dsl.response import Hit
 pytestmark = pytest.mark.django_db
 
 
-class TestLegacyStructuredLogAPIView:
+class TestModuleStructuredLogAPIView:
     def test_dsl(self, api_client, bk_app, bk_module):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/structured/list/?time_range=1h"
         with mock.patch("paasng.platform.log.views.instantiate_log_client") as client_factory:
@@ -65,7 +65,7 @@ class TestLegacyStructuredLogAPIView:
                 }
             },
             'sort': [{'@timestamp': {'order': 'desc'}, 'some-field': {'order': 'asc'}}],
-            'size': 200,
+            'size': 100,
             'from': 0,
             'highlight': {
                 'fields': {'*': {'number_of_fragments': 0}, '*.*': {'number_of_fragments': 0}},
@@ -126,26 +126,26 @@ class TestLegacyStructuredLogAPIView:
         # 测试日志的解析是否符合预期
         assert response.data["logs"] == [
             {
-                'timestamp': 1,
-                # 高亮
-                'message': '[bk-mark]???[/bk-mark]',
-                'detail': {
-                    '@timestamp': 1,
-                    # 扁平化
-                    'json.message': '[bk-mark]???[/bk-mark]',
-                    'one.two.three': 'four',
-                    'region': 'default',
-                    'app_code': bk_app.code,
-                    'module_name': bk_module.name,
-                    'environment': 'stag',
-                    'process_id': '1234567',
-                    'stream': 'foo',
-                    'pod_name': 'bar',
+                "timestamp": 1,
+                # # 高亮
+                "message": "[bk-mark]???[/bk-mark]",
+                "detail": {
+                    "@timestamp": 1,
+                    "json.message": "[bk-mark]???[/bk-mark]",
+                    "one.two.three": "four",
+                    "region": bk_app.region,
+                    "app_code": bk_app.code,
+                    "module_name": "default",
+                    "environment": "stag",
+                    "process_id": "1234567",
+                    "stream": "foo",
+                    "pod_name": "bar",
                 },
-                'region': bk_app.region,
-                'app_code': bk_app.code,
+                "region": bk_app.region,
+                "app_code": bk_app.code,
                 # 没有 module_name
-                'environment': 'stag',
-                'process_id': '1234567',
+                "environment": "stag",
+                "process_id": "1234567",
+                "stream": "foo",
             }
         ]

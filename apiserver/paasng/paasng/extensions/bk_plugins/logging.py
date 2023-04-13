@@ -31,6 +31,7 @@ from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.platform.log.filters import EnvFilter
 from paasng.platform.log.models import ElasticSearchConfig, ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.utils import clean_logs
+from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.es_log.models import LogLine, Logs, extra_field
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -51,7 +52,6 @@ class StructureLogLine(LogLine):
 
     # extra useful field, will be extracted from the same field in raw
     detail: Dict[str, Any] = field(init=False)
-    region: str = extra_field(converter=converters.optional(str))
     plugin_code: str = extra_field(source="app_code", converter=converters.optional(str))
     environment: str = extra_field(converter=converters.optional(str))
     process_id: Optional[str] = extra_field(converter=converters.optional(str))
@@ -60,6 +60,7 @@ class StructureLogLine(LogLine):
 
     def __attrs_post_init__(self):
         self.detail = self.raw
+        self.raw["ts"] = convert_timestamp_to_str(self.timestamp)
         super().__attrs_post_init__()
 
 
@@ -110,7 +111,7 @@ class PluginLoggingClient:
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
         module = self.application.get_module(module_name=self._module_name)
-        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module)
+        log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module.get_envs("prod")).json
         return instantiate_log_client(log_config=log_config, bk_username="blueking"), log_config
 
     def make_search(self, trace_id: str) -> SmartSearch:
@@ -122,7 +123,7 @@ class PluginLoggingClient:
         # 插件应用只部署 prod 环境
         env = module.get_envs(environment="prod")
         smart_time_range = SmartTimeRange(time_range=self._default_time_range)
-        query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env)
+        query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).json
         search = self._make_base_search(env=env, search_params=query_config.search_params, time_range=smart_time_range)
         return search.filter(**{'json.trace_id': [trace_id]})
 

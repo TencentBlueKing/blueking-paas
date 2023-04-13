@@ -30,8 +30,6 @@ class StandardOutputLogLineSLZ(serializers.Serializer):
     timestamp = serializers.IntegerField(help_text="时间戳")
     message = serializers.CharField(help_text="日志内容")
 
-    region = serializers.CharField()
-    app_code = serializers.CharField()
     environment = serializers.CharField()
     process_id = serializers.CharField(allow_null=True, allow_blank=True)
     pod_name = serializers.CharField(required=True, help_text="Pod名称")
@@ -57,6 +55,7 @@ class StructureLogLineSLZ(serializers.Serializer):
     app_code = serializers.CharField()
     environment = serializers.CharField()
     process_id = serializers.CharField(allow_null=True, allow_blank=True)
+    stream = serializers.CharField()
 
 
 class StructureLogsSLZ(serializers.Serializer):
@@ -115,8 +114,12 @@ class LogQueryParamsSLZ(serializers.Serializer):
     start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
     end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
     offset = serializers.IntegerField(default=0, help_text="偏移量=页码*每页数量")
-    limit = serializers.IntegerField(default=100, help_text="每页数量")
+    limit = serializers.IntegerField(default=100, min_value=1, help_text="每页数量")
     scroll_id = serializers.CharField(required=False, help_text="仅标准输出日志需要该字段")
+
+    # [deprecated] should use limit/offset instead
+    page = serializers.IntegerField(min_value=1, required=False, help_text="页码")
+    page_size = serializers.IntegerField(min_value=1, required=False, help_text="每页数量")
 
     def validate(self, attrs):
         try:
@@ -128,6 +131,11 @@ class LogQueryParamsSLZ(serializers.Serializer):
         except ValueError as e:
             raise ValidationError({"time_range": str(e)})
         attrs["smart_time_range"] = time_range
+        # deprecated, 兼容旧参数
+        if "page_size" in attrs:
+            attrs["limit"] = attrs["page_size"]
+        if "page" in attrs:
+            attrs["offset"] = (attrs["page"] - 1) * attrs["limit"]
         return attrs
 
 

@@ -391,7 +391,7 @@
                     if (field.name !== 'response_time') {
                         field.list.forEach(item => {
                             options[field.name].push({
-                                text: item.text,
+                                text: String(item.text),
                                 value: item.id
                             });
                         });

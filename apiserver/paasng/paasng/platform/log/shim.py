@@ -94,7 +94,9 @@ def setup_platform_elk_model():
         termTemplate={"engine_app_name": "{{ engine_app_names | tojson }}"},
         builtinFilters={"stream": ["stdout"]},
         builtinExcludes={},
-        filedMatcher=r"client_ip|bytes_sent|user_agent|http_version|environment|process_id|stream",
+        filedMatcher=(
+            r"client_ip|bytes_sent|user_agent|http_version|environment|process_id|stream|method|path|status_code"
+        ),
     )
     ElasticSearchConfig.objects.update_or_create(
         collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID,

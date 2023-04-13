@@ -16,8 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+
 import cattr
 from django.conf import settings
+from django.db.utils import IntegrityError
 
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.shim import EnvClusterService
@@ -29,6 +32,8 @@ from paasng.platform.log.models import (
     ElasticSearchParams,
     ProcessLogQueryConfig,
 )
+
+logger = logging.getLogger(__name__)
 
 ELK_STDOUT_COLLECTOR_CONFIG_ID = "elk-stdout"
 ELK_STRUCTURED_COLLECTOR_CONFIG_ID = "elk-structured"
@@ -115,11 +120,14 @@ def setup_saas_elk_model(env: ModuleEnvironment):
     structured_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID)
     ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
 
-    ProcessLogQueryConfig.objects.update_or_create(
-        env=env,
-        process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER,
-        defaults={"stdout": stdout_config, "json": structured_config, "ingress": ingress_config},
-    )
+    try:
+        ProcessLogQueryConfig.objects.update_or_create(
+            env=env,
+            process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER,
+            defaults={"stdout": stdout_config, "json": structured_config, "ingress": ingress_config},
+        )
+    except IntegrityError:
+        logger.info("unique constraint conflict in the database when creating ProcessLogQueryConfig, can be ignored.")
 
 
 def setup_default_bk_log_model(env: ModuleEnvironment):

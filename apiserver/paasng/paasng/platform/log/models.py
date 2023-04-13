@@ -140,7 +140,7 @@ class ProcessLogQueryConfig(UuidAuditedModel):
     """进程日志查询配置"""
 
     env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
-    process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True, help_text="默认配置使用 ")
+    process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True)
 
     stdout = models.ForeignKey(
         ElasticSearchConfig,
@@ -168,3 +168,6 @@ class ProcessLogQueryConfig(UuidAuditedModel):
     )
 
     objects = ProcessLogQueryConfigManager()
+
+    class Meta:
+        unique_together = ("env", "process_type")

@@ -29,8 +29,6 @@ import (
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 )
 
-var appCode, appModule, appEnv string
-
 var appLongDesc = `
 Deploy PaaS application using subcommands like "bkpaas-cli app deploy"
 `

@@ -24,11 +24,13 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/action"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 )
 
 // NewCmdGetInfo returns a Command instance for 'app get-info' sub command
 func NewCmdGetInfo() *cobra.Command {
+	var appCode string
+
 	cmd := cobra.Command{
 		Use:   "get-info",
 		Short: "Get PaaS application info",
@@ -45,7 +47,7 @@ func NewCmdGetInfo() *cobra.Command {
 
 // 在命令行中展示指定的蓝鲸应用信息
 func displayAppInfo(appCode string) {
-	retriever := action.NewBasicInfoRetriever()
+	retriever := handler.NewBasicInfoRetriever()
 	appInfo, err := retriever.Exec(appCode)
 	if err != nil {
 		color.Red("Failed to get application info")

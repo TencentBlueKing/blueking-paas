@@ -16,16 +16,19 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action_test
+package helper
 
 import (
-	"testing"
+	"github.com/TencentBlueKing/gopkg/mapx"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
 )
 
-func TestEnvx(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "pkg/action Suite")
+// FetchAppType 获取指定的应用类型
+func FetchAppType(appCode string) string {
+	appInfo, err := apiresources.DefaultRequester.GetAppInfo(appCode)
+	if err != nil {
+		return ""
+	}
+	return mapx.GetStr(appInfo, "application.type")
 }

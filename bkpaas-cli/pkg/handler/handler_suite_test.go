@@ -16,32 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package handler_test
 
-type DefaultAppDeployer struct{}
+import (
+	"testing"
 
-func (d DefaultAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
-	// TODO implement me
-	panic("implement me")
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func TestHandler(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "pkg/handler Suite")
 }
-
-func (d DefaultAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-var _ Deployer = DefaultAppDeployer{}
-
-type CNativeAppDeployer struct{}
-
-func (d CNativeAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (d CNativeAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-var _ Deployer = CNativeAppDeployer{}

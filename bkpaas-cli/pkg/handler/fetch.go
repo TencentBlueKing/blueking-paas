@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package handler
 
 import (
 	"github.com/TencentBlueKing/gopkg/mapx"

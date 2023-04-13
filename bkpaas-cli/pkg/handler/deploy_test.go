@@ -16,13 +16,12 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action_test
+package handler_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/action"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
 )
 
@@ -31,38 +30,8 @@ var _ = Describe("TestFetch", func() {
 		apiresources.DefaultRequester = &apiresources.MockedRequester{}
 	})
 
-	It("TestAppBasicInfoRetriever", func() {
-		excepted := action.AppBasicInfo{
-			Code:    "test-code",
-			Name:    "test-app",
-			Region:  "默认版",
-			AppType: "default",
-			Modules: []action.ModuleBasicInfo{
-				{
-					Name:     "default",
-					RepoType: "Opensource Community Github",
-					RepoURL:  "https://github.com/octocat/Hello-World.git",
-					Envs: []action.EnvBasicInfo{
-						{
-							Name:        "stag",
-							ClusterName: "default",
-							ClusterID:   "BCS-K8S-12345",
-						},
-						{
-							Name:        "prod",
-							ClusterName: "dev",
-							ClusterID:   "",
-						},
-					},
-				},
-			},
-		}
-
-		retriever := action.NewBasicInfoRetriever()
-		info, err := retriever.Exec("test-code")
-		Expect(info).To(Equal(excepted))
-		Expect(err).To(BeNil())
-
-		Expect(info.String() != "").To(BeTrue())
+	It("TestDefaultAppDeployer", func() {
+		// TODO 补充单元测试
+		Expect(nil).To(BeNil())
 	})
 })

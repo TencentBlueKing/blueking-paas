@@ -16,22 +16,23 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action_test
+package helper_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
 )
 
-var _ = Describe("TestFetch", func() {
+var _ = Describe("TestApp", func() {
 	BeforeEach(func() {
 		apiresources.DefaultRequester = &apiresources.MockedRequester{}
 	})
 
-	It("TestDefaultAppDeployer", func() {
-		// TODO 补充单元测试
-		Expect(nil).To(BeNil())
+	It("TestFetchAppType", func() {
+		Expect(helper.FetchAppType("no_exists")).To(Equal(""))
+		Expect(helper.FetchAppType("bkapp_code")).To(Equal("default"))
 	})
 })

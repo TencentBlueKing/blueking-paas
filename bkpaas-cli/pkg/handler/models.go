@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package handler
 
 import (
 	"bytes"
@@ -86,18 +86,8 @@ var _ AppInfo = AppBasicInfo{}
 type DeployOptions struct {
 	AppCode       string
 	AppType       string
-	Branch        string
 	Module        string
 	DeployEnv     string
+	Branch        string
 	BkAppManifest map[string]any
-}
-
-// DeployInfo 部署相关信息
-type DeployInfo struct {
-	DeployInfo string
-}
-
-// DeployResult 部署结果
-type DeployResult struct {
-	Logs string
 }

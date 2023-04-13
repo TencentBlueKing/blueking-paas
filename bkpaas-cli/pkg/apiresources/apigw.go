@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/levigross/grequests"
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
@@ -54,10 +55,69 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 // GetAppInfo 获取应用基础信息
 func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	url := fmt.Sprintf("%s/bkapps/applications/%s/", config.G.PaaSApigwUrl, appCode)
-	resp, err := grequests.Get(url, &grequests.RequestOptions{Headers: r.headers()})
+	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
+}
 
-	if resp.StatusCode != http.StatusOK || err != nil {
-		return nil, FetchAppInfoErr
+// DeployDefaultApp 部署普通应用
+func (r apigwRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error) {
+	url := fmt.Sprintf(
+		"%s/bkapps/applications/%s/modules/%s/envs/%s/deployments/",
+		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
+	)
+	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]string{
+		"version_type": "branch", "version_name": branch, "revision": branch, // 暂不支持按 commit_id 拉取代码
+	}}
+	return r.handlePaaSApiRequest(grequests.Post, url, opts)
+}
+
+// GetDefaultAppDeployResult 获取普通应用部署结果
+func (r apigwRequester) GetDefaultAppDeployResult(appCode string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// DeployCNativeApp 部署云原生应用
+func (r apigwRequester) DeployCNativeApp(
+	appCode, appModule, deployEnv string, manifest map[string]any,
+) (map[string]any, error) {
+	url := fmt.Sprintf(
+		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/deployments/",
+		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
+	)
+	opts := grequests.RequestOptions{Headers: r.headers(), JSON: map[string]any{"manifest": manifest}}
+	return r.handlePaaSApiRequest(grequests.Post, url, opts)
+}
+
+// GetCNativeAppDeployResult 获取云原生应用部署结果
+func (r apigwRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// 处理 PaaS API 调用请求
+func (r apigwRequester) handlePaaSApiRequest(
+	reqFunc func(string, *grequests.RequestOptions) (*grequests.Response, error),
+	url string, opts grequests.RequestOptions,
+) (map[string]any, error) {
+	resp, err := reqFunc(url, &opts)
+
+	if err != nil {
+		return nil, PaaSApiErr
+	}
+
+	// PaaS 平台 API 可能正常返回 200，201，204 等值，这里需要以范围判断（200 <= x < 300）
+	if !(http.StatusOK <= resp.StatusCode && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, errors.Errorf("%d -> %s", resp.StatusCode, resp.String())
 	}
 
 	respData := map[string]any{}

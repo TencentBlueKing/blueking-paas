@@ -93,6 +93,10 @@ func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) 
 
 // GetAppInfo ...
 func (r MockedRequester) GetAppInfo(appCode string) (map[string]any, error) {
+	if appCode == "no_exists" {
+		return nil, PaaSApiErr
+	}
+
 	return map[string]any{
 		"application": map[string]any{
 			"code":        appCode,
@@ -123,3 +127,44 @@ func (r MockedRequester) GetAppInfo(appCode string) (map[string]any, error) {
 		},
 	}, nil
 }
+
+// DeployDefaultApp ...
+func (r MockedRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// GetDefaultAppDeployResult ...
+func (r MockedRequester) GetDefaultAppDeployResult(appCode string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// ListDefaultAppDeployHistory ...
+func (r MockedRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// DeployCNativeApp ...
+func (r MockedRequester) DeployCNativeApp(
+	appCode, appModule, deployEnv string,
+	manifest map[string]any,
+) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// GetCNativeAppDeployResult ...
+func (r MockedRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// ListCNativeAppDeployHistory ...
+func (r MockedRequester) ListCNativeAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+var _ Requester = MockedRequester{}

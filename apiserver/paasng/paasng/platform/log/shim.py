@@ -34,6 +34,7 @@ from paasng.platform.log.models import (
 )
 
 logger = logging.getLogger(__name__)
+
 ELK_STDOUT_COLLECTOR_CONFIG_ID = "elk-stdout"
 ELK_STRUCTURED_COLLECTOR_CONFIG_ID = "elk-structured"
 ELK_INGRESS_COLLECTOR_CONFIG_ID = "elk-ingress"
@@ -126,7 +127,7 @@ def setup_saas_elk_model(env: ModuleEnvironment):
             defaults={"stdout": stdout_config, "json": structured_config, "ingress": ingress_config},
         )
     except IntegrityError:
-        logger.info("创建 ProcessLogQueryConfig 时出现数据库唯一约束冲突")
+        logger.info("unique constraint conflict in the database when creating ProcessLogQueryConfig, can be ignored.")
 
 
 def setup_default_bk_log_model(env: ModuleEnvironment):

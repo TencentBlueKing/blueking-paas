@@ -945,7 +945,7 @@
                         params,
                         filter
                     });
-                    const data = res.data.logs.reverse();
+                    const data = res.logs.reverse();
                     data.forEach((item) => {
                         item.podShortName = item.pod_name.split('-').reverse()[0];
                     });

@@ -28,11 +28,11 @@ class PodMapper(CallThroughKresMapper[KPod]):
 
     @property
     def name(self) -> str:
-        return f"{self.process.app.scheduler_safe_name}--{self.process.name}"
+        return f"{self.process.app.scheduler_safe_name}--{self.process.type}"
 
     @property
     def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.name}", 63)
+        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.type}", 63)
 
     @property
     def labels(self) -> dict:
@@ -44,7 +44,7 @@ class PodMapper(CallThroughKresMapper[KPod]):
             region=self.process.app.region,
             env=mdata.environment,
             module_name=mdata.module_name,
-            process_id=self.process.name,
+            process_id=self.process.type,
             category="bkapp",
             mapper_version="v2",
         )
@@ -61,7 +61,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.name}", 63)
+        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.type}", 63)
 
     @property
     def labels(self) -> dict:
@@ -78,7 +78,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def name(self) -> str:
-        return f"{self.process.app.scheduler_safe_name}--{self.process.name}"
+        return f"{self.process.app.scheduler_safe_name}--{self.process.type}"
 
 
 class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
@@ -86,11 +86,11 @@ class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
 
     @property
     def pod_selector(self) -> str:
-        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.name}", 63)
+        return digest_if_length_exceeded(f"{self.process.app.name}-{self.process.type}", 63)
 
     @property
     def name(self) -> str:
-        return f"{self.process.app.name.replace('_', '0us0')}--{self.process.name}"
+        return f"{self.process.app.scheduler_safe_name}--{self.process.type}"
 
     @property
     def match_labels(self) -> dict:

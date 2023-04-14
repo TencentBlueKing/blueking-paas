@@ -80,4 +80,4 @@ class ProcDefaultServices:
     def should_create_ingress(self):
         """whether to create an ingress rule or not"""
         # TODO: 由 ProcessSpec 模型控制是否创建 ingress
-        return self.process.name == "web"
+        return self.process.type == "web"

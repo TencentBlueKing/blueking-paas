@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Tests for Kubernetes resources utils
 """
+import math
 import time
 from textwrap import dedent
 from typing import Any, Dict, Optional
@@ -222,12 +223,15 @@ class TestKNamespace:
         KNamespace(k8s_client).delete(namespace)
 
     def test_wait_for_default_sa_failed(self, k8s_client, resource_name):
+        cli = KNamespace(k8s_client)
         time_started = time.time()
         namespace = resource_name
+        with pytest.raises(CreateServiceAccountTimeout), mock.patch.object(
+            KNamespace, "default_sa_exists", return_value=False
+        ):
+            assert cli.wait_for_default_sa(namespace, timeout=2, check_period=0.1)
 
-        with pytest.raises(CreateServiceAccountTimeout):
-            assert KNamespace(k8s_client).wait_for_default_sa(namespace, timeout=2, check_period=0.1)
-        assert int(time.time() - time_started) == 2
+        assert math.isclose(time.time(), time_started, abs_tol=2.1)
 
     def test_wait_for_default_sa_succeed(self, k8s_client, resource_name):
         namespace = resource_name

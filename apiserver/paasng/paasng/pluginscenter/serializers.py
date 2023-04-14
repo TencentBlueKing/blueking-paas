@@ -32,7 +32,6 @@ from paasng.pluginscenter.constants import LogTimeChoices, PluginReleaseVersionR
 from paasng.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.log import SmartTimeRange
 from paasng.pluginscenter.models import (
     OperationRecord,
     PluginDefinition,
@@ -41,6 +40,7 @@ from paasng.pluginscenter.models import (
     PluginRelease,
     PluginReleaseStage,
 )
+from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
 
 

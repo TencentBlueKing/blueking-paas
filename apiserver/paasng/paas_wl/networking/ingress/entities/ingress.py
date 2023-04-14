@@ -38,9 +38,20 @@ ANNOT_SERVER_SNIPPET = 'nginx.ingress.kubernetes.io/server-snippet'
 ANNOT_CONFIGURATION_SNIPPET = 'nginx.ingress.kubernetes.io/configuration-snippet'
 ANNOT_REWRITE_TARGET = "nginx.ingress.kubernetes.io/rewrite-target"
 ANNOT_SSL_REDIRECT = 'nginx.ingress.kubernetes.io/ssl-redirect'
+# 由于 tke 集群默认会为没有绑定 CLB 的 Ingress 创建并绑定公网 CLB 的危险行为，
+# bcs-webhook 会对下发/更新配置时没有指定 clb 的 Ingress 进行拦截，在关闭 tke 集群的 l7-lb-controller 组件后
+# 可以在下发 Ingress 时候添加注解 bkbcs.tencent.com/skip-filter-clb: "true" 以跳过 bcs-webhook 的拦截
+# l7-lb-controller 状态查询：kubectl get deploy l7-lb-controller -n kube-system
+ANNOT_SKIP_FILTER_CLB = 'bkbcs.tencent.com/skip-filter-clb'
 
 # Annotations managed by system
-reserved_annotations = {ANNOT_SERVER_SNIPPET, ANNOT_CONFIGURATION_SNIPPET, ANNOT_REWRITE_TARGET, ANNOT_SSL_REDIRECT}
+reserved_annotations = {
+    ANNOT_SERVER_SNIPPET,
+    ANNOT_CONFIGURATION_SNIPPET,
+    ANNOT_REWRITE_TARGET,
+    ANNOT_SSL_REDIRECT,
+    ANNOT_SKIP_FILTER_CLB,
+}
 
 
 logger = logging.getLogger(__name__)
@@ -156,6 +167,7 @@ class IngressV1Beta1Serializer(AppEntitySerializer['ProcessIngress']):
             ANNOT_CONFIGURATION_SNIPPET: obj.configuration_snippet,
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
+            ANNOT_SKIP_FILTER_CLB: "true",
             **obj.annotations,
         }
         if obj.rewrite_to_root:
@@ -314,6 +326,7 @@ class IngressV1Serializer(AppEntitySerializer["ProcessIngress"]):
             ANNOT_CONFIGURATION_SNIPPET: obj.configuration_snippet,
             # Disable HTTPS redirect by default, the behaviour might be overwritten in the future
             ANNOT_SSL_REDIRECT: "false",
+            ANNOT_SKIP_FILTER_CLB: "true",
             **obj.annotations,
         }
         if obj.rewrite_to_root:

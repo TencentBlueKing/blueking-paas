@@ -16,6 +16,8 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from unittest import mock
+
 import pytest
 
 from paasng.dev_resources.servicehub.remote.client import RemoteSvcConfig
@@ -32,7 +34,7 @@ def configure_ieod_region():
 
 
 @pytest.fixture
-def migration_instance_maker(bk_app):
+def migration_instance_maker(bk_app, legacy_app_code):
     def maker(migration_cls):
         instance = get_migration_instance(migration_cls)
         instance.context.app = bk_app
@@ -59,3 +61,10 @@ def store():
     raw_store = get_remote_store()
     yield raw_store
     raw_store.empty()
+
+
+@pytest.fixture(autouse=True)
+def mock_setup_log():
+    with mock.patch("paasng.platform.log.shim.EnvClusterService") as fake_log:
+        fake_log().get_cluster().has_feature_flag.return_value = False
+        yield

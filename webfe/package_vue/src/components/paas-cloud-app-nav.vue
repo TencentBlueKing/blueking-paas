@@ -103,6 +103,8 @@
                         'appCloudAPI',
                         // 镜像凭证
                         'imageCredential',
+                        // 应用推广
+                        'appMarketing',
                         // 基本设置
                         'appConfigs',
                         // 文档管理
@@ -135,6 +137,8 @@
                         'appCloudAPI',
                         // 镜像凭证
                         'imageCredential',
+                        // 应用推广
+                        'appMarketing',
                         // 基本设置
                         'appConfigs',
                         // 文档管理
@@ -167,6 +171,8 @@
                         'appCloudAPI',
                         // 镜像凭证
                         'imageCredential',
+                        // 应用推广
+                        'appMarketing',
                         // 基本设置
                         'appConfigs',
                         // 文档管理
@@ -444,7 +450,7 @@
                         });
                     } else {
                         this.$router.push({
-                            name: 'appBaseInfo',
+                            name: 'appSummary',
                             params: {
                                 id: this.curAppInfo.application.code
                             }

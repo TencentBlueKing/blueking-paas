@@ -63,6 +63,7 @@ class DeployHookType(str, StructuredEnum):
 
     @classmethod
     def _missing_(cls, value):
+        # 兼容 value = pre_release_hook 的场景
         if value == "pre_release_hook":
             return cls.PRE_RELEASE_HOOK
         return super()._missing_(value)

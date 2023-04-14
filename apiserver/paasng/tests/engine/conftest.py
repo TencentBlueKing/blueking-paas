@@ -19,8 +19,23 @@ to the current version of the project delivered to anyone in the future.
 import pytest
 from django.test.utils import override_settings
 
+from paas_wl.platform.applications.models import BuildProcess, WlApp
+from tests.paas_wl.utils.build import create_build_proc
+
 
 @pytest.fixture(autouse=True, scope="session")
 def no_color():
     with override_settings(COLORFUL_TERMINAL_OUTPUT=False):
         yield
+
+
+@pytest.fixture
+def wl_app(bk_stag_env, with_wl_apps) -> WlApp:
+    """A WlApp object"""
+    return bk_stag_env.wl_app
+
+
+@pytest.fixture
+def build_proc(wl_app) -> BuildProcess:
+    """A new BuildProcess object with random info"""
+    return create_build_proc(wl_app)

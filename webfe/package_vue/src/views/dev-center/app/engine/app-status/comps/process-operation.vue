@@ -38,7 +38,7 @@
                   class="process-name"
                 >{{ process.name }}</b>
                 <div class="instance-count">
-                  <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
+                  <span>{{ process.available_instance_count }} / {{ process.targetReplicas }}</span>
                 </div>
               </div>
               <div class="process-operate">
@@ -945,7 +945,7 @@
                         params,
                         filter
                     });
-                    const data = res.data.logs.reverse();
+                    const data = res.logs.reverse();
                     data.forEach((item) => {
                         item.podShortName = item.pod_name.split('-').reverse()[0];
                     });
@@ -1340,7 +1340,6 @@
                         operateIconTitle: operateIconTitle,
                         operateIconTitleCopy: operateIconTitle,
                         isShowTooltipConfirm: false,
-                        desired_replicas: processInfo.replicas,
                         available_instance_count: processInfo.success,
                         failed: processInfo.failed,
                         cpuLimit: processInfo.cpu_limit,
@@ -1461,7 +1460,6 @@
                     this.allProcesses.forEach(process => {
                         if (process.type === processData.type) {
                             process.available_instance_count = processData.success;
-                            process.desired_replicas = processData.replicas;
                             process.failed = processData.failed;
                             this.updateProcessStatus(process);
                         }

@@ -19,13 +19,14 @@ to the current version of the project delivered to anyone in the future.
 """Releasing process of an application deployment
 """
 import logging
-import typing
-from typing import Optional
+from typing import List, Optional, Tuple
 
+import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from django.utils.translation import gettext as _
 from pydantic import ValidationError as PyDanticValidationError
 
+from paas_wl.workloads.processes.models import DeclarativeProcess
 from paasng.engine.configurations.building import get_processes_by_build
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
@@ -51,8 +52,12 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure(_('更新进程配置')):
-            # only sync `command` field in release
-            processes = [{"name": name, "command": command} for name, command in self.deployment.procfile.items()]
+            # create process specs if missing
+            # TODO: sync plan, replicas
+            processes = cattr.structure(
+                [{"name": name, "command": command} for name, command in self.deployment.procfile.items()],
+                List[DeclarativeProcess],
+            )
             ProcessManager(self.engine_app).sync_processes_specs(processes)
 
         with self.procedure(_('更新应用配置')):
@@ -73,7 +78,7 @@ class ApplicationReleaseMgr(DeployStep):
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(release_id=release_id)
         step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
-        step_obj.mark_and_write_to_steam(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+        step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
 
     def sync_entrance_configs(self):
         """Sync app's default subdomains/subpaths with engine backend"""
@@ -91,7 +96,7 @@ class ApplicationReleaseMgr(DeployStep):
             self.deployment.app_environment.save()
 
         step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
-        step_obj.mark_and_write_to_steam(self.stream, status)
+        step_obj.mark_and_write_to_stream(self.stream, status)
         self.state_mgr.update(release_status=status)
         self.state_mgr.finish(status, err_detail=error_detail, write_to_stream=True)
 
@@ -117,7 +122,7 @@ class ReleaseResultHandler(CallbackHandler):
         mgr = ApplicationReleaseMgr.from_deployment_id(deployment_id)
         mgr.callback_release(status.to_job_status(), error_detail)
 
-    def get_error_detail(self, result: CallbackResult) -> typing.Tuple[bool, str]:
+    def get_error_detail(self, result: CallbackResult) -> Tuple[bool, str]:
         """Get detailed error message. if error message was empty, release was considered succeeded
 
         :returns: (is_interrupted, error_msg)

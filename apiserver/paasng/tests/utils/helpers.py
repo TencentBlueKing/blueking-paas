@@ -106,6 +106,8 @@ def initialize_module(module, repo_type=None, repo_url='', additional_modules=No
             module.save()
             module_initializer.initialize_with_template(repo_type, repo_url)
 
+        module_initializer.initialize_log_config()
+
 
 class BaseTestCaseWithApp(TestCase):
     """Base class with an application was pre-created"""
@@ -196,14 +198,16 @@ def create_app(
     return application
 
 
-def create_legacy_application():
-    """Create a simple legacy application, for testing purpose only"""
+def create_legacy_application(code: Optional[str] = None):
+    """Create a simple legacy application, for testing purpose only
+
+    :param code: The application code, default to a random string.
+    """
     session = legacy_db.get_scoped_session()
-    app_code = generate_random_string(length=12)
-    app_name = app_code
+    app_code = code if code else generate_random_string(length=12)
     values = dict(
         code=app_code,
-        name=app_name,
+        name=app_code,
         from_paasv3=0,
         migrated_to_paasv3=0,
         logo='',
@@ -390,7 +394,10 @@ def _mock_wl_services_in_creation():
         "paasng.cnative.services.create_cnative_app_model_resource"
     ), mock.patch(
         "paasng.cnative.services.EnvClusterService"
-    ):
+    ), mock.patch(
+        "paasng.platform.log.shim.EnvClusterService"
+    ) as fake_log:
+        fake_log().get_cluster().has_feature_flag.return_value = False
         yield
 
 

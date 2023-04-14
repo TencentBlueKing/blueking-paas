@@ -20,7 +20,7 @@ import json
 from typing import Dict
 from unittest import mock
 
-import cattrs
+import cattr
 import pytest
 from elasticsearch_dsl.aggs import DateHistogram
 from elasticsearch_dsl.response import Hit
@@ -28,13 +28,13 @@ from elasticsearch_dsl.response.aggs import FieldBucketData
 from elasticsearch_dsl.search import Search
 
 from paasng.pluginscenter.log import (
-    SmartTimeRange,
     aggregate_date_histogram,
     query_ingress_logs,
     query_standard_output_logs,
     query_structure_logs,
 )
 from paasng.pluginscenter.log.client import LogClientProtocol
+from paasng.utils.es_log.time_range import SmartTimeRange
 
 pytestmark = pytest.mark.django_db
 
@@ -63,13 +63,13 @@ def test_query_standard_output_logs(pd, plugin, log_client, time_range):
     ], 20
 
     logs = query_standard_output_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattrs.unstructure(logs.logs) == [
-        {'timestamp': 1, 'message': 'foo'},
-        {'timestamp': 2, 'message': 'bar'},
+    assert cattr.unstructure(logs.logs) == [
+        {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json.message': 'foo', 'other': 'FOO'}},
+        {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json.message': 'bar', 'other': 'BAR'}},
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
-        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}, {'term': {}}]}},
+        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}]}},
         'sort': [{'@timestamp': {'order': 'desc'}}],
         'size': 100,
         'from': 0,
@@ -83,13 +83,13 @@ def test_query_structure_logs(pd, plugin, log_client, time_range):
     ], 20
 
     logs = query_structure_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattrs.unstructure(logs.logs) == [
+    assert cattr.unstructure(logs.logs) == [
         {'timestamp': 1, 'message': 'foo', 'raw': {'@timestamp': 1, 'json.message': 'foo', 'other': 'FOO'}},
         {'timestamp': 2, 'message': 'bar', 'raw': {'@timestamp': 2, 'json.message': 'bar', 'other': 'BAR'}},
     ]
     assert logs.total == 20
     assert json.loads(logs.dsl) == {
-        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}, {'term': {}}]}},
+        'query': {'bool': {'filter': [{'range': {'@timestamp': {'gte': 'now-1h', 'lte': 'now'}}}]}},
         'sort': [{'@timestamp': {'order': 'desc'}}],
         'size': 100,
         'from': 0,
@@ -129,7 +129,7 @@ def test_query_ingress_logs(pd, plugin, log_client, time_range):
     ], 20
 
     logs = query_ingress_logs(pd, plugin, "nobody", time_range, "", 100, 0)
-    assert cattrs.unstructure(logs.logs) == [
+    assert cattr.unstructure(logs.logs) == [
         {
             'timestamp': 1,
             'message': 'foo',

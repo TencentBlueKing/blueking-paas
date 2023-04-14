@@ -136,6 +136,10 @@
         vertical-align: middle;
         padding-left: 5px;
     }
+    // 非必填
+    &.optional::after {
+        opacity: 0;
+    }
 }
 
 .card-container {

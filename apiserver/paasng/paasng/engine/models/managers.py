@@ -33,7 +33,7 @@ from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.phases import DeployPhase, DeployPhaseTypes
 from paasng.engine.phases_steps.display_blocks import get_display_blocks_by_type
-from paasng.engine.phases_steps.picker import DeployStepPicker
+from paasng.engine.phases_steps.steps import DeployStepPicker
 from paasng.platform.modules.specs import ModuleSpecs
 
 if TYPE_CHECKING:

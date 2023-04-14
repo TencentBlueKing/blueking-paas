@@ -20,6 +20,8 @@ from typing import List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+from paasng.engine.constants import JobStatus
+
 
 class BuildStatus(str, StructuredEnum):
     SUCCESSFUL = EnumField('successful', '成功')
@@ -45,6 +47,14 @@ class CommandStatus(str, StructuredEnum):
         """获取已完成的状态"""
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
+    def to_job_status(self) -> JobStatus:
+        """Transform to `JobStatus`"""
+        # Do type transformation directly because two types are sharing the same
+        # members currently.
+        if self.value == CommandStatus.SCHEDULED:
+            return JobStatus.PENDING
+        return JobStatus(self.value)
+
 
 class CommandType(str, StructuredEnum):
     PRE_RELEASE_HOOK = EnumField("pre-release-hook", label="发布前置指令")
@@ -54,6 +64,13 @@ class CommandType(str, StructuredEnum):
             return "pre-release phase"
         else:
             return "command"
+
+    @classmethod
+    def _missing_(cls, value):
+        # 兼容 value = pre_release_hook 的场景
+        if value == "pre_release_hook":
+            return cls.PRE_RELEASE_HOOK
+        return super()._missing_(value)
 
 
 def make_enum_choices(obj):

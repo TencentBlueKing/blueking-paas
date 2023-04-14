@@ -48,12 +48,13 @@ from paas_wl.utils.kubestatus import (
     extract_exit_code,
     parse_pod,
 )
+from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
 from paas_wl.workloads.processes.models import Process
 
 if TYPE_CHECKING:
-    from paas_wl.release_controller.builder.infras import SlugBuilderTemplate
     from paas_wl.resources.base.base import EnhancedApiClient
     from paas_wl.resources.base.generation import MapperPack
+    from paasng.engine.configurations.building import SlugBuilderTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +435,7 @@ class CommandHandler(PodScheduleHandler):
         return command_kmodel.delete(existed)
 
     def interrupt_command(self, command: Command) -> bool:
-        """Interrupt build pod by deleting it, this method will wait up to 1 second before a SIGKILL
+        """Interrupt a command pod by deleting it, this method will wait up to 1 second before a SIGKILL
         signal was sent.
 
         :param namespace: namespace where run the command.
@@ -527,3 +528,23 @@ class CommandHandler(PodScheduleHandler):
     @staticmethod
     def get_pod_timeout(pod: Command) -> arrow.Arrow:
         return arrow.get(pod.start_time) + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
+
+
+class ProcAutoscalingHandler(ResourceHandlerBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.manager = AppEntityManager(ProcAutoscaling)
+
+    def deploy(self, scaling: ProcAutoscaling):
+        """向集群中下发 GPA （创建/更新）"""
+        try:
+            existed = self.manager.get(app=scaling.app, name=scaling.name)
+            scaling._kube_data = existed._kube_data
+        except AppEntityNotFound:
+            self.manager.create(scaling)
+        else:
+            self.manager.update(scaling, "patch", allow_not_concrete=True, content_type='application/merge-patch+json')
+
+    def delete(self, scaling: ProcAutoscaling):
+        """删除集群中的 GPA"""
+        self.manager.delete_by_name(scaling.app, scaling.name)

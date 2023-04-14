@@ -22,16 +22,11 @@ from pathlib import Path
 from typing import Optional
 
 from attrs import define
-from bkpaas_auth.models import User
 from django.db import models
-from django.utils import timezone
-from django.utils.translation import gettext as _
 from jsonfield import JSONField
 
-from paas_wl.release_controller.api import InterruptionNotAllowed, interrupt_build_proc
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
-from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.base import OperationVersionBase
 from paasng.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
@@ -217,36 +212,3 @@ class Deployment(OperationVersionBase):
             if hook.enabled:
                 hooks.upsert(hook.type, hook.command)
         return hooks
-
-
-def interrupt_deployment(deployment: Deployment, user: User):
-    """Interrupt a deployment, this method does not guarantee that the deployment will be interrupted
-    immediately(or in a few seconds). It will try to do following things:
-
-    - When in "build" phase: this method will try to stop the build process by calling engine service
-    - When in "release" phase: this method will set a flag value and abort the polling process of
-      current release
-
-    After finished doing above things, the deployment process MIGHT be stopped if anything goes OK, while
-    the interruption may have no effects at all if the deployment was not in the right status.
-
-    :param deployment: Deployment object to interrupt
-    :param user: User who invoked interruption
-    :raises: DeployInterruptionFailed
-    """
-    if deployment.operator != user.pk:
-        raise DeployInterruptionFailed(_('无法中断由他人发起的部署'))
-    if deployment.status in JobStatus.get_finished_states():
-        raise DeployInterruptionFailed(_('无法中断，部署已处于结束状态'))
-
-    now = timezone.now()
-    deployment.build_int_requested_at = now
-    deployment.release_int_requested_at = now
-    deployment.save(update_fields=['build_int_requested_at', 'release_int_requested_at', 'updated'])
-
-    if deployment.build_process_id:
-        try:
-            interrupt_build_proc(deployment.build_process_id)
-        except InterruptionNotAllowed:
-            # This exception means that build has not been started yet
-            raise DeployInterruptionFailed('任务正处于预备执行状态，无法中断，请稍候重试')

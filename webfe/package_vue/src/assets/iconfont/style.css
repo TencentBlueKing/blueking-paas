@@ -947,3 +947,6 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-pv:before {
 	content: "\e24a";
 }
+.paasng-process-2:before {
+	content: "\e24c";
+}

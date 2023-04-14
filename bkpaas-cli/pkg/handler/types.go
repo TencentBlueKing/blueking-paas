@@ -56,12 +56,18 @@ type AppInfo interface {
 
 // DeployResult 部署结果接口
 type DeployResult interface {
+	// IsStable 根据部署结果，判断是否到达稳定状态（如：成功/失败）
+	IsStable() bool
 	// String 将部署结果转换成可打印展示的字符串
 	String() string
 }
 
 // DeployHistory 部署历史接口
 type DeployHistory interface {
+	// Length 返回部署历史总数量
+	Length() int
+	// Latest 获取最新一次的部署结果
+	Latest() *AppDeployRecord
 	// String 将部署结果转换成可打印展示的字符串
 	String() string
 }

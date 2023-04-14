@@ -41,7 +41,7 @@ type Requester interface {
 	// DeployDefaultApp 部署普通应用
 	DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error)
 	// GetDefaultAppDeployResult 获取普通应用部署结果
-	GetDefaultAppDeployResult(appCode string) (map[string]any, error)
+	GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
 	// ListDefaultAppDeployHistory 获取普通应用部署历史（最近N次）
 	ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error)
 

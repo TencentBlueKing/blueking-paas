@@ -71,9 +71,12 @@ func (r apigwRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch s
 }
 
 // GetDefaultAppDeployResult 获取普通应用部署结果
-func (r apigwRequester) GetDefaultAppDeployResult(appCode string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
+func (r apigwRequester) GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
+	url := fmt.Sprintf(
+		"%s/bkapps/applications/%s/modules/%s/deployments/%s/result/",
+		config.G.PaaSApigwUrl, appCode, appModule, deployID,
+	)
+	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{})
 }
 
 func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
@@ -99,8 +102,11 @@ func (r apigwRequester) DeployCNativeApp(
 
 // GetCNativeAppDeployResult 获取云原生应用部署结果
 func (r apigwRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
+	url := fmt.Sprintf(
+		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/status/",
+		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
+	)
+	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{})
 }
 
 func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {

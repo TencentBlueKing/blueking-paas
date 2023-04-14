@@ -21,6 +21,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
@@ -52,8 +53,23 @@ func NewCmdDeploy() *cobra.Command {
 			if noWatch {
 				return
 			}
-			// TODO 支持轮询获取部署结果，-nw 不执行轮询
-			// TODO 部署成功/失败后，弹出页面链接，方便用户快捷前往开发者中心
+			// TODO 添加超时机制 15min
+			for {
+				fmt.Println("Waiting for deploy finish...")
+				time.Sleep(5 * time.Second)
+
+				result, err := getDeployResult(appCode, appModule, appEnv)
+				if err != nil {
+					color.Red(fmt.Sprintf("failed to get app %s deploy result, error: %s", appCode, err.Error()))
+					os.Exit(1)
+				}
+				// 到达稳定状态后输出部署结果
+				// TODO 部署成功/失败后，弹出页面链接，方便用户快捷前往开发者中心
+				if result.IsStable() {
+					fmt.Println(result)
+					return
+				}
+			}
 		},
 	}
 
@@ -62,7 +78,7 @@ func NewCmdDeploy() *cobra.Command {
 	cmd.Flags().StringVar(&appEnv, "env", "stag", "environment (stag/prod)")
 	cmd.Flags().StringVar(&branch, "branch", "", "git repo branch")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "bkapp manifest file path")
-	cmd.Flags().BoolVar(&showResponse, "show-response", false, "show deploy api response")
+	cmd.Flags().BoolVar(&showResponse, "show-resp", false, "show deploy api response")
 	cmd.Flags().BoolVar(&noWatch, "no-watch", false, "watch deploy process")
 	_ = cmd.MarkFlagRequired("code")
 

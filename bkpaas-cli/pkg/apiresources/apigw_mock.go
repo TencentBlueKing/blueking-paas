@@ -135,7 +135,7 @@ func (r MockedRequester) DeployDefaultApp(appCode, appModule, deployEnv, branch 
 }
 
 // GetDefaultAppDeployResult ...
-func (r MockedRequester) GetDefaultAppDeployResult(appCode string) (map[string]any, error) {
+func (r MockedRequester) GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error) {
 	// TODO implement me
 	panic("implement me")
 }

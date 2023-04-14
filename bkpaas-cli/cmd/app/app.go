@@ -52,6 +52,8 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(NewCmdGetInfo())
 	// 蓝鲸应用部署
 	cmd.AddCommand(NewCmdDeploy())
+	// 查看部署结果
+	cmd.AddCommand(NewCmdDeployResult())
 	// 查看蓝鲸应用部署历史
 	cmd.AddCommand(NewCmdDeployHistory())
 

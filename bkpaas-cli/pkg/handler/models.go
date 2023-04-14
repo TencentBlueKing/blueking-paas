@@ -96,7 +96,14 @@ type DeployOptions struct {
 }
 
 // DefaultAppDeployResult 普通应用部署结果
-type DefaultAppDeployResult struct{}
+type DefaultAppDeployResult struct {
+	Status string
+	Logs   string
+}
+
+func (r DefaultAppDeployResult) IsStable() bool {
+	return false
+}
 
 // String ...
 func (r DefaultAppDeployResult) String() string {
@@ -105,8 +112,24 @@ func (r DefaultAppDeployResult) String() string {
 
 var _ DeployResult = DefaultAppDeployResult{}
 
+// Condition 云原生应用部署状态信息
+type Condition struct {
+	Type    string
+	Status  string
+	Reason  string
+	Message string
+}
+
 // CNativeAppDeployResult 云原生应用部署结果
-type CNativeAppDeployResult struct{}
+type CNativeAppDeployResult struct {
+	Status     string
+	Conditions []Condition
+}
+
+// IsStable ...
+func (r CNativeAppDeployResult) IsStable() bool {
+	return false
+}
 
 // String ...
 func (r CNativeAppDeployResult) String() string {
@@ -115,8 +138,8 @@ func (r CNativeAppDeployResult) String() string {
 
 var _ DeployResult = CNativeAppDeployResult{}
 
-// DefaultAppDeployRecord 普通应用部署记录
-type DefaultAppDeployRecord struct {
+// AppDeployRecord 应用部署记录
+type AppDeployRecord struct {
 	ID       string
 	Branch   string
 	Version  string
@@ -131,7 +154,21 @@ type DefaultAppDeployHistory struct {
 	AppCode   string
 	Module    string
 	DeployEnv string
-	Records   []DefaultAppDeployRecord
+	Total     int
+	Records   []AppDeployRecord
+}
+
+// Length ...
+func (h DefaultAppDeployHistory) Length() int {
+	return h.Total
+}
+
+// Latest ...
+func (h DefaultAppDeployHistory) Latest() *AppDeployRecord {
+	if h.Total == 0 {
+		return nil
+	}
+	return &h.Records[0]
 }
 
 // String ...
@@ -174,22 +211,26 @@ func (h DefaultAppDeployHistory) getStatusTextColor(status string) tw.Colors {
 
 var _ DeployHistory = DefaultAppDeployHistory{}
 
-// CNativeAppDeployRecord 云原生应用部署记录
-type CNativeAppDeployRecord struct {
-	ID       int
-	Version  string
-	Operator string
-	CostTime string
-	Status   string
-	StartAt  string
-}
-
 // CNativeAppDeployHistory 云原生应用部署历史
 type CNativeAppDeployHistory struct {
 	AppCode   string
 	Module    string
 	DeployEnv string
-	Records   []CNativeAppDeployRecord
+	Total     int
+	Records   []AppDeployRecord
+}
+
+// Length ...
+func (h CNativeAppDeployHistory) Length() int {
+	return h.Total
+}
+
+// Latest ...
+func (h CNativeAppDeployHistory) Latest() *AppDeployRecord {
+	if h.Total == 0 {
+		return nil
+	}
+	return &h.Records[0]
 }
 
 // String ...

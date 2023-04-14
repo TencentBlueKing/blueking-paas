@@ -162,7 +162,7 @@ func (r MockedRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv
 }
 
 // ListCNativeAppDeployHistory ...
-func (r MockedRequester) ListCNativeAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+func (r MockedRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {
 	// TODO implement me
 	panic("implement me")
 }

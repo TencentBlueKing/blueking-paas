@@ -26,6 +26,28 @@ const (
 	AppTypeCNative = "cloud_native"
 )
 
+// ShortRevisionLength 短版本信息长度
+const ShortRevisionLength = 8
+
+const (
+	// DeployStatusSuccessful 部署成功
+	DeployStatusSuccessful = "successful"
+	// DeployStatusFailed 部署失败
+	DeployStatusFailed = "failed"
+	// DeployStatusInterrupted 部署中断
+	DeployStatusInterrupted = "interrupted"
+	// DeployStatusPending 等待部署完成
+	DeployStatusPending = "pending"
+	// DeployStatusPending 部署进行中
+	DeployStatusProgressing = "progressing"
+	// DeployStatusReady 已就绪
+	DeployStatusReady = "ready"
+	// DeployStatusError 未知状态
+	DeployStatusError = "error"
+	// DeployStatusUnknown 未知状态
+	DeployStatusUnknown = "unknown"
+)
+
 // AppInfo 应用信息接口
 type AppInfo interface {
 	// String 将应用信息转换成可打印展示的字符串

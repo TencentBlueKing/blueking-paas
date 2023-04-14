@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package pathx_test
+package timex_test
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPathx(t *testing.T) {
+func TestTimex(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "pkg/utils/pathx Suite")
+	RunSpecs(t, "pkg/utils/timex Suite")
 }

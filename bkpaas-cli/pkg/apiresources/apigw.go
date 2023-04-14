@@ -77,8 +77,12 @@ func (r apigwRequester) GetDefaultAppDeployResult(appCode string) (map[string]an
 }
 
 func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
+	url := fmt.Sprintf(
+		"%s/bkapps/applications/%s/modules/%s/deployments/lists/",
+		config.G.PaaSApigwUrl, appCode, appModule,
+	)
+	opts := grequests.RequestOptions{Headers: r.headers(), Params: map[string]string{"limit": "5"}}
+	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
 // DeployCNativeApp 部署云原生应用
@@ -99,9 +103,13 @@ func (r apigwRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv 
 	panic("implement me")
 }
 
-func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule string) (map[string]any, error) {
-	// TODO implement me
-	panic("implement me")
+func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {
+	url := fmt.Sprintf(
+		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/deployments/",
+		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
+	)
+	opts := grequests.RequestOptions{Headers: r.headers(), Params: map[string]string{"limit": "5"}}
+	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
 // 处理 PaaS API 调用请求
@@ -110,7 +118,6 @@ func (r apigwRequester) handlePaaSApiRequest(
 	url string, opts grequests.RequestOptions,
 ) (map[string]any, error) {
 	resp, err := reqFunc(url, &opts)
-
 	if err != nil {
 		return nil, PaaSApiErr
 	}

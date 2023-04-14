@@ -19,10 +19,14 @@
 package handler
 
 import (
+	"github.com/TencentBlueKing/gopkg/mapx"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
+	"github.com/spf13/cast"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/timex"
 )
 
 // NewAppDeployer ...
@@ -56,8 +60,34 @@ func (d DefaultAppDeployer) GetResult(opts DeployOptions) (DeployResult, error) 
 
 // GetHistory 获取部署历史
 func (d DefaultAppDeployer) GetHistory(opts DeployOptions) (DeployHistory, error) {
-	// TODO implement me
-	panic("implement me")
+	respData, err := apiresources.DefaultRequester.ListDefaultAppDeployHistory(opts.AppCode, opts.Module)
+	if err != nil {
+		return nil, err
+	}
+	records := []DefaultAppDeployRecord{}
+	for _, deploy := range mapx.GetList(respData, "results") {
+		dp, _ := deploy.(map[string]any)
+
+		environment := mapx.GetStr(dp, "environment")
+		// 如果已指定部署环境，需要进行检查过滤不属于该环境的记录
+		if opts.DeployEnv != "" && environment != opts.DeployEnv {
+			continue
+		}
+		revision := mapx.GetStr(dp, "repo.revision")
+		startTime := mapx.GetStr(dp, "start_time")
+		endTime := mapx.GetStr(dp, "complete_time")
+
+		records = append(records, DefaultAppDeployRecord{
+			ID:       mapx.GetStr(dp, "id"),
+			Branch:   mapx.GetStr(dp, "repo.name"),
+			Version:  revision[:lo.Min([]int{ShortRevisionLength, len(revision)})],
+			Operator: mapx.GetStr(dp, "operator.username"),
+			CostTime: timex.CalcDuration(startTime, endTime),
+			Status:   mapx.GetStr(dp, "status"),
+			StartAt:  mapx.GetStr(dp, "created"),
+		})
+	}
+	return DefaultAppDeployHistory{opts.AppCode, opts.Module, opts.DeployEnv, records}, nil
 }
 
 var _ Deployer = DefaultAppDeployer{}
@@ -80,8 +110,28 @@ func (d CNativeAppDeployer) GetResult(opts DeployOptions) (DeployResult, error) 
 
 // GetHistory 获取部署历史
 func (d CNativeAppDeployer) GetHistory(opts DeployOptions) (DeployHistory, error) {
-	// TODO implement me
-	panic("implement me")
+	respData, err := apiresources.DefaultRequester.ListCNativeAppDeployHistory(
+		opts.AppCode, opts.Module, opts.DeployEnv,
+	)
+	if err != nil {
+		return nil, err
+	}
+	records := []CNativeAppDeployRecord{}
+	for _, deploy := range mapx.GetList(respData, "results") {
+		dp, _ := deploy.(map[string]any)
+		startTime := mapx.GetStr(dp, "created")
+		endTime := mapx.GetStr(dp, "last_transition_time")
+
+		records = append(records, CNativeAppDeployRecord{
+			ID:       cast.ToInt(dp["id"]),
+			Version:  mapx.GetStr(dp, "name"),
+			Operator: mapx.GetStr(dp, "operator"),
+			CostTime: timex.CalcDuration(startTime, endTime),
+			Status:   mapx.GetStr(dp, "status"),
+			StartAt:  mapx.GetStr(dp, "created"),
+		})
+	}
+	return CNativeAppDeployHistory{opts.AppCode, opts.Module, opts.DeployEnv, records}, nil
 }
 
 var _ Deployer = CNativeAppDeployer{}

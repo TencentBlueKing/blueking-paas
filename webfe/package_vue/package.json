@@ -6,8 +6,8 @@
   "private": true,
   "scripts": {
     "dev:te": "APP_VERSION=te bk-cli-service-webpack dev",
-    "dev:ee": "cross-env NODE_ENV=development APP_VERSION=ee node build/dev-server.js",
-    "dev:ce": "cross-env NODE_ENV=development APP_VERSION=ce node build/dev-server.js",
+    "dev:ee": "APP_VERSION=ee bk-cli-service-webpack dev",
+    "dev:ce": "APP_VERSION=ce bk-cli-service-webpack dev",
     "build:te": "cross-env NODE_ENV=production APP_VERSION=te node build/build.js",
     "build:ee": "cross-env NODE_ENV=production APP_VERSION=ee node build/build.js",
     "build:ce": "cross-env NODE_ENV=production APP_VERSION=ce node build/build.js",

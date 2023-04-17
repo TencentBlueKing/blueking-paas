@@ -24,10 +24,10 @@
       //   'BK_PAAS_VERSION': '$BK_PAAS_VERSION' || ''
       // }
     </script>
-    <script src="/static/runtime/runtime.js?version=<%= htmlWebpackPlugin.options.RELEASE_VERSION %>"></script>
+    <script src="/static/runtime/runtime.js?version=<%= RELEASE_VERSION %>"></script>
     <script>
       // 以下变量由webpack构建工具填充
-      var RELEASE_VERSION = '<%= htmlWebpackPlugin.options.RELEASE_VERSION %>'
+      // var RELEASE_VERSION = '<%= htmlWebpackPlugin.options.RELEASE_VERSION %>'
 
 
       // 环境变量
@@ -48,7 +48,7 @@
         USERS_URL: '<%= process.env.BK_USERS_URL %>' || '',
       }
     </script>
-    <% if (htmlWebpackPlugin.options.APP_VERSION === 'te'){ %>
+    <% if (process.env.APP_VERSION === 'te'){ %>
     <!-- BK Analytics start -->
     <!-- start及end之间的内部代码会在企业版本出包时删除 -->
     <script>

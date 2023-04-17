@@ -42,12 +42,12 @@ class PreTaskPlugin {
     }
 
     // 复制paas_static
-    const PAASSTATIC = APP_VERSION === 'te' ? `../../webfe-settings/paas_static.${APP_VERSION}.js` : `./static/json/paas_static.${APP_VERSION}.js`;
+    const PAASSTATIC = APP_VERSION === 'te' ? `../../webfe-settings/paas_static.${APP_VERSION}.js` : `../../static/json/paas_static.${APP_VERSION}.js`;
     const staticData = fs.readFileSync(path.resolve(JSON_DIR_PATH, PAASSTATIC));
     fs.writeFileSync(paasStaticPath, staticData);
 
     // 复制runtime
-    const PAASRUNTIME = APP_VERSION === 'te' ? `../../webfe-settings/runtime.${APP_VERSION}.js` : `./static/runtime/runtime.${APP_VERSION}.js`;
+    const PAASRUNTIME = APP_VERSION === 'te' ? `../../webfe-settings/runtime.${APP_VERSION}.js` : `../../static/runtime/runtime.${APP_VERSION}.js`;
     const runtimeData = fs.readFileSync(path.resolve(RUNTIME_DIR_PATH, PAASRUNTIME));
     let envs = {};
     let fileContent = runtimeData.toString();
@@ -70,7 +70,7 @@ class PreTaskPlugin {
     fs.writeFileSync(runtimePath, fileContent);
 
     // 复制bklogout
-    const PAASLOGOUT = APP_VERSION === 'te' ? `../../webfe-settings/bklogout.${APP_VERSION}.js` : `./bklogout.${APP_VERSION}.js`;
+    const PAASLOGOUT = APP_VERSION === 'te' ? `../../webfe-settings/bklogout.${APP_VERSION}.js` : `../../static/js/bklogout.${APP_VERSION}.js`;
     const logoutData = fs.readFileSync(path.resolve(JS_DIR_PATH, PAASLOGOUT));
     fs.writeFileSync(bklogoutPath, logoutData);
     console.timeEnd('Pre task');

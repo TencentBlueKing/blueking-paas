@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const PreTaskPlugin = require('./pre-task-plugin');
 
 const now = new Date()
-// const RELEASE_VERSION = [now.getFullYear(), ]
+const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.getDate(), '_', now.getHours(), ':', now.getMinutes(), ':', now.getSeconds()].join('') // 版本号，eg: 2019-2-25_9:12:52
 
 module.exports = {
   host: process.env.BK_APP_HOST,
@@ -26,13 +26,13 @@ module.exports = {
     // plugin
     config
       .plugin('providePlugin')
-      .use(new webpack.ProvidePlugin, [{
+      .use(webpack.ProvidePlugin, [{
         $: 'jquery',
       }]);
       config
-      .plugin('htmlWebpackPlugin')
-      .use(new HtmlWebpackPlugin, [{
-        RELEASE_VERSION: RELEASE_VERSION,
+      .plugin('html')
+      .use(webpack.DefinePlugin, [{
+        RELEASE_VERSION: JSON.stringify(RELEASE_VERSION),
       }]);
     config.plugin('preTaskPlugin')
       .use(new PreTaskPlugin());

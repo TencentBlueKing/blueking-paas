@@ -2110,5 +2110,8 @@ export default {
   '已部署': 'Deployed',
   '未部署': 'Undeployed',
   '已申请权限的 API': 'Authorized API',
-  '实例名': 'Instance name'
+  '实例名': 'Instance name',
+  '确认离开当前页？': 'Confirm to leave current page?',
+  '离开将会导致未保存信息丢失': 'Leaving will result in loss of unsaved information',
+  '离开': 'Leave'
 };

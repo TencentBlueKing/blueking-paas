@@ -235,6 +235,7 @@
         :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
+        :before-close="handleBeforeClose"
       >
         <div
           id="log-container"
@@ -319,6 +320,7 @@
         :is-show.sync="chartSlider.isShow"
         :title="chartSlider.title"
         :quick-close="true"
+        :before-close="handleChartBeforeClose"
         @hidden="handlerChartHide"
       >
         <div
@@ -557,6 +559,7 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import $ from 'jquery';
     import i18n from '@/language/i18n.js';
+    import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 
     let maxReplicasNum = 0;
 
@@ -579,7 +582,7 @@
             numInput,
             chart: ECharts
         },
-        mixins: [appBaseMixin],
+        mixins: [appBaseMixin, sidebarDiffMixin],
         props: {
             environment: {
                 type: String
@@ -931,6 +934,7 @@
                 this.processSlider.isShow = true;
                 this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
                 this.loadInstanceLog();
+                this.initSidebarFormData(this.curLogTimeRange);
             },
 
             getParams () {
@@ -1644,6 +1648,7 @@
                 this.curProcessKey = process.name;
                 this.chartSlider.title = `${this.$t('进程')} ${process.name}${this.$t('详情')}`;
                 this.chartSlider.isShow = true;
+                this.initSidebarFormData(this.initDateTimeRange);
                 if (this.curAppInfo.feature.RESOURCE_METRICS) {
                     this.getInstanceChart(process);
                 }
@@ -1929,6 +1934,15 @@
                     return instance.state;
                 }
                 return instance.state_message;
+            },
+
+            async handleBeforeClose () {
+                return this.$isSidebarClosed(JSON.stringify(this.curLogTimeRange));
+            },
+
+            async handleChartBeforeClose () {
+                const time = this.initDateTimeRange.map(time => moment(time).format('YYYY-MM-DD HH:mm:ss'));
+                return this.$isSidebarClosed(JSON.stringify(time));
             }
         }
     };

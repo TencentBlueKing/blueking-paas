@@ -70,8 +70,19 @@ class DeploymentDescription(TimestampedModel):
     plugins = JSONField(verbose_name='extra plugins', blank=True, default=[])
 
     def get_procfile(self) -> Dict[str, str]:
+        """get Procfile
+
+        Procfile is a dict containing a process type and its corresponding command
+        """
         processes = self.runtime.get("processes", {})
         return {key: process["command"] for key, process in processes.items()}
+
+    def get_processes(self) -> Dict[str, Dict[str, str]]:
+        """get Declarative Processes
+
+        Declarative Processes is a dict containing a process type and its corresponding DeclarativeProcess"""
+        processes = self.runtime.get("processes", {})
+        return {key: process for key, process in processes.items()}
 
     def get_deploy_hooks(self) -> HookList:
         hooks = HookList()

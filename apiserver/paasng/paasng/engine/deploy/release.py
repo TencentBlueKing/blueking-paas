@@ -19,14 +19,12 @@ to the current version of the project delivered to anyone in the future.
 """Releasing process of an application deployment
 """
 import logging
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
-import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
 from django.utils.translation import gettext as _
 from pydantic import ValidationError as PyDanticValidationError
 
-from paas_wl.workloads.processes.models import DeclarativeProcess
 from paasng.engine.configurations.building import get_processes_by_build
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
@@ -52,13 +50,7 @@ class ApplicationReleaseMgr(DeployStep):
     @DeployStep.procedures
     def start(self):
         with self.procedure(_('更新进程配置')):
-            # create process specs if missing
-            # TODO: sync plan, replicas
-            processes = cattr.structure(
-                [{"name": name, "command": command} for name, command in self.deployment.procfile.items()],
-                List[DeclarativeProcess],
-            )
-            ProcessManager(self.engine_app).sync_processes_specs(processes)
+            ProcessManager(self.engine_app).sync_processes_specs(self.deployment.get_processes())
 
         with self.procedure(_('更新应用配置')):
             update_image_runtime_config(

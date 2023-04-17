@@ -42,6 +42,6 @@ class ArchiveOperationController:
     def stop_all_processes(self):
         """Stop all processes"""
         ctl = get_proc_mgr(env=self.env)
-        release = Release.objects.get_latest(self.env.wl_app)
+        release: Release = Release.objects.get_latest(self.env.wl_app)
         for proc_type in release.get_procfile().keys():
             ctl.stop(proc_type=proc_type)

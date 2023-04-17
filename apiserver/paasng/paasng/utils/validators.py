@@ -136,6 +136,34 @@ PROC_TYPE_PATTERN = re.compile(r'^[a-zA-Z0-9]([-a-zA-Z0-9])*$')
 PROC_TYPE_MAX_LENGTH = 12
 
 
+def validate_processes(processes: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, str]]:
+    """Validate proc type format
+
+    :param processes:
+    :return: validated processes, which all key is lower case.
+    :raise: django.core.exceptions.ValidationError
+    """
+    for proc_type in processes.keys():
+        if not PROC_TYPE_PATTERN.match(proc_type):
+            raise ValidationError(
+                f'Invalid proc type: {proc_type}, must match ' f'pattern {PROC_TYPE_PATTERN.pattern}'
+            )
+        if len(proc_type) > PROC_TYPE_MAX_LENGTH:
+            raise ValidationError(
+                f'Invalid proc type: {proc_type}, must not ' f'longer than {PROC_TYPE_MAX_LENGTH} characters'
+            )
+
+    # Formalize processes data and return
+    return {
+        name.lower(): {
+            "name": name.lower(),
+            # 过滤 None 值和白名单字段
+            **{vk: vv for vk, vv in v.items() if vk in ["command", "replicas", "plan"] and vv is not None},
+        }
+        for name, v in processes.items()
+    }
+
+
 def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """Validate proc type format
     :param procfile:

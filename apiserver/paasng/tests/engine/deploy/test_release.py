@@ -22,6 +22,7 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
+from paas_wl.workloads.processes.models import DeclarativeProcess
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.deploy.release import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.engine.models import Deployment, DeployPhaseTypes
@@ -46,12 +47,6 @@ def auto_binding_phases(bk_prod_env, bk_deployment):
         manager.attach(DeployPhaseTypes(p.type), bk_deployment)
 
 
-@pytest.fixture(autouse=True)
-def setup_mocks():
-    with mock.patch('paasng.engine.deploy.release.ProcessManager'):
-        yield
-
-
 class TestApplicationReleaseMgr:
     """Tests for ApplicationReleaseMgr"""
 
@@ -62,6 +57,8 @@ class TestApplicationReleaseMgr:
             'paasng.engine.deploy.release.EngineDeployClient'
         ) as mocked_client_r, mock.patch(
             'paasng.engine.workflow.flow.EngineDeployClient'
+        ), mock.patch(
+            'paasng.engine.deploy.release.ProcessManager'
         ):
             mocked_client_r().create_release.side_effect = RuntimeError('can not create release')
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
@@ -76,6 +73,16 @@ class TestApplicationReleaseMgr:
             assert deployment.err_detail == 'can not create release'
 
     def test_start_normal(self, bk_deployment, auto_binding_phases):
+        bk_deployment.processes = {
+            "web": {
+                "name": "web",
+                "command": "start web",
+                "replicas": 2,
+            },
+            "worker": {"name": "worker", "command": "start worker"},
+        }
+        bk_deployment.save()
+        bk_deployment.refresh_from_db()
         with mock.patch('paasng.engine.utils.output.RedisChannelStream'), mock.patch(
             'paasng.engine.deploy.release.EngineDeployClient'
         ) as mocked_client_r, mock.patch('paasng.engine.deploy.release.update_image_runtime_config'), mock.patch(
@@ -84,19 +91,63 @@ class TestApplicationReleaseMgr:
             'paasng.engine.configurations.ingress.AppDefaultDomains.sync'
         ), mock.patch(
             'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
-        ):
+        ), mock.patch(
+            'paasng.engine.deploy.release.ProcessManager'
+        ) as fake_process_manager:
             faked_release_id = uuid.uuid4().hex
             mocked_client_r().create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
 
             release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
             release_mgr.start()
 
-            deployment = Deployment.objects.get(pk=bk_deployment.id)
+        # Validate deployment data
+        deployment = Deployment.objects.get(pk=bk_deployment.id)
+        assert deployment.release_id.hex == faked_release_id
+        assert deployment.status == JobStatus.PENDING.value
+        assert deployment.err_detail is None
 
-            # Validate deployment data
-            assert deployment.release_id.hex == faked_release_id
-            assert deployment.status == JobStatus.PENDING.value
-            assert deployment.err_detail is None
+        # Validate sync specs data
+        assert fake_process_manager().sync_processes_specs.called
+        (processes,) = fake_process_manager().sync_processes_specs.call_args[0]
+        assert processes == [
+            DeclarativeProcess(name='web', command='start web', replicas=2, plan=None),
+            DeclarativeProcess(name='worker', command='start worker', replicas=None, plan=None),
+        ]
+
+    def test_sync_specs_from_procfile(self, bk_deployment, auto_binding_phases):
+        bk_deployment.procfile = {"web": "start web", "worker": "start worker"}
+        bk_deployment.save()
+        bk_deployment.refresh_from_db()
+        with mock.patch('paasng.engine.utils.output.RedisChannelStream'), mock.patch(
+            'paasng.engine.deploy.release.EngineDeployClient'
+        ) as mocked_client_r, mock.patch('paasng.engine.deploy.release.update_image_runtime_config'), mock.patch(
+            'paasng.engine.workflow.flow.EngineDeployClient'
+        ), mock.patch(
+            'paasng.engine.configurations.ingress.AppDefaultDomains.sync'
+        ), mock.patch(
+            'paasng.engine.configurations.ingress.AppDefaultSubpaths.sync'
+        ), mock.patch(
+            'paasng.engine.deploy.release.ProcessManager'
+        ) as fake_process_manager:
+            faked_release_id = uuid.uuid4().hex
+            mocked_client_r().create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
+
+            release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
+            release_mgr.start()
+
+        # Validate deployment data
+        deployment = Deployment.objects.get(pk=bk_deployment.id)
+        assert deployment.release_id.hex == faked_release_id
+        assert deployment.status == JobStatus.PENDING.value
+        assert deployment.err_detail is None
+
+        # Validate sync specs data
+        assert fake_process_manager().sync_processes_specs.called
+        (processes,) = fake_process_manager().sync_processes_specs.call_args[0]
+        assert processes == [
+            DeclarativeProcess(name='web', command='start web', replicas=None, plan=None),
+            DeclarativeProcess(name='worker', command='start worker', replicas=None, plan=None),
+        ]
 
 
 class TestReleaseResultHandler:

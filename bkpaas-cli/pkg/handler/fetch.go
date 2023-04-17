@@ -22,6 +22,7 @@ import (
 	"github.com/TencentBlueKing/gopkg/mapx"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 // 应用基础信息查看
@@ -33,20 +34,20 @@ func NewBasicInfoRetriever() *BasicInfoRetriever {
 }
 
 // Exec 调用 API 获取应用基础信息
-func (v *BasicInfoRetriever) Exec(appCode string) (AppInfo, error) {
+func (v *BasicInfoRetriever) Exec(appCode string) (model.AppInfo, error) {
 	appInfo, err := apiresources.DefaultRequester.GetAppInfo(appCode)
 	if err != nil {
 		return nil, err
 	}
 
-	modules := []ModuleBasicInfo{}
+	modules := []model.ModuleBasicInfo{}
 	for _, mod := range mapx.GetList(appInfo, "application.modules") {
 		m, _ := mod.(map[string]any)
 
 		// 环境基础信息
-		envs := []EnvBasicInfo{}
+		envs := []model.EnvBasicInfo{}
 		for envName, clusterInfo := range mapx.GetMap(m, "clusters") {
-			envs = append(envs, EnvBasicInfo{
+			envs = append(envs, model.EnvBasicInfo{
 				Name:        envName,
 				ClusterName: mapx.GetStr(clusterInfo.(map[string]any), "name"),
 				ClusterID:   mapx.GetStr(clusterInfo.(map[string]any), "bcs_cluster_id"),
@@ -54,7 +55,7 @@ func (v *BasicInfoRetriever) Exec(appCode string) (AppInfo, error) {
 		}
 
 		// 模块基础信息
-		modules = append(modules, ModuleBasicInfo{
+		modules = append(modules, model.ModuleBasicInfo{
 			Name:     mapx.GetStr(m, "name"),
 			RepoType: mapx.GetStr(m, "repo.display_name"),
 			RepoURL:  mapx.GetStr(m, "repo.repo_url"),
@@ -62,7 +63,7 @@ func (v *BasicInfoRetriever) Exec(appCode string) (AppInfo, error) {
 		})
 	}
 
-	return AppBasicInfo{
+	return model.AppBasicInfo{
 		Code:    appCode,
 		Name:    mapx.GetStr(appInfo, "application.name"),
 		Region:  mapx.GetStr(appInfo, "application.region_name"),

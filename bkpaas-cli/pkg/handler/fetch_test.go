@@ -24,6 +24,7 @@ import (
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 var _ = Describe("TestFetch", func() {
@@ -32,17 +33,17 @@ var _ = Describe("TestFetch", func() {
 	})
 
 	It("TestAppBasicInfoRetriever", func() {
-		excepted := handler.AppBasicInfo{
+		excepted := model.AppBasicInfo{
 			Code:    "test-code",
 			Name:    "test-app",
 			Region:  "默认版",
 			AppType: "default",
-			Modules: []handler.ModuleBasicInfo{
+			Modules: []model.ModuleBasicInfo{
 				{
 					Name:     "default",
 					RepoType: "Opensource Community Github",
 					RepoURL:  "https://github.com/octocat/Hello-World.git",
-					Envs: []handler.EnvBasicInfo{
+					Envs: []model.EnvBasicInfo{
 						{
 							Name:        "stag",
 							ClusterName: "default",

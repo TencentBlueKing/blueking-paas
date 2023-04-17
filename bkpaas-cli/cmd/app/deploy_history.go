@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 // NewCmdDeployHistory returns a Command instance for 'app deploy-history' sub command
@@ -53,8 +55,8 @@ func NewCmdDeployHistory() *cobra.Command {
 }
 
 // 获取应用部署历史
-func listDeployHistory(appCode, appModule, appEnv string) (handler.DeployHistory, error) {
-	opts := handler.DeployOptions{
+func listDeployHistory(appCode, appModule, appEnv string) (model.DeployHistory, error) {
+	opts := model.DeployOptions{
 		AppCode:   appCode,
 		Module:    appModule,
 		DeployEnv: appEnv,

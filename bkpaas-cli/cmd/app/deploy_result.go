@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 // NewCmdDeployResult returns a Command instance for 'app deploy-result' sub command
@@ -36,12 +37,12 @@ func NewCmdDeployResult() *cobra.Command {
 		Use:   "deploy-result",
 		Short: "Get PaaS application latest deploy result",
 		Run: func(cmd *cobra.Command, args []string) {
-			history, err := listDeployHistory(appCode, appModule, appEnv)
+			result, err := getDeployResult(appCode, appModule, appEnv)
 			if err != nil {
 				color.Red(fmt.Sprintf("failed to get application %s deploy result, error: %s", appCode, err.Error()))
 				os.Exit(1)
 			}
-			fmt.Println(history)
+			fmt.Println(result)
 		},
 	}
 
@@ -54,8 +55,8 @@ func NewCmdDeployResult() *cobra.Command {
 }
 
 // 应用部署
-func getDeployResult(appCode, appModule, appEnv string) (handler.DeployResult, error) {
-	opts := handler.DeployOptions{
+func getDeployResult(appCode, appModule, appEnv string) (model.DeployResult, error) {
+	opts := model.DeployOptions{
 		AppCode:   appCode,
 		Module:    appModule,
 		DeployEnv: appEnv,

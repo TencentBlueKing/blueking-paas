@@ -30,6 +30,7 @@ import (
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 // NewCmdDeploy returns a Command instance for 'app deploy' sub command
@@ -53,7 +54,8 @@ func NewCmdDeploy() *cobra.Command {
 			if noWatch {
 				return
 			}
-			// TODO 添加超时机制 15min
+			// TODO 添加超时机制?
+			// TODO 轮询体验优化，比如支持滚动更新日志？
 			for {
 				fmt.Println("Waiting for deploy finish...")
 				time.Sleep(5 * time.Second)
@@ -64,7 +66,6 @@ func NewCmdDeploy() *cobra.Command {
 					os.Exit(1)
 				}
 				// 到达稳定状态后输出部署结果
-				// TODO 部署成功/失败后，弹出页面链接，方便用户快捷前往开发者中心
 				if result.IsStable() {
 					fmt.Println(result)
 					return
@@ -89,7 +90,7 @@ func NewCmdDeploy() *cobra.Command {
 func deployApp(appCode, appModule, appEnv, branch, filePath string) (map[string]any, error) {
 	appType := helper.FetchAppType(appCode)
 
-	opts := handler.DeployOptions{
+	opts := model.DeployOptions{
 		AppCode:   appCode,
 		AppType:   appType,
 		Module:    appModule,
@@ -97,13 +98,14 @@ func deployApp(appCode, appModule, appEnv, branch, filePath string) (map[string]
 		Branch:    branch,
 	}
 
+	// TODO 参数检查是不是可以作为 DeployOptions 的方法？
 	// 参数检查，普通应用需要指定部署的分支，云原生应用需要指定 manifest 文件路径
-	if appType == handler.AppTypeDefault && branch == "" {
+	if appType == model.AppTypeDefault && branch == "" {
 		return nil, errors.New("branch is required when deploy default app")
 	}
 
 	// 加载文件中的 bkapp manifest 内容
-	if appType == handler.AppTypeCNative {
+	if appType == model.AppTypeCNative {
 		if filePath == "" {
 			return nil, errors.New("manifest file path is required when deploy cnative app")
 		}

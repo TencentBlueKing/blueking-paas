@@ -16,127 +16,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package handler
+package model
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	tw "github.com/olekukonko/tablewriter"
 )
-
-// EnvBasicInfo 应用部署环境基础信息
-type EnvBasicInfo struct {
-	Name        string
-	ClusterName string
-	ClusterID   string
-}
-
-// ModuleBasicInfo 模块基础信息
-type ModuleBasicInfo struct {
-	Name     string
-	RepoType string
-	RepoURL  string
-	Envs     []EnvBasicInfo
-}
-
-// AppBasicInfo 应用基础信息
-type AppBasicInfo struct {
-	Code    string
-	Name    string
-	Region  string
-	AppType string
-	Modules []ModuleBasicInfo
-}
-
-// String ...
-func (i AppBasicInfo) String() string {
-	tmplStr := `
-{{ define "AppBasicInfo" -}}
-Application Basic Information:
-
-Name: {{ .Name }}    Code: {{ .Code }}    Region: {{ .Region }}    Type: {{ .AppType }}
-
-Modules:
-  {{- range .Modules }}
-  Name: {{ .Name }}    {{ if and .RepoType .RepoURL }}RepoType: {{ .RepoType }}    RepoUrl: {{ .RepoURL }}{{ end }}
-  Environments:
-    {{- range .Envs }}
-    Name: {{ .Name }}    Cluster: {{ .ClusterName }} {{ if .ClusterID }}({{ .ClusterID }}){{ end }}
-    {{- end }}
-  {{- end }}
-{{ end }}
-`
-
-	tmpl, err := template.New("").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
-	if err != nil {
-		return err.Error()
-	}
-	var buf bytes.Buffer
-	err = tmpl.ExecuteTemplate(&buf, "AppBasicInfo", i)
-	if err != nil {
-		return err.Error()
-	}
-	return buf.String()
-}
-
-var _ AppInfo = AppBasicInfo{}
-
-// DeployOptions 部署时需要使用的配置
-type DeployOptions struct {
-	AppCode       string
-	AppType       string
-	Module        string
-	DeployEnv     string
-	Branch        string
-	BkAppManifest map[string]any
-}
-
-// DefaultAppDeployResult 普通应用部署结果
-type DefaultAppDeployResult struct {
-	Status string
-	Logs   string
-}
-
-func (r DefaultAppDeployResult) IsStable() bool {
-	return false
-}
-
-// String ...
-func (r DefaultAppDeployResult) String() string {
-	return "xxx"
-}
-
-var _ DeployResult = DefaultAppDeployResult{}
-
-// Condition 云原生应用部署状态信息
-type Condition struct {
-	Type    string
-	Status  string
-	Reason  string
-	Message string
-}
-
-// CNativeAppDeployResult 云原生应用部署结果
-type CNativeAppDeployResult struct {
-	Status     string
-	Conditions []Condition
-}
-
-// IsStable ...
-func (r CNativeAppDeployResult) IsStable() bool {
-	return false
-}
-
-// String ...
-func (r CNativeAppDeployResult) String() string {
-	return "xxx"
-}
-
-var _ DeployResult = CNativeAppDeployResult{}
 
 // AppDeployRecord 应用部署记录
 type AppDeployRecord struct {

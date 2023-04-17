@@ -76,7 +76,7 @@ func (r apigwRequester) GetDefaultAppDeployResult(appCode, appModule, deployID s
 		"%s/bkapps/applications/%s/modules/%s/deployments/%s/result/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployID,
 	)
-	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{})
+	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
 func (r apigwRequester) ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error) {
@@ -106,7 +106,7 @@ func (r apigwRequester) GetCNativeAppDeployResult(appCode, appModule, deployEnv 
 		"%s/cnative/specs/applications/%s/modules/%s/envs/%s/mres/status/",
 		config.G.PaaSApigwUrl, appCode, appModule, deployEnv,
 	)
-	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{})
+	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
 }
 
 func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error) {
@@ -118,10 +118,11 @@ func (r apigwRequester) ListCNativeAppDeployHistory(appCode, appModule, deployEn
 	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
+type gReqFunc func(string, *grequests.RequestOptions) (*grequests.Response, error)
+
 // 处理 PaaS API 调用请求
 func (r apigwRequester) handlePaaSApiRequest(
-	reqFunc func(string, *grequests.RequestOptions) (*grequests.Response, error),
-	url string, opts grequests.RequestOptions,
+	reqFunc gReqFunc, url string, opts grequests.RequestOptions,
 ) (map[string]any, error) {
 	resp, err := reqFunc(url, &opts)
 	if err != nil {

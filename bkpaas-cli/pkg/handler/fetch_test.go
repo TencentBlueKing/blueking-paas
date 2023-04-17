@@ -49,11 +49,6 @@ var _ = Describe("TestFetch", func() {
 							ClusterName: "default",
 							ClusterID:   "BCS-K8S-12345",
 						},
-						{
-							Name:        "prod",
-							ClusterName: "dev",
-							ClusterID:   "",
-						},
 					},
 				},
 			},

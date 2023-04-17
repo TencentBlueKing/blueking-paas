@@ -146,6 +146,7 @@ func (d CNativeAppDeployer) GetResult(opts model.DeployOptions) (model.DeployRes
 	if err != nil {
 		return nil, err
 	}
+
 	conditions := []model.Condition{}
 	for _, condition := range mapx.GetList(respData, "conditions") {
 		c, _ := condition.(map[string]any)
@@ -156,6 +157,20 @@ func (d CNativeAppDeployer) GetResult(opts model.DeployOptions) (model.DeployRes
 			Message: mapx.GetStr(c, "message"),
 		})
 	}
+
+	events := []model.Event{}
+	for _, event := range mapx.GetList(respData, "events") {
+		e, _ := event.(map[string]any)
+		events = append(events, model.Event{
+			Name:      mapx.GetStr(e, "name"),
+			LastSeen:  mapx.GetStr(e, "last_seen"),
+			Component: mapx.GetStr(e, "component"),
+			Type:      mapx.GetStr(e, "type"),
+			Message:   mapx.GetStr(e, "message"),
+			Count:     mapx.GetStr(e, "count"),
+		})
+	}
+
 	return model.CNativeAppDeployResult{
 		AppCode:    opts.AppCode,
 		Module:     opts.Module,
@@ -165,6 +180,7 @@ func (d CNativeAppDeployer) GetResult(opts model.DeployOptions) (model.DeployRes
 		Reason:     mapx.GetStr(respData, "deployment.reason"),
 		Message:    mapx.GetStr(respData, "deployment.message"),
 		Conditions: conditions,
+		Events:     events,
 	}, nil
 }
 

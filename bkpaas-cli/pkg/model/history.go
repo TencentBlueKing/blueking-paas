@@ -63,7 +63,7 @@ func (h DefaultAppDeployHistory) String() string {
 	sb := strings.Builder{}
 	sb.WriteString(
 		fmt.Sprintf(
-			"Application Recent Deploy History (AppCode: %s, Module: %s, Env: %s)\n",
+			"Application Recent 5 Deploy History (AppCode: %s, Module: %s, Env: %s)\n",
 			h.AppCode, h.Module, h.DeployEnv,
 		),
 	)
@@ -125,7 +125,7 @@ func (h CNativeAppDeployHistory) String() string {
 	sb := strings.Builder{}
 	sb.WriteString(
 		fmt.Sprintf(
-			"Application Recent Deploy History (AppCode: %s, Module: %s, Env: %s)\n",
+			"Application Recent 5 Deploy History (AppCode: %s, Module: %s, Env: %s)\n",
 			h.AppCode, h.Module, h.DeployEnv,
 		),
 	)

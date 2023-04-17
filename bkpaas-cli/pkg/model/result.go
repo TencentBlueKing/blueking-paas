@@ -84,6 +84,16 @@ type Condition struct {
 	Message string
 }
 
+// Event 云原生应用部署事件
+type Event struct {
+	Name      string
+	LastSeen  string
+	Component string
+	Type      string
+	Message   string
+	Count     string
+}
+
 // CNativeAppDeployResult 云原生应用部署结果
 type CNativeAppDeployResult struct {
 	AppCode    string
@@ -94,6 +104,7 @@ type CNativeAppDeployResult struct {
 	Reason     string
 	Message    string
 	Conditions []Condition
+	Events     []Event
 }
 
 // IsStable ...
@@ -104,24 +115,15 @@ func (r CNativeAppDeployResult) IsStable() bool {
 // String ...
 func (r CNativeAppDeployResult) String() string {
 	sb := strings.Builder{}
-	sb.WriteString(
-		fmt.Sprintf("Deploy Conditions: (Code: %s, Module: %s, Env: %s)\n", r.AppCode, r.Module, r.DeployEnv),
-	)
-	table := tw.NewWriter(&sb)
-	table.SetHeader([]string{"Type", "Status", "Reason", "Message"})
-	table.SetRowLine(true)
-
-	for _, c := range r.Conditions {
-		table.Rich(
-			[]string{c.Type, c.Status, c.Reason, c.Message},
-			[]tw.Colors{{}, lo.Ternary(cast.ToBool(c.Status), tw.Colors{}, tw.Colors{tw.FgHiRedColor}), {}, {}},
-		)
-	}
-	table.Render()
+	r.attachConditions(&sb)
 
 	if r.Status == DeployStatusError {
+		// 仅失败时候会展示部署事件
+		r.attachEvents(&sb)
+		// 部署失败提示
 		sb.WriteString(color.RedString("Deploy failed: %s -> %s\n", r.Reason, r.Message))
 	} else if r.Status == DeployStatusReady {
+		// 部署成功提示
 		sb.WriteString(color.GreenString("Deploy successful.\n"))
 		sb.WriteString(fmt.Sprintf("\n↗ SaaS Home Page: %s\n", r.Url))
 	}
@@ -133,6 +135,41 @@ func (r CNativeAppDeployResult) String() string {
 		),
 	)
 	return sb.String()
+}
+
+// 向输出结果中追加部署状态信息
+func (r CNativeAppDeployResult) attachConditions(sb *strings.Builder) {
+	sb.WriteString(
+		fmt.Sprintf("Deploy Conditions: (Code: %s, Module: %s, Env: %s)\n", r.AppCode, r.Module, r.DeployEnv),
+	)
+	table := tw.NewWriter(sb)
+	table.SetHeader([]string{"Type", "Status", "Reason", "Message"})
+	table.SetRowLine(true)
+
+	for _, c := range r.Conditions {
+		table.Rich(
+			[]string{c.Type, c.Status, c.Reason, c.Message},
+			[]tw.Colors{{}, lo.Ternary(cast.ToBool(c.Status), tw.Colors{}, tw.Colors{tw.FgHiRedColor}), {}, {}},
+		)
+	}
+	table.Render()
+}
+
+// 向输出结果中追加部署事件信息
+func (r CNativeAppDeployResult) attachEvents(sb *strings.Builder) {
+	sb.WriteString("Events:\n")
+	table := tw.NewWriter(sb)
+	table.SetHeader([]string{"LastSeen", "Component", "Type", "Message", "Count"})
+	table.SetRowLine(true)
+	for _, e := range r.Events {
+		// 非普通事件都展示红色
+		typeColumColors := lo.Ternary(cast.ToBool(e.Type == "Normal"), tw.Colors{}, tw.Colors{tw.FgHiRedColor})
+		table.Rich(
+			[]string{e.LastSeen, e.Component, e.Type, e.Message, e.Count},
+			[]tw.Colors{{}, {}, typeColumColors, {}, {}},
+		)
+	}
+	table.Render()
 }
 
 var _ DeployResult = CNativeAppDeployResult{}

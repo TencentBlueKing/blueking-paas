@@ -62,7 +62,7 @@ Modules:
   Name: {{ .Name }}    {{ if and .RepoType .RepoURL }}RepoType: {{ .RepoType }}    RepoUrl: {{ .RepoURL }}{{ end }}
   Environments:
     {{- range .Envs }}
-    Name: {{ .Name }}    Cluster: {{ .ClusterName }} {{ if .ClusterID }}({{ .ClusterID }}){{ end }}
+    Name: {{ .Name }}    Cluster: {{ .ClusterName }}{{ if .ClusterID }} ({{ .ClusterID }}){{ end }}
     {{- end }}
   {{- end }}
 {{ end }}

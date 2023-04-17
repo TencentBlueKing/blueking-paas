@@ -26,6 +26,7 @@ from django.conf import settings
 from django.utils import timezone
 from kubernetes.dynamic.resource import ResourceInstance
 
+from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.base.controllers import BuildHandler
 from paas_wl.resources.base.exceptions import (
@@ -54,6 +55,10 @@ RG = settings.DEFAULT_REGION_NAME
 
 
 class TestClientProcess:
+    @pytest.fixture(autouse=True)
+    def set_res_version(self, wl_app):
+        AppResVerManager(wl_app).update("v1")
+
     @pytest.fixture
     def web_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("web", release=wl_release)
@@ -77,7 +82,7 @@ class TestClientProcess:
             deployment_args, deployment_kwargs = kd.call_args_list[0]
             assert deployment_kwargs.get('name') == f"{RG}-{wl_app.name}-web-python-deployment"
             assert deployment_kwargs.get('body')
-            assert deployment_kwargs.get('namespace') == wl_app.name
+            assert deployment_kwargs.get('namespace') == wl_app.namespace
 
             # Check service resource
             assert ks.get.called

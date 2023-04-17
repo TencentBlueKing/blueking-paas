@@ -78,5 +78,5 @@ class TestZombieProcessesKiller:
         assert len(types) == len(diff["types"])
         assert len(names) == len(diff["names"])
 
-        assert {x.name for x in types} == set(diff["types"])
-        assert {x.name for x in names} == set(diff["names"])
+        assert {x.type for x in types} == set(diff["types"])
+        assert {x.type for x in names} == set(diff["names"])

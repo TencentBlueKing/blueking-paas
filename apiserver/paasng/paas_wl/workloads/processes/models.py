@@ -29,6 +29,7 @@ from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models.managers import AppConfigVarManager
 from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
+from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.release_controller.constants import ImagePullPolicy
 from paas_wl.resources.base import kres
 from paas_wl.resources.kube_res.base import AppEntity, Schedule
@@ -350,9 +351,11 @@ class Process(AppEntity):
         envs.update(release.get_envs())
         envs.update(extra_envs or {})
 
-        return Process(
+        mapper_version = AppResVerManager(release.app).curr_version
+        process = Process(
             app=release.app,
-            name=type_,
+            # AppEntity.name should be the name of k8s resource
+            name="should-set-by-mapper",
             type=type_,
             version=release.version,
             replicas=release.app.get_structure().get(type_, 0),
@@ -372,6 +375,9 @@ class Process(AppEntity):
             ),
             resources=Resources(**config.resource_requirements.get(type_, {})),
         )
+        # TODO: 解决 MapperVersion 与 Process 循环依赖的问题
+        process.name = mapper_version.deployment(process=process).name
+        return process
 
     @property
     def main_container_name(self) -> str:

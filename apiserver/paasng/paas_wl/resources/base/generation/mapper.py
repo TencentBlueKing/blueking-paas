@@ -161,6 +161,8 @@ class MapperPack:
     replica_set: MapperField[KReplicaSet]
 
     def __init__(self, client: Optional['EnhancedApiClient'] = None):
+        # client can only be used at CallThroughKresMapper
+        # never be used at Mapper
         self.client = client
 
     @property

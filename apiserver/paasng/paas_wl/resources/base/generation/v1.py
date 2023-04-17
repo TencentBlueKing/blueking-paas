@@ -35,12 +35,12 @@ class PodMapper(CallThroughKresMapper[KPod]):
 
     @property
     def pod_selector(self) -> str:
-        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.name}-deployment"
+        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-deployment"
 
     @property
     def name(self):
         return (
-            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.name}-"
+            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-"
             f"{get_command_name(self.process.runtime.proc_command)}-deployment"
         )
 
@@ -57,7 +57,7 @@ class PodMapper(CallThroughKresMapper[KPod]):
             region=self.process.app.region,
             env=mdata.environment,
             module_name=mdata.module_name,
-            process_id=self.process.name,
+            process_id=self.process.type,
             # mark deployment as bkapp, maybe we will have other category in the future.
             category="bkapp",
             mapper_version="v1",
@@ -75,7 +75,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
 
     @property
     def pod_selector(self) -> str:
-        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.name}-deployment"
+        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-deployment"
 
     @property
     def labels(self) -> dict:
@@ -93,7 +93,7 @@ class DeploymentMapper(CallThroughKresMapper[KDeployment]):
     @property
     def name(self) -> str:
         return (
-            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.name}-"
+            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-"
             f"{get_command_name(self.process.runtime.proc_command)}-deployment"
         )
 
@@ -103,12 +103,12 @@ class ReplicaSetMapper(CallThroughKresMapper[KReplicaSet]):
 
     @property
     def pod_selector(self) -> str:
-        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.name}-deployment"
+        return f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-deployment"
 
     @property
     def name(self) -> str:
         return (
-            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.name}-"
+            f"{v1_scheduler_safe_name(self.process.app)}-{self.process.type}-"
             f"{get_command_name(self.process.runtime.proc_command)}-deployment"
         )
 

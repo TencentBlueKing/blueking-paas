@@ -177,9 +177,6 @@ class AppEntitySerializer(BaseTransformer, Generic[AET], metaclass=ABCMeta):
         """Generate kubernetes data by given AppEntity"""
         raise NotImplementedError
 
-    def get_res_name(self, obj: AET, **kwargs) -> str:
-        return obj.name
-
 
 T = TypeVar('T', bound=BaseTransformer)
 
@@ -416,9 +413,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
         serializer = self._make_serializer(res.app)
         body = serializer.serialize(res, **kwargs)
         with self.kres(res.app, api_version=serializer.get_apiversion()) as kres_client:
-            kube_data = kres_client.create(
-                serializer.get_res_name(res, **kwargs), body, namespace=self._get_namespace(res.app)
-            )
+            kube_data = kres_client.create(res.name, body, namespace=self._get_namespace(res.app))
         # Set _kube_data
         res._kube_data = kube_data
         return res
@@ -462,7 +457,7 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
         with self.kres(res.app, api_version=serializer.get_apiversion()) as kres_client:
             try:
                 return kres_client.replace_or_patch(
-                    name=serializer.get_res_name(res, mapper_version=mapper_version),
+                    name=res.name,
                     body=body,
                     namespace=self._get_namespace(res.app),
                     update_method=update_method,

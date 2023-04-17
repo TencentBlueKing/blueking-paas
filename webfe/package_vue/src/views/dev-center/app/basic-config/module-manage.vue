@@ -191,7 +191,6 @@
                   <p class="mt10">
                     <bk-input
                       v-model="sourceControlChangeForm.sourceDir"
-                      size="large"
                       class="source-dir"
                       :class="isSourceDirInvalid ? 'error' : ''"
                       :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
@@ -2079,5 +2078,12 @@
 }
 .bk-form-item+.bk-form-item {
     margin-top: 13px;
+}
+</style>
+<style lang="scss">
+.form-group-flex .source-dir.error .bk-input-text {
+    input {
+       border-color: #ff3737 !important;
+    }
 }
 </style>

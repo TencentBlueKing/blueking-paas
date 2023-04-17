@@ -176,30 +176,25 @@
                 font-size: 12px;
                 display: inline-block;
                 vertical-align: middle;
-                padding-left: 5px;
             }
         }
         .bk-select {
             width: 520px;
-            height: 42px;
-            .bk-select-name {
-                height: 40px;
-            }
 
             .bk-select-angle {
-                top: 10px;
+                top: 4px;
             }
 
             .bk-select-loading {
-                top: 10px;
+                top: 4px;
             }
 
             &.is-unselected:before {
-                line-height: 40px;
+                line-height: 32px;
             }
 
             .bk-select-name {
-                line-height: 40px;
+                line-height: 32px;
             }
         }
     }

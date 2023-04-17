@@ -320,10 +320,9 @@
                     />
                   </label>
                   <div class="form-group-flex">
-                    <p class="mt10">
+                    <p>
                       <bk-input
                         v-model="sourceDirVal"
-                        size="large"
                         class="source-dir"
                         :class="sourceDirError ? 'error' : ''"
                         :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"

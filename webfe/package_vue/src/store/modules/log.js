@@ -51,7 +51,7 @@ const mutations = {
     }];
     const timestamps = data.timestamps.map(item => {
       // 时间处理
-      item = moment(item.timestamp).format('YYYY/MM/DD hh:mm:ss');
+      item = moment.unix(item).format('YYYY/MM/DD hh:mm:ss');
       return item.substring(5);
     });
     chartOptions.xAxis.data = timestamps;

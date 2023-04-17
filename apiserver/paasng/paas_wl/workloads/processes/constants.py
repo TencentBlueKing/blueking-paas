@@ -20,6 +20,7 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 # 注解或标签中存储进程名称的键名
 PROCESS_NAME_KEY = "bkapp.paas.bk.tencent.com/process-name"
+PROCESS_MAPPER_VERSION_KEY = "bkapp.paas.bk.tencent.com/process-mapper-version"
 
 
 class ProcessUpdateType(str, StructuredEnum):

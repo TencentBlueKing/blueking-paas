@@ -23,19 +23,29 @@
       //   'BK_ANALYSIS_JS': '$BK_ANALYSIS_JS' || '',  // 蓝鲸组件API地址，目前值跟 v2 开发者中心一致，内部版本不用填
       //   'BK_PAAS_VERSION': '$BK_PAAS_VERSION' || ''
       // }
-      const BACKEND_URL = '<%= process.env.BK_PAAS3_URL %>' + '/backend'
     </script>
     <script src="/static/runtime/runtime.js?version=<%= htmlWebpackPlugin.options.RELEASE_VERSION %>"></script>
     <script>
       // 以下变量由webpack构建工具填充
       var RELEASE_VERSION = '<%= htmlWebpackPlugin.options.RELEASE_VERSION %>'
-      var NODE_ENV = '<%= htmlWebpackPlugin.options.NODE_ENV %>'
-      var APP_VERSION = '<%= htmlWebpackPlugin.options.APP_VERSION %>'
+
+
+      // 环境变量
+      var APP_VERSION = '<%= process.env.APP_VERSION %>'
+      var BACKEND_URL = '<%= process.env.BK_PAAS3_URL %>' + '/backend'
+      var NODE_ENV = '<%= process.env.NODE_ENV %>'
+      var BK_LESSCODE_URL = '<%= process.env.BK_LESSCODE_URL %>' || ''
+      var BK_PAAS2_URL = '<%= process.env.BK_PAAS2_URL %>' || ''
+      var BK_DOCS_URL_PREFIX = '<%= process.env.BK_DOCS_URL_PREFIX %>' || ''
+      var BK_APIGW_URL = '<%= process.env.BK_APIGW_URL %>' || ''
+      var BK_APIGW_DOC_URL = '<%= process.env.BK_APIGW_DOC_URL %>' || ''
+      var BK_COMPONENT_API_URL = '<%= process.env.BK_COMPONENT_API_URL %>' || ''
+      var BK_ANALYSIS_JS = '<%= process.env.BK_ANALYSIS_JS %>' || ''
+      var DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/PaaS3.0`
       var GLOBAL_CONFIG = {
         APP_VERSION: APP_VERSION,
-        LOGIN_SERVICE_URL: window.LOGIN_SERVICE_URL,
-        USERS_URL: window.USERS_URL,
-        BK_COMPONENT_API_URL: window.BK_COMPONENT_API_URL
+        LOGIN_SERVICE_URL: '<%= process.env.BK_LOGIN_URL %>',
+        USERS_URL: '<%= process.env.BK_USERS_URL %>' || '',
       }
     </script>
     <% if (htmlWebpackPlugin.options.APP_VERSION === 'te'){ %>
@@ -44,7 +54,7 @@
     <script>
       document.write('<scr'+'ipt src="'+BK_ANALYSIS_JS+'"></scr'+'ipt>');
     </script>
-    <% if (htmlWebpackPlugin.options.NODE_ENV !== 'development') { %>
+    <% if (process.env.NODE_ENV !== 'development') { %>
     <script>
         if (window.NODE_ENV !== 'development') {
           if(BKANALYSIS) {

@@ -24,20 +24,25 @@ import store from '@/store';
 import http from '@/api';
 import auth from '@/auth';
 import { bus } from '@/common/bus';
-// import '@/common/jquery_tools';
-import {
-  bkBadge, bkButton, bkLink, bkCheckbox, bkCheckboxGroup, bkCol, bkCollapse, bkCollapseItem, bkContainer, bkDatePicker,
-  bkDialog, bkDropdownMenu, bkException, bkForm, bkFormItem, bkInfoBox, bkInput, bkLoading, bkMessage,
-  bkNavigation, bkNavigationMenu, bkNavigationMenuItem, bkNotify, bkOption, bkOptionGroup, bkPagination,
-  bkPopover, bkProcess, bkProgress, bkRadio, bkRadioGroup,
-  bkRoundProgress, bkRow, bkSearchSelect, bkSelect, bkOverflowTips,
-  bkSideslider, bkSlider, bkSteps, bkSwitcher, bkTab, bkTabPanel, bkTable, bkTableColumn, bkTagInput, bkTimePicker,
-  bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside,
-  bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard,
-  bkTag } from 'bk-magic-vue';
+import $ from 'jquery';
+import '@/common/jquery_tools';
+// import {
+//   bkBadge, bkButton, bkLink, bkCheckbox, bkCheckboxGroup, bkCol, bkCollapse,
+// bkCollapseItem, bkContainer, bkDatePicker,
+//   bkDialog, bkDropdownMenu, bkException, bkForm, bkFormItem, bkInfoBox, bkInput, bkLoading, bkMessage,
+//   bkNavigation, bkNavigationMenu, bkNavigationMenuItem, bkNotify, bkOption, bkOptionGroup, bkPagination,
+//   bkPopover, bkProcess, bkProgress, bkRadio, bkRadioGroup,
+//   bkRoundProgress, bkRow, bkSearchSelect, bkSelect, bkOverflowTips,
+//   bkSideslider, bkSlider, bkSteps, bkSwitcher, bkTab, bkTabPanel, bkTable, bkTableColumn, bkTagInput, bkTimePicker,
+//   bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside,
+//   bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard,
+//   bkTag } from 'bk-magic-vue';
+
+import { bkInfoBox, bkMessage, bkNotify } from 'bk-magic-vue';
 import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
+import '@/common/bkmagic.js';
 // eslint-disable-next-line
 import Blob from '@/common/Blob'
 // eslint-disable-next-line
@@ -70,78 +75,81 @@ import { renderHeader } from '@/common/utils';
 
 // composition-api
 import VueCompositionAPI from '@vue/composition-api';
+
+window.$ = $;
+
 Vue.use(VueCompositionAPI);
 
 Vue.config.devtools = true;
 
 // components use
-Vue.use(bkBadge);
-Vue.use(bkButton);
-Vue.use(bkLink);
-Vue.use(bkCheckbox);
-Vue.use(bkCheckboxGroup);
-Vue.use(bkCol);
-Vue.use(bkCollapse);
-Vue.use(bkCollapseItem);
-Vue.use(bkContainer);
-Vue.use(bkDatePicker);
-Vue.use(bkDialog, {
-  headerPosition: 'left',
-});
-Vue.use(bkDropdownMenu);
-Vue.use(bkException);
-Vue.use(bkForm);
-Vue.use(bkFormItem);
-Vue.use(bkInput);
-Vue.use(bkNavigation);
-Vue.use(bkNavigationMenu);
-Vue.use(bkNavigationMenuItem);
-Vue.use(bkOption);
-Vue.use(bkOptionGroup);
-Vue.use(bkPagination);
-Vue.use(bkPopover);
-Vue.use(bkProcess);
-Vue.use(bkProgress);
-Vue.use(bkRadio);
-Vue.use(bkRadioGroup);
-Vue.use(bkRoundProgress);
-Vue.use(bkRow);
-Vue.use(bkSearchSelect);
-Vue.use(bkSelect);
-Vue.use(bkSideslider);
-Vue.use(bkSlider);
-Vue.use(bkSteps);
-Vue.use(bkSwitcher);
-Vue.use(bkTab);
-Vue.use(bkOverflowTips);
-Vue.use(bkTabPanel);
-Vue.use(bkTable);
-Vue.use(bkTableColumn, {
-  showOverflowTooltip: true,
-});
-Vue.use(bkTagInput, {
-  tooltipKey: 'name',
-});
-Vue.use(bkTimePicker);
-Vue.use(bkTimeline);
-Vue.use(bkTransfer, {
-  showOverflowTips: true,
-});
-Vue.use(bkTree);
-Vue.use(bkUpload);
-Vue.use(bkSwiper);
-Vue.use(bkRate);
-Vue.use(bkAnimateNumber);
-Vue.use(bkVirtualScroll);
-Vue.use(bkPopconfirm);
-// directives use
-Vue.use(bkClickoutside);
-Vue.use(bkTooltips);
-Vue.use(bkLoading);
-// Vue.use(bkOverflowTips)
-Vue.use(bkAlert);
-Vue.use(bkCard);
-Vue.use(bkTag);
+// Vue.use(bkBadge);
+// Vue.use(bkButton);
+// Vue.use(bkLink);
+// Vue.use(bkCheckbox);
+// Vue.use(bkCheckboxGroup);
+// Vue.use(bkCol);
+// Vue.use(bkCollapse);
+// Vue.use(bkCollapseItem);
+// Vue.use(bkContainer);
+// Vue.use(bkDatePicker);
+// Vue.use(bkDialog, {
+//   headerPosition: 'left',
+// });
+// Vue.use(bkDropdownMenu);
+// Vue.use(bkException);
+// Vue.use(bkForm);
+// Vue.use(bkFormItem);
+// Vue.use(bkInput);
+// Vue.use(bkNavigation);
+// Vue.use(bkNavigationMenu);
+// Vue.use(bkNavigationMenuItem);
+// Vue.use(bkOption);
+// Vue.use(bkOptionGroup);
+// Vue.use(bkPagination);
+// Vue.use(bkPopover);
+// Vue.use(bkProcess);
+// Vue.use(bkProgress);
+// Vue.use(bkRadio);
+// Vue.use(bkRadioGroup);
+// Vue.use(bkRoundProgress);
+// Vue.use(bkRow);
+// Vue.use(bkSearchSelect);
+// Vue.use(bkSelect);
+// Vue.use(bkSideslider);
+// Vue.use(bkSlider);
+// Vue.use(bkSteps);
+// Vue.use(bkSwitcher);
+// Vue.use(bkTab);
+// Vue.use(bkOverflowTips);
+// Vue.use(bkTabPanel);
+// Vue.use(bkTable);
+// Vue.use(bkTableColumn, {
+//   showOverflowTooltip: true,
+// });
+// Vue.use(bkTagInput, {
+//   tooltipKey: 'name',
+// });
+// Vue.use(bkTimePicker);
+// Vue.use(bkTimeline);
+// Vue.use(bkTransfer, {
+//   showOverflowTips: true,
+// });
+// Vue.use(bkTree);
+// Vue.use(bkUpload);
+// Vue.use(bkSwiper);
+// Vue.use(bkRate);
+// Vue.use(bkAnimateNumber);
+// Vue.use(bkVirtualScroll);
+// Vue.use(bkPopconfirm);
+// // directives use
+// Vue.use(bkClickoutside);
+// Vue.use(bkTooltips);
+// Vue.use(bkLoading);
+// // Vue.use(bkOverflowTips)
+// Vue.use(bkAlert);
+// Vue.use(bkCard);
+// Vue.use(bkTag);
 
 Vue.use(Directives);
 Vue.component('PaasContentLoader', PaasContentLoader);

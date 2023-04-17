@@ -398,7 +398,7 @@
               class="form-group-dir"
               style="margin-top: 10px;"
             >
-              <label class="form-label">
+              <label class="form-label optional">
                 {{ $t('部署目录') }}
                 <i
                   v-bk-tooltips="sourceDirTip"
@@ -1319,6 +1319,7 @@
                     } else if (codeSource === 'default') {
                         // 普通应用
                         this.regionChoose = this.defaultRegionChoose;
+                        this.handleCodeTypeChange(1);
                     }
                 });
             }

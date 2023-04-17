@@ -33,3 +33,9 @@ class DomainGroupMapping(BaseKresource):
     """CRD: Mapping between BkApp and DomainGroups"""
 
     kind = 'DomainGroupMapping'
+
+
+class GPA(BaseKresource):
+    """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
+
+    kind = 'GeneralPodAutoscaler'

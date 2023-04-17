@@ -208,14 +208,6 @@
             appInfo () {
                 this.initAppList();
             },
-            '$route' () {
-                // 路由切换时需更新appLinks
-                // 初始化左侧下拉导航快速访问入口
-                this.appLinks = {
-                    stag: '',
-                    prod: ''
-                };
-            },
             filterKey (newVal, oldVal) {
                 if (newVal === '' && oldVal !== '') {
                     this.propsfilterKey = '';

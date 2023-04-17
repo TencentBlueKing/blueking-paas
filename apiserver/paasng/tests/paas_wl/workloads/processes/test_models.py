@@ -16,9 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import List
+
+import cattr
 import pytest
 
-from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecManager
+from paas_wl.workloads.processes.models import DeclarativeProcess, ProcessSpec, ProcessSpecManager
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -28,18 +31,31 @@ class TestProcessSpecManager:
 
     def test_sync(self, wl_app):
         mgr = ProcessSpecManager(wl_app)
-        mgr.sync([{"name": "web", "command": "foo", "replicas": 2}, {"name": "celery", "command": "foo"}])
+        mgr.sync(
+            cattr.structure(
+                [{"name": "web", "command": "foo", "replicas": 2}, {"name": "celery", "command": "foo"}],
+                List[DeclarativeProcess],
+            )
+        )
 
         assert ProcessSpec.objects.get(engine_app=wl_app, name="web").target_replicas == 2
         assert ProcessSpec.objects.get(engine_app=wl_app, name="celery").target_replicas == 1
 
-        mgr.sync([{"name": "web", "command": "foo", "replicas": 3, "plan": "4C1G5R"}])
+        mgr.sync(
+            cattr.structure(
+                [{"name": "web", "command": "foo", "replicas": 3, "plan": "4C1G5R"}], List[DeclarativeProcess]
+            )
+        )
         web = ProcessSpec.objects.get(engine_app=wl_app, name="web")
         assert web.target_replicas == 3
         assert web.plan.name == "4C1G5R"
         assert ProcessSpec.objects.filter(engine_app=wl_app).count() == 1
 
-        mgr.sync([{"name": "web", "command": "foo", "replicas": None, "plan": None}])
+        mgr.sync(
+            cattr.structure(
+                [{"name": "web", "command": "foo", "replicas": None, "plan": None}], List[DeclarativeProcess]
+            )
+        )
         web = ProcessSpec.objects.get(engine_app=wl_app, name="web")
         assert web.target_replicas == 3
         assert web.plan.name == "4C1G5R"

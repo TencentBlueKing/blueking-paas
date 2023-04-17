@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import jinja2
 
 from paasng.pluginscenter.definitions import ElasticSearchParams
-from paasng.pluginscenter.log.search import SmartSearch
 from paasng.pluginscenter.models import PluginInstance
+from paasng.utils.es_log.search import SmartSearch
 
 
 class ElasticSearchFilter:
@@ -31,10 +31,14 @@ class ElasticSearchFilter:
     def filter_by_plugin(self, search: SmartSearch) -> SmartSearch:
         """为搜索增加插件相关过滤条件"""
         context = {"plugin_id": self.plugin.id}
-        fields = self.search_params.termTemplate.copy()
-        for k, v in fields.items():
-            fields[k] = jinja2.Template(v).render(**context)
-        return search.filter("term", **fields)
+        term_fields = self.search_params.termTemplate.copy()
+        for k, v in term_fields.items():
+            term_fields[k] = jinja2.Template(v).render(**context)
+        if term_fields:
+            # [term] query doesn't support multiple fields
+            for k, v in term_fields.items():
+                search = search.filter("term", **{k: v})
+        return search
 
     def filter_by_builtin_filters(self, search: SmartSearch) -> SmartSearch:
         """根据 params 配置的 builtinFilters 添加过滤条件"""

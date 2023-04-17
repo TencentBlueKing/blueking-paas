@@ -18,7 +18,6 @@
                             <bk-button class="ml5" theme="danger" text @click="unbindApiServer(props.row, subProps.row)">删除</bk-button>
                         </template>
                     </bk-table-column>
-                    <div slot="empty">/*隐藏 empty block*/</div>
                     <div slot="append" class="bk-table-append-block" @click="upsertApiServer(props.row)">
                         <div style="display: flex; flex-direction: column;">
                             <i class="bk-icon icon-plus-circle" style="font-size: 16px"></i>

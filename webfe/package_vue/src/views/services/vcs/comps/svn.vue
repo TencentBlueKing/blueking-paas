@@ -43,7 +43,7 @@
                   href="javascript:"
                   @click="openPassword"
                 >
-                  {{ $t('忘记密码') }}
+                  <span v-dashed>{{ $t('忘记密码') }}</span>
                 </a>
               </div>
               <div

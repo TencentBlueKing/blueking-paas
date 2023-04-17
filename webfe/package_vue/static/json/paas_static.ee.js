@@ -625,6 +625,25 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "appMarketing",
+                "label": staticI18n.$t("应用推广"),
+                "iconfontName": "volumn",
+                "children": [
+                    {
+                        "name": staticI18n.$t("应用市场"),
+                        "destRoute": {
+                          "name": "appMarket"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("应用市场 (移动端)"),
+                        "destRoute": {
+                          "name": "appMobileMarket"
+                        }
+                    }
+                ]
+            },
+            {
                 "name": "appConfigs",
                 "label": staticI18n.$t("基本设置"),
                 "iconfontName": "gear",

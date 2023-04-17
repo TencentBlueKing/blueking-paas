@@ -24,7 +24,7 @@
           v-for="(filter) of streamLogFilters"
           :key="filter.value"
         >
-          <span class="filter-value">实例名: {{ filter.text }}</span>
+          <span class="filter-value">{{ $t('实例名') }}: {{ filter.text }}</span>
         </li>
       </ul>
       <span
@@ -70,7 +70,7 @@
             v-if="isShowDate"
             class="mr10"
             style="min-width: 140px;"
-          >{{ log.timestamp }}</span>
+          >{{ formatTime(log.timestamp) }}</span>
           <div>
             <span
               v-if="log.process_id.length < 5"
@@ -79,6 +79,7 @@
             <span
               v-else
               v-bk-tooltips.right="{ theme: 'light', content: log.process_id }"
+              v-dashed="9"
               style="cursor: pointer;"
             >{{ processIdSlice(log.process_id) }}</span>
           </div>
@@ -93,7 +94,10 @@
               class="pod-name"
               @click="handleAddStreamLogFilters(log)"
             >
-              <span v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }">{{ log.podShortName }}</span>
+              <span
+                v-bk-tooltips.right="{ theme: 'light', content: $t('仅展示该实例') }"
+                v-dashed="9"
+              >{{ log.podShortName }}</span>
             </div>
           </template>
           <pre
@@ -125,6 +129,7 @@
     import xss from 'xss';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -441,8 +446,8 @@
                         params,
                         filter
                     });
-                    this.lastScrollId = res.data.scroll_id;
-                    const data = res.data.logs.reverse();
+                    this.lastScrollId = res.scroll_id;
+                    const data = res.logs.reverse();
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
                         item.podShortName = item.pod_name.split('-').reverse()[0];
@@ -453,7 +458,7 @@
                     } else {
                         this.bindScrollLoading();
                     }
-                    this.streamLogCount = res.data.total;
+                    this.streamLogCount = res.total;
 
                     if (this.isScrollLoading) {
                         this.streamLogList = [...data, ...this.streamLogList];
@@ -489,7 +494,7 @@
 
                 try {
                     const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
-                    const data = res.data;
+                    const data = res;
                     data.forEach(item => {
                         const condition = {
                             id: item.key,
@@ -503,11 +508,11 @@
                                 text: option[0]
                             });
                         });
-                        if (condition.id === 'environment') {
+                        if (condition.name === 'environment') {
                             this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
+                        } else if (condition.name === 'process_id') {
                             this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
+                        } else if (condition.name === 'stream') {
                             this.streamList = condition.list;
                         }
                     });
@@ -589,6 +594,10 @@
 
             updateEmptyDarkConfig () {
                 this.emptyDarkConf.keyword = this.logParams.keyword;
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

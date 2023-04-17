@@ -378,6 +378,7 @@
               v-else
               v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
               class="ps-btn-disabled"
+              style="text-align: center;"
             >
               {{ $t('创建模块') }}
             </div>

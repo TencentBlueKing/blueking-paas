@@ -38,7 +38,7 @@
                   class="process-name"
                 >{{ process.name }}</b>
                 <div class="instance-count">
-                  <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
+                  <span>{{ process.available_instance_count }} / {{ process.targetReplicas }}</span>
                 </div>
               </div>
               <div class="process-operate">
@@ -155,7 +155,10 @@
                             class="paasng-icon"
                             :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
                           />
-                          <span v-bk-tooltips="{content: getInstanceStateToolTips(instance)}">{{ instance.state }}</span>
+                          <span
+                            v-bk-tooltips="{content: getInstanceStateToolTips(instance)}"
+                            v-dashed
+                          >{{ instance.state }}</span>
                         </td>
                         <td class="time">
                           <template v-if="instance.date_time !== 'Invalid date'">
@@ -942,7 +945,7 @@
                         params,
                         filter
                     });
-                    const data = res.data.logs.reverse();
+                    const data = res.logs.reverse();
                     data.forEach((item) => {
                         item.podShortName = item.pod_name.split('-').reverse()[0];
                     });
@@ -1337,7 +1340,6 @@
                         operateIconTitle: operateIconTitle,
                         operateIconTitleCopy: operateIconTitle,
                         isShowTooltipConfirm: false,
-                        desired_replicas: processInfo.replicas,
                         available_instance_count: processInfo.success,
                         failed: processInfo.failed,
                         cpuLimit: processInfo.cpu_limit,
@@ -1458,7 +1460,6 @@
                     this.allProcesses.forEach(process => {
                         if (process.type === processData.type) {
                             process.available_instance_count = processData.success;
-                            process.desired_replicas = processData.replicas;
                             process.failed = processData.failed;
                             this.updateProcessStatus(process);
                         }

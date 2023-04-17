@@ -19,23 +19,8 @@ to the current version of the project delivered to anyone in the future.
 from typing import Optional
 from uuid import UUID
 
-from paas_wl.platform.applications.models.build import Build, BuildProcess
-from paas_wl.release_controller.builder.exceptions import InterruptionNotAllowed
-from paas_wl.release_controller.builder.executor import interrupt_build
-from paas_wl.release_controller.hooks.models import Command
-from paas_wl.resources.actions.exec import interrupt_command as _interrupt_command
+from paas_wl.platform.applications.models.build import Build
 from paasng.platform.applications.models import ModuleEnvironment
-
-
-def interrupt_build_proc(bp_id: UUID) -> bool:
-    """Interrupt a build process
-
-    :return: Whether the build process was successfully interrupted.
-    """
-    bp = BuildProcess.objects.get(pk=bp_id)
-    if not bp.check_interruption_allowed():
-        raise InterruptionNotAllowed()
-    return interrupt_build(bp)
 
 
 def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:
@@ -47,14 +32,3 @@ def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:
         return Build.objects.filter(app=env.wl_app).latest('created').pk
     except Build.DoesNotExist:
         return None
-
-
-def interrupt_command(command_id: UUID) -> bool:
-    """Interrupt a command
-
-    :return: Whether the Command was successfully interrupted.
-    """
-    command = Command.objects.get(pk=command_id)
-    if not command.check_interruption_allowed():
-        raise InterruptionNotAllowed
-    return _interrupt_command(command)

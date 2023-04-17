@@ -18,7 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.pluginscenter.log.client import ESLogClient, FieldFilter
+from paasng.pluginscenter.log.client import ESLogClient
+from paasng.utils.es_log.models import FieldFilter
 
 
 @pytest.mark.parametrize(
@@ -47,5 +48,4 @@ from paasng.pluginscenter.log.client import ESLogClient, FieldFilter
     ],
 )
 def test_clean_property(nested_name, mapping, expected):
-    client = ESLogClient.__new__(ESLogClient)
-    assert client._clean_property(nested_name, mapping) == expected
+    assert ESLogClient._clean_property(nested_name, mapping) == expected

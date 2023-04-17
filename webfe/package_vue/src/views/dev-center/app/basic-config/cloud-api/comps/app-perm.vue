@@ -76,6 +76,7 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
@@ -115,6 +116,7 @@
               :label="isComponentApi ? $t('系统') : $t('网关')"
               min-width="100"
               :prop="isComponentApi ? 'system_name' : 'api_name'"
+              :column-key="isComponentApi ? 'system_name' : 'api_name'"
               :filters="nameFilters"
               :filter-method="nameFilterMethod"
               :filter-multiple="true"
@@ -177,7 +179,7 @@
           >
             <template slot-scope="props">
               <span
-                v-bk-tooltips="props.row.description"
+                v-bk-tooltips="{ content: props.row.description, disabled: props.row.description === '' }"
                 v-html="highlightDesc(props.row)"
               />
             </template>
@@ -202,6 +204,7 @@
             <bk-table-column
               :label="$t('状态')"
               prop="permission_status"
+              column-key="status"
               :filters="statusFilters"
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
@@ -356,7 +359,8 @@
                 tableEmptyConf: {
                     keyword: '',
                     isAbnormal: false
-                }
+                },
+                allFilterData: {}
             };
         },
         computed: {
@@ -442,6 +446,14 @@
                 return row[property] === value;
             },
 
+            filterChange (filters) {
+                Object.entries(filters).forEach(item => {
+                    const [name, value] = item;
+                    this.allFilterData[name] = value;
+                });
+                this.updateTableEmptyConfig();
+            },
+
             handleSelect (value, option) {
                 this.pagination = Object.assign({}, {
                     current: 1,
@@ -515,6 +527,7 @@
                 }
                 this.initPageConf();
                 this.tableList = this.getDataByPage();
+                this.updateTableEmptyConfig();
             },
 
             /**
@@ -765,6 +778,8 @@
             },
             clearFilterKey () {
                 this.searchValue = '';
+                this.isRenewalPerm = false;
+                this.allFilterData = {};
                 this.$refs.permRef.clearFilter();
                 if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
                     const tableHeader = this.$refs.permRef.$refs.tableHeader;
@@ -774,7 +789,24 @@
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.searchValue;
+                let isTableFilter = this.isFilterCriteria();
+
+                if (this.searchValue || this.isRenewalPerm || isTableFilter) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '$CONSTANT';
+            },
+
+            // 表头是否存在筛选条件
+            isFilterCriteria () {
+                let isFilter = false;
+                for (const key in this.allFilterData) {
+                    if (this.allFilterData[key].length) {
+                        isFilter = true;
+                    }
+                };
+                return isFilter;
             }
         }
     };

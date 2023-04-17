@@ -2,7 +2,7 @@ name: '{{ alert_rule_display_name }}'
 enabled: {{ enabled }}
 
 labels:
-  - BKPAAS
+  - BKAPP
   - {{ app_code }}
   - {{ alert_rule_name }}
 
@@ -10,7 +10,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum by (pod, container_name, namespace) (container_memory_working_set_bytes{container_name!="POD",namespace="{{ namespace }}",pod=~"{{ namespace }}--.*"}) / sum by (pod, container_name, namespace) (label_join(kube_pod_container_resource_limits_cpu_cores{namespace="{{ namespace }}",pod=~"{{ namespace }}--.*"}, "container_name", "", "container"))'
+  - metric: 'sum by (pod_name, container_name, namespace) (container_memory_working_set_bytes{container_name!="POD",namespace="{{ namespace }}"}) / sum by (pod_name, container_name, namespace) (kube_pod_container_resource_limits_memory_bytes{namespace="{{ namespace }}"})'
     interval: 60
 
 detect: # 检测配置

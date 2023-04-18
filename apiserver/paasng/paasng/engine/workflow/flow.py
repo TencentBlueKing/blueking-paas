@@ -83,10 +83,11 @@ class DeployProcedure:
 
             return False
 
-        # Only exception `DeployShouldAbortError` should be outputed directly into the stream,
-        # While other exceptions should be masked as "Unknown error" instead for better user
-        # experience.
-        if exc_type in [DeployShouldAbortError, exceptions.ProvisionInstanceError]:
+        # Only some types of exception should be output directly into the stream,
+        # others have to be masked as "Unknown error" in order to provide better
+        # user experiences.
+        is_known_exc = exc_type in [DeployShouldAbortError, exceptions.ProvisionInstanceError]
+        if is_known_exc:
             msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
                 title=Style.Title(self.title), reason=Style.Warning(exc_val)
             )
@@ -97,7 +98,10 @@ class DeployProcedure:
         if coded_message:
             msg += coded_message
 
-        logger.exception(msg)
+        # Only log exception when it's an unknown exception
+        if not is_known_exc:
+            logger.exception(msg)
+
         self.stream.write_message(msg, StreamType.STDERR)
 
         if self.step_obj:
@@ -159,7 +163,10 @@ class DeploymentStateMgr:
             self.deployment.app_environment.save(update_fields=['is_offlined'])
 
         # Release deploy lock
-        DeploymentCoordinator(self.deployment.app_environment).release_lock(expected_deployment=self.deployment)
+        try:
+            DeploymentCoordinator(self.deployment.app_environment).release_lock(expected_deployment=self.deployment)
+        except ValueError as e:
+            logger.warning("Failed to release the deployment lock: %s", e)
 
         # Trigger signal
         post_appenv_deploy.send(self.deployment.app_environment, deployment=self.deployment)
@@ -224,7 +231,7 @@ class DeploymentCoordinator:
             if expected_deployment:
                 deployment_id = pipe.get(self.key_name_deployment)
                 if deployment_id and (force_text(deployment_id) != str(expected_deployment.pk)):
-                    raise ValueError('Can not release a lock that is not owned by given deployment')
+                    raise ValueError(f'found: {deployment_id}, expected: {expected_deployment.pk}')
 
             pipe.delete(self.key_name_lock)
             # Clean deployment key

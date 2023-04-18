@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="establish">
+  <div
+    v-en-class="'en-label'"
+    class="establish"
+  >
     <div class="ps-tip-block default-info mt15">
       <i
         style="color: #3A84FF;"
@@ -1489,6 +1492,9 @@
       color: #313238;
       line-height: 32px;
   }
+}
+.tab-box {
+    align-items: center;
 }
 
 </style>

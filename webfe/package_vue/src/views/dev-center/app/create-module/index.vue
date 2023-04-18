@@ -1,6 +1,9 @@
 <template lang="html">
   <div class="paas-content white">
-    <div class="wrap">
+    <div
+      v-en-class="'en-label'"
+      class="wrap"
+    >
       <div class="paas-application-tit establish-title mt30">
         <span> {{ $t('创建模块') }} </span>
       </div>

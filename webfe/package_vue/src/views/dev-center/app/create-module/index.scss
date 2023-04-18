@@ -577,6 +577,10 @@ input::-webkit-input-placeholder {
     }
 }
 
+.en-label.wrap .form-label {
+    width: 100px;
+}
+
 .form-group-dir{
     display: flex;
     &-flex{

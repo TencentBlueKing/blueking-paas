@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="right-main">
+  <div
+    v-en-class="'en-label'"
+    class="right-main"
+  >
     <app-top-bar
       :title="$t('模块管理')"
       :can-create="canCreateModule"
@@ -2050,6 +2053,11 @@
     text-align: right;
     margin-right: 10px;
 }
+
+.en-label .form-label {
+    width: 100px;
+}
+
 .form-group{
     display: flex;
     &-flex{

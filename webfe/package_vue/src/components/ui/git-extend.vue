@@ -198,4 +198,8 @@
             }
         }
     }
+
+    .en-label #shorter-loading-animate .form-label {
+        width: 100px;
+    }
 </style>

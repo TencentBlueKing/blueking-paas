@@ -51,7 +51,7 @@
             font-weight: bold;
         }
     }
-
+    
     .form-group{
         display: flex;
         &-flex{
@@ -76,12 +76,11 @@
                 font-size: 12px;
                 display: inline-block;
                 vertical-align: middle;
-                padding-left: 5px;
             }
         }
     }
-    
 
+    
     .form-group-dir{
         display: flex;
         &-flex{
@@ -93,6 +92,10 @@
             align-items: center;
             margin-top: 3px;
         }
+    }
+
+    &.flex-end .form-group-dir {
+        align-items: flex-end;
     }
 }
 
@@ -134,12 +137,14 @@
         font-size: 12px;
         display: inline-block;
         vertical-align: middle;
-        padding-left: 5px;
     }
     // 非必填
     &.optional::after {
         opacity: 0;
     }
+}
+.establish.en-label .form-label {
+    width: 100px;
 }
 
 .card-container {
@@ -230,10 +235,6 @@
 
 .lang-card-to-right-enter {
     left: -600px;
-}
-
-input.ps-form-control {
-    padding: 4px 10px;
 }
 
 .form-group {

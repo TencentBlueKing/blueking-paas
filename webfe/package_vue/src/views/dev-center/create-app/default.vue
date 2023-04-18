@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="establish">
+  <div
+    v-en-class="'en-label'"
+    class="establish"
+  >
     <div class="ps-tip-block default-info mt15">
       <i
         style="color: #3A84FF;"
@@ -440,7 +443,7 @@
 
       <div
         v-if="isShowAdvancedOptions"
-        class="create-item"
+        class="create-item flex-end"
         data-test-id="createDefault_item_appSelect"
       >
         <div class="item-title">
@@ -1335,25 +1338,24 @@
 #choose-cluster {
     .bk-select {
         width: 520px;
-        height: 42px;
         .bk-select-name {
-            height: 40px;
+            height: 32px;
         }
 
         .bk-select-angle {
-            top: 10px;
+            top: 4px;
         }
 
         .bk-select-loading {
-            top: 10px;
+            top: 4px;
         }
 
         &.is-unselected:before {
-            line-height: 40px;
+            line-height: 32px;
         }
 
         .bk-select-name {
-            line-height: 40px;
+            line-height: 32px;
         }
     }
 }
@@ -1485,14 +1487,14 @@
 }
 
 .template-wrapper {
-  .form-label {
-      line-height: 32px !important;
-  }
   .bk-less-code {
       font-size: 14px;
       color: #313238;
       line-height: 32px;
   }
+}
+.tab-box {
+    align-items: center;
 }
 
 </style>

@@ -1,5 +1,8 @@
 <template>
-  <div :class="['ps-header','clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]">
+  <div
+    v-en-class="'en-header-cls'"
+    :class="['ps-header','clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]"
+  >
     <div class="ps-header-visible clearfix">
       <router-link
         :to="{ name: 'index' }"
@@ -1051,6 +1054,9 @@
         line-height: 32px;
         border-left: solid 1px #30303d;
         padding: 5px 0 62px 0;
+    }
+    .en-header-cls .ps-header-invisible>dl {
+        width: 145px;
     }
 
     .ps-header-invisible>dl:last-child {

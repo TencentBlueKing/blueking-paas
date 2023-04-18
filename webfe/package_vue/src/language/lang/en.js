@@ -2099,8 +2099,9 @@ export default {
   '申请成为开发者': 'Apply to be a developer',
   '所有进程 CPU limit 的总和': 'The sum of all process CPU limits',
   '所有进程 Memory limit 的总和': 'Sum of all process Memory limits',
-  '核（生产）': 'core(prod)',
-  '核（预发布）': 'core(stag)',
+  '核（生产）': ' core(prod)',
+  '核（预发布）': ' core(stag)',
+  '核（生产环境）': ' core(prod)',
   '告警数量': 'Number of alert',
   '访问数(pv)': 'Access count(pv)',
   '访客数(uv)': 'Visitor count(uv)',
@@ -2112,6 +2113,7 @@ export default {
   '已申请权限的 API': 'Authorized API',
   '实例名': 'Instance name',
   '确认离开当前页？': 'Confirm to leave current page?',
-  '离开将会导致未保存信息丢失': 'Leaving will result in loss of unsaved information',
-  '离开': 'Leave'
+  '离开将会导致未保存信息丢失': 'Leaving will lose unsaved information',
+  '离开': 'Leave',
+  '应用市场信息请在“app_desc.yaml”文件中配置': 'Please configure the application market information in the "app_desc.yaml" file'
 };

@@ -208,99 +208,6 @@
           :model="form"
           :rules="informationRules"
         >
-          <bk-form-item
-            :label="$t('连接器类型')"
-            :required="true"
-            :property="'type'"
-          >
-            <bk-radio-group v-model="form.type">
-              <bk-radio
-                :key="'数据源接入'"
-                :value="1"
-              >
-                {{ $t('数据源接入') }}
-              </bk-radio>
-              <bk-radio
-                :key="'数据入库'"
-                :value="2"
-              >
-                {{ $t('数据入库') }}
-              </bk-radio>
-            </bk-radio-group>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('建议使用场景')"
-            :required="true"
-            :property="'type'"
-          >
-            <div class="flex-row">
-              <bk-select
-                v-model="form.type"
-                class="w480"
-                :clearable="false"
-                :placeholder="$t('建议使用场景')"
-              >
-                <bk-option
-                  v-for="(option, index) in pluginTypeList"
-                  :id="option.id"
-                  :key="index"
-                  :name="option.text"
-                />
-              </bk-select>
-            </div>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('建议日数据量')"
-            :required="true"
-            :property="'type'"
-          >
-            <bk-select
-              v-model="form.type"
-              class="w480"
-              :clearable="false"
-              :placeholder="$t('建议日数据量')"
-            >
-              <bk-option
-                v-for="(option, index) in pluginTypeList"
-                :id="option.id"
-                :key="index"
-                :name="option.text"
-              />
-            </bk-select>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('查询模式')"
-            :required="true"
-            :property="'type'"
-          >
-            <bk-select
-              v-model="form.type"
-              class="w480"
-              :clearable="false"
-              :placeholder="$t('查询模式')"
-            >
-              <bk-option
-                v-for="(option, index) in pluginTypeList"
-                :id="option.id"
-                :key="index"
-                :name="option.text"
-              />
-            </bk-select>
-          </bk-form-item>
-          <bk-form-item
-            class="edit-form-item"
-            :label="$t('使用说明')"
-            :required="true"
-            :property="'type'"
-          >
-            <quill-editor
-              v-model="form.type"
-              class="editor"
-              :options="editorOption"
-              @change="onEditorChange($event)"
-            />
-          </bk-form-item>
-
           <BkSchemaForm
             class="mt20 bk-form-warp"
             v-model="schemaFormData"
@@ -560,7 +467,6 @@ export default {
     },
 
     submitPluginForm() {
-      console.log('schemaFormData', this.schemaFormData);
       this.$refs.pluginForm.validate().then(() => {
         this.buttonLoading = true;
         this.save();
@@ -579,7 +485,7 @@ export default {
           name: this.form.name,
           template: this.form.templateName,
           pd_id: this.form.pd_id,
-          extra_fields: this.extraFields,
+          extra_fields: this.schemaFormData,
         };
         const res = await this.$store.dispatch('plugin/savePlugins', params);
         this.$paasMessage({

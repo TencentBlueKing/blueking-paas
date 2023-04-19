@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import List, Optional
 
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
+from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 
 
 @dataclass
@@ -32,18 +32,15 @@ class ScalingObjectRef:
 
 
 @dataclass
-class ScalingMetric:
+class MetricSpec:
     """扩缩容指标配置"""
 
     # 指标来源类型
     type: ScalingMetricSourceType
-    # 指标名称：cpu / memory
-    name: ScalingMetricName
-    # 指标度量类型：AverageValue / Utilization
-    target_type: ScalingMetricTargetType
-    # 指标值：百分比（Utilization）单位为 %
-    # 或绝对数值（AverageValue）单位应为 m(cpu)/Mi(memory)
-    target_value: str
+    # 指标名称
+    metric: ScalingMetric
+    # 指标值：百分比 / 绝对数值
+    value: str
     # 指标来源对象，搭配 Object Type 使用
     described_object: Optional[ScalingObjectRef] = None
 
@@ -56,5 +53,5 @@ class AutoscalingConfig:
     min_replicas: int
     # 最大副本数量
     max_replicas: int
-    # 扩缩容指标（资源 cpu/memory 等）
-    metrics: List[ScalingMetric]
+    # 扩缩容指标
+    metrics: List[MetricSpec]

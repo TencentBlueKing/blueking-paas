@@ -42,7 +42,6 @@ from paasng.pluginscenter.bk_devops.client import BkDevopsClient
 from paasng.pluginscenter.bk_devops.exceptions import BkDevopsApiError, BkDevopsGatewayServiceError
 from paasng.pluginscenter.bk_devops.utils import get_devops_project_id
 from paasng.pluginscenter.configuration import PluginConfigManager
-from paasng.pluginscenter.definitions import remove_null
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.pluginscenter.filters import PluginInstancePermissionFilter
@@ -98,7 +97,7 @@ class SchemaViewSet(ViewSet):
                         "release_method": basic_info_definition.release_method,
                         "repository_group": basic_info_definition.repository_group,
                         "repository_template": shim.build_repository_template(basic_info_definition.repository_group),
-                        "extra_fields": remove_null(cattr.unstructure(basic_info_definition.extra_fields)),
+                        "extra_fields": cattr.unstructure(basic_info_definition.extra_fields),
                     },
                 }
             )
@@ -115,7 +114,7 @@ class SchemaViewSet(ViewSet):
             {
                 "category": market_api.list_category(pd) if not readonly else [],
                 "schema": {
-                    "extra_fields": remove_null(cattr.unstructure(market_info_definition.extra_fields)),
+                    "extra_fields": cattr.unstructure(market_info_definition.extra_fields),
                 },
                 "readonly": readonly,
             }
@@ -130,7 +129,7 @@ class SchemaViewSet(ViewSet):
             data={
                 "id": basic_info_definition.id_schema.dict(exclude_unset=True),
                 "name": basic_info_definition.name_schema.dict(exclude_unset=True),
-                "extra_fields": remove_null(cattr.unstructure(basic_info_definition.extra_fields)),
+                "extra_fields": cattr.unstructure(basic_info_definition.extra_fields),
             }
         )
 
@@ -576,7 +575,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 "docs": release_revision.docs,
                 "source_version_pattern": release_revision.revisionPattern,
                 "version_no": release_revision.versionNo,
-                "extra_fields": remove_null(cattr.unstructure(release_revision.extraFields)),
+                "extra_fields": cattr.unstructure(release_revision.extraFields),
                 "source_versions": cattr.unstructure(versions),
                 "semver_choices": semver_choices,
                 "current_release": serializers.PlainPluginReleaseVersionSLZ(current_release).data

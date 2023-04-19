@@ -53,7 +53,7 @@ class ProcSpecsSerializer(serializers.Serializer):
     """Representing ProcSpecs object"""
 
     name = serializers.CharField(source='metadata.name')
-    type = serializers.CharField(source='name')
+    type = serializers.CharField()
     replicas = serializers.IntegerField(source="status.replicas")
     success = serializers.IntegerField(source="status.success")
     failed = serializers.IntegerField(source="status.failed")

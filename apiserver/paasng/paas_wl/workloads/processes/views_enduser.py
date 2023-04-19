@@ -228,17 +228,17 @@ def get_proc_insts(wl_app: WlApp, release_id: Optional[str] = None) -> Dict:
         for proc_spec in procs.items:
             proc_extra_infos.append(
                 {
-                    'type': proc_spec.name,
+                    'type': proc_spec.type,
                     'cluster_link': f'http://{proc_spec.metadata.name}.{proc_spec.app.namespace}',  # type: ignore
                 }
             )
     else:
         for proc_spec in procs.items:
             release = wl_app.release_set.get(version=proc_spec.version)
-            proc_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.name, release=release)
+            proc_obj = AppProcessManager(app=wl_app).assemble_process(proc_spec.type, release=release)
             proc_extra_infos.append(
                 {
-                    'type': proc_obj.name,
+                    'type': proc_obj.type,
                     # command 仅普通应用独有，用于页面进程信息展示，云原生应用暂不展示命令信息
                     'command': proc_obj.runtime.proc_command,
                     'cluster_link': 'http://' + get_service_dns_name(proc_obj.app, proc_obj.type),

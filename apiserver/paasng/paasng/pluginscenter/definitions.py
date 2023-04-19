@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Any, Dict, List, Literal, Optional, Type, Union
 
 import cattr
 from pydantic import BaseModel, Field
@@ -318,3 +318,12 @@ def find_stage_by_id(
         if stage.id == identifier:
             return stage
     return None
+
+
+def remove_null(obj: Union[dict, list, Any]) -> Union[dict, list, Any]:
+    if isinstance(obj, dict):
+        return {k: remove_null(v) for k, v in obj.items() if v is not None}
+    elif isinstance(obj, list):
+        return [remove_null(elem) for elem in obj if elem is not None]
+    else:
+        return obj

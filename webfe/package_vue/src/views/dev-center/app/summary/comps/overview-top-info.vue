@@ -36,7 +36,7 @@
         </div>
       </div>
       <div
-        v-if="!isCloud"
+        v-if="!isCloud && userFeature.PHALANX"
         class="alarm"
       >
         <div class="icon-box mr8">
@@ -147,6 +147,9 @@
             },
             curModuleId () {
                 return this.curAppModule.name;
+            },
+            userFeature () {
+                return this.$store.state.userFeature;
             }
         },
         watch: {

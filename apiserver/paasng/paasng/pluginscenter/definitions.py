@@ -58,6 +58,7 @@ class FieldSchema(BaseModel):
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
+    uiReactions: Optional[List] = Field(alias="ui:reactions")
     items: Optional[Dict] = Field(alias="items")
 
 

@@ -142,10 +142,12 @@ class BkLogClient:
 
 def make_bk_log_client() -> BkLogClient:
     if settings.ENABLE_BK_LOG_APIGW:
-        apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
+        apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
         apigw_client.update_bkapi_authorization(
+            # 日志平台必须要 bk_username 这个参数
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
+            bk_username="admin",
         )
         return BkLogClient(apigw_client.api)
     raise NotImplementedError

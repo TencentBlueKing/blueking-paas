@@ -16,12 +16,14 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import datetime
 import logging
 from contextlib import nullcontext
 
 import cattr
 from django.conf import settings
 from django.db.transaction import atomic
+from django.utils.timezone import get_default_timezone
 
 from paasng.accessories.log_search.client import make_bk_log_client
 from paasng.accessories.log_search.constatns import ETLType, FieldType
@@ -49,9 +51,26 @@ from .setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
 logger = logging.getLogger(__name__)
 
 
+class BKLogConfigProvider:
+    @property
+    def timezone(self) -> int:
+        if timezone := settings.BKLOG_CONFIG.get("TIME_ZONE"):
+            return timezone
+        tz = get_default_timezone()
+        return tz.utcoffset(datetime.datetime.now()).total_seconds() // 60 // 60
+
+    @property
+    def storage_cluster_id(self) -> int:
+        return settings.BKLOG_CONFIG["STORAGE_CLUSTER_ID"]
+
+    @property
+    def bk_biz_id(self) -> int:
+        return settings.BKLOG_CONFIG["BK_BIZ_ID"]
+
+
 def build_python_json_collector_config():
     return AppLogCollectorConfig(
-        log_path=[
+        log_paths=[
             settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
             settings.VOLUME_MOUNT_APP_LOGGING_DIR,
         ],
@@ -66,7 +85,7 @@ def build_python_json_collector_config():
 
 def build_normal_json_collector_config():
     return AppLogCollectorConfig(
-        log_path=[
+        log_paths=[
             settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
             settings.VOLUME_MOUNT_APP_LOGGING_DIR,
         ],
@@ -81,7 +100,7 @@ def build_custom_collector_config_name(module: Module, type: str) -> str:
     app_code = module.application.code
     # module_name max_length 20 字符
     module_name = module.name
-    return f"bkapp__{app_code}__{module_name}".replace("-", "_")
+    return f"bkapp__{app_code}__{module_name}__{type}".replace("-", "_")
 
 
 def to_custom_collector_config(module: Module, collector_config: AppLogCollectorConfig) -> CustomCollectorConfig:
@@ -97,14 +116,13 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
             type=collector_config.etl_type,
             fields=[
                 ETLField(
-                    index=1,
-                    name=collector_config.time_field,
-                    type=FieldType.STRING,
+                    field_index=1,
+                    field_name=collector_config.time_field,
+                    field_type=FieldType.STRING,
                     is_time=True,
                     is_dimension=False,
                     option={
-                        # TODO: 根据 settings 设置时区
-                        "time_zone": 8,
+                        "time_zone": BKLogConfigProvider().timezone,
                         "time_format": collector_config.time_format,
                     },
                 ),
@@ -120,8 +138,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         name_zh_cn=name,
         etl_config=etl_config,
         storage_config=StorageConfig(
-            # TODO: 根据 settings 设置值
-            storage_cluster_id=102,
+            storage_cluster_id=BKLogConfigProvider().storage_cluster_id,
         ),
     )
 
@@ -135,6 +152,8 @@ def update_or_create_custom_collector_config(
     ctx = nullcontext()
     try:
         obj = CustomCollectorConfigModel.objects.get(module=module, name_en=custom_collector_config.name_en)
+        obj.log_paths = collector_config.log_paths
+        obj.save(update_fields=["log_paths", "updated"])
         custom_collector_config.id = obj.collector_config_id
         custom_collector_config.index_set_id = obj.index_set_id
         custom_collector_config.bk_data_id = obj.bk_data_id
@@ -147,9 +166,8 @@ def update_or_create_custom_collector_config(
         if custom_collector_config.id:
             client.update_custom_collector_config(custom_collector_config)
         else:
-            # TODO: 设置 bk_biz_id
             custom_collector_config = client.create_custom_collector_config(
-                bk_biz_id=398, config=custom_collector_config
+                bk_biz_id=BKLogConfigProvider().bk_biz_id, config=custom_collector_config
             )
             CustomCollectorConfigModel.objects.update_or_create(
                 module=module,
@@ -158,6 +176,7 @@ def update_or_create_custom_collector_config(
                     "collector_config_id": custom_collector_config.id,
                     "index_set_id": custom_collector_config.index_set_id,
                     "bk_data_id": custom_collector_config.bk_data_id,
+                    "log_paths": collector_config.log_paths,
                 },
             )
     collector_config.collector_config = custom_collector_config

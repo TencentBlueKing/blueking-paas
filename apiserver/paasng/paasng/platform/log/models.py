@@ -183,5 +183,8 @@ class CustomCollectorConfig(UuidAuditedModel):
         _("自定义采集项名词"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, unique=True
     )
     collector_config_id = models.BigIntegerField(_("采集配置ID"), help_text="采集配置ID", unique=True)
-    index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用")
+    index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用", null=True)
     bk_data_id = models.BigIntegerField(_("数据管道ID"))
+
+    log_paths = models.JSONField(_("日志采集路径"))
+    log_type = models.CharField(_("日志类型"), max_length=32)

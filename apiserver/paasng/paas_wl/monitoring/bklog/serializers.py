@@ -22,12 +22,12 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import cattrs
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.monitoring.bklog.models import LabelSelector, LogFilterCondition
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
-from paas_wl.workloads.bklog.models import LabelSelector, LogFilterCondition
 
 if TYPE_CHECKING:
-    from paas_wl.workloads.bklog.entities import BkAppLogConfig
+    from paas_wl.monitoring.bklog.entities import BkAppLogConfig
 
 
 class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
@@ -63,6 +63,8 @@ class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig"]):
     api_version = 'bk.tencent.com/v1alpha1'
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "BkAppLogConfig":
+        from paas_wl.monitoring.bklog.entities import BkAppLogConfig
+
         spec = kube_data.spec
         config = BkAppLogConfig(
             app=app,

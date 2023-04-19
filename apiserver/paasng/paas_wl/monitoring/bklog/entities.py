@@ -16,14 +16,18 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional
 
+from paas_wl.monitoring.bklog.constants import BkLogConfigType
+from paas_wl.monitoring.bklog.models import LabelSelector, LogFilterCondition
+from paas_wl.monitoring.bklog.serializers import BKLogConfigDeserializer, BKLogConfigSerializer
 from paas_wl.resources.base import crd
-from paas_wl.resources.kube_res.base import AppEntity
-from paas_wl.workloads.bklog.constants import BkLogConfigType
-from paas_wl.workloads.bklog.models import LabelSelector, LogFilterCondition
-from paas_wl.workloads.bklog.serializers import BKLogConfigDeserializer, BKLogConfigSerializer
+from paas_wl.resources.kube_res.base import AppEntity, AppEntityManager
+from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -57,3 +61,22 @@ class BkAppLogConfig(AppEntity):
         kres_class = crd.BKLogConfig
         deserializer = BKLogConfigDeserializer
         serializer = BKLogConfigSerializer
+
+
+class BkAppLogConfigManager(AppEntityManager[BkAppLogConfig]):
+    def __init__(self):
+        super().__init__(BkAppLogConfig)
+
+    def delete(self, res: BkAppLogConfig, non_grace_period: bool = False):
+        namespace = res.app.namespace
+        secret_name = res.name
+
+        try:
+            existed = self.get(app=res.app, name=secret_name)
+        except AppEntityNotFound:
+            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, secret_name)
+            return
+        return super().delete(existed, non_grace_period)
+
+
+bklog_config_kmodel = BkAppLogConfigManager()

@@ -27,9 +27,9 @@ from paasng.accessories.log_search.constatns import ETLType, FieldType
 class ETLField:
     """日志清洗字段配置
 
-    :param index: 字段顺序
-    :param name: 字段名称
-    :param type: 字段类型(int, long, double, string, object, nested)
+    :param field_index: 字段顺序
+    :param field_name: 字段名称
+    :param field_type: 字段类型(int, long, double, string, object, nested)
     :param alias_name: 字段别名，一般清洗为json时，可配置上这个对字段重命名
     :param description: 字段描述信息
     :param is_delete: 字段是否被删除，保留为false即可
@@ -40,9 +40,9 @@ class ETLField:
     :param option: 字段配置，一般设置为时间字段后需要配置，例如：{"time_zone":8, "time_format":"yyyy-MM-dd HH:mm:ss"}
     """
 
-    index: int
-    name: str
-    type: FieldType
+    field_index: int
+    field_name: str
+    field_type: FieldType
     alias_name: Optional[str] = None
     description: Optional[str] = ""
     is_delete: bool = False
@@ -91,7 +91,7 @@ class StorageConfig:
     retention: int = 14
     es_shards: int = 3
     storage_replies: int = 1
-    allocation_min_days: int = 14
+    allocation_min_days: int = 0
 
 
 @define
@@ -130,7 +130,7 @@ class CustomCollectorConfig:
 class AppLogCollectorConfig:
     """简化的采集项配置
 
-    :param log_path: 日志文件的绝对路径, 可使用通配符
+    :param log_paths: 日志文件的绝对路径, 可使用通配符
     :param time_field: 时间字段, 仅 log_type = json 时必须
     :param time_format: 时间格式, 仅 log_type = json 时必须
     :param log_type: 日志类型, stdout, json
@@ -139,7 +139,7 @@ class AppLogCollectorConfig:
     :param collector_config: 日志采集项配置, 创建后再赋值
     """
 
-    log_path: List[str] = field(factory=list)
+    log_paths: List[str] = field(factory=list)
     time_field: Optional[str] = None
     time_format: Optional[str] = None
     log_type: Literal["stdout", "json"] = "json"

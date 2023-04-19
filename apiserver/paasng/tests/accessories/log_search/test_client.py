@@ -86,11 +86,13 @@ class TestBkLogClient:
                     etl_config=ETLConfig(
                         type=ETLType.JSON,
                         fields=[
-                            ETLField(index=1, name="custom_1", type=FieldType.INT, description="自定义字段说明1"),
                             ETLField(
-                                index=1,
-                                name="time",
-                                type=FieldType.STRING,
+                                field_index=1, field_name="custom_1", field_type=FieldType.INT, description="自定义字段说明1"
+                            ),
+                            ETLField(
+                                field_index=1,
+                                field_name="time",
+                                field_type=FieldType.STRING,
                                 description="时间字段",
                                 is_time=True,
                                 option={"time_zone": 8, "time_format": "yyyy-MM-dd HH:mm:ss"},
@@ -109,9 +111,9 @@ class TestBkLogClient:
                     'etl_params': {'retain_original_text': False, 'separator': None, 'separator_regexp': None},
                     'fields': [
                         {
-                            'index': 1,
-                            'name': 'custom_1',
-                            'type': 'int',
+                            'field_index': 1,
+                            'field_name': 'custom_1',
+                            'field_type': 'int',
                             'alias_name': None,
                             'description': '自定义字段说明1',
                             'is_delete': False,
@@ -122,9 +124,9 @@ class TestBkLogClient:
                             'option': {},
                         },
                         {
-                            'index': 1,
-                            'name': 'time',
-                            'type': 'string',
+                            'field_index': 1,
+                            'field_name': 'time',
+                            'field_type': 'string',
                             'alias_name': None,
                             'description': '时间字段',
                             'is_delete': False,
@@ -218,11 +220,13 @@ class TestBkLogClient:
                     etl_config=ETLConfig(
                         type=ETLType.JSON,
                         fields=[
-                            ETLField(index=1, name="custom_1", type=FieldType.INT, description="自定义字段说明1"),
                             ETLField(
-                                index=1,
-                                name="time",
-                                type=FieldType.STRING,
+                                field_index=1, field_name="custom_1", field_type=FieldType.INT, description="自定义字段说明1"
+                            ),
+                            ETLField(
+                                field_index=1,
+                                field_name="time",
+                                field_type=FieldType.STRING,
                                 description="时间字段",
                                 is_time=True,
                                 option={"time_zone": 8, "time_format": "yyyy-MM-dd HH:mm:ss"},
@@ -239,9 +243,9 @@ class TestBkLogClient:
                     'etl_params': {'retain_original_text': False, 'separator': None, 'separator_regexp': None},
                     'fields': [
                         {
-                            'index': 1,
-                            'name': 'custom_1',
-                            'type': 'int',
+                            'field_index': 1,
+                            'field_name': 'custom_1',
+                            'field_type': 'int',
                             'alias_name': None,
                             'description': '自定义字段说明1',
                             'is_delete': False,
@@ -252,9 +256,9 @@ class TestBkLogClient:
                             'option': {},
                         },
                         {
-                            'index': 1,
-                            'name': 'time',
-                            'type': 'string',
+                            'field_index': 1,
+                            'field_name': 'time',
+                            'field_type': 'string',
                             'alias_name': None,
                             'description': '时间字段',
                             'is_delete': False,

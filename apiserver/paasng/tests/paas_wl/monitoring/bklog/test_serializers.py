@@ -21,11 +21,11 @@ from typing import Any, Dict
 import cattrs
 import pytest
 
+from paas_wl.monitoring.bklog.entities import BkAppLogConfig
+from paas_wl.monitoring.bklog.models import LabelSelector
+from paas_wl.monitoring.bklog.serializers import BKLogConfigSerializer
 from paas_wl.resources.base import crd
 from paas_wl.resources.kube_res.base import GVKConfig
-from paas_wl.workloads.bklog.entities import BkAppLogConfig
-from paas_wl.workloads.bklog.models import LabelSelector
-from paas_wl.workloads.bklog.serializers import BKLogConfigSerializer
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

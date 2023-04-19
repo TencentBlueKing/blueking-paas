@@ -130,6 +130,7 @@ class AppIDField(serializers.RegexField):
     def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
         preset_kwargs = dict(
             max_length=16,
+            min_length=3,
             required=True,
             help_text='应用 ID',
             validators=[

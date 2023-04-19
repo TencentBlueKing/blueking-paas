@@ -18,9 +18,12 @@ to the current version of the project delivered to anyone in the future.
 """
 from typing import Any, Dict, Optional, Protocol
 
+import cattr
 from bkapi_client_core.exceptions import APIGatewayResponseError
+from django.conf import settings
 
-from paasng.accessories.log_search.definitions import CustomCollectorMetaData
+from paasng.accessories.log_search.backend.apigw import Client
+from paasng.accessories.log_search.definitions import CustomCollectorConfig
 from paasng.accessories.log_search.exceptions import (
     BkLogApiError,
     BkLogGatewayServiceError,
@@ -56,7 +59,7 @@ class BkLogClient:
     def __init__(self, client: BKLogAPIProtocol):
         self.client = client
 
-    def create_custom_collector_config(self, bk_biz_id: int, config: CustomCollectorMetaData):
+    def create_custom_collector_config(self, bk_biz_id: int, config: CustomCollectorConfig):
         """创建自定义采集项, 如果创建成功, 会给 config.id, config.index_set_id, config.bk_data_id 赋值"""
         data: Dict[str, Any] = {
             "bk_biz_id": bk_biz_id,
@@ -68,6 +71,14 @@ class BkLogClient:
         }
         if config.data_link_id:
             data["data_link_id"] = config.data_link_id
+        if config.etl_config:
+            data.update(
+                {
+                    "etl_config": config.etl_config.type,
+                    "etl_params": cattr.unstructure(config.etl_config.params),
+                    "fields": cattr.unstructure(config.etl_config.fields),
+                }
+            )
         if config.storage_config:
             data.update(
                 {
@@ -91,7 +102,7 @@ class BkLogClient:
         config.bk_data_id = resp["data"]["bk_data_id"]
         return config
 
-    def update_custom_collector_config(self, config: CustomCollectorMetaData):
+    def update_custom_collector_config(self, config: CustomCollectorConfig):
         """更新自定义采集项"""
         if config.id is None:
             raise CollectorConfigNotPersisted
@@ -102,6 +113,14 @@ class BkLogClient:
             "category_id": config.category_id,
             "description": config.description,
         }
+        if config.etl_config:
+            data.update(
+                {
+                    "etl_config": config.etl_config.type,
+                    "etl_params": cattr.unstructure(config.etl_config.params),
+                    "fields": cattr.unstructure(config.etl_config.fields),
+                }
+            )
         if config.storage_config:
             data.update(
                 {
@@ -119,3 +138,14 @@ class BkLogClient:
 
         if not resp["result"]:
             raise BkLogApiError(resp["message"])
+
+
+def make_bk_log_client() -> BkLogClient:
+    if settings.ENABLE_BK_LOG_APIGW:
+        apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_MONITOR_APIGW_SERVICE_STAGE)
+        apigw_client.update_bkapi_authorization(
+            bk_app_code=settings.BK_APP_CODE,
+            bk_app_secret=settings.BK_APP_SECRET,
+        )
+        return BkLogClient(apigw_client.api)
+    raise NotImplementedError

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.applications.constants import AppEnvironment
@@ -26,11 +27,35 @@ DEFAULT_RULE_CONFIGS = {
     'module_scoped': {
         'high_cpu_usage': {
             'display_name': _('CPU 使用率过高'),
+            'metric_label_names': ['namespace'],
             'threshold_expr': '>= 0.8',  # 使用率 80%
         },
         'high_mem_usage': {
             'display_name': _('内存使用率过高'),
+            'metric_label_names': ['namespace'],
             'threshold_expr': '>= 0.95',  # 使用率 95%
+        },
+        'pod_restart': {
+            'display_name': _('异常重启'),
+            'metric_label_names': ['namespace'],
+            'threshold_expr': '>= 1',  # 出现至少 1 次
+        },
+        'oom_killed': {
+            'display_name': _('OOMKilled 退出'),
+            'metric_label_names': ['namespace'],
+            'threshold_expr': '>= 1',  # 出现至少 1 次
         },
     }
 }
+
+# 开启 rabbitmq 监控
+if settings.RABBITMQ_MONITOR_CONF.get('enabled', False):
+    DEFAULT_RULE_CONFIGS['module_scoped'].update(
+        {
+            'high_rabbitmq_queue_messages': {
+                'display_name': _('队列消息数过多'),
+                'metric_label_names': ['vhost'],
+                'threshold_expr': '>= 2000',  # 超过 2000 条
+            },
+        }
+    )

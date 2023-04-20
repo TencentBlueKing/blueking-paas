@@ -33,13 +33,9 @@
         USERS_URL: '<%= process.env.BK_USERS_URL %>' || '',
       }
     </script>
-    <% if (process.env.APP_VERSION === 'te'){ %>
-    <!-- BK Analytics start -->
-    <!-- start及end之间的内部代码会在企业版本出包时删除 -->
     <script>
       document.write('<scr'+'ipt src="'+BK_ANALYSIS_JS+'"></scr'+'ipt>');
     </script>
-    <% if (process.env.NODE_ENV !== 'development') { %>
     <script>
         if (window.NODE_ENV !== 'development') {
           if(BKANALYSIS) {
@@ -50,8 +46,6 @@
           }
         }
     </script>
-    <% } %>
-    <!-- End BK Analytics end -->
-    <% } %>
+
   </body>
 </html>

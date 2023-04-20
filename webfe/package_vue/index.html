@@ -42,7 +42,7 @@
       var BK_COMPONENT_API_URL = '<%= process.env.BK_COMPONENT_API_URL %>' || ''
       var BK_ANALYSIS_JS = '<%= process.env.BK_ANALYSIS_JS %>' || ''
       var DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/PaaS3.0`
-      var BK_STATIC_URL = process.env.BK_STATIC_URL
+      var BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || ''
       var GLOBAL_CONFIG = {
         APP_VERSION: APP_VERSION,
         LOGIN_SERVICE_URL: '<%= process.env.BK_LOGIN_URL %>',

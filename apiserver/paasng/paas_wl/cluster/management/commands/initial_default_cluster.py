@@ -95,6 +95,7 @@ class Command(BaseCommand):
                 "annotations": {
                     "bcs_cluster_id": env.str("PAAS_WL_CLUSTER_BCS_CLUSTER_ID", ""),
                     "bcs_project_id": env.str("PAAS_WL_CLUSTER_BCS_PROJECT_ID", ""),
+                    "bk_biz_id": env.str("PAAS_WL_CLUSTER_BK_BIZ_ID", ""),
                 },
                 "ca_data": env.str("PAAS_WL_CLUSTER_CA_DATA", ""),
                 "cert_data": env.str("PAAS_WL_CLUSTER_CERT_DATA", ""),

@@ -2116,5 +2116,7 @@ export default {
   '离开将会导致未保存信息丢失': 'Leaving will lose unsaved information',
   '离开': 'Leave',
   '应用市场信息请在“app_desc.yaml”文件中配置': 'Please configure the application market information in the "app_desc.yaml" file',
-  'web进程的容器镜像地址': 'The container image address of the web process'
+  'web进程的容器镜像地址': 'The container image address of the web process',
+  '共享实例': 'Shared',
+  '独占实例': 'Exclusive'
 };

@@ -75,11 +75,13 @@ def bk_app_init_rule_configs(bk_app):
             'alert_rule_name_format': f'{app_code}-default-{{env}}-oom_killed',
             'template_name': 'oom_killed.yaml.j2',
         },
-        'high_rabbitmq_queue_messages': {
+    }
+
+    if settings.RABBITMQ_MONITOR_CONF.get('enabled', False):
+        default_rules['high_rabbitmq_queue_messages'] = {
             'alert_rule_name_format': f'{app_code}-default-{{env}}-high_rabbitmq_queue_messages',
             'template_name': 'high_rabbitmq_queue_messages.yaml.j2',
-        },
-    }
+        }
 
     init_rule_configs = {}
     for alert_code, c in default_rules.items():

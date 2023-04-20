@@ -103,6 +103,9 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.GET_DEPLOYMENT_FAILED.f(f"id=`{deploy_id}` not found.")
         return Response(DeployDetailSerializer(deployment).data)
 
+    # 该接口已注册到 APIGW
+    # 网关名称 get_cnative_deployments_list
+    # 请勿随意修改该接口协议
     @swagger_auto_schema(responses={"200": DeploySerializer(many=True)}, query_serializer=QueryDeploysSerializer)
     def list(self, request, code, module_name, environment):
         """查询历史部署对象"""
@@ -117,6 +120,9 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         return self.paginator.get_paginated_response(data=DeploySerializer(page, many=True).data)
 
+    # 该接口已注册到 APIGW
+    # 网关名称 deploy_cnative_app
+    # 请勿随意修改该接口协议
     @swagger_auto_schema(request_body=CreateDeploySerializer)
     def create(self, request, code, module_name, environment):
         """创建一次新的部署
@@ -234,6 +240,9 @@ class MresStatusViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    # 该接口已注册到 APIGW
+    # 网关名称 get_cnative_app_status
+    # 请勿随意修改该接口协议
     @swagger_auto_schema(responses={"200": MresStatusSLZ})
     def retrieve(self, request, code, module_name, environment):
         """查看应用模型资源当前状态"""

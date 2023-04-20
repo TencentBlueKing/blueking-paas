@@ -74,6 +74,7 @@
 
 <script>
     import _ from 'lodash';
+    import i18n from '@/language/i18n.js';
 
     export default {
         props: {
@@ -101,7 +102,7 @@
                 localCloudAppData: {},
                 hooks: null,
                 processData: [],
-                cloudInfoTip: 'web进程的容器镜像地址'
+                cloudInfoTip: i18n.t('web进程的容器镜像地址')
             };
         },
 

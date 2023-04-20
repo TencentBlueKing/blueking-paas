@@ -20,6 +20,7 @@ to the current version of the project delivered to anyone in the future.
 from enum import Enum
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.core.region import RegionType
 
@@ -69,3 +70,15 @@ class OpenMode(str, StructuredEnum):
 
     DESKTOP = EnumField(real_value='desktop', label="桌面")
     NEW_TAB = EnumField(real_value='new_tab', label="新标签页")
+
+
+class TagName(str, StructuredEnum):
+    """应用分类名称"""
+
+    OPSTOOlS = EnumField("OpsTools", label=_("运维工具"))
+    MONITORAlARM = EnumField("MonitorAlarm", label=_("监控告警"))
+    CONFMANAGE = EnumField("ConfManage", label=_("配置管理"))
+    DEVTOOLS = EnumField("DevTools", label=_("开发工具"))
+    ENTERPRISEIT = EnumField("EnterpriseIT", label=_("企业IT"))
+    OFFICEAPP = EnumField("OfficeApp", label=_("办公应用"))
+    OTHER = EnumField("Other", label=_("其它"))

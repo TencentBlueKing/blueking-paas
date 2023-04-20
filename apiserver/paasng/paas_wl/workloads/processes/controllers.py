@@ -30,7 +30,6 @@ from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.procs.exceptions import ProcNotFoundInRes
 from paas_wl.cnative.specs.procs.replicas import ProcReplicas
 from paas_wl.platform.applications.models import Release, WlApp
-from paas_wl.platform.applications.models.managers.app_res_ver import AppResVerManager
 from paas_wl.resources.base.base import get_client_by_cluster_name
 from paas_wl.resources.base.kres import KDeployment
 from paas_wl.resources.kube_res.exceptions import AppEntityNotFound
@@ -203,7 +202,7 @@ class AppProcessesController:
         target_ref = ScalingObjectRef(
             api_version=kres_client.get_preferred_version(),
             kind=kres_client.kind,
-            name=AppResVerManager(self.app).curr_version.deployment(process=self._prepare_process(proc_type)).name,
+            name=self._prepare_process(proc_type).name,
         )
 
         return ProcAutoscaling(self.app, proc_type, scaling_config, target_ref)  # type: ignore

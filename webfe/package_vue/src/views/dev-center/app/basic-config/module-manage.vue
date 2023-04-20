@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="right-main">
+  <div
+    v-en-class="'en-label'"
+    class="right-main"
+  >
     <app-top-bar
       :title="$t('模块管理')"
       :can-create="canCreateModule"
@@ -191,7 +194,6 @@
                   <p class="mt10">
                     <bk-input
                       v-model="sourceControlChangeForm.sourceDir"
-                      size="large"
                       class="source-dir"
                       :class="isSourceDirInvalid ? 'error' : ''"
                       :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
@@ -2051,6 +2053,11 @@
     text-align: right;
     margin-right: 10px;
 }
+
+.en-label .form-label {
+    width: 100px;
+}
+
 .form-group{
     display: flex;
     &-flex{
@@ -2079,5 +2086,12 @@
 }
 .bk-form-item+.bk-form-item {
     margin-top: 13px;
+}
+</style>
+<style lang="scss">
+.form-group-flex .source-dir.error .bk-input-text {
+    input {
+       border-color: #ff3737 !important;
+    }
 }
 </style>

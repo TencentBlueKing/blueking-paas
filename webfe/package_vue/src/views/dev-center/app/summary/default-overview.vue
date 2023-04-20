@@ -117,7 +117,8 @@
                           {{ $t('部署') }}
                         </bk-button>
                       </div>
-                      <template v-if="!isCloudApp">
+                      <!-- FeatureFlag 控制 -->
+                      <template v-if="userFeature.ANALYTICS && !isCloudApp">
                         <!-- 折线图内容 部署了才展示内容-->
                         <div
                           v-if="data.is_deployed"

@@ -101,6 +101,7 @@ class SchemaViewSet(ViewSet):
                     },
                 }
             )
+
         return Response(schemas)
 
     @swagger_auto_schema(responses={200: openapi_docs.market_schema})

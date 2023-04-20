@@ -129,10 +129,10 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
     process = Process.from_release(type_="web", release=wl_release)
 
     serializer = ProcAutoscalingSerializer(ProcAutoscaling, gpa_gvk_config)
-    assert serializer.get_res_name(scaling) == process.name
+    assert scaling.name == process.type
 
     excepted = gpa_manifest
-    excepted['metadata']['name'] = process.name
+    excepted['metadata']['name'] = process.type
     excepted['metadata']['namespace'] = wl_app.namespace
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 

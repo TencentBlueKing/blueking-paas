@@ -335,7 +335,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         try:
             make_bk_monitor_client().update_space(application.code, application.name, request.user.username)
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
-            logger.error(f'Failed to update app space on BK Monitor, {e}')
+            logger.info(f'Failed to update app space on BK Monitor, {e}')
         except Exception:
             logger.exception('Failed to update app space on BK Monitor')
 

@@ -104,7 +104,7 @@ class ZombieProcessesKiller:
     僵尸进程清理者
     两种情况会产生僵尸进程：
     - 用户修改了 process_type
-    - 用户修改了 process_name （后期需要去除掉 process_name）
+    - 用户修改了 command_name( v1 mapper 的资源名依赖了 command_name)
     :return: processes which should be undead
     """
 
@@ -113,7 +113,7 @@ class ZombieProcessesKiller:
 
     def search(self) -> Tuple[List['Process'], List['Process']]:
         """
-        :return: tuple, (type_processes, name_processes)
+        :return: tuple, (List[Process] with inconsistent process types, List[Process] with inconsistent command name)
         """
         # 首次部署
         if not self.last_release or not self.last_release.build:
@@ -131,7 +131,7 @@ class ZombieProcessesKiller:
                 process_type=last_type, release=self.last_release
             )
 
-            if last_process.name not in procfile:
+            if last_process.type not in procfile:
                 zombie_type_processes.append(last_process)
                 continue
 

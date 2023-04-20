@@ -37,6 +37,19 @@ var ReplicasOne = lo.ToPtr(int32(1))
 // ReplicasTwo 副本数 2, 用于替换测试程序内的魔数
 var ReplicasTwo = lo.ToPtr(int32(2))
 
+// BkApp 资源的 annotations 中用来保存特殊信息的键名
+const (
+	// LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.
+	// This behaviour was changed in "v1alpha2", but we still need to save the legacy images configs
+	// in annotations to maintain backward compatibility.
+	LegacyProcImageAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-image-config"
+
+	// LegacyProcResAnnoKey, In API version "v1alpha1", every process can specify the exact CPU and
+	// memory resources. This behaviour was changed in "v1alpha2", but we still need to save the
+	// legacy resource configs in annotations to maintain backward compatibility.
+	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
+)
+
 // AddonsAnnoKey , BkApp 资源中用于保存增强服务相关信息的 annotation 键名
 const AddonsAnnoKey = "bkapp.paas.bk.tencent.com/addons"
 

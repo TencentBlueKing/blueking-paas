@@ -26,7 +26,7 @@ from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.workloads.processes.models import DeclarativeProcess
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.engine.models.base import OperationVersionBase
@@ -63,7 +63,7 @@ class AdvancedOptions:
 
 
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)
-DeclarativeProcessField = make_json_field("DeclarativeProcessField", Dict[str, DeclarativeProcess])
+DeclarativeProcessField = make_json_field("DeclarativeProcessField", Dict[str, ProcessTmpl])
 
 
 class Deployment(OperationVersionBase):
@@ -219,12 +219,14 @@ class Deployment(OperationVersionBase):
                 hooks.upsert(hook.type, hook.command)
         return hooks
 
-    def get_processes(self) -> List[DeclarativeProcess]:
+    def get_processes(self) -> List[ProcessTmpl]:
         if self.processes:
             return list(self.processes.values())
+        # 兼容旧字段 procfile
+        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas
         elif self.procfile:
             return cattr.structure(
                 [{"name": name, "command": command} for name, command in self.procfile.items()],
-                List[DeclarativeProcess],
+                List[ProcessTmpl],
             )
         return []

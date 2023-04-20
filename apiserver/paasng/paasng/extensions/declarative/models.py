@@ -78,9 +78,9 @@ class DeploymentDescription(TimestampedModel):
         return {key: process["command"] for key, process in processes.items()}
 
     def get_processes(self) -> Dict[str, Dict[str, str]]:
-        """get Declarative Processes
+        """get ProcessesTmpl
 
-        Declarative Processes is a dict containing a process type and its corresponding DeclarativeProcess"""
+        ProcessesTmpl is a dict containing a process type and its corresponding ProcessTmpl"""
         processes = self.runtime.get("processes", {})
         return {key: process for key, process in processes.items()}
 

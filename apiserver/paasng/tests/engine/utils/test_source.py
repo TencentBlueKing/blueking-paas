@@ -17,9 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import pathlib
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from unittest import mock
 
+import cattr
 import pytest
 import yaml
 from django.conf import settings
@@ -33,6 +34,7 @@ from paasng.engine.exceptions import DeployShouldAbortError
 from paasng.engine.models import Deployment
 from paasng.engine.utils.output import ConsoleStream
 from paasng.engine.utils.source import (
+    TypeProcesses,
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
@@ -45,6 +47,10 @@ from paasng.extensions.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
 
 pytestmark = pytest.mark.django_db
+
+
+def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
+    return cattr.structure(obj, TypeProcesses)
 
 
 @pytest.mark.usefixtures("init_tmpls")
@@ -83,38 +89,44 @@ class TestGetProcesses:
         with mock.patch('paasng.dev_resources.sourcectl.type_specs.SvnRepoController.read_file') as mocked_read_file:
             mocked_read_file.side_effect = fake_read_file
             processes = get_processes(bk_deployment_full)
-            assert processes == {
-                "web": {"name": "web", "command": "gunicorn wsgi -w 4"},
-                "worker": {"name": "worker", "command": "celery"},
-            }
+            assert processes == cast_to_processes(
+                {
+                    "web": {"name": "web", "command": "gunicorn wsgi -w 4"},
+                    "worker": {"name": "worker", "command": "celery"},
+                }
+            )
 
     @pytest.mark.parametrize(
         'extra_info, expected',
         [
             (
                 {},
-                {"web": {"name": "web", "command": WEB_PROCESS}},
+                cast_to_processes({"web": {"name": "web", "command": WEB_PROCESS}}),
             ),
             (
                 {'is_use_celery': True},
-                {
-                    "web": {"name": "web", "command": WEB_PROCESS},
-                    "celery": {"name": "celery", "command": CELERY_PROCESS},
-                },
+                cast_to_processes(
+                    {
+                        "web": {"name": "web", "command": WEB_PROCESS},
+                        "celery": {"name": "celery", "command": CELERY_PROCESS},
+                    }
+                ),
             ),
             (
                 {'is_use_celery': True, 'is_use_celery_beat': True},
-                {
-                    "web": {
-                        "name": "web",
-                        "command": WEB_PROCESS,
-                    },
-                    "celery": {
-                        "name": "celery",
-                        "command": CELERY_PROCESS,
-                    },
-                    "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS},
-                },
+                cast_to_processes(
+                    {
+                        "web": {
+                            "name": "web",
+                            "command": WEB_PROCESS,
+                        },
+                        "celery": {
+                            "name": "celery",
+                            "command": CELERY_PROCESS,
+                        },
+                        "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS},
+                    }
+                ),
             ),
         ],
     )
@@ -138,17 +150,19 @@ class TestGetProcesses:
         [
             (
                 {'web': {'command': 'start web;'}},
-                {'web': {'name': 'web', 'command': 'start web;'}},
+                cast_to_processes({'web': {'name': 'web', 'command': 'start web;'}}),
             ),
             (
                 {
                     'web': {'command': 'start web;', 'replicas': 5, 'plan': '1C2G5R'},
                     'celery': {'command': 'start celery;', 'replicas': 5},
                 },
-                {
-                    'web': {'name': 'web', 'command': 'start web;', 'replicas': 5, 'plan': '1C2G5R'},
-                    'celery': {'name': 'celery', 'command': 'start celery;', 'replicas': 5},
-                },
+                cast_to_processes(
+                    {
+                        'web': {'name': 'web', 'command': 'start web;', 'replicas': 5, 'plan': '1C2G5R'},
+                        'celery': {'name': 'celery', 'command': 'start celery;', 'replicas': 5},
+                    }
+                ),
             ),
         ],
     )
@@ -190,7 +204,7 @@ class TestGetProcesses:
         handler.handle_deployment(bk_deployment_full)
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == {'web': {'name': 'web', 'command': 'start web'}}
+        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
 
     def test_get_from_deploy_config(self, bk_module_full, bk_deployment_full):
         deploy_config = bk_module_full.get_deploy_config()
@@ -198,7 +212,7 @@ class TestGetProcesses:
         deploy_config.save()
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == {'web': {'name': 'web', 'command': 'start web'}}
+        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
 
     def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
         bk_module_full.source_origin = SourceOrigin.S_MART
@@ -219,7 +233,7 @@ class TestGetProcesses:
         )
 
         processes = get_processes(deployment=bk_deployment_full)
-        assert processes == {'web': {'name': 'web', 'command': 'start web'}}
+        assert processes == cast_to_processes({'web': {'name': 'web', 'command': 'start web'}})
 
     def test_both_app_description_and_procfile(self, bk_app_full, bk_module_full, bk_deployment_full):
         """应用描述文件和 Procfile 同时定义, 以 Procfile 为准"""
@@ -247,10 +261,12 @@ class TestGetProcesses:
 
             processes = get_processes(deployment=bk_deployment_full)
 
-        assert processes == {
-            'web': {'name': 'web', 'command': 'gunicorn wsgi -w 4'},
-            'worker': {'name': 'worker', 'command': 'celery'},
-        }
+        assert processes == cast_to_processes(
+            {
+                'web': {'name': 'web', 'command': 'gunicorn wsgi -w 4'},
+                'worker': {'name': 'worker', 'command': 'celery'},
+            }
+        )
 
 
 class TestGetSourcePackagePath:

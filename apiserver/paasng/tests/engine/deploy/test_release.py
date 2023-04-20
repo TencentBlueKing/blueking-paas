@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paas_wl.workloads.processes.models import DeclarativeProcess
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.deploy.release import ApplicationReleaseMgr, ReleaseResultHandler
 from paasng.engine.models import Deployment, DeployPhaseTypes
@@ -110,8 +110,8 @@ class TestApplicationReleaseMgr:
         assert fake_process_manager().sync_processes_specs.called
         (processes,) = fake_process_manager().sync_processes_specs.call_args[0]
         assert processes == [
-            DeclarativeProcess(name='web', command='start web', replicas=2, plan=None),
-            DeclarativeProcess(name='worker', command='start worker', replicas=None, plan=None),
+            ProcessTmpl(name='web', command='start web', replicas=2, plan=None),
+            ProcessTmpl(name='worker', command='start worker', replicas=None, plan=None),
         ]
 
     def test_sync_specs_from_procfile(self, bk_deployment, auto_binding_phases):
@@ -145,8 +145,8 @@ class TestApplicationReleaseMgr:
         assert fake_process_manager().sync_processes_specs.called
         (processes,) = fake_process_manager().sync_processes_specs.call_args[0]
         assert processes == [
-            DeclarativeProcess(name='web', command='start web', replicas=None, plan=None),
-            DeclarativeProcess(name='worker', command='start worker', replicas=None, plan=None),
+            ProcessTmpl(name='web', command='start web', replicas=None, plan=None),
+            ProcessTmpl(name='worker', command='start worker', replicas=None, plan=None),
         ]
 
 

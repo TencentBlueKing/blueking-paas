@@ -110,7 +110,7 @@ class ApplicationBuilder(DeployStep):
         pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
         with self.procedure(_('启动应用构建任务')):
             self.async_start_build_process(
-                source_destination_path, procfile={p["name"]: p["command"] for p in processes.values()}
+                source_destination_path, procfile={p.name: p.command for p in processes.values()}
             )
 
     def compress_and_upload(self, relative_source_dir: Path, source_destination_path: str):

@@ -20,10 +20,12 @@ import logging
 from pathlib import Path
 from typing import Dict, Optional
 
+import cattr
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.dev_resources.sourcectl.controllers.package import PackageController
@@ -40,14 +42,35 @@ from paasng.extensions.smart_app.patcher import SourceCodePatcherWithDBDriver
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.utils.validators import validate_processes
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 logger = logging.getLogger(__name__)
-TypeProcesses = Dict[str, Dict[str, str]]
+TypeProcesses = Dict[str, ProcessTmpl]
+
+
+def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
+    """Validate proc type format
+
+    :param processes:
+    :return: validated processes, which all key is lower case.
+    :raise: django.core.exceptions.ValidationError
+    """
+    for proc_type in processes.keys():
+        if not PROC_TYPE_PATTERN.match(proc_type):
+            raise ValidationError(
+                f'Invalid proc type: {proc_type}, must match ' f'pattern {PROC_TYPE_PATTERN.pattern}'
+            )
+        if len(proc_type) > PROC_TYPE_MAX_LENGTH:
+            raise ValidationError(
+                f'Invalid proc type: {proc_type}, must not ' f'longer than {PROC_TYPE_MAX_LENGTH} characters'
+            )
+
+    # Formalize processes data and return
+    return cattr.structure({name.lower(): {"name": name.lower(), **v} for name, v in processes.items()}, TypeProcesses)
 
 
 def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901
-    """Get the Declarative Processes from SourceCode
+    """Get the ProcessTmpl from SourceCode
     Declarative Processes is a dict containing a process type and its corresponding DeclarativeProcess
 
     1. Try to get processes data from DeploymentDescription at first.
@@ -65,7 +88,7 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
     version_info = deployment.version_info
     relative_source_dir = deployment.get_source_dir()
 
-    proc_data: Optional[TypeProcesses] = None
+    proc_data: Optional[Dict[str, Dict[str, str]]] = None
     if deployment:
         try:
             deploy_desc: DeploymentDescription = DeploymentDescription.objects.get(deployment=deployment)

@@ -986,7 +986,7 @@ export default {
   '天前': 'Days ago',
   '小时前': 'Hours ago',
   '分钟前': 'Minutes ago',
-  '刚刚': 'Just',
+  '刚刚': 'Just now',
   '部署阶段': 'Deployment phase',
   '无执行中的进程': 'No running process',
   '暂无日志': 'No log yet',

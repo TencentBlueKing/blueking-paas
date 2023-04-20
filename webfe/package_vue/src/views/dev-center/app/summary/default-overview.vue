@@ -505,6 +505,9 @@ export default {
     isCloudApp() {
       return this.curAppInfo.application.type === 'cloud_native';
     },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
   },
   watch: {
     '$route'() {
@@ -567,7 +570,7 @@ export default {
         this.trunkUrl = this.curAppModule.repo.trunk_url || '';
         this.sourceType = this.curAppModule.repo.source_type || '';
       }
-      if (!this.isCloudApp) {
+      if (this.userFeature.PHALANX && !this.isCloudApp) {
         this.getAlarmData();
       }
     },

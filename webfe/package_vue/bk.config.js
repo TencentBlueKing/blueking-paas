@@ -1,15 +1,14 @@
 const webpack = require('webpack');
-const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 const PreTaskPlugin = require('./pre-task-plugin');
 
-const now = new Date()
-const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.getDate(), '_', now.getHours(), ':', now.getMinutes(), ':', now.getSeconds()].join('') // 版本号，eg: 2019-2-25_9:12:52
+const now = new Date();
+const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.getDate(), '_', now.getHours(), ':', now.getMinutes(), ':', now.getSeconds()].join(''); // 版本号，eg: 2019-2-25_9:12:52
 
 module.exports = {
   host: process.env.BK_APP_HOST,
   port: 6060,
-  publicPath: process.env.BK_STATIC_URL,
+  publicPath: '/',
   cache: true,
   open: true,
   replaceStatic: true,
@@ -29,7 +28,7 @@ module.exports = {
       .use(webpack.ProvidePlugin, [{
         $: 'jquery',
       }]);
-      config
+    config
       .plugin('html')
       .use(webpack.DefinePlugin, [{
         RELEASE_VERSION: JSON.stringify(RELEASE_VERSION),

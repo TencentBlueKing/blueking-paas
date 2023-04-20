@@ -19,8 +19,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	"github.com/samber/lo"
 )
 
@@ -39,64 +37,11 @@ var ReplicasOne = lo.ToPtr(int32(1))
 // ReplicasTwo 副本数 2, 用于替换测试程序内的魔数
 var ReplicasTwo = lo.ToPtr(int32(2))
 
-// App信息
-const (
-	// BkAppRegionKey 注解中存储 region 的键名
-	BkAppRegionKey = "bkapp.paas.bk.tencent.com/region"
-	// BkAppNameKey 注解或标签中存储应用名称的键名
-	BkAppNameKey = "bkapp.paas.bk.tencent.com/name"
-	// BkAppCodeKey 注解中存储应用 ID 的键名
-	BkAppCodeKey = "bkapp.paas.bk.tencent.com/code"
-	// ModuleNameKey 注解中存储模块名称的键名
-	ModuleNameKey = "bkapp.paas.bk.tencent.com/module-name"
-	// EnvironmentKey 注解中存储当前部署环境的键名
-	EnvironmentKey = "bkapp.paas.bk.tencent.com/environment"
-	// EngineAppNameKey 注解中存储当前 EngineApp 名称的键名
-	EngineAppNameKey = "bkapp.paas.bk.tencent.com/engine-app-name"
-)
+// AddonsAnnoKey , BkApp 资源中用于保存增强服务相关信息的 annotation 键名
+const AddonsAnnoKey = "bkapp.paas.bk.tencent.com/addons"
 
-// 平台相关信息
-const (
-	// HookTypeKey 注解中存储钩子类型的键名
-	HookTypeKey = "bkapp.paas.bk.tencent.com/hook-type"
-	// ProcessNameKey 注解或标签中存储进程名称的键名
-	ProcessNameKey = "bkapp.paas.bk.tencent.com/process-name"
-	// AddonsAnnoKey 注解中存储当前应用依赖的增强服务列表
-	AddonsAnnoKey = "bkapp.paas.bk.tencent.com/addons"
-	// AccessControlAnnoKey 注解中存储当前应用是否启用白名单功能的键名
-	AccessControlAnnoKey = "bkapp.paas.bk.tencent.com/access-control"
-	// ImageCredentialsRefAnnoKey 注解中存储镜像凭证引用的键名
-	ImageCredentialsRefAnnoKey = "bkapp.paas.bk.tencent.com/image-credentials"
-	// DeployIDAnnoKey 注解中存储 bkpaas 部署ID的键名
-	DeployIDAnnoKey = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
-	// PaaSAnalysisSiteIDAnnoKey 注解中存储 PA site id 的键名
-	PaaSAnalysisSiteIDAnnoKey = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
-)
-
-const (
-	// RevisionAnnoKey 注解中存储当前版本信息的键名
-	RevisionAnnoKey = "bkapp.paas.bk.tencent.com/revision"
-	// ResourceTypeKey 注解中存储资源类型的键名
-	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
-	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
-	IngressClassAnnoKey = "kubernetes.io/ingress.class"
-)
-
-const (
-	// DefaultRequeueAfter 调和循环默认的间隔
-	DefaultRequeueAfter = time.Second * 3
-
-	// WorkloadOwnerKey 是 kubebuilder cache 用来存储 OwnerReference 主从关联关系的索引键
-	WorkloadOwnerKey = ".metadata.controller"
-
-	// BkAppFinalizerName BkApp 的 finalizer 标记
-	BkAppFinalizerName = "bkapp.paas.bk.tencent.com/finalizer"
-	// DGroupMappingFinalizerName is the name of DomainGroupMapping finalizer
-	DGroupMappingFinalizerName = "domain-group-mapping.paas.bk.tencent.com/finalizer"
-
-	// DefaultImagePullSecretName 平台默认的 pullImageSecret 名称
-	DefaultImagePullSecretName = "bkapp-dockerconfigjson"
-)
+// DGroupMappingFinalizerName is the name of DomainGroupMapping finalizer
+const DGroupMappingFinalizerName = "domain-group-mapping.paas.bk.tencent.com/finalizer"
 
 // AllowedDomainGroupMappingRefKinds 允许被 DomainGroupMapping 引用的资源类型
 var AllowedDomainGroupMappingRefKinds = []string{KindBkApp}

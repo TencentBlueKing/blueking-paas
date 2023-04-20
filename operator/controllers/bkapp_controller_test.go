@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
@@ -43,7 +43,7 @@ import (
 )
 
 var _ = Describe("", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var podCounter func() int
 	var isSvcExists func(types.NamespacedName) bool
 
@@ -53,34 +53,35 @@ var _ = Describe("", func() {
 	)
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: "paas.bk.tencent.com/v1alpha1",
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: "paas.bk.tencent.com/v1alpha2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "fake-app",
 				Namespace:   "default",
 				Annotations: map[string]string{},
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "bar",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "bar",
-						Replicas:   v1alpha1.ReplicasOne,
-						TargetPort: 80,
-						CPU:        "2",
-						Memory:     "500Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasOne,
+						ResQuotaPlan: "default",
+						TargetPort:   80,
 					},
 				},
-				Hooks: &v1alpha1.AppHooks{
-					PreRelease: &v1alpha1.Hook{
+				Hooks: &paasv1alpha2.AppHooks{
+					PreRelease: &paasv1alpha2.Hook{
 						Command: []string{"/bin/bash"},
 						Args:    []string{"-c", "echo foo;"},
 					},
 				},
-				Configuration: v1alpha1.AppConfig{},
+				Configuration: paasv1alpha2.AppConfig{},
 			},
 		}
 		bkapp = testing.WithAppInfoAnnotations(testing.WithAddons(bkapp, "fake-addon"))
@@ -90,8 +91,8 @@ var _ = Describe("", func() {
 			err := k8sClient.List(ctx, pods,
 				client.InNamespace(bkapp.GetNamespace()),
 				client.MatchingLabels{
-					v1alpha1.ResourceTypeKey: "hook",
-					v1alpha1.BkAppNameKey:    bkapp.GetName(),
+					paasv1alpha2.ResourceTypeKey: "hook",
+					paasv1alpha2.BkAppNameKey:    bkapp.GetName(),
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -133,7 +134,7 @@ var _ = Describe("", func() {
 		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
 
 		bkappLookupKey := client.ObjectKeyFromObject(bkapp)
-		createdBkApp := &v1alpha1.BkApp{}
+		createdBkApp := &paasv1alpha2.BkApp{}
 
 		// We'll need to retry getting this newly created BkApp, given that creation may not immediately happen.
 		Eventually(func() bool {
@@ -144,7 +145,7 @@ var _ = Describe("", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		Expect(createdBkApp.Status.Revision.Revision).To(Equal(int64(1)))
-		Expect(controllerutil.ContainsFinalizer(createdBkApp, v1alpha1.BkAppFinalizerName)).To(BeTrue())
+		Expect(controllerutil.ContainsFinalizer(createdBkApp, paasv1alpha2.BkAppFinalizerName)).To(BeTrue())
 
 		By("By checking the pre-release-hook pod is dispatched")
 		preReleaseHook1LookupKey := types.NamespacedName{Namespace: "default", Name: "pre-release-hook-1"}
@@ -161,14 +162,14 @@ var _ = Describe("", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		// Check status
-		condAvailable := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.AppAvailable)
+		condAvailable := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)
 		Expect(condAvailable.Status).To(Equal(metav1.ConditionFalse))
 
-		hookStatus := createdBkApp.Status.FindHookStatus(v1alpha1.HookPreRelease)
-		condHooks := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.HooksFinished)
+		hookStatus := createdBkApp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
+		condHooks := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.HooksFinished)
 		Expect(condHooks.Reason).To(Equal("Progressing"))
 		Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
-		Expect(hookStatus.Phase).To(Equal(v1alpha1.HealthProgressing))
+		Expect(hookStatus.Phase).To(Equal(paasv1alpha2.HealthProgressing))
 
 		// Check addons envs
 		Expect(
@@ -185,7 +186,7 @@ var _ = Describe("", func() {
 			if err != nil {
 				return false
 			}
-			condHooks := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.HooksFinished)
+			condHooks := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.HooksFinished)
 			return (condHooks.Status == metav1.ConditionTrue && condHooks.Reason == "Finished")
 		}, timeout, interval).Should(BeTrue())
 
@@ -199,12 +200,12 @@ var _ = Describe("", func() {
 			if err != nil {
 				return false
 			}
-			condProgressing := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.AppProgressing)
+			condProgressing := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppProgressing)
 			return condProgressing.Status == metav1.ConditionTrue
 		}, timeout, interval).Should(BeTrue())
 
 		_ = k8sClient.Get(ctx, bkappLookupKey, createdBkApp)
-		condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.AppAvailable)
+		condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)
 		Expect(condAvailable.Status).To(Equal(metav1.ConditionFalse))
 
 		By(
@@ -240,8 +241,9 @@ var _ = Describe("", func() {
 				if err != nil {
 					return false
 				}
-				condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.AppAvailable)
-				return condAvailable.Status == metav1.ConditionTrue && createdBkApp.Status.Phase == v1alpha1.AppRunning
+				condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)
+				return condAvailable.Status == metav1.ConditionTrue &&
+					createdBkApp.Status.Phase == paasv1alpha2.AppRunning
 			}, timeout, interval*10).Should(BeTrue())
 		})
 
@@ -261,7 +263,7 @@ var _ = Describe("", func() {
 			}
 			createdBkApp.Spec.Configuration.Env = append(
 				createdBkApp.Spec.Configuration.Env,
-				v1alpha1.AppEnvVar{Name: "foo"},
+				paasv1alpha2.AppEnvVar{Name: "foo"},
 			)
 			return k8sClient.Update(ctx, createdBkApp)
 		}, timeout, interval).ShouldNot(HaveOccurred())
@@ -275,7 +277,7 @@ var _ = Describe("", func() {
 			return createdBkApp.Status.Revision.Revision != int64(1)
 		}, timeout, interval).Should(BeTrue())
 
-		condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.AppAvailable)
+		condAvailable = apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)
 		Expect(condAvailable.Status).To(Equal(metav1.ConditionUnknown))
 		Expect(podCounter()).To(Equal(2))
 
@@ -297,7 +299,7 @@ var _ = Describe("", func() {
 			if err != nil {
 				return false
 			}
-			cond := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, v1alpha1.AppAvailable)
+			cond := apimeta.FindStatusCondition(createdBkApp.Status.Conditions, paasv1alpha2.AppAvailable)
 			if cond.Status == metav1.ConditionFalse && cond.Reason != "Terminating" {
 				return false
 			}

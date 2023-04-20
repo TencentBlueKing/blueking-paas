@@ -29,27 +29,27 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Get App Envs", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "bkapp-sample",
 				Namespace:   "default",
 				Annotations: map[string]string{},
 			},
-			Spec: v1alpha1.AppSpec{
-				Configuration: v1alpha1.AppConfig{
-					Env: []v1alpha1.AppEnvVar{
+			Spec: paasv1alpha2.AppSpec{
+				Configuration: paasv1alpha2.AppConfig{
+					Env: []paasv1alpha2.AppEnvVar{
 						{Name: "ENV_NAME_1", Value: "env_value_1"},
 						{Name: "ENV_NAME_2", Value: "env_value_2"},
 					},
@@ -69,7 +69,7 @@ var _ = Describe("Get App Envs", func() {
 	})
 
 	It("no env", func() {
-		bkapp.Spec.Configuration.Env = []v1alpha1.AppEnvVar{}
+		bkapp.Spec.Configuration.Env = []paasv1alpha2.AppEnvVar{}
 		envs := GetAppEnvs(bkapp)
 		Expect(len(envs)).To(Equal(0))
 	})
@@ -77,7 +77,7 @@ var _ = Describe("Get App Envs", func() {
 	Context("with addon envs", func() {
 		BeforeEach(func() {
 			annotation := bkapp.GetAnnotations()
-			annotation[v1alpha1.AddonsAnnoKey] = "[\"foo-service\"]"
+			annotation[paasv1alpha2.AddonsAnnoKey] = "[\"foo-service\"]"
 		})
 
 		AfterEach(func() {

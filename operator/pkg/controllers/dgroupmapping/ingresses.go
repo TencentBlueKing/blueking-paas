@@ -30,6 +30,7 @@ import (
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
@@ -39,13 +40,13 @@ import (
 // In order to use this type, the mapping object must reference to a valid BkApp.
 type DGroupMappingSyncer struct {
 	client client.Client
-	bkapp  *v1alpha1.BkApp
+	bkapp  *paasv1alpha2.BkApp
 }
 
 // NewDGroupMappingSyncer creates a DGroupMappingSyncer object
 // - bkapp is the owner for current syncer, usually is the referenced BkApp object
 //   of DomainGroupMapping object.
-func NewDGroupMappingSyncer(client client.Client, bkapp *v1alpha1.BkApp) *DGroupMappingSyncer {
+func NewDGroupMappingSyncer(client client.Client, bkapp *paasv1alpha2.BkApp) *DGroupMappingSyncer {
 	return &DGroupMappingSyncer{client: client, bkapp: bkapp}
 }
 

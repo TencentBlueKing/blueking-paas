@@ -2118,4 +2118,6 @@ export default {
   '应用市场信息请在“app_desc.yaml”文件中配置': 'Please configure the application market information in the "app_desc.yaml" file',
   'web进程的容器镜像地址': 'The container image address of the web process',
   '每个镜像版本默认仅拉取一次，如版本内容有更新，请勾选该项': 'Each image version is only pulled once by default, please check this box if there are updates to the version.'
+  '共享实例': 'Shared',
+  '独占实例': 'Exclusive'
 };

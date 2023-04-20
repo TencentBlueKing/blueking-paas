@@ -511,9 +511,14 @@
             }
         },
         watch: {
-            '$route' () {
-                this.init();
-                this.initTopText();
+            '$route': {
+                deep: true,
+                handler () {
+                    this.$nextTick(() => {
+                        this.init();
+                    });
+                    this.initTopText();
+                }
             },
             dateRange: {
                 deep: true,
@@ -552,7 +557,6 @@
             moment.locale(this.localLanguage);
         },
         mounted () {
-            this.init();
             this.initDate();
             this.initTopText();
         },

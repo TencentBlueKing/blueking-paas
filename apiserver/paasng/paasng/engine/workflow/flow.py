@@ -231,7 +231,9 @@ class DeploymentCoordinator:
             if expected_deployment:
                 deployment_id = pipe.get(self.key_name_deployment)
                 if deployment_id and (force_text(deployment_id) != str(expected_deployment.pk)):
-                    raise ValueError(f'found: {deployment_id}, expected: {expected_deployment.pk}')
+                    raise ValueError(
+                        f'deployment lock holder mismatch, found: {deployment_id}, expected: {expected_deployment.pk}'
+                    )
 
             pipe.delete(self.key_name_lock)
             # Clean deployment key

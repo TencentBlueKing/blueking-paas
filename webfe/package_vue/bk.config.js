@@ -8,7 +8,7 @@ const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.
 module.exports = {
   host: process.env.BK_APP_HOST,
   port: 6060,
-  publicPath: process.env.NODE_ENV === 'development' ? '/' : process.env.BK_PAAS3_URL,
+  publicPath: '/',
   cache: true,
   open: true,
   replaceStatic: true,

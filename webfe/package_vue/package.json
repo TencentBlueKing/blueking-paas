@@ -5,13 +5,13 @@
   "author": "paas-v3",
   "private": true,
   "scripts": {
-    "dev:te": "APP_VERSION=te bk-cli-service-webpack dev",
-    "dev:ee": "APP_VERSION=ee bk-cli-service-webpack dev",
-    "dev:ce": "APP_VERSION=ce bk-cli-service-webpack dev",
-    "build:te": "APP_VERSION=te bk-cli-service-webpack build",
-    "build:ee": "APP_VERSION=ee bk-cli-service-webpack build",
-    "build:ce": "APP_VERSION=ce bk-cli-service-webpack build",
-    "build": "APP_VERSION=$APP_VERSION bk-cli-service-webpack build",
+    "dev:te": "BK_APP_VERSION=te bk-cli-service-webpack dev",
+    "dev:ee": "BK_APP_VERSION=ee bk-cli-service-webpack dev",
+    "dev:ce": "BK_APP_VERSION=ce bk-cli-service-webpack dev",
+    "build:te": "BK_APP_VERSION=te bk-cli-service-webpack build",
+    "build:ee": "BK_APP_VERSION=ee bk-cli-service-webpack build",
+    "build:ce": "BK_APP_VERSION=ce bk-cli-service-webpack build",
+    "build": "BK_APP_VERSION=$APP_VERSION bk-cli-service-webpack build",
     "lint": "eslint --fix --ext .js,.vue src"
   },
   "dependencies": {

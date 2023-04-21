@@ -37,4 +37,17 @@ resources:
   kind: ProjectConfig
   path: bk.tencent.com/paas-app-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: bk.tencent.com
+  group: paas
+  kind: BkApp
+  path: bk.tencent.com/paas-app-operator/api/v1alpha2
+  version: v1alpha2
+  webhooks:
+    conversion: true
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

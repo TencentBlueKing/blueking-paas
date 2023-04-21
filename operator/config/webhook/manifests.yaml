@@ -7,6 +7,26 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-paas-bk-tencent-com-v1alpha2-bkapp
+  failurePolicy: Fail
+  name: mbkapp-v1alpha2.kb.io
+  rules:
+  - apiGroups:
+    - paas.bk.tencent.com
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - bkapps
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
   - v1beta1
   clientConfig:
     service:
@@ -33,6 +53,27 @@ metadata:
   creationTimestamp: null
   name: validating-webhook-configuration
 webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-paas-bk-tencent-com-v1alpha2-bkapp
+  failurePolicy: Fail
+  name: vbkapp-v1alpha2.kb.io
+  rules:
+  - apiGroups:
+    - paas.bk.tencent.com
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - bkapps
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   - v1beta1

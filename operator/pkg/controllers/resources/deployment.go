@@ -30,11 +30,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -44,6 +45,9 @@ const (
 	// DefaultImage 是当无法获取进程镜像时使用的默认镜像
 	DefaultImage = "busybox:latest"
 )
+
+// log is for logging in this package.
+var log = logf.Log.WithName("controllers-resources")
 
 // GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
 func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
@@ -62,7 +66,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 		// TODO: Add error handling
 		image, pullPolicy, err := NewProcImageGetter(app).Get(proc.Name)
 		if err != nil {
-			// TODO: Log error "Failed to get image for process %s: %v, use default image", proc.Name, err
+			log.Info("Failed to get image for process %s: %v, use default values.", proc.Name, err)
 			image = DefaultImage
 			pullPolicy = corev1.PullIfNotPresent
 		}
@@ -70,7 +74,7 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 		resGetter := NewProcResourcesGetter(app)
 		resReq, err := resGetter.Get(proc.Name)
 		if err != nil {
-			// TODO: Log error "Failed to get resources for process %s: %v, use default resources", proc.Name, err
+			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
 			resReq = resGetter.GetDefault()
 		}
 
@@ -151,8 +155,8 @@ type procResourcesGetter struct {
 
 var planToResources = map[string][2]string{
 	"default": {
-		v1alpha1.ProjConf.ResLimitConfig.ProcDefaultCPULimits,
-		v1alpha1.ProjConf.ResLimitConfig.ProcDefaultMemLimits,
+		config.Global.ResLimitConfig.ProcDefaultCPULimits,
+		config.Global.ResLimitConfig.ProcDefaultMemLimits,
 	},
 	// TODO: Add more plans
 }

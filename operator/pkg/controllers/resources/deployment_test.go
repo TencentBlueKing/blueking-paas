@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
@@ -171,7 +171,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 
 		It("legacy version", func() {
-			kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
 				"web":    {"image": "busybox:1.0.0", "policy": "Never"},
 				"worker": {"image": "busybox:2.0.0", "policy": "Always"},
 			})
@@ -224,12 +224,12 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 			// The resource requirements should be the default value defined in project config
 			// TODO: enhance below tests to check real plans
-			Expect(cWebRes.Limits.Cpu().String()).To(Equal(v1alpha1.ProjConf.ResLimitConfig.ProcDefaultCPULimits))
-			Expect(cWebRes.Limits.Memory().String()).To(Equal(v1alpha1.ProjConf.ResLimitConfig.ProcDefaultMemLimits))
+			Expect(cWebRes.Limits.Cpu().String()).To(Equal(config.Global.ResLimitConfig.ProcDefaultCPULimits))
+			Expect(cWebRes.Limits.Memory().String()).To(Equal(config.Global.ResLimitConfig.ProcDefaultMemLimits))
 		})
 
 		It("legacy version", func() {
-			kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
 				"web":    {"cpu": "1", "memory": "1Gi"},
 				"worker": {"cpu": "2", "memory": "2Gi"},
 			})

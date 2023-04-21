@@ -1,0 +1,16 @@
+apiVersion: paas.bk.tencent.com/v1alpha2
+metadata:
+  name: demo-app
+spec:
+  build:
+    image: django-helloworld:latest
+  processes:
+    - name: web
+      replicas: 1
+  hooks:
+    preRelease:
+      command:
+        - /bin/bash
+        - /app/run_db_migrations.sh
+      args:
+        - "--no-input"

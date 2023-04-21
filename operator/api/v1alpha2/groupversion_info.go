@@ -38,4 +38,7 @@ var (
 
 	// KindBkApp is the string value of BkApp resource kind
 	KindBkApp = "BkApp"
+
+	// GroupKindBkApp is the GroupKind of BkApp
+	GroupKindBkApp = schema.GroupKind{Group: GroupVersion.Group, Kind: KindBkApp}
 )

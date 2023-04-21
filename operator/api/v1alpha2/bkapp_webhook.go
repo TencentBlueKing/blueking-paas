@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	"fmt"
@@ -32,8 +32,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 )
 
 // log is for logging in this package.
@@ -44,14 +42,21 @@ var (
 	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,16}$")
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
+
+	// MaxReplicasConfig is the max allowed replicas for a process
+	// TODO: read max replicas from config.Global.ResLimitConfig.MaxReplicas, currently this
+	// behavior is forbidden because of cyclic import
+	MaxReplicasConfig = int32(10)
 )
 
 // SetupWebhookWithManager ...
 func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(r).Complete()
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(r).
+		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-paas-bk-tencent-com-v1alpha1-bkapp,mutating=true,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update,versions=v1alpha1,name=mbkapp.kb.io,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:path=/mutate-paas-bk-tencent-com-v1alpha2-bkapp,mutating=true,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update,versions=v1alpha2,name=mbkapp-v1alpha2.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &BkApp{}
 
@@ -59,25 +64,24 @@ var _ webhook.Defaulter = &BkApp{}
 func (r *BkApp) Default() {
 	appLog.Info("default", "name", r.Name)
 
-	// 为进程的端口号、CPU 内存资源等配置默认值
-	r.Spec.Processes = lo.Map(r.Spec.Processes, func(proc Process, i int) Process {
+	// 为镜像构建相关字段配置默认值
+	if r.Spec.Build.ImagePullPolicy == "" {
+		r.Spec.Build.ImagePullPolicy = corev1.PullIfNotPresent
+	}
+
+	// 为进程的端口号、资源配额方案等设置默认值
+	for i, proc := range r.Spec.Processes {
 		if proc.TargetPort == 0 {
 			proc.TargetPort = ProcDefaultTargetPort
 		}
-		if proc.CPU == "" {
-			proc.CPU = projConf.ResLimitConfig.ProcDefaultCPULimits
+		if proc.ResQuotaPlan == "" {
+			proc.ResQuotaPlan = "default"
 		}
-		if proc.Memory == "" {
-			proc.Memory = projConf.ResLimitConfig.ProcDefaultMemLimits
-		}
-		if proc.ImagePullPolicy == "" {
-			proc.ImagePullPolicy = corev1.PullIfNotPresent
-		}
-		return proc
-	})
+		r.Spec.Processes[i] = proc
+	}
 }
 
-//+kubebuilder:webhook:path=/validate-paas-bk-tencent-com-v1alpha1-bkapp,mutating=false,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update;delete,versions=v1alpha1,name=vbkapp.kb.io,admissionReviewVersions=v1;v1beta1
+//+kubebuilder:webhook:path=/validate-paas-bk-tencent-com-v1alpha2-bkapp,mutating=false,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update;delete,versions=v1alpha2,name=vbkapp-v1alpha2.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &BkApp{}
 
@@ -189,24 +193,14 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		)
 	}
 	// 2. 副本数量不能超过上限
-	if *proc.Replicas > projConf.ResLimitConfig.MaxReplicas {
+	if *proc.Replicas > MaxReplicasConfig {
 		return field.Invalid(
 			pField.Child("replicas"),
 			*proc.Replicas,
-			fmt.Sprintf("at most support %d replicas", projConf.ResLimitConfig.MaxReplicas),
+			fmt.Sprintf("at most support %d replicas", MaxReplicasConfig),
 		)
 	}
-	// 3. 资源配额需要符合规范
-	if _, err := quota.NewQuantity(proc.CPU, quota.CPU); err != nil {
-		return field.Invalid(pField.Child("cpu"), proc.CPU, err.Error())
-	}
-	if _, err := quota.NewQuantity(proc.Memory, quota.Memory); err != nil {
-		return field.Invalid(pField.Child("memory"), proc.Memory, err.Error())
-	}
-	// 4. 进程镜像不可为空
-	if proc.Image == "" {
-		return field.Invalid(pField.Child("image"), proc.Image, "proc image is required")
-	}
+	// 3. TODO: Check ResQuotaPlan is valid
 	return nil
 }
 
@@ -227,7 +221,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "replicas": envName and process
-	maxReplicas := projConf.ResLimitConfig.MaxReplicas
+	maxReplicas := MaxReplicasConfig
 	for i, rep := range r.Spec.EnvOverlay.Replicas {
 		replicasField := f.Child("replicas").Index(i)
 		if !CheckEnvName(rep.EnvName) {

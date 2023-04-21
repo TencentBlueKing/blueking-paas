@@ -52,12 +52,12 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	// Handle fields that are using identical structures
-	copier.CopyWithOption(
+	_ = copier.CopyWithOption(
 		&dst.Spec.Configuration,
 		&src.Spec.Configuration,
 		copier.Option{IgnoreEmpty: true, DeepCopy: true},
 	)
-	copier.CopyWithOption(
+	_ = copier.CopyWithOption(
 		&dst.Spec.Build,
 		&src.Spec.Build,
 		copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -68,7 +68,7 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.Hooks = nil
 	} else {
 		dst.Spec.Hooks = &paasv1alpha2.AppHooks{}
-		copier.CopyWithOption(
+		_ = copier.CopyWithOption(
 			&dst.Spec.Hooks,
 			&src.Spec.Hooks,
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -80,7 +80,7 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.EnvOverlay = nil
 	} else {
 		dst.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{}
-		copier.CopyWithOption(
+		_ = copier.CopyWithOption(
 			&dst.Spec.EnvOverlay,
 			&src.Spec.EnvOverlay,
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -117,12 +117,12 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 
 	// Handle fields that are using identical structures
-	copier.CopyWithOption(
+	_ = copier.CopyWithOption(
 		&dst.Spec.Configuration,
 		&src.Spec.Configuration,
 		copier.Option{IgnoreEmpty: true, DeepCopy: true},
 	)
-	copier.CopyWithOption(
+	_ = copier.CopyWithOption(
 		&dst.Spec.Build,
 		&src.Spec.Build,
 		copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -133,7 +133,7 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		dst.Spec.Hooks = nil
 	} else {
 		dst.Spec.Hooks = &AppHooks{}
-		copier.CopyWithOption(
+		_ = copier.CopyWithOption(
 			&dst.Spec.Hooks,
 			&src.Spec.Hooks,
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -145,7 +145,7 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		dst.Spec.EnvOverlay = nil
 	} else {
 		dst.Spec.EnvOverlay = &AppEnvOverlay{}
-		copier.CopyWithOption(
+		_ = copier.CopyWithOption(
 			&dst.Spec.EnvOverlay,
 			&src.Spec.EnvOverlay,
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},

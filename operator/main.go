@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/controllers"
 	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
@@ -63,6 +64,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -137,11 +139,15 @@ func main() {
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&paasv1alpha1.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "BkApp")
+			setupLog.Error(err, "unable to create webhook", "webhook", "v1alpha1/BkApp")
 			os.Exit(1)
 		}
 		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DomainGroupMapping")
+			os.Exit(1)
+		}
+		if err = (&paasv1alpha2.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "v1alpha2/BkApp")
 			os.Exit(1)
 		}
 	}

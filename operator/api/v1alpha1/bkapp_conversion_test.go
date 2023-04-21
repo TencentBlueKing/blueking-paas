@@ -69,9 +69,9 @@ var _ = Describe("test conversion back and forth", func() {
 
 		// Convert the resource back and forth
 		var v1alpha2bkapp paasv1alpha2.BkApp
-		v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkapp))
+		_ = v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkapp))
 		var v1alpha1bkappFromConverted BkApp
-		v1alpha1bkappFromConverted.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
+		_ = v1alpha1bkappFromConverted.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
 
 		// Make sure the conversion is lossless.
 		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
@@ -109,9 +109,9 @@ var _ = Describe("test conversion back and forth", func() {
 
 		// Convert the resource back and forth
 		var v1alpha1bkapp BkApp
-		v1alpha1bkapp.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
+		_ = v1alpha1bkapp.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
 		var v1alpha2bkappFromConverted paasv1alpha2.BkApp
-		v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkappFromConverted))
+		_ = v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkappFromConverted))
 
 		// Make sure the conversion is lossless.
 		Expect(v1alpha2bkapp.Spec).To(Equal(v1alpha2bkappFromConverted.Spec))

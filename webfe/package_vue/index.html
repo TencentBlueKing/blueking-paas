@@ -32,7 +32,7 @@
 
       // 环境变量
       var APP_VERSION = '<%= process.env.BK_APP_VERSION %>' 
-      var BACKEND_URL = '<%= process.env.BK_PAAS3_URL %>' + '/backend'
+      var BACKEND_URL = `<%= process.env.BK_PAAS3_URL %>/backend`
       var NODE_ENV = '<%= process.env.NODE_ENV %>'
       var BK_LESSCODE_URL = '<%= process.env.BK_LESSCODE_URL %>' || ''
       var BK_PAAS2_URL = '<%= process.env.BK_PAAS2_URL %>' || ''
@@ -44,12 +44,12 @@
       var DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/PaaS3.0`
       var BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || ''
       var GLOBAL_CONFIG = {
-        APP_VERSION: APP_VERSION,
+        APP_VERSION: '<%= process.env.BK_APP_VERSION %>',
         LOGIN_SERVICE_URL: '<%= process.env.BK_LOGIN_URL %>',
-        USERS_URL: '<%= process.env.BK_COMPONENT_API_URL %>' + '/api/c/compapi/v2/usermanage/fs_list_users/' || '',
+        USERS_URL: `<%= process.env.BK_COMPONENT_API_URL %>/api/c/compapi/v2/usermanage/fs_list_users/` || '',
       }
     </script>
-    <% if (process.env.APP_VERSION === 'te'){ %>
+    <% if (process.env.BK_APP_VERSION === 'te'){ %>
     <!-- BK Analytics start -->
     <!-- start及end之间的内部代码会在企业版本出包时删除 -->
     <script>

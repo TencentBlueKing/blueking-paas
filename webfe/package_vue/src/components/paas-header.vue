@@ -888,7 +888,7 @@ export default {
     .ps-head-right {
         position: relative;
         float: right;
-        margin: 8px 0 0 0;
+        margin: 0;
         padding: 8px 10px;
         display: flex;
         align-items: center;

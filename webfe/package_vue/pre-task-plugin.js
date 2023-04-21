@@ -19,7 +19,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const APP_VERSION = process.env.APP_VERSION || 'ee';
+const APP_VERSION = process.env.BK_APP_VERSION || 'ee';
 
 const JSON_DIR_PATH = path.resolve(__dirname, './static/json');
 const JS_DIR_PATH = path.resolve(__dirname, './static/js');

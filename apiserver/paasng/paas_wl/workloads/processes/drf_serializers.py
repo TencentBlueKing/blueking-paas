@@ -28,7 +28,7 @@ from rest_framework.serializers import ValidationError
 
 from paas_wl.cnative.specs.procs import CNativeProcSpec
 from paas_wl.platform.applications.models import Release
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
+from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.models import AutoscalingConfig
 from paas_wl.workloads.processes.constants import ProcessUpdateType
 from paas_wl.workloads.processes.models import Instance, ProcessSpec
@@ -125,7 +125,7 @@ class ScalingObjectRefSLZ(serializers.Serializer):
     name = serializers.CharField(required=True)
 
 
-class ScaleMetricSLZ(serializers.Serializer):
+class MetricSpecSLZ(serializers.Serializer):
     """扩缩容指标"""
 
     type = serializers.ChoiceField(
@@ -133,9 +133,8 @@ class ScaleMetricSLZ(serializers.Serializer):
         default=ScalingMetricSourceType.RESOURCE,
         choices=ScalingMetricSourceType.get_choices(),
     )
-    name = serializers.ChoiceField(required=True, choices=ScalingMetricName.get_choices())
-    target_type = serializers.ChoiceField(required=True, choices=ScalingMetricTargetType.get_choices())
-    target_value = serializers.CharField(required=True, help_text=_('资源指标值/百分比'))
+    metric = serializers.ChoiceField(required=True, choices=ScalingMetric.get_choices())
+    value = serializers.CharField(required=True, help_text=_('资源指标值/百分比'))
     described_object = ScalingObjectRefSLZ(required=False)
 
 
@@ -144,7 +143,7 @@ class ScalingConfigSLZ(serializers.Serializer):
 
     min_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最小副本数'))
     max_replicas = serializers.IntegerField(required=True, min_value=1, help_text=_('最大副本数'))
-    metrics = serializers.ListField(child=ScaleMetricSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
+    metrics = serializers.ListField(child=MetricSpecSLZ(), required=True, min_length=1, help_text=_('扩缩容指标'))
 
 
 class UpdateProcessSLZ(serializers.Serializer):

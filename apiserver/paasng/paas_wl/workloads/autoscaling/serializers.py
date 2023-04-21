@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from kubernetes.dynamic import ResourceInstance
 
@@ -97,19 +97,17 @@ class ProcAutoscalingDeserializer(AppEntityDeserializer['ProcAutoscaling']):
 
     def _get_metric(self, res_name: str, target_type: str) -> ScalingMetric:
         """获取 metric name"""
-        if target_type == ScalingMetricTargetType.UTILIZATION:
-            if res_name == ScalingMetricName.CPU:
-                return ScalingMetric.CPU_UTILIZATION
-            if res_name == ScalingMetricName.MEMORY:
-                return ScalingMetric.MEMORY_UTILIZATION
+        type_name_metric_map: Dict[Tuple[str, str], ScalingMetric] = {
+            (ScalingMetricTargetType.UTILIZATION, ScalingMetricName.CPU): ScalingMetric.CPU_UTILIZATION,
+            (ScalingMetricTargetType.UTILIZATION, ScalingMetricName.MEMORY): ScalingMetric.MEMORY_UTILIZATION,
+            (ScalingMetricTargetType.AVERAGE_VALUE, ScalingMetricName.CPU): ScalingMetric.CPU_AVERAGE_VALUE,
+            (ScalingMetricTargetType.AVERAGE_VALUE, ScalingMetricName.MEMORY): ScalingMetric.MEMORY_AVERAGE_VALUE,
+        }
 
-        if target_type == ScalingMetricTargetType.AVERAGE_VALUE:
-            if res_name == ScalingMetricName.CPU:
-                return ScalingMetric.CPU_AVERAGE_VALUE
-            if res_name == ScalingMetricName.MEMORY:
-                return ScalingMetric.MEMORY_AVERAGE_VALUE
+        if (target_type, res_name) not in type_name_metric_map:
+            raise ValueError(f'unsupported metric res_name {res_name} and target type: {target_type}')
 
-        raise ValueError(f'unsupported metric res_name {res_name} and target type: {target_type}')
+        return type_name_metric_map[(target_type, res_name)]
 
     def _get_metric_value(self, metric_target: Dict[str, Union[str, int]]) -> str:
         """将 gpa 配置中的 averageValue/averageUtilization 转换为统一的数值"""
@@ -169,7 +167,6 @@ class ProcAutoscalingSerializer(AppEntitySerializer['ProcAutoscaling']):
         CPU 使用率百分比 -> {"name": "cpu", "target": {"type": Utilization, "averageUtilization": 80}}
         """
         if spec.metric == ScalingMetric.CPU_UTILIZATION:
-            # 资源使用率百分比
             metric_name, target_type = ScalingMetricName.CPU, ScalingMetricTargetType.UTILIZATION
             value_key, value = 'averageUtilization', int(spec.value)
 

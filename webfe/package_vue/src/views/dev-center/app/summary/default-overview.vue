@@ -511,9 +511,14 @@
             }
         },
         watch: {
-            '$route' () {
-                this.init();
-                this.initTopText();
+            '$route': {
+                deep: true,
+                handler () {
+                    this.$nextTick(() => {
+                        this.init();
+                    });
+                    this.initTopText();
+                }
             },
             dateRange: {
                 deep: true,
@@ -552,7 +557,6 @@
             moment.locale(this.localLanguage);
         },
         mounted () {
-            this.init();
             this.initDate();
             this.initTopText();
         },
@@ -571,7 +575,7 @@
                     this.trunkUrl = this.curAppModule.repo.trunk_url || '';
                     this.sourceType = this.curAppModule.repo.source_type || '';
                 }
-                if (this.userFeature.PHALANX || !this.isCloudApp) {
+                if (this.userFeature.PHALANX && !this.isCloudApp) {
                     this.getAlarmData();
                 }
             },

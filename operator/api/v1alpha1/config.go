@@ -18,14 +18,14 @@
 
 package v1alpha1
 
-// projConf for current pkg
-var projConf *ProjectConfig
+// ProjConf for current pkg
+var ProjConf *ProjectConfig
 
 func init() {
-	projConf = NewProjectConfig()
+	ProjConf = NewProjectConfig()
 }
 
-// SetConfig will set the projConf by given cfg
+// SetConfig will set the ProjConf by given cfg
 func SetConfig(cfg *ProjectConfig) {
-	projConf = cfg
+	ProjConf = cfg
 }

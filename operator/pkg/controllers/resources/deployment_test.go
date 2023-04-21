@@ -27,57 +27,58 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
-var _ = Describe("DeploymentResources", func() {
-	var bkapp *paasv1alpha1.BkApp
+var _ = Describe("Test build deployments from BkApp", func() {
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &paasv1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       paasv1alpha1.KindBkApp,
-				APIVersion: paasv1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: paasv1alpha1.AppSpec{
-				Processes: []paasv1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   paasv1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: "default",
+						TargetPort:   80,
 					},
 					{
-						Name:     "hi",
-						Image:    "busybox:latest",
-						Replicas: paasv1alpha1.ReplicasTwo,
-						Command:  []string{"/bin/sh"},
-						Args:     []string{"-c", "echo hi"},
-						CPU:      "50m",
-						Memory:   "50Mi",
+						Name:         "hi",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: "default",
+						Command:      []string{"/bin/sh"},
+						Args:         []string{"-c", "echo hi"},
 					},
 				},
-				Configuration: paasv1alpha1.AppConfig{
-					Env: []paasv1alpha1.AppEnvVar{
+				Configuration: paasv1alpha2.AppConfig{
+					Env: []paasv1alpha2.AppEnvVar{
 						{Name: "ENV_NAME_1", Value: "env_value_1"},
 						{Name: "ENV_NAME_2", Value: "env_value_2"},
 					},
 				},
 				// Add some overlay configs
-				EnvOverlay: &paasv1alpha1.AppEnvOverlay{
-					Replicas: []paasv1alpha1.ReplicasOverlay{
+				EnvOverlay: &paasv1alpha2.AppEnvOverlay{
+					Replicas: []paasv1alpha2.ReplicasOverlay{
 						{EnvName: "stag", Process: "web", Count: 10},
 					},
-					EnvVariables: []paasv1alpha1.EnvVarOverlay{
+					EnvVariables: []paasv1alpha2.EnvVarOverlay{
 						{EnvName: "stag", Name: "ENV_NAME_3", Value: "env_value_3"},
 						{EnvName: "prod", Name: "ENV_NAME_1", Value: "env_value_1_prod"},
 					},
@@ -87,20 +88,20 @@ var _ = Describe("DeploymentResources", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(paasv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 	})
 
-	Context("TestParseDeploys", func() {
-		It("no deploys", func() {
-			bkapp.Spec.Processes = []paasv1alpha1.Process{}
+	Context("basic fields checks", func() {
+		It("no processes", func() {
+			bkapp.Spec.Processes = []paasv1alpha2.Process{}
 			deploys := GetWantedDeploys(bkapp)
 			Expect(len(deploys)).To(Equal(0))
 		})
 
-		It("common fields", func() {
+		It("common base fields", func() {
 			deploys := GetWantedDeploys(bkapp)
 			Expect(len(deploys)).To(Equal(2))
 
@@ -120,8 +121,147 @@ var _ = Describe("DeploymentResources", func() {
 			Expect(*hiDeploy.Spec.RevisionHistoryLimit).To(Equal(int32(0)))
 			Expect(len(hiDeploy.Spec.Template.Spec.Containers)).To(Equal(1))
 		})
+	})
+
+	Context("container basic fields", func() {
+		It("base fields", func() {
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{
+				Image: "busybox:latest",
+			}
+			bkapp.Spec.Processes = []paasv1alpha2.Process{{
+				Name:       "web",
+				Replicas:   paasv1alpha2.ReplicasOne,
+				Command:    []string{"/bin/sh"},
+				Args:       []string{"-c", "echo hi"},
+				TargetPort: 8081,
+			}}
+
+			c := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
+			Expect(len(c.Command)).To(Equal(1))
+			Expect(len(c.Args)).To(Equal(2))
+			Expect(c.Ports).To(Equal([]corev1.ContainerPort{{ContainerPort: 8081}}))
+		})
+	})
+
+	Context("Image related fields", func() {
+		It("default version", func() {
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{
+				Image:           "busybox:latest",
+				ImagePullPolicy: corev1.PullAlways,
+			}
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
+				{
+					Name:     "web",
+					Replicas: paasv1alpha2.ReplicasOne,
+				}, {
+					Name:     "worker",
+					Replicas: paasv1alpha2.ReplicasOne,
+				},
+			}
+
+			cWeb := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
+			Expect(cWeb.Name).To(Equal("web"))
+			Expect(cWeb.Image).To(Equal("busybox:latest"))
+			Expect(cWeb.ImagePullPolicy).To(Equal(corev1.PullAlways))
+
+			cWorker := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0]
+			Expect(cWorker.Name).To(Equal("worker"))
+			Expect(cWorker.Image).To(Equal(cWeb.Image))
+			Expect(cWorker.ImagePullPolicy).To(Equal(cWeb.ImagePullPolicy))
+		})
+
+		It("legacy version", func() {
+			kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
+				"web":    {"image": "busybox:1.0.0", "policy": "Never"},
+				"worker": {"image": "busybox:2.0.0", "policy": "Always"},
+			})
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{}
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
+				{
+					Name:     "web",
+					Replicas: paasv1alpha2.ReplicasOne,
+				}, {
+					Name:     "worker",
+					Replicas: paasv1alpha2.ReplicasOne,
+				},
+			}
+
+			cWeb := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0]
+			Expect(cWeb.Image).To(Equal("busybox:1.0.0"))
+			Expect(cWeb.ImagePullPolicy).To(Equal(corev1.PullNever))
+
+			cWorker := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0]
+			Expect(cWorker.Image).To(Equal("busybox:2.0.0"))
+			Expect(cWorker.ImagePullPolicy).To(Equal(corev1.PullAlways))
+		})
+	})
+
+	Context("Resources related fields", func() {
+		BeforeEach(func() {
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{
+				Image:           "busybox:latest",
+				ImagePullPolicy: corev1.PullAlways,
+			}
+		})
+		It("default version", func() {
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
+				{
+					Name:         "web",
+					Replicas:     paasv1alpha2.ReplicasOne,
+					ResQuotaPlan: "default",
+				}, {
+					Name:         "worker",
+					Replicas:     paasv1alpha2.ReplicasOne,
+					ResQuotaPlan: "default",
+				},
+			}
+
+			cWebRes := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0].Resources
+			cWorkerRes := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0].Resources
+			// The processes should share the same resource requirements
+			Expect(cWebRes.Requests).To(Equal(cWorkerRes.Requests))
+			Expect(cWebRes.Limits).To(Equal(cWorkerRes.Limits))
+
+			// The resource requirements should be the default value defined in project config
+			// TODO: enhance below tests to check real plans
+			Expect(cWebRes.Limits.Cpu().String()).To(Equal(v1alpha1.ProjConf.ResLimitConfig.ProcDefaultCPULimits))
+			Expect(cWebRes.Limits.Memory().String()).To(Equal(v1alpha1.ProjConf.ResLimitConfig.ProcDefaultMemLimits))
+		})
+
+		It("legacy version", func() {
+			kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
+				"web":    {"cpu": "1", "memory": "1Gi"},
+				"worker": {"cpu": "2", "memory": "2Gi"},
+			})
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
+				{
+					Name:     "web",
+					Replicas: paasv1alpha2.ReplicasOne,
+				}, {
+					Name:     "worker",
+					Replicas: paasv1alpha2.ReplicasOne,
+				},
+			}
+
+			// Check resource requirements for "web"
+			cWebRes := GetWantedDeploys(bkapp)[0].Spec.Template.Spec.Containers[0].Resources
+			Expect(cWebRes.Requests.Cpu().String()).To(Equal("250m"))
+			Expect(cWebRes.Limits.Cpu().String()).To(Equal("1"))
+			Expect(cWebRes.Requests.Memory().String()).To(Equal("512Mi"))
+			Expect(cWebRes.Limits.Memory().String()).To(Equal("1Gi"))
+
+			// Check resource requirements for "worker"
+			cWorkerRes := GetWantedDeploys(bkapp)[1].Spec.Template.Spec.Containers[0].Resources
+			Expect(cWorkerRes.Requests.Cpu().String()).To(Equal("500m"))
+			Expect(cWorkerRes.Limits.Cpu().String()).To(Equal("2"))
+			Expect(cWorkerRes.Requests.Memory().String()).To(Equal("1Gi"))
+			Expect(cWorkerRes.Limits.Memory().String()).To(Equal("2Gi"))
+		})
+	})
+
+	Context("environment related fields", func() {
 		It("stag env related fields", func() {
-			bkapp.SetAnnotations(map[string]string{paasv1alpha1.EnvironmentKey: "stag"})
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
 			deploys := GetWantedDeploys(bkapp)
 			web, hi := deploys[0], deploys[1]
 			// Value overwritten by overlay config
@@ -137,7 +277,7 @@ var _ = Describe("DeploymentResources", func() {
 			))
 		})
 		It("prod env related fields", func() {
-			bkapp.SetAnnotations(map[string]string{paasv1alpha1.EnvironmentKey: "prod"})
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "prod"})
 			deploys := GetWantedDeploys(bkapp)
 			web, hi := deploys[0], deploys[1]
 			Expect(*web.Spec.Replicas).To(Equal(int32(2)))
@@ -149,71 +289,6 @@ var _ = Describe("DeploymentResources", func() {
 					{Name: "ENV_NAME_2", Value: "env_value_2"},
 				},
 			))
-		})
-	})
-
-	Context("Make container from process", func() {
-		It("Rich spec", func() {
-			proc := paasv1alpha1.Process{
-				Name:       "web",
-				Image:      "busybox:latest",
-				Replicas:   paasv1alpha1.ReplicasOne,
-				Command:    []string{"/bin/sh"},
-				Args:       []string{"-c", "echo hi"},
-				TargetPort: 80,
-				CPU:        "100m",
-				Memory:     "100Mi",
-			}
-			envs := []corev1.EnvVar{
-				{Name: "ENV_NAME_1", Value: "env_value_1"},
-				{Name: "ENV_NAME_2", Value: "env_value_2"},
-			}
-
-			container := buildContainers(proc, envs)[0]
-			Expect(container.Name).To(Equal(proc.Name))
-			Expect(container.Image).To(Equal(proc.Image))
-			Expect(len(container.Command)).To(Equal(1))
-			Expect(len(container.Args)).To(Equal(2))
-			Expect(container.Env).To(Equal(envs))
-			Expect(container.Ports).To(Equal([]corev1.ContainerPort{{ContainerPort: 80}}))
-		})
-
-		It("Simple spec", func() {
-			var replicas int32 = 1
-			proc := paasv1alpha1.Process{
-				Name:     "web",
-				Image:    "busybox:latest",
-				Replicas: &replicas,
-				CPU:      "100m",
-				Memory:   "100Mi",
-			}
-			container := buildContainers(proc, []corev1.EnvVar{})[0]
-			Expect(container.Name).To(Equal(proc.Name))
-			Expect(len(container.Env)).To(Equal(0))
-		})
-
-		It("Resource quota", func() {
-			var replicas int32 = 1
-			proc := paasv1alpha1.Process{
-				Name:     "web",
-				Image:    "busybox:latest",
-				Replicas: &replicas,
-				CPU:      "1000m",
-				Memory:   "2048Mi",
-			}
-			container := buildContainers(proc, []corev1.EnvVar{})[0]
-
-			cpuRequests := container.Resources.Requests[corev1.ResourceCPU]
-			Expect(cpuRequests.String()).To(Equal("250m"))
-
-			cpuLimits := container.Resources.Limits[corev1.ResourceCPU]
-			Expect(cpuLimits.String()).To(Equal("1"))
-
-			memRequests := container.Resources.Requests[corev1.ResourceMemory]
-			Expect(memRequests.String()).To(Equal("1Gi"))
-
-			memLimits := container.Resources.Limits[corev1.ResourceMemory]
-			Expect(memLimits.String()).To(Equal("2Gi"))
 		})
 	})
 })

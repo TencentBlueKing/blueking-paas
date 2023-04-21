@@ -65,10 +65,10 @@ func (r *BkApp) Default() {
 			proc.TargetPort = ProcDefaultTargetPort
 		}
 		if proc.CPU == "" {
-			proc.CPU = projConf.ResLimitConfig.ProcDefaultCPULimits
+			proc.CPU = ProjConf.ResLimitConfig.ProcDefaultCPULimits
 		}
 		if proc.Memory == "" {
-			proc.Memory = projConf.ResLimitConfig.ProcDefaultMemLimits
+			proc.Memory = ProjConf.ResLimitConfig.ProcDefaultMemLimits
 		}
 		if proc.ImagePullPolicy == "" {
 			proc.ImagePullPolicy = corev1.PullIfNotPresent
@@ -189,11 +189,11 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		)
 	}
 	// 2. 副本数量不能超过上限
-	if *proc.Replicas > projConf.ResLimitConfig.MaxReplicas {
+	if *proc.Replicas > ProjConf.ResLimitConfig.MaxReplicas {
 		return field.Invalid(
 			pField.Child("replicas"),
 			*proc.Replicas,
-			fmt.Sprintf("at most support %d replicas", projConf.ResLimitConfig.MaxReplicas),
+			fmt.Sprintf("at most support %d replicas", ProjConf.ResLimitConfig.MaxReplicas),
 		)
 	}
 	// 3. 资源配额需要符合规范
@@ -227,7 +227,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "replicas": envName and process
-	maxReplicas := projConf.ResLimitConfig.MaxReplicas
+	maxReplicas := ProjConf.ResLimitConfig.MaxReplicas
 	for i, rep := range r.Spec.EnvOverlay.Replicas {
 		replicasField := f.Child("replicas").Index(i)
 		if !CheckEnvName(rep.EnvName) {

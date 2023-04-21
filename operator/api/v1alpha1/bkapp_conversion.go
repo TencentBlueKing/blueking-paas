@@ -9,18 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// LegacyProcConfig is a type alias for storing legacy process related config in annotations,
-// such as "image" and "resource" configs. Structure: {<procName>: {<configKey>: <configValue>}
-type LegacyProcConfig map[string]map[string]string
-
 // ConvertTo converts this BkApp to the Hub version (v1alpha2).
 func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*paasv1alpha2.BkApp)
 	dst.ObjectMeta = src.ObjectMeta
 
 	// Handle Processes field
-	legacyProcImageConfig := make(LegacyProcConfig)
-	legacyProcResConfig := make(LegacyProcConfig)
+	legacyProcImageConfig := make(paasv1alpha2.LegacyProcConfig)
+	legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
 	for _, proc := range src.Spec.Processes {
 		dstProc := paasv1alpha2.Process{
 			Name:         proc.Name,
@@ -99,8 +95,8 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.ObjectMeta = src.ObjectMeta
 
 	// Handle Processes field
-	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[LegacyProcConfig](src, LegacyProcImageAnnoKey)
-	legacyProcResConfig, _ := kubetypes.GetJsonAnnotation[LegacyProcConfig](src, LegacyProcResAnnoKey)
+	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
+	legacyProcResConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcResAnnoKey)
 	for _, proc := range src.Spec.Processes {
 		dstProc := Process{
 			Name:         proc.Name,

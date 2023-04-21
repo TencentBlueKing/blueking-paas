@@ -19,8 +19,11 @@
 package resources
 
 import (
+	"errors"
+	"fmt"
 	"strconv"
 
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
@@ -36,21 +40,39 @@ import (
 const (
 	// DeployRevisionHistoryLimit 更新 Deployment 时不保留旧 ReplicasSet
 	DeployRevisionHistoryLimit = int32(0)
+
+	// DefaultImage 是当无法获取进程镜像时使用的默认镜像
+	DefaultImage = "busybox:latest"
 )
 
 // GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
-func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
+func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 	newRevision := int64(0)
 	if rev := app.Status.Revision; rev != nil {
 		newRevision = rev.Revision
 	}
-	annotations := map[string]string{v1alpha1.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
+	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
 	deployList := []*appsv1.Deployment{}
 	replicasGetter := NewReplicasGetter(app)
 	for _, proc := range app.Spec.Processes {
 		selector := labels.PodSelector(app, proc.Name)
 		objLabels := labels.Deployment(app, proc.Name)
+
+		// TODO: Add error handling
+		image, pullPolicy, err := NewProcImageGetter(app).Get(proc.Name)
+		if err != nil {
+			// TODO: Log error "Failed to get image for process %s: %v, use default image", proc.Name, err
+			image = DefaultImage
+			pullPolicy = corev1.PullIfNotPresent
+		}
+
+		resGetter := NewProcResourcesGetter(app)
+		resReq, err := resGetter.Get(proc.Name)
+		if err != nil {
+			// TODO: Log error "Failed to get resources for process %s: %v, use default resources", proc.Name, err
+			resReq = resGetter.GetDefault()
+		}
 
 		deployList = append(deployList, &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
@@ -64,9 +86,9 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 				Annotations: annotations,
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(app, schema.GroupVersionKind{
-						Group:   v1alpha1.GroupVersion.Group,
-						Version: v1alpha1.GroupVersion.Version,
-						Kind:    v1alpha1.KindBkApp,
+						Group:   paasv1alpha2.GroupVersion.Group,
+						Version: paasv1alpha2.GroupVersion.Version,
+						Kind:    paasv1alpha2.KindBkApp,
 					}),
 				},
 			},
@@ -80,7 +102,7 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 						Annotations: annotations,
 					},
 					Spec: corev1.PodSpec{
-						Containers:       buildContainers(proc, envs),
+						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq),
 						ImagePullSecrets: buildImagePullSecrets(app),
 					},
 				},
@@ -90,27 +112,97 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 	return deployList
 }
 
-// buildContainers 根据配置生产对应容器配置列表（目前设计单个 proc 只会有单个容器）
-func buildContainers(proc v1alpha1.Process, envs []corev1.EnvVar) []corev1.Container {
-	container := corev1.Container{
-		Name:            proc.Name,
-		Image:           proc.Image,
-		Resources:       buildContainerResources(proc.CPU, proc.Memory),
-		ImagePullPolicy: proc.ImagePullPolicy,
-		Env:             envs,
-		Command:         proc.Command,
-		Args:            proc.Args,
-	}
-	// TODO P3 理论上所有进程都需要对外提供服务（暴露端口？）
-	if proc.TargetPort != 0 {
-		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
-	}
-	return []corev1.Container{container}
+type procImageGetter struct {
+	bkapp *paasv1alpha2.BkApp
 }
 
-// buildContainerResources 构建容器资源配额信息
-func buildContainerResources(cpu, memory string) corev1.ResourceRequirements {
-	// 由于 webhook 中已做校验，因此这里不会有 err，可以忽略
+// NewProcImageGetter create a new ProcImageGetter
+func NewProcImageGetter(bkapp *paasv1alpha2.BkApp) *procImageGetter {
+	return &procImageGetter{bkapp: bkapp}
+}
+
+// Get get the container image by process name, both the standard and legacy API versions
+// are supported at this time.
+//
+// - name: process name
+// - return: <image>, <imagePullPolicy>, <error>
+func (r *procImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
+	// Standard: the image was defined in build config directly
+	if image := r.bkapp.Spec.Build.Image; image != "" {
+		return r.bkapp.Spec.Build.Image, r.bkapp.Spec.Build.ImagePullPolicy, nil
+	}
+
+	// Legacy API version: read image configs from annotations
+	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
+		r.bkapp,
+		paasv1alpha2.LegacyProcImageAnnoKey,
+	)
+	if config, ok := legacyProcImageConfig[name]; ok {
+		return config["image"], corev1.PullPolicy(config["policy"]), nil
+	}
+
+	return "", corev1.PullIfNotPresent, errors.New("image not configured")
+}
+
+// ProcResourcesGetter help getting resources requirements for creating processes
+type procResourcesGetter struct {
+	bkapp *paasv1alpha2.BkApp
+}
+
+var planToResources = map[string][2]string{
+	"default": {
+		v1alpha1.ProjConf.ResLimitConfig.ProcDefaultCPULimits,
+		v1alpha1.ProjConf.ResLimitConfig.ProcDefaultMemLimits,
+	},
+	// TODO: Add more plans
+}
+
+// NewProcResourcesGetter create a new ProcResourcesGetter
+func NewProcResourcesGetter(bkapp *paasv1alpha2.BkApp) *procResourcesGetter {
+	return &procResourcesGetter{bkapp: bkapp}
+}
+
+// GetDefault returns the default resources requirements for creating processes
+func (r *procResourcesGetter) GetDefault() corev1.ResourceRequirements {
+	return r.fromQuotaPlan("default")
+}
+
+// Get get the container resources by process name
+//
+// - name: process name
+// - return: <resources requirements>, <error>
+func (r *procResourcesGetter) Get(name string) (result corev1.ResourceRequirements, err error) {
+	// Standard: read the "ResQuotaPlan" field from process
+	procObj := r.bkapp.Spec.FindProcess(name)
+	if procObj == nil {
+		return result, fmt.Errorf("process %s not found", name)
+	}
+	if plan := procObj.ResQuotaPlan; plan != "" {
+		return r.fromQuotaPlan(plan), nil
+	}
+
+	// Legacy version: try to read resources configs from legacy annotation
+	legacyProcResourcesConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
+		r.bkapp,
+		paasv1alpha2.LegacyProcResAnnoKey,
+	)
+	if config, ok := legacyProcResourcesConfig[name]; ok {
+		return r.fromRawString(config["cpu"], config["memory"]), nil
+	}
+	return result, errors.New("resources unconfigured")
+}
+
+// fromQuotaPlan try to get resource requirements by the name of quota plan
+func (r *procResourcesGetter) fromQuotaPlan(plan string) corev1.ResourceRequirements {
+	values, ok := planToResources[plan]
+	if !ok {
+		return r.GetDefault()
+	}
+	return r.fromRawString(values[0], values[1])
+}
+
+// fromRawString build the resource requirements from raw string
+func (r *procResourcesGetter) fromRawString(cpu, memory string) corev1.ResourceRequirements {
 	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
 	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
 
@@ -127,15 +219,45 @@ func buildContainerResources(cpu, memory string) corev1.ResourceRequirements {
 	}
 }
 
+// buildContainers 根据配置生产对应容器配置列表（目前设计单个 proc 只会有单个容器）
+//
+// - proc: 应用定义的进程对象
+// - envs: 环境变量列表
+// - image: 进程的镜像地址
+// - pullPolicy: 镜像拉取策略
+// - resRequirements: 容器资源限制
+func buildContainers(
+	proc paasv1alpha2.Process,
+	envs []corev1.EnvVar,
+	image string,
+	pullPolicy corev1.PullPolicy,
+	resRequirements corev1.ResourceRequirements,
+) []corev1.Container {
+	container := corev1.Container{
+		Name:            proc.Name,
+		Image:           image,
+		Resources:       resRequirements,
+		ImagePullPolicy: pullPolicy,
+		Env:             envs,
+		Command:         proc.Command,
+		Args:            proc.Args,
+	}
+	// TODO P3 理论上所有进程都需要对外提供服务（暴露端口？）
+	if proc.TargetPort != 0 {
+		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
+	}
+	return []corev1.Container{container}
+}
+
 // buildImagePullSecrets 返回拉取镜像的 Secrets 列表
-func buildImagePullSecrets(app *v1alpha1.BkApp) []corev1.LocalObjectReference {
-	if app.GetAnnotations()[v1alpha1.ImageCredentialsRefAnnoKey] == "" {
+func buildImagePullSecrets(app *paasv1alpha2.BkApp) []corev1.LocalObjectReference {
+	if app.GetAnnotations()[paasv1alpha2.ImageCredentialsRefAnnoKey] == "" {
 		return nil
 	}
 	// DefaultImagePullSecretName 由 workloads 服务负责创建
 	return []corev1.LocalObjectReference{
 		{
-			Name: v1alpha1.DefaultImagePullSecretName,
+			Name: paasv1alpha2.DefaultImagePullSecretName,
 		},
 	}
 }

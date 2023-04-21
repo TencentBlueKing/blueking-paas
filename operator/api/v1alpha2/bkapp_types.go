@@ -68,6 +68,10 @@ type BkAppList struct {
 	Items           []BkApp `json:"items"`
 }
 
+// LegacyProcConfig is a type alias for storing legacy process related config in annotations,
+// such as "image" and "resource" configs. Structure: {<procName>: {<configKey>: <configValue>}
+type LegacyProcConfig map[string]map[string]string
+
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
 	Build         BuildConfig `json:"build"`

@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -110,7 +109,7 @@ class Deployment(OperationVersionBase):
         )
 
     def update_fields(self, **u_fields):
-        logger.info('update_fields, deployment_id: {} , fields: {}'.format(self.id, json.dumps(u_fields)))
+        logger.info('update_fields, deployment_id: %s, fields: %s', self.id, u_fields)
         before_time = self.updated
         kind: Optional[str]
         status: Optional[JobStatus]
@@ -123,6 +122,7 @@ class Deployment(OperationVersionBase):
         else:
             kind = None
             status = None
+
         for key, value in u_fields.items():
             setattr(self, key, value)
         self.save()

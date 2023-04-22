@@ -22,7 +22,8 @@
               >{{ appInfo.name }}</strong>
               <div
                 v-if="platformFeature.REGION_DISPLAY"
-                :class="['overview-region region-tag', { inner: appInfo.region === 'ieod', clouds: appInfo.region === 'clouds' }]"
+                :class="['overview-region region-tag',
+                         { inner: appInfo.region === 'ieod', clouds: appInfo.region === 'clouds' }]"
               >
                 <span>{{ appInfo.region_name }}</span>
               </div>
@@ -34,141 +35,134 @@
               {{ appInfo.code }}
             </p>
           </div>
+
+          <div class="dropdown-btn" @click.stop="dropdownShow">
+            <a
+              href="javascript:"
+              class="overview-title-icon"
+            >
+              <i
+                class="paasng-icon right-icon paasng-angle-line-down"
+                :class="{ 'right-icon-up': isDropdownShow }"
+              />
+            </a>
+          </div>
         </template>
       </div>
 
-      <bk-dropdown-menu
-        ref="dropdown"
-        trigger="click"
-        @show="dropdownShow"
-        @hide="dropdownHide"
-        class="dropdown-menu-warp"
-      >
 
-        <div class="dropdown-btn" slot="dropdown-trigger">
-          <a
-            href="javascript:"
-            class="overview-title-icon"
+      <div
+        v-show="isDropdownShow"
+        @click.stop="dropOpen"
+        class="nav-dropdown overview-slidedown"
+      >
+        <div class="quick-access border-box">
+          <h3>
+            {{ $t('快速访问') }}
+            <span style="color: #c4c6cc; font-size: 12px;"> {{ $t('(主模块)') }} </span>
+          </h3>
+          <template v-if="appDeployed">
+            <div class="link">
+              <a
+                v-if="appLinks.stag"
+                :href="appLinks.stag"
+                target="_blank"
+                class="blue"
+              > {{ $t('预发布环境') }} </a>
+              <a
+                v-if="appLinks.prod"
+                :href="appLinks.prod"
+                target="_blank"
+                class="blue"
+              > {{ $t('生产环境') }} </a>
+            </div>
+          </template>
+          <template v-else>
+            <p class="no-data">
+              {{ engineAbled ? $t('应用暂未部署') : $t('暂无') }}
+            </p>
+          </template>
+          <div
+            v-if="showEntrances"
+            class="entrances-wrapper"
           >
-            <i
-              class="paasng-icon right-icon paasng-angle-line-down"
-              :class="{ 'right-icon-up': isDropdownShow }"
-            />
-          </a>
-        </div>
-        <div
-          slot="dropdown-content"
-          class="nav-dropdown overview-slidedown"
-        >
-          <div class="quick-access border-box">
-            <h3>
-              {{ $t('快速访问') }}
-              <span style="color: #c4c6cc; font-size: 12px;"> {{ $t('(主模块)') }} </span>
-            </h3>
-            <template v-if="appDeployed">
-              <div class="link">
-                <a
-                  v-if="appLinks.stag"
-                  :href="appLinks.stag"
-                  target="_blank"
-                  class="blue"
-                > {{ $t('预发布环境') }} </a>
-                <a
-                  v-if="appLinks.prod"
-                  :href="appLinks.prod"
-                  target="_blank"
-                  class="blue"
-                > {{ $t('生产环境') }} </a>
-              </div>
-            </template>
-            <template v-else>
-              <p class="no-data">
-                {{ engineAbled ? $t('应用暂未部署') : $t('暂无') }}
-              </p>
-            </template>
-            <div
-              v-if="showEntrances"
-              class="entrances-wrapper"
+            <section
+              v-for="(item, key, index) in customDomainEntrances"
+              v-if="customDomainEntrances[key].length"
+              :key="key"
+              :class="{ 'set-mt': index !== 0 }"
             >
-              <section
-                v-for="(item, key, index) in customDomainEntrances"
-                v-if="customDomainEntrances[key].length"
-                :key="key"
-                :class="{ 'set-mt': index !== 0 }"
-              >
-                <h3>
-                  {{ $t('独立域名') }}
-                  <span style="color: #c4c6cc; font-size: 12px;">({{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }})</span>
-                </h3>
-                <div class="entrances-adress">
-                  <p
-                    v-for="(url, urlIndex) in customDomainEntrances[key]"
-                    :key="urlIndex"
-                    :class="{ 'set-pb': urlIndex !== customDomainEntrances[key].length - 1 }"
-                  >
-                    <a
-                      v-bk-tooltips="{ content: url.hostname, placement: 'left', boundary: 'window' }"
-                      :href="url.address"
-                      target="_blank"
-                      class="address-link blue"
-                    >
-                      <span style="cursor: pointer;">{{ url.hostname }}</span>
-                    </a>
-                  </p>
-                </div>
-              </section>
-            </div>
-          </div>
-          <div class="app-dropdown">
-            <h3> {{ $t('应用列表') }} ( {{ appList.length }} )</h3>
-            <div :class="['paas-search',{ 'focus': isFocused }]">
-              <div class="application-search">
-                <input
-                  ref="keywordInput"
-                  v-model="filterKey"
-                  type="text"
-                  :placeholder="$t('输入应用名称、ID，按Enter搜索')"
-                  @focus="focusInput(true)"
-                  @blur="focusInput(false)"
-                  @keydown.down.prevent="searchAppKeyDown"
-                  @keydown.up.prevent="searchAppKeyUp"
-                  @keyup.enter="searchApp"
+              <h3>
+                {{ $t('独立域名') }}
+                <span style="color: #c4c6cc; font-size: 12px;">({{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }})</span>
+              </h3>
+              <div class="entrances-adress">
+                <p
+                  v-for="(url, urlIndex) in customDomainEntrances[key]"
+                  :key="urlIndex"
+                  :class="{ 'set-pb': urlIndex !== customDomainEntrances[key].length - 1 }"
                 >
-                <span
-                  v-if="filterKey === ''"
-                  class="paasng-icon paasng-search input-icon"
-                />
-                <span
-                  v-else
-                  class="paasng-icon paasng-close input-icon"
-                  @click="clearInputValue"
-                />
+                  <a
+                    v-bk-tooltips="{ content: url.hostname, placement: 'left', boundary: 'window' }"
+                    :href="url.address"
+                    target="_blank"
+                    class="address-link blue"
+                  >
+                    <span style="cursor: pointer;">{{ url.hostname }}</span>
+                  </a>
+                </p>
               </div>
-            </div>
-            <searchAppList
-              ref="searchAppList"
-              :filter-key="propsfilterKey"
-              :search-apps-router-name="'customed'"
-              :params="{ include_inactive: true }"
-              @selectAppCallback="selectAppCallback"
-              @search-ready="handlerSearchReady"
-            />
+            </section>
           </div>
         </div>
-      </bk-dropdown-menu>
+        <div class="app-dropdown">
+          <h3> {{ $t('应用列表') }} ( {{ appList.length }} )</h3>
+          <div :class="['paas-search',{ 'focus': isFocused }]">
+            <div class="application-search">
+              <input
+                ref="keywordInput"
+                v-model="filterKey"
+                type="text"
+                :placeholder="$t('输入应用名称、ID，按Enter搜索')"
+                @focus="focusInput(true)"
+                @blur="focusInput(false)"
+                @keydown.down.prevent="searchAppKeyDown"
+                @keydown.up.prevent="searchAppKeyUp"
+                @keyup.enter="searchApp"
+              >
+              <span
+                v-if="filterKey === ''"
+                class="paasng-icon paasng-search input-icon"
+              />
+              <span
+                v-else
+                class="paasng-icon paasng-close input-icon"
+                @click="clearInputValue"
+              />
+            </div>
+          </div>
+          <searchAppList
+            ref="searchAppList"
+            :filter-key="propsfilterKey"
+            :search-apps-router-name="'customed'"
+            :params="{ include_inactive: true }"
+            @selectAppCallback="selectAppCallback"
+            @search-ready="handlerSearchReady"
+          />
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
 
 <script>
-import Dropdown from '@/components/ui/Dropdown';
 import searchAppList from '@/components/searching/searchAppList';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { bus } from '@/common/bus';
 
 export default {
   components: {
-    dropdown: Dropdown,
     searchAppList,
   },
   mixins: [appBaseMixin],
@@ -301,6 +295,7 @@ export default {
     // 切换APP后的回调方法
     selectAppCallback() {
     //   this.$refs.dropdown.close();
+      this.isDropdownShow = false;
     },
     handlerClose() {
       this.filterKey = '';
@@ -351,10 +346,22 @@ export default {
 
 
     dropdownShow() {
-      this.isDropdownShow = true;
+      this.filterKey = '';
+      this.isDropdownShow = !this.isDropdownShow;
+
+      // 监听点击事件
+      if (this.isDropdownShow) {
+        document.getElementsByTagName('body')[0].className += ' drop-open';
+        document.getElementsByClassName('drop-open')[0].addEventListener('click', () => {
+          this.isDropdownShow = false;
+          document.getElementsByTagName('body')[0].className = 'ps-app-detail';
+        });
+      } else {
+        document.getElementsByTagName('body')[0].className = 'ps-app-detail';
+      }
     },
-    dropdownHide() {
-      this.isDropdownShow = false;
+    dropOpen() {
+      console.log('stop bubbling');
     },
   },
 };
@@ -451,7 +458,7 @@ export default {
     .overview-slidedown {
         position: absolute;
         width: 240px;
-        top: -1px;
+        top: 60px;
         background: #fff;
         z-index: 9;
         border: solid 1px #eaeeee;

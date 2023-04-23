@@ -103,7 +103,6 @@ class AppCommandExecutor:
                 self.stream.write_message(Style.Warning(f"{self.STEP_NAME} aborted."))
                 self.command.update_status(CommandStatus.INTERRUPTED, exit_code=e.exit_code)
             else:
-                logger.exception("%s execute failed", self.STEP_NAME)
                 self.stream.write_message(Style.Error(e.message))
                 self.command.update_status(CommandStatus.FAILED, exit_code=e.exit_code)
         except Exception:

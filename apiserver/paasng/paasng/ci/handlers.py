@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 from django.dispatch import receiver
 
+from paasng.accounts.models import Oauth2TokenHolder
 from paasng.ci.base import BkUserOAuth
 from paasng.ci.constants import CIBackend
 from paasng.ci.exceptions import NotSupportedRepoType
@@ -66,6 +67,9 @@ def start_ci_job(sender: 'ApplicationEnvironment', deployment: 'Deployment', **k
         mgr.start()
     except NotSupportedRepoType as e:
         logger.info("source type<%s> is not support, ci skipping", e.source_type)
+        return
+    except Oauth2TokenHolder.DoesNotExist:
+        logger.info(f'AppEnv<{sender}> failed to execute ci job: Oauth2TokenHolder does not exist')
         return
     except Exception:
         logger.exception("failed to execute ci job")

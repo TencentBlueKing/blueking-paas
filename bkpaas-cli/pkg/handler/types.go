@@ -25,8 +25,8 @@ const ShortRevisionLength = 8
 
 // Deployer 部署器接口
 type Deployer interface {
-	// Exec 下发部署命令
-	Exec(opts model.DeployOptions) (map[string]any, error)
+	// Deploy 下发部署命令
+	Deploy(opts model.DeployOptions) (map[string]any, error)
 	// GetResult 获取应用部署结果
 	GetResult(opts model.DeployOptions) (model.DeployResult, error)
 	// GetHistory 获取应用部署历史

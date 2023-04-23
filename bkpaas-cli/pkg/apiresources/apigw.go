@@ -20,7 +20,6 @@ package apiresources
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/levigross/grequests"
 	"github.com/pkg/errors"
@@ -41,7 +40,7 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 	}
 	resp, err := grequests.Get(config.G.CheckTokenUrl, &ro)
 
-	if resp.StatusCode != http.StatusOK || err != nil {
+	if !resp.Ok || err != nil {
 		return nil, AuthApiErr
 	}
 
@@ -129,8 +128,7 @@ func (r apigwRequester) handlePaaSApiRequest(
 		return nil, PaaSApiErr
 	}
 
-	// PaaS 平台 API 可能正常返回 200，201，204 等值，这里需要以范围判断（200 <= x < 300）
-	if !(http.StatusOK <= resp.StatusCode && resp.StatusCode < http.StatusMultipleChoices) {
+	if !resp.Ok {
 		return nil, errors.Errorf("%d -> %s", resp.StatusCode, resp.String())
 	}
 

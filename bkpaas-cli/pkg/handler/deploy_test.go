@@ -43,8 +43,8 @@ var _ = Describe("TestDefaultAppDeployer", func() {
 		apiresources.DefaultRequester = &apiresources.MockedRequester{}
 	})
 
-	It("TestExec", func() {
-		_, err := deployer.Exec(deployOpts)
+	It("TestDeploy", func() {
+		_, err := deployer.Deploy(deployOpts)
 		Expect(err).To(BeNil())
 	})
 
@@ -97,7 +97,7 @@ var _ = Describe("TestCNativeAppDeployer", func() {
 	})
 
 	It("TestExec", func() {
-		_, err := deployer.Exec(deployOpts)
+		_, err := deployer.Deploy(deployOpts)
 		Expect(err).To(BeNil())
 	})
 

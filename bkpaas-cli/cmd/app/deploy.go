@@ -57,7 +57,7 @@ func NewCmdDeploy() *cobra.Command {
 			// TODO 添加超时机制?
 			// TODO 轮询体验优化，比如支持滚动更新日志？
 			for {
-				fmt.Println("Waiting for deploy finish...")
+				fmt.Println("Waiting for deploy finished...")
 				time.Sleep(5 * time.Second)
 
 				result, err := getDeployResult(appCode, appModule, appEnv)
@@ -125,5 +125,5 @@ func deployApp(appCode, appModule, appEnv, branch, filePath string) (map[string]
 		return nil, err
 	}
 
-	return deployer.Exec(opts)
+	return deployer.Deploy(opts)
 }

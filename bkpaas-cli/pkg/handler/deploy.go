@@ -46,8 +46,8 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 // DefaultAppDeployer 普通应用部署器
 type DefaultAppDeployer struct{}
 
-// Exec 执行部署操作
-func (d DefaultAppDeployer) Exec(opts model.DeployOptions) (map[string]any, error) {
+// Deploy 执行部署操作
+func (d DefaultAppDeployer) Deploy(opts model.DeployOptions) (map[string]any, error) {
 	return apiresources.DefaultRequester.DeployDefaultApp(
 		opts.AppCode, opts.Module, opts.DeployEnv, opts.Branch,
 	)
@@ -133,8 +133,8 @@ var _ Deployer = DefaultAppDeployer{}
 // CNativeAppDeployer 云原生应用部署器
 type CNativeAppDeployer struct{}
 
-// Exec 执行部署操作
-func (d CNativeAppDeployer) Exec(opts model.DeployOptions) (map[string]any, error) {
+// Deploy 执行部署操作
+func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) (map[string]any, error) {
 	return apiresources.DefaultRequester.DeployCNativeApp(
 		opts.AppCode, opts.Module, opts.DeployEnv, opts.BkAppManifest,
 	)

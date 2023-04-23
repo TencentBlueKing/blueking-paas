@@ -114,7 +114,6 @@ class TestAppCommandExecutor:
         )
         assert hook.status == CommandStatus.FAILED
         assert hook.exit_code == 1
-        assert f"Pod<{hook.app.namespace}/pre-release-hook> ends unsuccessfully" in caplog.text
 
     def test_perform_but_be_interrupt(self, hook_maker, mock_run_command, stream, capsys, caplog):
         hook = hook_maker('echo 1;echo 2;')

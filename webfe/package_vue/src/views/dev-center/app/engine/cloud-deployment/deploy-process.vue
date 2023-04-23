@@ -570,7 +570,7 @@
                 if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
                     this.$paasMessage({
                         theme: 'error',
-                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字符开头')
+                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
                     });
                     setTimeout(() => {
                         this.isBlur = true;

@@ -58,19 +58,19 @@ class TestGeneration:
     def test_v1_pod_name(self, v1_mapper, process):
         assert (
             v1_mapper.pod(process=process).name == f"{process.app.region}-{process.app.scheduler_safe_name}-"
-            f"{process.name}-{get_command_name(process.runtime.proc_command)}-deployment"
+            f"{process.type}-{get_command_name(process.runtime.proc_command)}-deployment"
         )
 
         assert (
             v1_mapper.deployment(process=process).name == f"{process.app.region}-{process.app.scheduler_safe_name}-"
-            f"{process.name}-{get_command_name(process.runtime.proc_command)}-deployment"
+            f"{process.type}-{get_command_name(process.runtime.proc_command)}-deployment"
         )
 
     def test_preset_process_client(self, wl_app, process, client, v1_mapper):
         assert (
             v1_mapper.pod(process=process, client=client).name
             == f"{process.app.region}-{process.app.scheduler_safe_name}-"
-            f"{process.name}-{get_command_name(process.runtime.proc_command)}-deployment"
+            f"{process.type}-{get_command_name(process.runtime.proc_command)}-deployment"
         )
 
     def test_v1_get(self, wl_app, process, client, v1_mapper):
@@ -106,5 +106,5 @@ class TestGeneration:
             assert kwargs['namespace'] == mapper.namespace
 
     def test_v2_name(self, process, v2_mapper):
-        assert v2_mapper.pod(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.name}"
-        assert v2_mapper.deployment(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.name}"
+        assert v2_mapper.pod(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"
+        assert v2_mapper.deployment(process=process).name == f"{process.app.name.replace('_', '0us0')}--{process.type}"

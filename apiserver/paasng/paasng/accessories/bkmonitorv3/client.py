@@ -86,7 +86,7 @@ class BkMonitorClient:
             raise BkMonitorGatewayServiceError('Failed to update app space on BK Monitor') from e
 
         if not resp.get('result'):
-            logger.exception(f'Failed to update app space on BK Monitor, resp:{resp} \ndata: {data}')
+            logger.info(f'Failed to update app space on BK Monitor, resp:{resp} \ndata: {data}')
             raise BkMonitorApiError(resp['message'])
 
         return resp.get('data', {}).get('space_uid')
@@ -118,7 +118,7 @@ class BkMonitorClient:
         # 目前监控的API返回值只有 true 和 false，没有更详细的错误码来确定是否空间已经存在
         # 监控侧暂时也没有规划添加错误码来标识空间是否已经存在
         if not resp.get('result'):
-            logger.exception(f'Failed to get app({app_code}) space detail on BK Monitor, resp:{resp}')
+            logger.info(f'Failed to get app({app_code}) space detail on BK Monitor, resp:{resp}')
             raise BkMonitorSpaceDoesNotExist(resp['message'])
 
         return resp.get('data', {}).get('space_uid')

@@ -117,7 +117,8 @@
                           {{ $t('部署') }}
                         </bk-button>
                       </div>
-                      <template v-if="!isCloudApp">
+                      <!-- FeatureFlag 控制 -->
+                      <template v-if="userFeature.ANALYTICS && !isCloudApp">
                         <!-- 折线图内容 部署了才展示内容-->
                         <div
                           v-if="data.is_deployed"
@@ -504,12 +505,20 @@
             },
             isCloudApp () {
                 return this.curAppInfo.application.type === 'cloud_native';
+            },
+            userFeature () {
+                return this.$store.state.userFeature;
             }
         },
         watch: {
-            '$route' () {
-                this.init();
-                this.initTopText();
+            '$route': {
+                deep: true,
+                handler () {
+                    this.$nextTick(() => {
+                        this.init();
+                    });
+                    this.initTopText();
+                }
             },
             dateRange: {
                 deep: true,
@@ -548,7 +557,6 @@
             moment.locale(this.localLanguage);
         },
         mounted () {
-            this.init();
             this.initDate();
             this.initTopText();
         },
@@ -567,7 +575,7 @@
                     this.trunkUrl = this.curAppModule.repo.trunk_url || '';
                     this.sourceType = this.curAppModule.repo.source_type || '';
                 }
-                if (!this.isCloudApp) {
+                if (this.userFeature.PHALANX && !this.isCloudApp) {
                     this.getAlarmData();
                 }
             },

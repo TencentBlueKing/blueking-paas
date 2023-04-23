@@ -24,9 +24,9 @@ from kubernetes.dynamic import ResourceInstance
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.generation import get_mapper_version
 from paas_wl.resources.kube_res.base import GVKConfig
-from paas_wl.workloads.autoscaling.constants import ScalingMetricName, ScalingMetricSourceType, ScalingMetricTargetType
+from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.entities import ProcAutoscaling
-from paas_wl.workloads.autoscaling.models import AutoscalingConfig, ScalingMetric, ScalingObjectRef
+from paas_wl.workloads.autoscaling.models import AutoscalingConfig, MetricSpec, ScalingObjectRef
 from paas_wl.workloads.autoscaling.serializers import ProcAutoscalingDeserializer, ProcAutoscalingSerializer
 from paas_wl.workloads.processes.models import Process
 
@@ -52,6 +52,7 @@ def gpa_manifest() -> Dict[str, Any]:
             'name': 'web',
             'annotations': {
                 'bkapp.paas.bk.tencent.com/process-name': 'web',
+                'compute-by-limits': 'true',
             },
         },
         'spec': {
@@ -97,23 +98,20 @@ def scaling(wl_app) -> ProcAutoscaling:
             min_replicas=2,
             max_replicas=5,
             metrics=[
-                ScalingMetric(
+                MetricSpec(
                     type=ScalingMetricSourceType.RESOURCE,
-                    name=ScalingMetricName.CPU,
-                    target_type=ScalingMetricTargetType.AVERAGE_VALUE,
-                    target_value="1000m",
+                    metric=ScalingMetric.CPU_AVERAGE_VALUE,
+                    value="1000m",
                 ),
-                ScalingMetric(
+                MetricSpec(
                     type=ScalingMetricSourceType.RESOURCE,
-                    name=ScalingMetricName.MEMORY,
-                    target_type=ScalingMetricTargetType.UTILIZATION,
-                    target_value="80",
+                    metric=ScalingMetric.MEMORY_UTILIZATION,
+                    value="80",
                 ),
-                ScalingMetric(
+                MetricSpec(
                     type=ScalingMetricSourceType.RESOURCE,
-                    name=ScalingMetricName.MEMORY,
-                    target_type=ScalingMetricTargetType.AVERAGE_VALUE,
-                    target_value="256Mi",
+                    metric=ScalingMetric.MEMORY_AVERAGE_VALUE,
+                    value="256Mi",
                 ),
             ],
         ),
@@ -129,10 +127,10 @@ def test_ProcAutoscalingSerializer(wl_app, wl_release, gpa_gvk_config, gpa_manif
     process = Process.from_release(type_="web", release=wl_release)
 
     serializer = ProcAutoscalingSerializer(ProcAutoscaling, gpa_gvk_config)
-    assert serializer.get_res_name(scaling) == process.name
+    assert scaling.name == process.type
 
     excepted = gpa_manifest
-    excepted['metadata']['name'] = process.name
+    excepted['metadata']['name'] = process.type
     excepted['metadata']['namespace'] = wl_app.namespace
     assert serializer.serialize(scaling, mapper_version=get_mapper_version(target="v2")) == excepted
 

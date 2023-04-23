@@ -12,10 +12,10 @@
       >
         <label
           class="label"
-          :title="item.name"
-        >{{ item.name }}</label>
+          :title="$t(item.name)"
+        >{{ $t(item.name) }}</label>
         <section class="value">
-          {{ item.value }}
+          {{ $t(item.value) }}
         </section>
       </section>
     </section>

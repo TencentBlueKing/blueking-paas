@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="establish">
+  <div
+    v-en-class="'en-label'"
+    class="establish"
+  >
     <div class="ps-tip-block default-info mt15">
       <i
         style="color: #3A84FF;"
@@ -39,12 +42,13 @@
                 name="code"
                 data-parsley-required="true"
                 :data-parsley-required-message="$t('该字段是必填项')"
+                data-parsley-minlength="3"
                 data-parsley-maxlength="16"
                 :data-parsley-pattern="isLessCodeRule ? '[a-z]+' : '[a-z][a-z0-9-]+'"
-                :data-parsley-pattern-message="isLessCodeRule ? $t('格式不正确，由小写字母组成，长度小于 16 个字符') : $t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
+                :data-parsley-pattern-message="isLessCodeRule ? $t('格式不正确，由小写字母组成，长度小于 16 个字符') : $t('格式不正确，只能包含：3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
                 data-parsley-trigger="input blur"
                 class="ps-form-control"
-                :placeholder="isLessCodeRule ? $t('由小写字母组成，长度小于 16 个字符') : $t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')"
+                :placeholder="isLessCodeRule ? $t('由小写字母组成，长度小于 16 个字符') : $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               >
             </p>
             <p class="whole-item-tips">
@@ -440,7 +444,7 @@
 
       <div
         v-if="isShowAdvancedOptions"
-        class="create-item"
+        class="create-item flex-end"
         data-test-id="createDefault_item_appSelect"
       >
         <div class="item-title">
@@ -1335,25 +1339,24 @@
 #choose-cluster {
     .bk-select {
         width: 520px;
-        height: 42px;
         .bk-select-name {
-            height: 40px;
+            height: 32px;
         }
 
         .bk-select-angle {
-            top: 10px;
+            top: 4px;
         }
 
         .bk-select-loading {
-            top: 10px;
+            top: 4px;
         }
 
         &.is-unselected:before {
-            line-height: 40px;
+            line-height: 32px;
         }
 
         .bk-select-name {
-            line-height: 40px;
+            line-height: 32px;
         }
     }
 }
@@ -1485,14 +1488,14 @@
 }
 
 .template-wrapper {
-  .form-label {
-      line-height: 32px !important;
-  }
   .bk-less-code {
       font-size: 14px;
       color: #313238;
       line-height: 32px;
   }
+}
+.tab-box {
+    align-items: center;
 }
 
 </style>

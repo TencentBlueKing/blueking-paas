@@ -16,22 +16,28 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-import copy from './copy';
-import charts from './charts';
-import dashed from './dashed';
-import enClass from './en-class';
-
-const directives = {
-  copy,
-  charts,
-  dashed,
-  enClass
-};
+import cookie from 'cookie';
 
 export default {
-  install (Vue) {
-    Object.keys(directives).forEach((key) => {
-      Vue.directive(key, directives[key]);
-    });
+  bind (el, binding) {
+    if ((typeof binding.value === 'string' && el && el.classList.contains(binding.value)) || cookie.parse(document.cookie).blueking_language !== 'en') {
+      return;
+    }
+    if (typeof binding.value === 'string') {
+      binding.value && el.classList.add(binding.value);
+      return;
+    }
+    let options = { class: '', styles: {} };
+    options = { ...options, ...binding.value };
+    options.class && el.classList.add(options.class);
+    let cssText = '';
+    if (typeof options.styles === 'string') {
+      cssText += options.styles;
+    } else {
+      Object.keys(options.styles).forEach((key) => {
+        cssText += `${key}: ${options.styles[key]};`;
+      });
+    }
+    el.style.cssText += cssText;
   }
 };

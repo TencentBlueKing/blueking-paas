@@ -29,7 +29,7 @@ from paas_wl.platform.applications.constants import WlAppType
 from paas_wl.platform.applications.models import Release, WlApp
 from paas_wl.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
-from paas_wl.workloads.processes.constants import PROCESS_NAME_KEY
+from paas_wl.workloads.processes.constants import PROCESS_MAPPER_VERSION_KEY, PROCESS_NAME_KEY
 from paas_wl.workloads.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
 from paas_wl.workloads.resource_templates.utils import AddonManager
 
@@ -233,16 +233,7 @@ class InstanceDeserializer(AppEntityDeserializer['Instance']):
 class ProcessSerializer(AppEntitySerializer['Process']):
     """Serializer for process"""
 
-    def get_res_name(self, obj: 'Process', **kwargs) -> str:
-        """Get deployment name"""
-        mapper_version: Optional['MapperPack'] = kwargs.get("mapper_version")
-        if mapper_version is None:
-            raise ValueError("mapper_version is required")
-
-        return mapper_version.deployment(process=obj).name
-
     def serialize(self, obj: 'Process', original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
-
         mapper_version: Optional['MapperPack'] = kwargs.get("mapper_version")
         if mapper_version is None:
             raise ValueError("mapper_version is required")
@@ -250,7 +241,8 @@ class ProcessSerializer(AppEntitySerializer['Process']):
         deployment_body: Dict[str, Any] = {
             'metadata': {
                 'labels': mapper_version.deployment(process=obj).labels,
-                'name': mapper_version.deployment(process=obj).name,
+                'name': obj.name,
+                'annotations': {PROCESS_MAPPER_VERSION_KEY: mapper_version.version},
             },
             'spec': {
                 'revisionHistoryLimit': settings.MAX_RS_RETAIN,
@@ -269,7 +261,7 @@ class ProcessSerializer(AppEntitySerializer['Process']):
                     'spec': self._construct_pod_body_specs(obj),
                     'metadata': {
                         'labels': mapper_version.pod(process=obj).labels,
-                        'name': mapper_version.deployment(process=obj).name,
+                        'name': mapper_version.pod(process=obj).name,
                     },
                 },
                 'replicas': obj.replicas,
@@ -300,8 +292,8 @@ class ProcessSerializer(AppEntitySerializer['Process']):
             'volumeMounts': cattr.unstructure(
                 get_app_logging_volume_mounts(process.app) + addon_mgr.get_volume_mounts()
             ),
-            # TODO: 重构「主入口」时需要改这里, 不再用 process.name 作为判断条件
-            'readinessProbe': None if process.name != "web" else cattr.unstructure(addon_mgr.get_readiness_probe()),
+            # TODO: 重构「主入口」时需要改这里, 不再用 process.type 作为判断条件
+            'readinessProbe': None if process.type != "web" else cattr.unstructure(addon_mgr.get_readiness_probe()),
         }
 
         return {

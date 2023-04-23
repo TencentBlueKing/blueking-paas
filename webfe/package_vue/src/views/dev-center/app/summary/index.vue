@@ -1,6 +1,9 @@
 <template lang="html">
   <!-- 普通应用 -->
-  <default-overview v-if="isEngineless" />
+  <default-overview
+    v-if="isEngineless"
+    ref="defaultApp"
+  />
   <!-- 外链应用 -->
   <engineless-overview v-else />
 </template>
@@ -19,6 +22,11 @@
             },
             isEngineless () {
                 return this.curAppInfo.web_config.engine_enabled;
+            }
+        },
+        mounted () {
+            if (this.isEngineless) {
+                this.$refs.defaultApp.init();
             }
         }
     };

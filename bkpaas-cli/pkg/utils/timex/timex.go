@@ -32,7 +32,7 @@ const TimeLayout = "2006-01-02 15:04:05"
 // CalcDuration 计算 起始 至 终止时间 间时间间隔（带单位），例：
 // 1. start: '2021-04-01 12:35:30' end: '2021-04-03 14:00:00' => '2d1h'
 // 2. start: '2021-04-01 12:35:30' end: '2021-04-01 12:59:59' => '24m29s'
-// 3. start: '2021-04-01 12:35:30' end: '2021-04-01 12:35:30' => '< 1s'
+// 3. start: '2021-04-01 12:35:30' end: '2021-04-01 12:35:30' => '0s'
 func CalcDuration(start string, end string) string {
 	startTime, _ := dateparse.ParseStrict(start)
 	endTime := time.Now()
@@ -40,7 +40,7 @@ func CalcDuration(start string, end string) string {
 		endTime, _ = dateparse.ParseStrict(end)
 	}
 	if startTime.Equal(endTime) {
-		return "< 1s"
+		return "0s"
 	}
 	timeDuration := endTime.Sub(startTime)
 	// 将时间间隔解析成字符串，最大单位为 d（days），保留两位有效信息

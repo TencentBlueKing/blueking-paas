@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 // log is for logging in this package.
@@ -72,6 +73,20 @@ func (r *BkApp) Default() {
 		}
 		if proc.ImagePullPolicy == "" {
 			proc.ImagePullPolicy = corev1.PullIfNotPresent
+		}
+		if proc.Autoscaling != nil && proc.Autoscaling.Enabled {
+			// 若没有配置最小副本数，则设置为 1
+			if proc.Autoscaling.MinReplicas == 0 {
+				proc.Autoscaling.MinReplicas = 1
+			}
+			// 若没有配置最大副本数，则使用预设上限
+			if proc.Autoscaling.MaxReplicas == 0 {
+				proc.Autoscaling.MaxReplicas = projConf.ResLimitConfig.MaxReplicas
+			}
+			// 如果没有配置策略，使用默认值
+			if proc.Autoscaling.Policy == nil || *proc.Autoscaling.Policy == "" {
+				proc.Autoscaling.Policy = lo.ToPtr(ScalingPolicyDefault)
+			}
 		}
 		return proc
 	})
@@ -205,7 +220,49 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	}
 	// 4. 进程镜像不可为空
 	if proc.Image == "" {
-		return field.Invalid(pField.Child("image"), proc.Image, "proc image is required")
+		return field.Invalid(pField.Child("image"), proc.Image, "process image is required")
+	}
+	// 5. 如果启用扩缩容，需要符合规范
+	if proc.Autoscaling != nil && proc.Autoscaling.Enabled {
+		// 目前不支持缩容到 0
+		if proc.Autoscaling.MinReplicas <= 0 {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("minReplicas"),
+				proc.Autoscaling.MinReplicas,
+				"minReplicas must be greater than 0",
+			)
+		}
+		// 扩缩容最大副本数不可超过上限
+		if proc.Autoscaling.MaxReplicas > projConf.ResLimitConfig.MaxReplicas {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("maxReplicas"),
+				proc.Autoscaling.MaxReplicas,
+				fmt.Sprintf("at most support %d replicas", projConf.ResLimitConfig.MaxReplicas),
+			)
+		}
+		// 最大副本数需大于等于最小副本数
+		if proc.Autoscaling.MinReplicas > proc.Autoscaling.MaxReplicas {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("maxReplicas"),
+				proc.Autoscaling.MaxReplicas,
+				"maxReplicas must be greater than or equal to minReplicas",
+			)
+		}
+		// 目前必须配置扩缩容策略
+		if proc.Autoscaling.Policy == nil || *proc.Autoscaling.Policy == "" {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("policy"),
+				proc.Autoscaling.Policy,
+				"autoscaling policy is required",
+			)
+		}
+		// 配置的扩缩容策略必须是受支持的
+		if !lo.Contains(AllowedScalingPolicies, *proc.Autoscaling.Policy) {
+			return field.NotSupported(
+				pField.Child("autoscaling").Child("policy"),
+				*proc.Autoscaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
+			)
+		}
 	}
 	return nil
 }

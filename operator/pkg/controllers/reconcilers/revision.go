@@ -70,7 +70,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 		ctx,
 		&allDeploys,
 		client.InNamespace(bkapp.Namespace),
-		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
+		client.MatchingFields{v1alpha1.KubeResOwnerKey: bkapp.Name},
 	)
 	if err != nil {
 		return r.Result.withError(err)

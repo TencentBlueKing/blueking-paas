@@ -286,6 +286,25 @@ content_patch_conf = {
             '{{ include "bkpaas-app-operator.fullname" . }}-webhook-service',
             'bkpaas-app-operator-webhook-service'
         )
+    ],
+    # 为 Helm Charts 中的 CRD 统一添加删除保护注解
+    'bkapp-crd.yaml': [
+        (
+            'controller-gen.kubebuilder.io/version: v0.9.0',
+            'controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep'
+        )
+    ],
+    'domaingroupmapping-crd.yaml': [
+        (
+            'controller-gen.kubebuilder.io/version: v0.9.0',
+            'controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep'
+        )
+    ],
+    'projectconfig-crd.yaml': [
+        (
+            'controller-gen.kubebuilder.io/version: v0.9.0',
+            'controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep'
+        )
     ]
 }
 

@@ -34,7 +34,7 @@ import (
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
-	"bk.tencent.com/paas-app-operator/pkg/utils/basic"
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 var _ = Describe("", func() {
@@ -49,7 +49,7 @@ var _ = Describe("", func() {
 
 	BeforeEach(func() {
 		// Use a random name for every test case
-		nameSuffix := strings.ToLower(basic.RandStr(6))
+		nameSuffix := strings.ToLower(stringx.Rand(6))
 		bkapp = &paasv1alpha1.BkApp{
 			TypeMeta: metav1.TypeMeta{Kind: v1alpha1.KindBkApp, APIVersion: v1alpha1.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{

@@ -86,7 +86,7 @@ func (r *DeploymentReconciler) getCurrentState(
 	deployList := appsv1.DeploymentList{}
 	if err = r.Client.List(
 		ctx, &deployList, client.InNamespace(bkapp.Namespace),
-		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
+		client.MatchingFields{v1alpha1.KubeResOwnerKey: bkapp.Name},
 	); err != nil {
 		return nil, errors.Wrap(err, "failed to list app's deployments")
 	}

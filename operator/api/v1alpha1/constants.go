@@ -83,11 +83,17 @@ const (
 )
 
 const (
+	// GPAComputeByLimitsAnnoKey 在为 GPA 添加注解 compute-by-limits=true 后，
+	// 在计算 Utilization 时将根据当前使用量 & limits 来计算目标副本数，否则使用 requests 来计算
+	GPAComputeByLimitsAnnoKey = "compute-by-limits"
+)
+
+const (
 	// DefaultRequeueAfter 调和循环默认的间隔
 	DefaultRequeueAfter = time.Second * 3
 
-	// WorkloadOwnerKey 是 kubebuilder cache 用来存储 OwnerReference 主从关联关系的索引键
-	WorkloadOwnerKey = ".metadata.controller"
+	// KubeResOwnerKey 是 kubebuilder cache 用来存储 OwnerReference 主从关联关系的索引键
+	KubeResOwnerKey = ".metadata.controller"
 
 	// BkAppFinalizerName BkApp 的 finalizer 标记
 	BkAppFinalizerName = "bkapp.paas.bk.tencent.com/finalizer"
@@ -116,3 +122,6 @@ const (
 
 // AllowedSourceTypes 允许使用的 SourceType
 var AllowedSourceTypes = []string{SourceTypeSubDomain, SourceTypeSubPath, SourceTypeCustom}
+
+// AllowedScalingPolicies 允许使用的扩缩容策略
+var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}

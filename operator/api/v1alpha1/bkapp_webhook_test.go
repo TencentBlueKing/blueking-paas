@@ -21,6 +21,7 @@ package v1alpha1
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -172,6 +173,55 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Spec.Processes[0].CPU = "1C"
 			err = bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("must match the regular"))
+		})
+	})
+
+	Context("Test process autoscaling", func() {
+		It("Invalid minReplicas", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
+				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: lo.ToPtr(ScalingPolicyDefault),
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("minReplicas must be greater than 0"))
+		})
+
+		It("Invalid maxReplicas", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: lo.ToPtr(ScalingPolicyDefault),
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("at most support 5 replicas"))
+		})
+
+		It("maxReplicas < minReplicas", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
+				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: lo.ToPtr(ScalingPolicyDefault),
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("maxReplicas must be greater than or equal to minReplicas"))
+		})
+
+		It("policy required", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: nil,
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("autoscaling policy is required"))
+		})
+
+		It("policy must supported", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: lo.ToPtr[ScalingPolicy]("fake"),
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
+
+		It("disable autoscaling cause skip validate", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
+				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: lo.ToPtr[ScalingPolicy]("fake"),
+			}
+			Expect(bkapp.ValidateCreate()).To(BeNil())
 		})
 	})
 

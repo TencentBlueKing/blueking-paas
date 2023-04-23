@@ -37,6 +37,8 @@ import (
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
+
+	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 // NewBkAppReconciler will return a BkAppReconciler with given k8s client and scheme
@@ -112,6 +114,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		reconcilers.NewHookReconciler(r.client),
 		reconcilers.NewDeploymentReconciler(r.client),
 		reconcilers.NewServiceReconciler(r.client),
+		reconcilers.NewAutoscalingReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue
@@ -126,12 +129,19 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opts controller.Options) error {
-	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
+	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, v1alpha1.KubeResOwnerKey, getOwnerNames)
 	if err != nil {
 		return err
 	}
 
-	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
+	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, v1alpha1.KubeResOwnerKey, getOwnerNames)
+	if err != nil {
+		return err
+	}
+
+	err = mgr.GetFieldIndexer().IndexField(
+		ctx, &autoscaling.GeneralPodAutoscaler{}, v1alpha1.KubeResOwnerKey, getOwnerNames,
+	)
 	if err != nil {
 		return err
 	}
@@ -141,6 +151,7 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Pod{}).
+		Owns(&autoscaling.GeneralPodAutoscaler{}).
 		Complete(r)
 }
 

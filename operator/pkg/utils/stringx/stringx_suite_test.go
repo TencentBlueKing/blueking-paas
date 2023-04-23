@@ -16,19 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package basic
+package stringx
 
 import (
-	"math/rand"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-var letters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-// RandStr generates a random string with given length
-func RandStr(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
+func TestStringx(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "utils/stringx Suite")
 }

@@ -26,7 +26,7 @@ import (
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 )
 
-var _ = Describe("Test kubestatus/podutils", func() {
+var _ = Describe("Test kubestatus/pod", func() {
 	DescribeTable(
 		"test CheckPodHealthStatus",
 		func(pod *corev1.Pod, phase paasv1alpha1.HealthPhase, reason, message string) {

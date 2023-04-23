@@ -144,6 +144,37 @@ spec:
                       items:
                         type: string
                       type: array
+                    autoscaling:
+                      description: Autoscaling specifies the autoscaling configuration
+                      properties:
+                        enabled:
+                          description: Enabled indicates whether autoscaling is enabled
+                          type: boolean
+                        maxReplicas:
+                          description: maxReplicas is the upper limit for the number
+                            of replicas to which the autoscaler can scale up. It cannot
+                            be less that minReplicas.
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          description: minReplicas is the lower limit for the number
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
+                          format: int32
+                          type: integer
+                        policy:
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
+                          type: string
+                      required:
+                      - enabled
+                      - maxReplicas
+                      - minReplicas
+                      type: object
                     command:
                       description: Entrypoint array. Not executed within a shell.
                       items:

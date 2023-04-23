@@ -16,16 +16,42 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action_test
+package app
 
 import (
-	"testing"
+	"fmt"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 )
 
-func TestEnvx(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "pkg/action Suite")
+// NewCmdGetInfo returns a Command instance for 'app get-info' sub command
+func NewCmdGetInfo() *cobra.Command {
+	var appCode string
+
+	cmd := cobra.Command{
+		Use:   "get-info",
+		Short: "Get PaaS application info",
+		Run: func(cmd *cobra.Command, args []string) {
+			displayAppInfo(appCode)
+		},
+	}
+
+	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
+	_ = cmd.MarkFlagRequired("code")
+
+	return &cmd
+}
+
+// 在命令行中展示指定的蓝鲸应用信息
+func displayAppInfo(appCode string) {
+	retriever := handler.NewBasicInfoRetriever()
+	appInfo, err := retriever.Exec(appCode)
+	if err != nil {
+		color.Red("Failed to get application info")
+		return
+	}
+	fmt.Println(appInfo)
 }

@@ -570,7 +570,7 @@
                 if (this.itemValue !== 'name' && panelName.includes(this.itemValue)) {
                     this.$paasMessage({
                         theme: 'error',
-                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
+                        message: this.$t('不允许添加同名进程')
                     });
                     setTimeout(() => {
                         this.isBlur = true;
@@ -580,7 +580,7 @@
                 } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
                     this.$paasMessage({
                         theme: 'error',
-                        message: this.$t('不允许添加包含特殊符进程')
+                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
                     });
                     setTimeout(() => {
                         this.isBlur = true;

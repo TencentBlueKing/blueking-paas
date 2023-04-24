@@ -20,10 +20,12 @@ package login
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/howeyc/gopass"
+	"github.com/levigross/grequests"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
@@ -33,16 +35,76 @@ import (
 
 // NewCmd create login command
 func NewCmd() *cobra.Command {
-	return &cobra.Command{
+	var accessToken, bkTicket, bkToken string
+
+	cmd := cobra.Command{
 		Use:   "login",
 		Short: "Login as user",
 		Run: func(cmd *cobra.Command, args []string) {
+			if accessToken != "" {
+				loginByAccessToken(accessToken)
+				return
+			}
+			if bkTicket != "" {
+				loginByBkTicket(bkTicket)
+				return
+			}
+			if bkToken != "" {
+				loginByBkToken(bkToken)
+				return
+			}
 			userLogin()
 		},
 	}
+
+	cmd.Flags().StringVar(&accessToken, "accessToken", "", "BlueKing AccessToken")
+	cmd.Flags().StringVar(&bkTicket, "bkTicket", "", "BlueKing User Ticket")
+	cmd.Flags().StringVar(&bkToken, "bkToken", "", "BlueKing User Token")
+	return &cmd
 }
 
-// 用户登录
+// 通过提供 AccessToken 进行登录
+func loginByAccessToken(accessToken string) {
+	fmt.Printf("User login... ")
+	username, err := account.FetchUserNameByAccessToken(accessToken)
+	if err != nil {
+		color.Red("Fail!")
+		color.Red(err.Error())
+		return
+	}
+	color.Green("Success!")
+
+	// update global config and dump to file
+	config.G.Username = username
+	config.G.AccessToken = accessToken
+	if err = config.DumpConf(config.ConfigFilePath); err != nil {
+		color.Red("Failed to dump config, error: " + err.Error())
+	}
+}
+
+// 通过提供 bkTicket 进行登录
+func loginByBkTicket(bkTicket string) {
+	resp, err := grequests.Get(account.GetOAuthTokenUrl(), &grequests.RequestOptions{
+		Cookies: []*http.Cookie{{Name: "bk_ticket", Value: bkTicket}},
+	})
+	if !resp.Ok || err != nil {
+		color.Red("Failed to get accessToken by bkTicket")
+		return
+	}
+	respData := map[string]any{}
+	if err = resp.JSON(&respData); err != nil {
+		color.Red("Failed to parse oauth api response, error: " + err.Error())
+		return
+	}
+	loginByAccessToken(respData["access_token"].(string))
+}
+
+// 通过提供 bkToken 进行登录
+func loginByBkToken(bkToken string) {
+	color.Red("login by bk_token currently unsupported...")
+}
+
+// 交互式用户登录
 func userLogin() {
 	color.Cyan("Now we will open your browser...")
 	color.Cyan("Please copy and paste the access_token from your browser.")
@@ -50,7 +112,7 @@ func userLogin() {
 	// wait 2 seconds for user read tips
 	time.Sleep(2 * time.Second)
 
-	if err := browser.OpenURL(config.G.PaaSUrl + "/backend/api/accounts/oauth/token/"); err != nil {
+	if err := browser.OpenURL(account.GetOAuthTokenUrl()); err != nil {
 		color.Red("Failed to open browser, error: " + err.Error())
 		return
 	}
@@ -62,21 +124,5 @@ func userLogin() {
 		color.Red("Failed to read access token, error: " + err.Error())
 		return
 	}
-
-	fmt.Printf("User login... ")
-	username, err := account.FetchUserNameByAccessToken(string(accessToken))
-	if err != nil {
-		color.Red("Fail!")
-		color.Red(err.Error())
-		return
-	}
-
-	color.Green("Success!")
-
-	// update global config and dump to file
-	config.G.Username = username
-	config.G.AccessToken = string(accessToken)
-	if err = config.DumpConf(config.ConfigFilePath); err != nil {
-		color.Red("Failed to dump config, error: " + err.Error())
-	}
+	loginByAccessToken(string(accessToken))
 }

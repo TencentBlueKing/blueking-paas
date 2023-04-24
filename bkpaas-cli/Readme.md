@@ -4,25 +4,21 @@ bkpaas-cli 是蓝鲸开发者中心提供的命令行工具，支持应用基础
 
 ## 使用指南
 
-### 用户登录
-
-使用本工具需要认证用户的开发者身份，如果你未认证或认证信息已过期，则需要在 bkpaas-cli 中重新登录以更新你的认证信息。
-
-bkpaas-cli 提供交互式的用户登录能力，需要你执行 `bkpaas-cli login` 命令以进行登录。
-
-```shell
->>> bkpaas-cli login
-Now we will open your browser...
-Please copy and paste the access_token from your browser.
->>> AccessToken: ******  // 从唤起的浏览器窗口中复制并粘贴你的 AccessToken
-User login... success!
-```
-
 ### 配置信息
 
 bkpaas-cli 通过配置文件来存储 API 访问路径，用户认证等信息，你可以在开发者中心上获取到示例配置。
 
-默认情况下我们会读取 `${HOME}/.blueking-paas/config.yaml` 作为 bkpaas-cli 的配置，
+默认情况下我们会读取 `${HOME}/.blueking-paas/config.yaml` 作为 bkpaas-cli 的配置，你可以执行以下命令来初始化：
+
+```shell
+>>> mkdir ${HOME}/.blueking-paas && cat > ${HOME}/.blueking-paas/config.yaml << EOF
+paasApigwUrl: http://bkapi.example.com/api/bkpaas3
+paasUrl: https://bkpaas3.example.com
+checkTokenUrl: http://apigw.example.com/auth/check_token/
+username: admin
+accessToken: ""
+EOF
+```
 
 如果你有特殊指定的需求，可以执行以下命令，bkpaas-cli 将优先使用你指定的文件作为配置：
 
@@ -38,9 +34,43 @@ configFilePath: /root/.blueking-paas/config.yaml
 
 paasApigwUrl: http://bkapi.example.com/api/bkpaas3
 paasUrl: https://bkpaas3.example.com
-checkTokenUrl: https://apigw.example.com/auth/check_token/
+checkTokenUrl: http://apigw.example.com/auth/check_token/
 username: admin
 accessToken: [REDACTED]
+```
+
+### 用户登录
+
+使用本工具需要认证用户的开发者身份，如果你未认证或认证信息已过期，则需要在 bkpaas-cli 中重新登录以更新你的认证信息。
+
+#### 交互式登录
+
+bkpaas-cli 提供交互式的用户登录能力，需要你执行 `bkpaas-cli login` 命令以进行登录。
+
+```shell
+>>> bkpaas-cli login
+Now we will open your browser...
+Please copy and paste the access_token from your browser.
+>>> AccessToken: ******  # 从唤起的浏览器窗口中复制并粘贴你的 AccessToken
+User login... success!
+```
+
+#### 通过 bkTicket 登录
+
+如果你使用命令行的环境中没有浏览器，你可以使用 bkTicket 进行登录的方法（你可以在浏览器的 Cookies 中找到 `bk_ticket` 的值）
+
+```shell
+>>> bkpaas-cli login --bkTicket=********
+User login... Success!
+```
+
+#### 通过 AccessToken 登录
+
+如果你已经从平台管理员处获取到可使用的 AccessToken，你也可以直接使用 AccessToken 进行登录。
+
+```shell
+>>> bkpaas-cli login --accessToken=******
+User login... Success!
 ```
 
 ### 蓝鲸应用管理
@@ -308,4 +338,5 @@ bkpaas-cli 将提供适用于 Linux，MacOS，Windows 等多种系统 / 架构�
 
 ## 建议反馈
 
-感谢你使用 bkpaas-cli 命令行工具，如果你有任何需求或者改进建议，欢迎到 GitHub 给我们提 [Issue](https://github.com/TencentBlueKing/blueking-paas/issues)。
+感谢你使用 bkpaas-cli 命令行工具，如果你有任何需求或者改进建议，欢迎到 GitHub
+给我们提 [Issue](https://github.com/TencentBlueKing/blueking-paas/issues)。

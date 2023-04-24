@@ -40,8 +40,8 @@ var _ = Describe("TestConfig", func() {
 			Expect(username).To(Equal(username))
 			Expect(errors.Is(err, exceptedErr)).To(BeTrue())
 		},
-		Entry("auth api err case", "cause_auth_err", "", apiresources.AuthApiErr),
-		Entry("resp format err case", "cause_auth_resp_err", "", apiresources.ApiRespDecodeErr),
+		Entry("auth api err case", "auth_api_error", "", apiresources.AuthApiErr),
+		Entry("resp decode err case", "auth_resp_error", "", apiresources.ApiRespDecodeErr),
 		Entry("invalid access token case", "invalid_token", "", account.TokenExpiredOrInvalid),
 		Entry("no username err case", "no_username", "", account.FetchUsernameFailedErr),
 		Entry("username in rtx case", "username_in_rtx", "admin1", nil),
@@ -53,8 +53,8 @@ var _ = Describe("TestConfig", func() {
 		func(accessToken string, authorized bool) {
 			Expect(account.IsUserAuthorized(accessToken)).To(Equal(authorized))
 		},
-		Entry("auth api err case", "cause_auth_err", false),
-		Entry("resp format err case", "cause_auth_resp_err", false),
+		Entry("auth api err case", "auth_api_error", false),
+		Entry("resp decode err case", "auth_resp_error", false),
 		Entry("invalid access token case", "invalid_token", false),
 		Entry("no username err case", "no_username", false),
 		Entry("username in rtx case", "username_in_rtx", true),

@@ -21,7 +21,6 @@ package v1alpha1
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -179,7 +178,7 @@ var _ = Describe("test webhook.Validator", func() {
 	Context("Test process autoscaling", func() {
 		It("Invalid minReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
-				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: lo.ToPtr(ScalingPolicyDefault),
+				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("minReplicas must be greater than 0"))
@@ -187,7 +186,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("Invalid maxReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: lo.ToPtr(ScalingPolicyDefault),
+				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("at most support 5 replicas"))
@@ -195,7 +194,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("maxReplicas < minReplicas", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
-				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: lo.ToPtr(ScalingPolicyDefault),
+				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("maxReplicas must be greater than or equal to minReplicas"))
@@ -203,7 +202,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("policy required", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: nil,
+				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "",
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("autoscaling policy is required"))
@@ -211,7 +210,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("policy must supported", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: lo.ToPtr[ScalingPolicy]("fake"),
+				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
@@ -219,7 +218,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("disable autoscaling cause skip validate", func() {
 			bkapp.Spec.Processes[0].Autoscaling = &AutoscalingSpec{
-				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: lo.ToPtr[ScalingPolicy]("fake"),
+				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: "fake",
 			}
 			Expect(bkapp.ValidateCreate()).To(BeNil())
 		})
@@ -230,15 +229,20 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Spec.EnvOverlay = &AppEnvOverlay{}
 		})
 		It("Normal", func() {
-			bkapp.Spec.EnvOverlay.Replicas = []ReplicasOverlay{
-				{EnvName: "stag", Process: "web", Count: 1},
-			}
-			bkapp.Spec.EnvOverlay.EnvVariables = []EnvVarOverlay{
-				{EnvName: "stag", Name: "foo", Value: "foo-value"},
+			bkapp.Spec.EnvOverlay = &AppEnvOverlay{
+				Replicas: []ReplicasOverlay{
+					{EnvName: "stag", Process: "web", Count: 1},
+				},
+				EnvVariables: []EnvVarOverlay{
+					{EnvName: "stag", Name: "foo", Value: "foo-value"},
+				},
+				Autoscaling: []AutoscalingOverlay{
+					{EnvName: "stag", Process: "web", Policy: ScalingPolicyDefault},
+				},
 			}
 
 			err := bkapp.ValidateCreate()
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).To(BeNil())
 		})
 		It("[replicas] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.Replicas = []ReplicasOverlay{
@@ -260,6 +264,34 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("count can't be greater than "))
+		})
+		It("[envVariables] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.EnvVariables = []EnvVarOverlay{
+				{EnvName: "invalid-env", Name: "foo", Value: "bar"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[autoscaling] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.Autoscaling = []AutoscalingOverlay{
+				{EnvName: "invalid-env", Process: "web", Policy: ScalingPolicyDefault},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[autoscaling] invalid process name", func() {
+			bkapp.Spec.EnvOverlay.Autoscaling = []AutoscalingOverlay{
+				{EnvName: "stag", Process: "invalid-proc", Policy: ScalingPolicyDefault},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
+		})
+		It("[autoscaling] invalid policy", func() {
+			bkapp.Spec.EnvOverlay.Autoscaling = []AutoscalingOverlay{
+				{EnvName: "stag", Process: "web", Policy: "fake"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
 		})
 	})
 })

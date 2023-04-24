@@ -136,8 +136,57 @@ func (r *EnvVarsGetter) loadEnvOverlay(env paasv1alpha1.EnvName) {
 func GetEnvName(bkapp *paasv1alpha1.BkApp) paasv1alpha1.EnvName {
 	annots := bkapp.GetAnnotations()
 	name := paasv1alpha1.EnvName(annots[paasv1alpha1.EnvironmentKey])
-	if paasv1alpha1.CheckEnvName(name) {
+	if name.IsValid() {
 		return name
 	}
-	return paasv1alpha1.EnvName("")
+	return ""
+}
+
+// AutoscalingPolicyGetter get autoscaling policy from BkApp object
+type AutoscalingPolicyGetter struct {
+	bkapp *paasv1alpha1.BkApp
+	// policyMap stores process scaling policy, "{process} -> {scalingPolicy}"
+	policyMap map[string]paasv1alpha1.ScalingPolicy
+}
+
+// NewAutoscalingPolicyGetter creates a AutoscalingPolicyGetter object
+func NewAutoscalingPolicyGetter(bkapp *paasv1alpha1.BkApp) *AutoscalingPolicyGetter {
+	obj := &AutoscalingPolicyGetter{bkapp: bkapp, policyMap: make(map[string]paasv1alpha1.ScalingPolicy)}
+
+	// Build internal index data
+	obj.buildDefault()
+	if env := GetEnvName(obj.bkapp); !env.IsEmpty() {
+		obj.buildEnvOverlay(env)
+	}
+	return obj
+}
+
+// Get scalingPolicy by process name
+func (g *AutoscalingPolicyGetter) Get(name string) paasv1alpha1.ScalingPolicy {
+	if v, ok := g.policyMap[name]; ok {
+		return v
+	}
+	return ""
+}
+
+// Build policy map from default configuration
+func (g *AutoscalingPolicyGetter) buildDefault() {
+	for _, proc := range g.bkapp.Spec.Processes {
+		if proc.Autoscaling != nil {
+			g.policyMap[proc.Name] = proc.Autoscaling.Policy
+		}
+	}
+}
+
+// Build policy map from env overlay configs
+func (g *AutoscalingPolicyGetter) buildEnvOverlay(env paasv1alpha1.EnvName) {
+	if g.bkapp.Spec.EnvOverlay == nil {
+		return
+	}
+	// Pick values which matches environment
+	for _, c := range g.bkapp.Spec.EnvOverlay.Autoscaling {
+		if c.EnvName == env {
+			g.policyMap[c.Process] = c.Policy
+		}
+	}
 }

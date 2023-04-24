@@ -33,6 +33,7 @@ import (
 // GetWantedGPAs 根据应用生成对应的 GPA(general-pod-autoscaler) 配置列表
 func GetWantedGPAs(app *v1alpha1.BkApp) []*autoscaling.GeneralPodAutoscaler {
 	gpaList := []*autoscaling.GeneralPodAutoscaler{}
+	policyGetter := NewAutoscalingPolicyGetter(app)
 	for _, proc := range app.Spec.Processes {
 		// 若某个进程没有自动扩缩容配置，或未启用，则跳过
 		if proc.Autoscaling == nil || proc.Autoscaling.Enabled == false {
@@ -61,7 +62,7 @@ func GetWantedGPAs(app *v1alpha1.BkApp) []*autoscaling.GeneralPodAutoscaler {
 			Spec: autoscaling.GeneralPodAutoscalerSpec{
 				AutoScalingDrivenMode: autoscaling.AutoScalingDrivenMode{
 					MetricMode: &autoscaling.MetricMode{
-						Metrics: buildMetricSpecs(proc.Autoscaling),
+						Metrics: buildMetricSpecs(policyGetter.Get(proc.Name)),
 					},
 				},
 				MinReplicas: &proc.Autoscaling.MinReplicas,
@@ -78,12 +79,8 @@ func GetWantedGPAs(app *v1alpha1.BkApp) []*autoscaling.GeneralPodAutoscaler {
 }
 
 // 构建资源指标配置，目前仅支持按策略组装
-func buildMetricSpecs(spec *v1alpha1.AutoscalingSpec) (metrics []autoscaling.MetricSpec) {
-	if spec == nil || spec.Policy == nil || *spec.Policy == "" {
-		return metrics
-	}
-
-	switch *spec.Policy {
+func buildMetricSpecs(policy v1alpha1.ScalingPolicy) (metrics []autoscaling.MetricSpec) {
+	switch policy {
 	case v1alpha1.ScalingPolicyDefault:
 		// 默认策略：cpu utilization 85%
 		metrics = append(metrics, autoscaling.MetricSpec{

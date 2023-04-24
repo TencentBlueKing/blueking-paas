@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +60,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 							Enabled:     true,
 							MinReplicas: 2,
 							MaxReplicas: 5,
-							Policy:      lo.ToPtr(v1alpha1.ScalingPolicyDefault),
+							Policy:      v1alpha1.ScalingPolicyDefault,
 						},
 					},
 				},

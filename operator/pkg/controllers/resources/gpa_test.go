@@ -55,7 +55,7 @@ var _ = Describe("GPAResources", func() {
 							Enabled:     true,
 							MinReplicas: 1,
 							MaxReplicas: 5,
-							Policy:      lo.ToPtr(paasv1alpha1.ScalingPolicyDefault),
+							Policy:      paasv1alpha1.ScalingPolicyDefault,
 						},
 					},
 					{

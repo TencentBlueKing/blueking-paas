@@ -143,7 +143,7 @@ type AutoscalingSpec struct {
 	MaxReplicas int32 `json:"maxReplicas"`
 
 	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
-	Policy *ScalingPolicy `json:"policy,omitempty"`
+	Policy ScalingPolicy `json:"policy"`
 }
 
 // ScalingPolicy is used to specify which policy should be used while scaling
@@ -185,21 +185,30 @@ type AppEnvVar struct {
 
 // AppEnvOverlay defines environment specified configs.
 type AppEnvOverlay struct {
-	// Replicas overwrite processes's replicas count
+	// Replicas overwrite process's replicas count
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
 
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
 	EnvVariables []EnvVarOverlay `json:"envVariables,omitempty"`
+
+	// Autoscaling overwrite process's autoscaling config
+	// +optional
+	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
 type EnvName string
 
 // IsEmpty checks if current environment is empty(absent)
-func (r EnvName) IsEmpty() bool {
-	return string(r) == ""
+func (n EnvName) IsEmpty() bool {
+	return string(n) == ""
+}
+
+// IsValid checks if a given string is valid as environment name
+func (n EnvName) IsValid() bool {
+	return n == StagEnv || n == ProdEnv
 }
 
 const (
@@ -208,11 +217,6 @@ const (
 	// ProdEnv refers to "production" env
 	ProdEnv EnvName = "prod"
 )
-
-// CheckEnvName checks if a given string is valid as environment name
-func CheckEnvName(n EnvName) bool {
-	return n == StagEnv || n == ProdEnv
-}
 
 // ReplicasOverlay overwrite process's replicas by environment.
 type ReplicasOverlay struct {
@@ -232,6 +236,16 @@ type EnvVarOverlay struct {
 	Name string `json:"name"`
 	// Value of the environment variable
 	Value string `json:"value"`
+}
+
+// AutoscalingOverlay overwrite or add application's autoscaling config by environment.
+type AutoscalingOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
+	Policy ScalingPolicy `json:"policy"`
 }
 
 // AppStatus defines the observed state of BkApp

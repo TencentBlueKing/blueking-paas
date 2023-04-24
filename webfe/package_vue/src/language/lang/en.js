@@ -986,7 +986,7 @@ export default {
   '天前': 'Days ago',
   '小时前': 'Hours ago',
   '分钟前': 'Minutes ago',
-  '刚刚': 'Just',
+  '刚刚': 'Just now',
   '部署阶段': 'Deployment phase',
   '无执行中的进程': 'No running process',
   '暂无日志': 'No log yet',
@@ -1322,8 +1322,8 @@ export default {
   '你可以根据以下操作解决此类问题': 'You can solve this kind of problem by doing the following',
   '平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能。': 'The platform provides app engines, Add-ons, cloud API permissions, app market and other features for such apps.',
   '应用 ID': 'APP ID',
-  '格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符': 'Incorrect format, can only contain: lowercase letters, numbers, hyphens (-), initial letter must be a letter, length less than 16 characters',
-  '由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符': 'Consists of lowercase letters, numbers, hyphens (-), the first letter must be a letter and less than 16 characters long',
+  '格式不正确，只能包含：3-16 字符的小写字母、数字、连字符(-)，以小写字母开头': 'Incorrect format, 3-16 Characters with lowercase letters, numbers, hyphens (-), beginning with lowercase letters',
+  '请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头': 'Please enter 3-16 characters in lowercase letters, numbers, hyphens (-), starting with a lowercase letter',
   '应用的唯一标识，创建后不可修改': 'The unique identifier of the app, which cannot be modified after creation',
   '格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符': 'The format is incorrect, it can only contain: Chinese characters, English letters, numbers, and the length is less than 20 characters',
   '由汉字、英文字母、数字组成，长度小于 20 个字符': 'Composed of Chinese characters, English letters and numbers, the length is less than 20 characters',
@@ -2116,5 +2116,8 @@ export default {
   '离开将会导致未保存信息丢失': 'Leaving will lose unsaved information',
   '离开': 'Leave',
   '应用市场信息请在“app_desc.yaml”文件中配置': 'Please configure the application market information in the "app_desc.yaml" file',
-  'web进程的容器镜像地址': 'The container image address of the web process'
+  'web进程的容器镜像地址': 'The container image address of the web process',
+  '每个镜像版本默认仅拉取一次，如版本内容有更新，请勾选该项': 'Each image version is only pulled once by default, please check this box if there are updates to the version.',
+  '共享实例': 'Shared',
+  '独占实例': 'Exclusive'
 };

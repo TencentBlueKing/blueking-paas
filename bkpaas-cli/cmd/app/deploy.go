@@ -20,30 +20,110 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"time"
 
+	"github.com/fatih/color"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 // NewCmdDeploy returns a Command instance for 'app deploy' sub command
 func NewCmdDeploy() *cobra.Command {
+	var appCode, appModule, appEnv, branch, filePath string
+	var showResponse, noWatch bool
+
 	cmd := cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy PaaS application",
 		Run: func(cmd *cobra.Command, args []string) {
-			deployApp()
+			fmt.Printf("Application %s deploying...\n", appCode)
+			respData, err := deployApp(appCode, appModule, appEnv, branch, filePath)
+			if showResponse {
+				fmt.Println("Deploy API Response Data:", respData)
+			}
+			if err != nil {
+				color.Red(fmt.Sprintf("failed to deploy application %s, error: %s", appCode, err.Error()))
+				os.Exit(1)
+			}
+			if noWatch {
+				return
+			}
+			// TODO 添加超时机制?
+			// TODO 轮询体验优化，比如支持滚动更新日志？
+			for {
+				fmt.Println("Waiting for deploy finished...")
+				time.Sleep(5 * time.Second)
+
+				result, err := getDeployResult(appCode, appModule, appEnv)
+				if err != nil {
+					color.Red(fmt.Sprintf("failed to get app %s deploy result, error: %s", appCode, err.Error()))
+					os.Exit(1)
+				}
+				// 到达稳定状态后输出部署结果
+				if result.IsStable() {
+					fmt.Println(result)
+					return
+				}
+			}
 		},
 	}
 
-	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
-	cmd.Flags().StringVarP(&appModule, "module", "", "default", "module name")
-	cmd.Flags().StringVarP(&appEnv, "env", "", "prod", "environment (stag/prod)")
+	cmd.Flags().StringVar(&appCode, "code", "", "app code")
+	cmd.Flags().StringVar(&appModule, "module", "default", "module name")
+	cmd.Flags().StringVar(&appEnv, "env", "stag", "environment (stag/prod)")
+	cmd.Flags().StringVar(&branch, "branch", "", "git repo branch")
+	cmd.Flags().StringVarP(&filePath, "file", "f", "", "bkapp manifest file path")
+	cmd.Flags().BoolVar(&showResponse, "show-resp", false, "show deploy api response")
+	cmd.Flags().BoolVar(&noWatch, "no-watch", false, "watch deploy process")
 	_ = cmd.MarkFlagRequired("code")
 
 	return &cmd
 }
 
 // 应用部署
-func deployApp() {
-	// TODO 执行应用部署操作
-	fmt.Println("Implement me...")
+func deployApp(appCode, appModule, appEnv, branch, filePath string) (map[string]any, error) {
+	appType := helper.FetchAppType(appCode)
+
+	opts := model.DeployOptions{
+		AppCode:   appCode,
+		AppType:   appType,
+		Module:    appModule,
+		DeployEnv: appEnv,
+		Branch:    branch,
+	}
+
+	// TODO 参数检查是不是可以作为 DeployOptions 的方法？
+	// 参数检查，普通应用需要指定部署的分支，云原生应用需要指定 manifest 文件路径
+	if appType == model.AppTypeDefault && branch == "" {
+		return nil, errors.New("branch is required when deploy default app")
+	}
+
+	// 加载文件中的 bkapp manifest 内容
+	if appType == model.AppTypeCNative {
+		if filePath == "" {
+			return nil, errors.New("manifest file path is required when deploy cnative app")
+		}
+		yamlFile, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load bkapp manifest")
+		}
+		manifest := map[string]any{}
+		if err = yaml.Unmarshal(yamlFile, &manifest); err != nil {
+			return nil, errors.Wrap(err, "failed to load bkapp manifest")
+		}
+		opts.BkAppManifest = manifest
+	}
+
+	deployer, err := handler.NewAppDeployer(appCode)
+	if err != nil {
+		return nil, err
+	}
+
+	return deployer.Deploy(opts)
 }

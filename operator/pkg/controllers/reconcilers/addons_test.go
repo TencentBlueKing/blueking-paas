@@ -20,7 +20,6 @@ package reconcilers
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -70,8 +69,10 @@ var _ = Describe("Test AddonReconciler", func() {
 		testing.WithAppInfoAnnotations(bkapp)
 
 		r = &AddonReconciler{
-			Client:         builder.WithObjects(bkapp).Build(),
-			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 200}),
+			Client: builder.WithObjects(bkapp).Build(),
+			ExternalClient: external.NewTestClient(
+				"", "", &external.SimpleResponse{StatusCode: 200},
+			),
 		}
 		ret := r.Reconcile(ctx, bkapp)
 
@@ -93,8 +94,11 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("InvalidAnnotations"))
-		Expect(cond.Message).To(Equal("InvalidAnnotations: missing bkapp info"))
+		Expect(cond.Reason).To(Equal("InternalServerError"))
+		Expect(cond.Message).To(Equal(
+			"InvalidAnnotations: missing bkapp info, Detail: " +
+				"for missing bkapp.paas.bk.tencent.com/region: unable to parse app metadata",
+		))
 	})
 
 	It("when extract addons failed", func() {
@@ -104,8 +108,10 @@ var _ = Describe("Test AddonReconciler", func() {
 		})
 
 		r = &AddonReconciler{
-			Client:         builder.WithObjects(bkapp).Build(),
-			ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 200}),
+			Client: builder.WithObjects(bkapp).Build(),
+			ExternalClient: external.NewTestClient(
+				"", "", &external.SimpleResponse{StatusCode: 200},
+			),
 		}
 		ret := r.Reconcile(ctx, bkapp)
 
@@ -114,16 +120,21 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("InvalidAnnotations"))
-		Expect(cond.Message).To(Equal("InvalidAnnotations: invalid value for 'bkapp.paas.bk.tencent.com/addons'"))
+		Expect(cond.Reason).To(Equal("InternalServerError"))
+		Expect(cond.Message).To(Equal(
+			"InvalidAnnotations: invalid value for 'bkapp.paas.bk.tencent.com/addons', Detail: " +
+				"invalid character '\\'' looking for beginning of value",
+		))
 	})
 
 	It("when provision addon failed", func() {
 		testing.WithAppInfoAnnotations(bkapp)
 		By("set a failed external client", func() {
 			r = &AddonReconciler{
-				Client:         builder.WithObjects(bkapp).Build(),
-				ExternalClient: external.NewTestClient("", "", &external.SimpleResponse{StatusCode: 400, Body: "bar"}),
+				Client: builder.WithObjects(bkapp).Build(),
+				ExternalClient: external.NewTestClient(
+					"", "", &external.SimpleResponse{StatusCode: 400, Body: "bar"},
+				),
 			}
 		})
 
@@ -134,9 +145,9 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("ProvisionFailed"))
-		Expect(
-			cond.Message,
-		).To(Equal(fmt.Sprintf("ProvisionFailed: failed to provision '%s' instance", "foo-service")))
+		Expect(cond.Reason).To(Equal("InternalServerError"))
+		Expect(cond.Message).To(Equal(
+			"ProvisionFailed: failed to provision 'foo-service' instance, Detail: response not ok",
+		))
 	})
 })

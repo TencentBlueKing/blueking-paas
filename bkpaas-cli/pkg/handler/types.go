@@ -16,16 +16,25 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package pathx_test
+package handler
 
-import (
-	"testing"
+import "github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
+// ShortRevisionLength 短版本信息长度
+const ShortRevisionLength = 8
 
-func TestPathx(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "pkg/utils/pathx Suite")
+// Deployer 部署器接口
+type Deployer interface {
+	// Deploy 下发部署命令
+	Deploy(opts model.DeployOptions) (map[string]any, error)
+	// GetResult 获取应用部署结果
+	GetResult(opts model.DeployOptions) (model.DeployResult, error)
+	// GetHistory 获取应用部署历史
+	GetHistory(opts model.DeployOptions) (model.DeployHistory, error)
+}
+
+// Retriever 各类应用信息查询接口
+type Retriever interface {
+	// Exec 请求 PaaS API，获取应用某类信息
+	Exec(appCode string) (model.AppInfo, error)
 }

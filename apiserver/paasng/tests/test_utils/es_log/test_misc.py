@@ -76,6 +76,22 @@ def indexes():
             ),
             ["k8s_app_log_-2022.10.10", "k8s_app_log_-2022.10.11", "k8s_app_log_-2023.05.11"],
         ),
+        (
+            SmartTimeRange(
+                time_range="customized",
+                start_time=arrow.get("2022-10-11 02:00:00+00:00").datetime,
+                end_time=arrow.get("2022-10-11 03:00:00+00:00").datetime,
+            ),
+            ["k8s_app_log_-2022.10.11"],
+        ),
+        (
+            SmartTimeRange(
+                time_range="customized",
+                start_time=arrow.get("2022-10-11 02:00:00+03:00").datetime,
+                end_time=arrow.get("2022-10-11 03:00:00+00:00").datetime,
+            ),
+            ["k8s_app_log_-2022.10.10", "k8s_app_log_-2022.10.11"],
+        ),
     ],
 )
 def test_filter_indexes_by_time_range(indexes, time_range, expected):

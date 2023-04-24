@@ -70,9 +70,9 @@ class TestProcessOperationObj:
     @pytest.mark.parametrize(
         'type_,extra_values,expected_text',
         [
-            (OperationType.PROCESS_START, {'process_type': 'web'}, '启动 web 进程'),
-            (OperationType.PROCESS_STOP, {'process_type': 'web'}, '停止 web 进程'),
-            (OperationType.PROCESS_STOP, {}, '停止 未知 进程'),
+            (OperationType.PROCESS_START, {'process_type': 'web'}, '启动 default 模块的 web 进程'),
+            (OperationType.PROCESS_STOP, {'process_type': 'web'}, '停止 default 模块的 web 进程'),
+            (OperationType.PROCESS_STOP, {}, '停止 default 模块的 未知 进程'),
         ],
     )
     def test_normal(self, type_, extra_values, expected_text, bk_app, bk_user):
@@ -83,6 +83,7 @@ class TestProcessOperationObj:
             region=bk_app.region,
             source_object_id=bk_app.id.hex,
             extra_values=extra_values,
+            module_name='default',
         )
         assert operation.get_operate_display() == expected_text
 
@@ -91,9 +92,9 @@ class TestAppDeploymentOperationObj:
     @pytest.mark.parametrize(
         'status,expected_text',
         [
-            (JobStatus.SUCCESSFUL, '成功部署生产环境'),
-            (JobStatus.FAILED, '尝试部署生产环境失败'),
-            (JobStatus.INTERRUPTED, '中断了生产环境的部署过程'),
+            (JobStatus.SUCCESSFUL, '成功部署 default 模块的生产环境'),
+            (JobStatus.FAILED, '尝试部署 default 模块的生产环境失败'),
+            (JobStatus.INTERRUPTED, '中断了 default 模块的生产环境的部署过程'),
         ],
     )
     def test_create_from_deployment(self, status, expected_text, bk_module):
@@ -109,9 +110,9 @@ class TestCNativeAppDeployOperationObj:
     @pytest.mark.parametrize(
         'status,expected_text',
         [
-            (DeployStatus.READY, '成功部署预发布环境'),
-            (DeployStatus.ERROR, '尝试部署预发布环境失败'),
-            (DeployStatus.PENDING, '尝试部署预发布环境失败'),
+            (DeployStatus.READY, '成功部署 default 模块的预发布环境'),
+            (DeployStatus.ERROR, '尝试部署 default 模块的预发布环境失败'),
+            (DeployStatus.PENDING, '尝试部署 default 模块的预发布环境失败'),
         ],
     )
     def test_create_from_deploy(self, bk_stag_env, bk_user, status, expected_text):

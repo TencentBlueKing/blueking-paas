@@ -27,6 +27,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -368,12 +369,16 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         market_params = data['market_params']
         operator = request.user.pk
 
-        if data["engine_enabled"]:
-            raise ValidationError("该接口只支持创建外链应用")
-
-        application = create_third_app(
-            data['region'], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
-        )
+        try:
+            application = create_third_app(
+                data['region'], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
+            )
+        except DbIntegrityError as e:
+            # 并发创建时, 可能会绕过 CreateThirdPartyApplicationSLZ 中 code 和 name 的存在性校验
+            if 'Duplicate entry' in str(e):
+                err_msg = _("code 为 {} 或 name 为 {} 的应用已存在").format(data['code'], data["name_zh_cn"])
+                raise error_codes.CANNOT_CREATE_APP.f(err_msg)
+            raise e
 
         return Response(
             data={'application': slzs.ApplicationSLZ(application).data, 'source_init_result': None},

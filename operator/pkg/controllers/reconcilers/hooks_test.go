@@ -25,8 +25,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -181,7 +181,7 @@ var _ = Describe("Test HookReconciler", func() {
 			)
 
 			Expect(finished).To(BeFalse())
-			Expect(err.Error()).To(Equal("pod ends unsuccessfully: hook failed with: fail message"))
+			Expect(err.Error()).To(Equal("hook failed with: fail message: pod ends unsuccessfully"))
 		})
 
 		// UpdatePreReleaseHook creates app and Pod resource, return the result of "CheckAndUpdatePreReleaseHookStatus"
@@ -325,7 +325,7 @@ var _ = Describe("Test HookReconciler", func() {
 			r := NewHookReconciler(builder.WithObjects(hook.Pod).Build())
 
 			err := r.ExecuteHook(ctx, bkapp, hook)
-			Expect(err).To(Equal(resources.ErrHookPodExists))
+			Expect(errors.Is(err, resources.ErrHookPodExists)).To(BeTrue())
 		})
 	})
 })

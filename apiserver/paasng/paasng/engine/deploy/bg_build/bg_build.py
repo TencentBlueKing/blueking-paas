@@ -161,6 +161,7 @@ class BuildProcessExecutor(DeployStep):
                 self.stream.write_message("building process was interrupted.")
                 self.bp.update_status(BuildStatus.INTERRUPTED.value)
             else:
+                logger.exception(f"builder pod exit not succeeded during deploy[{self.bp}]")
                 self.stream.write_title("构建失败")
                 self.stream.write_message(Style.Error(e.message))
                 self.bp.update_status(BuildStatus.FAILED)

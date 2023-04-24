@@ -77,7 +77,7 @@ Modules:
 
 ```shell
 # 首先你需要准备一份 BkApp 的 manifest，可以在 云原生应用 -> 应用编排 -> YAML 页面获取
->>> cat ./bkapp.yaml
+>>> cat > ./bkapp.yaml << EOF
 apiVersion: paas.bk.tencent.com/v1alpha1
 kind: BkApp
 metadata:
@@ -91,6 +91,7 @@ spec:
       name: web
       replicas: 2
       targetPort: 80
+EOF
 
 # 执行以下命令以部署云原生应用
 >>> bkpaas-cli app deploy --code=cnative-demo --env=stag -f ./bkapp.yaml

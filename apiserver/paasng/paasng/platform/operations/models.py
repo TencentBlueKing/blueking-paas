@@ -104,13 +104,13 @@ class ProcessOperationObj(OperationObj):
     """Operation object: processs start/stop"""
 
     _text_tmpls = {
-        OP.PROCESS_START: _('启动 {process_type} 进程'),
-        OP.PROCESS_STOP: _('停止 {process_type} 进程'),
+        OP.PROCESS_START: _('启动 {module_name} 模块的 {process_type} 进程'),
+        OP.PROCESS_STOP: _('停止 {module_name} 模块的 {process_type} 进程'),
     }
 
     def get_text_display(self):
         process_type = self.operation.extra_values.get('process_type', _('未知'))
-        return self._text_tmpls[self.op_type].format(process_type=process_type)
+        return self._text_tmpls[self.op_type].format(module_name=self.operation.module_name, process_type=process_type)
 
 
 @dataclass
@@ -164,16 +164,16 @@ class AppDeploymentOperationObj(OperationObj):
 
         text_tmpl = self.get_tmpl_from_status(status)
         env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
-        return text_tmpl.format(env_name=env_name)
+        return text_tmpl.format(module_name=self.operation.module_name, env_name=env_name)
 
     @staticmethod
     def get_tmpl_from_status(status: JobStatus):
         if status == JobStatus.SUCCESSFUL:
-            return _('成功部署{env_name}')
+            return _('成功部署 {module_name} 模块的{env_name}')
         elif status == JobStatus.INTERRUPTED:
-            return _('中断了{env_name}的部署过程')
+            return _('中断了 {module_name} 模块的{env_name}的部署过程')
         else:
-            return _('尝试部署{env_name}失败')
+            return _('尝试部署 {module_name} 模块的{env_name}失败')
 
 
 class CNativeAppDeployOperationObj(OperationObj):
@@ -212,18 +212,17 @@ class CNativeAppDeployOperationObj(OperationObj):
         return operation
 
     def get_text_display(self) -> str:
-        text_tmpl = _('成功部署{env_name}') if self.extra_values.has_succeeded else _('尝试部署{env_name}失败')
+        text_tmpl = (
+            _('成功部署 {module_name} 模块的{env_name}')
+            if self.extra_values.has_succeeded
+            else _('尝试部署 {module_name} 模块的{env_name}失败')
+        )
         env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
-        return text_tmpl.format(env_name=env_name)
+        return text_tmpl.format(module_name=self.operation.module_name, env_name=env_name)
 
 
 class AppOfflineOperationObj(OperationObj):
     values_type = namedtuple('values_type', "env_name has_succeeded")
-
-    _env_name_map = {
-        'stag': '预发布',
-        'prod': '生产',
-    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -266,15 +265,14 @@ class AppOfflineOperationObj(OperationObj):
         Operation.objects.create(**cls.assemble_operation_params(offline_instance))
 
     def get_text_display(self):
-        # 未知 env_name 或 未指定都直接返回原来定义的内容
-        env_name = _(self._env_name_map.get(self.extra_values.env_name, ""))
+        env_name = AppEnvName.get_choice_label(self.extra_values.env_name) or _('未知')
         if not env_name:
             return super().get_text_display()
 
         if self.extra_values.has_succeeded:
-            text_tmpl = _('成功下架{env_name}环境')
+            text_tmpl = _('成功下架 {module_name} 模块的{env_name}')
         else:
-            text_tmpl = _('尝试下架{env_name}环境')
+            text_tmpl = _('尝试下架 {module_name} 模块的{env_name}')
 
         return text_tmpl.format(env_name=env_name)
 

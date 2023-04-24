@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-04-19 19:35+0800\n"
+"POT-Creation-Date: 2023-04-23 11:52+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -76,6 +76,7 @@ msgstr "unknown error"
 #: paasng/platform/operations/models.py:112
 #: paasng/platform/operations/models.py:166
 #: paasng/platform/operations/models.py:216
+#: paasng/platform/operations/models.py:264
 msgid "未知"
 msgstr "Unknown"
 
@@ -176,6 +177,22 @@ msgstr ""
 msgid "端口列表中发现重复值 {value}"
 msgstr ""
 
+#: paas_wl/workloads/autoscaling/constants.py:60
+msgid "CPU 使用率"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:61
+msgid "内存使用率"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:62
+msgid "CPU 使用量"
+msgstr ""
+
+#: paas_wl/workloads/autoscaling/constants.py:63
+msgid "内存使用量"
+msgstr ""
+
 #: paas_wl/workloads/images/views_enduser.py:57
 msgid "同名凭证已存在"
 msgstr ""
@@ -184,43 +201,43 @@ msgstr ""
 msgid "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:138
+#: paas_wl/workloads/processes/drf_serializers.py:137
 msgid "资源指标值/百分比"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:145
+#: paas_wl/workloads/processes/drf_serializers.py:144
 msgid "最小副本数"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:146
+#: paas_wl/workloads/processes/drf_serializers.py:145
 msgid "最大副本数"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:147
+#: paas_wl/workloads/processes/drf_serializers.py:146
 msgid "扩缩容指标"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:155
+#: paas_wl/workloads/processes/drf_serializers.py:154
 msgid "目标进程副本数"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:156
+#: paas_wl/workloads/processes/drf_serializers.py:155
 msgid "是否开启自动扩缩容"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:157
+#: paas_wl/workloads/processes/drf_serializers.py:156
 msgid "进程扩缩容配置"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:163
+#: paas_wl/workloads/processes/drf_serializers.py:162
 msgid "当启用自动扩缩容时，必须提供有效的 scaling_config"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:165
+#: paas_wl/workloads/processes/drf_serializers.py:164
 msgid "当操作类型为扩缩容时，必须提供有效的 target_replicas"
 msgstr ""
 
-#: paas_wl/workloads/processes/drf_serializers.py:175
+#: paas_wl/workloads/processes/drf_serializers.py:174
 msgid "scaling_config 配置格式有误：{}"
 msgstr ""
 
@@ -1396,10 +1413,9 @@ msgid "应用ID: {appid} 的应用已存在!"
 msgstr "App ID: {appid} of the app already exists!"
 
 #: paasng/extensions/smart_app/views.py:225
-#, fuzzy, python-brace-format
-#| msgid "应用ID: {appid} 的应用已存在!"
+#, python-brace-format
 msgid "应用ID: {appid} 的应用不存在!"
-msgstr "App ID: {appid} of the app already exists!"
+msgstr "App ID: {appid} of the application does not exist!"
 
 #: paasng/monitoring/healthz/probes.py:138
 #, python-brace-format
@@ -1778,16 +1794,16 @@ msgid "{env} 环境绑定出口IP异常, 详情: {detail}"
 msgstr "{env} environment binding exit IP exception, details: {detail}"
 
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:54
-#, fuzzy, python-brace-format
-#| msgid "{env} 环境绑定出口IP异常, 详情: {detail}"
+#, python-brace-format
 msgid "{env} 环境绑定出口IP异常, 详情: 不能重复绑定"
-msgstr "{env} environment binding exit IP exception, details: {detail}"
+msgstr ""
+"{env} environment binding exit IP exception, details: cannot be repeatedly "
+"bound"
 
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:56
-#, fuzzy, python-brace-format
-#| msgid "{env} 环境绑定出口IP异常, 详情: {detail}"
+#, python-brace-format
 msgid "{env} 环境绑定出口IP异常"
-msgstr "{env} environment binding exit IP exception, details: {detail}"
+msgstr "{env} environment binding exit IP exception"
 
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:77
 #, python-brace-format
@@ -1795,10 +1811,9 @@ msgid "{env} 环境未获取过网关信息"
 msgstr "{env} The environment has not obtained gateway information."
 
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:79
-#, fuzzy, python-brace-format
-#| msgid "{env} 环境解绑出口IP异常, 详情: {detail}"
+#, python-brace-format
 msgid "{env} 环境解绑出口IP异常"
-msgstr "{env} environment unbinding exit IP exception, details: {detail}"
+msgstr "{env} environment unbinding exit IP exception"
 
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:82
 msgid "绑定出口 IP "
@@ -2091,55 +2106,52 @@ msgstr "Unknown operation type"
 
 #: paasng/platform/operations/models.py:107
 #, python-brace-format
-msgid "启动 {process_type} 进程"
-msgstr "start {process_type} process"
+msgid "启动 {module_name} 模块的 {process_type} 进程"
+msgstr "start {module_name} module's {process_type} process"
 
 #: paasng/platform/operations/models.py:108
 #, python-brace-format
-msgid "停止 {process_type} 进程"
-msgstr "stop {process_type} process"
+msgid "停止 {module_name} 模块的 {process_type} 进程"
+msgstr "stop {module_name} module's {process_type} process"
 
 #: paasng/platform/operations/models.py:172
 #: paasng/platform/operations/models.py:215
-#, fuzzy, python-brace-format
-#| msgid "成功部署{env_name}环境"
-msgid "成功部署{env_name}"
-msgstr "successfully deployed {env_name}"
+#, python-brace-format
+msgid "成功部署 {module_name} 模块的{env_name}"
+msgstr "successfully deployed {module_name} module's {env_name}"
 
 #: paasng/platform/operations/models.py:174
-#, fuzzy, python-brace-format
-#| msgid "中断了{env_name}环境的部署过程"
-msgid "中断了{env_name}的部署过程"
-msgstr "Interrupted deploy of {env_name}"
+#, python-brace-format
+msgid "中断了 {module_name} 模块的{env_name}的部署过程"
+msgstr "Interrupted deploy of {module_name} module's {env_name}"
 
 #: paasng/platform/operations/models.py:176
 #: paasng/platform/operations/models.py:215
-#, fuzzy, python-brace-format
-#| msgid "尝试部署{env_name}环境失败"
-msgid "尝试部署{env_name}失败"
-msgstr "Failed to deploy {env_name}"
-
-#: paasng/platform/operations/models.py:275
 #, python-brace-format
-msgid "成功下架{env_name}环境"
-msgstr "Successfully archive {env_name}"
+msgid "尝试部署 {module_name} 模块的{env_name}失败"
+msgstr "Failed to deploy {module_name} module's {env_name}"
 
-#: paasng/platform/operations/models.py:277
+#: paasng/platform/operations/models.py:269
 #, python-brace-format
-msgid "尝试下架{env_name}环境"
-msgstr "Archive {env_name}"
+msgid "成功下架 {module_name} 模块的{env_name}"
+msgstr "Successfully archived {env_name} from {module_name} module"
 
-#: paasng/platform/operations/models.py:286
+#: paasng/platform/operations/models.py:271
+#, python-brace-format
+msgid "尝试下架 {module_name} 模块的{env_name}"
+msgstr "Try to archive {env_name} from {module_name} module"
+
+#: paasng/platform/operations/models.py:280
 #, python-brace-format
 msgid "创建 {module_name} 模块"
 msgstr "Create {module_name} module"
 
-#: paasng/platform/operations/models.py:293
+#: paasng/platform/operations/models.py:287
 #, python-brace-format
 msgid "申请 {gateway_name} 网关的 API 权限"
 msgstr ""
 
-#: paasng/platform/operations/models.py:294
+#: paasng/platform/operations/models.py:288
 #, python-brace-format
 msgid "续期 {gateway_name} 网关的 API 权限"
 msgstr ""
@@ -2543,8 +2555,6 @@ msgid "监控告警"
 msgstr "MonitorAlarm"
 
 #: paasng/publish/market/constant.py:80
-#, fuzzy
-#| msgid "配置管理"
 msgid "配置管理"
 msgstr "ConfManage"
 
@@ -3016,6 +3026,12 @@ msgstr ""
 #: tests/sourcectl/packages/test_utils.py:47
 msgid "zh-cn"
 msgstr ""
+
+#~ msgid "成功下架{env_name}环境"
+#~ msgstr "Successfully archive {env_name}"
+
+#~ msgid "尝试下架{env_name}环境"
+#~ msgstr "Archive {env_name}"
 
 #~ msgid "自定义 time_range 时需要传入 start_time & end_time"
 #~ msgstr "Pass start_time & end_time to customize time_range"

@@ -35,36 +35,93 @@ import (
 
 // NewCmd create login command
 func NewCmd() *cobra.Command {
-	var accessToken, bkTicket, bkToken string
+	var byAccessToken, byBkTicket, byBkToken bool
 
 	cmd := cobra.Command{
 		Use:   "login",
 		Short: "Login as user",
 		Run: func(cmd *cobra.Command, args []string) {
-			if accessToken != "" {
-				loginByAccessToken(accessToken)
+			if byAccessToken {
+				loginByAccessToken()
 				return
 			}
-			if bkTicket != "" {
-				loginByBkTicket(bkTicket)
+			if byBkTicket {
+				loginByBkTicket()
 				return
 			}
-			if bkToken != "" {
-				loginByBkToken(bkToken)
+			if byBkToken {
+				loginByBkToken()
 				return
 			}
-			userLogin()
+			loginByBrowser()
 		},
 	}
 
-	cmd.Flags().StringVar(&accessToken, "accessToken", "", "BlueKing AccessToken")
-	cmd.Flags().StringVar(&bkTicket, "bkTicket", "", "BlueKing User Ticket")
-	cmd.Flags().StringVar(&bkToken, "bkToken", "", "BlueKing User Token")
+	cmd.Flags().BoolVar(&byAccessToken, "accessToken", false, "BlueKing AccessToken")
+	cmd.Flags().BoolVar(&byBkTicket, "bkTicket", false, "BlueKing User Ticket")
+	cmd.Flags().BoolVar(&byBkToken, "bkToken", false, "BlueKing User Token")
 	return &cmd
 }
 
-// 通过提供 AccessToken 进行登录
-func loginByAccessToken(accessToken string) {
+// 通过浏览器登录
+func loginByBrowser() {
+	color.Cyan("Now we will open your browser...")
+	color.Cyan("Please copy and paste the access_token from your browser.")
+
+	// wait 2 seconds for user read tips
+	time.Sleep(2 * time.Second)
+
+	if err := browser.OpenURL(account.GetOAuthTokenUrl()); err != nil {
+		color.Red("Failed to open browser, error: " + err.Error())
+		return
+	}
+	loginByAccessToken()
+}
+
+// 通过 AccessToken 登录
+func loginByAccessToken() {
+	// read access_token implicitly
+	fmt.Printf(">>> AccessToken: ")
+	accessToken, err := gopass.GetPasswdMasked()
+	if err != nil {
+		color.Red("Failed to read access token, error: " + err.Error())
+		return
+	}
+	login(string(accessToken))
+}
+
+// 通过 bkTicket 进行登录
+func loginByBkTicket() {
+	// read bk_ticket implicitly
+	fmt.Printf(">>> BkTicket: ")
+	bkTicket, err := gopass.GetPasswdMasked()
+	if err != nil {
+		color.Red("Failed to read bk ticket, error: " + err.Error())
+		return
+	}
+
+	resp, err := grequests.Get(account.GetOAuthTokenUrl(), &grequests.RequestOptions{
+		Cookies: []*http.Cookie{{Name: "bk_ticket", Value: string(bkTicket)}},
+	})
+	if !resp.Ok || err != nil {
+		color.Red("Failed to get access token by bk ticket")
+		return
+	}
+	respData := map[string]any{}
+	if err = resp.JSON(&respData); err != nil {
+		color.Red("Failed to parse oauth api response, error: " + err.Error())
+		return
+	}
+	login(respData["access_token"].(string))
+}
+
+// 通过提供 bkToken 进行登录
+func loginByBkToken() {
+	color.Red("login by bk_token currently unsupported...")
+}
+
+// 用户登录
+func login(accessToken string) {
 	fmt.Printf("User login... ")
 	username, err := account.FetchUserNameByAccessToken(accessToken)
 	if err != nil {
@@ -80,49 +137,4 @@ func loginByAccessToken(accessToken string) {
 	if err = config.DumpConf(config.ConfigFilePath); err != nil {
 		color.Red("Failed to dump config, error: " + err.Error())
 	}
-}
-
-// 通过提供 bkTicket 进行登录
-func loginByBkTicket(bkTicket string) {
-	resp, err := grequests.Get(account.GetOAuthTokenUrl(), &grequests.RequestOptions{
-		Cookies: []*http.Cookie{{Name: "bk_ticket", Value: bkTicket}},
-	})
-	if !resp.Ok || err != nil {
-		color.Red("Failed to get accessToken by bkTicket")
-		return
-	}
-	respData := map[string]any{}
-	if err = resp.JSON(&respData); err != nil {
-		color.Red("Failed to parse oauth api response, error: " + err.Error())
-		return
-	}
-	loginByAccessToken(respData["access_token"].(string))
-}
-
-// 通过提供 bkToken 进行登录
-func loginByBkToken(bkToken string) {
-	color.Red("login by bk_token currently unsupported...")
-}
-
-// 交互式用户登录
-func userLogin() {
-	color.Cyan("Now we will open your browser...")
-	color.Cyan("Please copy and paste the access_token from your browser.")
-
-	// wait 2 seconds for user read tips
-	time.Sleep(2 * time.Second)
-
-	if err := browser.OpenURL(account.GetOAuthTokenUrl()); err != nil {
-		color.Red("Failed to open browser, error: " + err.Error())
-		return
-	}
-
-	// read access token implicitly
-	fmt.Printf(">>> AccessToken: ")
-	accessToken, err := gopass.GetPasswdMasked()
-	if err != nil {
-		color.Red("Failed to read access token, error: " + err.Error())
-		return
-	}
-	loginByAccessToken(string(accessToken))
 }

@@ -51,25 +51,27 @@ bkpaas-cli 提供交互式的用户登录能力，需要你执行 `bkpaas-cli lo
 >>> bkpaas-cli login
 Now we will open your browser...
 Please copy and paste the access_token from your browser.
->>> AccessToken: ******  # 从唤起的浏览器窗口中复制并粘贴你的 AccessToken
+>>> AccessToken: ********  # 从唤起的浏览器窗口中复制并粘贴你的 AccessToken
 User login... success!
 ```
 
 #### 通过 bkTicket 登录
 
-如果你使用命令行的环境中没有浏览器，你可以使用 bkTicket 进行登录的方法（你可以在浏览器的 Cookies 中找到 `bk_ticket` 的值）
+如果你使用命令行的环境中没有浏览器，你可以使用 bkTicket 进行登录（在浏览器的 Cookies 中可以找到 `bk_ticket` 的值）
 
 ```shell
->>> bkpaas-cli login --bkTicket=********
+>>> bkpaas-cli login --bkTicket
+>>> BkTicket: ************
 User login... Success!
 ```
 
 #### 通过 AccessToken 登录
 
-如果你已经从平台管理员处获取到可使用的 AccessToken，你也可以直接使用 AccessToken 进行登录。
+如果你已经从平台管理员处获取到有效的 AccessToken，你也可以直接使用 AccessToken 进行登录。
 
 ```shell
->>> bkpaas-cli login --accessToken=******
+>>> bkpaas-cli login --accessToken                               
+>>> AccessToken: ********
 User login... Success!
 ```
 
@@ -338,5 +340,4 @@ bkpaas-cli 将提供适用于 Linux，MacOS，Windows 等多种系统 / 架构�
 
 ## 建议反馈
 
-感谢你使用 bkpaas-cli 命令行工具，如果你有任何需求或者改进建议，欢迎到 GitHub
-给我们提 [Issue](https://github.com/TencentBlueKing/blueking-paas/issues)。
+感谢你使用 bkpaas-cli 命令行工具，如果你有任何需求或者改进建议，欢迎到 GitHub 给我们提 [Issue](https://github.com/TencentBlueKing/blueking-paas/issues)。

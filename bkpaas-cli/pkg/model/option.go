@@ -16,40 +16,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package app
+package model
 
-import (
-	"fmt"
-
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/action"
-)
-
-// NewCmdGetInfo returns a Command instance for 'app get-info' sub command
-func NewCmdGetInfo() *cobra.Command {
-	cmd := cobra.Command{
-		Use:   "get-info",
-		Short: "Get PaaS application info",
-		Run: func(cmd *cobra.Command, args []string) {
-			displayAppInfo(appCode)
-		},
-	}
-
-	cmd.Flags().StringVarP(&appCode, "code", "", "", "app code")
-	_ = cmd.MarkFlagRequired("code")
-
-	return &cmd
-}
-
-// 在命令行中展示指定的蓝鲸应用信息
-func displayAppInfo(appCode string) {
-	retriever := action.NewBasicInfoRetriever()
-	appInfo, err := retriever.Exec(appCode)
-	if err != nil {
-		color.Red("Failed to get application info")
-		return
-	}
-	fmt.Println(appInfo)
+// DeployOptions 部署时需要使用的配置
+type DeployOptions struct {
+	AppCode       string
+	AppType       string
+	Module        string
+	DeployEnv     string
+	Branch        string
+	BkAppManifest map[string]any
 }

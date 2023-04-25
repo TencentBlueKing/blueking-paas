@@ -39,7 +39,7 @@ type PlatformConfig struct {
 // IngressPluginConfig contains the config for controlling ingress config
 type IngressPluginConfig struct {
 	AccessControlConfig *AccessControlConfig `json:"accessControlConfig,omitempty"`
-	PaaSAnalysisConfig  *PaaSAnalysisConfig  `json:"paaSAnalysisConfig,omitempty"`
+	PaaSAnalysisConfig  *PaaSAnalysisConfig  `json:"paasAnalysisConfig,omitempty"`
 }
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module

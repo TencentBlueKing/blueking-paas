@@ -91,7 +91,7 @@ spec:
                 required:
                 - redisConfigKey
                 type: object
-              paaSAnalysisConfig:
+              paasAnalysisConfig:
                 description: PaaSAnalysisConfig contains the config for controlling
                   ingress snippet about PA(paas-analysis) module
                 properties:

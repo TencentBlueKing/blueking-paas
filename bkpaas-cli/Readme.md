@@ -8,7 +8,7 @@ bkpaas-cli 是蓝鲸开发者中心提供的命令行工具，支持应用基础
 
 bkpaas-cli 通过配置文件来存储 API 访问路径，用户认证等信息，你可以在开发者中心上获取到示例配置。
 
-默认情况下我们会读取 `${HOME}/.blueking-paas/config.yaml` 作为 bkpaas-cli 的配置，你可以执行以下命令来初始化：
+默认情况下 bkpaas-cli 会读取 `${HOME}/.blueking-paas/config.yaml` 并加载为配置，你可以执行以下命令来初始化：
 
 ```shell
 >>> mkdir ${HOME}/.blueking-paas && cat > ${HOME}/.blueking-paas/config.yaml << EOF
@@ -41,7 +41,7 @@ accessToken: [REDACTED]
 
 ### 用户登录
 
-使用本工具需要认证用户的开发者身份，如果你未认证或认证信息已过期，则需要在 bkpaas-cli 中重新登录以更新你的认证信息。
+使用本工具需要认证用户的开发者身份，如果你未认证或认证信息已过期，则需要重新登录以更新你的认证信息。
 
 #### 交互式登录
 
@@ -60,7 +60,7 @@ User login... success!
 如果你使用命令行的环境中没有浏览器，你可以使用 bkTicket 进行登录（在浏览器的 Cookies 中可以找到 `bk_ticket` 的值）
 
 ```shell
->>> bkpaas-cli login --bkTicket
+>>> bkpaas-cli login --bk-ticket
 >>> BkTicket: ************
 User login... Success!
 ```
@@ -70,7 +70,7 @@ User login... Success!
 如果你已经从平台管理员处获取到有效的 AccessToken，你也可以直接使用 AccessToken 进行登录。
 
 ```shell
->>> bkpaas-cli login --accessToken                               
+>>> bkpaas-cli login --access-token                               
 >>> AccessToken: ********
 User login... Success!
 ```

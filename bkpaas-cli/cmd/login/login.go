@@ -35,21 +35,21 @@ import (
 
 // NewCmd create login command
 func NewCmd() *cobra.Command {
-	var byAccessToken, byBkTicket, byBkToken bool
+	var useAccessToken, useBkTicket, useBkToken bool
 
 	cmd := cobra.Command{
 		Use:   "login",
 		Short: "Login as user",
 		Run: func(cmd *cobra.Command, args []string) {
-			if byAccessToken {
+			if useAccessToken {
 				loginByAccessToken()
 				return
 			}
-			if byBkTicket {
+			if useBkTicket {
 				loginByBkTicket()
 				return
 			}
-			if byBkToken {
+			if useBkToken {
 				loginByBkToken()
 				return
 			}
@@ -57,9 +57,9 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&byAccessToken, "accessToken", false, "BlueKing AccessToken")
-	cmd.Flags().BoolVar(&byBkTicket, "bkTicket", false, "BlueKing User Ticket")
-	cmd.Flags().BoolVar(&byBkToken, "bkToken", false, "BlueKing User Token")
+	cmd.Flags().BoolVar(&useAccessToken, "access-token", false, "BlueKing AccessToken")
+	cmd.Flags().BoolVar(&useBkTicket, "bk-ticket", false, "BlueKing User Ticket")
+	cmd.Flags().BoolVar(&useBkToken, "bk-token", false, "BlueKing User Token")
 	return &cmd
 }
 

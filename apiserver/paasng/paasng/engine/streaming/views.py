@@ -64,6 +64,9 @@ class StreamViewSet(ViewSet):
             for s in ServerSendEvent.to_eof_str_list():
                 yield s
 
+            # 主动关闭
+            subscriber.close()
+
         return StreamingHttpResponse(resp(), content_type='text/event-stream')
 
     @swagger_auto_schema(query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)})
@@ -74,6 +77,10 @@ class StreamViewSet(ViewSet):
 
         last_event_id = slz.validated_data["last_event_id"]
         events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
+
+        # 主动关闭
+        subscriber.close()
+
         return Response(data=StreamEventSLZ(events, many=True).data, content_type="application/json")
 
 

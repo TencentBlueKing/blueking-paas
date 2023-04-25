@@ -1,0 +1,45 @@
+# This workflow will build bkpaas-cli and restore
+name: release-cli
+
+on:
+  push:
+    branches: ["bkpaas-cli-release"]
+  release:
+    types:
+      - created
+
+jobs:
+  release-cli:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goarch: amd64
+            goos: linux
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      # TODO use release/tag name as version
+      - name: build and packaging
+        run: cd bkpaas-cli && make package GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}
+
+      - name: install coscmd
+        run: sudo apt-get update && sudo apt-get install -y pip && sudo pip install coscmd
+
+      - name: setup coscmd
+        run: coscmd config -a $SECRET_ID -s $SECRET_KEY -b $BUCKET -r $REGION
+        env:
+          SECRET_ID: ${{ secrets.TCLOUD_API_ID }}
+          SECRET_KEY: ${{ secrets.TCLOUD_API_KEY }}
+          BUCKET: ${{ secrets.TCLOUD_BUCKET }}
+          REGION: ${{ secrets.TCLOUD_REGION }}
+
+      # TODO use release/tag name as version
+      - name: upload to cos
+        run: coscmd upload -rfs --delete ./bkpaas-cli/bkpaas-cli-${{ matrix.goos }}-${{ matrix.goarch }}.tgz /

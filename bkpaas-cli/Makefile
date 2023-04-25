@@ -25,6 +25,18 @@ else
     GITCOMMIT=$(shell git rev-parse HEAD)
 endif
 
+ifdef GOOS
+    GOOS=${GOOS}
+else
+    GOOS=darwin
+endif
+
+ifdef GOARCH
+    GOARCH=${GOARCH}
+else
+    GOARCH=arm64
+endif
+
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
@@ -45,11 +57,11 @@ GOCILINT ?= $(LOCALBIN)/golangci-lint
 help: ## 展示可用 make 命令及说明
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ 开发常用命令
+##@ 开发/构建命令
 
 .PHONY: build
 build: tidy # build executable binary
-	go build -ldflags ${LDFLAGS} -o bkpaas-cli ./main.go
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o bkpaas-cli ./main.go
 
 .PHONY: fmt
 fmt: ## 执行 golines，gofumpt ...
@@ -71,6 +83,16 @@ test: tidy ## 执行 ginkgo 单元测试
 .PHONY: lint
 lint: ## 执行 golangci-lint run
 	$(GOCILINT) run
+
+PACKAGE_DIR=bkpaas-cli-${GOOS}-${GOARCH}
+
+.PHONY: package
+package: build # package binary and docs as tar package
+	rm -rf ${PACKAGE_DIR} && mkdir ${PACKAGE_DIR}
+	mv bkpaas-cli ${PACKAGE_DIR}
+	cp Readme.md ${PACKAGE_DIR}
+	cp ../LICENSE.txt ${PACKAGE_DIR}
+	tar czvf ${PACKAGE_DIR}.tgz ${PACKAGE_DIR}
 
 ##@ 开发工具安装命令
 

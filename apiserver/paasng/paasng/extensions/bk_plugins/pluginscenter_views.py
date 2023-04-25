@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 from collections import defaultdict
+from contextlib import closing
 from typing import Dict, List
 
 from bkpaas_auth.core.constants import ProviderType
@@ -276,23 +277,26 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_GET_DEPLOYMENT
 
         subscriber = StreamChannelSubscriber(deploy_id, redis_db=get_default_redis())
-        channel_state = subscriber.get_channel_state()
-        if channel_state == 'none' or channel_state == 'unknown':
-            # redis 管道已结束, 取数据库中存储的日志
-            return Response(
-                data=api_serializers.PluginReleaseLogsResponseSLZ(
-                    {"finished": True, "logs": get_all_logs(deployment).split("\n")}
-                ).data
-            )
 
-        logs = []
-        finished = False
-        events = subscriber.get_history_events(last_event_id=0, ignore_special=False)
-        for event in events:
-            if event["event"] == EventType.MSG.value:
-                logs.append(json.loads(event["data"])["line"])
-            if event["event"] == EventType.CLOSE.value:
-                finished = True
+        with closing(subscriber):
+            channel_state = subscriber.get_channel_state()
+            if channel_state == 'none' or channel_state == 'unknown':
+                # redis 管道已结束, 取数据库中存储的日志
+                return Response(
+                    data=api_serializers.PluginReleaseLogsResponseSLZ(
+                        {"finished": True, "logs": get_all_logs(deployment).split("\n")}
+                    ).data
+                )
+
+            logs = []
+            finished = False
+            events = subscriber.get_history_events(last_event_id=0, ignore_special=False)
+            for event in events:
+                if event["event"] == EventType.MSG.value:
+                    logs.append(json.loads(event["data"])["line"])
+                if event["event"] == EventType.CLOSE.value:
+                    finished = True
+
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 
 

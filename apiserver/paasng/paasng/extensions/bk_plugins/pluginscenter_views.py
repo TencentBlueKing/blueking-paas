@@ -291,11 +291,12 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             logs = []
             finished = False
             events = subscriber.get_history_events(last_event_id=0, ignore_special=False)
-            for event in events:
-                if event["event"] == EventType.MSG.value:
-                    logs.append(json.loads(event["data"])["line"])
-                if event["event"] == EventType.CLOSE.value:
-                    finished = True
+
+        for event in events:
+            if event["event"] == EventType.MSG.value:
+                logs.append(json.loads(event["data"])["line"])
+            if event["event"] == EventType.CLOSE.value:
+                finished = True
 
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 

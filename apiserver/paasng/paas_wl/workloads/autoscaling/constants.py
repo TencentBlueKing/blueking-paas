@@ -55,7 +55,7 @@ class ScalingEnvName(str, StructuredEnum):
 
 
 class ScalingMetric(str, StructuredEnum):
-    """扩缩容指标（暴露给用户的指标）"""
+    """扩缩容指标（用户可选指标）"""
 
     CPU_UTILIZATION = EnumField('cpuUtilization', label=_('CPU 使用率'))
     MEMORY_UTILIZATION = EnumField('memoryUtilization', label=_('内存使用率'))

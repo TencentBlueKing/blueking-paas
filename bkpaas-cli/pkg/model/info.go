@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package model
 
 import (
 	"bytes"
@@ -62,9 +62,9 @@ Modules:
   Name: {{ .Name }}    {{ if and .RepoType .RepoURL }}RepoType: {{ .RepoType }}    RepoUrl: {{ .RepoURL }}{{ end }}
   Environments:
     {{- range .Envs }}
-    Name: {{ .Name }}    Cluster: {{ .ClusterName }} {{ if .ClusterID }}({{ .ClusterID }}){{ end }}
+    Name: {{ .Name }}    Cluster: {{ .ClusterName }}{{ if .ClusterID }} ({{ .ClusterID }}){{ end }}
     {{- end }}
-  {{ end }}
+  {{- end }}
 {{ end }}
 `
 
@@ -81,23 +81,3 @@ Modules:
 }
 
 var _ AppInfo = AppBasicInfo{}
-
-// DeployOptions 部署时需要使用的配置
-type DeployOptions struct {
-	AppCode       string
-	AppType       string
-	Branch        string
-	Module        string
-	DeployEnv     string
-	BkAppManifest map[string]any
-}
-
-// DeployInfo 部署相关信息
-type DeployInfo struct {
-	DeployInfo string
-}
-
-// DeployResult 部署结果
-type DeployResult struct {
-	Logs string
-}

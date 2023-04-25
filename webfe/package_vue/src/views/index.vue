@@ -126,10 +126,6 @@
                 </div>
                 <div class="paas-operation-section section2 section-wrapper">
                   <span
-                    v-if="recordItem.represent_info.props.display_module && recordItem.represent_info.props.provide_links"
-                    class="module-name"
-                  >{{ recordItem.represent_info.module_name + $t('模块') }}</span>
-                  <span
                     v-bk-tooltips.bottom="recordItem.type"
                     class="bottom-middle text-style"
                     :title="recordItem.type"

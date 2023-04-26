@@ -21,10 +21,10 @@
 package v1alpha2
 
 import (
-	"errors"
 	"fmt"
 
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"

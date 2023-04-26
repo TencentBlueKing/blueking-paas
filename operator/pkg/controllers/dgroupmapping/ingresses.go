@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
@@ -53,7 +52,7 @@ func NewDGroupMappingSyncer(client client.Client, bkapp *paasv1alpha2.BkApp) *DG
 // Sync is the main method for syncing resources, it returns the expected domain
 // groups if the sync procedure finished successfully.
 func (r *DGroupMappingSyncer) Sync(
-	ctx context.Context, dgmapping *v1alpha1.DomainGroupMapping,
+	ctx context.Context, dgmapping *paasv1alpha1.DomainGroupMapping,
 ) ([]res.DomainGroup, error) {
 	// Sync ingress resources
 	current, err := r.ListCurrentIngresses(ctx, dgmapping)
@@ -87,7 +86,7 @@ func (r *DGroupMappingSyncer) Sync(
 // ListCurrentIngresses lists ingress resources related with current mapping object
 func (r *DGroupMappingSyncer) ListCurrentIngresses(
 	ctx context.Context,
-	dgmapping *v1alpha1.DomainGroupMapping,
+	dgmapping *paasv1alpha1.DomainGroupMapping,
 ) (results []*networkingv1.Ingress, err error) {
 	current := networkingv1.IngressList{}
 	err = r.client.List(
@@ -104,7 +103,7 @@ func (r *DGroupMappingSyncer) ListCurrentIngresses(
 
 // getWantedIngresses get the desired ingress resources
 func (r *DGroupMappingSyncer) getWantedIngresses(
-	dgmapping *v1alpha1.DomainGroupMapping,
+	dgmapping *paasv1alpha1.DomainGroupMapping,
 	domains []res.DomainGroup,
 ) ([]*networkingv1.Ingress, error) {
 	var results []*networkingv1.Ingress
@@ -143,7 +142,7 @@ func setLabelsAndOwner(ings []*networkingv1.Ingress, dgmapping *paasv1alpha1.Dom
 }
 
 // DeleteIngresses delete all related ingresses of given DomainGroupMapping
-func DeleteIngresses(ctx context.Context, c client.Client, dgmapping *v1alpha1.DomainGroupMapping) error {
+func DeleteIngresses(ctx context.Context, c client.Client, dgmapping *paasv1alpha1.DomainGroupMapping) error {
 	opts := []client.DeleteAllOfOption{
 		client.InNamespace(dgmapping.GetNamespace()),
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),

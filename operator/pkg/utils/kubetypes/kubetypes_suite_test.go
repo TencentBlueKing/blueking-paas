@@ -16,34 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package revision
+package kubetypes
 
 import (
-	"strconv"
+	"testing"
 
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// GetRevision returns the revision number of the input object.
-func GetRevision(obj metav1.Object) (int64, error) {
-	v, ok := obj.GetAnnotations()[paasv1alpha2.RevisionAnnoKey]
-	if !ok {
-		return 0, nil
-	}
-	return strconv.ParseInt(v, 10, 64)
-}
-
-// MaxRevision finds the highest revision in the deployments
-func MaxRevision(allProcesses []*appsv1.Deployment) (max int64) {
-	for _, process := range allProcesses {
-		if v, err := GetRevision(process); err != nil {
-			continue
-		} else if v > max {
-			max = v
-		}
-	}
-	return max
+func TestKubetypes(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "utils/kubetypes Suite")
 }

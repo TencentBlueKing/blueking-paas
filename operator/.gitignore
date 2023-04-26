@@ -20,10 +20,10 @@ testbin/*
 
 # editor and IDE paraphernalia
 .idea
+.vscode
 *.swp
 *.swo
 *~
 .codecc
 
 **.dockerconfigjson
-.vscode

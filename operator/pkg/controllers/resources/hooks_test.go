@@ -96,7 +96,7 @@ var _ = Describe("HookUtils", func() {
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-1"))
 			Expect(hook.Pod.ObjectMeta.Labels[paasv1alpha2.HookTypeKey]).To(Equal(string(paasv1alpha2.HookPreRelease)))
 			Expect(len(hook.Pod.Spec.Containers)).To(Equal(1))
-			// Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.GetWebProcess().Image))
+			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.Build.Image))
 			Expect(hook.Pod.Spec.Containers[0].Command).To(Equal(bkapp.Spec.Hooks.PreRelease.Command))
 			Expect(hook.Pod.Spec.Containers[0].Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(0))

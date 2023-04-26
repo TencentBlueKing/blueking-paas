@@ -16,34 +16,36 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package revision
+package kubetypes
 
 import (
-	"strconv"
-
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-// GetRevision returns the revision number of the input object.
-func GetRevision(obj metav1.Object) (int64, error) {
-	v, ok := obj.GetAnnotations()[paasv1alpha2.RevisionAnnoKey]
-	if !ok {
-		return 0, nil
-	}
-	return strconv.ParseInt(v, 10, 64)
-}
+var _ = Describe("Test get/set JSON annotations", func() {
+	It("Set invalid JSON value", func() {
+		d := &appsv1.Deployment{}
+		// Chan is not JSON serializable
+		Expect(SetJsonAnnotation(d, "test", make(chan int))).To(HaveOccurred())
+	})
 
-// MaxRevision finds the highest revision in the deployments
-func MaxRevision(allProcesses []*appsv1.Deployment) (max int64) {
-	for _, process := range allProcesses {
-		if v, err := GetRevision(process); err != nil {
-			continue
-		} else if v > max {
-			max = v
-		}
-	}
-	return max
-}
+	It("Get not found", func() {
+		d := &appsv1.Deployment{}
+		val, err := GetJsonAnnotation[map[string]string](d, "test")
+		Expect(err).To(HaveOccurred())
+		Expect(val).To(BeNil())
+	})
+
+	It("Integrated test, normal case", func() {
+		d := &appsv1.Deployment{}
+		err := SetJsonAnnotation(d, "test", map[string]string{"foo": "bar"})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Get the value set above
+		val, err := GetJsonAnnotation[map[string]string](d, "test")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(val).To(Equal(map[string]string{"foo": "bar"}))
+	})
+})

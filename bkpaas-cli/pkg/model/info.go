@@ -23,13 +23,14 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 // EnvBasicInfo 应用部署环境基础信息
 type EnvBasicInfo struct {
-	Name        string
-	ClusterName string
-	ClusterID   string
+	Name    string
+	Cluster string
+	// TODO 补充访问入口，最近部署情况等信息
 }
 
 // ModuleBasicInfo 模块基础信息
@@ -53,22 +54,30 @@ type AppBasicInfo struct {
 func (i AppBasicInfo) String() string {
 	tmplStr := `
 {{ define "AppBasicInfo" -}}
-Application Basic Information:
-
-Name: {{ .Name }}    Code: {{ .Code }}    Region: {{ .Region }}    Type: {{ .AppType }}
-
-Modules:
-  {{- range .Modules }}
-  Name: {{ .Name }}    {{ if and .RepoType .RepoURL }}RepoType: {{ .RepoType }}    RepoUrl: {{ .RepoURL }}{{ end }}
-  Environments:
-    {{- range .Envs }}
-    Name: {{ .Name }}    Cluster: {{ .ClusterName }}{{ if .ClusterID }} ({{ .ClusterID }}){{ end }}
-    {{- end }}
-  {{- end }}
++-----------------------------------------------------------------------------------------------------+
+|                                Application Basic Information                                        |
++------+----------------------------------------------------------------------------------------------+
+| Name | {{ pad .Name 15 ' ' }} | Code | {{ pad .Code 15 ' ' }} | Region | {{ pad .Region 15 ' ' }} | Type | {{ pad .AppType 15 ' ' }} |
++------+----------------------------------------------------------------------------------------------+
+|                                           Modules                                                   |
++-----------------------------------------------------------------------------------------------------+
+{{- range $idx, $mod := .Modules }}
+|   {{ $idx }}   | Name     | {{ pad $mod.Name 80 ' ' }} |
+{{- if and $mod.RepoType $mod.RepoURL }}
++       +---------------------------------------------------------------------------------------------+
+|       | RepoType | {{ pad $mod.RepoType 12 ' ' }} | RepoUrl | {{ pad $mod.RepoURL 55 ' ' }} |
+{{- end }}
+{{- range $mod.Envs }}
++       +---------------------------------------------------------------------------------------------+
+|       | Env      | {{ pad .Name 12 ' ' }} | Cluster | {{ pad .Cluster 55 ' ' }} |
+{{- end }}
++-----------------------------------------------------------------------------------------------------+
+{{- end }}
 {{ end }}
 `
-
-	tmpl, err := template.New("").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
+	funcMap := sprig.TxtFuncMap()
+	funcMap["pad"] = text.Pad
+	tmpl, err := template.New("").Funcs(funcMap).Parse(tmplStr)
 	if err != nil {
 		return err.Error()
 	}

@@ -270,6 +270,7 @@
 
 <script>
     import _ from 'lodash';
+    import { bus } from '@/common/bus';
 
     export default {
         components: {
@@ -463,6 +464,15 @@
                         }
                     }
                 }
+            },
+
+            panels: {
+              handler (val) {
+                if (!val.length) return;
+                const isDisabled = val[this.panelActive].isEdit;
+                bus.$emit('release-disabled', isDisabled);
+              },
+              deep: true
             }
         },
         created () {

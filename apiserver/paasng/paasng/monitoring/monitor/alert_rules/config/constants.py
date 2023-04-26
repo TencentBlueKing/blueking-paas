@@ -23,6 +23,8 @@ from paasng.platform.applications.constants import AppEnvironment
 
 RUN_ENVS = AppEnvironment.get_values()
 
+RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get('service_name', 'rabbitmq')
+
 DEFAULT_RULE_CONFIGS = {
     'module_scoped': {
         'high_cpu_usage': {

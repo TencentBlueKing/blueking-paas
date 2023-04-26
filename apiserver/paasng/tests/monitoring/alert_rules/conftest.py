@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from pathlib import Path
+from typing import Dict
 from unittest import mock
 
 import jinja2
@@ -48,7 +49,17 @@ def mock_get_vhost():
 
 
 @pytest.fixture
-def bk_app_init_rule_configs(bk_app):
+def wl_namespaces(bk_stag_env, bk_prod_env, with_wl_apps) -> Dict[str, str]:
+    return {'prod': bk_prod_env.wl_app.namespace, 'stag': bk_stag_env.wl_app.namespace}
+
+
+@pytest.fixture
+def create_module_for_alert(create_module, with_wl_apps):
+    return create_module
+
+
+@pytest.fixture
+def bk_app_init_rule_configs(bk_app, wl_namespaces):
 
     tpl_dir = Path(settings.BASE_DIR) / 'paasng' / 'monitoring' / 'monitor' / 'alert_rules' / 'ascode'
     loader = jinja2.FileSystemLoader([tpl_dir / 'rules_tpl', tpl_dir / 'notice_tpl'])
@@ -95,7 +106,7 @@ def bk_app_init_rule_configs(bk_app):
                 alert_code=alert_code,
                 enabled=True,
                 metric_labels={'namespace': f'bkapp-{app_code}-{env}', 'vhost': random_vhost},
-                namespace=f'bkapp-{app_code}-{env}',
+                namespace=wl_namespaces[env],
                 threshold_expr=module_scoped_configs[alert_code]['threshold_expr'],
                 notice_group_name=notice_group_name,
             )

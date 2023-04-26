@@ -22,12 +22,12 @@ from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
 from paasng.monitoring.monitor.models import AppAlertRule
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestAlertRulesView:
     @pytest.fixture(autouse=True)
-    def init_rules(self, bk_app):
+    def init_rules(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
         manager.init_rules()
 

@@ -20,29 +20,29 @@ import functools
 import logging
 from typing import Callable, Dict, List, Optional
 
-from paasng.dev_resources.servicehub.constants import Category
+from paasng.dev_resources.servicehub.exceptions import ServiceObjNotFound
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ApplicationEnvironment
+
+from .constants import RABBITMQ_SERVICE_NAME
 
 logger = logging.getLogger(__name__)
 
 
 def get_vhost(app_code: str, run_env: str, module_name: str) -> Optional[str]:
     app = Application.objects.get(code=app_code)
-    app_module = app.get_module(module_name)
 
-    for bound_service in mixed_service_mgr.list_binded(app_module, category_id=Category.DATA_STORAGE):
-        if bound_service.name == 'rabbitmq':
-            svc_obj = mixed_service_mgr.get(bound_service.uuid, app.region)
-            break
-    else:
-        logger.info(f'RabbitMQ service not found or not bounded with app: {app_code}, module: {module_name}')
+    try:
+        svc_obj = mixed_service_mgr.find_by_name(name=RABBITMQ_SERVICE_NAME, region=app.region)
+    except ServiceObjNotFound as e:
+        logger.info(e)
         return None
 
-    for rel in mixed_service_mgr.list_provisioned_rels(app_module.get_envs(run_env).engine_app, svc_obj):
-        # 只取第一个 vhost
-        return rel.get_instance().credentials['RABBITMQ_VHOST']
+    app_module = app.get_module(module_name)
+    if env_vars := mixed_service_mgr.get_env_vars(app_module.get_envs(run_env).engine_app, svc_obj):
+        return env_vars['RABBITMQ_VHOST']
 
+    logger.info(f'RabbitMQ service not bounded with app: {app_code}, module: {module_name}')
     return None
 
 
@@ -55,7 +55,9 @@ def get_namespace(app_code: str, run_env: str, module_name: str) -> Optional[str
 
 @functools.lru_cache(maxsize=10)
 def _get_namespace_cache(app_code: str, run_env: str, module_name: str) -> str:
-    return Application.objects.get(code=app_code).get_engine_app(run_env, module_name).name
+    return ApplicationEnvironment.objects.get(
+        application__code=app_code, module__name=module_name, environment=run_env
+    ).wl_app.namespace
 
 
 LABEL_VALUE_QUERY_FUNCS: Dict[str, Callable[..., Optional[str]]] = {

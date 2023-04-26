@@ -47,11 +47,11 @@ func (v *BasicInfoRetriever) Exec(appCode string) (model.AppInfo, error) {
 		// 环境基础信息
 		envs := []model.EnvBasicInfo{}
 		for envName, clusterInfo := range mapx.GetMap(m, "clusters") {
-			envs = append(envs, model.EnvBasicInfo{
-				Name:        envName,
-				ClusterName: mapx.GetStr(clusterInfo.(map[string]any), "name"),
-				ClusterID:   mapx.GetStr(clusterInfo.(map[string]any), "bcs_cluster_id"),
-			})
+			cluster := mapx.GetStr(clusterInfo.(map[string]any), "name")
+			if clusterID := mapx.GetStr(clusterInfo.(map[string]any), "bcs_cluster_id"); clusterID != "" {
+				cluster += " -> " + clusterID
+			}
+			envs = append(envs, model.EnvBasicInfo{Name: envName, Cluster: cluster})
 		}
 
 		// 模块基础信息

@@ -1,16 +1,20 @@
+kind: BkApp
 apiVersion: paas.bk.tencent.com/v1alpha2
 metadata:
-  name: demo-app
+  name: sample-app-v1a2
 spec:
   build:
-    image: django-helloworld:latest
+    image: nginx:latest
   processes:
     - name: web
       replicas: 1
+      resQuotaPlan: "default"
   hooks:
     preRelease:
       command:
-        - /bin/bash
-        - /app/run_db_migrations.sh
+        - "/bin/sh"
       args:
-        - "--no-input"
+        - "-c"
+        - "echo hello; sleep 1;"
+  configuration:
+    env: []

@@ -89,7 +89,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 
 	// Use the web process's image and pull policy to run the hook.
 	// This behavior might be changed in the future when v1alpha1.BkApp is fully removed.
-	image, pullPolicy, err := NewProcImageGetter(bkapp).Get("web")
+	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get("web")
 	if err != nil {
 		return nil
 	}
@@ -133,7 +133,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 						Name:            "hook",
 						ImagePullPolicy: pullPolicy,
 						// pre-hook 使用默认资源配置
-						Resources: NewProcResourcesGetter(bkapp).GetDefault(),
+						Resources: paasv1alpha2.NewProcResourcesGetter(bkapp).GetDefault(),
 						// TODO: 挂载点
 						VolumeMounts: nil,
 					},

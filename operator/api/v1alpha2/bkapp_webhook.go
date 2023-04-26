@@ -32,6 +32,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"bk.tencent.com/paas-app-operator/pkg/config"
 )
 
 // log is for logging in this package.
@@ -42,11 +44,6 @@ var (
 	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,16}$")
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
-
-	// MaxReplicasConfig is the max allowed replicas for a process
-	// TODO: read max replicas from config.Global.ResLimitConfig.MaxReplicas, currently this
-	// behavior is forbidden because of cyclic import
-	MaxReplicasConfig = int32(10)
 )
 
 // SetupWebhookWithManager ...
@@ -147,6 +144,10 @@ func (r *BkApp) validateAppSpec() *field.Error {
 		return field.Invalid(procsField, r.Spec.Processes, "processes can't be empty")
 	}
 
+	if err := r.validateBuildConfig(); err != nil {
+		return err
+	}
+
 	procCounter := map[string]int{}
 	for idx, proc := range r.Spec.Processes {
 		if err := r.validateAppProc(proc, idx); err != nil {
@@ -182,6 +183,27 @@ func (r *BkApp) getProcNames() []string {
 	return items
 }
 
+// Validate the part of Spec which is related with image build and images
+func (r *BkApp) validateBuildConfig() *field.Error {
+	// Use procImageGetter to handle both legacy and hub API versions because the webhook
+	// is configured with "MatchPolicy: Equivalent", which means it will be called for every
+	// possible API version of "BkApp".
+	//
+	// NewProcImageGetter handles both API versions.
+	imageGetter := NewProcImageGetter(r)
+	for _, proc := range r.Spec.Processes {
+		_, _, err := imageGetter.Get(proc.Name)
+		if err != nil {
+			return field.Invalid(
+				field.NewPath(""),
+				proc.Name,
+				fmt.Sprintf("image not configured for process %s", proc.Name),
+			)
+		}
+	}
+	return nil
+}
+
 func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	pField := field.NewPath("spec").Child("processes").Index(idx)
 	// 1. 进程名称必须符合正则
@@ -193,11 +215,11 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		)
 	}
 	// 2. 副本数量不能超过上限
-	if *proc.Replicas > MaxReplicasConfig {
+	if *proc.Replicas > config.Global.GetProcMaxReplicas() {
 		return field.Invalid(
 			pField.Child("replicas"),
 			*proc.Replicas,
-			fmt.Sprintf("at most support %d replicas", MaxReplicasConfig),
+			fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
 		)
 	}
 	// 3. TODO: Check ResQuotaPlan is valid
@@ -221,7 +243,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "replicas": envName and process
-	maxReplicas := MaxReplicasConfig
+	maxReplicas := config.Global.GetProcMaxReplicas()
 	for i, rep := range r.Spec.EnvOverlay.Replicas {
 		replicasField := f.Child("replicas").Index(i)
 		if !CheckEnvName(rep.EnvName) {

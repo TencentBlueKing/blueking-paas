@@ -216,7 +216,6 @@ spec:
                   type: object
                 type: array
             required:
-            - build
             - configuration
             - processes
             type: object

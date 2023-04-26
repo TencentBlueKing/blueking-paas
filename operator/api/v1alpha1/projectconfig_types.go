@@ -104,3 +104,25 @@ func NewProjectConfig() *ProjectConfig {
 func init() {
 	SchemeBuilder.Register(&ProjectConfig{})
 }
+
+// Below functions implements the ProjectConfigReader interface
+
+// GetProcMaxReplicas returns the max replicas of a process
+func (p *ProjectConfig) GetProcMaxReplicas() int32 {
+	return p.ResLimitConfig.MaxReplicas
+}
+
+// GetProcDefaultCpuLimits returns the default cpu limits of a process
+func (p *ProjectConfig) GetProcDefaultCpuLimits() string {
+	return p.ResLimitConfig.ProcDefaultCPULimits
+}
+
+// GetProcDefaultMemLimits returns the default memory limits of a process
+func (p *ProjectConfig) GetProcDefaultMemLimits() string {
+	return p.ResLimitConfig.ProcDefaultMemLimits
+}
+
+// GetIngressClassName returns the ingress class name
+func (p *ProjectConfig) GetIngressClassName() string {
+	return p.PlatformConfig.IngressClassName
+}

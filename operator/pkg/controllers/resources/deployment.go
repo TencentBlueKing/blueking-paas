@@ -19,11 +19,8 @@
 package resources
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
 
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,10 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
-	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -64,14 +59,14 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 		objLabels := labels.Deployment(app, proc.Name)
 
 		// TODO: Add error handling
-		image, pullPolicy, err := NewProcImageGetter(app).Get(proc.Name)
+		image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(app).Get(proc.Name)
 		if err != nil {
 			log.Info("Failed to get image for process %s: %v, use default values.", proc.Name, err)
 			image = DefaultImage
 			pullPolicy = corev1.PullIfNotPresent
 		}
 
-		resGetter := NewProcResourcesGetter(app)
+		resGetter := paasv1alpha2.NewProcResourcesGetter(app)
 		resReq, err := resGetter.Get(proc.Name)
 		if err != nil {
 			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
@@ -114,113 +109,6 @@ func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 		})
 	}
 	return deployList
-}
-
-type procImageGetter struct {
-	bkapp *paasv1alpha2.BkApp
-}
-
-// NewProcImageGetter create a new ProcImageGetter
-func NewProcImageGetter(bkapp *paasv1alpha2.BkApp) *procImageGetter {
-	return &procImageGetter{bkapp: bkapp}
-}
-
-// Get get the container image by process name, both the standard and legacy API versions
-// are supported at this time.
-//
-// - name: process name
-// - return: <image>, <imagePullPolicy>, <error>
-func (r *procImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
-	// Standard: the image was defined in build config directly
-	if image := r.bkapp.Spec.Build.Image; image != "" {
-		return r.bkapp.Spec.Build.Image, r.bkapp.Spec.Build.ImagePullPolicy, nil
-	}
-
-	// Legacy API version: read image configs from annotations
-	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
-		r.bkapp,
-		paasv1alpha2.LegacyProcImageAnnoKey,
-	)
-	if config, ok := legacyProcImageConfig[name]; ok {
-		return config["image"], corev1.PullPolicy(config["policy"]), nil
-	}
-
-	return "", corev1.PullIfNotPresent, errors.New("image not configured")
-}
-
-// ProcResourcesGetter help getting resources requirements for creating processes
-type procResourcesGetter struct {
-	bkapp *paasv1alpha2.BkApp
-}
-
-var planToResources = map[string][2]string{
-	"default": {
-		config.Global.ResLimitConfig.ProcDefaultCPULimits,
-		config.Global.ResLimitConfig.ProcDefaultMemLimits,
-	},
-	// TODO: Add more plans
-}
-
-// NewProcResourcesGetter create a new ProcResourcesGetter
-func NewProcResourcesGetter(bkapp *paasv1alpha2.BkApp) *procResourcesGetter {
-	return &procResourcesGetter{bkapp: bkapp}
-}
-
-// GetDefault returns the default resources requirements for creating processes
-func (r *procResourcesGetter) GetDefault() corev1.ResourceRequirements {
-	return r.fromQuotaPlan("default")
-}
-
-// Get get the container resources by process name
-//
-// - name: process name
-// - return: <resources requirements>, <error>
-func (r *procResourcesGetter) Get(name string) (result corev1.ResourceRequirements, err error) {
-	// Standard: read the "ResQuotaPlan" field from process
-	procObj := r.bkapp.Spec.FindProcess(name)
-	if procObj == nil {
-		return result, fmt.Errorf("process %s not found", name)
-	}
-	if plan := procObj.ResQuotaPlan; plan != "" {
-		return r.fromQuotaPlan(plan), nil
-	}
-
-	// Legacy version: try to read resources configs from legacy annotation
-	legacyProcResourcesConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
-		r.bkapp,
-		paasv1alpha2.LegacyProcResAnnoKey,
-	)
-	if config, ok := legacyProcResourcesConfig[name]; ok {
-		return r.fromRawString(config["cpu"], config["memory"]), nil
-	}
-	return result, errors.New("resources unconfigured")
-}
-
-// fromQuotaPlan try to get resource requirements by the name of quota plan
-func (r *procResourcesGetter) fromQuotaPlan(plan string) corev1.ResourceRequirements {
-	values, ok := planToResources[plan]
-	if !ok {
-		return r.GetDefault()
-	}
-	return r.fromRawString(values[0], values[1])
-}
-
-// fromRawString build the resource requirements from raw string
-func (r *procResourcesGetter) fromRawString(cpu, memory string) corev1.ResourceRequirements {
-	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
-	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
-
-	return corev1.ResourceRequirements{
-		// 目前 Requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    *quota.Div(cpuQuota, 4),
-			corev1.ResourceMemory: *quota.Div(memQuota, 2),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    *cpuQuota,
-			corev1.ResourceMemory: *memQuota,
-		},
-	}
 }
 
 // buildContainers 根据配置生产对应容器配置列表（目前设计单个 proc 只会有单个容器）

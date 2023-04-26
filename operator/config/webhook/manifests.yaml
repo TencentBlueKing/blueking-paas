@@ -25,27 +25,6 @@ webhooks:
     resources:
     - bkapps
   sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-paas-bk-tencent-com-v1alpha1-bkapp
-  failurePolicy: Fail
-  name: mbkapp.kb.io
-  rules:
-  - apiGroups:
-    - paas.bk.tencent.com
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - bkapps
-  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -67,28 +46,6 @@ webhooks:
     - paas.bk.tencent.com
     apiVersions:
     - v1alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    - DELETE
-    resources:
-    - bkapps
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-paas-bk-tencent-com-v1alpha1-bkapp
-  failurePolicy: Fail
-  name: vbkapp.kb.io
-  rules:
-  - apiGroups:
-    - paas.bk.tencent.com
-    apiVersions:
-    - v1alpha1
     operations:
     - CREATE
     - UPDATE

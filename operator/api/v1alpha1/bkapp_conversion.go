@@ -1,13 +1,15 @@
 package v1alpha1
 
 import (
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"github.com/jinzhu/copier"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
+
+var _ conversion.Convertible = &BkApp{}
 
 // ConvertTo converts this BkApp to the Hub version (v1alpha2).
 func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {

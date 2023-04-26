@@ -66,6 +66,7 @@ type BkAppList struct {
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
+	// +optional
 	Build         BuildConfig `json:"build"`
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`

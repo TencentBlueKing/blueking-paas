@@ -194,7 +194,7 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 		},
 	}
 	// 如果已配置 ingressClassName，则使用
-	if ingClassName := config.Global.PlatformConfig.IngressClassName; ingClassName != "" {
+	if ingClassName := config.Global.GetIngressClassName(); ingClassName != "" {
 		ingress.Annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
 	}
 	results = append(results, &ingress)

@@ -16,16 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+package v1alpha2_test
 
-// projConf for current pkg
-var projConf *ProjectConfig
-
-func init() {
-	projConf = NewProjectConfig()
-}
-
-// SetConfig will set the projConf by given cfg
-func SetConfig(cfg *ProjectConfig) {
-	projConf = cfg
-}
+// The tests for procImageGetter and procResourcesGetter are covered by resources/deployment_test.go
+// currently, no test cases need here at this moment.

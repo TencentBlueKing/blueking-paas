@@ -14,6 +14,7 @@ resources:
   path: bk.tencent.com/paas-app-operator/api/v1alpha1
   version: v1alpha1
   webhooks:
+    conversion: true
     defaulting: true
     validation: true
     webhookVersion: v1

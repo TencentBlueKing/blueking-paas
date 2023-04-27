@@ -157,9 +157,6 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("failed to new paas-analysis template: %w", err))
 	}
-
-	// PA 无需额外配置, 可以总是启用该插件
-	RegistryPlugin(&PaasAnalysisPlugin{})
 }
 
 // RegistryPlugin 注册插件

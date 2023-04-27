@@ -39,12 +39,19 @@ type PlatformConfig struct {
 // IngressPluginConfig contains the config for controlling ingress config
 type IngressPluginConfig struct {
 	AccessControlConfig *AccessControlConfig `json:"accessControlConfig,omitempty"`
+	PaaSAnalysisConfig  *PaaSAnalysisConfig  `json:"paasAnalysisConfig,omitempty"`
 }
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module
 type AccessControlConfig struct {
 	// bk-ingress-nginx choose which redis key to connect to, optional values 'prod', 'test', 'local'
 	RedisConfigKey string `json:"redisConfigKey"`
+}
+
+// PaaSAnalysisConfig contains the config for controlling ingress snippet about PA(paas-analysis) module
+type PaaSAnalysisConfig struct {
+	// Is PA enabled on the current cluster?
+	Enabled bool `json:"enabled"`
 }
 
 // ResLimitConfig contains bkapp resource limit

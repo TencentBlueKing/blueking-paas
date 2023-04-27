@@ -103,6 +103,8 @@
                         'appCloudAPI',
                         // 镜像凭证
                         'imageCredential',
+                        // 数据统计
+                        'appAnalysis',
                         // 应用推广
                         'appMarketing',
                         // 基本设置
@@ -137,6 +139,8 @@
                         'appCloudAPI',
                         // 镜像凭证
                         'imageCredential',
+                        // 数据统计
+                        'appAnalysis',
                         // 应用推广
                         'appMarketing',
                         // 基本设置
@@ -171,6 +175,8 @@
                         'appCloudAPI',
                         // 镜像凭证
                         'imageCredential',
+                        // 数据统计
+                        'appAnalysis',
                         // 应用推广
                         'appMarketing',
                         // 基本设置

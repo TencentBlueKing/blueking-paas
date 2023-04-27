@@ -616,6 +616,32 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "appAnalysis",
+                "label": staticI18n.$t("数据统计"),
+                "iconfontName": "analysis",
+                "supportModule": true,
+                "children": [
+                    {
+                        "name": staticI18n.$t("网站访问统计"),
+                        "destRoute": {
+                            "name": "appWebAnalysis"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("访问日志统计"),
+                        "destRoute": {
+                            "name": "appLogAnalysis"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("自定义事件统计"),
+                        "destRoute": {
+                            "name": "appEventAnalysis"
+                        }
+                    }
+                ]
+            },
+            {
                 "name": "appMarketing",
                 "label": staticI18n.$t("应用推广"),
                 "iconfontName": "volumn",

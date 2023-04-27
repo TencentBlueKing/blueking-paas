@@ -16,31 +16,34 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package handler
+package app
 
-import "github.com/TencentBlueKing/blueking-paas/client/pkg/model"
+import (
+	"fmt"
 
-// ShortRevisionLength 短版本信息长度
-const ShortRevisionLength = 8
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 
-// Lister 应用/服务列表查询接口
-type Lister interface {
-	// Exec 请求 PaaS API，获取资源列表数据
-	Exec() (model.Items, error)
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
+)
+
+// NewCmdList returns a Command instance for 'app list' sub command
+func NewCmdList() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List PaaS applications",
+		Run: func(cmd *cobra.Command, args []string) {
+			listApps()
+		},
+	}
 }
 
-// Retriever 各类应用信息查询接口
-type Retriever interface {
-	// Exec 请求 PaaS API，获取应用某类信息
-	Exec(appCode string) (model.AppInfo, error)
-}
-
-// Deployer 部署器接口
-type Deployer interface {
-	// Deploy 下发部署命令
-	Deploy(opts model.DeployOptions) (map[string]any, error)
-	// GetResult 获取应用部署结果
-	GetResult(opts model.DeployOptions) (model.DeployResult, error)
-	// GetHistory 获取应用部署历史
-	GetHistory(opts model.DeployOptions) (model.DeployHistory, error)
+// 在命令行中展示当前用户有权限的应用列表
+func listApps() {
+	applications, err := handler.NewAppLister().Exec()
+	if err != nil {
+		color.Red("Failed to list applications")
+		return
+	}
+	fmt.Println(applications)
 }

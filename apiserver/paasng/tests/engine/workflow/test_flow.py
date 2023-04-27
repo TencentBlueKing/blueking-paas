@@ -38,16 +38,6 @@ def setup_cluster():
         yield
 
 
-@pytest.fixture(autouse=True)
-def setup_mocks():
-    """Setup mocks for current testing module
-
-    - Mock ProcessManager which depends on `workloads` module
-    """
-    with mock.patch('paasng.extensions.declarative.deployment.controller.ProcessManager'):
-        yield
-
-
 class TestDeployProcedure:
     @pytest.fixture
     def phases(self, bk_prod_env, bk_deployment):

@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import io
 from textwrap import dedent
-from unittest import mock
 
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
@@ -39,15 +38,6 @@ class TestGetEnvVariables:
     @pytest.fixture(autouse=True)
     def setup_cluster(self):
         with mock_cluster_service():
-            yield
-
-    @pytest.fixture(autouse=True)
-    def setup_mocks(self):
-        """Setup mocks for current testing module
-
-        - Mock ProcessManager which depends on `workloads` module
-        """
-        with mock.patch('paasng.extensions.declarative.deployment.controller.ProcessManager'):
             yield
 
     def test_user_config_var(self, bk_module, bk_stag_env):

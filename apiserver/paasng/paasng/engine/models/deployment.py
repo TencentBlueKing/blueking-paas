@@ -16,22 +16,23 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
+import cattr
 from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
 from paasng.engine.models.base import OperationVersionBase
 from paasng.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
-from paasng.utils.models import make_legacy_json_field
+from paasng.utils.models import make_json_field, make_legacy_json_field
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ class AdvancedOptions:
 
 
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)
+DeclarativeProcessField = make_json_field("DeclarativeProcessField", Dict[str, ProcessTmpl])
 
 
 class Deployment(OperationVersionBase):
@@ -89,7 +91,10 @@ class Deployment(OperationVersionBase):
     advanced_options: AdvancedOptions = AdvancedOptionsField("高级选项", null=True)
 
     procfile = JSONField(
-        default=dict, help_text="启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile"
+        default=dict, help_text="[deprecated] 启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile"
+    )
+    processes = DeclarativeProcessField(
+        default=dict, help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec"
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
 
@@ -104,10 +109,10 @@ class Deployment(OperationVersionBase):
         )
 
     def update_fields(self, **u_fields):
-        logger.info('update_fields, deployment_id: {} , fields: {}'.format(self.id, json.dumps(u_fields)))
+        logger.info('update_fields, deployment_id: %s, fields: %s', self.id, u_fields)
         before_time = self.updated
         kind: Optional[str]
-        status: Optional[str]
+        status: Optional[JobStatus]
         if 'release_status' in u_fields:
             kind = 'release'
             status = JobStatus(u_fields['release_status'])
@@ -117,6 +122,7 @@ class Deployment(OperationVersionBase):
         else:
             kind = None
             status = None
+
         for key, value in u_fields.items():
             setattr(self, key, value)
         self.save()
@@ -212,3 +218,15 @@ class Deployment(OperationVersionBase):
             if hook.enabled:
                 hooks.upsert(hook.type, hook.command)
         return hooks
+
+    def get_processes(self) -> List[ProcessTmpl]:
+        if self.processes:
+            return list(self.processes.values())
+        # 兼容旧字段 procfile
+        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas
+        elif self.procfile:
+            return cattr.structure(
+                [{"name": name, "command": command} for name, command in self.procfile.items()],
+                List[ProcessTmpl],
+            )
+        return []

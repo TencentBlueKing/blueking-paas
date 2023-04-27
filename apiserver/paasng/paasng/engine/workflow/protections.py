@@ -36,6 +36,7 @@ from paasng.platform.core.protections.exceptions import ConditionNotMatched
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
+from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.publish.market.models import Product
 from paasng.utils.basic import get_username_by_bkpaas_user_id
@@ -117,7 +118,7 @@ class ProcfileCondition(DeployCondition):
     action_name = DeployConditions.NEED_TO_COMPLETE_PROCFILE.value
 
     def validate(self):
-        module = self.env.module
+        module: Module = self.env.module
         if ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE:
             return
 

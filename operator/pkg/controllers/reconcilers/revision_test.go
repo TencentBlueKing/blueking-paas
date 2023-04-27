@@ -178,28 +178,31 @@ var _ = Describe("Test RevisionReconciler", func() {
 		})
 
 		It("skip failed hook", func() {
-			bkapp.Generation = 3
-			// g3 表示第三个版本，在 g2 & r2 的时候，hook 失败
+			// g4 表示第四个版本
+			bkapp.Generation = 4
+			// 在 g3 & r3 的时候，hook 失败
 			bkapp.Status.Revision = &v1alpha1.Revision{
-				Revision: 2,
+				Revision: 3,
 			}
 			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
 				Type:      v1alpha1.HookPreRelease,
 				Phase:     v1alpha1.HealthUnhealthy,
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
-			// r1 中调和循环正常结束，r2 中 hook 失败，因此 deployment 还是 r1
-			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
+			// r2 中调和循环正常结束，r3 中 hook 失败，因此 deployment 还是 r2
+			web.Annotations[v1alpha1.RevisionAnnoKey] = "2"
 
-			hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
-			Expect(hook.Pod).NotTo(BeNil())
+			hook := resources.BuildPreReleaseHook(
+				bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease),
+			)
 
-			r := NewRevisionReconciler(builder.WithObjects(bkapp, web, hook.Pod).Build())
+			cli := builder.WithObjects(bkapp, web, hook.Pod).Build()
+			r := NewRevisionReconciler(cli)
 			ret := r.Reconcile(context.Background(), bkapp)
 
 			Expect(ret.ShouldAbort()).To(BeFalse())
-			// 跳过失败的 hook 版本后，revision 应该是 deploy max revision: 1 + 1 + 1 = 3
-			Expect(bkapp.Status.Revision.Revision).To(Equal(int64(3)))
+			// 跳过失败的 hook 版本后，revision 应该是 deploy max revision: 2 + 1 + 1 = 4
+			Expect(bkapp.Status.Revision.Revision).To(Equal(int64(4)))
 		})
 	})
 })

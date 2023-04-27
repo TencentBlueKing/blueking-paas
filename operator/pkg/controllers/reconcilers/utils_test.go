@@ -60,11 +60,11 @@ var _ = Describe("Test utils", func() {
 				Processes: []v1alpha1.Process{
 					{
 						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
+						Image:      "nginx:1.0.0",
+						Replicas:   v1alpha1.ReplicasOne,
 						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						CPU:        "200m",
+						Memory:     "128Mi",
 					},
 				},
 			},
@@ -76,10 +76,9 @@ var _ = Describe("Test utils", func() {
 				Kind:       "Deployment",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: names.Deployment(bkapp, "fake"),
-				// TODO P1 考虑 prod，stag 部署环境隔离？比如不同命名空间？
+				Name:        names.Deployment(bkapp, "foo"),
 				Namespace:   bkapp.Namespace,
-				Labels:      labels.Deployment(bkapp, "fake"),
+				Labels:      labels.Deployment(bkapp, "foo"),
 				Annotations: make(map[string]string),
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
@@ -108,7 +107,7 @@ var _ = Describe("Test utils", func() {
 
 		outdated := FindExtraByName(current, want)
 		Expect(len(outdated)).To(Equal(1))
-		Expect(outdated[0].Name).To(Equal("bkapp-sample--fake"))
+		Expect(outdated[0].Name).To(Equal("bkapp-sample--foo"))
 	})
 
 	Context("test UpsertObject", func() {

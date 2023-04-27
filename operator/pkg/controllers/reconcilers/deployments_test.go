@@ -76,8 +76,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 				Kind:       "Deployment",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: names.Deployment(bkapp, "fake"),
-				// TODO P1 考虑 prod，stag 部署环境隔离？比如不同命名空间？
+				Name:        names.Deployment(bkapp, "fake"),
 				Namespace:   bkapp.Namespace,
 				Labels:      labels.Deployment(bkapp, "fake"),
 				Annotations: make(map[string]string),

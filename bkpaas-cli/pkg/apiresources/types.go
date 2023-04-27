@@ -35,6 +35,9 @@ var ApiRespDecodeErr = errors.New("Decode api response failed")
 type Requester interface {
 	// CheckToken 检查 AccessToken 是否有效，若有效则返回用户身份信息
 	CheckToken(token string) (map[string]any, error)
+
+	// ListAppMinimal 获取应用简明信息列表
+	ListAppMinimal() (map[string]any, error)
 	// GetAppInfo 获取应用基础信息
 	GetAppInfo(appCode string) (map[string]any, error)
 

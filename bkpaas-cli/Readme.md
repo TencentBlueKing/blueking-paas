@@ -79,26 +79,51 @@ User login... Success!
 
 bkpaas-cli 可用于蓝鲸应用的信息查询，部署，部署状态查询等场景。
 
+#### 列举应用
+
+你可以通过执行命令 `bkpaas-cli app list` 来查看你有操作权限的蓝鲸应用：
+
+```shell
+>>> bkpaas-cli app list
+Application List
++----+------------------+------------------+
+| #  |      NAME        |       CODE       |
++----+------------------+------------------+
+|  1 | demo-app-1       | app-code-1       |
+|  2 | demo-app-2       | app-code-2       |
+|  3 | demo-app-3       | app-code-3       |
++----+------------------+------------------+
+```
+
 #### 应用信息查询
 
 你可以通过执行命令 `bkpaas-cli app get-info` 来查看指定应用的基础信息：
 
 ```shell
 >>> bkpaas-cli app get-info --code=demo-app
-Application Basic Information:
-
-Name: 示例应用    Code: demo-app    Region: default    Type: default
-
-Modules:
-  Name: webfe    RepoType: GitHub    RepoUrl: https://github.com/octocat/Hello-World.git
-  Environments:
-    Name: prod    Cluster: default (BCS-K8S-12345)
-    Name: stag    Cluster: default (BCS-K8S-12345)
-
-  Name: backend    RepoType: GitHub    RepoUrl: https://github.com/octocat/Hello-World.git
-  Environments:
-    Name: prod    Cluster: default (BCS-K8S-12345)
-    Name: stag    Cluster: default (BCS-K8S-12345)
++-----------------------------------------------------------------------------------------------------+
+|                                Application Basic Information                                        |
++------+----------------------------------------------------------------------------------------------+
+| Name | demo-app-1    | Code | app-code-1       | Region | default          | Type | default         |
++------+----------------------------------------------------------------------------------------------+
+|                                           Modules                                                   |
++-----------------------------------------------------------------------------------------------------+
+|   0   | Name     | frontend                                                                         |
++       +---------------------------------------------------------------------------------------------+
+|       | RepoType | GitHub       | RepoUrl | https://github.com/octocat/Hello-World.git              |
++       +---------------------------------------------------------------------------------------------+
+|       | Env      | prod         | Cluster | default -> BCS-K8S-12345                                |
++       +---------------------------------------------------------------------------------------------+
+|       | Env      | stag         | Cluster | default -> BCS-K8S-12345                                |
++-----------------------------------------------------------------------------------------------------+
+|   1   | Name     | backend                                                                          |
++       +---------------------------------------------------------------------------------------------+
+|       | RepoType | GitHub       | RepoUrl | https://github.com/octocat/Hello-World.git              |
++       +---------------------------------------------------------------------------------------------+
+|       | Env      | prod         | Cluster | default -> BCS-K8S-12345                                |
++       +---------------------------------------------------------------------------------------------+
+|       | Env      | stag         | Cluster | default -> BCS-K8S-12345                                |
++-----------------------------------------------------------------------------------------------------+
 ```
 
 #### 应用部署

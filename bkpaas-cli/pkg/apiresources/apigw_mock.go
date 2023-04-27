@@ -81,6 +81,27 @@ func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) 
 	}
 }
 
+// ListAppMinimal ...
+func (r MockedRequester) ListAppMinimal() (map[string]any, error) {
+	return map[string]any{
+		"count": 2,
+		"results": []any{
+			map[string]any{
+				"application": map[string]any{
+					"code": "test-code-1",
+					"name": "test-app-1",
+				},
+			},
+			map[string]any{
+				"application": map[string]any{
+					"code": "test-code-2",
+					"name": "test-app-2",
+				},
+			},
+		},
+	}, nil
+}
+
 // GetAppInfo ...
 func (r MockedRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	if appCode == "no_exists" {

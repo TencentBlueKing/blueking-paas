@@ -1033,6 +1033,7 @@ class PluginCallBackApiViewSet(PluginInstanceMixin, GenericViewSet):
     @csrf_exempt
     def itsm_create_callback(self, request, pd_id, plugin_id):
         """创建插件审批回调，更新插件状态并完成插件创建相关操作"""
+        logger.error("itsm test, request.data: %s", request.data)
         serializer = serializers.ItsmApprovalSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 

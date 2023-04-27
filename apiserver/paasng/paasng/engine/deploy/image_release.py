@@ -62,9 +62,10 @@ class ImageReleaseMgr(DeployStep):
         with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
             processes = get_processes(deployment=self.deployment)
             build_id = self.engine_client.create_build(
-                procfile=processes, extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"}
+                procfile={p.name: p.command for p in processes.values()},
+                extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
             )
-            self.deployment.update_fields(procfile=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
+            self.deployment.update_fields(processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
         with self.procedure_force_phase(_('配置镜像访问凭证'), phase=preparation_phase):
             self._setup_image_credentials()

@@ -190,6 +190,13 @@ func initIngressPlugins() {
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
 	}
+	if pluginConfig.PaaSAnalysisConfig != nil && pluginConfig.PaaSAnalysisConfig.Enabled {
+		// PA 无需额外配置, 可以总是启用该插件
+		setupLog.Info("[IngressPlugin] PA(paas-analysis) plugin enabled.")
+		resources.RegistryPlugin(&resources.PaasAnalysisPlugin{})
+	} else {
+		setupLog.Info("[IngressPlugin] Missing paas-analysis config or this cluster is not supported, disable PA feature.")
+	}
 }
 
 // 生成某类组资源管理器配置

@@ -31,6 +31,7 @@ from paasng.engine.signals import pre_appenv_deploy
 from paasng.engine.utils.source import get_source_dir
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ def initialize_deployment(
     :param version_info: 需要部署的源码版本信息
     :param advanced_options: AdvancedOptionsField, 部署的高级选项.
     """
-    module = env.module
+    module: Module = env.module
     version_service = get_version_service(module, operator=operator)
     source_location = version_service.build_url(version_info)
 

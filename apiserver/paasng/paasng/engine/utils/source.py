@@ -57,16 +57,21 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
     """
     for proc_type in processes.keys():
         if not PROC_TYPE_PATTERN.match(proc_type):
-            raise ValidationError(
-                f'Invalid proc type: {proc_type}, must match ' f'pattern {PROC_TYPE_PATTERN.pattern}'
-            )
+            raise ValidationError(f'Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}')
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f'Invalid proc type: {proc_type}, must not ' f'longer than {PROC_TYPE_MAX_LENGTH} characters'
+                f'Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters'
             )
 
     # Formalize processes data and return
-    return cattr.structure({name.lower(): {"name": name.lower(), **v} for name, v in processes.items()}, TypeProcesses)
+    try:
+        return cattr.structure(
+            {name.lower(): {"name": name.lower(), **v} for name, v in processes.items()}, TypeProcesses
+        )
+    except KeyError as e:
+        raise ValidationError(f'Invalid process data, missing: {e}')
+    except ValueError as e:
+        raise ValidationError(f"Invalid process data, {e}")
 
 
 def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901

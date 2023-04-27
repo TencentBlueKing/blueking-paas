@@ -44,6 +44,15 @@ class MetaV1Condition(BaseModel):
     observedGeneration: int = Field(default=0)
 
 
+class AutoscalingSpec(BaseModel):
+    """Autoscaling specification"""
+
+    enabled: bool
+    minReplicas: int
+    maxReplicas: int
+    policy: str = Field(..., min_length=1)
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -56,6 +65,7 @@ class BkAppProcess(BaseModel):
     cpu: str = DEFAULT_PROC_CPU
     memory: str = DEFAULT_PROC_MEM
     imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    autoscaling: Optional[AutoscalingSpec] = None
 
 
 class Hook(BaseModel):
@@ -100,11 +110,20 @@ class EnvVarOverlay(BaseModel):
     value: str
 
 
+class AutoscalingOverlay(BaseModel):
+    """Overwrite or add application's autoscaling by environment"""
+
+    envName: str
+    process: str
+    policy: str
+
+
 class EnvOverlay(BaseModel):
     """Defines environment specified configs"""
 
     replicas: Optional[List[ReplicasOverlay]] = None
     envVariables: Optional[List[EnvVarOverlay]] = None
+    autoscaling: Optional[List[AutoscalingOverlay]] = None
 
 
 class BkAppSpec(BaseModel):

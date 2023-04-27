@@ -16,32 +16,11 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package action
+package config
 
-type DefaultAppDeployer struct{}
+import "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/pathx"
 
-func (d DefaultAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
-	// TODO implement me
-	panic("implement me")
+// LoadMockedConfig 加载测试用配置
+func LoadMockedConfig() {
+	G, _ = LoadConf(pathx.GetCurPKGPath() + "/../../etc/conf.yaml")
 }
-
-func (d DefaultAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-var _ Deployer = DefaultAppDeployer{}
-
-type CNativeAppDeployer struct{}
-
-func (d CNativeAppDeployer) Exec(opts DeployOptions) (DeployInfo, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (d CNativeAppDeployer) GetResult(info DeployInfo) (DeployResult, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-var _ Deployer = CNativeAppDeployer{}

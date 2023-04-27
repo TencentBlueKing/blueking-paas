@@ -246,8 +246,13 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
 class CreateThirdPartyApplicationSLZ(AppBasicInfoMixin):
     """创建外链应用的表单"""
 
-    engine_enabled = serializers.BooleanField(default=False, required=False)
+    engine_enabled = serializers.BooleanField(default=False)
     market_params = MarketParamsMixin()
+
+    def validate(self, attrs):
+        if attrs['engine_enabled']:
+            raise ValidationError(_('该接口只支持创建外链应用'))
+        return attrs
 
 
 class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):

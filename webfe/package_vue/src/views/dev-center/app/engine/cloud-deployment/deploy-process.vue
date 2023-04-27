@@ -270,6 +270,7 @@
 
 <script>
     import _ from 'lodash';
+    import { bus } from '@/common/bus';
 
     export default {
         components: {
@@ -463,6 +464,15 @@
                         }
                     }
                 }
+            },
+
+            panels: {
+              handler (val) {
+                if (!val.length) return;
+                const isDisabled = val[this.panelActive].isEdit;
+                bus.$emit('release-disabled', isDisabled);
+              },
+              deep: true
             }
         },
         created () {
@@ -558,7 +568,7 @@
                 });
             },
 
-            // 处理重复添加
+            // 处理重复添加和正则
             handleRepeatData (index) {
                 if (!this.isBlur) return;
                 this.isBlur = false; // 处理enter会触发两次的bug
@@ -571,6 +581,16 @@
                     this.$paasMessage({
                         theme: 'error',
                         message: this.$t('不允许添加同名进程')
+                    });
+                    setTimeout(() => {
+                        this.isBlur = true;
+                        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+                    }, 100);
+                    return false;
+                } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
                     });
                     setTimeout(() => {
                         this.isBlur = true;

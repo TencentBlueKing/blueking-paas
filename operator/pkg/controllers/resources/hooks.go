@@ -67,7 +67,7 @@ func (i *HookInstance) Succeeded() bool {
 
 // Failed 返回当前 hook 是否执行失败
 func (i *HookInstance) Failed() bool {
-	return !i.Progressing() && !i.Succeeded()
+	return !(i.Progressing() || i.Succeeded())
 }
 
 // Timeout 根据参数 timeout 判断 Pod 是否执行超时

@@ -80,15 +80,21 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	newRevision := maxOldRevision + 1
 
 	if newRevision != defaultRevision {
-		// 检测上一个版本的 PreReleaseHook 是否仍在运行
 		preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
-		if preReleaseHook != nil && preReleaseHook.Status.Phase == v1alpha1.HealthProgressing {
-			if _, err = CheckAndUpdatePreReleaseHookStatus(
-				ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
-			); err != nil {
-				return r.Result.withError(err)
+		if preReleaseHook != nil {
+			// 检测上一个版本的 PreReleaseHook 是否仍在运行
+			if preReleaseHook.Progressing() {
+				if _, err = CheckAndUpdatePreReleaseHookStatus(
+					ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
+				); err != nil {
+					return r.Result.withError(err)
+				}
+				return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
 			}
-			return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
+			// 上一个版本的 hook 失败不应该阻止调和循环，revision 需要自增以跳过失败的版本
+			if preReleaseHook.Failed() {
+				newRevision += 1
+			}
 		}
 	}
 

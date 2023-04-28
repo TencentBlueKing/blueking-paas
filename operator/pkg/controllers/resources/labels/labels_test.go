@@ -23,19 +23,19 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Get resource labels", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo-app",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{},
+			Spec: paasv1alpha2.AppSpec{},
 		}
 	})
 
@@ -50,19 +50,19 @@ var _ = Describe("Get resource labels", func() {
 				"normal",
 				"foo",
 				"web",
-				map[string]string{v1alpha1.BkAppNameKey: "foo", v1alpha1.ProcessNameKey: "web"},
+				map[string]string{paasv1alpha2.BkAppNameKey: "foo", paasv1alpha2.ProcessNameKey: "web"},
 			),
 			Entry(
 				"_ in app",
 				"foo_app",
 				"web",
-				map[string]string{v1alpha1.BkAppNameKey: "foo_app", v1alpha1.ProcessNameKey: "web"},
+				map[string]string{paasv1alpha2.BkAppNameKey: "foo_app", paasv1alpha2.ProcessNameKey: "web"},
 			),
 			Entry(
 				"_ in process",
 				"foo",
 				"backend_worker",
-				map[string]string{v1alpha1.BkAppNameKey: "foo", v1alpha1.ProcessNameKey: "backend_worker"},
+				map[string]string{paasv1alpha2.BkAppNameKey: "foo", paasv1alpha2.ProcessNameKey: "backend_worker"},
 			),
 		)
 	})

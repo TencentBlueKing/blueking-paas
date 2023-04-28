@@ -39,12 +39,19 @@ type PlatformConfig struct {
 // IngressPluginConfig contains the config for controlling ingress config
 type IngressPluginConfig struct {
 	AccessControlConfig *AccessControlConfig `json:"accessControlConfig,omitempty"`
+	PaaSAnalysisConfig  *PaaSAnalysisConfig  `json:"paasAnalysisConfig,omitempty"`
 }
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module
 type AccessControlConfig struct {
 	// bk-ingress-nginx choose which redis key to connect to, optional values 'prod', 'test', 'local'
 	RedisConfigKey string `json:"redisConfigKey"`
+}
+
+// PaaSAnalysisConfig contains the config for controlling ingress snippet about PA(paas-analysis) module
+type PaaSAnalysisConfig struct {
+	// Is PA enabled on the current cluster?
+	Enabled bool `json:"enabled"`
 }
 
 // ResLimitConfig contains bkapp resource limit
@@ -96,4 +103,26 @@ func NewProjectConfig() *ProjectConfig {
 
 func init() {
 	SchemeBuilder.Register(&ProjectConfig{})
+}
+
+// Below functions implements the ProjectConfigReader interface
+
+// GetProcMaxReplicas returns the max replicas of a process
+func (p *ProjectConfig) GetProcMaxReplicas() int32 {
+	return p.ResLimitConfig.MaxReplicas
+}
+
+// GetProcDefaultCpuLimits returns the default cpu limits of a process
+func (p *ProjectConfig) GetProcDefaultCpuLimits() string {
+	return p.ResLimitConfig.ProcDefaultCPULimits
+}
+
+// GetProcDefaultMemLimits returns the default memory limits of a process
+func (p *ProjectConfig) GetProcDefaultMemLimits() string {
+	return p.ResLimitConfig.ProcDefaultMemLimits
+}
+
+// GetIngressClassName returns the ingress class name
+func (p *ProjectConfig) GetIngressClassName() string {
+	return p.PlatformConfig.IngressClassName
 }

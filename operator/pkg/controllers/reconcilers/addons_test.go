@@ -28,23 +28,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Test AddonReconciler", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var r *AddonReconciler
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var ctx context.Context
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "bkapp-sample",
@@ -56,7 +56,7 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 		ctx = context.Background()
 	})
@@ -79,7 +79,7 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(ret.err).NotTo(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeFalse())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionTrue))
 	})
 
@@ -92,7 +92,7 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 		Expect(cond.Reason).To(Equal("InternalServerError"))
 		Expect(cond.Message).To(Equal(
@@ -104,7 +104,7 @@ var _ = Describe("Test AddonReconciler", func() {
 	It("when extract addons failed", func() {
 		testing.WithAppInfoAnnotations(bkapp)
 		By("set a invalid addon list", func() {
-			bkapp.Annotations[v1alpha1.AddonsAnnoKey] = "['foo-service']"
+			bkapp.Annotations[paasv1alpha2.AddonsAnnoKey] = "['foo-service']"
 		})
 
 		r = &AddonReconciler{
@@ -118,7 +118,7 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(ret.err).To(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 		Expect(cond.Reason).To(Equal("InternalServerError"))
 		Expect(cond.Message).To(Equal(
@@ -143,7 +143,7 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(ret.err).To(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AddOnsProvisioned)
+		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 		Expect(cond.Reason).To(Equal("InternalServerError"))
 		Expect(cond.Message).To(Equal(

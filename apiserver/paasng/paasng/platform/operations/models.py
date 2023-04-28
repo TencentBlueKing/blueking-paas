@@ -274,7 +274,7 @@ class AppOfflineOperationObj(OperationObj):
         else:
             text_tmpl = _('尝试下架 {module_name} 模块的{env_name}')
 
-        return text_tmpl.format(env_name=env_name)
+        return text_tmpl.format(module_name=self.operation.module_name, env_name=env_name)
 
 
 class CreateModuleOperationObj(OperationObj):

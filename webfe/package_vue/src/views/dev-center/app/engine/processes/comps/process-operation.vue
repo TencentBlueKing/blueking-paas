@@ -956,8 +956,8 @@
                     }
                 };
 
-                params.query.terms['pod_name'] = [this.curInstance.name];
-                params.query.terms['environment'] = [this.environment];
+                params.query.terms.pod_name = [this.curInstance.name];
+                params.query.terms.environment = [this.environment];
 
                 return params;
             },
@@ -1725,6 +1725,7 @@
                         res => {
                             this.processConfigDialog.isLoading = false;
                             this.processConfigDialog.visiable = false;
+                            this.$store.commit('updataEnvEventData', []);
                             this.updateProcessConfig();
                         },
                         // 验证失败

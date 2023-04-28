@@ -95,7 +95,7 @@ class ApplicationBuilder(DeployStep):
         module = self.deployment.app_environment.module
         with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
-            self.deployment.update_fields(procfile=processes)
+            self.deployment.update_fields(processes=processes)
 
         with self.procedure_force_phase(_('上传仓库代码'), phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
@@ -109,7 +109,9 @@ class ApplicationBuilder(DeployStep):
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
         with self.procedure(_('启动应用构建任务')):
-            self.async_start_build_process(source_destination_path, processes)
+            self.async_start_build_process(
+                source_destination_path, procfile={p.name: p.command for p in processes.values()}
+            )
 
     def compress_and_upload(self, relative_source_dir: Path, source_destination_path: str):
         """Download, compress and upload module source files
@@ -169,7 +171,7 @@ class ApplicationBuilder(DeployStep):
 
         handler.handle_deployment(self.deployment)
 
-    def async_start_build_process(self, source_tar_path, procfile):
+    def async_start_build_process(self, source_tar_path: str, procfile: Dict[str, str]):
         """Start a new build process and check the status periodically"""
         env_vars = get_env_variables(self.module_environment, deployment=self.deployment)
         build_process_id = start_build_process(
@@ -329,7 +331,7 @@ def start_build_process(
     version: 'VersionInfo',
     stream_channel_id: str,
     source_tar_path: str,
-    procfile: dict,
+    procfile: Dict[str, str],
     extra_envs: Dict[str, str],
 ) -> str:
     """Start a new build process, this will start a celery task in the background without

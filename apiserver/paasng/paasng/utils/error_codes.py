@@ -94,6 +94,7 @@ class ErrorCodes:
     APP_METRICS_UNSUPPORTED = ErrorCode(_('应用资源 metrics 暂不支持'))
     CANNOT_FETCH_RESOURCE_METRICS = ErrorCode(_('无法获取应用资源 metrics'))
     # Monitor
+    INIT_ALERT_RULES_FAILED = ErrorCode(_('初始化告警规则失败'))
     QUERY_ALERTS_FAILED = ErrorCode(_('查询告警失败'))
     # 独立域名
     CANNOT_UPDATE_DOMAIN = ErrorCode(_('无法更新独立域名'))

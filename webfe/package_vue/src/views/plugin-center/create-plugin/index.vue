@@ -199,109 +199,6 @@
           </div>
         </bk-form-item>
       </bk-form>
-      <template v-if="Object.keys(extraFields).length">
-        <div class="base-info-tit">
-          {{ $t('更多信息') }}
-        </div>
-        <bk-form
-          ref="form"
-          :model="form"
-          :rules="informationRules"
-        >
-          <bk-form-item
-            :label="$t('连接器类型')"
-            :required="true"
-            :property="'type'"
-          >
-            <bk-radio-group v-model="form.type">
-              <bk-radio
-                :key="'数据源接入'"
-                :value="1"
-              >
-                {{ $t('数据源接入') }}
-              </bk-radio>
-              <bk-radio
-                :key="'数据入库'"
-                :value="2"
-              >
-                {{ $t('数据入库') }}
-              </bk-radio>
-            </bk-radio-group>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('建议使用场景')"
-            :required="true"
-            :property="'type'"
-          >
-            <div class="flex-row">
-              <bk-select
-                v-model="form.type"
-                class="w480"
-                :clearable="false"
-                :placeholder="$t('建议使用场景')"
-              >
-                <bk-option
-                  v-for="(option, index) in pluginTypeList"
-                  :id="option.id"
-                  :key="index"
-                  :name="option.text"
-                />
-              </bk-select>
-            </div>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('建议日数据量')"
-            :required="true"
-            :property="'type'"
-          >
-            <bk-select
-              v-model="form.type"
-              class="w480"
-              :clearable="false"
-              :placeholder="$t('建议日数据量')"
-            >
-              <bk-option
-                v-for="(option, index) in pluginTypeList"
-                :id="option.id"
-                :key="index"
-                :name="option.text"
-              />
-            </bk-select>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('查询模式')"
-            :required="true"
-            :property="'type'"
-          >
-            <bk-select
-              v-model="form.type"
-              class="w480"
-              :clearable="false"
-              :placeholder="$t('查询模式')"
-            >
-              <bk-option
-                v-for="(option, index) in pluginTypeList"
-                :id="option.id"
-                :key="index"
-                :name="option.text"
-              />
-            </bk-select>
-          </bk-form-item>
-          <bk-form-item
-            class="edit-form-item"
-            :label="$t('使用说明')"
-            :required="true"
-            :property="'type'"
-          >
-            <quill-editor
-              v-model="form.type"
-              class="editor"
-              :options="editorOption"
-              @change="onEditorChange($event)"
-            />
-          </bk-form-item>
-        </bk-form>
-      </template>
 
       <div class="button-warp">
         <bk-button
@@ -326,14 +223,12 @@
   </div>
 </template>
 <script>
-    import { quillEditor } from 'vue-quill-editor';
     import 'quill/dist/quill.core.css';
     import 'quill/dist/quill.snow.css';
     import 'quill/dist/quill.bubble.css';
     import paasPluginTitle from '@/components/pass-plugin-title';
     export default {
         components: {
-            quillEditor,
             paasPluginTitle
         },
         data () {
@@ -495,7 +390,7 @@
                 });
                 rulesPluginId.push({
                     max: this.curPluginInfo.schema.id.maxlength || 16,
-                    message: this.$t(`不能多于{maxLength}个字符`, { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
+                    message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
                     trigger: 'blur change'
                 });
                 // 插件名称
@@ -506,7 +401,7 @@
                 });
                 rulesName.push({
                     max: this.curPluginInfo.schema.name.maxlength || 20,
-                    message: this.$t(`不能多于{maxLength}个字符`, { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
+                    message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
                     trigger: 'blur change'
                 });
                 this.rules.plugin_id = rulesPluginId;

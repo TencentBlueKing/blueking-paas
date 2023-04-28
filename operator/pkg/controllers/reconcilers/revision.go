@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
 )
@@ -48,7 +48,7 @@ type RevisionReconciler struct {
 }
 
 // Reconcile ...
-func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
+func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	log := logf.FromContext(ctx)
 	var err error
 	log.V(4).Info("handling revision reconciliation")
@@ -70,7 +70,7 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 		ctx,
 		&allDeploys,
 		client.InNamespace(bkapp.Namespace),
-		client.MatchingFields{v1alpha1.WorkloadOwnerKey: bkapp.Name},
+		client.MatchingFields{paasv1alpha2.WorkloadOwnerKey: bkapp.Name},
 	)
 	if err != nil {
 		return r.Result.withError(err)
@@ -80,21 +80,29 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 	newRevision := maxOldRevision + 1
 
 	if newRevision != defaultRevision {
-		// 检测上一个版本的 PreReleaseHook 是否仍在运行
-		preReleaseHook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
-		if preReleaseHook != nil && preReleaseHook.Status.Phase == v1alpha1.HealthProgressing {
-			if _, err = CheckAndUpdatePreReleaseHookStatus(
-				ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
-			); err != nil {
-				return r.Result.withError(err)
+		preReleaseHook := resources.BuildPreReleaseHook(
+			bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
+		)
+		if preReleaseHook != nil {
+			// 检测上一个版本的 PreReleaseHook 是否仍在运行
+			if preReleaseHook.Progressing() {
+				if _, err = CheckAndUpdatePreReleaseHookStatus(
+					ctx, r.Client, bkapp, resources.HookExecuteTimeoutThreshold,
+				); err != nil {
+					return r.Result.withError(err)
+				}
+				return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
 			}
-			return r.Result.withError(errors.WithStack(resources.ErrLastHookStillRunning))
+			// 上一个版本的 hook 失败不应该阻止调和循环，revision 需要自增以跳过失败的版本
+			if preReleaseHook.Failed() {
+				newRevision += 1
+			}
 		}
 	}
 
 	log.Info("new revision accepted!", "GetRevision", newRevision)
-	bkapp.Status.Phase = v1alpha1.AppPending
-	bkapp.Status.SetRevision(newRevision, bkapp.Annotations[v1alpha1.DeployIDAnnoKey])
+	bkapp.Status.Phase = paasv1alpha2.AppPending
+	bkapp.Status.SetRevision(newRevision, bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey])
 	bkapp.Status.HookStatuses = nil
 	bkapp.Status.ObservedGeneration = bkapp.Generation
 	SetDefaultConditions(&bkapp.Status)
@@ -107,47 +115,47 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkAp
 }
 
 // SetDefaultConditions set all conditions to initial value
-func SetDefaultConditions(status *v1alpha1.AppStatus) {
+func SetDefaultConditions(status *paasv1alpha2.AppStatus) {
 	availableMessage := "rolling upgrade"
 	availableStatus := metav1.ConditionUnknown
-	latestAvailableCond := apimeta.FindStatusCondition(status.Conditions, v1alpha1.AppAvailable)
+	latestAvailableCond := apimeta.FindStatusCondition(status.Conditions, paasv1alpha2.AppAvailable)
 	if latestAvailableCond == nil {
 		availableMessage = "First time deployment, service unavailable"
 		availableStatus = metav1.ConditionFalse
 	}
 
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:               v1alpha1.AppAvailable,
+		Type:               paasv1alpha2.AppAvailable,
 		Status:             availableStatus,
 		Reason:             "NewRevision",
 		Message:            availableMessage,
 		ObservedGeneration: status.ObservedGeneration,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:               v1alpha1.AppProgressing,
+		Type:               paasv1alpha2.AppProgressing,
 		Status:             metav1.ConditionTrue,
 		Reason:             "NewRevision",
 		ObservedGeneration: status.ObservedGeneration,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:               v1alpha1.AddOnsProvisioned,
+		Type:               paasv1alpha2.AddOnsProvisioned,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Initial",
 		ObservedGeneration: status.ObservedGeneration,
 	})
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:               v1alpha1.HooksFinished,
+		Type:               paasv1alpha2.HooksFinished,
 		Status:             metav1.ConditionUnknown,
 		Reason:             "Initial",
 		ObservedGeneration: status.ObservedGeneration,
 	})
 }
 
-func isNewRevision(bkapp *v1alpha1.BkApp) bool {
+func isNewRevision(bkapp *paasv1alpha2.BkApp) bool {
 	// Generation 未变化说明 BkApp 的定义未被修改
 	if bkapp.Status.ObservedGeneration < bkapp.Generation {
 		return true
 	}
 	// DeployId 发生变化说明平台触发了部署
-	return bkapp.Status.DeployId != bkapp.Annotations[v1alpha1.DeployIDAnnoKey]
+	return bkapp.Status.DeployId != bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 }

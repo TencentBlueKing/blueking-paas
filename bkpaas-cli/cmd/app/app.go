@@ -48,6 +48,9 @@ func NewCmd() *cobra.Command {
 		},
 		Run: cmdUtil.DefaultSubCmdRun(),
 	}
+
+	// 有权限的应用列表
+	cmd.AddCommand(NewCmdList())
 	// 配置信息查看
 	cmd.AddCommand(NewCmdGetInfo())
 	// 蓝鲸应用部署

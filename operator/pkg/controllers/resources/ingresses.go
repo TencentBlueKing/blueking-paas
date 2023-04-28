@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
@@ -141,7 +142,7 @@ type IngressBuilder interface {
 // - bkapp is the BkApp resource which the dgmapping resource reference to.
 func NewIngressBuilder(
 	sourceType DomainSourceType,
-	bkapp *paasv1alpha1.BkApp,
+	bkapp *paasv1alpha2.BkApp,
 ) (IngressBuilder, error) {
 	switch sourceType {
 	case DomainSubDomain, DomainSubPath:
@@ -155,7 +156,7 @@ func NewIngressBuilder(
 
 // MonoIngressBuilder build Ingress resources for "subdomain" and "subpath" source types
 type MonoIngressBuilder struct {
-	bkapp      *paasv1alpha1.BkApp
+	bkapp      *paasv1alpha2.BkApp
 	sourceType DomainSourceType
 }
 
@@ -193,8 +194,8 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 		},
 	}
 	// 如果已配置 ingressClassName，则使用
-	if ingClassName := config.Global.PlatformConfig.IngressClassName; ingClassName != "" {
-		ingress.Annotations[paasv1alpha1.IngressClassAnnoKey] = ingClassName
+	if ingClassName := config.Global.GetIngressClassName(); ingClassName != "" {
+		ingress.Annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
 	}
 	results = append(results, &ingress)
 	return results, nil
@@ -202,7 +203,7 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 
 // CustomIngressBuilder build Ingress resources for "custom" source type
 type CustomIngressBuilder struct {
-	bkapp *paasv1alpha1.BkApp
+	bkapp *paasv1alpha2.BkApp
 }
 
 // Build Ingress object, may return multiple Ingress objects when there are more
@@ -249,7 +250,7 @@ func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ing
 }
 
 // Make rule objects
-func makeRules(bkapp *paasv1alpha1.BkApp, domains []Domain) []networkingv1.IngressRule {
+func makeRules(bkapp *paasv1alpha2.BkApp, domains []Domain) []networkingv1.IngressRule {
 	rules := []networkingv1.IngressRule{}
 	for _, d := range domains {
 		r := networkingv1.IngressRule{
@@ -282,7 +283,7 @@ func makeTLS(domains []Domain) (results []networkingv1.IngressTLS) {
 }
 
 // Make path objects
-func makePaths(bkapp *paasv1alpha1.BkApp, pathPrefixes []string) []networkingv1.HTTPIngressPath {
+func makePaths(bkapp *paasv1alpha2.BkApp, pathPrefixes []string) []networkingv1.HTTPIngressPath {
 	results := []networkingv1.HTTPIngressPath{}
 	for _, prefix := range pathPrefixes {
 		path := networkingv1.HTTPIngressPath{
@@ -366,7 +367,7 @@ func (b *RegexLocationBuilder) makeRewriteTarget() string {
 }
 
 // MakeConfigurationSnippet return a configuration snippet
-func (b *RegexLocationBuilder) MakeConfigurationSnippet(bkapp *paasv1alpha1.BkApp, domains []Domain) string {
+func (b *RegexLocationBuilder) MakeConfigurationSnippet(bkapp *paasv1alpha2.BkApp, domains []Domain) string {
 	if len(domains) == 0 {
 		return ""
 	}
@@ -376,19 +377,19 @@ func (b *RegexLocationBuilder) MakeConfigurationSnippet(bkapp *paasv1alpha1.BkAp
 }
 
 // MakeServerSnippet RegexLocationBuilder 不提供 server snippet
-func (b *RegexLocationBuilder) MakeServerSnippet(bkapp *paasv1alpha1.BkApp, domains []Domain) string {
+func (b *RegexLocationBuilder) MakeServerSnippet(bkapp *paasv1alpha2.BkApp, domains []Domain) string {
 	return ""
 }
 
 // make server snippet, this method will call all registered plugins
-func makeServerSnippet(bkapp *paasv1alpha1.BkApp, domains []Domain) string {
+func makeServerSnippet(bkapp *paasv1alpha2.BkApp, domains []Domain) string {
 	return strings.Join(lo.Map(registeredIngressPlugins, func(plugin NginxIngressPlugin, i int) string {
 		return plugin.MakeServerSnippet(bkapp, domains)
 	}), "\n")
 }
 
 // make configuration snippet, this method will call all registered plugins
-func makeConfigurationSnippet(bkapp *paasv1alpha1.BkApp, domains []Domain) string {
+func makeConfigurationSnippet(bkapp *paasv1alpha2.BkApp, domains []Domain) string {
 	return strings.Join(lo.Map(registeredIngressPlugins, func(plugin NginxIngressPlugin, i int) string {
 		return plugin.MakeConfigurationSnippet(bkapp, domains)
 	}), "\n")

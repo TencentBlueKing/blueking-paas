@@ -39,6 +39,7 @@ import (
 
 	//+kubebuilder:scaffold:imports
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -77,6 +78,7 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	Expect(paasv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+	Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(networkingv1.AddToScheme(scheme)).NotTo(HaveOccurred())

@@ -27,7 +27,7 @@ from paas_wl.networking.ingress.entities.ingress import ingress_kmodel
 from paas_wl.networking.ingress.managers.misc import AppDefaultIngresses, LegacyAppIngressMgr
 from paas_wl.networking.ingress.models import AppDomain
 from paas_wl.networking.ingress.utils import make_service_name
-from paas_wl.workloads.processes.models import DeclarativeProcess, ProcessSpecManager
+from paas_wl.workloads.processes.models import ProcessSpecManager, ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -116,7 +116,7 @@ class TestAppDefaultIngresses:
         # Set the app's process, add a process called "worker", sync ingresses, service name field
         # should remain intact because the process is there.
         ProcessSpecManager(bk_stag_wl_app).sync(
-            cattr.structure([{"name": "worker", "command": "foo"}], List[DeclarativeProcess])
+            cattr.structure([{"name": "worker", "command": "foo"}], List[ProcessTmpl])
         )
         mgr.sync_ignore_empty(default_service_name=svc_name_default)
         assert ingress_kmodel.list_by_app(bk_stag_wl_app)[0].service_name == svc_name_worker

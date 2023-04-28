@@ -30,40 +30,41 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
 
 var _ = Describe("Test RevisionReconciler", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var web *appsv1.Deployment
 
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: "default",
+						TargetPort:   80,
 					},
 				},
-				Hooks: &v1alpha1.AppHooks{
-					PreRelease: &v1alpha1.Hook{},
+				Hooks: &paasv1alpha2.AppHooks{
+					PreRelease: &paasv1alpha2.Hook{},
 				},
 			},
 		}
@@ -83,7 +84,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
@@ -103,7 +104,12 @@ var _ = Describe("Test RevisionReconciler", func() {
 
 		It("second revision", func() {
 			bkapp.Generation = 1
-			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
 
 			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 
@@ -117,10 +123,10 @@ var _ = Describe("Test RevisionReconciler", func() {
 		It("Generation not change", func() {
 			bkapp.Generation = 1
 			bkapp.Status.ObservedGeneration = 1
-			bkapp.Status.Revision = &v1alpha1.Revision{
+			bkapp.Status.Revision = &paasv1alpha2.Revision{
 				Revision: 1,
 			}
-			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
+			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
 
 			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
@@ -132,10 +138,15 @@ var _ = Describe("Test RevisionReconciler", func() {
 		It("Generation change", func() {
 			bkapp.Generation = 2
 			bkapp.Status.ObservedGeneration = 1
-			bkapp.Status.Revision = &v1alpha1.Revision{
+			bkapp.Status.Revision = &paasv1alpha2.Revision{
 				Revision: 1,
 			}
-			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
 
 			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
 			ret := r.Reconcile(context.Background(), bkapp)
@@ -146,17 +157,17 @@ var _ = Describe("Test RevisionReconciler", func() {
 
 		It("second revision, but hook is unfinished", func() {
 			bkapp.Generation = 1
-			bkapp.Status.Revision = &v1alpha1.Revision{
+			bkapp.Status.Revision = &paasv1alpha2.Revision{
 				Revision: 1,
 			}
-			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
-				Type:      v1alpha1.HookPreRelease,
-				Phase:     v1alpha1.HealthProgressing,
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthProgressing,
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
-			web.Annotations[v1alpha1.RevisionAnnoKey] = "1"
+			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
 
-			hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
+			hook := resources.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
 			Expect(hook.Pod).NotTo(BeNil())
 
 			r := NewRevisionReconciler(builder.WithObjects(bkapp, web, hook.Pod).Build())
@@ -165,6 +176,34 @@ var _ = Describe("Test RevisionReconciler", func() {
 			Expect(ret.ShouldAbort()).To(BeTrue())
 			Expect(ret.err).To(HaveOccurred())
 			Expect(bkapp.Status.Revision.Revision).To(Equal(int64(1)))
+		})
+
+		It("skip failed hook", func() {
+			// g4 表示第四个版本
+			bkapp.Generation = 4
+			// 在 g3 & r3 的时候，hook 失败
+			bkapp.Status.Revision = &paasv1alpha2.Revision{
+				Revision: 3,
+			}
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthUnhealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+			// r2 中调和循环正常结束，r3 中 hook 失败，因此 deployment 还是 r2
+			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "2"
+
+			hook := resources.BuildPreReleaseHook(
+				bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
+			)
+
+			cli := builder.WithObjects(bkapp, web, hook.Pod).Build()
+			r := NewRevisionReconciler(cli)
+			ret := r.Reconcile(context.Background(), bkapp)
+
+			Expect(ret.ShouldAbort()).To(BeFalse())
+			// 跳过失败的 hook 版本后，revision 应该是 deploy max revision: 2 + 1 + 1 = 4
+			Expect(bkapp.Status.Revision.Revision).To(Equal(int64(4)))
 		})
 	})
 })

@@ -66,8 +66,10 @@ type BkAppList struct {
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
-	Processes     []Process `json:"processes"`
-	Configuration AppConfig `json:"configuration"`
+	// +optional
+	Build         BuildConfig `json:"build"`
+	Processes     []Process   `json:"processes"`
+	Configuration AppConfig   `json:"configuration"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -94,6 +96,39 @@ func (spec *AppSpec) FindProcess(name string) *Process {
 	return nil
 }
 
+// BuildConfig is the configuration related with application building, the platform
+// support 3 types of build config currently: image, remote build by Dockerfile and
+// remote build by buildpack.
+type BuildConfig struct {
+	// *1. Build by image*
+	// Image is the container image name of current application, tag and container
+	// registry address can be included.
+	// +optional
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is the image pull policy of given image.
+	// +optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImageCredentialsName is the name of image credentials, required for pulling
+	// images stores in private registry.
+	// +optional
+	ImageCredentialsName string `json:"imageCredentialsName,omitempty"`
+
+	// *2. Remote build by Dockerfile*
+	// Dockerfile is the name of target Dockerfile, it will be used to build.
+	// +optional
+	Dockerfile string `json:"dockerfile,omitempty"`
+	// BuildTarget, when multiple stages are defined in Dockerfile, this field is used
+	// to specify the target stage.
+	// +optional
+	BuildTarget string `json:"buildTarget,omitempty"`
+	// Args is the additional build arguments, it will be used to build image by Dockerfile
+	// +optional
+	Args map[string]string `json:"args,omitempty"`
+
+	// *3. Remote build by buildpack*
+	// TODO
+}
+
 // Process defines the process of BkApp
 type Process struct {
 	// Name of process
@@ -107,6 +142,10 @@ type Process struct {
 
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
+
+	// ResQuotaPlan is the name of plan which defines how much resources current process
+	// can consume.
+	ResQuotaPlan string `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`

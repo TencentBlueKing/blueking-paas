@@ -23,13 +23,13 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Test kubestatus/podutils", func() {
 	DescribeTable(
 		"test CheckPodHealthStatus",
-		func(pod *corev1.Pod, phase paasv1alpha1.HealthPhase, reason, message string) {
+		func(pod *corev1.Pod, phase paasv1alpha2.HealthPhase, reason, message string) {
 			healthStatus := CheckPodHealthStatus(pod)
 
 			Expect(healthStatus.Phase).To(Equal(phase))
@@ -38,7 +38,7 @@ var _ = Describe("Test kubestatus/podutils", func() {
 		},
 		Entry("running pod", &corev1.Pod{
 			Status: corev1.PodStatus{Phase: corev1.PodRunning, Reason: "foo", Message: "bar"},
-		}, paasv1alpha1.HealthProgressing, "foo", "bar"),
+		}, paasv1alpha2.HealthProgressing, "foo", "bar"),
 		Entry("running pod - with always restart policy and ready condition", &corev1.Pod{
 			Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyAlways},
 			Status: corev1.PodStatus{
@@ -49,7 +49,7 @@ var _ = Describe("Test kubestatus/podutils", func() {
 					{Type: corev1.PodReady, Status: corev1.ConditionTrue},
 				},
 			},
-		}, paasv1alpha1.HealthHealthy, "foo", "bar"),
+		}, paasv1alpha2.HealthHealthy, "foo", "bar"),
 		Entry("running pod - with always restart policy but some container fails", &corev1.Pod{
 			Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyAlways},
 			Status: corev1.PodStatus{
@@ -64,7 +64,7 @@ var _ = Describe("Test kubestatus/podutils", func() {
 					},
 				},
 			},
-		}, paasv1alpha1.HealthUnhealthy, "---", "bar"),
+		}, paasv1alpha2.HealthUnhealthy, "---", "bar"),
 		Entry("running pod - with always restart policy only", &corev1.Pod{
 			Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyAlways},
 			Status: corev1.PodStatus{
@@ -72,13 +72,13 @@ var _ = Describe("Test kubestatus/podutils", func() {
 				Reason:  "foo",
 				Message: "bar",
 			},
-		}, paasv1alpha1.HealthProgressing, "foo", "bar"),
+		}, paasv1alpha2.HealthProgressing, "foo", "bar"),
 		Entry("succeeded pod", &corev1.Pod{
 			Status: corev1.PodStatus{Phase: corev1.PodSucceeded, Reason: "foo", Message: "bar"},
-		}, paasv1alpha1.HealthHealthy, "foo", "bar"),
+		}, paasv1alpha2.HealthHealthy, "foo", "bar"),
 		Entry("failed pod - with pod message", &corev1.Pod{
 			Status: corev1.PodStatus{Phase: corev1.PodFailed, Reason: "foo", Message: "bar"},
-		}, paasv1alpha1.HealthUnhealthy, "foo", "bar"),
+		}, paasv1alpha2.HealthUnhealthy, "foo", "bar"),
 		Entry("failed pod - OOMKilled", &corev1.Pod{
 			Status: corev1.PodStatus{
 				Phase:  corev1.PodFailed,
@@ -91,10 +91,10 @@ var _ = Describe("Test kubestatus/podutils", func() {
 					},
 				},
 			},
-		}, paasv1alpha1.HealthUnhealthy, "---", "OOMKilled"),
+		}, paasv1alpha2.HealthUnhealthy, "---", "OOMKilled"),
 		Entry("pending pod", &corev1.Pod{
 			Status: corev1.PodStatus{Phase: corev1.PodPending, Reason: "foo", Message: "bar"},
-		}, paasv1alpha1.HealthProgressing, "foo", "bar"),
+		}, paasv1alpha2.HealthProgressing, "foo", "bar"),
 		Entry("pending pod -  failed to start container", &corev1.Pod{
 			Status: corev1.PodStatus{
 				Phase:  corev1.PodPending,
@@ -107,7 +107,7 @@ var _ = Describe("Test kubestatus/podutils", func() {
 					},
 				},
 			},
-		}, paasv1alpha1.HealthUnhealthy, "---", "bar"),
+		}, paasv1alpha2.HealthUnhealthy, "---", "bar"),
 		Entry("pending pod -  wait for create container", &corev1.Pod{
 			Status: corev1.PodStatus{
 				Phase: corev1.PodPending,
@@ -119,7 +119,7 @@ var _ = Describe("Test kubestatus/podutils", func() {
 					},
 				},
 			},
-		}, paasv1alpha1.HealthProgressing, "", ""),
+		}, paasv1alpha2.HealthProgressing, "", ""),
 	)
 
 	DescribeTable(

@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
@@ -52,22 +52,22 @@ var (
 // HookInstance 指示解析后的 Hook 实例
 type HookInstance struct {
 	Pod    *corev1.Pod
-	Status *paasv1alpha1.HookStatus
+	Status *paasv1alpha2.HookStatus
 }
 
 // Progressing 返回当前 hook 是否执行中
 func (i *HookInstance) Progressing() bool {
-	return i.Status.Phase == paasv1alpha1.HealthProgressing
+	return i.Status.Phase == paasv1alpha2.HealthProgressing
 }
 
 // Succeeded 返回当前 hook 是否执行成功
 func (i *HookInstance) Succeeded() bool {
-	return i.Status.Phase == paasv1alpha1.HealthHealthy
+	return i.Status.Phase == paasv1alpha2.HealthHealthy
 }
 
 // Failed 返回当前 hook 是否执行失败
 func (i *HookInstance) Failed() bool {
-	return !i.Progressing() && !i.Succeeded()
+	return !(i.Progressing() || i.Succeeded())
 }
 
 // Timeout 根据参数 timeout 判断 Pod 是否执行超时
@@ -77,7 +77,7 @@ func (i *HookInstance) Timeout(timeout time.Duration) bool {
 }
 
 // BuildPreReleaseHook 从应用描述中解析 Pre-Release-Hook 对象
-func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookStatus) *HookInstance {
+func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookStatus) *HookInstance {
 	if bkapp.Spec.Hooks == nil || bkapp.Spec.Hooks.PreRelease == nil {
 		return nil
 	}
@@ -87,10 +87,17 @@ func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookSta
 		return nil
 	}
 
+	// Use the web process's image and pull policy to run the hook.
+	// This behavior might be changed in the future when v1alpha1.BkApp is fully removed.
+	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get("web")
+	if err != nil {
+		return nil
+	}
+
 	if status == nil {
-		status = &paasv1alpha1.HookStatus{
-			Type:  paasv1alpha1.HookPreRelease,
-			Phase: paasv1alpha1.HealthUnknown,
+		status = &paasv1alpha2.HookStatus{
+			Type:  paasv1alpha2.HookPreRelease,
+			Phase: paasv1alpha2.HealthUnknown,
 		}
 	}
 
@@ -104,29 +111,29 @@ func BuildPreReleaseHook(bkapp *paasv1alpha1.BkApp, status *paasv1alpha1.HookSta
 				Name:      names.PreReleaseHook(bkapp),
 				Namespace: bkapp.Namespace,
 				Labels: map[string]string{
-					paasv1alpha1.BkAppNameKey:    bkapp.GetName(),
-					paasv1alpha1.ResourceTypeKey: "hook",
-					paasv1alpha1.HookTypeKey:     string(paasv1alpha1.HookPreRelease),
+					paasv1alpha2.BkAppNameKey:    bkapp.GetName(),
+					paasv1alpha2.ResourceTypeKey: "hook",
+					paasv1alpha2.HookTypeKey:     string(paasv1alpha2.HookPreRelease),
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
-						Group:   paasv1alpha1.GroupVersion.Group,
-						Version: paasv1alpha1.GroupVersion.Version,
-						Kind:    paasv1alpha1.KindBkApp,
+						Group:   paasv1alpha2.GroupVersion.Group,
+						Version: paasv1alpha2.GroupVersion.Version,
+						Kind:    paasv1alpha2.KindBkApp,
 					}),
 				},
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Image:           proc.Image,
+						Image:           image,
 						Command:         bkapp.Spec.Hooks.PreRelease.Command,
 						Args:            bkapp.Spec.Hooks.PreRelease.Args,
 						Env:             GetAppEnvs(bkapp),
 						Name:            "hook",
-						ImagePullPolicy: proc.ImagePullPolicy,
-						// pre-hook 使用 web 进程的资源配额
-						Resources: buildContainerResources(proc.CPU, proc.Memory),
+						ImagePullPolicy: pullPolicy,
+						// pre-hook 使用默认资源配置
+						Resources: paasv1alpha2.NewProcResourcesGetter(bkapp).GetDefault(),
 						// TODO: 挂载点
 						VolumeMounts: nil,
 					},

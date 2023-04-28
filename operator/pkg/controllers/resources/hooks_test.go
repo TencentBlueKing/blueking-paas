@@ -22,56 +22,57 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 )
 
 var _ = Describe("HookUtils", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: "paas.bk.tencent.com/v1alpha1",
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: "paas.bk.tencent.com/v1alpha2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					v1alpha1.ImageCredentialsRefAnnoKey: "image-pull-secrets",
+					paasv1alpha2.ImageCredentialsRefAnnoKey: "image-pull-secrets",
 				},
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "bar",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "bar",
-						Replicas:   v1alpha1.ReplicasOne,
-						TargetPort: 80,
-						CPU:        "1",
-						Memory:     "500Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasOne,
+						TargetPort:   80,
+						ResQuotaPlan: "default",
 					},
 				},
-				Hooks: &v1alpha1.AppHooks{
-					PreRelease: &v1alpha1.Hook{
+				Hooks: &paasv1alpha2.AppHooks{
+					PreRelease: &paasv1alpha2.Hook{
 						Command: []string{"/bin/bash"},
 						Args:    []string{"-c", "echo foo;"},
 					},
 				},
-				Configuration: v1alpha1.AppConfig{},
+				Configuration: paasv1alpha2.AppConfig{},
 			},
 		}
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 	})
@@ -93,36 +94,35 @@ var _ = Describe("HookUtils", func() {
 			hook := BuildPreReleaseHook(bkapp, nil)
 
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-1"))
-			Expect(hook.Pod.ObjectMeta.Labels[v1alpha1.HookTypeKey]).To(Equal(string(v1alpha1.HookPreRelease)))
+			Expect(hook.Pod.ObjectMeta.Labels[paasv1alpha2.HookTypeKey]).To(Equal(string(paasv1alpha2.HookPreRelease)))
 			Expect(len(hook.Pod.Spec.Containers)).To(Equal(1))
-			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.GetWebProcess().Image))
+			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.Build.Image))
 			Expect(hook.Pod.Spec.Containers[0].Command).To(Equal(bkapp.Spec.Hooks.PreRelease.Command))
 			Expect(hook.Pod.Spec.Containers[0].Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(0))
 			// 容器资源配额
 			hookRes := hook.Pod.Spec.Containers[0].Resources
-			cpuReq, memReq := resource.MustParse("250m"), resource.MustParse("250Mi")
-			cpuLimit, memLimit := resource.MustParse("1"), resource.MustParse("500Mi")
-			Expect(cpuReq.Cmp(hookRes.Requests[corev1.ResourceCPU])).To(Equal(0))
-			Expect(memReq.Cmp(hookRes.Requests[corev1.ResourceMemory])).To(Equal(0))
-			Expect(cpuLimit.Cmp(hookRes.Limits[corev1.ResourceCPU])).To(Equal(0))
-			Expect(memLimit.Cmp(hookRes.Limits[corev1.ResourceMemory])).To(Equal(0))
+			Expect(hookRes.Limits.Cpu().String()).To(Equal(config.Global.GetProcDefaultCpuLimits()))
+			Expect(
+				hookRes.Limits.Memory().String(),
+			).To(Equal(config.Global.GetProcDefaultMemLimits()))
+
 			// 镜像拉取密钥
-			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(v1alpha1.DefaultImagePullSecretName))
-			Expect(hook.Status.Phase).To(Equal(v1alpha1.HealthUnknown))
+			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(paasv1alpha2.DefaultImagePullSecretName))
+			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 
 		It("complex case - override Pod.name by Revision and Status.Phase by PreRelease.Status", func() {
-			bkapp.Status.Revision = &v1alpha1.Revision{Revision: 100}
-			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{Type: v1alpha1.HookPreRelease})
+			bkapp.Status.Revision = &paasv1alpha2.Revision{Revision: 100}
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
-			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease))
+			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-100"))
-			Expect(hook.Status.Phase).To(Equal(v1alpha1.HealthPhase("")))
+			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthPhase("")))
 		})
 
 		It("complex case - with env vars", func() {
-			bkapp.Spec.Configuration.Env = append(bkapp.Spec.Configuration.Env, v1alpha1.AppEnvVar{Name: "FOO"})
+			bkapp.Spec.Configuration.Env = append(bkapp.Spec.Configuration.Env, paasv1alpha2.AppEnvVar{Name: "FOO"})
 
 			hook := BuildPreReleaseHook(bkapp, nil)
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(1))

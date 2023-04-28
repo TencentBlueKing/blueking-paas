@@ -22,7 +22,8 @@ command has to be called in order to refresh all Secret resources which contains
 the content of certificate.
 """
 import sys
-from typing import Sequence
+from functools import partial
+from typing import Iterable, List, Sequence
 
 import cryptography.x509
 from django.core.management.base import BaseCommand
@@ -41,6 +42,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--name", type=str, required=True, help="Name of certification object")
+        parser.add_argument(
+            "--full-scan",
+            action="store_true",
+            help=(
+                "Before refreshing, scan all domains in the cert's region completely first, update the "
+                "\"shared_cert\" field of the domain object if a match is found, helpful when the cert is newly added."
+            ),
+        )
         parser.add_argument("--dry-run", action="store_true", help="Enable dry run mode")
 
     def handle(self, *args, **options) -> None:
@@ -53,6 +62,10 @@ class Command(BaseCommand):
             cert = AppDomainSharedCert.objects.get(name=name)
         except AppDomainSharedCert.DoesNotExist:
             self.exit_with_error(f'Cert "{name}" does not exist')
+
+        # If full scan is enabled, scan all domains and update the cert field if needed
+        if options['full_scan']:
+            self.scan_and_update(cert, options['dry_run'])
 
         # Find out all affected WlApps
         d_apps = self.find_subdomain_apps(cert)
@@ -72,6 +85,31 @@ class Command(BaseCommand):
         # by multiple Ingresses, so this approach will do fine.
         self.update_secrets(apps, cert, options['dry_run'])
         return
+
+    def scan_and_update(self, cert: AppDomainSharedCert, dry_run: bool):
+        """Scan all domains in the cert's region, update the cert related fields if needed."""
+        # Make a print function which print message with current context
+        _print = partial(self.print, title='update_cert_fields')
+
+        _print("Scanning all domains to find those whose host matches the given cert...")
+        matches: List[AppDomain] = list(find_uninitialized_domains(cert))
+        if not matches:
+            _print(self.style.SUCCESS("No domains found."))
+            return
+
+        _print(f'Found {len(matches)} domains.')
+        if input("Do you want to update the cert fields of these domains?(yes/no) ").lower() not in {'y', 'yes'}:
+            _print("Update canceled.")
+            return
+
+        # Update the "shared_cert" field
+        if not dry_run:
+            for domain in matches:
+                domain.shared_cert = cert
+                domain.save(update_fields=["shared_cert", "updated"])
+            _print(self.style.SUCCESS(f'{len(matches)} domain objects updated.'))
+        else:
+            _print('(dry-run mode) Update skipped.')
 
     def find_subdomain_apps(self, cert: AppDomainSharedCert) -> Sequence[WlApp]:
         """Find all affected WlApps for subdomain addresses"""
@@ -122,7 +160,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.print(f'Unable to update Secret for {app}: {str(e).splitlines()[0]}')
                 error_cnt += 1
-        self.print(f'Update Secrets finished, error count: {error_cnt}')
+        self.print(self.style.SUCCESS(f'Update Secrets finished, error count: {error_cnt}'))
 
     def display_cert(self, cert: AppDomainSharedCert):
         """Display the information of given cert object"""
@@ -138,10 +176,25 @@ class Command(BaseCommand):
 
     def exit_with_error(self, message: str, code: int = 2):
         """Exit execution and print error message"""
-        self.print(f'Error: {message}')
+        self.print(self.style.NOTICE(f'Error: {message}'))
         sys.exit(2)
 
-    @staticmethod
-    def print(message: str) -> None:
-        """A simple wrapper for print function, can be replaced with other implementations"""
-        print(message)
+    def print(self, message: str, title: str = "refresh") -> None:
+        """A simple wrapper for print function, can be replaced with other implementations
+
+        :param message: The message to be printed
+        :param title: Use this title to distinguish different print messages
+        """
+        if title:
+            print(self.style.SUCCESS(f'[{title.upper()}] ') + message)
+        else:
+            print(message)
+
+
+def find_uninitialized_domains(cert: AppDomainSharedCert) -> Iterable[AppDomain]:
+    """Find all domains which matches the given certificate but not initialized yet"""
+    for domain in AppDomain.objects.filter(region=cert.region).iterator():
+        if domain.cert or domain.shared_cert:
+            continue
+        if cert.match_hostname(domain.host):
+            yield domain

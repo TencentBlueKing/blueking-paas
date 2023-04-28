@@ -21,12 +21,10 @@ from typing import Dict, List, Literal
 
 import cattr
 import semver
-from django.conf import settings
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
-from django.views.decorators.csrf import csrf_exempt
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, status
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -48,8 +46,6 @@ from paasng.pluginscenter.filters import PluginInstancePermissionFilter
 from paasng.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
-from paasng.pluginscenter.itsm_adaptor.client import ItsmClient
-from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.itsm_adaptor.utils import submit_create_approval_ticket
 from paasng.pluginscenter.models import (
     OperationRecord,
@@ -1001,93 +997,3 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             subject=constants.SubjectTypes.CONFIG_INFO,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# System API
-class PluginCallBackApiViewSet(PluginInstanceMixin, GenericViewSet):
-    """注册到 APIGW 上的 API 有统一的中间件 AutoDisableCSRFMiddleware 豁免 csrf。这个是 ITSM 直接回调开发者中心 API，不走 APIGW，需要单独处理 csrf 豁免"""
-
-    @csrf_exempt
-    def itsm_stage_callback(self, request, pd_id, plugin_id, release_id, stage_id):
-        """发布流程中上线审批阶段回调, 更新审批阶段的状态"""
-        serializer = serializers.ItsmApprovalSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        token = serializer.validated_data["token"]
-        is_passed = self._verify_itsm_token(request, token)
-        if not is_passed:
-            return Response({"message": "itsm token verify failed", "code": -1, "data": None, "result": False})
-
-        plugin = self.get_plugin_instance()
-        release = plugin.all_versions.get(pk=release_id)
-        stage = release.all_stages.get(id=stage_id)
-
-        # 根据 itsm 的回调结果更新单据状态
-        ticket_status = serializer.validated_data["current_status"]
-        approve_result = serializer.validated_data["approve_result"]
-        stage_status = self._convert_release_status(ticket_status, approve_result)
-        stage.status = stage_status
-        stage.save(update_fields=["status", "updated"])
-        return Response({"message": "success", "code": 0, "data": None, "result": True})
-
-    @csrf_exempt
-    def itsm_create_callback(self, request, pd_id, plugin_id):
-        """创建插件审批回调，更新插件状态并完成插件创建相关操作"""
-        logger.error("itsm test, request.data: %s", request.data)
-        serializer = serializers.ItsmApprovalSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        token = serializer.validated_data["token"]
-        is_passed = self._verify_itsm_token(request, token)
-        if not is_passed:
-            return Response({"message": "itsm token verify failed", "code": -1, "data": None, "result": False})
-
-        plugin = self.get_plugin_instance()
-
-        ticket_status = serializer.validated_data["current_status"]
-        approve_result = serializer.validated_data["approve_result"]
-        plugin_status = self._convert_create_status(ticket_status, approve_result)
-
-        # 审批成功，则更新插件状态并完成插件创建相关操作
-        if plugin_status == constants.PluginStatus.DEVELOPING:
-            # 完成创建插件的剩余操作
-            shim.init_plugin_in_view(plugin, plugin.creator.username)
-        # 更新插件的状态
-        plugin.status = plugin_status
-        plugin.save(update_fields=["status", "updated"])
-        return Response({"message": "success", "code": 0, "data": None, "result": True})
-
-    def _verify_itsm_token(self, request, token: str) -> bool:
-        """验证回调请求是否来自 ITSM
-        https://github.com/TencentBlueKing/bk-itsm/blob/master/docs/wiki/access.md
-        """
-        # 获取登录票据
-        login_cookie = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
-        client = ItsmClient(login_cookie=login_cookie)
-        is_passed = client.verify_token(token)
-        return is_passed
-
-    def _convert_release_status(
-        self, ticket_status: ItsmTicketStatus, approve_result: bool
-    ) -> constants.PluginReleaseStatus:
-        """将ITSM单据状态和结果转换为插件版本 Stage 的状态"""
-        status = constants.PluginReleaseStatus.PENDING
-        if ticket_status == ItsmTicketStatus.FINISHED:
-            # 单据结束，则审批阶段的状态则对应地设置为成功、失败
-            status = (
-                constants.PluginReleaseStatus.SUCCESSFUL if approve_result else constants.PluginReleaseStatus.FAILED
-            )
-        elif ticket_status in [ItsmTicketStatus.TERMINATED, ItsmTicketStatus.REVOKED]:
-            # 单据被撤销，则审批阶段状态设置为已中断
-            status = constants.PluginReleaseStatus.INTERRUPTED
-
-        return status
-
-    def _convert_create_status(self, ticket_status: ItsmTicketStatus, approve_result: bool) -> constants.PluginStatus:
-        """将ITSM单据状态和结果转换为插件状态"""
-        status = constants.PluginStatus.APPROVAL_FAILED
-        if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
-            # 单据结束且结果为审批成功，则插件状态设置为开发中，否则为审批失败状态
-            status = constants.PluginStatus.DEVELOPING
-
-        return status

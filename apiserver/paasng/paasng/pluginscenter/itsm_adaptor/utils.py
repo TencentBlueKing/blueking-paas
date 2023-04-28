@@ -40,7 +40,7 @@ def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
 
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
-    callback_url = f"{paas_url}/sys/api/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/itsm/"
+    callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/"
 
     # 组装提单数据,包含插件的基本信息
     basic_fields = _get_basic_fields(pd, plugin)
@@ -80,8 +80,8 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f'{settings.BK_IAM_RESOURCE_API_HOST}/backend'
     callback_url = (
-        f"{paas_url}/sys/api/bkplugins/"
-        + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/stages/{current_stage.id}/itsm/"
+        f"{paas_url}/open/api/itsm/bkplugins/"
+        + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/stages/{current_stage.id}/"
     )
 
     # 提交 itsm 申请单据

@@ -680,6 +680,8 @@ BK_IAM_APIGATEWAY_URL = settings.get(
 )
 
 # 权限中心回调地址（provider api）
+# 会存在开发者中心访问地址是 https 协议，但是 API 只能用 http 协议的情况，所以不能直接用 BKPAAS_URL
+# ITSM 回调地址也复用了这个变量，修改变量名会涉及到 helm values 等多个地方同时修改，暂时先保留这个变量名
 BK_IAM_RESOURCE_API_HOST = settings.get('BK_IAM_RESOURCE_API_HOST', BKPAAS_URL)
 
 # 权限中心应用ID，用于拼接权限中心的在桌面的访问地址

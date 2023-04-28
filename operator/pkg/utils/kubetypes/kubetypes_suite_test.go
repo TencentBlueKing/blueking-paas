@@ -16,15 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package reconcilers
+package kubetypes
 
 import (
-	"context"
+	"testing"
 
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// Reconciler will move the current state of the cluster closer to the desired state.
-type Reconciler interface {
-	Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result
+func TestKubetypes(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "utils/kubetypes Suite")
 }

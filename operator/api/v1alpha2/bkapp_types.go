@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	"encoding/json"
@@ -33,6 +33,7 @@ import (
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:storageversion
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -55,6 +56,9 @@ func (bkapp *BkApp) ExtractAddons() ([]string, error) {
 	return addons, nil
 }
 
+// Hub marks this type as a conversion hub.
+func (*BkApp) Hub() {}
+
 //+kubebuilder:object:root=true
 
 // BkAppList contains a list of BkApp
@@ -64,9 +68,12 @@ type BkAppList struct {
 	Items           []BkApp `json:"items"`
 }
 
+// LegacyProcConfig is a type alias for storing legacy process related config in annotations,
+// such as "image" and "resource" configs. Structure: {<procName>: {<configKey>: <configValue>}
+type LegacyProcConfig map[string]map[string]string
+
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
-	// +optional
 	Build         BuildConfig `json:"build"`
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`
@@ -134,12 +141,6 @@ type Process struct {
 	// Name of process
 	Name string `json:"name"`
 
-	// Container image name
-	Image string `json:"image"`
-
-	// Container image pull policy
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
 
@@ -150,17 +151,13 @@ type Process struct {
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
 
-	// CPU will be used as limits.cpu
-	CPU string `json:"cpu,omitempty"`
-
-	// Memory will be used as limits.memory
-	Memory string `json:"memory,omitempty"`
-
 	// Entrypoint array. Not executed within a shell.
 	Command []string `json:"command,omitempty"`
 
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
+
+	// TODO: "autoscaling" field
 }
 
 // AppHooks defines bkapp deployment hook

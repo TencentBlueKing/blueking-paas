@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 	"bk.tencent.com/paas-app-operator/pkg/utils/revision"
@@ -47,7 +47,7 @@ type DeploymentReconciler struct {
 }
 
 // Reconcile ...
-func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.BkApp) Result {
+func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return r.Result.withError(err)
@@ -72,8 +72,8 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.Bk
 		return r.Result.withError(err)
 	}
 	// deployment 未就绪, 下次调和循环重新更新状态
-	if bkapp.Status.Phase == v1alpha2.AppPending {
-		return r.Result.requeue(v1alpha2.DefaultRequeueAfter)
+	if bkapp.Status.Phase == paasv1alpha2.AppPending {
+		return r.Result.requeue(paasv1alpha2.DefaultRequeueAfter)
 	}
 	return r.Result
 }
@@ -81,12 +81,12 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.Bk
 // 获取应用当前在集群中的状态
 func (r *DeploymentReconciler) getCurrentState(
 	ctx context.Context,
-	bkapp *v1alpha2.BkApp,
+	bkapp *paasv1alpha2.BkApp,
 ) (result []*appsv1.Deployment, err error) {
 	deployList := appsv1.DeploymentList{}
 	if err = r.Client.List(
 		ctx, &deployList, client.InNamespace(bkapp.Namespace),
-		client.MatchingFields{v1alpha2.KubeResOwnerKey: bkapp.Name},
+		client.MatchingFields{paasv1alpha2.KubeResOwnerKey: bkapp.Name},
 	); err != nil {
 		return nil, errors.Wrap(err, "failed to list app's deployments")
 	}
@@ -119,7 +119,7 @@ func (r *DeploymentReconciler) updateHandler(
 }
 
 // update condition `AppAvailable`
-func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alpha2.BkApp) error {
+func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return err
@@ -127,9 +127,9 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 
 	if len(current) == 0 {
 		// TODO: Phase 应该是应用下架、休眠？
-		bkapp.Status.Phase = v1alpha2.AppFailed
+		bkapp.Status.Phase = paasv1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha2.AppAvailable,
+			Type:               paasv1alpha2.AppAvailable,
 			Status:             metav1.ConditionFalse,
 			Reason:             "Teardown",
 			Message:            "no running processes",
@@ -140,7 +140,7 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 		anyFailed := false
 		for _, deployment := range current {
 			healthStatus := kubestatus.CheckDeploymentHealthStatus(deployment)
-			if healthStatus.Phase == v1alpha2.HealthHealthy {
+			if healthStatus.Phase == paasv1alpha2.HealthHealthy {
 				availableCount += 1
 				continue
 			}
@@ -149,15 +149,15 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 			if errors.Is(err, kubestatus.ErrDeploymentStillProgressing) {
 				continue
 			}
-			if healthStatus.Phase == v1alpha2.HealthUnhealthy {
+			if healthStatus.Phase == paasv1alpha2.HealthUnhealthy {
 				failMessage = deployment.Name + ": " + healthStatus.Message
 			}
 
 			if failMessage != "" {
 				anyFailed = true
-				bkapp.Status.Phase = v1alpha2.AppFailed
+				bkapp.Status.Phase = paasv1alpha2.AppFailed
 				apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-					Type:               v1alpha2.AppAvailable,
+					Type:               paasv1alpha2.AppAvailable,
 					Status:             metav1.ConditionFalse,
 					Reason:             "ReplicaFailure",
 					Message:            failMessage,
@@ -172,17 +172,17 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *v1alp
 				// AppAvailable means the BkApp is available and ready to service requests,
 				// but now we set AppAvailable to ConditionTrue before create Service when first time deploy.
 				// TODO: fix this problem, should we create service before reconcile processes?
-				bkapp.Status.Phase = v1alpha2.AppRunning
+				bkapp.Status.Phase = paasv1alpha2.AppRunning
 				apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-					Type:               v1alpha2.AppAvailable,
+					Type:               paasv1alpha2.AppAvailable,
 					Status:             metav1.ConditionTrue,
 					Reason:             "AppAvailable",
 					ObservedGeneration: bkapp.Status.ObservedGeneration,
 				})
 			} else {
-				bkapp.Status.Phase = v1alpha2.AppPending
+				bkapp.Status.Phase = paasv1alpha2.AppPending
 				apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-					Type:   v1alpha2.AppAvailable,
+					Type:   paasv1alpha2.AppAvailable,
 					Status: metav1.ConditionFalse,
 					Reason: "Progressing",
 					Message: fmt.Sprintf(

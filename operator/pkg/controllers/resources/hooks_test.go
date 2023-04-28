@@ -26,53 +26,53 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 )
 
 var _ = Describe("HookUtils", func() {
-	var bkapp *v1alpha2.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &v1alpha2.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
+				Kind:       paasv1alpha2.KindBkApp,
 				APIVersion: "paas.bk.tencent.com/v1alpha2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-app",
 				Namespace: "default",
 				Annotations: map[string]string{
-					v1alpha2.ImageCredentialsRefAnnoKey: "image-pull-secrets",
+					paasv1alpha2.ImageCredentialsRefAnnoKey: "image-pull-secrets",
 				},
 			},
-			Spec: v1alpha2.AppSpec{
-				Build: v1alpha2.BuildConfig{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
 					Image: "bar",
 				},
-				Processes: []v1alpha2.Process{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name:         "web",
-						Replicas:     v1alpha2.ReplicasOne,
+						Replicas:     paasv1alpha2.ReplicasOne,
 						TargetPort:   80,
 						ResQuotaPlan: "default",
 					},
 				},
-				Hooks: &v1alpha2.AppHooks{
-					PreRelease: &v1alpha2.Hook{
+				Hooks: &paasv1alpha2.AppHooks{
+					PreRelease: &paasv1alpha2.Hook{
 						Command: []string{"/bin/bash"},
 						Args:    []string{"-c", "echo foo;"},
 					},
 				},
-				Configuration: v1alpha2.AppConfig{},
+				Configuration: paasv1alpha2.AppConfig{},
 			},
 		}
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 	})
@@ -94,7 +94,7 @@ var _ = Describe("HookUtils", func() {
 			hook := BuildPreReleaseHook(bkapp, nil)
 
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-1"))
-			Expect(hook.Pod.ObjectMeta.Labels[v1alpha2.HookTypeKey]).To(Equal(string(v1alpha2.HookPreRelease)))
+			Expect(hook.Pod.ObjectMeta.Labels[paasv1alpha2.HookTypeKey]).To(Equal(string(paasv1alpha2.HookPreRelease)))
 			Expect(len(hook.Pod.Spec.Containers)).To(Equal(1))
 			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.Build.Image))
 			Expect(hook.Pod.Spec.Containers[0].Command).To(Equal(bkapp.Spec.Hooks.PreRelease.Command))
@@ -108,21 +108,21 @@ var _ = Describe("HookUtils", func() {
 			).To(Equal(config.Global.GetProcDefaultMemLimits()))
 
 			// 镜像拉取密钥
-			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(v1alpha2.DefaultImagePullSecretName))
-			Expect(hook.Status.Phase).To(Equal(v1alpha2.HealthUnknown))
+			Expect(hook.Pod.Spec.ImagePullSecrets[0].Name).To(Equal(paasv1alpha2.DefaultImagePullSecretName))
+			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthUnknown))
 		})
 
 		It("complex case - override Pod.name by Revision and Status.Phase by PreRelease.Status", func() {
-			bkapp.Status.Revision = &v1alpha2.Revision{Revision: 100}
-			bkapp.Status.SetHookStatus(v1alpha2.HookStatus{Type: v1alpha2.HookPreRelease})
+			bkapp.Status.Revision = &paasv1alpha2.Revision{Revision: 100}
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
-			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(v1alpha2.HookPreRelease))
+			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-100"))
-			Expect(hook.Status.Phase).To(Equal(v1alpha2.HealthPhase("")))
+			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthPhase("")))
 		})
 
 		It("complex case - with env vars", func() {
-			bkapp.Spec.Configuration.Env = append(bkapp.Spec.Configuration.Env, v1alpha2.AppEnvVar{Name: "FOO"})
+			bkapp.Spec.Configuration.Env = append(bkapp.Spec.Configuration.Env, paasv1alpha2.AppEnvVar{Name: "FOO"})
 
 			hook := BuildPreReleaseHook(bkapp, nil)
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(1))

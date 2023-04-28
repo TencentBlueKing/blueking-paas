@@ -21,7 +21,7 @@ package kubestatus
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
@@ -34,7 +34,7 @@ func GenGPAHealthStatus(gpa *autoscaling.GeneralPodAutoscaler) *HealthStatus {
 	for _, condition := range gpa.Status.Conditions {
 		if condition.Status == corev1.ConditionFalse {
 			return &HealthStatus{
-				Phase:   v1alpha2.HealthUnhealthy,
+				Phase:   paasv1alpha2.HealthUnhealthy,
 				Reason:  condition.Reason,
 				Message: condition.Message,
 			}
@@ -42,8 +42,8 @@ func GenGPAHealthStatus(gpa *autoscaling.GeneralPodAutoscaler) *HealthStatus {
 	}
 
 	return &HealthStatus{
-		Phase:   v1alpha2.HealthHealthy,
-		Reason:  v1alpha2.AutoscalingAvailable,
+		Phase:   paasv1alpha2.HealthHealthy,
+		Reason:  paasv1alpha2.AutoscalingAvailable,
 		Message: "",
 	}
 }

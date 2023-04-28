@@ -27,58 +27,58 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
 var _ = Describe("Test build deployments from BkApp", func() {
-	var bkapp *v1alpha2.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &v1alpha2.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
-				APIVersion: v1alpha2.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha2.AppSpec{
-				Build: v1alpha2.BuildConfig{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
 					Image: "nginx:latest",
 				},
-				Processes: []v1alpha2.Process{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name:         "web",
-						Replicas:     v1alpha2.ReplicasTwo,
+						Replicas:     paasv1alpha2.ReplicasTwo,
 						ResQuotaPlan: "default",
 						TargetPort:   80,
 					},
 					{
 						Name:         "hi",
-						Replicas:     v1alpha2.ReplicasTwo,
+						Replicas:     paasv1alpha2.ReplicasTwo,
 						ResQuotaPlan: "default",
 						Command:      []string{"/bin/sh"},
 						Args:         []string{"-c", "echo hi"},
 					},
 				},
-				Configuration: v1alpha2.AppConfig{
-					Env: []v1alpha2.AppEnvVar{
+				Configuration: paasv1alpha2.AppConfig{
+					Env: []paasv1alpha2.AppEnvVar{
 						{Name: "ENV_NAME_1", Value: "env_value_1"},
 						{Name: "ENV_NAME_2", Value: "env_value_2"},
 					},
 				},
 				// Add some overlay configs
-				EnvOverlay: &v1alpha2.AppEnvOverlay{
-					Replicas: []v1alpha2.ReplicasOverlay{
+				EnvOverlay: &paasv1alpha2.AppEnvOverlay{
+					Replicas: []paasv1alpha2.ReplicasOverlay{
 						{EnvName: "stag", Process: "web", Count: 10},
 					},
-					EnvVariables: []v1alpha2.EnvVarOverlay{
+					EnvVariables: []paasv1alpha2.EnvVarOverlay{
 						{EnvName: "stag", Name: "ENV_NAME_3", Value: "env_value_3"},
 						{EnvName: "prod", Name: "ENV_NAME_1", Value: "env_value_1_prod"},
 					},
@@ -88,7 +88,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
@@ -96,7 +96,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 	Context("basic fields checks", func() {
 		It("no processes", func() {
-			bkapp.Spec.Processes = []v1alpha2.Process{}
+			bkapp.Spec.Processes = []paasv1alpha2.Process{}
 			deploys := GetWantedDeploys(bkapp)
 			Expect(len(deploys)).To(Equal(0))
 		})
@@ -125,12 +125,12 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 	Context("container basic fields", func() {
 		It("base fields", func() {
-			bkapp.Spec.Build = v1alpha2.BuildConfig{
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{
 				Image: "busybox:latest",
 			}
-			bkapp.Spec.Processes = []v1alpha2.Process{{
+			bkapp.Spec.Processes = []paasv1alpha2.Process{{
 				Name:       "web",
-				Replicas:   v1alpha2.ReplicasOne,
+				Replicas:   paasv1alpha2.ReplicasOne,
 				Command:    []string{"/bin/sh"},
 				Args:       []string{"-c", "echo hi"},
 				TargetPort: 8081,
@@ -145,17 +145,17 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 	Context("Image related fields", func() {
 		It("default version", func() {
-			bkapp.Spec.Build = v1alpha2.BuildConfig{
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{
 				Image:           "busybox:latest",
 				ImagePullPolicy: corev1.PullAlways,
 			}
-			bkapp.Spec.Processes = []v1alpha2.Process{
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
 				{
 					Name:     "web",
-					Replicas: v1alpha2.ReplicasOne,
+					Replicas: paasv1alpha2.ReplicasOne,
 				}, {
 					Name:     "worker",
-					Replicas: v1alpha2.ReplicasOne,
+					Replicas: paasv1alpha2.ReplicasOne,
 				},
 			}
 
@@ -171,18 +171,18 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 
 		It("legacy version", func() {
-			_ = kubetypes.SetJsonAnnotation(bkapp, v1alpha2.LegacyProcImageAnnoKey, v1alpha2.LegacyProcConfig{
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcImageAnnoKey, paasv1alpha2.LegacyProcConfig{
 				"web":    {"image": "busybox:1.0.0", "policy": "Never"},
 				"worker": {"image": "busybox:2.0.0", "policy": "Always"},
 			})
-			bkapp.Spec.Build = v1alpha2.BuildConfig{}
-			bkapp.Spec.Processes = []v1alpha2.Process{
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{}
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
 				{
 					Name:     "web",
-					Replicas: v1alpha2.ReplicasOne,
+					Replicas: paasv1alpha2.ReplicasOne,
 				}, {
 					Name:     "worker",
-					Replicas: v1alpha2.ReplicasOne,
+					Replicas: paasv1alpha2.ReplicasOne,
 				},
 			}
 
@@ -198,20 +198,20 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 	Context("Resources related fields", func() {
 		BeforeEach(func() {
-			bkapp.Spec.Build = v1alpha2.BuildConfig{
+			bkapp.Spec.Build = paasv1alpha2.BuildConfig{
 				Image:           "busybox:latest",
 				ImagePullPolicy: corev1.PullAlways,
 			}
 		})
 		It("default version", func() {
-			bkapp.Spec.Processes = []v1alpha2.Process{
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
 				{
 					Name:         "web",
-					Replicas:     v1alpha2.ReplicasOne,
+					Replicas:     paasv1alpha2.ReplicasOne,
 					ResQuotaPlan: "default",
 				}, {
 					Name:         "worker",
-					Replicas:     v1alpha2.ReplicasOne,
+					Replicas:     paasv1alpha2.ReplicasOne,
 					ResQuotaPlan: "default",
 				},
 			}
@@ -229,17 +229,17 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 
 		It("legacy version", func() {
-			_ = kubetypes.SetJsonAnnotation(bkapp, v1alpha2.LegacyProcResAnnoKey, v1alpha2.LegacyProcConfig{
+			_ = kubetypes.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, paasv1alpha2.LegacyProcConfig{
 				"web":    {"cpu": "1", "memory": "1Gi"},
 				"worker": {"cpu": "2", "memory": "2Gi"},
 			})
-			bkapp.Spec.Processes = []v1alpha2.Process{
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
 				{
 					Name:     "web",
-					Replicas: v1alpha2.ReplicasOne,
+					Replicas: paasv1alpha2.ReplicasOne,
 				}, {
 					Name:     "worker",
-					Replicas: v1alpha2.ReplicasOne,
+					Replicas: paasv1alpha2.ReplicasOne,
 				},
 			}
 
@@ -261,7 +261,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 
 	Context("environment related fields", func() {
 		It("stag env related fields", func() {
-			bkapp.SetAnnotations(map[string]string{v1alpha2.EnvironmentKey: "stag"})
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
 			deploys := GetWantedDeploys(bkapp)
 			web, hi := deploys[0], deploys[1]
 			// Value overwritten by overlay config
@@ -277,7 +277,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			))
 		})
 		It("prod env related fields", func() {
-			bkapp.SetAnnotations(map[string]string{v1alpha2.EnvironmentKey: "prod"})
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "prod"})
 			deploys := GetWantedDeploys(bkapp)
 			web, hi := deploys[0], deploys[1]
 			Expect(*web.Spec.Replicas).To(Equal(int32(2)))

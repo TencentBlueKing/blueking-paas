@@ -27,40 +27,40 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 var _ = Describe("GPAResources", func() {
-	var bkapp *v1alpha2.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &v1alpha2.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
-				APIVersion: v1alpha2.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha2.AppSpec{
-				Processes: []v1alpha2.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name: "web",
-						Autoscaling: &v1alpha2.AutoscalingSpec{
+						Autoscaling: &paasv1alpha2.AutoscalingSpec{
 							Enabled:     true,
 							MinReplicas: 1,
 							MaxReplicas: 5,
-							Policy:      v1alpha2.ScalingPolicyDefault,
+							Policy:      paasv1alpha2.ScalingPolicyDefault,
 						},
 					},
 					{
 						Name: "hi",
-						Autoscaling: &v1alpha2.AutoscalingSpec{
+						Autoscaling: &paasv1alpha2.AutoscalingSpec{
 							Enabled: false,
 						},
 					},
@@ -70,7 +70,7 @@ var _ = Describe("GPAResources", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(autoscaling.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 	})

@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
@@ -39,20 +39,20 @@ import (
 // In order to use this type, the mapping object must reference to a valid BkApp.
 type DGroupMappingSyncer struct {
 	client client.Client
-	bkapp  *v1alpha2.BkApp
+	bkapp  *paasv1alpha2.BkApp
 }
 
 // NewDGroupMappingSyncer creates a DGroupMappingSyncer object
 // - bkapp is the owner for current syncer, usually is the referenced BkApp object
 //   of DomainGroupMapping object.
-func NewDGroupMappingSyncer(client client.Client, bkapp *v1alpha2.BkApp) *DGroupMappingSyncer {
+func NewDGroupMappingSyncer(client client.Client, bkapp *paasv1alpha2.BkApp) *DGroupMappingSyncer {
 	return &DGroupMappingSyncer{client: client, bkapp: bkapp}
 }
 
 // Sync is the main method for syncing resources, it returns the expected domain
 // groups if the sync procedure finished successfully.
 func (r *DGroupMappingSyncer) Sync(
-	ctx context.Context, dgmapping *v1alpha1.DomainGroupMapping,
+	ctx context.Context, dgmapping *paasv1alpha1.DomainGroupMapping,
 ) ([]res.DomainGroup, error) {
 	// Sync ingress resources
 	current, err := r.ListCurrentIngresses(ctx, dgmapping)
@@ -86,7 +86,7 @@ func (r *DGroupMappingSyncer) Sync(
 // ListCurrentIngresses lists ingress resources related with current mapping object
 func (r *DGroupMappingSyncer) ListCurrentIngresses(
 	ctx context.Context,
-	dgmapping *v1alpha1.DomainGroupMapping,
+	dgmapping *paasv1alpha1.DomainGroupMapping,
 ) (results []*networkingv1.Ingress, err error) {
 	current := networkingv1.IngressList{}
 	err = r.client.List(
@@ -103,7 +103,7 @@ func (r *DGroupMappingSyncer) ListCurrentIngresses(
 
 // getWantedIngresses get the desired ingress resources
 func (r *DGroupMappingSyncer) getWantedIngresses(
-	dgmapping *v1alpha1.DomainGroupMapping,
+	dgmapping *paasv1alpha1.DomainGroupMapping,
 	domains []res.DomainGroup,
 ) ([]*networkingv1.Ingress, error) {
 	var results []*networkingv1.Ingress
@@ -128,21 +128,21 @@ func (r *DGroupMappingSyncer) applyIngress(ctx context.Context, ingress *network
 }
 
 // Set the labels and owner fields for a slice of ingresses
-func setLabelsAndOwner(ings []*networkingv1.Ingress, dgmapping *v1alpha1.DomainGroupMapping) {
+func setLabelsAndOwner(ings []*networkingv1.Ingress, dgmapping *paasv1alpha1.DomainGroupMapping) {
 	for _, ingress := range ings {
 		ingress.Labels = lo.Assign(ingress.Labels, labels.MappingIngress(dgmapping))
 		ingress.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(dgmapping, schema.GroupVersionKind{
-				Group:   v1alpha1.GroupVersion.Group,
-				Version: v1alpha1.GroupVersion.Version,
-				Kind:    v1alpha1.KindDomainGroupMapping,
+				Group:   paasv1alpha1.GroupVersion.Group,
+				Version: paasv1alpha1.GroupVersion.Version,
+				Kind:    paasv1alpha1.KindDomainGroupMapping,
 			}),
 		}
 	}
 }
 
 // DeleteIngresses delete all related ingresses of given DomainGroupMapping
-func DeleteIngresses(ctx context.Context, c client.Client, dgmapping *v1alpha1.DomainGroupMapping) error {
+func DeleteIngresses(ctx context.Context, c client.Client, dgmapping *paasv1alpha1.DomainGroupMapping) error {
 	opts := []client.DeleteAllOfOption{
 		client.InNamespace(dgmapping.GetNamespace()),
 		client.MatchingLabels(labels.MappingIngress(dgmapping)),

@@ -30,36 +30,36 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
 var _ = Describe("Test ServiceReconciler", func() {
-	var bkapp *v1alpha2.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var fakeService *corev1.Service
 	ctx := context.Background()
 
 	BeforeEach(func() {
-		bkapp = &v1alpha2.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
-				APIVersion: v1alpha2.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha2.AppSpec{
-				Build: v1alpha2.BuildConfig{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
 					Image: "nginx:latest",
 				},
-				Processes: []v1alpha2.Process{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name:         "web",
-						Replicas:     v1alpha2.ReplicasTwo,
+						Replicas:     paasv1alpha2.ReplicasTwo,
 						ResQuotaPlan: "default",
 						TargetPort:   80,
 					},
@@ -93,7 +93,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
 	})
@@ -154,7 +154,7 @@ var _ = Describe("Test ServiceReconciler", func() {
 		Expect(got1.Spec.Ports).To(Equal(current.Spec.Ports))
 
 		By("change Service.Spec")
-		want.Spec.Selector[v1alpha2.ProcessNameKey] = "web"
+		want.Spec.Selector[paasv1alpha2.ProcessNameKey] = "web"
 
 		Expect(want.Spec.Selector).NotTo(Equal(current.Spec.Selector))
 		Expect(r.handleUpdate(ctx, cli, current, want)).NotTo(HaveOccurred())

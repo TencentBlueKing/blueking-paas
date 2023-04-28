@@ -21,18 +21,18 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // ReplicasGetter get replicas from BkApp object
 type ReplicasGetter struct {
-	bkapp *v1alpha2.BkApp
+	bkapp *paasv1alpha2.BkApp
 	// replicasMap stores replications data, "{process} -> {replicas}"
 	replicasMap map[string]int32
 }
 
 // NewReplicasGetter creates a ReplicasGetter object
-func NewReplicasGetter(bkapp *v1alpha2.BkApp) *ReplicasGetter {
+func NewReplicasGetter(bkapp *paasv1alpha2.BkApp) *ReplicasGetter {
 	obj := &ReplicasGetter{bkapp: bkapp, replicasMap: make(map[string]int32)}
 
 	// Build internal index data
@@ -61,7 +61,7 @@ func (r *ReplicasGetter) buildDefault() {
 }
 
 // Build replicas map from env overlay configs
-func (r *ReplicasGetter) buildEnvOverlay(env v1alpha2.EnvName) {
+func (r *ReplicasGetter) buildEnvOverlay(env paasv1alpha2.EnvName) {
 	if r.bkapp.Spec.EnvOverlay == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (r *ReplicasGetter) buildEnvOverlay(env v1alpha2.EnvName) {
 
 // EnvVarsGetter get env vars from BkApp object
 type EnvVarsGetter struct {
-	bkapp *v1alpha2.BkApp
+	bkapp *paasv1alpha2.BkApp
 
 	// Stores env vars by key/value
 	itemsMap map[string]string
@@ -84,7 +84,7 @@ type EnvVarsGetter struct {
 }
 
 // NewEnvVarsGetter creates a ReplicasGetter object
-func NewEnvVarsGetter(bkapp *v1alpha2.BkApp) *EnvVarsGetter {
+func NewEnvVarsGetter(bkapp *paasv1alpha2.BkApp) *EnvVarsGetter {
 	obj := &EnvVarsGetter{bkapp: bkapp, itemsMap: make(map[string]string)}
 	// Load values from different sources, the order is important
 	obj.loadDefault()
@@ -118,7 +118,7 @@ func (r *EnvVarsGetter) loadDefault() {
 }
 
 // Load from env overlays
-func (r *EnvVarsGetter) loadEnvOverlay(env v1alpha2.EnvName) {
+func (r *EnvVarsGetter) loadEnvOverlay(env paasv1alpha2.EnvName) {
 	if r.bkapp.Spec.EnvOverlay == nil {
 		return
 	}
@@ -133,9 +133,9 @@ func (r *EnvVarsGetter) loadEnvOverlay(env v1alpha2.EnvName) {
 
 // GetEnvName get environment name from application, return an empty string
 // when no information can be found.
-func GetEnvName(bkapp *v1alpha2.BkApp) v1alpha2.EnvName {
+func GetEnvName(bkapp *paasv1alpha2.BkApp) paasv1alpha2.EnvName {
 	annots := bkapp.GetAnnotations()
-	name := v1alpha2.EnvName(annots[v1alpha2.EnvironmentKey])
+	name := paasv1alpha2.EnvName(annots[paasv1alpha2.EnvironmentKey])
 	if name.IsValid() {
 		return name
 	}
@@ -144,14 +144,14 @@ func GetEnvName(bkapp *v1alpha2.BkApp) v1alpha2.EnvName {
 
 // AutoscalingPolicyGetter get autoscaling policy from BkApp object
 type AutoscalingPolicyGetter struct {
-	bkapp *v1alpha2.BkApp
+	bkapp *paasv1alpha2.BkApp
 	// policyMap stores process scaling policy, "{process} -> {scalingPolicy}"
-	policyMap map[string]v1alpha2.ScalingPolicy
+	policyMap map[string]paasv1alpha2.ScalingPolicy
 }
 
 // NewAutoscalingPolicyGetter creates a AutoscalingPolicyGetter object
-func NewAutoscalingPolicyGetter(bkapp *v1alpha2.BkApp) *AutoscalingPolicyGetter {
-	obj := &AutoscalingPolicyGetter{bkapp: bkapp, policyMap: make(map[string]v1alpha2.ScalingPolicy)}
+func NewAutoscalingPolicyGetter(bkapp *paasv1alpha2.BkApp) *AutoscalingPolicyGetter {
+	obj := &AutoscalingPolicyGetter{bkapp: bkapp, policyMap: make(map[string]paasv1alpha2.ScalingPolicy)}
 
 	// Build internal index data
 	obj.buildDefault()
@@ -162,7 +162,7 @@ func NewAutoscalingPolicyGetter(bkapp *v1alpha2.BkApp) *AutoscalingPolicyGetter 
 }
 
 // Get scalingPolicy by process name
-func (g *AutoscalingPolicyGetter) Get(name string) v1alpha2.ScalingPolicy {
+func (g *AutoscalingPolicyGetter) Get(name string) paasv1alpha2.ScalingPolicy {
 	if v, ok := g.policyMap[name]; ok {
 		return v
 	}
@@ -179,7 +179,7 @@ func (g *AutoscalingPolicyGetter) buildDefault() {
 }
 
 // Build policy map from env overlay configs
-func (g *AutoscalingPolicyGetter) buildEnvOverlay(env v1alpha2.EnvName) {
+func (g *AutoscalingPolicyGetter) buildEnvOverlay(env paasv1alpha2.EnvName) {
 	if g.bkapp.Spec.EnvOverlay == nil {
 		return
 	}

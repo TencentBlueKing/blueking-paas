@@ -45,8 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/controllers"
 	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
@@ -63,8 +63,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -82,7 +82,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	var err error
-	projConf := v1alpha1.NewProjectConfig()
+	projConf := paasv1alpha1.NewProjectConfig()
 	options := ctrl.Options{
 		Scheme:         scheme,
 		LeaderElection: false,
@@ -99,7 +99,7 @@ func main() {
 
 	// TODO: This is not the desired way to use the global config, we should refactor
 	// the code in current file to avoid type assertion entirely.
-	cfgObj := config.Global.(*v1alpha1.ProjectConfig)
+	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
 	// ref: how to usage sentry in go -> https://docs.sentry.io/platforms/go/usage/
 	sentryDSN := cfgObj.PlatformConfig.SentryDSN
@@ -127,28 +127,28 @@ func main() {
 	mgrCli := client.New(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
 
-	bkappMgrOpts := genGroupKindMgrOpts(v1alpha1.GroupKindBkApp, projConf.Controller)
+	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf.Controller)
 	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
 		os.Exit(1)
 	}
-	dgmappingMgrOpts := genGroupKindMgrOpts(v1alpha1.GroupKindDomainGroupMapping, projConf.Controller)
+	dgmappingMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindDomainGroupMapping, projConf.Controller)
 	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, dgmappingMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&v1alpha1.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&paasv1alpha1.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "v1alpha1/BkApp")
 			os.Exit(1)
 		}
-		if err = (&v1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DomainGroupMapping")
 			os.Exit(1)
 		}
-		if err = (&v1alpha2.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&paasv1alpha2.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "v1alpha2/BkApp")
 			os.Exit(1)
 		}
@@ -171,7 +171,7 @@ func main() {
 }
 
 func initExtensionClient() error {
-	cfgObj := config.Global.(*v1alpha1.ProjectConfig)
+	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
 	if cfgObj.PlatformConfig.BkAPIGatewayURL != "" {
 		bkpaasGatewayBaseURL, err := url.Parse(cfgObj.PlatformConfig.BkAPIGatewayURL)
@@ -193,7 +193,7 @@ func initExtensionClient() error {
 }
 
 func initIngressPlugins() {
-	cfgObj := config.Global.(*v1alpha1.ProjectConfig)
+	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
 	pluginConfig := cfgObj.IngressPluginConfig
 	if pluginConfig.AccessControlConfig != nil {

@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
@@ -82,7 +82,7 @@ func (r *DomainGroupMappingReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	dgmapping := &v1alpha1.DomainGroupMapping{}
+	dgmapping := &paasv1alpha1.DomainGroupMapping{}
 	err := r.client.Get(ctx, req.NamespacedName, dgmapping)
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to fetch DomainGroupMapping %v", req.NamespacedName))
@@ -92,20 +92,20 @@ func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.R
 	// Handle deletion and finalizer related logics:
 	// If object is not under deletion, add our finalizer
 	if dgmapping.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(dgmapping, v1alpha1.DGroupMappingFinalizerName) {
-			controllerutil.AddFinalizer(dgmapping, v1alpha1.DGroupMappingFinalizerName)
+		if !controllerutil.ContainsFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName) {
+			controllerutil.AddFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName)
 			if err = r.client.Update(ctx, dgmapping); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 	} else {
 		// The resource is under deletion
-		if controllerutil.ContainsFinalizer(dgmapping, v1alpha1.DGroupMappingFinalizerName) {
+		if controllerutil.ContainsFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName) {
 			// Our finalizer is present, handle any external dependency
 			if err = r.SyncDeletion(ctx, dgmapping); err != nil {
 				return ctrl.Result{}, err
 			}
-			controllerutil.RemoveFinalizer(dgmapping, v1alpha1.DGroupMappingFinalizerName)
+			controllerutil.RemoveFinalizer(dgmapping, paasv1alpha1.DGroupMappingFinalizerName)
 			if err = r.client.Update(ctx, dgmapping); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -116,14 +116,14 @@ func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.R
 
 	// Start the main sync procedure
 	if err = r.Sync(ctx, dgmapping); err != nil {
-		return ctrl.Result{RequeueAfter: v1alpha2.DefaultRequeueAfter}, err
+		return ctrl.Result{RequeueAfter: paasv1alpha2.DefaultRequeueAfter}, err
 	}
 	return ctrl.Result{}, nil
 }
 
 // Sync DomainGroupMapping object, move it to desired state by manipulating Ingress
 // and BkApp resources.
-func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *v1alpha1.DomainGroupMapping) error {
+func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *paasv1alpha1.DomainGroupMapping) error {
 	log := logf.FromContext(ctx)
 	bkapp, errRef := r.GetRef(ctx, dgmapping)
 	// Update status first
@@ -164,7 +164,7 @@ func (r *DomainGroupMappingReconciler) Sync(ctx context.Context, dgmapping *v1al
 // SyncDeletion method handle deletions of DomainGroupMapping resources
 func (r *DomainGroupMappingReconciler) SyncDeletion(
 	ctx context.Context,
-	dgmapping *v1alpha1.DomainGroupMapping,
+	dgmapping *paasv1alpha1.DomainGroupMapping,
 ) error {
 	// Delete all related Ingresses
 	if err := dgroupmapping.DeleteIngresses(ctx, r.client, dgmapping); err != nil {
@@ -189,9 +189,9 @@ func (r *DomainGroupMappingReconciler) SyncDeletion(
 // GetRef gets the BkApp object which is referenced by given mapping object
 func (r *DomainGroupMappingReconciler) GetRef(
 	ctx context.Context,
-	dgmapping *v1alpha1.DomainGroupMapping,
-) (v1alpha2.BkApp, error) {
-	refObj := v1alpha2.BkApp{}
+	dgmapping *paasv1alpha1.DomainGroupMapping,
+) (paasv1alpha2.BkApp, error) {
+	refObj := paasv1alpha2.BkApp{}
 	if dgmapping.Spec.Ref.Name == "" {
 		return refObj, errors.WithStack(ErrReferenceUndefined)
 	}
@@ -207,7 +207,7 @@ func (r *DomainGroupMappingReconciler) GetRef(
 
 // Sync domain group mapping's status field by err which was produced during finding referenced object.
 func (r *DomainGroupMappingReconciler) syncRefErrStatus(
-	ctx context.Context, dgmapping *v1alpha1.DomainGroupMapping, err error,
+	ctx context.Context, dgmapping *paasv1alpha1.DomainGroupMapping, err error,
 ) error {
 	// Skip updating status if no error
 	if err == nil {
@@ -223,7 +223,7 @@ func (r *DomainGroupMappingReconciler) syncRefErrStatus(
 		reason = "RefGettingError"
 	}
 	apimeta.SetStatusCondition(&dgmapping.Status.Conditions, metav1.Condition{
-		Type:    v1alpha1.DomainMappingProcessed,
+		Type:    paasv1alpha1.DomainMappingProcessed,
 		Status:  metav1.ConditionFalse,
 		Reason:  reason,
 		Message: message,
@@ -239,13 +239,13 @@ func (r *DomainGroupMappingReconciler) syncRefErrStatus(
 // current resource.
 func (r *DomainGroupMappingReconciler) syncProcessedStatus(
 	ctx context.Context,
-	bkapp *v1alpha2.BkApp,
-	dgmapping *v1alpha1.DomainGroupMapping,
+	bkapp *paasv1alpha2.BkApp,
+	dgmapping *paasv1alpha1.DomainGroupMapping,
 	domainGroups []res.DomainGroup,
 ) error {
 	// Update mapping obj's conditions
 	apimeta.SetStatusCondition(&dgmapping.Status.Conditions, metav1.Condition{
-		Type:   v1alpha1.DomainMappingProcessed,
+		Type:   paasv1alpha1.DomainMappingProcessed,
 		Status: metav1.ConditionTrue,
 		Reason: "Processed",
 	})
@@ -267,7 +267,7 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(
 ) error {
 	// Build an index to query DomainGroupMappings by BkApp later
 	err := mgr.GetFieldIndexer().
-		IndexField(ctx, &v1alpha1.DomainGroupMapping{}, BkAppIndexField, getDGMappingOwnerNames)
+		IndexField(ctx, &paasv1alpha1.DomainGroupMapping{}, BkAppIndexField, getDGMappingOwnerNames)
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(
 	// enqueue requests.
 	handleEnqueueBkApp := func(bkapp client.Object) []reconcile.Request {
 		// List attached DomainGroupMapping objects by index
-		dgmappings := &v1alpha1.DomainGroupMappingList{}
+		dgmappings := &paasv1alpha1.DomainGroupMappingList{}
 		listOps := &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(BkAppIndexField, bkapp.GetName()),
 			Namespace:     bkapp.GetNamespace(),
@@ -299,17 +299,17 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(
 		return reqs
 	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.DomainGroupMapping{}).
+		For(&paasv1alpha1.DomainGroupMapping{}).
 		WithOptions(opts).
 		Watches(&source.Kind{
-			Type: &v1alpha2.BkApp{},
+			Type: &paasv1alpha2.BkApp{},
 		}, handler.EnqueueRequestsFromMapFunc(handleEnqueueBkApp)).
 		Complete(r)
 }
 
 func getDGMappingOwnerNames(rawObj client.Object) []string {
-	dgmapping := rawObj.(*v1alpha1.DomainGroupMapping)
-	if dgmapping.Spec.Ref.Kind == v1alpha2.KindBkApp && dgmapping.Spec.Ref.Name != "" {
+	dgmapping := rawObj.(*paasv1alpha1.DomainGroupMapping)
+	if dgmapping.Spec.Ref.Kind == paasv1alpha2.KindBkApp && dgmapping.Spec.Ref.Name != "" {
 		return []string{dgmapping.Spec.Ref.Name}
 	}
 	return nil
@@ -317,12 +317,12 @@ func getDGMappingOwnerNames(rawObj client.Object) []string {
 
 // ToAddressableStatus receives a list of DomainGroups, turns them into
 // addressable objects which can be used for BkApp's status field
-func ToAddressableStatus(groups []res.DomainGroup) []v1alpha2.Addressable {
-	var results []v1alpha2.Addressable
+func ToAddressableStatus(groups []res.DomainGroup) []paasv1alpha2.Addressable {
+	var results []paasv1alpha2.Addressable
 	for _, group := range groups {
 		for _, d := range group.Domains {
 			for _, url := range d.GetURLs() {
-				results = append(results, v1alpha2.Addressable{SourceType: string(group.SourceType), URL: url})
+				results = append(results, paasv1alpha2.Addressable{SourceType: string(group.SourceType), URL: url})
 			}
 		}
 	}

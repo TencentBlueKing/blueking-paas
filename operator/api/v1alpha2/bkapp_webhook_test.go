@@ -29,25 +29,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 var _ = Describe("test webhook.Defaulter", func() {
 	It("normal case", func() {
-		bkapp := &v1alpha2.BkApp{
+		bkapp := &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
-				APIVersion: v1alpha2.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha2.AppSpec{
-				Processes: []v1alpha2.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name: "web",
 					},
@@ -65,31 +65,31 @@ var _ = Describe("test webhook.Defaulter", func() {
 })
 
 var _ = Describe("test webhook.Validator", func() {
-	var bkapp *v1alpha2.BkApp
+	var bkapp *paasv1alpha2.BkApp
 
 	BeforeEach(func() {
-		bkapp = &v1alpha2.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
-				APIVersion: v1alpha2.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha2.AppSpec{
-				Build: v1alpha2.BuildConfig{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
 					Image: "nginx:latest",
 				},
-				Processes: []v1alpha2.Process{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name:       "web",
-						Replicas:   v1alpha2.ReplicasTwo,
+						Replicas:   paasv1alpha2.ReplicasTwo,
 						TargetPort: 80,
 					},
 					{
 						Name:     "hi",
-						Replicas: v1alpha2.ReplicasTwo,
+						Replicas: paasv1alpha2.ReplicasTwo,
 						Command:  []string{"/bin/sh"},
 						Args:     []string{"-c", "echo hi"},
 					},
@@ -129,7 +129,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 	Context("Test process basic", func() {
 		It("Processes empty", func() {
-			bkapp.Spec.Processes = []v1alpha2.Process{}
+			bkapp.Spec.Processes = []paasv1alpha2.Process{}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("processes can't be empty"))
 		})
@@ -168,31 +168,31 @@ var _ = Describe("test webhook.Validator", func() {
 
 	Context("Test process autoscaling", func() {
 		It("Invalid minReplicas", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &v1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: v1alpha2.ScalingPolicyDefault,
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("minReplicas must be greater than 0"))
 		})
 
 		It("Invalid maxReplicas", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &v1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: v1alpha2.ScalingPolicyDefault,
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("at most support 5 replicas"))
 		})
 
 		It("maxReplicas < minReplicas", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &v1alpha2.AutoscalingSpec{
-				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: v1alpha2.ScalingPolicyDefault,
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: paasv1alpha2.ScalingPolicyDefault,
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("maxReplicas must be greater than or equal to minReplicas"))
 		})
 
 		It("policy required", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &v1alpha2.AutoscalingSpec{
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
 				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "",
 			}
 			err := bkapp.ValidateCreate()
@@ -200,7 +200,7 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 
 		It("policy must supported", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &v1alpha2.AutoscalingSpec{
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
 				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
 			}
 			err := bkapp.ValidateCreate()
@@ -208,7 +208,7 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 
 		It("disable autoscaling cause skip validate", func() {
-			bkapp.Spec.Processes[0].Autoscaling = &v1alpha2.AutoscalingSpec{
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
 				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: "fake",
 			}
 			Expect(bkapp.ValidateCreate()).To(BeNil())
@@ -217,18 +217,18 @@ var _ = Describe("test webhook.Validator", func() {
 
 	Context("Test envOverlay", func() {
 		BeforeEach(func() {
-			bkapp.Spec.EnvOverlay = &v1alpha2.AppEnvOverlay{}
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{}
 		})
 		It("Normal", func() {
-			bkapp.Spec.EnvOverlay = &v1alpha2.AppEnvOverlay{
-				Replicas: []v1alpha2.ReplicasOverlay{
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				Replicas: []paasv1alpha2.ReplicasOverlay{
 					{EnvName: "stag", Process: "web", Count: 1},
 				},
-				EnvVariables: []v1alpha2.EnvVarOverlay{
+				EnvVariables: []paasv1alpha2.EnvVarOverlay{
 					{EnvName: "stag", Name: "foo", Value: "foo-value"},
 				},
-				Autoscaling: []v1alpha2.AutoscalingOverlay{
-					{EnvName: "stag", Process: "web", Policy: v1alpha2.ScalingPolicyDefault},
+				Autoscaling: []paasv1alpha2.AutoscalingOverlay{
+					{EnvName: "stag", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
 				},
 			}
 
@@ -236,49 +236,49 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err).To(BeNil())
 		})
 		It("[replicas] invalid envName", func() {
-			bkapp.Spec.EnvOverlay.Replicas = []v1alpha2.ReplicasOverlay{
+			bkapp.Spec.EnvOverlay.Replicas = []paasv1alpha2.ReplicasOverlay{
 				{EnvName: "invalid-env", Process: "web", Count: 1},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
 		It("[replicas] invalid process name", func() {
-			bkapp.Spec.EnvOverlay.Replicas = []v1alpha2.ReplicasOverlay{
+			bkapp.Spec.EnvOverlay.Replicas = []paasv1alpha2.ReplicasOverlay{
 				{EnvName: "stag", Process: "invalid-proc", Count: 1},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
 		})
 		It("[replicas] invalid count", func() {
-			bkapp.Spec.EnvOverlay.Replicas = []v1alpha2.ReplicasOverlay{
+			bkapp.Spec.EnvOverlay.Replicas = []paasv1alpha2.ReplicasOverlay{
 				{EnvName: "stag", Process: "web", Count: 100},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("count can't be greater than "))
 		})
 		It("[envVariables] invalid envName", func() {
-			bkapp.Spec.EnvOverlay.EnvVariables = []v1alpha2.EnvVarOverlay{
+			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{
 				{EnvName: "invalid-env", Name: "foo", Value: "bar"},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
 		It("[autoscaling] invalid envName", func() {
-			bkapp.Spec.EnvOverlay.Autoscaling = []v1alpha2.AutoscalingOverlay{
-				{EnvName: "invalid-env", Process: "web", Policy: v1alpha2.ScalingPolicyDefault},
+			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
+				{EnvName: "invalid-env", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
 		})
 		It("[autoscaling] invalid process name", func() {
-			bkapp.Spec.EnvOverlay.Autoscaling = []v1alpha2.AutoscalingOverlay{
-				{EnvName: "stag", Process: "invalid-proc", Policy: v1alpha2.ScalingPolicyDefault},
+			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
+				{EnvName: "stag", Process: "invalid-proc", Policy: paasv1alpha2.ScalingPolicyDefault},
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
 		})
 		It("[autoscaling] invalid policy", func() {
-			bkapp.Spec.EnvOverlay.Autoscaling = []v1alpha2.AutoscalingOverlay{
+			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
 				{EnvName: "stag", Process: "web", Policy: "fake"},
 			}
 			err := bkapp.ValidateCreate()
@@ -291,9 +291,9 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 	var suffix string
 
 	// A shortcut to build a v1alpha1/BkApp object
-	buildApp := func(spec v1alpha1.AppSpec) *v1alpha1.BkApp {
-		ret := &v1alpha1.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: v1alpha1.KindBkApp, APIVersion: v1alpha1.GroupVersion.String()},
+	buildApp := func(spec paasv1alpha1.AppSpec) *paasv1alpha1.BkApp {
+		ret := &paasv1alpha1.BkApp{
+			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-" + suffix, Namespace: "default"},
 		}
 		ret.Spec = spec
@@ -305,42 +305,42 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 	})
 
 	It("Create BkApp with minimal required fields", func() {
-		bkapp := buildApp(v1alpha1.AppSpec{
-			Processes: []v1alpha1.Process{
-				{Name: "web", Replicas: v1alpha1.ReplicasOne, Image: "nginx:latest"},
+		bkapp := buildApp(paasv1alpha1.AppSpec{
+			Processes: []paasv1alpha1.Process{
+				{Name: "web", Replicas: paasv1alpha1.ReplicasOne, Image: "nginx:latest"},
 			},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
 	})
 
 	It("Check default values was set", func() {
-		bkapp := buildApp(v1alpha1.AppSpec{
-			Processes: []v1alpha1.Process{
-				{Name: "web", Replicas: v1alpha1.ReplicasOne, Image: "nginx:latest"},
+		bkapp := buildApp(paasv1alpha1.AppSpec{
+			Processes: []paasv1alpha1.Process{
+				{Name: "web", Replicas: paasv1alpha1.ReplicasOne, Image: "nginx:latest"},
 			},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
 
 		// Check if default values have been set
-		var createdBkApp v1alpha2.BkApp
+		var createdBkApp paasv1alpha2.BkApp
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(bkapp), &createdBkApp)).NotTo(HaveOccurred())
-		Expect(createdBkApp.Spec.Processes[0].TargetPort).To(Equal(v1alpha2.ProcDefaultTargetPort))
+		Expect(createdBkApp.Spec.Processes[0].TargetPort).To(Equal(paasv1alpha2.ProcDefaultTargetPort))
 	})
 
 	It("Create BkApp with duplicated processes", func() {
-		bkapp := buildApp(v1alpha1.AppSpec{
-			Processes: []v1alpha1.Process{
-				{Name: "web", Replicas: v1alpha1.ReplicasOne},
-				{Name: "web", Replicas: v1alpha1.ReplicasOne},
+		bkapp := buildApp(paasv1alpha1.AppSpec{
+			Processes: []paasv1alpha1.Process{
+				{Name: "web", Replicas: paasv1alpha1.ReplicasOne},
+				{Name: "web", Replicas: paasv1alpha1.ReplicasOne},
 			},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).To(HaveOccurred())
 	})
 
 	It("Create BkApp with image absent", func() {
-		bkapp := buildApp(v1alpha1.AppSpec{
-			Processes: []v1alpha1.Process{
-				{Name: "web", Replicas: v1alpha1.ReplicasOne},
+		bkapp := buildApp(paasv1alpha1.AppSpec{
+			Processes: []paasv1alpha1.Process{
+				{Name: "web", Replicas: paasv1alpha1.ReplicasOne},
 			},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).To(HaveOccurred())
@@ -351,9 +351,9 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 	var suffix string
 
 	// A shortcut to build a v1alpha2/BkApp object
-	buildApp := func(spec v1alpha2.AppSpec) *v1alpha2.BkApp {
-		ret := &v1alpha2.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: v1alpha2.KindBkApp, APIVersion: v1alpha2.GroupVersion.String()},
+	buildApp := func(spec paasv1alpha2.AppSpec) *paasv1alpha2.BkApp {
+		ret := &paasv1alpha2.BkApp{
+			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha2.KindBkApp, APIVersion: paasv1alpha2.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-" + suffix, Namespace: "default"},
 		}
 		ret.Spec = spec
@@ -365,16 +365,16 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 	})
 
 	It("Create BkApp with minimal required fields", func() {
-		bkapp := buildApp(v1alpha2.AppSpec{
-			Build:     v1alpha2.BuildConfig{Image: "nginx:latest"},
-			Processes: []v1alpha2.Process{{Name: "web", Replicas: v1alpha2.ReplicasOne}},
+		bkapp := buildApp(paasv1alpha2.AppSpec{
+			Build:     paasv1alpha2.BuildConfig{Image: "nginx:latest"},
+			Processes: []paasv1alpha2.Process{{Name: "web", Replicas: paasv1alpha2.ReplicasOne}},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).NotTo(HaveOccurred())
 	})
 
 	It("Create BkApp with image missing", func() {
-		bkapp := buildApp(v1alpha2.AppSpec{
-			Processes: []v1alpha2.Process{{Name: "web", Replicas: v1alpha2.ReplicasOne}},
+		bkapp := buildApp(paasv1alpha2.AppSpec{
+			Processes: []paasv1alpha2.Process{{Name: "web", Replicas: paasv1alpha2.ReplicasOne}},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).To(HaveOccurred())
 	})

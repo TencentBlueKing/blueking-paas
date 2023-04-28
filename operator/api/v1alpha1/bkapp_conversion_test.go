@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -68,7 +68,7 @@ var _ = Describe("test conversion back and forth", func() {
 		}
 
 		// Convert the resource back and forth
-		var v1alpha2bkapp v1alpha2.BkApp
+		var v1alpha2bkapp paasv1alpha2.BkApp
 		_ = v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkapp))
 		var v1alpha1bkappFromConverted BkApp
 		_ = v1alpha1bkappFromConverted.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
@@ -78,20 +78,20 @@ var _ = Describe("test conversion back and forth", func() {
 	})
 
 	It("hub -> v1alpha1 -> hub", func() {
-		v1alpha2bkapp := v1alpha2.BkApp{
+		v1alpha2bkapp := paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.KindBkApp,
-				APIVersion: v1alpha2.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha2.AppSpec{
-				Build: v1alpha2.BuildConfig{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
 					Image: "nginx: latest",
 				},
-				Processes: []v1alpha2.Process{
+				Processes: []paasv1alpha2.Process{
 					{
 						Name:         "web",
 						Replicas:     ReplicasTwo,
@@ -110,7 +110,7 @@ var _ = Describe("test conversion back and forth", func() {
 		// Convert the resource back and forth
 		var v1alpha1bkapp BkApp
 		_ = v1alpha1bkapp.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
-		var v1alpha2bkappFromConverted v1alpha2.BkApp
+		var v1alpha2bkappFromConverted paasv1alpha2.BkApp
 		_ = v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkappFromConverted))
 
 		// Make sure the conversion is lossless.

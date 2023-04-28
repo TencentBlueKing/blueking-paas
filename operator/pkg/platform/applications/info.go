@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // ErrParseAppMetadata 指示从资源头对象中无法获取到蓝鲸应用的元信息
@@ -40,29 +40,29 @@ type BluekingAppInfo struct {
 }
 
 // GetBkAppInfo 获取蓝鲸应用元信息
-func GetBkAppInfo(bkapp *v1alpha2.BkApp) (*BluekingAppInfo, error) {
+func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 	annotations := bkapp.GetAnnotations()
 
 	var region, appCode, appName, moduleName, environment, engineAppName string
 	var ok bool
 
-	if region, ok = annotations[v1alpha2.BkAppRegionKey]; !ok {
-		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha2.BkAppRegionKey)
+	if region, ok = annotations[paasv1alpha2.BkAppRegionKey]; !ok {
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", paasv1alpha2.BkAppRegionKey)
 	}
 
-	if appCode, ok = annotations[v1alpha2.BkAppCodeKey]; !ok {
-		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha2.BkAppCodeKey)
+	if appCode, ok = annotations[paasv1alpha2.BkAppCodeKey]; !ok {
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", paasv1alpha2.BkAppCodeKey)
 	}
-	if appName, ok = annotations[v1alpha2.BkAppNameKey]; !ok {
-		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha2.BkAppNameKey)
+	if appName, ok = annotations[paasv1alpha2.BkAppNameKey]; !ok {
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", paasv1alpha2.BkAppNameKey)
 	}
-	if moduleName, ok = annotations[v1alpha2.ModuleNameKey]; !ok {
-		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha2.ModuleNameKey)
+	if moduleName, ok = annotations[paasv1alpha2.ModuleNameKey]; !ok {
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", paasv1alpha2.ModuleNameKey)
 	}
-	if environment, ok = annotations[v1alpha2.EnvironmentKey]; !ok {
-		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", v1alpha2.EnvironmentKey)
+	if environment, ok = annotations[paasv1alpha2.EnvironmentKey]; !ok {
+		return nil, errors.Wrapf(ErrParseAppMetadata, "for missing %s", paasv1alpha2.EnvironmentKey)
 	}
-	if engineAppName, ok = annotations[v1alpha2.EngineAppNameKey]; !ok {
+	if engineAppName, ok = annotations[paasv1alpha2.EngineAppNameKey]; !ok {
 		engineAppName = fmt.Sprintf("bkapp-%s-%s", appCode, environment)
 	}
 	return &BluekingAppInfo{

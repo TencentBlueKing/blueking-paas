@@ -35,7 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -87,7 +87,7 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	app := &v1alpha2.BkApp{}
+	app := &paasv1alpha2.BkApp{}
 	err := r.client.Get(ctx, req.NamespacedName, app)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
@@ -98,8 +98,8 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
-		if !controllerutil.ContainsFinalizer(app, v1alpha2.BkAppFinalizerName) {
-			controllerutil.AddFinalizer(app, v1alpha2.BkAppFinalizerName)
+		if !controllerutil.ContainsFinalizer(app, paasv1alpha2.BkAppFinalizerName) {
+			controllerutil.AddFinalizer(app, paasv1alpha2.BkAppFinalizerName)
 			if err = r.client.Update(ctx, app); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -129,25 +129,25 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opts controller.Options) error {
-	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, v1alpha2.KubeResOwnerKey, getOwnerNames)
+	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames)
 	if err != nil {
 		return err
 	}
 
-	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, v1alpha2.KubeResOwnerKey, getOwnerNames)
+	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames)
 	if err != nil {
 		return err
 	}
 
 	err = mgr.GetFieldIndexer().IndexField(
-		ctx, &autoscaling.GeneralPodAutoscaler{}, v1alpha2.KubeResOwnerKey, getOwnerNames,
+		ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
 	)
 	if err != nil {
 		return err
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha2.BkApp{}).
+		For(&paasv1alpha2.BkApp{}).
 		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Pod{}).
@@ -162,7 +162,7 @@ func getOwnerNames(rawObj client.Object) []string {
 		return nil
 	}
 	// 确保 Owner 类型为 BkApp
-	if owner.APIVersion == v1alpha2.GroupVersion.String() && owner.Kind == v1alpha2.KindBkApp {
+	if owner.APIVersion == paasv1alpha2.GroupVersion.String() && owner.Kind == paasv1alpha2.KindBkApp {
 		return []string{owner.Name}
 	}
 	return nil

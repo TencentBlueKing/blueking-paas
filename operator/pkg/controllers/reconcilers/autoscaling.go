@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 
@@ -46,7 +46,7 @@ type AutoscalingReconciler struct {
 }
 
 // Reconcile ...
-func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.BkApp) Result {
+func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return r.Result.withError(err)
@@ -75,12 +75,12 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.B
 
 // 获取应用当前在集群中的状态
 func (r *AutoscalingReconciler) getCurrentState(
-	ctx context.Context, bkapp *v1alpha2.BkApp,
+	ctx context.Context, bkapp *paasv1alpha2.BkApp,
 ) (result []*autoscaling.GeneralPodAutoscaler, err error) {
 	gpaList := autoscaling.GeneralPodAutoscalerList{}
 	err = r.Client.List(
 		ctx, &gpaList, client.InNamespace(bkapp.Namespace),
-		client.MatchingFields{v1alpha2.KubeResOwnerKey: bkapp.Name},
+		client.MatchingFields{paasv1alpha2.KubeResOwnerKey: bkapp.Name},
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list app's GPA")
@@ -95,7 +95,7 @@ func (r *AutoscalingReconciler) deploy(ctx context.Context, gpa *autoscaling.Gen
 }
 
 // 根据 GPA 状态（Conditions），更新 BkApp 状态（Conditions）
-func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *v1alpha2.BkApp) error {
+func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *v1al
 
 	if len(current) == 0 {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha2.AutoscalingAvailable,
+			Type:               paasv1alpha2.AutoscalingAvailable,
 			Status:             metav1.ConditionUnknown,
 			Reason:             "Disabled",
 			Message:            "Process autoscaling feature not turned on",
@@ -114,9 +114,9 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *v1al
 
 	for _, gpa := range current {
 		healthStatus := kubestatus.GenGPAHealthStatus(gpa)
-		if healthStatus.Phase != v1alpha2.HealthHealthy {
+		if healthStatus.Phase != paasv1alpha2.HealthHealthy {
 			apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-				Type:               v1alpha2.AutoscalingAvailable,
+				Type:               paasv1alpha2.AutoscalingAvailable,
 				Status:             metav1.ConditionFalse,
 				Reason:             "AutoscalerFailure",
 				Message:            gpa.Name + ": " + healthStatus.Message,
@@ -127,7 +127,7 @@ func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *v1al
 	}
 
 	apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-		Type:               v1alpha2.AutoscalingAvailable,
+		Type:               paasv1alpha2.AutoscalingAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             "AutoscalingAvailable",
 		ObservedGeneration: bkapp.Status.ObservedGeneration,

@@ -21,23 +21,23 @@ package fake
 import (
 	"fmt"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // DGroupMappingSpecFixture makes a faked Spec object which contains all 3 kinds of
 // example domain groups.
-func DGroupMappingSpecFixture(bkapp *v1alpha2.BkApp) v1alpha1.DomainGroupMappingSpec {
-	return v1alpha1.DomainGroupMappingSpec{
-		Ref: v1alpha1.MappingRef{
+func DGroupMappingSpecFixture(bkapp *paasv1alpha2.BkApp) paasv1alpha1.DomainGroupMappingSpec {
+	return paasv1alpha1.DomainGroupMappingSpec{
+		Ref: paasv1alpha1.MappingRef{
 			Name:       bkapp.Name,
-			Kind:       v1alpha2.KindBkApp,
-			APIVersion: v1alpha2.GroupVersion.String(),
+			Kind:       paasv1alpha2.KindBkApp,
+			APIVersion: paasv1alpha2.GroupVersion.String(),
 		},
-		Data: []v1alpha1.DomainGroup{
+		Data: []paasv1alpha1.DomainGroup{
 			{
 				SourceType: "subdomain",
-				Domains: []v1alpha1.Domain{
+				Domains: []paasv1alpha1.Domain{
 					{
 						Host:           fmt.Sprintf("%s.example.com", bkapp.Name),
 						PathPrefixList: []string{"/"},
@@ -46,7 +46,7 @@ func DGroupMappingSpecFixture(bkapp *v1alpha2.BkApp) v1alpha1.DomainGroupMapping
 			},
 			{
 				SourceType: "subpath",
-				Domains: []v1alpha1.Domain{
+				Domains: []paasv1alpha1.Domain{
 					{
 						Host:           "fake.example.com",
 						PathPrefixList: []string{"/" + bkapp.Name},
@@ -55,7 +55,7 @@ func DGroupMappingSpecFixture(bkapp *v1alpha2.BkApp) v1alpha1.DomainGroupMapping
 			},
 			{
 				SourceType: "custom",
-				Domains: []v1alpha1.Domain{
+				Domains: []paasv1alpha1.Domain{
 					{
 						Name:           "1",
 						Host:           fmt.Sprintf("%s-custom.example.com", bkapp.Name),

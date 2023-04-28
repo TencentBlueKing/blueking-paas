@@ -5,7 +5,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 )
 
@@ -13,14 +13,14 @@ var _ conversion.Convertible = &BkApp{}
 
 // ConvertTo converts this BkApp to the Hub version (v1alpha2).
 func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1alpha2.BkApp)
+	dst := dstRaw.(*paasv1alpha2.BkApp)
 	dst.ObjectMeta = src.ObjectMeta
 
 	// Handle Processes field
-	legacyProcImageConfig := make(v1alpha2.LegacyProcConfig)
-	legacyProcResConfig := make(v1alpha2.LegacyProcConfig)
+	legacyProcImageConfig := make(paasv1alpha2.LegacyProcConfig)
+	legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
 	for _, proc := range src.Spec.Processes {
-		dstProc := v1alpha2.Process{
+		dstProc := paasv1alpha2.Process{
 			Name:         proc.Name,
 			Replicas:     proc.Replicas,
 			ResQuotaPlan: proc.ResQuotaPlan,
@@ -69,7 +69,7 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	if src.Spec.Hooks == nil {
 		dst.Spec.Hooks = nil
 	} else {
-		dst.Spec.Hooks = &v1alpha2.AppHooks{}
+		dst.Spec.Hooks = &paasv1alpha2.AppHooks{}
 		_ = copier.CopyWithOption(
 			&dst.Spec.Hooks,
 			&src.Spec.Hooks,
@@ -81,7 +81,7 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	if src.Spec.EnvOverlay == nil {
 		dst.Spec.EnvOverlay = nil
 	} else {
-		dst.Spec.EnvOverlay = &v1alpha2.AppEnvOverlay{}
+		dst.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{}
 		_ = copier.CopyWithOption(
 			&dst.Spec.EnvOverlay,
 			&src.Spec.EnvOverlay,
@@ -93,12 +93,12 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 
 // ConvertFrom converts from the Hub version (v1alpha2) to this version.
 func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1alpha2.BkApp)
+	src := srcRaw.(*paasv1alpha2.BkApp)
 	dst.ObjectMeta = src.ObjectMeta
 
 	// Handle Processes field
-	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[v1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
-	legacyProcResConfig, _ := kubetypes.GetJsonAnnotation[v1alpha2.LegacyProcConfig](src, LegacyProcResAnnoKey)
+	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
+	legacyProcResConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcResAnnoKey)
 	for _, proc := range src.Spec.Processes {
 		dstProc := Process{
 			Name:         proc.Name,

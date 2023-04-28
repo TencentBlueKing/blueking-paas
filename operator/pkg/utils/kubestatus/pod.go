@@ -23,7 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 const (
@@ -40,17 +40,17 @@ const (
 //            progressing is meaning that the Pod is still running and condition `PodReady` is False.
 func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	healthyStatus := &HealthStatus{
-		Phase:   v1alpha2.HealthHealthy,
+		Phase:   paasv1alpha2.HealthHealthy,
 		Reason:  pod.Status.Reason,
 		Message: pod.Status.Message,
 	}
 	unhealthyStatus := &HealthStatus{
-		Phase:   v1alpha2.HealthUnhealthy,
+		Phase:   paasv1alpha2.HealthUnhealthy,
 		Reason:  pod.Status.Reason,
 		Message: pod.Status.Message,
 	}
 	progressingStatus := &HealthStatus{
-		Phase:   v1alpha2.HealthProgressing,
+		Phase:   paasv1alpha2.HealthProgressing,
 		Reason:  pod.Status.Reason,
 		Message: pod.Status.Message,
 	}
@@ -105,7 +105,7 @@ func CheckPodHealthStatus(pod *corev1.Pod) *HealthStatus {
 	default:
 		// unknown pod phase
 		return &HealthStatus{
-			Phase:   v1alpha2.HealthUnknown,
+			Phase:   paasv1alpha2.HealthUnknown,
 			Reason:  string(pod.Status.Phase),
 			Message: pod.Status.Message,
 		}

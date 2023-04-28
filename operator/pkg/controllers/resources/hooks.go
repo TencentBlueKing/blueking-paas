@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
@@ -52,17 +52,17 @@ var (
 // HookInstance 指示解析后的 Hook 实例
 type HookInstance struct {
 	Pod    *corev1.Pod
-	Status *v1alpha2.HookStatus
+	Status *paasv1alpha2.HookStatus
 }
 
 // Progressing 返回当前 hook 是否执行中
 func (i *HookInstance) Progressing() bool {
-	return i.Status.Phase == v1alpha2.HealthProgressing
+	return i.Status.Phase == paasv1alpha2.HealthProgressing
 }
 
 // Succeeded 返回当前 hook 是否执行成功
 func (i *HookInstance) Succeeded() bool {
-	return i.Status.Phase == v1alpha2.HealthHealthy
+	return i.Status.Phase == paasv1alpha2.HealthHealthy
 }
 
 // Failed 返回当前 hook 是否执行失败
@@ -77,7 +77,7 @@ func (i *HookInstance) Timeout(timeout time.Duration) bool {
 }
 
 // BuildPreReleaseHook 从应用描述中解析 Pre-Release-Hook 对象
-func BuildPreReleaseHook(bkapp *v1alpha2.BkApp, status *v1alpha2.HookStatus) *HookInstance {
+func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookStatus) *HookInstance {
 	if bkapp.Spec.Hooks == nil || bkapp.Spec.Hooks.PreRelease == nil {
 		return nil
 	}
@@ -88,16 +88,16 @@ func BuildPreReleaseHook(bkapp *v1alpha2.BkApp, status *v1alpha2.HookStatus) *Ho
 	}
 
 	// Use the web process's image and pull policy to run the hook.
-	// This behavior might be changed in the future when v1alpha1.BkApp is fully removed.
-	image, pullPolicy, err := v1alpha2.NewProcImageGetter(bkapp).Get("web")
+	// This behavior might be changed in the future when paasv1alpha1.BkApp is fully removed.
+	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get("web")
 	if err != nil {
 		return nil
 	}
 
 	if status == nil {
-		status = &v1alpha2.HookStatus{
-			Type:  v1alpha2.HookPreRelease,
-			Phase: v1alpha2.HealthUnknown,
+		status = &paasv1alpha2.HookStatus{
+			Type:  paasv1alpha2.HookPreRelease,
+			Phase: paasv1alpha2.HealthUnknown,
 		}
 	}
 
@@ -111,15 +111,15 @@ func BuildPreReleaseHook(bkapp *v1alpha2.BkApp, status *v1alpha2.HookStatus) *Ho
 				Name:      names.PreReleaseHook(bkapp),
 				Namespace: bkapp.Namespace,
 				Labels: map[string]string{
-					v1alpha2.BkAppNameKey:    bkapp.GetName(),
-					v1alpha2.ResourceTypeKey: "hook",
-					v1alpha2.HookTypeKey:     string(v1alpha2.HookPreRelease),
+					paasv1alpha2.BkAppNameKey:    bkapp.GetName(),
+					paasv1alpha2.ResourceTypeKey: "hook",
+					paasv1alpha2.HookTypeKey:     string(paasv1alpha2.HookPreRelease),
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
-						Group:   v1alpha2.GroupVersion.Group,
-						Version: v1alpha2.GroupVersion.Version,
-						Kind:    v1alpha2.KindBkApp,
+						Group:   paasv1alpha2.GroupVersion.Group,
+						Version: paasv1alpha2.GroupVersion.Version,
+						Kind:    paasv1alpha2.KindBkApp,
 					}),
 				},
 			},
@@ -133,7 +133,7 @@ func BuildPreReleaseHook(bkapp *v1alpha2.BkApp, status *v1alpha2.HookStatus) *Ho
 						Name:            "hook",
 						ImagePullPolicy: pullPolicy,
 						// pre-hook 使用默认资源配置
-						Resources: v1alpha2.NewProcResourcesGetter(bkapp).GetDefault(),
+						Resources: paasv1alpha2.NewProcResourcesGetter(bkapp).GetDefault(),
 						// TODO: 挂载点
 						VolumeMounts: nil,
 					},

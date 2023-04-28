@@ -40,8 +40,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -70,10 +70,10 @@ var _ = BeforeSuite(func() {
 	// order to enable the conversion webhook.
 	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/1882
 	scheme := runtime.NewScheme()
-	err := v1alpha1.AddToScheme(scheme)
+	err := paasv1alpha1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = v1alpha2.AddToScheme(scheme)
+	err = paasv1alpha2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = admissionv1beta1.AddToScheme(scheme)
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&v1alpha2.BkApp{}).SetupWebhookWithManager(mgr)
+	err = (&paasv1alpha2.BkApp{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook

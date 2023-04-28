@@ -13,7 +13,7 @@ webhooks:
       namespace: system
       path: /mutate-paas-bk-tencent-com-v1alpha2-bkapp
   failurePolicy: Fail
-  name: mbkapp-v1alpha2.kb.io
+  name: mbkapp-paasv1alpha2.kb.io
   rules:
   - apiGroups:
     - paas.bk.tencent.com
@@ -40,7 +40,7 @@ webhooks:
       namespace: system
       path: /validate-paas-bk-tencent-com-v1alpha2-bkapp
   failurePolicy: Fail
-  name: vbkapp-v1alpha2.kb.io
+  name: vbkapp-paasv1alpha2.kb.io
   rules:
   - apiGroups:
     - paas.bk.tencent.com

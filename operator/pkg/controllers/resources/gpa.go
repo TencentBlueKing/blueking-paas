@@ -24,14 +24,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 // GetWantedGPAs 根据应用生成对应的 GPA(general-pod-autoscaler) 配置列表
-func GetWantedGPAs(app *v1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler {
+func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler {
 	gpaList := []*autoscaling.GeneralPodAutoscaler{}
 	policyGetter := NewAutoscalingPolicyGetter(app)
 	for _, proc := range app.Spec.Processes {
@@ -48,14 +48,14 @@ func GetWantedGPAs(app *v1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler {
 				Name:      names.GPA(app, proc.Name),
 				Namespace: app.Namespace,
 				Annotations: map[string]string{
-					v1alpha2.ProcessNameKey:            proc.Name,
-					v1alpha2.GPAComputeByLimitsAnnoKey: "true",
+					paasv1alpha2.ProcessNameKey:            proc.Name,
+					paasv1alpha2.GPAComputeByLimitsAnnoKey: "true",
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(app, schema.GroupVersionKind{
-						Group:   v1alpha2.GroupVersion.Group,
-						Version: v1alpha2.GroupVersion.Version,
-						Kind:    v1alpha2.KindBkApp,
+						Group:   paasv1alpha2.GroupVersion.Group,
+						Version: paasv1alpha2.GroupVersion.Version,
+						Kind:    paasv1alpha2.KindBkApp,
 					}),
 				},
 			},
@@ -79,9 +79,9 @@ func GetWantedGPAs(app *v1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler {
 }
 
 // 构建资源指标配置，目前仅支持按策略组装
-func buildMetricSpecs(policy v1alpha2.ScalingPolicy) (metrics []autoscaling.MetricSpec) {
+func buildMetricSpecs(policy paasv1alpha2.ScalingPolicy) (metrics []autoscaling.MetricSpec) {
 	switch policy {
-	case v1alpha2.ScalingPolicyDefault:
+	case paasv1alpha2.ScalingPolicyDefault:
 		// 默认策略：cpu utilization 85%
 		metrics = append(metrics, autoscaling.MetricSpec{
 			Type: autoscaling.ResourceMetricSourceType,

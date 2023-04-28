@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
@@ -45,12 +45,12 @@ const (
 var log = logf.Log.WithName("controllers-resources")
 
 // GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
-func GetWantedDeploys(app *v1alpha2.BkApp) []*appsv1.Deployment {
+func GetWantedDeploys(app *paasv1alpha2.BkApp) []*appsv1.Deployment {
 	newRevision := int64(0)
 	if rev := app.Status.Revision; rev != nil {
 		newRevision = rev.Revision
 	}
-	annotations := map[string]string{v1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
+	annotations := map[string]string{paasv1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
 	deployList := []*appsv1.Deployment{}
 	replicasGetter := NewReplicasGetter(app)
@@ -59,14 +59,14 @@ func GetWantedDeploys(app *v1alpha2.BkApp) []*appsv1.Deployment {
 		objLabels := labels.Deployment(app, proc.Name)
 
 		// TODO: Add error handling
-		image, pullPolicy, err := v1alpha2.NewProcImageGetter(app).Get(proc.Name)
+		image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(app).Get(proc.Name)
 		if err != nil {
 			log.Info("Failed to get image for process %s: %v, use default values.", proc.Name, err)
 			image = DefaultImage
 			pullPolicy = corev1.PullIfNotPresent
 		}
 
-		resGetter := v1alpha2.NewProcResourcesGetter(app)
+		resGetter := paasv1alpha2.NewProcResourcesGetter(app)
 		resReq, err := resGetter.Get(proc.Name)
 		if err != nil {
 			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
@@ -85,9 +85,9 @@ func GetWantedDeploys(app *v1alpha2.BkApp) []*appsv1.Deployment {
 				Annotations: annotations,
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(app, schema.GroupVersionKind{
-						Group:   v1alpha2.GroupVersion.Group,
-						Version: v1alpha2.GroupVersion.Version,
-						Kind:    v1alpha2.KindBkApp,
+						Group:   paasv1alpha2.GroupVersion.Group,
+						Version: paasv1alpha2.GroupVersion.Version,
+						Kind:    paasv1alpha2.KindBkApp,
 					}),
 				},
 			},
@@ -119,7 +119,7 @@ func GetWantedDeploys(app *v1alpha2.BkApp) []*appsv1.Deployment {
 // - pullPolicy: 镜像拉取策略
 // - resRequirements: 容器资源限制
 func buildContainers(
-	proc v1alpha2.Process,
+	proc paasv1alpha2.Process,
 	envs []corev1.EnvVar,
 	image string,
 	pullPolicy corev1.PullPolicy,
@@ -142,14 +142,14 @@ func buildContainers(
 }
 
 // buildImagePullSecrets 返回拉取镜像的 Secrets 列表
-func buildImagePullSecrets(app *v1alpha2.BkApp) []corev1.LocalObjectReference {
-	if app.GetAnnotations()[v1alpha2.ImageCredentialsRefAnnoKey] == "" {
+func buildImagePullSecrets(app *paasv1alpha2.BkApp) []corev1.LocalObjectReference {
+	if app.GetAnnotations()[paasv1alpha2.ImageCredentialsRefAnnoKey] == "" {
 		return nil
 	}
 	// DefaultImagePullSecretName 由 workloads 服务负责创建
 	return []corev1.LocalObjectReference{
 		{
-			Name: v1alpha2.DefaultImagePullSecretName,
+			Name: paasv1alpha2.DefaultImagePullSecretName,
 		},
 	}
 }

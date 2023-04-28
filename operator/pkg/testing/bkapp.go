@@ -21,23 +21,23 @@ package testing
 import (
 	"encoding/json"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // WithAppInfoAnnotations will set a fake app info to bkapp.annotations
-func WithAppInfoAnnotations(bkapp *v1alpha2.BkApp) *v1alpha2.BkApp {
+func WithAppInfoAnnotations(bkapp *paasv1alpha2.BkApp) *paasv1alpha2.BkApp {
 	annotations := bkapp.GetAnnotations()
-	annotations[v1alpha2.BkAppRegionKey] = "region"
-	annotations[v1alpha2.BkAppCodeKey] = "app-code"
-	annotations[v1alpha2.BkAppNameKey] = "app-name"
-	annotations[v1alpha2.ModuleNameKey] = "module"
-	annotations[v1alpha2.EnvironmentKey] = "stag"
-	annotations[v1alpha2.EngineAppNameKey] = "bkapp-app-code-stag"
+	annotations[paasv1alpha2.BkAppRegionKey] = "region"
+	annotations[paasv1alpha2.BkAppCodeKey] = "app-code"
+	annotations[paasv1alpha2.BkAppNameKey] = "app-name"
+	annotations[paasv1alpha2.ModuleNameKey] = "module"
+	annotations[paasv1alpha2.EnvironmentKey] = "stag"
+	annotations[paasv1alpha2.EngineAppNameKey] = "bkapp-app-code-stag"
 	return bkapp
 }
 
 // WithAddons will set the addons keys to bkapp.annotations
-func WithAddons(bkapp *v1alpha2.BkApp, addons ...string) *v1alpha2.BkApp {
+func WithAddons(bkapp *paasv1alpha2.BkApp, addons ...string) *paasv1alpha2.BkApp {
 	var data []byte
 	var err error
 	if data, err = json.Marshal(addons); err != nil {
@@ -45,6 +45,6 @@ func WithAddons(bkapp *v1alpha2.BkApp, addons ...string) *v1alpha2.BkApp {
 	}
 
 	annotations := bkapp.GetAnnotations()
-	annotations[v1alpha2.AddonsAnnoKey] = string(data)
+	annotations[paasv1alpha2.AddonsAnnoKey] = string(data)
 	return bkapp
 }

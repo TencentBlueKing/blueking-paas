@@ -31,7 +31,6 @@ import (
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
-	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/utils/basic"
@@ -271,7 +270,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 	var suffix string
 
 	// A shortcut to build a v1alpha2/BkApp object
-	buildApp := func(spec paasv1alpha2.AppSpec) *v1alpha2.BkApp {
+	buildApp := func(spec paasv1alpha2.AppSpec) *paasv1alpha2.BkApp {
 		ret := &paasv1alpha2.BkApp{
 			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha2.KindBkApp, APIVersion: paasv1alpha2.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-" + suffix, Namespace: "default"},

@@ -21,18 +21,18 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // ReplicasGetter get replicas from BkApp object
 type ReplicasGetter struct {
-	bkapp *paasv1alpha1.BkApp
+	bkapp *paasv1alpha2.BkApp
 	// replicasMap stores replications data, "{process} -> {replicas}"
 	replicasMap map[string]int32
 }
 
 // NewReplicasGetter creates a ReplicasGetter object
-func NewReplicasGetter(bkapp *paasv1alpha1.BkApp) *ReplicasGetter {
+func NewReplicasGetter(bkapp *paasv1alpha2.BkApp) *ReplicasGetter {
 	obj := &ReplicasGetter{bkapp: bkapp, replicasMap: make(map[string]int32)}
 
 	// Build internal index data
@@ -61,7 +61,7 @@ func (r *ReplicasGetter) buildDefault() {
 }
 
 // Build replicas map from env overlay configs
-func (r *ReplicasGetter) buildEnvOverlay(env paasv1alpha1.EnvName) {
+func (r *ReplicasGetter) buildEnvOverlay(env paasv1alpha2.EnvName) {
 	if r.bkapp.Spec.EnvOverlay == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (r *ReplicasGetter) buildEnvOverlay(env paasv1alpha1.EnvName) {
 
 // EnvVarsGetter get env vars from BkApp object
 type EnvVarsGetter struct {
-	bkapp *paasv1alpha1.BkApp
+	bkapp *paasv1alpha2.BkApp
 
 	// Stores env vars by key/value
 	itemsMap map[string]string
@@ -84,7 +84,7 @@ type EnvVarsGetter struct {
 }
 
 // NewEnvVarsGetter creates a ReplicasGetter object
-func NewEnvVarsGetter(bkapp *paasv1alpha1.BkApp) *EnvVarsGetter {
+func NewEnvVarsGetter(bkapp *paasv1alpha2.BkApp) *EnvVarsGetter {
 	obj := &EnvVarsGetter{bkapp: bkapp, itemsMap: make(map[string]string)}
 	// Load values from different sources, the order is important
 	obj.loadDefault()
@@ -118,7 +118,7 @@ func (r *EnvVarsGetter) loadDefault() {
 }
 
 // Load from env overlays
-func (r *EnvVarsGetter) loadEnvOverlay(env paasv1alpha1.EnvName) {
+func (r *EnvVarsGetter) loadEnvOverlay(env paasv1alpha2.EnvName) {
 	if r.bkapp.Spec.EnvOverlay == nil {
 		return
 	}
@@ -133,11 +133,11 @@ func (r *EnvVarsGetter) loadEnvOverlay(env paasv1alpha1.EnvName) {
 
 // GetEnvName get environment name from application, return an empty string
 // when no information can be found.
-func GetEnvName(bkapp *paasv1alpha1.BkApp) paasv1alpha1.EnvName {
+func GetEnvName(bkapp *paasv1alpha2.BkApp) paasv1alpha2.EnvName {
 	annots := bkapp.GetAnnotations()
-	name := paasv1alpha1.EnvName(annots[paasv1alpha1.EnvironmentKey])
-	if paasv1alpha1.CheckEnvName(name) {
+	name := paasv1alpha2.EnvName(annots[paasv1alpha2.EnvironmentKey])
+	if paasv1alpha2.CheckEnvName(name) {
 		return name
 	}
-	return paasv1alpha1.EnvName("")
+	return paasv1alpha2.EnvName("")
 }

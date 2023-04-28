@@ -16,15 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package reconcilers
+package v1alpha2_test
 
-import (
-	"context"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-)
-
-// Reconciler will move the current state of the cluster closer to the desired state.
-type Reconciler interface {
-	Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result
-}
+// The tests for procImageGetter and procResourcesGetter are covered by resources/deployment_test.go
+// currently, no test cases need here at this moment.

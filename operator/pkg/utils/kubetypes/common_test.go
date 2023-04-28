@@ -16,15 +16,36 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package reconcilers
+package kubetypes
 
 import (
-	"context"
-
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
-// Reconciler will move the current state of the cluster closer to the desired state.
-type Reconciler interface {
-	Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result
-}
+var _ = Describe("Test get/set JSON annotations", func() {
+	It("Set invalid JSON value", func() {
+		d := &appsv1.Deployment{}
+		// Chan is not JSON serializable
+		Expect(SetJsonAnnotation(d, "test", make(chan int))).To(HaveOccurred())
+	})
+
+	It("Get not found", func() {
+		d := &appsv1.Deployment{}
+		val, err := GetJsonAnnotation[map[string]string](d, "test")
+		Expect(err).To(HaveOccurred())
+		Expect(val).To(BeNil())
+	})
+
+	It("Integrated test, normal case", func() {
+		d := &appsv1.Deployment{}
+		err := SetJsonAnnotation(d, "test", map[string]string{"foo": "bar"})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Get the value set above
+		val, err := GetJsonAnnotation[map[string]string](d, "test")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(val).To(Equal(map[string]string{"foo": "bar"}))
+	})
+})

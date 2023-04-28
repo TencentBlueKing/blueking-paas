@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf import settings
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -30,13 +29,14 @@ class ItsmBasicAuthentication(BasicAuthentication):
         """
         验证回调请求是否来自 ITSM
         https://github.com/TencentBlueKing/bk-itsm/blob/master/docs/wiki/access.md
+        TODO: itsm 该 API 在 APIGW 开启了用户态验证，无法验证通过，先跳过。等他们处理后再打开
         """
-        login_cookie = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
+        return
         token = request.data.get('token', '')
 
-        client = ItsmClient(login_cookie=login_cookie)
+        client = ItsmClient()
         is_passed = client.verify_token(token)
         if not is_passed:
             raise AuthenticationFailed('authentication failed: itsm callback token verification failed')
 
-        return is_passed
+        return

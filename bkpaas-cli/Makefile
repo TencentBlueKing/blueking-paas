@@ -28,14 +28,21 @@ endif
 ifdef GOOS
     GOOS=${GOOS}
 else
-    GOOS=darwin
+    GOOS=""
 endif
 
 ifdef GOARCH
     GOARCH=${GOARCH}
 else
-    GOARCH=arm64
+    GOARCH=""
 endif
+
+ifeq (${GOOS}, windows)
+    BIN_NAME=bkpaas-cli.exe
+else
+    BIN_NAME=bkpaas-cli
+endif
+
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
@@ -61,7 +68,7 @@ help: ## 展示可用 make 命令及说明
 
 .PHONY: build
 build: tidy # build executable binary
-	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o bkpaas-cli ./main.go
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o ${BIN_NAME} ./main.go
 
 .PHONY: fmt
 fmt: ## 执行 golines，gofumpt ...
@@ -83,16 +90,6 @@ test: tidy ## 执行 ginkgo 单元测试
 .PHONY: lint
 lint: ## 执行 golangci-lint run
 	$(GOCILINT) run
-
-PACKAGE_DIR=bkpaas-cli-${GOOS}-${GOARCH}
-
-.PHONY: package
-package: build # package binary and docs as tar package
-	rm -rf ${PACKAGE_DIR} && mkdir ${PACKAGE_DIR}
-	mv bkpaas-cli ${PACKAGE_DIR}
-	cp Readme.md ${PACKAGE_DIR}
-	cp ../LICENSE.txt ${PACKAGE_DIR}
-	tar czvf ${PACKAGE_DIR}.tgz ${PACKAGE_DIR}
 
 ##@ 开发工具安装命令
 

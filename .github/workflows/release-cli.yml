@@ -2,8 +2,6 @@
 name: release-cli
 
 on:
-  push:
-    branches: ["bkpaas-cli-release"]
   release:
     types:
       - created
@@ -14,32 +12,34 @@ jobs:
     strategy:
       matrix:
         include:
+          - goarch: arm64
+            goos: darwin
+            bin_name: bkpaas-cli
+          - goarch: amd64
+            goos: darwin
+            bin_name: bkpaas-cli
           - goarch: amd64
             goos: linux
+            bin_name: bkpaas-cli
+          - goarch: arm64
+            goos: linux
+            bin_name: bkpaas-cli
+          - goarch: amd64
+            goos: windows
+            bin_name: bkpaas-cli.exe
     steps:
       - name: checkout code
         uses: actions/checkout@v3
 
-      - name: setup golang
-        uses: actions/setup-go@v3
+      - name: release go binaries
+        uses: wangyoucao577/go-release-action@v1.37
         with:
-          go-version: 1.19
-
-      # TODO use release/tag name as version
-      - name: build and packaging
-        run: cd bkpaas-cli && make package GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}
-
-      - name: install coscmd
-        run: sudo apt-get update && sudo apt-get install -y pip && sudo pip install coscmd
-
-      - name: setup coscmd
-        run: coscmd config -a $SECRET_ID -s $SECRET_KEY -b $BUCKET -r $REGION
-        env:
-          SECRET_ID: ${{ secrets.TCLOUD_API_ID }}
-          SECRET_KEY: ${{ secrets.TCLOUD_API_KEY }}
-          BUCKET: ${{ secrets.TCLOUD_BUCKET }}
-          REGION: ${{ secrets.TCLOUD_REGION }}
-
-      # TODO use release/tag name as version
-      - name: upload to cos
-        run: coscmd upload -rfs --delete ./bkpaas-cli/bkpaas-cli-${{ matrix.goos }}-${{ matrix.goarch }}.tgz /
+          github_token: ${{ secrets.REPO_RELEASE_ACCESS_TOKEN }}
+          goversion: 1.19.4
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          project_path: bkpaas-cli
+          build_command: make build GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} VERSION=${{ github.event.release.tag_name }}
+          extra_files: LICENSE.txt bkpaas-cli/Readme.md bkpaas-cli/${{ matrix.bin_name }}
+          asset_name: bkpaas-cli-${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          md5sum: false

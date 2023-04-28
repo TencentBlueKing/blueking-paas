@@ -58,7 +58,7 @@ var _ = Describe("Test utils", func() {
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
-					Image: "nginx:latest",
+					Image: "nginx:1.0.0",
 				},
 				Processes: []paasv1alpha2.Process{
 					{
@@ -77,10 +77,9 @@ var _ = Describe("Test utils", func() {
 				Kind:       "Deployment",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: names.Deployment(bkapp, "fake"),
-				// TODO P1 考虑 prod，stag 部署环境隔离？比如不同命名空间？
+				Name:        names.Deployment(bkapp, "foo"),
 				Namespace:   bkapp.Namespace,
-				Labels:      labels.Deployment(bkapp, "fake"),
+				Labels:      labels.Deployment(bkapp, "foo"),
 				Annotations: make(map[string]string),
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
@@ -109,7 +108,7 @@ var _ = Describe("Test utils", func() {
 
 		outdated := FindExtraByName(current, want)
 		Expect(len(outdated)).To(Equal(1))
-		Expect(outdated[0].Name).To(Equal("bkapp-sample--fake"))
+		Expect(outdated[0].Name).To(Equal("bkapp-sample--foo"))
 	})
 
 	Context("test UpsertObject", func() {

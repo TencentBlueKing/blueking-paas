@@ -104,6 +104,11 @@ var _ = Describe("Test RevisionReconciler", func() {
 
 		It("second revision", func() {
 			bkapp.Generation = 1
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
 			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
 
 			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
@@ -136,6 +141,11 @@ var _ = Describe("Test RevisionReconciler", func() {
 			bkapp.Status.Revision = &paasv1alpha2.Revision{
 				Revision: 1,
 			}
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
 			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "1"
 
 			r := NewRevisionReconciler(builder.WithObjects(bkapp, web).Build())
@@ -166,6 +176,34 @@ var _ = Describe("Test RevisionReconciler", func() {
 			Expect(ret.ShouldAbort()).To(BeTrue())
 			Expect(ret.err).To(HaveOccurred())
 			Expect(bkapp.Status.Revision.Revision).To(Equal(int64(1)))
+		})
+
+		It("skip failed hook", func() {
+			// g4 表示第四个版本
+			bkapp.Generation = 4
+			// 在 g3 & r3 的时候，hook 失败
+			bkapp.Status.Revision = &paasv1alpha2.Revision{
+				Revision: 3,
+			}
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthUnhealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+			// r2 中调和循环正常结束，r3 中 hook 失败，因此 deployment 还是 r2
+			web.Annotations[paasv1alpha2.RevisionAnnoKey] = "2"
+
+			hook := resources.BuildPreReleaseHook(
+				bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
+			)
+
+			cli := builder.WithObjects(bkapp, web, hook.Pod).Build()
+			r := NewRevisionReconciler(cli)
+			ret := r.Reconcile(context.Background(), bkapp)
+
+			Expect(ret.ShouldAbort()).To(BeFalse())
+			// 跳过失败的 hook 版本后，revision 应该是 deploy max revision: 2 + 1 + 1 = 4
+			Expect(bkapp.Status.Revision.Revision).To(Equal(int64(4)))
 		})
 	})
 })

@@ -184,7 +184,7 @@ type AutoscalingSpec struct {
 type ScalingPolicy string
 
 const (
-	// Default is the default autoscaling policy (cpu utilization 85%)
+	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
 	ScalingPolicyDefault ScalingPolicy = "default"
 )
 

@@ -36,7 +36,7 @@ func GetWantedGPAs(app *paasv1alpha2.BkApp) []*autoscaling.GeneralPodAutoscaler 
 	policyGetter := NewAutoscalingPolicyGetter(app)
 	for _, proc := range app.Spec.Processes {
 		// 若某个进程没有自动扩缩容配置，或未启用，则跳过
-		if proc.Autoscaling == nil || proc.Autoscaling.Enabled == false {
+		if proc.Autoscaling == nil || !proc.Autoscaling.Enabled {
 			continue
 		}
 		gpaList = append(gpaList, &autoscaling.GeneralPodAutoscaler{

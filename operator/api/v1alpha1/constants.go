@@ -24,9 +24,6 @@ import (
 
 // 默认值相关常量
 const (
-	// ProcDefaultTargetPort 进程服务默认端口
-	ProcDefaultTargetPort int32 = 5000
-
 	// WebProcName 表示 web 进程名称
 	WebProcName = "web"
 )

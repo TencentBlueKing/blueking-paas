@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
-
 	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -36,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 // log is for logging in this package.
@@ -55,7 +54,7 @@ func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-paas-bk-tencent-com-v1alpha2-bkapp,mutating=true,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update,versions=v1alpha2,name=mbkapp-paasv1alpha2.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/mutate-paas-bk-tencent-com-v1alpha2-bkapp,mutating=true,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update,versions=v1alpha2,name=mbkapp-v1alpha2.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &BkApp{}
 
@@ -80,7 +79,7 @@ func (r *BkApp) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-paas-bk-tencent-com-v1alpha2-bkapp,mutating=false,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update;delete,versions=v1alpha2,name=vbkapp-paasv1alpha2.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-paas-bk-tencent-com-v1alpha2-bkapp,mutating=false,failurePolicy=fail,sideEffects=None,groups=paas.bk.tencent.com,resources=bkapps,verbs=create;update;delete,versions=v1alpha2,name=vbkapp-v1alpha2.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &BkApp{}
 

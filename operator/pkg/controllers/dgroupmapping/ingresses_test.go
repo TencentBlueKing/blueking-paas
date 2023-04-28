@@ -32,14 +32,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	dgfake "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/fake"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 )
 
 var _ = Describe("Test DGroupMappingSyncer", func() {
-	var bkapp *paasv1alpha1.BkApp
-	var dgmapping *paasv1alpha1.DomainGroupMapping
+	var bkapp *v1alpha2.BkApp
+	var dgmapping *v1alpha1.DomainGroupMapping
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
@@ -47,40 +48,42 @@ var _ = Describe("Test DGroupMappingSyncer", func() {
 		// Set up client
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		_ = paasv1alpha1.AddToScheme(scheme)
+		_ = v1alpha1.AddToScheme(scheme)
+		_ = v1alpha2.AddToScheme(scheme)
 		_ = appsv1.AddToScheme(scheme)
 		_ = corev1.AddToScheme(scheme)
 		_ = networkingv1.AddToScheme(scheme)
 		builder.WithScheme(scheme)
 
 		// Sample data
-		bkapp = &paasv1alpha1.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
+		bkapp = &v1alpha2.BkApp{
+			TypeMeta:   metav1.TypeMeta{Kind: v1alpha2.KindBkApp, APIVersion: v1alpha2.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
-			Spec: paasv1alpha1.AppSpec{
-				Processes: []paasv1alpha1.Process{
+			Spec: v1alpha2.AppSpec{
+				Build: v1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []v1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   paasv1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     v1alpha2.ReplicasTwo,
+						ResQuotaPlan: "default",
+						TargetPort:   80,
 					},
 				},
 			},
 		}
 
-		dgmapping = &paasv1alpha1.DomainGroupMapping{
+		dgmapping = &v1alpha1.DomainGroupMapping{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       paasv1alpha1.KindDomainGroupMapping,
-				APIVersion: paasv1alpha1.GroupVersion.String(),
+				Kind:       v1alpha1.KindDomainGroupMapping,
+				APIVersion: v1alpha1.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "sample-mapping",
 				Namespace: "default",
 			},
-			Spec: paasv1alpha1.DomainGroupMappingSpec{},
+			Spec: v1alpha1.DomainGroupMappingSpec{},
 		}
 	})
 
@@ -138,7 +141,7 @@ var _ = Describe("Test DGroupMappingSyncer", func() {
 			Expect(len(objs)).To(Equal(3))
 
 			By("All ingresses should be removed")
-			dgmapping.Spec.Data = []paasv1alpha1.DomainGroup{}
+			dgmapping.Spec.Data = []v1alpha1.DomainGroup{}
 			_, err = syncer.Sync(ctx, dgmapping)
 			Expect(err).Should(Not(HaveOccurred()))
 			objs, _ = syncer.ListCurrentIngresses(ctx, dgmapping)

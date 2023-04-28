@@ -18,11 +18,11 @@
 
 package kubestatus
 
-import paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+import "bk.tencent.com/paas-app-operator/api/v1alpha2"
 
 // HealthStatus the resource health status
 type HealthStatus struct {
-	Phase   paasv1alpha1.HealthPhase
+	Phase   v1alpha2.HealthPhase
 	Reason  string
 	Message string
 }

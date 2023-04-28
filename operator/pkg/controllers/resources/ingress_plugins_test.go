@@ -24,18 +24,19 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Test ingress_plugins.go", func() {
-	var bkapp *paasv1alpha1.BkApp
+	var bkapp *v1alpha2.BkApp
 
 	BeforeEach(func() {
-		bkapp = &paasv1alpha1.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
+		bkapp = &v1alpha2.BkApp{
+			TypeMeta:   metav1.TypeMeta{Kind: v1alpha2.KindBkApp, APIVersion: v1alpha2.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default", Annotations: map[string]string{}},
-			Spec:       paasv1alpha1.AppSpec{},
+			Spec:       v1alpha2.AppSpec{},
 		}
 	})
 
@@ -44,7 +45,7 @@ var _ = Describe("Test ingress_plugins.go", func() {
 			By("init", initAction)
 
 			var plugin NginxIngressPlugin = &AccessControlPlugin{
-				Config: &paasv1alpha1.AccessControlConfig{RedisConfigKey: "acc_redis_server_name"},
+				Config: &v1alpha1.AccessControlConfig{RedisConfigKey: "acc_redis_server_name"},
 			}
 			Expect(plugin.MakeConfigurationSnippet(bkapp, nil)).To(Equal(expected))
 		},
@@ -52,11 +53,11 @@ var _ = Describe("Test ingress_plugins.go", func() {
 			Entry("when missing AccessControlAnnoKey", func() { testing.WithAppInfoAnnotations(bkapp) }, ""),
 			Entry("when disable acl", func() {
 				testing.WithAppInfoAnnotations(bkapp)
-				bkapp.Annotations[paasv1alpha1.AccessControlAnnoKey] = "false"
+				bkapp.Annotations[v1alpha2.AccessControlAnnoKey] = "false"
 			}, ""),
 			Entry("normal case", func() {
 				testing.WithAppInfoAnnotations(bkapp)
-				bkapp.Annotations[paasv1alpha1.AccessControlAnnoKey] = "true"
+				bkapp.Annotations[v1alpha2.AccessControlAnnoKey] = "true"
 			}, dedent.Dedent(`
         # Blow content was configured by access-control plugin, do not edit
 
@@ -74,7 +75,7 @@ var _ = Describe("Test ingress_plugins.go", func() {
 
 		It("test MakeServerSnippet", func() {
 			var plugin NginxIngressPlugin = &AccessControlPlugin{
-				Config: &paasv1alpha1.AccessControlConfig{RedisConfigKey: "local"},
+				Config: &v1alpha1.AccessControlConfig{RedisConfigKey: "local"},
 			}
 			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(""))
 		})
@@ -91,11 +92,11 @@ var _ = Describe("Test ingress_plugins.go", func() {
 			Entry("when missing PaaSAnalysisSiteIDAnnoKey", func() { testing.WithAppInfoAnnotations(bkapp) }, ""),
 			Entry("when invalid PaaSAnalysisSiteIDAnnoKey", func() {
 				testing.WithAppInfoAnnotations(bkapp)
-				bkapp.Annotations[paasv1alpha1.PaaSAnalysisSiteIDAnnoKey] = "false"
+				bkapp.Annotations[v1alpha2.PaaSAnalysisSiteIDAnnoKey] = "false"
 			}, ""),
 			Entry("normal case", func() {
 				testing.WithAppInfoAnnotations(bkapp)
-				bkapp.Annotations[paasv1alpha1.PaaSAnalysisSiteIDAnnoKey] = "1"
+				bkapp.Annotations[v1alpha2.PaaSAnalysisSiteIDAnnoKey] = "1"
 			}, dedent.Dedent(`
         # Blow content was configured by paas-analysis plugin, do not edit
         

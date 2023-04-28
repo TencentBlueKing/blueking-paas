@@ -66,8 +66,10 @@ type BkAppList struct {
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
-	Processes     []Process `json:"processes"`
-	Configuration AppConfig `json:"configuration"`
+	// +optional
+	Build         BuildConfig `json:"build"`
+	Processes     []Process   `json:"processes"`
+	Configuration AppConfig   `json:"configuration"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -94,6 +96,39 @@ func (spec *AppSpec) FindProcess(name string) *Process {
 	return nil
 }
 
+// BuildConfig is the configuration related with application building, the platform
+// support 3 types of build config currently: image, remote build by Dockerfile and
+// remote build by buildpack.
+type BuildConfig struct {
+	// *1. Build by image*
+	// Image is the container image name of current application, tag and container
+	// registry address can be included.
+	// +optional
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is the image pull policy of given image.
+	// +optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImageCredentialsName is the name of image credentials, required for pulling
+	// images stores in private registry.
+	// +optional
+	ImageCredentialsName string `json:"imageCredentialsName,omitempty"`
+
+	// *2. Remote build by Dockerfile*
+	// Dockerfile is the name of target Dockerfile, it will be used to build.
+	// +optional
+	Dockerfile string `json:"dockerfile,omitempty"`
+	// BuildTarget, when multiple stages are defined in Dockerfile, this field is used
+	// to specify the target stage.
+	// +optional
+	BuildTarget string `json:"buildTarget,omitempty"`
+	// Args is the additional build arguments, it will be used to build image by Dockerfile
+	// +optional
+	Args map[string]string `json:"args,omitempty"`
+
+	// *3. Remote build by buildpack*
+	// TODO
+}
+
 // Process defines the process of BkApp
 type Process struct {
 	// Name of process
@@ -107,6 +142,10 @@ type Process struct {
 
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
+
+	// ResQuotaPlan is the name of plan which defines how much resources current process
+	// can consume.
+	ResQuotaPlan string `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
@@ -122,37 +161,7 @@ type Process struct {
 
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
-
-	// Autoscaling specifies the autoscaling configuration
-	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
-
-// AutoscalingSpec is bkapp autoscaling config
-type AutoscalingSpec struct {
-	// Enabled indicates whether autoscaling is enabled
-	Enabled bool `json:"enabled"`
-
-	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
-	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
-	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
-	// at least one metric value is available
-	MinReplicas int32 `json:"minReplicas"`
-
-	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-	// It cannot be less that minReplicas.
-	MaxReplicas int32 `json:"maxReplicas"`
-
-	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
-	Policy ScalingPolicy `json:"policy"`
-}
-
-// ScalingPolicy is used to specify which policy should be used while scaling
-type ScalingPolicy string
-
-const (
-	// Default is the default autoscaling policy (cpu utilization 85%)
-	ScalingPolicyDefault ScalingPolicy = "default"
-)
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {
@@ -192,10 +201,6 @@ type AppEnvOverlay struct {
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
 	EnvVariables []EnvVarOverlay `json:"envVariables,omitempty"`
-
-	// Autoscaling overwrite process's autoscaling config
-	// +optional
-	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
@@ -236,16 +241,6 @@ type EnvVarOverlay struct {
 	Name string `json:"name"`
 	// Value of the environment variable
 	Value string `json:"value"`
-}
-
-// AutoscalingOverlay overwrite or add application's autoscaling config by environment.
-type AutoscalingOverlay struct {
-	// EnvName is app environment name
-	EnvName EnvName `json:"envName"`
-	// Process is the name of process
-	Process string `json:"process"`
-	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
-	Policy ScalingPolicy `json:"policy"`
 }
 
 // AppStatus defines the observed state of BkApp
@@ -318,10 +313,6 @@ const (
 	// HooksFinished means all hook commands have been finished for CURRENT REVISION,
 	// when new revisions are deployed, the condition will be reset.
 	HooksFinished string = "HooksFinished"
-
-	// AutoscalingAvailable means that the process-related autoscaling component is ready
-	// and will manage the process replicas according to the preset scaling policy.
-	AutoscalingAvailable string = "AutoscalingAvailable"
 )
 
 // HookType hook type

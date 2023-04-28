@@ -21,10 +21,10 @@ package reconcilers
 import (
 	"context"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // Reconciler will move the current state of the cluster closer to the desired state.
 type Reconciler interface {
-	Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result
+	Reconcile(ctx context.Context, bkapp *v1alpha2.BkApp) Result
 }

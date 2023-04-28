@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
@@ -39,13 +39,13 @@ import (
 // In order to use this type, the mapping object must reference to a valid BkApp.
 type DGroupMappingSyncer struct {
 	client client.Client
-	bkapp  *v1alpha1.BkApp
+	bkapp  *v1alpha2.BkApp
 }
 
 // NewDGroupMappingSyncer creates a DGroupMappingSyncer object
 // - bkapp is the owner for current syncer, usually is the referenced BkApp object
 //   of DomainGroupMapping object.
-func NewDGroupMappingSyncer(client client.Client, bkapp *v1alpha1.BkApp) *DGroupMappingSyncer {
+func NewDGroupMappingSyncer(client client.Client, bkapp *v1alpha2.BkApp) *DGroupMappingSyncer {
 	return &DGroupMappingSyncer{client: client, bkapp: bkapp}
 }
 
@@ -128,14 +128,14 @@ func (r *DGroupMappingSyncer) applyIngress(ctx context.Context, ingress *network
 }
 
 // Set the labels and owner fields for a slice of ingresses
-func setLabelsAndOwner(ings []*networkingv1.Ingress, dgmapping *paasv1alpha1.DomainGroupMapping) {
+func setLabelsAndOwner(ings []*networkingv1.Ingress, dgmapping *v1alpha1.DomainGroupMapping) {
 	for _, ingress := range ings {
 		ingress.Labels = lo.Assign(ingress.Labels, labels.MappingIngress(dgmapping))
 		ingress.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(dgmapping, schema.GroupVersionKind{
-				Group:   paasv1alpha1.GroupVersion.Group,
-				Version: paasv1alpha1.GroupVersion.Version,
-				Kind:    paasv1alpha1.KindDomainGroupMapping,
+				Group:   v1alpha1.GroupVersion.Group,
+				Version: v1alpha1.GroupVersion.Version,
+				Kind:    v1alpha1.KindDomainGroupMapping,
 			}),
 		}
 	}

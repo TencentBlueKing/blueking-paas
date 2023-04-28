@@ -27,6 +27,7 @@ import (
 	"github.com/lithammer/dedent"
 
 	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 )
 
@@ -39,9 +40,9 @@ var (
 // NginxIngressPlugin ...
 type NginxIngressPlugin interface {
 	// MakeServerSnippet return a snippet which will be placed in "server" block
-	MakeServerSnippet(*v1alpha1.BkApp, []Domain) string
+	MakeServerSnippet(*v1alpha2.BkApp, []Domain) string
 	// MakeConfigurationSnippet return a snippet which will be placed in "location" block
-	MakeConfigurationSnippet(*v1alpha1.BkApp, []Domain) string
+	MakeConfigurationSnippet(*v1alpha2.BkApp, []Domain) string
 }
 
 // AccessControlPlugin Access control module for ingress
@@ -50,12 +51,12 @@ type AccessControlPlugin struct {
 }
 
 // MakeServerSnippet return server snippet for access_control module
-func (p *AccessControlPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+func (p *AccessControlPlugin) MakeServerSnippet(bkapp *v1alpha2.BkApp, domains []Domain) string {
 	return ""
 }
 
 // MakeConfigurationSnippet return configuration snippet for access_control module
-func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha2.BkApp, domains []Domain) string {
 	if p.Config.RedisConfigKey == "" {
 		return ""
 	}
@@ -70,7 +71,7 @@ func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, do
 	}
 
 	// 判断应用是否启用白名单功能
-	if v, ok := bkapp.Annotations[v1alpha1.AccessControlAnnoKey]; !ok {
+	if v, ok := bkapp.Annotations[v1alpha2.AccessControlAnnoKey]; !ok {
 		return ""
 	} else if enableACL, _ := strconv.ParseBool(v); !enableACL {
 		return ""
@@ -93,12 +94,12 @@ func (p *AccessControlPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, do
 type PaasAnalysisPlugin struct{}
 
 // MakeServerSnippet return server snippet for PA module
-func (p *PaasAnalysisPlugin) MakeServerSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+func (p *PaasAnalysisPlugin) MakeServerSnippet(bkapp *v1alpha2.BkApp, domains []Domain) string {
 	return ""
 }
 
 // MakeConfigurationSnippet return configuration snippet for PA module
-func (p *PaasAnalysisPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, domains []Domain) string {
+func (p *PaasAnalysisPlugin) MakeConfigurationSnippet(bkapp *v1alpha2.BkApp, domains []Domain) string {
 	if bkapp == nil || bkapp.Annotations == nil {
 		return ""
 	}
@@ -107,7 +108,7 @@ func (p *PaasAnalysisPlugin) MakeConfigurationSnippet(bkapp *v1alpha1.BkApp, dom
 	var err error
 
 	// 未配置 anno key 或值非法时跳过注入 PA 的 snippet
-	if v, ok := bkapp.Annotations[v1alpha1.PaaSAnalysisSiteIDAnnoKey]; !ok {
+	if v, ok := bkapp.Annotations[v1alpha2.PaaSAnalysisSiteIDAnnoKey]; !ok {
 		return ""
 	} else if siteId, err = strconv.ParseInt(v, 10, 64); err != nil {
 		return ""
@@ -157,9 +158,6 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("failed to new paas-analysis template: %w", err))
 	}
-
-	// PA 无需额外配置, 可以总是启用该插件
-	RegistryPlugin(&PaasAnalysisPlugin{})
 }
 
 // RegistryPlugin 注册插件

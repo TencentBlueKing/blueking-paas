@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
 
@@ -45,7 +45,7 @@ type ServiceReconciler struct {
 }
 
 // Reconcile ...
-func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
+func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.BkApp) Result {
 	current, err := r.listCurrentServices(ctx, bkapp)
 	if err != nil {
 		return r.Result.withError(err)
@@ -72,14 +72,14 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 // 获取当前在集群中的与该应用关联的 Service
 func (r *ServiceReconciler) listCurrentServices(
 	ctx context.Context,
-	bkapp *v1alpha1.BkApp,
+	bkapp *v1alpha2.BkApp,
 ) ([]*corev1.Service, error) {
 	current := corev1.ServiceList{}
 
 	if err := r.Client.List(
 		ctx, &current,
 		client.InNamespace(bkapp.GetNamespace()),
-		client.MatchingLabels{v1alpha1.BkAppNameKey: bkapp.GetName()},
+		client.MatchingLabels{v1alpha2.BkAppNameKey: bkapp.GetName()},
 	); err != nil {
 		return nil, errors.Wrap(err, "failed to list app's Service")
 	}
@@ -87,7 +87,7 @@ func (r *ServiceReconciler) listCurrentServices(
 }
 
 // getWantedService 获取应用期望的 Service 列表
-func (r *ServiceReconciler) getWantedService(bkapp *v1alpha1.BkApp) (result []*corev1.Service) {
+func (r *ServiceReconciler) getWantedService(bkapp *v1alpha2.BkApp) (result []*corev1.Service) {
 	for _, process := range bkapp.Spec.Processes {
 		svc := resources.BuildService(bkapp, &process)
 		result = append(result, svc)

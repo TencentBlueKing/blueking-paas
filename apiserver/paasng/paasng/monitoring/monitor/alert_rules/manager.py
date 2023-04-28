@@ -42,12 +42,12 @@ class AlertRuleManager:
         - app 迁移告警规则(从 bcs 迁移至 bkmonitor)
         """
         # init app scoped alert rule configs
-        rule_configs = self.config_generator.gen_initial_app_rule_configs()
+        rule_configs = self.config_generator.gen_app_scoped_rule_configs()
 
         # extend app module scoped alert rule configs
         module_names = self.application.modules.values_list('name', flat=True)
         for module_name in module_names:
-            rule_configs.extend(self.config_generator.gen_initial_module_rule_configs(module_name))
+            rule_configs.extend(self.config_generator.gen_module_scoped_rule_configs(module_name))
 
         self._apply_rule_configs(rule_configs)
         self._save_rule_configs(rule_configs)
@@ -57,7 +57,7 @@ class AlertRuleManager:
 
         :param module_name: 新模块名
         """
-        module_rule_configs = self.config_generator.gen_initial_module_rule_configs(module_name)
+        module_rule_configs = self.config_generator.gen_module_scoped_rule_configs(module_name)
 
         rule_configs = self.config_generator.gen_rule_configs_from_qs(
             AppAlertRule.objects.filter(application=self.application)

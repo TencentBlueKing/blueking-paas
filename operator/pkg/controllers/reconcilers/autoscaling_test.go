@@ -29,38 +29,38 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 var _ = Describe("Test AutoscalingReconciler", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *v1alpha2.BkApp
 	var fakeGPA *autoscaling.GeneralPodAutoscaler
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var ctx context.Context
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &v1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: "paas.bk.tencent.com/v1alpha1",
+				Kind:       v1alpha2.KindBkApp,
+				APIVersion: "paas.bk.tencent.com/v1alpha2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-app",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: v1alpha2.AppSpec{
+				Processes: []v1alpha2.Process{
 					{
 						Name: "web",
-						Autoscaling: &v1alpha1.AutoscalingSpec{
+						Autoscaling: &v1alpha2.AutoscalingSpec{
 							Enabled:     true,
 							MinReplicas: 2,
 							MaxReplicas: 5,
-							Policy:      v1alpha1.ScalingPolicyDefault,
+							Policy:      v1alpha2.ScalingPolicyDefault,
 						},
 					},
 				},
@@ -90,7 +90,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).To(BeNil())
+		Expect(v1alpha2.AddToScheme(scheme)).To(BeNil())
 		Expect(autoscaling.AddToScheme(scheme)).To(BeNil())
 		builder.WithScheme(scheme)
 		ctx = context.Background()
@@ -140,7 +140,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 			r := NewAutoscalingReconciler(client)
 			err := r.updateCondition(ctx, bkapp)
 			Expect(err).To(BeNil())
-			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AutoscalingAvailable)
+			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha2.AutoscalingAvailable)
 			Expect(cond.Status).To(Equal(metav1.ConditionUnknown))
 			Expect(cond.Reason).To(Equal("Disabled"))
 		})
@@ -156,7 +156,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 			r := NewAutoscalingReconciler(client)
 			err := r.updateCondition(ctx, bkapp)
 			Expect(err).To(BeNil())
-			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AutoscalingAvailable)
+			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha2.AutoscalingAvailable)
 			Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 			Expect(cond.Reason).To(Equal("AutoscalerFailure"))
 		})
@@ -172,7 +172,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 			r := NewAutoscalingReconciler(client)
 			err := r.updateCondition(ctx, bkapp)
 			Expect(err).To(BeNil())
-			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AutoscalingAvailable)
+			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha2.AutoscalingAvailable)
 			Expect(cond.Status).To(Equal(metav1.ConditionTrue))
 			Expect(cond.Reason).To(Equal("AutoscalingAvailable"))
 		})

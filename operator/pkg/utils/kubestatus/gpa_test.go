@@ -19,6 +19,7 @@
 package kubestatus
 
 import (
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/samber/lo"
@@ -26,8 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
@@ -85,7 +84,7 @@ var _ = Describe("Test kubestatus/gpa", func() {
 				},
 			}
 			status := GenGPAHealthStatus(gpa)
-			Expect(status.Phase).To(Equal(v1alpha1.HealthHealthy))
+			Expect(status.Phase).To(Equal(v1alpha2.HealthHealthy))
 			Expect(status.Reason).To(Equal("AutoscalingAvailable"))
 		})
 		It("test ScalingActive unhealthy", func() {
@@ -104,7 +103,7 @@ var _ = Describe("Test kubestatus/gpa", func() {
 				},
 			}
 			status := GenGPAHealthStatus(gpa)
-			Expect(status.Phase).To(Equal(v1alpha1.HealthUnhealthy))
+			Expect(status.Phase).To(Equal(v1alpha2.HealthUnhealthy))
 			Expect(status.Reason).To(Equal("FailedGetResourceMetric"))
 		})
 		It("test AbleToScale unhealthy", func() {
@@ -122,7 +121,7 @@ var _ = Describe("Test kubestatus/gpa", func() {
 				},
 			}
 			status := GenGPAHealthStatus(gpa)
-			Expect(status.Phase).To(Equal(v1alpha1.HealthUnhealthy))
+			Expect(status.Phase).To(Equal(v1alpha2.HealthUnhealthy))
 			Expect(status.Reason).To(Equal("FailedGetScale"))
 		})
 	})

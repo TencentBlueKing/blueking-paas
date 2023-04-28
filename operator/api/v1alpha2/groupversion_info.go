@@ -16,16 +16,29 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+// Package v1alpha2 contains API Schema definitions for the paas v1alpha2 API group
+//+kubebuilder:object:generate=true
+//+groupName=paas.bk.tencent.com
+package v1alpha2
 
-// projConf for current pkg
-var projConf *ProjectConfig
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
 
-func init() {
-	projConf = NewProjectConfig()
-}
+var (
+	// GroupVersion is group version used to register these objects
+	GroupVersion = schema.GroupVersion{Group: "paas.bk.tencent.com", Version: "v1alpha2"}
 
-// SetConfig will set the projConf by given cfg
-func SetConfig(cfg *ProjectConfig) {
-	projConf = cfg
-}
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+
+	// AddToScheme adds the types in this group-version to the given scheme.
+	AddToScheme = SchemeBuilder.AddToScheme
+
+	// KindBkApp is the string value of BkApp resource kind
+	KindBkApp = "BkApp"
+
+	// GroupKindBkApp is the GroupKind of BkApp
+	GroupKindBkApp = schema.GroupKind{Group: GroupVersion.Group, Kind: KindBkApp}
+)

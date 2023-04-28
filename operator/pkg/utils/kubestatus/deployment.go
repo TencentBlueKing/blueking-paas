@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // ErrDeploymentStillProgressing indicates the deployment is progressing
@@ -42,19 +42,19 @@ var ErrDeploymentStillProgressing = errors.New("deployment is progressing")
 func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		return &HealthStatus{
-			Phase:   paasv1alpha1.HealthProgressing,
+			Phase:   v1alpha2.HealthProgressing,
 			Reason:  "UnobservedDeploy",
 			Message: "Waiting for rollout to finish: observed deployment generation less then desired generation",
 		}
 	} else {
 		failureCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentReplicaFailure)
 		if failureCond != nil && failureCond.Status == corev1.ConditionTrue {
-			return makeStatusFromDeploymentCondition(paasv1alpha1.HealthUnhealthy, failureCond)
+			return makeStatusFromDeploymentCondition(v1alpha2.HealthUnhealthy, failureCond)
 		}
 
 		progressingCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentProgressing)
 		if progressingCond != nil && progressingCond.Status == corev1.ConditionFalse {
-			return makeStatusFromDeploymentCondition(paasv1alpha1.HealthUnhealthy, progressingCond)
+			return makeStatusFromDeploymentCondition(v1alpha2.HealthUnhealthy, progressingCond)
 		}
 
 		// 只有当前就绪的副本数等于需要的副本数时, Deployment 才完成滚动更新
@@ -62,9 +62,9 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 			availableCond := FindDeploymentStatusCondition(deployment.Status.Conditions, appsv1.DeploymentAvailable)
 			if availableCond != nil {
 				if availableCond.Status != corev1.ConditionTrue {
-					return makeStatusFromDeploymentCondition(paasv1alpha1.HealthUnhealthy, availableCond)
+					return makeStatusFromDeploymentCondition(v1alpha2.HealthUnhealthy, availableCond)
 				}
-				return makeStatusFromDeploymentCondition(paasv1alpha1.HealthHealthy, availableCond)
+				return makeStatusFromDeploymentCondition(v1alpha2.HealthHealthy, availableCond)
 			}
 		}
 
@@ -84,7 +84,7 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 		}
 
 		return &HealthStatus{
-			Phase:   paasv1alpha1.HealthProgressing,
+			Phase:   v1alpha2.HealthProgressing,
 			Reason:  "Progressing",
 			Message: message,
 		}
@@ -113,7 +113,7 @@ func GetDeploymentDirectFailMessage(
 		if !pod.DeletionTimestamp.IsZero() {
 			continue
 		}
-		if healthStatus := CheckPodHealthStatus(&pod); healthStatus.Phase == paasv1alpha1.HealthUnhealthy {
+		if healthStatus := CheckPodHealthStatus(&pod); healthStatus.Phase == v1alpha2.HealthUnhealthy {
 			return healthStatus.Message, nil
 		}
 	}
@@ -135,7 +135,7 @@ func FindDeploymentStatusCondition(
 
 // a shortcut for making a HealthStatus with given status and condition
 func makeStatusFromDeploymentCondition(
-	phase paasv1alpha1.HealthPhase,
+	phase v1alpha2.HealthPhase,
 	condition *appsv1.DeploymentCondition,
 ) *HealthStatus {
 	return &HealthStatus{

@@ -21,7 +21,7 @@ from typing import List
 import cattr
 import pytest
 
-from paas_wl.workloads.processes.models import DeclarativeProcess, ProcessSpec, ProcessSpecManager
+from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecManager, ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -34,7 +34,7 @@ class TestProcessSpecManager:
         mgr.sync(
             cattr.structure(
                 [{"name": "web", "command": "foo", "replicas": 2}, {"name": "celery", "command": "foo"}],
-                List[DeclarativeProcess],
+                List[ProcessTmpl],
             )
         )
 
@@ -42,9 +42,7 @@ class TestProcessSpecManager:
         assert ProcessSpec.objects.get(engine_app=wl_app, name="celery").target_replicas == 1
 
         mgr.sync(
-            cattr.structure(
-                [{"name": "web", "command": "foo", "replicas": 3, "plan": "4C1G5R"}], List[DeclarativeProcess]
-            )
+            cattr.structure([{"name": "web", "command": "foo", "replicas": 3, "plan": "4C1G5R"}], List[ProcessTmpl])
         )
         web = ProcessSpec.objects.get(engine_app=wl_app, name="web")
         assert web.target_replicas == 3
@@ -52,9 +50,7 @@ class TestProcessSpecManager:
         assert ProcessSpec.objects.filter(engine_app=wl_app).count() == 1
 
         mgr.sync(
-            cattr.structure(
-                [{"name": "web", "command": "foo", "replicas": None, "plan": None}], List[DeclarativeProcess]
-            )
+            cattr.structure([{"name": "web", "command": "foo", "replicas": None, "plan": None}], List[ProcessTmpl])
         )
         web = ProcessSpec.objects.get(engine_app=wl_app, name="web")
         assert web.target_replicas == 3

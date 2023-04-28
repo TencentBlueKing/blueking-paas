@@ -201,7 +201,7 @@ class SourceCodePatcherWithDBDriver:
         key.write_text(yaml.safe_dump(procfile))
 
     @cached_property
-    def deploy_description(self):
+    def deploy_description(self) -> DeploymentDescription:
         return DeploymentDescription.objects.get(deployment=self.deployment)
 
     @cached_property

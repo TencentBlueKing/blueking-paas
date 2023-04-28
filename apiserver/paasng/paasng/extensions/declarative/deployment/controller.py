@@ -17,19 +17,14 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List
 
 import cattr
 from django.db.transaction import atomic
-from django.utils.translation import gettext_lazy as _
 
 from paas_wl.platform.api import upsert_app_monitor
-from paas_wl.workloads.processes.models import DeclarativeProcess
 from paasng.engine.constants import ConfigVarEnvName
 from paasng.engine.models.deployment import Deployment
-from paasng.engine.models.processes import ProcessManager
-from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, Process
-from paasng.extensions.declarative.exceptions import ControllerError
+from paasng.extensions.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
 from paasng.extensions.declarative.models import DeploymentDescription
 
 logger = logging.getLogger(__name__)
@@ -64,36 +59,8 @@ class DeploymentDeclarativeController:
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
-        # TODO: The synchronization of processes_spec should be delayed until the RELEASE stage
-        if desc.processes:
-            self.sync_processes_specs(desc.processes)
-        else:
-            logger.debug("The description file does not define processes, deployment pk: %s", self.deployment.pk)
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)
-
-    def sync_processes_specs(self, processes: Dict[str, Process]):
-        """同步进程定义信息"""
-        engine_app = self.deployment.get_engine_app()
-        process_manager = ProcessManager(engine_app)
-
-        try:
-            process_manager.sync_processes_specs(
-                cattr.structure(
-                    [
-                        {
-                            "name": process_name,
-                            "command": process.command,
-                            "replicas": process.replicas,
-                            "plan": process.plan,
-                        }
-                        for process_name, process in processes.items()
-                    ],
-                    List[DeclarativeProcess],
-                )
-            )
-        except Exception as e:
-            raise ControllerError(_("同步进程信息时出现异常，请检查应用描述文件或联系平台管理员")) from e
 
     def update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""

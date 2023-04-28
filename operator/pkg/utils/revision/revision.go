@@ -24,12 +24,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // GetRevision returns the revision number of the input object.
 func GetRevision(obj metav1.Object) (int64, error) {
-	v, ok := obj.GetAnnotations()[v1alpha1.RevisionAnnoKey]
+	v, ok := obj.GetAnnotations()[v1alpha2.RevisionAnnoKey]
 	if !ok {
 		return 0, nil
 	}

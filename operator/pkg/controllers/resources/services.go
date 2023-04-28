@@ -23,13 +23,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
 // BuildService 构建与指定进程关联的 Service
-func BuildService(bkapp *v1alpha1.BkApp, process *v1alpha1.Process) *corev1.Service {
+func BuildService(bkapp *v1alpha2.BkApp, process *v1alpha2.Process) *corev1.Service {
 	if process == nil {
 		return nil
 	}

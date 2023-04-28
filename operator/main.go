@@ -45,7 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/controllers"
 	"bk.tencent.com/paas-app-operator/pkg/client"
 	"bk.tencent.com/paas-app-operator/pkg/config"
@@ -62,7 +63,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(v1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -80,7 +82,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	var err error
-	projConf := paasv1alpha1.NewProjectConfig()
+	projConf := v1alpha1.NewProjectConfig()
 	options := ctrl.Options{
 		Scheme:         scheme,
 		LeaderElection: false,
@@ -94,11 +96,13 @@ func main() {
 	}
 
 	config.SetConfig(projConf)
-	// not use global because import cycle
-	paasv1alpha1.SetConfig(projConf)
+
+	// TODO: This is not the desired way to use the global config, we should refactor
+	// the code in current file to avoid type assertion entirely.
+	cfgObj := config.Global.(*v1alpha1.ProjectConfig)
 
 	// ref: how to usage sentry in go -> https://docs.sentry.io/platforms/go/usage/
-	sentryDSN := config.Global.PlatformConfig.SentryDSN
+	sentryDSN := cfgObj.PlatformConfig.SentryDSN
 	if sentryDSN == "" {
 		setupLog.Info("[Sentry] SentryDSN unset, all events waiting for report will be dropped.")
 	}
@@ -123,25 +127,29 @@ func main() {
 	mgrCli := client.New(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
 
-	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf.Controller)
+	bkappMgrOpts := genGroupKindMgrOpts(v1alpha1.GroupKindBkApp, projConf.Controller)
 	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
 		os.Exit(1)
 	}
-	dgmappingMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindDomainGroupMapping, projConf.Controller)
+	dgmappingMgrOpts := genGroupKindMgrOpts(v1alpha1.GroupKindDomainGroupMapping, projConf.Controller)
 	if err = controllers.NewDomainGroupMappingReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, dgmappingMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DomainGroupMapping")
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&paasv1alpha1.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "BkApp")
+		if err = (&v1alpha1.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "v1alpha1/BkApp")
 			os.Exit(1)
 		}
-		if err = (&paasv1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&v1alpha1.DomainGroupMapping{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DomainGroupMapping")
+			os.Exit(1)
+		}
+		if err = (&v1alpha2.BkApp{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "v1alpha2/BkApp")
 			os.Exit(1)
 		}
 	}
@@ -163,16 +171,18 @@ func main() {
 }
 
 func initExtensionClient() error {
-	if config.Global.PlatformConfig.BkAPIGatewayURL != "" {
-		bkpaasGatewayBaseURL, err := url.Parse(config.Global.PlatformConfig.BkAPIGatewayURL)
+	cfgObj := config.Global.(*v1alpha1.ProjectConfig)
+
+	if cfgObj.PlatformConfig.BkAPIGatewayURL != "" {
+		bkpaasGatewayBaseURL, err := url.Parse(cfgObj.PlatformConfig.BkAPIGatewayURL)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse bkpaas gateway url to net.Url")
 		}
 		external.SetDefaultClient(
 			external.NewClient(
 				bkpaasGatewayBaseURL,
-				config.Global.PlatformConfig.BkAppCode,
-				config.Global.PlatformConfig.BkAppSecret,
+				cfgObj.PlatformConfig.BkAppCode,
+				cfgObj.PlatformConfig.BkAppSecret,
 				http.DefaultClient,
 			),
 		)
@@ -183,12 +193,21 @@ func initExtensionClient() error {
 }
 
 func initIngressPlugins() {
-	pluginConfig := config.Global.IngressPluginConfig
+	cfgObj := config.Global.(*v1alpha1.ProjectConfig)
+
+	pluginConfig := cfgObj.IngressPluginConfig
 	if pluginConfig.AccessControlConfig != nil {
 		setupLog.Info("[IngressPlugin] access control plugin enabled.")
 		resources.RegistryPlugin(&resources.AccessControlPlugin{Config: pluginConfig.AccessControlConfig})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
+	}
+	if pluginConfig.PaaSAnalysisConfig != nil && pluginConfig.PaaSAnalysisConfig.Enabled {
+		// PA 无需额外配置, 可以总是启用该插件
+		setupLog.Info("[IngressPlugin] PA(paas-analysis) plugin enabled.")
+		resources.RegistryPlugin(&resources.PaasAnalysisPlugin{})
+	} else {
+		setupLog.Info("[IngressPlugin] Missing paas-analysis config or this cluster is not supported, disable PA feature.")
 	}
 }
 

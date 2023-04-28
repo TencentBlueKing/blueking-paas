@@ -33,38 +33,39 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
 var _ = Describe("Test DeploymentReconciler", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *v1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var fakeDeploy appsv1.Deployment
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &v1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       v1alpha2.KindBkApp,
+				APIVersion: v1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "bkapp-sample",
 				Namespace:   "default",
 				Annotations: map[string]string{},
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: v1alpha2.AppSpec{
+				Build: v1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []v1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     v1alpha2.ReplicasTwo,
+						ResQuotaPlan: "default",
+						TargetPort:   80,
 					},
 				},
 			},
@@ -76,21 +77,20 @@ var _ = Describe("Test DeploymentReconciler", func() {
 				Kind:       "Deployment",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: names.Deployment(bkapp, "fake"),
-				// TODO P1 考虑 prod，stag 部署环境隔离？比如不同命名空间？
+				Name:        names.Deployment(bkapp, "fake"),
 				Namespace:   bkapp.Namespace,
 				Labels:      labels.Deployment(bkapp, "fake"),
 				Annotations: make(map[string]string),
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
-						Group:   v1alpha1.GroupVersion.Group,
-						Version: v1alpha1.GroupVersion.Version,
-						Kind:    v1alpha1.KindBkApp,
+						Group:   v1alpha2.GroupVersion.Group,
+						Version: v1alpha2.GroupVersion.Version,
+						Kind:    v1alpha2.KindBkApp,
 					}),
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: v1alpha1.ReplicasOne,
+				Replicas: v1alpha2.ReplicasOne,
 				Selector: &metav1.LabelSelector{},
 			},
 			Status: appsv1.DeploymentStatus{
@@ -101,7 +101,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(v1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
@@ -123,7 +123,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 		result := r.Reconcile(ctx, bkapp)
 		Expect(result.ShouldAbort()).To(BeFalse())
 		// after reconcile, the app phase should be Running
-		Expect(bkapp.Status.Phase).To(Equal(v1alpha1.AppRunning))
+		Expect(bkapp.Status.Phase).To(Equal(v1alpha2.AppRunning))
 		// And the outdated deployment should be removed
 		Expect(
 			apierrors.IsNotFound(
@@ -173,7 +173,7 @@ var _ = Describe("Test DeploymentReconciler", func() {
 		It("test update", func() {
 			ctx := context.Background()
 			current := fakeDeploy.DeepCopy()
-			current.Annotations[v1alpha1.RevisionAnnoKey] = "1"
+			current.Annotations[v1alpha2.RevisionAnnoKey] = "1"
 
 			client := builder.WithObjects(bkapp, current).Build()
 			r := NewDeploymentReconciler(client)
@@ -187,18 +187,18 @@ var _ = Describe("Test DeploymentReconciler", func() {
 
 			got1 := appsv1.Deployment{}
 			_ = client.Get(ctx, objKey, &got1)
-			Expect(got1.Annotations[v1alpha1.RevisionAnnoKey]).To(Equal("1"))
+			Expect(got1.Annotations[v1alpha2.RevisionAnnoKey]).To(Equal("1"))
 			Expect(*got1.Spec.Replicas).To(Equal(*one.Spec.Replicas - 1))
 			Expect(*current).To(Equal(got1))
 
 			By("deploy with changed RevisionAnnoKey")
 			two := fakeDeploy.DeepCopy()
-			two.Annotations[v1alpha1.RevisionAnnoKey] = "2"
+			two.Annotations[v1alpha2.RevisionAnnoKey] = "2"
 			Expect(r.deploy(ctx, two)).NotTo(HaveOccurred())
 
 			got2 := appsv1.Deployment{}
 			_ = client.Get(ctx, objKey, &got2)
-			Expect(got2.Annotations[v1alpha1.RevisionAnnoKey]).To(Equal("2"))
+			Expect(got2.Annotations[v1alpha2.RevisionAnnoKey]).To(Equal("2"))
 		})
 	})
 })

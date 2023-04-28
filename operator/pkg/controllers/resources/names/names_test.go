@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = DescribeTable("Get DNS-safe name",
@@ -37,15 +37,15 @@ var _ = DescribeTable("Get DNS-safe name",
 )
 
 var _ = Describe("Get resource names", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *v1alpha2.BkApp
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &v1alpha2.BkApp{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo-app",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{},
+			Spec: v1alpha2.AppSpec{},
 		}
 	})
 

@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Test Result", func() {
@@ -40,7 +40,7 @@ var _ = Describe("Test Result", func() {
 		Expect(result).To(Equal(expectedResult))
 		Expect(err).To(errMatcher)
 	},
-		Entry("normal case", Result{}, ctrl.Result{RequeueAfter: v1alpha1.DefaultRequeueAfter}, BeNil()),
+		Entry("normal case", Result{}, ctrl.Result{RequeueAfter: v1alpha2.DefaultRequeueAfter}, BeNil()),
 		Entry("with error", Result{}.withError(errors.New("")), ctrl.Result{}, HaveOccurred()),
 		Entry("requeue", Result{}.requeue(time.Second*60), ctrl.Result{RequeueAfter: time.Second * 60}, BeNil()),
 		Entry("End", Result{}.End(), ctrl.Result{}, BeNil()),

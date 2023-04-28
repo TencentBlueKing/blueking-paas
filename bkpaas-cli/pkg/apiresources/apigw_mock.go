@@ -23,26 +23,18 @@ type MockedRequester struct{}
 
 // CheckToken ...
 func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) {
+	switch accessToken {
 	// 请求失败的情况
-	if accessToken == "cause_auth_err" {
+	case "auth_api_error":
 		return nil, AuthApiErr
-	}
-
 	// 结果解析异常的情况
-	if accessToken == "cause_auth_resp_err" {
+	case "auth_resp_error":
 		return nil, ApiRespDecodeErr
-	}
-
 	// 不合法的 AccessToken
-	if accessToken == "invalid_token" {
-		return map[string]any{
-			"result": false,
-			"data":   nil,
-		}, nil
-	}
-
+	case "invalid_token":
+		return map[string]any{"result": false, "data": nil}, nil
 	// 请求成功，但是没有用户信息
-	if accessToken == "no_username" {
+	case "no_username":
 		return map[string]any{
 			"result": true,
 			"data": map[string]any{
@@ -56,10 +48,8 @@ func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) 
 				},
 			},
 		}, nil
-	}
-
 	// 请求正常，用户信息在 rtx 字段
-	if accessToken == "username_in_rtx" {
+	case "username_in_rtx":
 		return map[string]any{
 			"result": true,
 			"data": map[string]any{
@@ -73,18 +63,39 @@ func (r MockedRequester) CheckToken(accessToken string) (map[string]any, error) 
 				},
 			},
 		}, nil
-	}
-
 	// 请求正常，用户信息在 uin 字段
-	return map[string]any{
-		"result": true,
-		"data": map[string]any{
-			"id_providers": map[string]any{
-				"rtx": map[string]any{
-					"username": "",
+	default:
+		return map[string]any{
+			"result": true,
+			"data": map[string]any{
+				"id_providers": map[string]any{
+					"rtx": map[string]any{
+						"username": "",
+					},
+					"uin": map[string]any{
+						"username": "admin2",
+					},
 				},
-				"uin": map[string]any{
-					"username": "admin2",
+			},
+		}, nil
+	}
+}
+
+// ListAppMinimal ...
+func (r MockedRequester) ListAppMinimal() (map[string]any, error) {
+	return map[string]any{
+		"count": 2,
+		"results": []any{
+			map[string]any{
+				"application": map[string]any{
+					"code": "test-code-1",
+					"name": "test-app-1",
+				},
+			},
+			map[string]any{
+				"application": map[string]any{
+					"code": "test-code-2",
+					"name": "test-app-2",
 				},
 			},
 		},

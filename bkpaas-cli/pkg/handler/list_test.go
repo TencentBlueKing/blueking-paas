@@ -27,38 +27,25 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
-var _ = Describe("TestFetch", func() {
+var _ = Describe("TestList", func() {
 	BeforeEach(func() {
 		apiresources.DefaultRequester = &apiresources.MockedRequester{}
 	})
 
-	It("TestAppBasicInfoRetriever", func() {
-		excepted := model.AppBasicInfo{
-			Code:    "test-code",
-			Name:    "test-app",
-			Region:  "默认版",
-			AppType: "default",
-			Modules: []model.ModuleBasicInfo{
-				{
-					Name:     "default",
-					RepoType: "Opensource Community Github",
-					RepoURL:  "https://github.com/octocat/Hello-World.git",
-					Envs: []model.EnvBasicInfo{
-						{
-							Name:        "stag",
-							ClusterName: "default",
-							ClusterID:   "BCS-K8S-12345",
-						},
-					},
-				},
+	It("TestAppLister", func() {
+		excepted := model.MinimalApplications{
+			Total: 2,
+			Apps: []model.AppBasicInfo{
+				{Code: "test-code-1", Name: "test-app-1"},
+				{Code: "test-code-2", Name: "test-app-2"},
 			},
 		}
 
-		retriever := handler.NewBasicInfoRetriever()
-		info, err := retriever.Exec("test-code")
-		Expect(info).To(Equal(excepted))
+		lister := handler.NewAppLister()
+		result, err := lister.Exec()
+		Expect(result).To(Equal(excepted))
 		Expect(err).To(BeNil())
 
-		Expect(info.String() != "").To(BeTrue())
+		Expect(result.String() != "").To(BeTrue())
 	})
 })

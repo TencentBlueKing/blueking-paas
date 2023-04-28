@@ -18,16 +18,16 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paasng.monitoring.monitor.alert_rules.constants import DEFAULT_RULE_CONFIGS
+from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
 from paasng.monitoring.monitor.models import AppAlertRule
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 
 
 class TestAlertRulesView:
     @pytest.fixture(autouse=True)
-    def init_rules(self, bk_app):
+    def init_rules(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
         manager.init_rules()
 
@@ -52,7 +52,13 @@ class TestAlertRulesView:
         assert resp.status_code == 200
         assert AppAlertRule.objects.get(id=rule_obj.id).threshold_expr == threshold_expr
 
-    def test_list_supported_alerts(self, api_client):
-        resp = api_client.get('/api/monitor/supported_alerts/')
+    def test_list_supported_alert_rules(self, api_client):
+        resp = api_client.get('/api/monitor/supported_alert_rules/')
         alert_info = {alert['alert_code']: alert['display_name'] for alert in resp.data}
         assert alert_info['high_cpu_usage'] == DEFAULT_RULE_CONFIGS['module_scoped']['high_cpu_usage']['display_name']
+
+
+class TestInitAlertRulesAPI:
+    def test_init_alert_rules(self, api_client, bk_app):
+        resp = api_client.post(f'/api/monitor/applications/{bk_app.code}/alert_rules/init/')
+        assert resp.status_code == 200

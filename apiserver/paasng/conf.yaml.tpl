@@ -625,7 +625,11 @@
 # MONITOR_AS_CODE_CONF: {}
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
-
+## 监控 RabbitMQ 的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
+# RABBITMQ_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'rabbitmq'
 
 ## ---------------------------------------- 运行时默认配置 ----------------------------------------
 

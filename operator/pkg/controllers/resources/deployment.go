@@ -26,31 +26,52 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
-	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 )
 
 const (
 	// DeployRevisionHistoryLimit 更新 Deployment 时不保留旧 ReplicasSet
 	DeployRevisionHistoryLimit = int32(0)
+
+	// DefaultImage 是当无法获取进程镜像时使用的默认镜像
+	DefaultImage = "busybox:latest"
 )
 
+// log is for logging in this package.
+var log = logf.Log.WithName("controllers-resources")
+
 // GetWantedDeploys 根据应用生成对应的 Deployment 配置列表
-func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
+func GetWantedDeploys(app *v1alpha2.BkApp) []*appsv1.Deployment {
 	newRevision := int64(0)
 	if rev := app.Status.Revision; rev != nil {
 		newRevision = rev.Revision
 	}
-	annotations := map[string]string{v1alpha1.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
+	annotations := map[string]string{v1alpha2.RevisionAnnoKey: strconv.FormatInt(newRevision, 10)}
 	envs := GetAppEnvs(app)
 	deployList := []*appsv1.Deployment{}
 	replicasGetter := NewReplicasGetter(app)
 	for _, proc := range app.Spec.Processes {
 		selector := labels.PodSelector(app, proc.Name)
 		objLabels := labels.Deployment(app, proc.Name)
+
+		// TODO: Add error handling
+		image, pullPolicy, err := v1alpha2.NewProcImageGetter(app).Get(proc.Name)
+		if err != nil {
+			log.Info("Failed to get image for process %s: %v, use default values.", proc.Name, err)
+			image = DefaultImage
+			pullPolicy = corev1.PullIfNotPresent
+		}
+
+		resGetter := v1alpha2.NewProcResourcesGetter(app)
+		resReq, err := resGetter.Get(proc.Name)
+		if err != nil {
+			log.Info("Failed to get resources for process %s: %v, use default values.", proc.Name, err)
+			resReq = resGetter.GetDefault()
+		}
 
 		deployList = append(deployList, &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
@@ -64,9 +85,9 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 				Annotations: annotations,
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(app, schema.GroupVersionKind{
-						Group:   v1alpha1.GroupVersion.Group,
-						Version: v1alpha1.GroupVersion.Version,
-						Kind:    v1alpha1.KindBkApp,
+						Group:   v1alpha2.GroupVersion.Group,
+						Version: v1alpha2.GroupVersion.Version,
+						Kind:    v1alpha2.KindBkApp,
 					}),
 				},
 			},
@@ -80,7 +101,7 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 						Annotations: annotations,
 					},
 					Spec: corev1.PodSpec{
-						Containers:       buildContainers(proc, envs),
+						Containers:       buildContainers(proc, envs, image, pullPolicy, resReq),
 						ImagePullSecrets: buildImagePullSecrets(app),
 					},
 				},
@@ -91,12 +112,24 @@ func GetWantedDeploys(app *v1alpha1.BkApp) []*appsv1.Deployment {
 }
 
 // buildContainers 根据配置生产对应容器配置列表（目前设计单个 proc 只会有单个容器）
-func buildContainers(proc v1alpha1.Process, envs []corev1.EnvVar) []corev1.Container {
+//
+// - proc: 应用定义的进程对象
+// - envs: 环境变量列表
+// - image: 进程的镜像地址
+// - pullPolicy: 镜像拉取策略
+// - resRequirements: 容器资源限制
+func buildContainers(
+	proc v1alpha2.Process,
+	envs []corev1.EnvVar,
+	image string,
+	pullPolicy corev1.PullPolicy,
+	resRequirements corev1.ResourceRequirements,
+) []corev1.Container {
 	container := corev1.Container{
 		Name:            proc.Name,
-		Image:           proc.Image,
-		Resources:       buildContainerResources(proc.CPU, proc.Memory),
-		ImagePullPolicy: proc.ImagePullPolicy,
+		Image:           image,
+		Resources:       resRequirements,
+		ImagePullPolicy: pullPolicy,
 		Env:             envs,
 		Command:         proc.Command,
 		Args:            proc.Args,
@@ -108,34 +141,15 @@ func buildContainers(proc v1alpha1.Process, envs []corev1.EnvVar) []corev1.Conta
 	return []corev1.Container{container}
 }
 
-// buildContainerResources 构建容器资源配额信息
-func buildContainerResources(cpu, memory string) corev1.ResourceRequirements {
-	// 由于 webhook 中已做校验，因此这里不会有 err，可以忽略
-	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
-	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
-
-	return corev1.ResourceRequirements{
-		// 目前 Requests 配额策略：CPU 为 Limits 1/4，内存为 Limits 的 1/2
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    *quota.Div(cpuQuota, 4),
-			corev1.ResourceMemory: *quota.Div(memQuota, 2),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    *cpuQuota,
-			corev1.ResourceMemory: *memQuota,
-		},
-	}
-}
-
 // buildImagePullSecrets 返回拉取镜像的 Secrets 列表
-func buildImagePullSecrets(app *v1alpha1.BkApp) []corev1.LocalObjectReference {
-	if app.GetAnnotations()[v1alpha1.ImageCredentialsRefAnnoKey] == "" {
+func buildImagePullSecrets(app *v1alpha2.BkApp) []corev1.LocalObjectReference {
+	if app.GetAnnotations()[v1alpha2.ImageCredentialsRefAnnoKey] == "" {
 		return nil
 	}
 	// DefaultImagePullSecretName 由 workloads 服务负责创建
 	return []corev1.LocalObjectReference{
 		{
-			Name: v1alpha1.DefaultImagePullSecretName,
+			Name: v1alpha2.DefaultImagePullSecretName,
 		},
 	}
 }

@@ -49,6 +49,7 @@ def test_create_app_resource():
                     'cpu': '500m',
                     'memory': '256Mi',
                     'imagePullPolicy': 'IfNotPresent',
+                    'autoscaling': None,
                 }
             ],
             'hooks': None,

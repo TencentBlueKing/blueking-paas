@@ -6,6 +6,7 @@ require (
 	github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler v0.0.0-20230419100919-e7fc943fe8ef
 	github.com/getsentry/sentry-go v0.15.0
 	github.com/iancoleman/strcase v0.2.0
+	github.com/jinzhu/copier v0.3.5
 	github.com/lithammer/dedent v1.1.0
 	github.com/modern-go/reflect2 v1.0.2
 	github.com/onsi/ginkgo/v2 v2.1.4

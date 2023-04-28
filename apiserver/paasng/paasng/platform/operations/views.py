@@ -168,7 +168,8 @@ class ApplicationOperationsViewSet(viewsets.ModelViewSet, ApplicationCodeInPathM
 
     def list(self, request, *args, **kwargs):
         application = self.get_application()
-        self.queryset = Operation.objects.filter(
-            application=application, module_name=kwargs.get('module_name', application.get_default_module().name)
-        )
+        self.queryset = Operation.objects.filter(application=application)
+        # 路径参数中指定了模块才查询模块的操作记录，否则查询应用所有的操作记录
+        if module_name := kwargs.get('module_name'):
+            self.queryset = self.queryset.filter(module_name=module_name)
         return super().list(request, *args, **kwargs)

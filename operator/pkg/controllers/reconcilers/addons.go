@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 )
@@ -52,12 +52,12 @@ type AddonReconciler struct {
 }
 
 // Reconcile ...
-func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) Result {
+func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha2.BkApp) Result {
 	err := r.doReconcile(ctx, bkapp)
 	if err != nil {
-		bkapp.Status.Phase = v1alpha1.AppFailed
+		bkapp.Status.Phase = v1alpha2.AppFailed
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.AddOnsProvisioned,
+			Type:               v1alpha2.AddOnsProvisioned,
 			Status:             metav1.ConditionFalse,
 			Reason:             "InternalServerError",
 			Message:            err.Error(),
@@ -65,7 +65,7 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) 
 		})
 	} else {
 		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.AddOnsProvisioned,
+			Type:               v1alpha2.AddOnsProvisioned,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Provisioned",
 			ObservedGeneration: bkapp.Status.ObservedGeneration,
@@ -78,7 +78,7 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *v1alpha1.BkApp) 
 	return r.Result.withError(err)
 }
 
-func (r *AddonReconciler) doReconcile(ctx context.Context, bkapp *v1alpha1.BkApp) (err error) {
+func (r *AddonReconciler) doReconcile(ctx context.Context, bkapp *v1alpha2.BkApp) (err error) {
 	log := logf.FromContext(ctx)
 
 	var addons []string
@@ -92,7 +92,7 @@ func (r *AddonReconciler) doReconcile(ctx context.Context, bkapp *v1alpha1.BkApp
 
 	if addons, err = bkapp.ExtractAddons(); err != nil {
 		log.Error(err, "failed to extract addons info from annotation, skip addons reconcile")
-		return errors.Wrapf(err, "InvalidAnnotations: invalid value for '%s', Detail", v1alpha1.AddonsAnnoKey)
+		return errors.Wrapf(err, "InvalidAnnotations: invalid value for '%s', Detail", v1alpha2.AddonsAnnoKey)
 	}
 
 	for _, addon := range addons {

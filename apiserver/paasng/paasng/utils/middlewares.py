@@ -64,6 +64,15 @@ class AutoDisableCSRFMiddleware:
             request._dont_enforce_csrf_checks = True
         return self.get_response(request)
 
+    def process_view(self, request, view, args, kwargs):
+        # DRF SessionAuthentication authenticates the user and checks the CSRF again,
+        # not recognising the csrf_exempt exemption
+        # DRF's CSRF checks behave in the same way as the CsrfViewMiddleware and need to be skipped by
+        # setting request._dont_enforce_csrf_checks = True.
+        if getattr(view, 'csrf_exempt', False):
+            request._dont_enforce_csrf_checks = True
+        return None
+
 
 class APILanguageMiddleware(MiddlewareMixin):
     """Set the language for API requests"""

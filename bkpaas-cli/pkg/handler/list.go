@@ -18,29 +18,36 @@
 
 package handler
 
-import "github.com/TencentBlueKing/blueking-paas/client/pkg/model"
+import (
+	"github.com/TencentBlueKing/gopkg/mapx"
+	"github.com/spf13/cast"
 
-// ShortRevisionLength 短版本信息长度
-const ShortRevisionLength = 8
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
+)
 
-// Lister 应用/服务列表查询接口
-type Lister interface {
-	// Exec 请求 PaaS API，获取资源列表数据
-	Exec() (model.Items, error)
+type AppLister struct{}
+
+// NewAppLister ...
+func NewAppLister() *AppLister {
+	return &AppLister{}
 }
 
-// Retriever 各类应用信息查询接口
-type Retriever interface {
-	// Exec 请求 PaaS API，获取应用某类信息
-	Exec(appCode string) (model.AppInfo, error)
+// Exec 获取应用列表
+func (a AppLister) Exec() (model.Items, error) {
+	ret, err := apiresources.DefaultRequester.ListAppMinimal()
+	if err != nil {
+		return nil, err
+	}
+
+	applications := []model.AppBasicInfo{}
+	for _, item := range mapx.GetList(ret, "results") {
+		applications = append(applications, model.AppBasicInfo{
+			Code: mapx.GetStr(item.(map[string]any), "application.code"),
+			Name: mapx.GetStr(item.(map[string]any), "application.name"),
+		})
+	}
+	return model.MinimalApplications{Total: cast.ToInt(ret["count"]), Apps: applications}, nil
 }
 
-// Deployer 部署器接口
-type Deployer interface {
-	// Deploy 下发部署命令
-	Deploy(opts model.DeployOptions) (map[string]any, error)
-	// GetResult 获取应用部署结果
-	GetResult(opts model.DeployOptions) (model.DeployResult, error)
-	// GetHistory 获取应用部署历史
-	GetHistory(opts model.DeployOptions) (model.DeployHistory, error)
-}
+var _ Lister = AppLister{}

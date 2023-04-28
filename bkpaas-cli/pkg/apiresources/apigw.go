@@ -51,6 +51,11 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 	return respData, nil
 }
 
+func (r apigwRequester) ListAppMinimal() (map[string]any, error) {
+	url := fmt.Sprintf("%s/bkapps/applications/lists/minimal/", config.G.PaaSApigwUrl)
+	return r.handlePaaSApiRequest(grequests.Get, url, grequests.RequestOptions{Headers: r.headers()})
+}
+
 // GetAppInfo 获取应用基础信息
 func (r apigwRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	url := fmt.Sprintf("%s/bkapps/applications/%s/", config.G.PaaSApigwUrl, appCode)

@@ -16,31 +16,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package handler
+package model
 
-import "github.com/TencentBlueKing/blueking-paas/client/pkg/model"
+import (
+	"fmt"
+	"strings"
 
-// ShortRevisionLength 短版本信息长度
-const ShortRevisionLength = 8
+	tw "github.com/olekukonko/tablewriter"
+)
 
-// Lister 应用/服务列表查询接口
-type Lister interface {
-	// Exec 请求 PaaS API，获取资源列表数据
-	Exec() (model.Items, error)
+// MinimalApplications 应用简明信息列表
+type MinimalApplications struct {
+	Total int
+	Apps  []AppBasicInfo
 }
 
-// Retriever 各类应用信息查询接口
-type Retriever interface {
-	// Exec 请求 PaaS API，获取应用某类信息
-	Exec(appCode string) (model.AppInfo, error)
+func (a MinimalApplications) Length() int {
+	return a.Total
 }
 
-// Deployer 部署器接口
-type Deployer interface {
-	// Deploy 下发部署命令
-	Deploy(opts model.DeployOptions) (map[string]any, error)
-	// GetResult 获取应用部署结果
-	GetResult(opts model.DeployOptions) (model.DeployResult, error)
-	// GetHistory 获取应用部署历史
-	GetHistory(opts model.DeployOptions) (model.DeployHistory, error)
+func (a MinimalApplications) String() string {
+	sb := strings.Builder{}
+	sb.WriteString("Application List\n")
+	table := tw.NewWriter(&sb)
+	table.SetHeader([]string{"#", "Name", "Code"})
+	for idx, app := range a.Apps {
+		table.Append([]string{fmt.Sprintf("%d", idx+1), app.Name, app.Code})
+	}
+	table.Render()
+	return sb.String()
 }
+
+var _ Items = MinimalApplications{}

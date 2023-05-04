@@ -114,3 +114,12 @@ const (
 
 // AllowedScalingPolicies 允许使用的扩缩容策略
 var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}
+
+// AllowedResQuotaPlans 允许使用的资源配额方案
+var AllowedResQuotaPlans = []ResQuotaPlan{
+	ResQuotaPlanDefault,
+	ResQuotaPlan1C512M,
+	ResQuotaPlan2C1G,
+	ResQuotaPlan2C2G,
+	ResQuotaPlan4C2G,
+}

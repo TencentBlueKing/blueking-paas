@@ -134,7 +134,6 @@ func buildContainers(
 		Command:         proc.Command,
 		Args:            proc.Args,
 	}
-	// TODO P3 理论上所有进程都需要对外提供服务（暴露端口？）
 	if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
 	}

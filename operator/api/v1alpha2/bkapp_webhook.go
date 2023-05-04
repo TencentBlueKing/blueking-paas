@@ -73,7 +73,7 @@ func (r *BkApp) Default() {
 			proc.TargetPort = ProcDefaultTargetPort
 		}
 		if proc.ResQuotaPlan == "" {
-			proc.ResQuotaPlan = "default"
+			proc.ResQuotaPlan = ResQuotaPlanDefault
 		}
 		r.Spec.Processes[i] = proc
 	}
@@ -223,7 +223,14 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 			fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
 		)
 	}
-	// 3. TODO: Check ResQuotaPlan is valid
+
+	// 3. 检查资源方案是否是受支持的
+	if !lo.Contains(AllowedResQuotaPlans, proc.ResQuotaPlan) {
+		return field.NotSupported(
+			pField.Child("resQuotaPlan"), proc.ResQuotaPlan, stringx.ToStrArray(AllowedResQuotaPlans),
+		)
+	}
+
 	// 4. 如果启用扩缩容，需要符合规范
 	if proc.Autoscaling != nil && proc.Autoscaling.Enabled {
 		// 目前不支持缩容到 0

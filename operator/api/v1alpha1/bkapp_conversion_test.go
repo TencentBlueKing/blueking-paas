@@ -95,7 +95,7 @@ var _ = Describe("test conversion back and forth", func() {
 					{
 						Name:         "web",
 						Replicas:     ReplicasTwo,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 					},
 					{
 						Name:         "worker",

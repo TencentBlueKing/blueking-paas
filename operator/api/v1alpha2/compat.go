@@ -23,21 +23,22 @@ package v1alpha2
 import (
 	"fmt"
 
-	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"
+	"bk.tencent.com/paas-app-operator/pkg/utils/kubetypes"
 	"bk.tencent.com/paas-app-operator/pkg/utils/quota"
 )
 
-type procImageGetter struct {
+// ProcImageGetter help getting container image from bkapp
+type ProcImageGetter struct {
 	bkapp *BkApp
 }
 
 // NewProcImageGetter create a new ProcImageGetter
-func NewProcImageGetter(bkapp *BkApp) *procImageGetter {
-	return &procImageGetter{bkapp: bkapp}
+func NewProcImageGetter(bkapp *BkApp) *ProcImageGetter {
+	return &ProcImageGetter{bkapp: bkapp}
 }
 
 // Get get the container image by process name, both the standard and legacy API versions
@@ -45,7 +46,7 @@ func NewProcImageGetter(bkapp *BkApp) *procImageGetter {
 //
 // - name: process name
 // - return: <image>, <imagePullPolicy>, <error>
-func (r *procImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
+func (r *ProcImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
 	// Standard: the image was defined in build config directly
 	if image := r.bkapp.Spec.Build.Image; image != "" {
 		return r.bkapp.Spec.Build.Image, r.bkapp.Spec.Build.ImagePullPolicy, nil
@@ -56,33 +57,33 @@ func (r *procImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
 		r.bkapp,
 		LegacyProcImageAnnoKey,
 	)
-	if config, ok := legacyProcImageConfig[name]; ok {
-		return config["image"], corev1.PullPolicy(config["policy"]), nil
+	if cfg, ok := legacyProcImageConfig[name]; ok {
+		return cfg["image"], corev1.PullPolicy(cfg["policy"]), nil
 	}
 
 	return "", corev1.PullIfNotPresent, errors.New("image not configured")
 }
 
 // ProcResourcesGetter help getting resources requirements for creating processes
-type procResourcesGetter struct {
+type ProcResourcesGetter struct {
 	bkapp *BkApp
 }
 
 // NewProcResourcesGetter create a new ProcResourcesGetter
-func NewProcResourcesGetter(bkapp *BkApp) *procResourcesGetter {
-	return &procResourcesGetter{bkapp: bkapp}
+func NewProcResourcesGetter(bkapp *BkApp) *ProcResourcesGetter {
+	return &ProcResourcesGetter{bkapp: bkapp}
 }
 
 // GetDefault returns the default resources requirements for creating processes
-func (r *procResourcesGetter) GetDefault() corev1.ResourceRequirements {
-	return r.fromQuotaPlan("default")
+func (r *ProcResourcesGetter) GetDefault() corev1.ResourceRequirements {
+	return r.fromQuotaPlan(ResQuotaPlanDefault)
 }
 
-// Get get the container resources by process name
+// Get the container resources by process name
 //
 // - name: process name
 // - return: <resources requirements>, <error>
-func (r *procResourcesGetter) Get(name string) (result corev1.ResourceRequirements, err error) {
+func (r *ProcResourcesGetter) Get(name string) (result corev1.ResourceRequirements, err error) {
 	// Standard: read the "ResQuotaPlan" field from process
 	procObj := r.bkapp.Spec.FindProcess(name)
 	if procObj == nil {
@@ -97,31 +98,32 @@ func (r *procResourcesGetter) Get(name string) (result corev1.ResourceRequiremen
 		r.bkapp,
 		LegacyProcResAnnoKey,
 	)
-	if config, ok := legacyProcResourcesConfig[name]; ok {
-		return r.fromRawString(config["cpu"], config["memory"]), nil
+	if cfg, ok := legacyProcResourcesConfig[name]; ok {
+		return r.fromRawString(cfg["cpu"], cfg["memory"]), nil
 	}
 	return result, errors.New("resources unconfigured")
 }
 
 // fromQuotaPlan try to get resource requirements by the name of quota plan
-func (r *procResourcesGetter) fromQuotaPlan(plan string) corev1.ResourceRequirements {
-	planToResources := map[string][2]string{
-		"default": {
-			config.Global.GetProcDefaultCpuLimits(),
-			config.Global.GetProcDefaultMemLimits(),
-		},
-		// TODO: Add more plans
+func (r *ProcResourcesGetter) fromQuotaPlan(plan ResQuotaPlan) corev1.ResourceRequirements {
+	var cpuRaw, memRaw string
+	switch plan {
+	case ResQuotaPlan1C512M:
+		cpuRaw, memRaw = "1", "512Mi"
+	case ResQuotaPlan2C1G:
+		cpuRaw, memRaw = "2", "1Gi"
+	case ResQuotaPlan2C2G:
+		cpuRaw, memRaw = "2", "2Gi"
+	case ResQuotaPlan4C2G:
+		cpuRaw, memRaw = "4", "2Gi"
+	default:
+		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimits(), config.Global.GetProcDefaultMemLimits()
 	}
-
-	values, ok := planToResources[plan]
-	if !ok {
-		return r.GetDefault()
-	}
-	return r.fromRawString(values[0], values[1])
+	return r.fromRawString(cpuRaw, memRaw)
 }
 
 // fromRawString build the resource requirements from raw string
-func (r *procResourcesGetter) fromRawString(cpu, memory string) corev1.ResourceRequirements {
+func (r *ProcResourcesGetter) fromRawString(cpu, memory string) corev1.ResourceRequirements {
 	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
 	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
 

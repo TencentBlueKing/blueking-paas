@@ -60,7 +60,7 @@ var _ = Describe("test webhook.Defaulter", func() {
 
 		web := bkapp.Spec.GetWebProcess()
 		Expect(web.TargetPort).To(Equal(int32(5000)))
-		Expect(web.ResQuotaPlan).To(Equal("default"))
+		Expect(web.ResQuotaPlan).To(Equal(paasv1alpha2.ResQuotaPlanDefault))
 	})
 })
 
@@ -83,15 +83,17 @@ var _ = Describe("test webhook.Validator", func() {
 				},
 				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Replicas:   paasv1alpha2.ReplicasTwo,
-						TargetPort: 80,
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 					{
-						Name:     "hi",
-						Replicas: paasv1alpha2.ReplicasTwo,
-						Command:  []string{"/bin/sh"},
-						Args:     []string{"-c", "echo hi"},
+						Name:         "hi",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						Command:      []string{"/bin/sh"},
+						Args:         []string{"-c", "echo hi"},
 					},
 				},
 			},
@@ -163,6 +165,12 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(
 				err.Error(),
 			).To(ContainSubstring(fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas())))
+		})
+
+		It("resource quota plan unsupported", func() {
+			bkapp.Spec.Processes[0].ResQuotaPlan = "fake"
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"1C512M\""))
 		})
 	})
 

@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"bk.tencent.com/paas-app-operator/pkg/config"
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 // log is for logging in this package.
@@ -223,6 +224,48 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		)
 	}
 	// 3. TODO: Check ResQuotaPlan is valid
+	// 4. 如果启用扩缩容，需要符合规范
+	if proc.Autoscaling != nil && proc.Autoscaling.Enabled {
+		// 目前不支持缩容到 0
+		if proc.Autoscaling.MinReplicas <= 0 {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("minReplicas"),
+				proc.Autoscaling.MinReplicas,
+				"minReplicas must be greater than 0",
+			)
+		}
+		// 扩缩容最大副本数不可超过上限
+		if proc.Autoscaling.MaxReplicas > config.Global.GetProcMaxReplicas() {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("maxReplicas"),
+				proc.Autoscaling.MaxReplicas,
+				fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas()),
+			)
+		}
+		// 最大副本数需大于等于最小副本数
+		if proc.Autoscaling.MinReplicas > proc.Autoscaling.MaxReplicas {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("maxReplicas"),
+				proc.Autoscaling.MaxReplicas,
+				"maxReplicas must be greater than or equal to minReplicas",
+			)
+		}
+		// 目前必须配置扩缩容策略
+		if proc.Autoscaling.Policy == "" {
+			return field.Invalid(
+				pField.Child("autoscaling").Child("policy"),
+				proc.Autoscaling.Policy,
+				"autoscaling policy is required",
+			)
+		}
+		// 配置的扩缩容策略必须是受支持的
+		if !lo.Contains(AllowedScalingPolicies, proc.Autoscaling.Policy) {
+			return field.NotSupported(
+				pField.Child("autoscaling").Child("policy"),
+				proc.Autoscaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
+			)
+		}
+	}
 	return nil
 }
 
@@ -237,7 +280,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	// Validate "envVariables": envName
 	for i, env := range r.Spec.EnvOverlay.EnvVariables {
 		envField := f.Child("envVariables").Index(i)
-		if !CheckEnvName(env.EnvName) {
+		if !env.EnvName.IsValid() {
 			return field.Invalid(envField.Child("envName"), env.EnvName, "envName is invalid")
 		}
 	}
@@ -246,7 +289,7 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	maxReplicas := config.Global.GetProcMaxReplicas()
 	for i, rep := range r.Spec.EnvOverlay.Replicas {
 		replicasField := f.Child("replicas").Index(i)
-		if !CheckEnvName(rep.EnvName) {
+		if !rep.EnvName.IsValid() {
 			return field.Invalid(replicasField.Child("envName"), rep.EnvName, "envName is invalid")
 		}
 		if !lo.Contains(r.getProcNames(), rep.Process) {
@@ -257,6 +300,27 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 				replicasField.Child("count"),
 				rep.Process,
 				fmt.Sprintf("count can't be greater than %d", maxReplicas),
+			)
+		}
+	}
+
+	// Validate "autoscaling": envName, process and policy
+	for i, scaling := range r.Spec.EnvOverlay.Autoscaling {
+		pField := f.Child("autoscaling").Index(i)
+		if !scaling.EnvName.IsValid() {
+			return field.Invalid(pField.Child("envName"), scaling.EnvName, "envName is invalid")
+		}
+		if !lo.Contains(r.getProcNames(), scaling.Process) {
+			return field.Invalid(pField.Child("process"), scaling.Process, "process name is invalid")
+		}
+		// 添加的 envOverlay 需要配置扩缩容策略
+		if scaling.Policy == "" {
+			return field.Invalid(pField.Child("policy"), scaling.Policy, "autoscaling policy is required")
+		}
+		// 配置的扩缩容策略必须是受支持的
+		if !lo.Contains(AllowedScalingPolicies, scaling.Policy) {
+			return field.NotSupported(
+				pField.Child("policy"), scaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
 			)
 		}
 	}

@@ -37,9 +37,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	//+kubebuilder:scaffold:imports
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+
+	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -82,6 +83,7 @@ var _ = BeforeSuite(func() {
 	Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(networkingv1.AddToScheme(scheme)).NotTo(HaveOccurred())
+	Expect(autoscaling.AddToScheme(scheme)).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
 

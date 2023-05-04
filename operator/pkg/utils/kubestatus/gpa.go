@@ -16,14 +16,34 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+package kubestatus
 
-import ctrl "sigs.k8s.io/controller-runtime"
+import (
+	corev1 "k8s.io/api/core/v1"
 
-// SetupWebhookWithManager ...
-func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(r).Complete()
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+
+	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
+)
+
+// GenGPAHealthStatus check if the GPA is healthy
+// For a deployment:
+//   healthy means the GPA is available, ready to scale workloads with policy.
+//   unhealthy means the GPA is failed when reconciled.
+func GenGPAHealthStatus(gpa *autoscaling.GeneralPodAutoscaler) *HealthStatus {
+	for _, condition := range gpa.Status.Conditions {
+		if condition.Status == corev1.ConditionFalse {
+			return &HealthStatus{
+				Phase:   paasv1alpha2.HealthUnhealthy,
+				Reason:  condition.Reason,
+				Message: condition.Message,
+			}
+		}
+	}
+
+	return &HealthStatus{
+		Phase:   paasv1alpha2.HealthHealthy,
+		Reason:  paasv1alpha2.AutoscalingAvailable,
+		Message: "",
+	}
 }
-
-// No webhook is needed in v1alpha1, the webhook in v1alpha2 will handle the mutation
-// and the validation of v1alpha1 resources after a conversion.

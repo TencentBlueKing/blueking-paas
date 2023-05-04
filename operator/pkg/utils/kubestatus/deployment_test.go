@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("Test kubestatus/deploymentutils", func() {
+var _ = Describe("Test kubestatus/deployment", func() {
 	var deployment *appsv1.Deployment
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme

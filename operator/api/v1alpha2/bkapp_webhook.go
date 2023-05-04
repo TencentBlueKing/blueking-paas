@@ -305,21 +305,23 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 	}
 
 	// Validate "autoscaling": envName, process and policy
-	for i, as := range r.Spec.EnvOverlay.Autoscaling {
+	for i, scaling := range r.Spec.EnvOverlay.Autoscaling {
 		pField := f.Child("autoscaling").Index(i)
-		if !as.EnvName.IsValid() {
-			return field.Invalid(pField.Child("envName"), as.EnvName, "envName is invalid")
+		if !scaling.EnvName.IsValid() {
+			return field.Invalid(pField.Child("envName"), scaling.EnvName, "envName is invalid")
 		}
-		if !lo.Contains(r.getProcNames(), as.Process) {
-			return field.Invalid(pField.Child("process"), as.Process, "process name is invalid")
+		if !lo.Contains(r.getProcNames(), scaling.Process) {
+			return field.Invalid(pField.Child("process"), scaling.Process, "process name is invalid")
 		}
 		// 添加的 envOverlay 需要配置扩缩容策略
-		if as.Policy == "" {
-			return field.Invalid(pField.Child("policy"), as.Policy, "autoscaling policy is required")
+		if scaling.Policy == "" {
+			return field.Invalid(pField.Child("policy"), scaling.Policy, "autoscaling policy is required")
 		}
 		// 配置的扩缩容策略必须是受支持的
-		if !lo.Contains(AllowedScalingPolicies, as.Policy) {
-			return field.NotSupported(pField.Child("policy"), as.Policy, stringx.ToStrArray(AllowedScalingPolicies))
+		if !lo.Contains(AllowedScalingPolicies, scaling.Policy) {
+			return field.NotSupported(
+				pField.Child("policy"), scaling.Policy, stringx.ToStrArray(AllowedScalingPolicies),
+			)
 		}
 	}
 	return nil

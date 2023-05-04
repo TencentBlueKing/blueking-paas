@@ -26,8 +26,8 @@ import (
 )
 
 var _ = Describe("Test stringx tools", func() {
-	DescribeTable("test Rand", func(length int) {
-		Expect(len(stringx.Rand(length))).To(Equal(length))
+	DescribeTable("test RandLetters", func(length int) {
+		Expect(len(stringx.RandLetters(length))).To(Equal(length))
 	},
 		Entry("zero", 0),
 		Entry("eight", 8),

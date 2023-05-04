@@ -24,8 +24,8 @@ import (
 
 var letters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-// Rand generates a random string with given length
-func Rand(n int) string {
+// RandLetters generates a random string with given length
+func RandLetters(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]

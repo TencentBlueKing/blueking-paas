@@ -49,7 +49,7 @@ var _ = Describe("", func() {
 
 	BeforeEach(func() {
 		// Use a random name for every test case
-		nameSuffix := strings.ToLower(stringx.Rand(6))
+		nameSuffix := strings.ToLower(stringx.RandLetters(6))
 		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{

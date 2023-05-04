@@ -301,7 +301,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 	}
 
 	BeforeEach(func() {
-		suffix = strings.ToLower(stringx.Rand(6))
+		suffix = strings.ToLower(stringx.RandLetters(6))
 	})
 
 	It("Create BkApp with minimal required fields", func() {
@@ -361,7 +361,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 	}
 
 	BeforeEach(func() {
-		suffix = strings.ToLower(stringx.Rand(6))
+		suffix = strings.ToLower(stringx.RandLetters(6))
 	})
 
 	It("Create BkApp with minimal required fields", func() {

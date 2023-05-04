@@ -100,7 +100,7 @@ Application List
 你可以通过执行命令 `bkpaas-cli app get-info` 来查看指定应用的基础信息：
 
 ```shell
->>> bkpaas-cli app get-info --code=demo-app
+>>> bkpaas-cli app get-info --code=app-code-1
 +-----------------------------------------------------------------------------------------------------+
 |                                Application Basic Information                                        |
 +------+----------------------------------------------------------------------------------------------+

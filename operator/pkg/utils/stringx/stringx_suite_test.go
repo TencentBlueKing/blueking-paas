@@ -16,14 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+package stringx
 
-import ctrl "sigs.k8s.io/controller-runtime"
+import (
+	"testing"
 
-// SetupWebhookWithManager ...
-func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(r).Complete()
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func TestStringx(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "utils/stringx Suite")
 }
-
-// No webhook is needed in v1alpha1, the webhook in v1alpha2 will handle the mutation
-// and the validation of v1alpha1 resources after a conversion.

@@ -88,7 +88,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 	}
 
 	// Use the web process's image and pull policy to run the hook.
-	// This behavior might be changed in the future when v1alpha1.BkApp is fully removed.
+	// This behavior might be changed in the future when paasv1alpha1.BkApp is fully removed.
 	image, pullPolicy, err := paasv1alpha2.NewProcImageGetter(bkapp).Get("web")
 	if err != nil {
 		return nil

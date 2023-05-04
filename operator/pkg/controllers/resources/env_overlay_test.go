@@ -54,10 +54,22 @@ var _ = Describe("Environment overlay related functions", func() {
 						Name:       "web",
 						Replicas:   paasv1alpha2.ReplicasTwo,
 						TargetPort: 80,
+						Autoscaling: &paasv1alpha2.AutoscalingSpec{
+							Enabled:     true,
+							MinReplicas: 1,
+							MaxReplicas: 5,
+							Policy:      paasv1alpha2.ScalingPolicyDefault,
+						},
 					},
 					{
 						Name:     "worker",
 						Replicas: paasv1alpha2.ReplicasTwo,
+						Autoscaling: &paasv1alpha2.AutoscalingSpec{
+							Enabled:     true,
+							MinReplicas: 1,
+							MaxReplicas: 5,
+							Policy:      paasv1alpha2.ScalingPolicyDefault,
+						},
 					},
 				},
 				Configuration: paasv1alpha2.AppConfig{
@@ -127,7 +139,7 @@ var _ = Describe("Environment overlay related functions", func() {
 		})
 	})
 
-	Context("Test ReplicasGetter without env", func() {
+	Context("Test EnvVarsGetter without env", func() {
 		It("normal", func() {
 			vars := NewEnvVarsGetter(bkapp).Get()
 			Expect(vars).To(Equal([]corev1.EnvVar{
@@ -137,7 +149,7 @@ var _ = Describe("Environment overlay related functions", func() {
 		})
 	})
 
-	Context("Test ReplicasGetter with env", func() {
+	Context("Test EnvVarsGetter with env", func() {
 		BeforeEach(func() {
 			// Set up application to add env overlay related info
 			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
@@ -165,6 +177,37 @@ var _ = Describe("Environment overlay related functions", func() {
 				{Name: "ENV_2", Value: "value_2"},
 				{Name: "ENV_4", Value: "value_4"},
 			}))
+		})
+	})
+
+	Context("Test AutoscalingPolicyGetter without env", func() {
+		It("process normal", func() {
+			val := NewAutoscalingPolicyGetter(bkapp).Get("web")
+			Expect(val).To(Equal(paasv1alpha2.ScalingPolicyDefault))
+		})
+		It("process missing", func() {
+			val := NewAutoscalingPolicyGetter(bkapp).Get("web-missing")
+			Expect(val).To(Equal(paasv1alpha2.ScalingPolicy("")))
+		})
+	})
+
+	Context("Test AutoscalingPolicyGetter with env", func() {
+		BeforeEach(func() {
+			// Set up application to add env overlay related info
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				Autoscaling: []paasv1alpha2.AutoscalingOverlay{
+					{EnvName: "stag", Process: "web", Policy: "custom"},
+				},
+			}
+		})
+		It("env overlay hit", func() {
+			val := NewAutoscalingPolicyGetter(bkapp).Get("web")
+			Expect(val).To(Equal(paasv1alpha2.ScalingPolicy("custom")))
+		})
+		It("env overlay absent", func() {
+			val := NewAutoscalingPolicyGetter(bkapp).Get("worker")
+			Expect(val).To(Equal(paasv1alpha2.ScalingPolicyDefault))
 		})
 	})
 })

@@ -49,6 +49,11 @@ func Service(bkapp *paasv1alpha2.BkApp, process string) string {
 	return DNSSafeName(bkapp.GetName() + "--" + process)
 }
 
+// GPA Return the general-pod-autoscaler name for each process
+func GPA(bkapp *paasv1alpha2.BkApp, process string) string {
+	return DNSSafeName(bkapp.GetName() + "--" + process)
+}
+
 // DNSSafeName 通过替换 _ 等特殊字符串，将其变为可安全用于 DNS 域名的值，该算法与 bkpaas
 // 中其他逻辑保持一致。
 func DNSSafeName(name string) string {

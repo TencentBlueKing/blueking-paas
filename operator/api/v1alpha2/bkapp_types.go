@@ -157,8 +157,36 @@ type Process struct {
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
 
-	// TODO: "autoscaling" field
+	// Autoscaling specifies the autoscaling configuration
+	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
+
+// AutoscalingSpec is bkapp autoscaling config
+type AutoscalingSpec struct {
+	// Enabled indicates whether autoscaling is enabled
+	Enabled bool `json:"enabled"`
+
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
+	// at least one metric value is available
+	MinReplicas int32 `json:"minReplicas"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	MaxReplicas int32 `json:"maxReplicas"`
+
+	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
+	Policy ScalingPolicy `json:"policy"`
+}
+
+// ScalingPolicy is used to specify which policy should be used while scaling
+type ScalingPolicy string
+
+const (
+	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
+	ScalingPolicyDefault ScalingPolicy = "default"
+)
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {
@@ -198,14 +226,23 @@ type AppEnvOverlay struct {
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
 	EnvVariables []EnvVarOverlay `json:"envVariables,omitempty"`
+
+	// Autoscaling overwrite process's autoscaling config
+	// +optional
+	Autoscaling []AutoscalingOverlay `json:"autoscaling,omitempty"`
 }
 
 // EnvName is the environment name for application deployment
 type EnvName string
 
 // IsEmpty checks if current environment is empty(absent)
-func (r EnvName) IsEmpty() bool {
-	return string(r) == ""
+func (n EnvName) IsEmpty() bool {
+	return string(n) == ""
+}
+
+// IsValid checks if a given string is valid as environment name
+func (n EnvName) IsValid() bool {
+	return n == StagEnv || n == ProdEnv
 }
 
 const (
@@ -214,11 +251,6 @@ const (
 	// ProdEnv refers to "production" env
 	ProdEnv EnvName = "prod"
 )
-
-// CheckEnvName checks if a given string is valid as environment name
-func CheckEnvName(n EnvName) bool {
-	return n == StagEnv || n == ProdEnv
-}
 
 // ReplicasOverlay overwrite process's replicas by environment.
 type ReplicasOverlay struct {
@@ -238,6 +270,16 @@ type EnvVarOverlay struct {
 	Name string `json:"name"`
 	// Value of the environment variable
 	Value string `json:"value"`
+}
+
+// AutoscalingOverlay overwrite or add application's autoscaling config by environment.
+type AutoscalingOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
+	Policy ScalingPolicy `json:"policy"`
 }
 
 // AppStatus defines the observed state of BkApp
@@ -310,6 +352,10 @@ const (
 	// HooksFinished means all hook commands have been finished for CURRENT REVISION,
 	// when new revisions are deployed, the condition will be reset.
 	HooksFinished string = "HooksFinished"
+
+	// AutoscalingAvailable means that the process-related autoscaling component is ready
+	// and will manage the process replicas according to the preset scaling policy.
+	AutoscalingAvailable string = "AutoscalingAvailable"
 )
 
 // HookType hook type

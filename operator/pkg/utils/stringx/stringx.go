@@ -16,14 +16,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha1
+package stringx
 
-import ctrl "sigs.k8s.io/controller-runtime"
+import (
+	"math/rand"
+)
 
-// SetupWebhookWithManager ...
-func (r *BkApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(r).Complete()
+var letters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+// RandLetters generates a random string with given length
+func RandLetters(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
-// No webhook is needed in v1alpha1, the webhook in v1alpha2 will handle the mutation
-// and the validation of v1alpha1 resources after a conversion.
+// ToStrArray 用于将 []T 转换为 []string，其中 T 底层需要是 string 类型
+func ToStrArray[T ~string](iterable []T) (arr []string) {
+	for _, item := range iterable {
+		arr = append(arr, string(item))
+	}
+	return arr
+}

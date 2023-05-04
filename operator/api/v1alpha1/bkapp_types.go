@@ -194,7 +194,7 @@ type AppEnvVar struct {
 
 // AppEnvOverlay defines environment specified configs.
 type AppEnvOverlay struct {
-	// Replicas overwrite processes's replicas count
+	// Replicas overwrite process's replicas count
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
 
@@ -207,8 +207,13 @@ type AppEnvOverlay struct {
 type EnvName string
 
 // IsEmpty checks if current environment is empty(absent)
-func (r EnvName) IsEmpty() bool {
-	return string(r) == ""
+func (n EnvName) IsEmpty() bool {
+	return string(n) == ""
+}
+
+// IsValid checks if a given string is valid as environment name
+func (n EnvName) IsValid() bool {
+	return n == StagEnv || n == ProdEnv
 }
 
 const (
@@ -217,11 +222,6 @@ const (
 	// ProdEnv refers to "production" env
 	ProdEnv EnvName = "prod"
 )
-
-// CheckEnvName checks if a given string is valid as environment name
-func CheckEnvName(n EnvName) bool {
-	return n == StagEnv || n == ProdEnv
-}
 
 // ReplicasOverlay overwrite process's replicas by environment.
 type ReplicasOverlay struct {

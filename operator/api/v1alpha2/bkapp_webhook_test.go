@@ -29,11 +29,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
-	"bk.tencent.com/paas-app-operator/pkg/utils/basic"
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 var _ = Describe("test webhook.Defaulter", func() {
@@ -167,20 +166,74 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
+	Context("Test process autoscaling", func() {
+		It("Invalid minReplicas", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 0, MaxReplicas: 5, Policy: paasv1alpha2.ScalingPolicyDefault,
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("minReplicas must be greater than 0"))
+		})
+
+		It("Invalid maxReplicas", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 6, Policy: paasv1alpha2.ScalingPolicyDefault,
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("at most support 5 replicas"))
+		})
+
+		It("maxReplicas < minReplicas", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 3, MaxReplicas: 2, Policy: paasv1alpha2.ScalingPolicyDefault,
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("maxReplicas must be greater than or equal to minReplicas"))
+		})
+
+		It("policy required", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "",
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("autoscaling policy is required"))
+		})
+
+		It("policy must supported", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: true, MinReplicas: 1, MaxReplicas: 3, Policy: "fake",
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
+
+		It("disable autoscaling cause skip validate", func() {
+			bkapp.Spec.Processes[0].Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled: false, MinReplicas: 3, MaxReplicas: 2, Policy: "fake",
+			}
+			Expect(bkapp.ValidateCreate()).To(BeNil())
+		})
+	})
+
 	Context("Test envOverlay", func() {
 		BeforeEach(func() {
 			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{}
 		})
 		It("Normal", func() {
-			bkapp.Spec.EnvOverlay.Replicas = []paasv1alpha2.ReplicasOverlay{
-				{EnvName: "stag", Process: "web", Count: 1},
-			}
-			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{
-				{EnvName: "stag", Name: "foo", Value: "foo-value"},
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				Replicas: []paasv1alpha2.ReplicasOverlay{
+					{EnvName: "stag", Process: "web", Count: 1},
+				},
+				EnvVariables: []paasv1alpha2.EnvVarOverlay{
+					{EnvName: "stag", Name: "foo", Value: "foo-value"},
+				},
+				Autoscaling: []paasv1alpha2.AutoscalingOverlay{
+					{EnvName: "stag", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
+				},
 			}
 
 			err := bkapp.ValidateCreate()
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).To(BeNil())
 		})
 		It("[replicas] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.Replicas = []paasv1alpha2.ReplicasOverlay{
@@ -203,6 +256,34 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("count can't be greater than "))
 		})
+		It("[envVariables] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{
+				{EnvName: "invalid-env", Name: "foo", Value: "bar"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[autoscaling] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
+				{EnvName: "invalid-env", Process: "web", Policy: paasv1alpha2.ScalingPolicyDefault},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[autoscaling] invalid process name", func() {
+			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
+				{EnvName: "stag", Process: "invalid-proc", Policy: paasv1alpha2.ScalingPolicyDefault},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
+		})
+		It("[autoscaling] invalid policy", func() {
+			bkapp.Spec.EnvOverlay.Autoscaling = []paasv1alpha2.AutoscalingOverlay{
+				{EnvName: "stag", Process: "web", Policy: "fake"},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
 	})
 })
 
@@ -210,7 +291,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 	var suffix string
 
 	// A shortcut to build a v1alpha1/BkApp object
-	buildApp := func(spec paasv1alpha1.AppSpec) *v1alpha1.BkApp {
+	buildApp := func(spec paasv1alpha1.AppSpec) *paasv1alpha1.BkApp {
 		ret := &paasv1alpha1.BkApp{
 			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-" + suffix, Namespace: "default"},
@@ -220,7 +301,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 	}
 
 	BeforeEach(func() {
-		suffix = strings.ToLower(basic.RandStr(6))
+		suffix = strings.ToLower(stringx.RandLetters(6))
 	})
 
 	It("Create BkApp with minimal required fields", func() {
@@ -280,7 +361,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 	}
 
 	BeforeEach(func() {
-		suffix = strings.ToLower(basic.RandStr(6))
+		suffix = strings.ToLower(stringx.RandLetters(6))
 	})
 
 	It("Create BkApp with minimal required fields", func() {

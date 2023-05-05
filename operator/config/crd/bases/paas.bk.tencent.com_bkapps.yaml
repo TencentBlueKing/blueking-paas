@@ -621,7 +621,6 @@ spec:
                   required:
                   - name
                   - replicas
-                  - resQuotaPlan
                   type: object
                 type: array
             required:

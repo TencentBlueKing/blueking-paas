@@ -146,7 +146,7 @@ type Process struct {
 
 	// ResQuotaPlan is the name of plan which defines how much resources current process
 	// can consume.
-	ResQuotaPlan ResQuotaPlan `json:"resQuotaPlan"`
+	ResQuotaPlan ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`

@@ -146,7 +146,7 @@ type Process struct {
 
 	// ResQuotaPlan is the name of plan which defines how much resources current process
 	// can consume.
-	ResQuotaPlan string `json:"resQuotaPlan,omitempty"`
+	ResQuotaPlan ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
@@ -160,6 +160,26 @@ type Process struct {
 	// Autoscaling specifies the autoscaling configuration
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
+
+// ResQuotaPlan is used to specify process resource quota
+type ResQuotaPlan string
+
+const (
+	// ResQuotaPlanDefault is default quota plan，means 500m cpu & 256Mi memory
+	ResQuotaPlanDefault ResQuotaPlan = "default"
+
+	// ResQuotaPlan1C512M means 1 cpu & 512Mi memory
+	ResQuotaPlan1C512M ResQuotaPlan = "1C512M"
+
+	// ResQuotaPlan2C1G means 2 cpu & 1Gi memory
+	ResQuotaPlan2C1G ResQuotaPlan = "2C1G"
+
+	// ResQuotaPlan2C2G means 2 cpu & 2Gi memory
+	ResQuotaPlan2C2G ResQuotaPlan = "2C2G"
+
+	// ResQuotaPlan4C2G means 4 cpu & 2Gi memory
+	ResQuotaPlan4C2G ResQuotaPlan = "4C2G"
+)
 
 // AutoscalingSpec is bkapp autoscaling config
 type AutoscalingSpec struct {

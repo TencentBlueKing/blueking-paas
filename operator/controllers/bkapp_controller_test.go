@@ -71,7 +71,7 @@ var _ = Describe("", func() {
 					{
 						Name:         "web",
 						Replicas:     paasv1alpha2.ReplicasOne,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						TargetPort:   80,
 					},
 				},

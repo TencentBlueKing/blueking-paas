@@ -59,7 +59,7 @@ var _ = Describe("Test RevisionReconciler", func() {
 					{
 						Name:         "web",
 						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						TargetPort:   80,
 					},
 				},

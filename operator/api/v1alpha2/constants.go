@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // 默认值相关常量
@@ -114,3 +115,15 @@ const (
 
 // AllowedScalingPolicies 允许使用的扩缩容策略
 var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}
+
+// AllowedResQuotaPlans 允许使用的资源配额方案
+var AllowedResQuotaPlans = []ResQuotaPlan{
+	ResQuotaPlanDefault,
+	ResQuotaPlan1C512M,
+	ResQuotaPlan2C1G,
+	ResQuotaPlan2C2G,
+	ResQuotaPlan4C2G,
+}
+
+// AllowedImagePullPolicies 允许使用的镜像拉取策略
+var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, corev1.PullAlways, corev1.PullNever}

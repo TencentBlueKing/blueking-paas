@@ -57,7 +57,7 @@ var _ = Describe("HookUtils", func() {
 						Name:         "web",
 						Replicas:     paasv1alpha2.ReplicasOne,
 						TargetPort:   80,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 					},
 				},
 				Hooks: &paasv1alpha2.AppHooks{

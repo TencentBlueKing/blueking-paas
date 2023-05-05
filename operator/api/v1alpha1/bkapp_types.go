@@ -25,6 +25,8 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // BkApp is the Schema for the bkapps API
@@ -145,7 +147,7 @@ type Process struct {
 
 	// ResQuotaPlan is the name of plan which defines how much resources current process
 	// can consume.
-	ResQuotaPlan string `json:"resQuotaPlan,omitempty"`
+	ResQuotaPlan paasv1alpha2.ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`

@@ -79,7 +79,8 @@ var _ = Describe("test webhook.Validator", func() {
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
-					Image: "nginx:latest",
+					Image:           "nginx:latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
 				},
 				Processes: []paasv1alpha2.Process{
 					{
@@ -126,6 +127,14 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Name = "bkapp-sample-UPPER-CASE"
 			err = bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("must match regex"))
+		})
+	})
+
+	Context("Test spec.build fields", func() {
+		It("Image pull policy invalid", func() {
+			bkapp.Spec.Build.ImagePullPolicy = "ALWAYS"
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"IfNotPresent\", \"Always\""))
 		})
 	})
 

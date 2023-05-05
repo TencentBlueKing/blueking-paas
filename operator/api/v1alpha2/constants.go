@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // 默认值相关常量
@@ -123,3 +124,6 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 	ResQuotaPlan2C2G,
 	ResQuotaPlan4C2G,
 }
+
+// AllowedImagePullPolicies 允许使用的镜像拉取策略
+var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, corev1.PullAlways, corev1.PullNever}

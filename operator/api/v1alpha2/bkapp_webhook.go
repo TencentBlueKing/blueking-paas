@@ -186,6 +186,12 @@ func (r *BkApp) getProcNames() []string {
 
 // Validate the part of Spec which is related with image build and images
 func (r *BkApp) validateBuildConfig() *field.Error {
+	// Validate image pull policy
+	if !lo.Contains(AllowedImagePullPolicies, r.Spec.Build.ImagePullPolicy) {
+		path := field.NewPath("spec").Child("build").Child("imagePullPolicy")
+		return field.NotSupported(path, r.Spec.Build.ImagePullPolicy, stringx.ToStrArray(AllowedImagePullPolicies))
+	}
+
 	// Use procImageGetter to handle both legacy and hub API versions because the webhook
 	// is configured with "MatchPolicy: Equivalent", which means it will be called for every
 	// possible API version of "BkApp".

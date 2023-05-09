@@ -26,7 +26,6 @@ from dynaconf import LazySettings
 from paasng.settings.utils import (
     NAME_FOR_SIMPLE_JWT,
     get_database_conf,
-    get_internal_services_jwt_auth_conf,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
 )
@@ -56,30 +55,6 @@ def test_get_database_for_tests(settings, for_tests, name):
     assert db_conf
     assert db_conf['NAME'] == name
     assert db_conf['PORT'] == 3308
-
-
-def test_get_internal_services_jwt_auth_conf_simple(settings):
-    settings.update({'INTERNAL_SERVICES_JWT_AUTH_CONF': None, 'ONE_SIMPLE_JWT_AUTH_KEY': 'foo-key'})
-    assert get_internal_services_jwt_auth_conf(settings) == {
-        'iss': 'paas-v3',
-        'key': 'foo-key',
-    }
-
-
-def test_get_internal_services_jwt_auth_conf_normal(settings):
-    settings.update(
-        {
-            'INTERNAL_SERVICES_JWT_AUTH_CONF': {
-                'iss': 'paas-v3',
-                'key': 'bar-key',
-            },
-            'ONE_SIMPLE_JWT_AUTH_KEY': None,
-        }
-    )
-    assert get_internal_services_jwt_auth_conf(settings) == {
-        'iss': 'paas-v3',
-        'key': 'bar-key',
-    }
 
 
 def test_get_paas_service_jwt_clients_simple(settings):

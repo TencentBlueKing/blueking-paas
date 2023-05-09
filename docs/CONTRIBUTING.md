@@ -24,7 +24,7 @@
 
 想要贡献代码，建议请先参考以下文档搭建你的本地开发环境
 
-- [本地开发部署指引](./install/develop_guide.md)
+- [本地开发部署指引](DEVELOP_GUIDE.md)
 
 ## GIT Commit 规范
 

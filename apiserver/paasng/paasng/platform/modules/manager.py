@@ -341,8 +341,7 @@ class ModuleCleaner:
             processed_service_ids.add(service.uuid)
 
     def delete_engine_apps(self):
-        """调用 workloads 接口删除与当前模块关联的 EngineApp"""
-        # Delete all related resources in workloads
+        """删除与当前模块关联的 EngineApp"""
         delete_module_related_res(self.module)
 
     def delete_module(self):

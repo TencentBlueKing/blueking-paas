@@ -20,6 +20,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 from typing import Dict, List, Tuple
 
+from paas_wl.cnative.specs.constants import ApiVersion
 from paas_wl.cnative.specs.models import default_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, ReplicasOverlay
 from paas_wl.resources.base import crd
@@ -91,17 +92,13 @@ class ProcReplicas:
             patch_body = {'spec': {'envOverlay': {'replicas': [r.dict() for r in replicas_overlay]}}}
             # "strategic json merge" is not available for CRD resources, use
             # "json merge" to replace the entire array.
-            crd.BkApp(client).patch(
-                self.res_name,
-                namespace=self.ns,
-                body=patch_body,
-                ptype=PatchType.MERGE,
-            )
+            crd.BkApp(client).patch(self.res_name, namespace=self.ns, body=patch_body, ptype=PatchType.MERGE)
 
     def _get_bkapp_res(self, client: EnhancedApiClient) -> BkAppResource:
         """Get app model resource from cluster"""
         try:
-            data = crd.BkApp(client).get(self.res_name, namespace=self.ns)
+            # TODO 确定多版本交互后解除版本锁定
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).get(self.res_name, namespace=self.ns)
         except ResourceMissing:
             raise ProcNotDeployed(f'{self.env} not deployed')
         return BkAppResource(**data)

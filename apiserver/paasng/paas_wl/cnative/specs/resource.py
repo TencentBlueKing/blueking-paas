@@ -26,6 +26,7 @@ from paas_wl.cnative.specs import credentials
 from paas_wl.cnative.specs.addresses import AddrResourceManager, save_addresses
 from paas_wl.cnative.specs.constants import (
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
+    ApiVersion,
     ConditionStatus,
     DeployStatus,
     MResConditionType,
@@ -53,7 +54,10 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
         # TODO: Provide apiVersion or using AppEntity(after some adapting works) to make
         # code more robust.
         try:
-            data = crd.BkApp(client).get(default_bkapp_name(env), namespace=wl_app.namespace)
+            # TODO 确定多版本交互后解除版本锁定
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).get(
+                default_bkapp_name(env), namespace=wl_app.namespace
+            )
         except ResourceNotFoundError:
             logger.info('Resource BkApp not found in cluster')
             return None
@@ -85,7 +89,8 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
             credentials.ImageCredentialsManager(client).upsert(image_credentials)
 
         # 创建或更新 BkApp
-        bkapp, _ = crd.BkApp(client).create_or_update(
+        # TODO 确定多版本交互后解除版本锁定
+        bkapp, _ = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
             default_bkapp_name(env),
             namespace=wl_app.namespace,
             body=manifest,
@@ -104,7 +109,7 @@ def deploy_networking(env: ModuleEnvironment) -> None:
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
     with get_client_by_app(wl_app) as client:
-        crd.DomainGroupMapping(client).create_or_update(
+        crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
             mapping.metadata.name,
             namespace=wl_app.namespace,
             body=mapping.to_deployable(),

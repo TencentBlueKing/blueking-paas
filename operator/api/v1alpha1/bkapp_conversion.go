@@ -88,6 +88,12 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
 		)
 	}
+
+	// Copy Status field
+	_ = copier.CopyWithOption(
+		&dst.Status, &src.Status, copier.Option{IgnoreEmpty: true, DeepCopy: true},
+	)
+
 	return nil
 }
 
@@ -153,5 +159,11 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
 		)
 	}
+
+	// Copy Status field
+	_ = copier.CopyWithOption(
+		&dst.Status, &src.Status, copier.Option{IgnoreEmpty: true, DeepCopy: true},
+	)
+
 	return nil
 }

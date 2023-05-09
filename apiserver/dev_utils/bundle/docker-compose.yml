@@ -1,39 +1,30 @@
 version: '3.2'
 services:
-  mysql_main:
-    image: mysql:5.7.22
-    volumes:
-      - ${STORAGE_ROOT}/mysql:/var/lib/mysql/
+  bk_paas3_mysql:
+    image: mysql:5.7.36
+    command: 'mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci'
     environment:
-      MYSQL_DATABASE: bk_paas_ng
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
-      - "3406:3306"
-    command: [
-      "mysqld",
-      "--character-set-server=utf8mb4",
-      "--collation-server=utf8mb4_unicode_ci"
-      ]
-  minio:
-    image: minio/minio:RELEASE.2018-08-02T23-11-36Z
-    command: server /data
+      - "3306:3306"
     volumes:
-      - ${STORAGE_ROOT}/minio:/data
+      - ${STORAGE_ROOT}/mysql:/var/lib/mysql/
+      - ./provision/mysql/init:/docker-entrypoint-initdb.d
+  bk_paas3_minio:
+    image: minio/minio:RELEASE.2023-02-27T18-10-45Z
+    command: server /data --console-address ":9000" --address ":9090"
     ports:
       - "9100:9000"
+      - "9090:9090"
     environment:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-  redis_main:
-    image: redis:3.2.0
-    command: [
-          "bash", "-c",
-          '
-           docker-entrypoint.sh
-           --requirepass ${REDIS_PASSWORD}
-          '
-    ]
+    volumes:
+      - ${STORAGE_ROOT}/minio:/data
+  bk_paas3_redis:
+    image: redis:7.0.5
+    command: 'redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}'
+    ports:
+      - "6379:6379"
     volumes:
       - ${STORAGE_ROOT}/redis:/var/lib/redis
-    ports:
-      - "6479:6379"

@@ -29,8 +29,6 @@ import (
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
 )
 
-var appCode, appModule, appEnv string
-
 var appLongDesc = `
 Deploy PaaS application using subcommands like "bkpaas-cli app deploy"
 `
@@ -50,10 +48,17 @@ func NewCmd() *cobra.Command {
 		},
 		Run: cmdUtil.DefaultSubCmdRun(),
 	}
+
+	// 有权限的应用列表
+	cmd.AddCommand(NewCmdList())
 	// 配置信息查看
 	cmd.AddCommand(NewCmdGetInfo())
 	// 蓝鲸应用部署
 	cmd.AddCommand(NewCmdDeploy())
+	// 查看部署结果
+	cmd.AddCommand(NewCmdDeployResult())
+	// 查看蓝鲸应用部署历史
+	cmd.AddCommand(NewCmdDeployHistory())
 
 	return cmd
 }

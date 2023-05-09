@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from contextlib import closing
 from typing import List
 
 from blue_krill.redis_tools.messaging import StreamChannelSubscriber
@@ -53,27 +54,31 @@ class StreamViewSet(ViewSet):
         subscriber = self.get_subscriber(channel_id)
 
         def resp():
-            for data in subscriber.get_events():
-                e = ServerSendEvent.from_raw(data)
-                if e.is_internal:
-                    continue
+            with closing(subscriber):
+                for data in subscriber.get_events():
+                    e = ServerSendEvent.from_raw(data)
+                    if e.is_internal:
+                        continue
 
-                for s in e.to_yield_str_list():
+                    for s in e.to_yield_str_list():
+                        yield s
+
+                for s in ServerSendEvent.to_eof_str_list():
                     yield s
-
-            for s in ServerSendEvent.to_eof_str_list():
-                yield s
 
         return StreamingHttpResponse(resp(), content_type='text/event-stream')
 
     @swagger_auto_schema(query_serializer=HistoryEventsQuerySLZ, responses={200: StreamEventSLZ(many=True)})
     def history_events(self, request, channel_id):
-        subscriber = self.get_subscriber(channel_id)
         slz = HistoryEventsQuerySLZ(data=request.query_params)
         slz.is_valid(True)
 
-        last_event_id = slz.validated_data["last_event_id"]
-        events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
+        subscriber = self.get_subscriber(channel_id)
+
+        with closing(subscriber):
+            last_event_id = slz.validated_data["last_event_id"]
+            events = subscriber.get_history_events(last_event_id=last_event_id, ignore_special=False)
+
         return Response(data=StreamEventSLZ(events, many=True).data, content_type="application/json")
 
 

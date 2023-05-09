@@ -17,10 +17,15 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.utils.translation import gettext as _
+
+# 添加注解 compute-by-limits=true 后，CPU 计算 Utilization 时
+# 将根据当前使用量 & limits 来计算目标副本数，否则默认使用 requests 来计算
+GPA_COMPUTE_BY_LIMITS_ANNO_KEY = "compute-by-limits"
 
 
 class ScalingMetricName(str, StructuredEnum):
-    """扩缩容指标名称"""
+    """扩缩容指标名称（用于组装 CPA 的指标）"""
 
     CPU = EnumField('cpu')
     MEMORY = EnumField('memory')
@@ -35,7 +40,7 @@ class ScalingMetricSourceType(str, StructuredEnum):
 
 
 class ScalingMetricTargetType(str, StructuredEnum):
-    """扩缩容指标计量类型"""
+    """扩缩容指标计量类型（用于组装 CPA 的指标类型）"""
 
     UTILIZATION = EnumField('Utilization')
     AVERAGE_VALUE = EnumField('AverageValue')
@@ -47,3 +52,12 @@ class ScalingEnvName(str, StructuredEnum):
     STAG = EnumField('stag', label='仅测试环境')
     PROD = EnumField('prod', label='仅生产环境')
     GLOBAL = EnumField('_global_', label='所有环境')
+
+
+class ScalingMetric(str, StructuredEnum):
+    """扩缩容指标（用户可选指标）"""
+
+    CPU_UTILIZATION = EnumField('cpuUtilization', label=_('CPU 使用率'))
+    MEMORY_UTILIZATION = EnumField('memoryUtilization', label=_('内存使用率'))
+    CPU_AVERAGE_VALUE = EnumField('cpuAverageValue', label=_('CPU 使用量'))
+    MEMORY_AVERAGE_VALUE = EnumField('memoryAverageValue', label=_('内存使用量'))

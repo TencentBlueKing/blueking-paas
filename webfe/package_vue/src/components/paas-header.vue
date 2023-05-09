@@ -98,7 +98,7 @@
         v-if="userInitialized && user.isAuthenticated"
         class="ps-head-right"
       >
-        <template v-if="GLOBAL.APP_VERSION === 'te'">
+        <template>
           <li class="mr20">
             <dropdown
               ref="dropdown"
@@ -171,6 +171,7 @@
             </dropdown>
           </li>
           <li
+            v-if="userFeature.PHALANX"
             v-bk-tooltips.bottom="{ content: $t('我的告警'), distance: 20 }"
             class="ps-head-last my-alarm"
           >

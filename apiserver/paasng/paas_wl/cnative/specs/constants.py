@@ -39,6 +39,8 @@ MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
 # 注解中存储镜像凭证引用的键名
 IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
+# 注解中存储数据统计站点ID的键名
+PA_SITE_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
 
 
 class ApiVersion(str, StructuredEnum):

@@ -268,7 +268,8 @@ class CNativeProcController:
         if autoscaling:
             raise NotImplementedError('work in progress')
 
-        if not target_replicas:
+        # can't use `if not target_replicas` because stop process will use `scale(proc_type, target_replicas=0)`
+        if target_replicas is None:
             raise ValueError('target_replicas required when scale process')
 
         if target_replicas > self.HARD_LIMIT_COUNT:
@@ -296,7 +297,8 @@ def get_processes_status(app: WlApp) -> List[Process]:
     results: List[Process] = []
 
     try:
-        procfile = Release.objects.get_latest(app).get_procfile()
+        release: Release = Release.objects.get_latest(app)
+        procfile = release.get_procfile()
     except Release.DoesNotExist:
         return results
 

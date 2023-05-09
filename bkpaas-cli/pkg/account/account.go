@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
 // TokenExpiredOrInvalid Token 过期或无效
@@ -56,4 +57,9 @@ func FetchUserNameByAccessToken(accessToken string) (string, error) {
 func IsUserAuthorized(accessToken string) bool {
 	username, err := FetchUserNameByAccessToken(accessToken)
 	return (username != "" && err == nil)
+}
+
+// GetOAuthTokenUrl 返回获取 AccessToken 的 API 地址
+func GetOAuthTokenUrl() string {
+	return config.G.PaaSUrl + "/backend/api/accounts/oauth/token/"
 }

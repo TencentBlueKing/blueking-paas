@@ -404,7 +404,7 @@
                                     child.isSelected = true;
                                     nav.isActived = true;
                                     nav.isExpanded = true;
-                                } else if (child.destRoute.name === routeName) {
+                                } else if (child.destRoute && child.destRoute.name === routeName) {
                                     child.isSelected = true;
                                     nav.isActived = true;
                                     nav.isExpanded = true;

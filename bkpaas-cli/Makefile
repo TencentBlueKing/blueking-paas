@@ -25,6 +25,25 @@ else
     GITCOMMIT=$(shell git rev-parse HEAD)
 endif
 
+ifdef GOOS
+    GOOS=${GOOS}
+else
+    GOOS=""
+endif
+
+ifdef GOARCH
+    GOARCH=${GOARCH}
+else
+    GOARCH=""
+endif
+
+ifeq (${GOOS}, windows)
+    BIN_NAME=bkpaas-cli.exe
+else
+    BIN_NAME=bkpaas-cli
+endif
+
+
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
@@ -45,11 +64,11 @@ GOCILINT ?= $(LOCALBIN)/golangci-lint
 help: ## 展示可用 make 命令及说明
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ 开发常用命令
+##@ 开发/构建命令
 
 .PHONY: build
 build: tidy # build executable binary
-	go build -ldflags ${LDFLAGS} -o bkpaas-cli ./main.go
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o ${BIN_NAME} ./main.go
 
 .PHONY: fmt
 fmt: ## 执行 golines，gofumpt ...

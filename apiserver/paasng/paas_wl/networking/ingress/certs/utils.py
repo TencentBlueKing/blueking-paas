@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import base64
 import logging
-import re
 from typing import Optional, Tuple
 
 from django.utils.encoding import force_bytes, force_str
@@ -47,7 +46,7 @@ class DomainWithCert:
 
     @classmethod
     def from_app_domain(cls, domain: AppDomain) -> 'DomainWithCert':
-        """get DomainWithCert from `AppDomain`, will set shared_cert if found some matched"""
+        """Get DomainWithCert from `AppDomain`, will set shared_cert if found some matched"""
         cert = domain.cert or domain.shared_cert
         if not cert:
             cert = pick_shared_cert(domain.app.region, domain.host)
@@ -97,9 +96,6 @@ def pick_shared_cert(region: str, host: str) -> Optional[AppDomainSharedCert]:
     :param host: Hostname for finding valid cert object
     """
     for cert in AppDomainSharedCert.objects.filter(region=region):
-        for cn in cert.auto_match_cns.split(';'):
-            # CN format: foo.com / *.bar.com
-            pattern = re.escape(cn).replace(r'\*', r'[a-zA-Z0-9-]+')
-            if re.match(f'^{pattern}$', host):
-                return cert
+        if cert.match_hostname(host):
+            return cert
     return None

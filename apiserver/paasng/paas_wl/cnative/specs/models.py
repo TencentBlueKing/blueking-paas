@@ -28,6 +28,7 @@ from pydantic.error_wrappers import display_errors
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.platform.applications.models import WlApp
+from paas_wl.platform.applications.models.managers.app_metadata import get_metadata
 from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromName
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.images.models import AppImageCredential, ImageCredentialRef
@@ -47,6 +48,7 @@ from .constants import (
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
+    PA_SITE_ID_ANNO_KEY,
     DeployStatus,
 )
 from .v1alpha1.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
@@ -244,6 +246,10 @@ class AppModelDeploy(TimestampedModel):
         manifest.metadata.annotations[BKPAAS_ADDONS_ANNO_KEY] = json.dumps(
             [svc.name for svc in mixed_service_mgr.list_binded(env.module)]
         )
+
+        # inject pa site id when the feature is enabled
+        if bkpa_site_id := get_metadata(wl_app).bkpa_site_id:
+            manifest.metadata.annotations[PA_SITE_ID_ANNO_KEY] = str(bkpa_site_id)
 
         # flush credentials and inject a flag to tell operator that workloads have crated the secret
         if credential_refs:

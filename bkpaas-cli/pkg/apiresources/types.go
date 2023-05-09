@@ -25,16 +25,33 @@ import (
 // AuthApiErr Token 鉴权 API 异常
 var AuthApiErr = errors.New("Auth API unavailable")
 
-// ApiRespDecodeErr API  返回格式异常
-var ApiRespDecodeErr = errors.New("Decode api response failed")
+// PaaSApiErr 无法获取蓝鲸应用基础信息
+var PaaSApiErr = errors.New("PaaS API unavailable")
 
-// FetchAppInfoErr 无法获取蓝鲸应用基础信息
-var FetchAppInfoErr = errors.New("Failed to fetch application info")
+// ApiRespDecodeErr API 返回格式异常
+var ApiRespDecodeErr = errors.New("Decode api response failed")
 
 // Requester API 调用入口
 type Requester interface {
 	// CheckToken 检查 AccessToken 是否有效，若有效则返回用户身份信息
 	CheckToken(token string) (map[string]any, error)
+
+	// ListAppMinimal 获取应用简明信息列表
+	ListAppMinimal() (map[string]any, error)
 	// GetAppInfo 获取应用基础信息
 	GetAppInfo(appCode string) (map[string]any, error)
+
+	// DeployDefaultApp 部署普通应用
+	DeployDefaultApp(appCode, appModule, deployEnv, branch string) (map[string]any, error)
+	// GetDefaultAppDeployResult 获取普通应用部署结果
+	GetDefaultAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
+	// ListDefaultAppDeployHistory 获取普通应用部署历史（最近N次）
+	ListDefaultAppDeployHistory(appCode, appModule string) (map[string]any, error)
+
+	// DeployCNativeApp 部署云原生应用
+	DeployCNativeApp(appCode, appModule, deployEnv string, manifest map[string]any) (map[string]any, error)
+	// GetCNativeAppDeployResult 获取云原生应用部署结果
+	GetCNativeAppDeployResult(appCode, appModule, deployEnv string) (map[string]any, error)
+	// ListCNativeAppDeployHistory 获取云原生应用部署历史（最近N次）
+	ListCNativeAppDeployHistory(appCode, appModule, deployEnv string) (map[string]any, error)
 }

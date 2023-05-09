@@ -29,16 +29,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/labels"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
-	"bk.tencent.com/paas-app-operator/pkg/utils/basic"
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
 var _ = Describe("", func() {
-	var bkapp *paasv1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var domainMapping *paasv1alpha1.DomainGroupMapping
 	var getIngressesCnt func() int
 
@@ -49,23 +49,24 @@ var _ = Describe("", func() {
 
 	BeforeEach(func() {
 		// Use a random name for every test case
-		nameSuffix := strings.ToLower(basic.RandStr(6))
-		bkapp = &paasv1alpha1.BkApp{
-			TypeMeta: metav1.TypeMeta{Kind: v1alpha1.KindBkApp, APIVersion: v1alpha1.GroupVersion.String()},
+		nameSuffix := strings.ToLower(stringx.RandLetters(6))
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta: metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "sample-app-" + nameSuffix,
 				Namespace:   "default",
 				Annotations: map[string]string{},
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []paasv1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha1.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 				},
 			},
@@ -84,8 +85,8 @@ var _ = Describe("", func() {
 			Spec: paasv1alpha1.DomainGroupMappingSpec{
 				Ref: paasv1alpha1.MappingRef{
 					Name:       bkapp.Name,
-					Kind:       paasv1alpha1.KindBkApp,
-					APIVersion: paasv1alpha1.GroupVersion.String(),
+					Kind:       paasv1alpha2.KindBkApp,
+					APIVersion: paasv1alpha2.GroupVersion.String(),
 				},
 				// 1 builtin subdomain + 2 custom domains(same host, different path)
 				Data: []paasv1alpha1.DomainGroup{
@@ -176,7 +177,7 @@ var _ = Describe("", func() {
 		Eventually(getIngressesCnt, timeout, interval).Should(Equal(3))
 
 		By("BkApp's status should also be updated")
-		var app paasv1alpha1.BkApp
+		var app paasv1alpha2.BkApp
 		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(bkapp), &app)
 		Expect(app.Status.Addresses[0].URL).To(Equal("http://sample.example.com/"))
 
@@ -194,7 +195,7 @@ var _ = Describe("", func() {
 			Eventually(getIngressesCnt, timeout, interval).Should(Equal(3))
 		})
 		It("Test delete DomainGroupMapping", func() {
-			var app paasv1alpha1.BkApp
+			var app paasv1alpha2.BkApp
 			_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(bkapp), &app)
 			Expect(app.Status.Addresses[0].URL).To(Equal("http://sample.example.com/"))
 
@@ -237,7 +238,7 @@ var _ = Describe("", func() {
 			}
 			addresses := ToAddressableStatus(groups)
 			Expect(addresses).To(Equal(
-				[]paasv1alpha1.Addressable{
+				[]paasv1alpha2.Addressable{
 					{
 						SourceType: string(res.DomainSubDomain),
 						URL:        "http://subdomain.example.com/",

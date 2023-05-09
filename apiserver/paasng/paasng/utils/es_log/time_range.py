@@ -45,18 +45,47 @@ def get_time_delta(time_delta_string) -> datetime.timedelta:
 DEFAULT_EPOCH = datetime.datetime(1970, 1, 1)
 
 
-def get_epoch_milliseconds(dt: datetime.datetime) -> int:
-    """Return total number of milliseconds.
-
-
+def get_epoch_milliseconds(dt: datetime.datetime, ignore_timezone: bool = False) -> int:
+    """Return total number of milliseconds to EPOCH.
     This total number of milliseconds is the elapsed milliseconds since timestamp or unix epoch
     counting from 1 January 1970.
+
+    if ignore timezone, will return the milliseconds since to datetime.datetime(1970, 1, 1, tzinfo=dt.tzinfo)
+    if not ignore timezone, will return the milliseconds since to datetime.datetime(1970, 1, 1, tzinfo=utc)
+
+    by default, we should not ignore the time zone,
+    unless you are using someway like datetime.utcnow() which does not attach a time zone to the generated datetime
+
+    :param dt: the given datetime
+    :param ignore_timezone: whether to ignore time zone?
+
+
+    >>> import datetime
+    >>> tz = datetime.timezone(datetime.timedelta(hours=1))
+    >>> epoch_at_tz = datetime.datetime(1970, 1, 1, tzinfo=tz)
+    >>> get_epoch_milliseconds(dt=epoch_at_tz)
+    0
+
+    >>> import datetime
+    >>> tz = datetime.timezone(datetime.timedelta(hours=1))
+    >>> epoch_at_tz = datetime.datetime(1970, 1, 1, tzinfo=tz)
+    >>> get_epoch_milliseconds(dt=epoch_at_tz, ignore_timezone=False)
+    -3600000
+
+    >>> import datetime
+    >>> tz = datetime.timezone(datetime.timedelta(hours=-1))
+    >>> epoch_at_tz = datetime.datetime(1970, 1, 1, tzinfo=tz)
+    >>> get_epoch_milliseconds(dt=epoch_at_tz, ignore_timezone=False)
+    3600000
     """
     EPOCH = DEFAULT_EPOCH
     if dt.tzinfo is not None:
         # respect tzinfo, if given
         EPOCH = datetime.datetime(1970, 1, 1, tzinfo=dt.tzinfo)
     timestamp = (dt - EPOCH).total_seconds()
+    if not ignore_timezone:
+        if utcoffset := dt.utcoffset():
+            timestamp -= utcoffset.total_seconds()
     return int(timestamp * 1000)
 
 

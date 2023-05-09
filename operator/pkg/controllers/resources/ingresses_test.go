@@ -28,25 +28,26 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Test ingresses.go", func() {
-	var bkapp *paasv1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 
 	BeforeEach(func() {
-		bkapp = &paasv1alpha1.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha2.KindBkApp, APIVersion: paasv1alpha2.GroupVersion.String()},
 			ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
-			Spec: paasv1alpha1.AppSpec{
-				Processes: []paasv1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   paasv1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 				},
 			},

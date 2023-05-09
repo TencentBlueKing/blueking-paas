@@ -25,7 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 var _ = Describe("Test revision tools", func() {
@@ -38,13 +38,13 @@ var _ = Describe("Test revision tools", func() {
 			Annotations: map[string]string{},
 		}, Not(HaveOccurred()), int64(0)),
 		Entry("RevisionAnnoKey = 1", &metav1.ObjectMeta{
-			Annotations: map[string]string{paasv1alpha1.RevisionAnnoKey: "1"},
+			Annotations: map[string]string{paasv1alpha2.RevisionAnnoKey: "1"},
 		}, Not(HaveOccurred()), int64(1)),
 		Entry("RevisionAnnoKey = 2", &metav1.ObjectMeta{
-			Annotations: map[string]string{paasv1alpha1.RevisionAnnoKey: "2"},
+			Annotations: map[string]string{paasv1alpha2.RevisionAnnoKey: "2"},
 		}, Not(HaveOccurred()), int64(2)),
 		Entry("invalid RevisionAnnoKey", &metav1.ObjectMeta{
-			Annotations: map[string]string{paasv1alpha1.RevisionAnnoKey: "xxx"},
+			Annotations: map[string]string{paasv1alpha2.RevisionAnnoKey: "xxx"},
 		}, HaveOccurred(), int64(0)),
 	)
 
@@ -59,7 +59,7 @@ var _ = Describe("Test revision tools", func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						paasv1alpha1.RevisionAnnoKey: "1",
+						paasv1alpha2.RevisionAnnoKey: "1",
 					},
 				},
 			},
@@ -68,14 +68,14 @@ var _ = Describe("Test revision tools", func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						paasv1alpha1.RevisionAnnoKey: "1",
+						paasv1alpha2.RevisionAnnoKey: "1",
 					},
 				},
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						paasv1alpha1.RevisionAnnoKey: "2",
+						paasv1alpha2.RevisionAnnoKey: "2",
 					},
 				},
 			},
@@ -84,14 +84,14 @@ var _ = Describe("Test revision tools", func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						paasv1alpha1.RevisionAnnoKey: "1",
+						paasv1alpha2.RevisionAnnoKey: "1",
 					},
 				},
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						paasv1alpha1.RevisionAnnoKey: "2",
+						paasv1alpha2.RevisionAnnoKey: "2",
 					},
 				},
 			},
@@ -99,7 +99,7 @@ var _ = Describe("Test revision tools", func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						paasv1alpha1.RevisionAnnoKey: "999",
+						paasv1alpha2.RevisionAnnoKey: "999",
 					},
 				},
 			},

@@ -1157,6 +1157,8 @@ BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # 同步告警策略到监控的配置
 MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})
+# Rabbitmq 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'rabbitmq'}
+RABBITMQ_MONITOR_CONF = settings.get('RABBITMQ_MONITOR_CONF', {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 'stage')
 

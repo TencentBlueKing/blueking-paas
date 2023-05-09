@@ -21,7 +21,40 @@ import datetime
 import arrow
 import pytest
 
-from paasng.utils.es_log.time_range import SmartTimeRange
+from paasng.utils.es_log.time_range import SmartTimeRange, get_epoch_milliseconds
+
+
+@pytest.mark.parametrize(
+    "dt, ignore_timezone, expected",
+    [
+        (datetime.datetime(2023, 4, 20, 15, 40, 51, 997557), True, 1682005251997),
+        (datetime.datetime(2023, 4, 20, 15, 40, 51, 997557), False, 1682005251997),
+        (
+            datetime.datetime(2023, 4, 20, 15, 40, 51, 997557, tzinfo=datetime.timezone(datetime.timedelta(hours=1))),
+            True,
+            1682005251997,
+        ),
+        (
+            datetime.datetime(2023, 4, 20, 15, 40, 51, 997557, tzinfo=datetime.timezone(datetime.timedelta(hours=1))),
+            False,
+            # Note: 这个时间不一样的
+            1682005251997 - 3600 * 1000,
+        ),
+        (
+            datetime.datetime(2023, 4, 20, 15, 40, 51, 997557, tzinfo=datetime.timezone(datetime.timedelta(hours=-1))),
+            True,
+            1682005251997,
+        ),
+        (
+            datetime.datetime(2023, 4, 20, 15, 40, 51, 997557, tzinfo=datetime.timezone(datetime.timedelta(hours=-1))),
+            False,
+            # Note: 这个时间不一样的
+            1682005251997 + 3600 * 1000,
+        ),
+    ],
+)
+def test_get_epoch_milliseconds(dt, ignore_timezone, expected):
+    assert get_epoch_milliseconds(dt, ignore_timezone) == expected
 
 
 class TestSmartTimeRange:
@@ -72,8 +105,8 @@ class TestSmartTimeRange:
             (
                 arrow.get(datetime.datetime(2019, 2, 11), "Asia/Shanghai").datetime,
                 arrow.get(datetime.datetime(2019, 2, 12), "Asia/Shanghai").datetime,
-                1549843200000,
-                1549929600999,
+                1549814400000,
+                1549900800999,
             ),
             # arrow.get(1549814400) -> datetime.daatetime(2019, 02, 10, 16)
             # arrow.get(1549900800) -> datetime.daatetime(2019, 02, 11, 16)
@@ -86,8 +119,8 @@ class TestSmartTimeRange:
             (
                 arrow.get(1549814400).replace(tzinfo="Asia/Shanghai").datetime,
                 arrow.get(1549900800).replace(tzinfo="Asia/Shanghai").datetime,
-                1549814400000,
-                1549900800999,
+                1549785600000,
+                1549872000999,
             ),
         ],
     )

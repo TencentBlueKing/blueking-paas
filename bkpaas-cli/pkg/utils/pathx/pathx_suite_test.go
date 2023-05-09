@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPath(t *testing.T) {
+func TestPathx(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "pkg/utils/pathx Suite")
 }

@@ -25,6 +25,8 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // BkApp is the Schema for the bkapps API
@@ -66,8 +68,10 @@ type BkAppList struct {
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {
-	Processes     []Process `json:"processes"`
-	Configuration AppConfig `json:"configuration"`
+	// +optional
+	Build         BuildConfig `json:"build"`
+	Processes     []Process   `json:"processes"`
+	Configuration AppConfig   `json:"configuration"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -94,6 +98,39 @@ func (spec *AppSpec) FindProcess(name string) *Process {
 	return nil
 }
 
+// BuildConfig is the configuration related with application building, the platform
+// support 3 types of build config currently: image, remote build by Dockerfile and
+// remote build by buildpack.
+type BuildConfig struct {
+	// *1. Build by image*
+	// Image is the container image name of current application, tag and container
+	// registry address can be included.
+	// +optional
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is the image pull policy of given image.
+	// +optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImageCredentialsName is the name of image credentials, required for pulling
+	// images stores in private registry.
+	// +optional
+	ImageCredentialsName string `json:"imageCredentialsName,omitempty"`
+
+	// *2. Remote build by Dockerfile*
+	// Dockerfile is the name of target Dockerfile, it will be used to build.
+	// +optional
+	Dockerfile string `json:"dockerfile,omitempty"`
+	// BuildTarget, when multiple stages are defined in Dockerfile, this field is used
+	// to specify the target stage.
+	// +optional
+	BuildTarget string `json:"buildTarget,omitempty"`
+	// Args is the additional build arguments, it will be used to build image by Dockerfile
+	// +optional
+	Args map[string]string `json:"args,omitempty"`
+
+	// *3. Remote build by buildpack*
+	// TODO
+}
+
 // Process defines the process of BkApp
 type Process struct {
 	// Name of process
@@ -107,6 +144,10 @@ type Process struct {
 
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
+
+	// ResQuotaPlan is the name of plan which defines how much resources current process
+	// can consume.
+	ResQuotaPlan paasv1alpha2.ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
@@ -155,7 +196,7 @@ type AppEnvVar struct {
 
 // AppEnvOverlay defines environment specified configs.
 type AppEnvOverlay struct {
-	// Replicas overwrite processes's replicas count
+	// Replicas overwrite process's replicas count
 	// +optional
 	Replicas []ReplicasOverlay `json:"replicas,omitempty"`
 
@@ -168,8 +209,13 @@ type AppEnvOverlay struct {
 type EnvName string
 
 // IsEmpty checks if current environment is empty(absent)
-func (r EnvName) IsEmpty() bool {
-	return string(r) == ""
+func (n EnvName) IsEmpty() bool {
+	return string(n) == ""
+}
+
+// IsValid checks if a given string is valid as environment name
+func (n EnvName) IsValid() bool {
+	return n == StagEnv || n == ProdEnv
 }
 
 const (
@@ -178,11 +224,6 @@ const (
 	// ProdEnv refers to "production" env
 	ProdEnv EnvName = "prod"
 )
-
-// CheckEnvName checks if a given string is valid as environment name
-func CheckEnvName(n EnvName) bool {
-	return n == StagEnv || n == ProdEnv
-}
 
 // ReplicasOverlay overwrite process's replicas by environment.
 type ReplicasOverlay struct {

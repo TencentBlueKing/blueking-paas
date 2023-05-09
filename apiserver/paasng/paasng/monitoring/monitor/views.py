@@ -30,7 +30,9 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
-from paasng.monitoring.monitor.alert_rules.constants import DEFAULT_RULE_CONFIGS
+from paasng.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
+from paasng.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
+from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
@@ -207,8 +209,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(serializer.data)
 
     @swagger_auto_schema(responses={200: SupportedAlertSLZ(many=True)})
-    def list_supported_alerts(self, request):
-        """查询支持的告警信息"""
+    def list_supported_alert_rules(self, request):
+        """列举支持的告警规则"""
         supported_alerts = []
 
         for _, alert_config in DEFAULT_RULE_CONFIGS.items():
@@ -219,6 +221,18 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
         return Response(serializer.data)
+
+    @perm_classes([application_perm_class(AppAction.EDIT_ALERT_POLICY)], policy='merge')
+    def init_alert_rules(self, request, code):
+        """初始化告警规则"""
+        application = self.get_application()
+
+        try:
+            AlertRuleManager(application).init_rules()
+        except AsCodeAPIError:
+            raise error_codes.INIT_ALERT_RULES_FAILED
+
+        return Response()
 
 
 class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):

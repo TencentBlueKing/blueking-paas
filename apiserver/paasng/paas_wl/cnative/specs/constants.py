@@ -47,6 +47,7 @@ class ApiVersion(str, StructuredEnum):
     """Kubernetes CRD API versions"""
 
     V1ALPHA1 = 'paas.bk.tencent.com/v1alpha1'
+    V1ALPHA2 = 'paas.bk.tencent.com/v1alpha2'
 
 
 class DeployStatus(str, StructuredEnum):

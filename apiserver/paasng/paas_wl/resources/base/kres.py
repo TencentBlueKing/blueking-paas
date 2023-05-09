@@ -32,6 +32,7 @@ from attrs import define
 from kubernetes import client as client_mod
 from kubernetes.client.api_client import ApiClient
 from kubernetes.client.exceptions import ApiException
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from kubernetes.dynamic.resource import Resource, ResourceInstance
 
 from paas_wl.resources.base.constants import QUERY_LOG_DEFAULT_TIMEOUT
@@ -194,8 +195,16 @@ class BaseOperations:
         self.kres = kres
         self.request_timeout = request_timeout
 
-        self._preferred_resource = self.client.get_preferred_resource(self.kres.kind)
         self._available_resources = self.client.resources.search(kind=self.kres.kind)
+        try:
+            self._preferred_resource = self.client.get_preferred_resource(self.kres.kind)
+        except ResourceNotFoundError:
+            # 存在一种场景，即某类资源在 preferred group version 中是不存在的，
+            # 但集群中存在，此时如果指定 api_version 进行访问 / 操作，应当是被允许的
+            if not (self._available_resources and self.kres.api_version):
+                raise
+
+            self._preferred_resource = None
 
         self.resource: Resource  # make type checker happy
         if not self.kres.api_version:
@@ -205,6 +214,9 @@ class BaseOperations:
             self.resource = self.client.resources.get(kind=self.kres.kind, api_version=self.kres.api_version)
 
     def get_preferred_version(self) -> str:
+        if not self._preferred_resource:
+            return ''
+
         return self._preferred_resource.group_version
 
     def get_available_versions(self) -> List[str]:

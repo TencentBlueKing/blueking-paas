@@ -6,15 +6,15 @@
 
 简体中文 | [English](README_EN.md)
 
-> 重要提示: main 分支在开发过程中可能处于不可用状态。
-> 请通过 [releases](https://github.com/TencentBlueKing/blueking-paas/releases) 而非 main 分支去获取稳定的版本代码。
+> 注意: main 分支在开发过程中可能处于不可用状态。
+> 请通过 [releases](https://github.com/TencentBlueKing/blueking-paas/releases) 而非 main 分支去获取稳定版本代码。
 
 蓝鲸智云 PaaS 平台是一个开放式的开发平台，让开发者可以方便快捷地创建、开发、部署和管理 SaaS 应用。它提供的核心服务有：开发者中心、API
 网关、统一登录、蓝鲸桌面、可视化开发平台等，旨在帮助用户快速、低成本的构建免运维运营系统与支撑工具。
 
 本项目是 `PaaS平台 - 开发者中心`。
 
-**PaaS服务核心服务开源项目**
+**PaaS 服务核心服务开源项目**
 
 - PaaS 平台 - [开发者中心](https://github.com/TencentBlueKing/blueking-paas)
 - PaaS 平台 - [统一登录](https://github.com/TencentBlueKing/bk-user)

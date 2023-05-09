@@ -29,9 +29,7 @@ class ItsmBasicAuthentication(BasicAuthentication):
         """
         验证回调请求是否来自 ITSM
         https://github.com/TencentBlueKing/bk-itsm/blob/master/docs/wiki/access.md
-        TODO: itsm 该 API 在 APIGW 开启了用户态验证，无法验证通过，先跳过。等他们处理后再打开
         """
-        return
         token = request.data.get('token', '')
 
         client = ItsmClient()

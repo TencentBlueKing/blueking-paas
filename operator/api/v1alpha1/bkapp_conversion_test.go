@@ -65,6 +65,30 @@ var _ = Describe("test conversion back and forth", func() {
 					},
 				},
 			},
+			Status: AppStatus{
+				Phase: AppRunning,
+				Conditions: []metav1.Condition{
+					{
+						LastTransitionTime: metav1.Now(),
+						Message:            "",
+						ObservedGeneration: 1,
+						Reason:             AppAvailable,
+						Status:             metav1.ConditionTrue,
+						Type:               AppAvailable,
+					},
+				},
+				Addresses: []Addressable{
+					{
+						SourceType: SourceTypeCustom,
+						URL:        "https://example.com",
+					},
+				},
+				Revision: &Revision{
+					Revision: 1,
+				},
+				DeployId:           "1",
+				ObservedGeneration: 2,
+			},
 		}
 
 		// Convert the resource back and forth
@@ -75,6 +99,7 @@ var _ = Describe("test conversion back and forth", func() {
 
 		// Make sure the conversion is lossless.
 		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
+		Expect(v1alpha1bkapp.Status).To(Equal(v1alpha1bkappFromConverted.Status))
 	})
 
 	It("hub -> v1alpha1 -> hub", func() {
@@ -105,6 +130,30 @@ var _ = Describe("test conversion back and forth", func() {
 					},
 				},
 			},
+			Status: paasv1alpha2.AppStatus{
+				Phase: paasv1alpha2.AppRunning,
+				Conditions: []metav1.Condition{
+					{
+						LastTransitionTime: metav1.Now(),
+						Message:            "",
+						ObservedGeneration: 1,
+						Reason:             AppAvailable,
+						Status:             metav1.ConditionTrue,
+						Type:               AppAvailable,
+					},
+				},
+				Addresses: []paasv1alpha2.Addressable{
+					{
+						SourceType: SourceTypeCustom,
+						URL:        "https://example.com",
+					},
+				},
+				Revision: &paasv1alpha2.Revision{
+					Revision: 1,
+				},
+				DeployId:           "1",
+				ObservedGeneration: 2,
+			},
 		}
 
 		// Convert the resource back and forth
@@ -115,5 +164,6 @@ var _ = Describe("test conversion back and forth", func() {
 
 		// Make sure the conversion is lossless.
 		Expect(v1alpha2bkapp.Spec).To(Equal(v1alpha2bkappFromConverted.Spec))
+		Expect(v1alpha2bkapp.Status).To(Equal(v1alpha2bkappFromConverted.Status))
 	})
 })

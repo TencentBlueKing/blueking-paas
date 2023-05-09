@@ -132,3 +132,21 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+    - autoscaling.tkex.tencent.com
+  resources:
+    - generalpodautoscalers
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - autoscaling.tkex.tencent.com
+  resources:
+    - generalpodautoscalers/status
+  verbs:
+    - get

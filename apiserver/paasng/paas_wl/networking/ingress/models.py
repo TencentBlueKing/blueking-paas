@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import re
 from dataclasses import dataclass
 
 from django.core.validators import RegexValidator
@@ -107,6 +108,19 @@ class AppDomainSharedCert(BasicCert):
 
     class Meta:
         db_table = "services_appdomainsharedcert"
+
+    def match_hostname(self, hostname: str) -> bool:
+        """Check if current certificate object matches the given hostname
+
+        :param hostname: hostname to be checked, such as "foo.com".
+        :return: True if matched, False otherwise.
+        """
+        for cn in self.auto_match_cns.split(';'):
+            # CN format: foo.com / *.bar.com
+            pattern = re.escape(cn).replace(r'\*', r'[a-zA-Z0-9-]+')
+            if re.match(f'^{pattern}$', hostname):
+                return True
+        return False
 
 
 class AppSubpathManager(models.Manager):

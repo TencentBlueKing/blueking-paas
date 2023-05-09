@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 from functools import reduce
-from operator import add
+from operator import add, attrgetter
 from typing import Dict, List, Optional, Protocol, Tuple, Union
 
 from django.conf import settings
@@ -30,7 +30,12 @@ from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE
 from paasng.platform.log.exceptions import LogQueryError
-from paasng.platform.log.filters import FieldFilter, count_filters_options
+from paasng.platform.log.filters import (
+    FieldFilter,
+    agg_builtin_filters,
+    count_filters_options_from_agg,
+    count_filters_options_from_logs,
+)
 from paasng.platform.log.models import BKLogConfig, ElasticSearchConfig, ElasticSearchHost
 
 # TODO: 避免引用插件开发中心的代码, 提取通用组件
@@ -54,7 +59,9 @@ class LogClientProtocol(Protocol):
     def aggregate_date_histogram(self, index: str, search: SmartSearch, timeout: int) -> FieldBucketData:
         """Aggregate time-based histogram"""
 
-    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, mappings: dict, timeout: int
+    ) -> List[FieldFilter]:
         """Aggregate fields filters"""
 
     def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
@@ -108,7 +115,9 @@ class BKLogClient:
         resp = self._call_api(data, timeout)
         return AggResponse(search.search.aggs, search.search, resp["data"]["aggregations"]).histogram
 
-    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, mappings: dict, timeout: int
+    ) -> List[FieldFilter]:
         """aggregate fields filter"""
         # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
         search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
@@ -119,7 +128,9 @@ class BKLogClient:
         }
         resp = self._call_api(data, timeout)
         filters = {field: FieldFilter(name=field, key=field) for field in resp["data"]["select_fields_order"]}
-        return count_filters_options(list(Response(search.search, resp["data"])), filters)
+        # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
+        filters = count_filters_options_from_logs(list(Response(search.search, resp["data"])), filters)
+        return sorted(filters.values(), key=attrgetter("total", "key"), reverse=True)
 
     def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es"""
@@ -187,7 +198,7 @@ class ESLogClient:
             time_zone=settings.TIME_ZONE,
             min_doc_count=1,
         )
-        search.search.aggs.bucket('histogram', agg)
+        search = search.agg("histogram", agg)
         search.limit_offset(0, 0)
         es_index = self._get_indexes(index, search.time_range, timeout)
         return AggResponse(
@@ -198,16 +209,24 @@ class ESLogClient:
             ],
         ).histogram
 
-    def aggregate_fields_filters(self, index: str, search: SmartSearch, timeout: int) -> List[FieldFilter]:
+    def aggregate_fields_filters(
+        self, index: str, search: SmartSearch, mappings: dict, timeout: int
+    ) -> List[FieldFilter]:
         """aggregate fields filter"""
         # 拉取最近 DEFAULT_LOG_BATCH_SIZE 条日志, 用于统计字段分布
         es_index = self._get_indexes(index, search.time_range, timeout)
+        # 添加内置过滤条件查询语句, 内置过滤条件有 environment, process_id, stream
+        search = agg_builtin_filters(search, mappings)
         search = search.limit_offset(limit=DEFAULT_LOG_BATCH_SIZE, offset=0)
         response = Response(
             search.search,
             self._client.search(body=search.to_dict(), index=es_index, params={"request_timeout": timeout}),
         )
-        return count_filters_options(list(response), self._get_properties_filters(index=es_index, timeout=timeout))
+        all_properties_filters = self._get_properties_filters(mappings)
+        filters = count_filters_options_from_agg(response.aggregations.to_dict(), all_properties_filters)
+        filters = count_filters_options_from_logs(list(response), filters)
+        # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
+        return sorted(filters.values(), key=attrgetter("total", "key"), reverse=True)
 
     def get_mappings(self, index: str, time_range: SmartTimeRange, timeout: int) -> dict:
         """query the mappings in es"""
@@ -250,20 +269,11 @@ class ESLogClient:
             "count"
         ]
 
-    def _get_properties_filters(self, index: Union[str, List[str]], timeout: int) -> Dict[str, FieldFilter]:
+    def _get_properties_filters(self, mappings: dict) -> Dict[str, FieldFilter]:
         """获取属性映射"""
-        # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
-        # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
-        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
-        # Note: 避免 ES 会提前创建 index 导致无法查询到 mappings, 需要将空 properties 的 mappings 过滤掉
-        all_not_empty_mappings = {
-            key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
-        }
-        if not all_not_empty_mappings:
-            raise LogQueryError(_("No mappings available, maybe index does not exist or no logs at all"))
-        first_mapping = all_not_empty_mappings[sorted(all_not_empty_mappings, reverse=True)[0]]
-        docs_mappings: Dict = first_mapping["mappings"]
-        return {f.name: f for f in self._clean_property([], docs_mappings)}
+        # mappings 来自 get_mappings 函数
+        # 为了简化 _clean_property 的递归代码, 传递给 _clean_property 时需要加上 {"properties": mappings} 这层封装
+        return {f.name: f for f in self._clean_property([], {"properties": mappings})}
 
     @classmethod
     def _clean_property(cls, nested_name: List[str], mapping: Dict) -> List[FieldFilter]:

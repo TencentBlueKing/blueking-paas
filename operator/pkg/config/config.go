@@ -18,16 +18,42 @@
 
 package config
 
-import paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+// ProjectConfigReader is an interface for reading project config, it is used to
+// avoid import "paasv1alpha1" package from here so that import cycle will not happen.
+type ProjectConfigReader interface {
+	// Process related methods
+	GetProcMaxReplicas() int32
+	GetProcDefaultCpuLimits() string
+	GetProcDefaultMemLimits() string
 
-// Global global config instance
-var Global *paasv1alpha1.ProjectConfig
-
-func init() {
-	Global = paasv1alpha1.NewProjectConfig()
+	// Platform related methods
+	GetIngressClassName() string
 }
 
+// defaultConfig is a default implementation of ProjectConfigReader, it will be used
+// as the default config if no other configs is set.
+type defaultConfig struct{}
+
+func (d defaultConfig) GetProcMaxReplicas() int32 {
+	return 5
+}
+
+func (d defaultConfig) GetProcDefaultCpuLimits() string {
+	return "1"
+}
+
+func (d defaultConfig) GetProcDefaultMemLimits() string {
+	return "1Gi"
+}
+
+func (d defaultConfig) GetIngressClassName() string {
+	return "nginx"
+}
+
+// Global global config instance
+var Global ProjectConfigReader = defaultConfig{}
+
 // SetConfig will set the Global by given cfg
-func SetConfig(cfg *paasv1alpha1.ProjectConfig) {
+func SetConfig(cfg ProjectConfigReader) {
 	Global = cfg
 }

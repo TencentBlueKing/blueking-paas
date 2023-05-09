@@ -66,7 +66,7 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
 若开发/联调时不启用 Webhook 服务，请参考以下命令配置环境变量：
 
-    $ export ENABLE_WEBHOOKS=true
+    $ export ENABLE_WEBHOOKS=false
 
 ### 部署至测试用 Kubernetes 集群
 

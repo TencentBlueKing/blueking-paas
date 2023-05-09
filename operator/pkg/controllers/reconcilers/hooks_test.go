@@ -34,51 +34,52 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
 
 var _ = Describe("Test HookReconciler", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 	var ctx context.Context
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: "paas.bk.tencent.com/v1alpha1",
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: "paas.bk.tencent.com/v1alpha2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-app",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "bar",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "bar",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "1",
-						Memory:     "500Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 				},
-				Hooks: &v1alpha1.AppHooks{
-					PreRelease: &v1alpha1.Hook{
+				Hooks: &paasv1alpha2.AppHooks{
+					PreRelease: &paasv1alpha2.Hook{
 						Command: []string{"/bin/bash"},
 						Args:    []string{"-c", "echo foo;"},
 					},
 				},
-				Configuration: v1alpha1.AppConfig{},
+				Configuration: paasv1alpha2.AppConfig{},
 			},
-			Status: v1alpha1.AppStatus{},
+			Status: paasv1alpha2.AppStatus{},
 		}
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		Expect(v1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(paasv1alpha2.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(appsv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		builder.WithScheme(scheme)
@@ -114,8 +115,8 @@ var _ = Describe("Test HookReconciler", func() {
 				requeueAfter time.Duration,
 				errMatcher types.GomegaMatcher,
 			) {
-				hookStatus := v1alpha1.HookStatus{
-					Type:      v1alpha1.HookPreRelease,
+				hookStatus := paasv1alpha2.HookStatus{
+					Type:      paasv1alpha2.HookPreRelease,
 					StartTime: lo.ToPtr(startTime),
 				}
 				bkapp.Status.SetHookStatus(hookStatus)
@@ -129,8 +130,8 @@ var _ = Describe("Test HookReconciler", func() {
 				Expect(ret.duration).To(Equal(requeueAfter))
 				Expect(ret.err).To(errMatcher)
 			},
-			Entry("pending", corev1.PodPending, metav1.Now(), true, v1alpha1.DefaultRequeueAfter, BeNil()),
-			Entry("running", corev1.PodRunning, metav1.Now(), true, v1alpha1.DefaultRequeueAfter, BeNil()),
+			Entry("pending", corev1.PodPending, metav1.Now(), true, paasv1alpha2.DefaultRequeueAfter, BeNil()),
+			Entry("running", corev1.PodRunning, metav1.Now(), true, paasv1alpha2.DefaultRequeueAfter, BeNil()),
 			Entry(
 				"running timeout",
 				corev1.PodRunning,
@@ -224,7 +225,7 @@ var _ = Describe("Test HookReconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 				}
 
-				condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.HooksFinished)
+				condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
 				Expect(condHooks.Status).To(Equal(conditionStatus))
 			},
 			Entry(
@@ -260,11 +261,11 @@ var _ = Describe("Test HookReconciler", func() {
 			Expect(finished).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
 
-			hookStatus := bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)
-			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.HooksFinished)
+			hookStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
+			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
 			Expect(condHooks.Status).To(Equal(metav1.ConditionTrue))
 			Expect(condHooks.Reason).To(Equal("Finished"))
-			Expect(hookStatus.Phase).To(Equal(v1alpha1.HealthHealthy))
+			Expect(hookStatus.Phase).To(Equal(paasv1alpha2.HealthHealthy))
 		})
 	})
 
@@ -283,8 +284,8 @@ var _ = Describe("Test HookReconciler", func() {
 			hook := resources.BuildPreReleaseHook(bkapp, nil)
 			hook.Pod.Status.Phase = phase
 			hook.Pod.Status.StartTime = lo.ToPtr(metav1.Now())
-			bkapp.Status.SetHookStatus(v1alpha1.HookStatus{
-				Type:      v1alpha1.HookPreRelease,
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
 				StartTime: hook.Pod.Status.StartTime,
 			})
 
@@ -314,10 +315,10 @@ var _ = Describe("Test HookReconciler", func() {
 			err := r.ExecuteHook(ctx, bkapp, hook)
 			Expect(err).NotTo(HaveOccurred())
 
-			hookStatus := bkapp.Status.FindHookStatus(v1alpha1.HookPreRelease)
-			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.HooksFinished)
+			hookStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
+			condHooks := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.HooksFinished)
 			Expect(condHooks.Status).To(Equal(metav1.ConditionFalse))
-			Expect(hookStatus.Phase).To(Equal(v1alpha1.HealthProgressing))
+			Expect(hookStatus.Phase).To(Equal(paasv1alpha2.HealthProgressing))
 		})
 
 		It("Pod Existed!", func() {

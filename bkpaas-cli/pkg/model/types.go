@@ -45,6 +45,14 @@ const (
 	DeployStatusUnknown = "unknown"
 )
 
+// Items 资源列表接口
+type Items interface {
+	// Length 数据总量
+	Length() int
+	// String 将资源列表转换成可打印展示的字符串
+	String() string
+}
+
 // AppInfo 应用信息接口
 type AppInfo interface {
 	// String 将应用信息转换成可打印展示的字符串

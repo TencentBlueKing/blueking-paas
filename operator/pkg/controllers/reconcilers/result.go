@@ -23,7 +23,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // Result ...
@@ -50,7 +50,7 @@ func (r Result) ToRepresentation() (result ctrl.Result, err error) {
 
 	duration := r.duration
 	if duration.Seconds() == 0 {
-		duration = v1alpha1.DefaultRequeueAfter
+		duration = paasv1alpha2.DefaultRequeueAfter
 	}
 	return ctrl.Result{RequeueAfter: duration}, nil
 }

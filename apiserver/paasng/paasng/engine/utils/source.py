@@ -1,11 +1,31 @@
+# -*- coding: utf-8 -*-
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
+
+    http://opensource.org/licenses/MIT
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 import logging
 from pathlib import Path
 from typing import Dict, Optional
 
+import cattr
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.dev_resources.sourcectl.controllers.package import PackageController
@@ -22,13 +42,42 @@ from paasng.extensions.smart_app.patcher import SourceCodePatcherWithDBDriver
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.utils.validators import validate_procfile
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 logger = logging.getLogger(__name__)
+TypeProcesses = Dict[str, ProcessTmpl]
 
 
-def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> Dict[str, str]:  # noqa: C901
-    """Get the processes data from SourceCode
+def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
+    """Validate proc type format
+
+    :param processes:
+    :return: validated processes, which all key is lower case.
+    :raise: django.core.exceptions.ValidationError
+    """
+    for proc_type in processes.keys():
+        if not PROC_TYPE_PATTERN.match(proc_type):
+            raise ValidationError(f'Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}')
+        if len(proc_type) > PROC_TYPE_MAX_LENGTH:
+            raise ValidationError(
+                f'Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters'
+            )
+
+    # Formalize processes data and return
+    try:
+        return cattr.structure(
+            {name.lower(): {"name": name.lower(), **v} for name, v in processes.items()}, TypeProcesses
+        )
+    except KeyError as e:
+        raise ValidationError(f'Invalid process data, missing: {e}')
+    except ValueError as e:
+        raise ValidationError(f"Invalid process data, {e}")
+
+
+def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901
+    """Get the ProcessTmpl from SourceCode
+    Declarative Processes is a dict containing a process type and its corresponding DeclarativeProcess
+
     1. Try to get processes data from DeploymentDescription at first.
     2. Try to get the process data from DeployConfig, which only work from Image Application
     3. Try to get the process data from Procfile
@@ -39,26 +88,29 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
     :param DeployStream stream: 日志流对象, 用于记录日志
     :raises: DeployShouldAbortError
     """
-    module = deployment.app_environment.module
+    module: Module = deployment.app_environment.module
     operator = deployment.operator
     version_info = deployment.version_info
     relative_source_dir = deployment.get_source_dir()
 
-    proc_data = None
+    proc_data: Optional[Dict[str, Dict[str, str]]] = None
     if deployment:
         try:
-            deploy_desc = DeploymentDescription.objects.get(deployment=deployment)
-            proc_data = deploy_desc.get_procfile()
+            deploy_desc: DeploymentDescription = DeploymentDescription.objects.get(deployment=deployment)
+            proc_data = deploy_desc.get_processes()
         except DeploymentDescription.DoesNotExist:
             logger.info("Can't get related DeploymentDescription, read Procfile directly.")
 
     if not proc_data:
         deploy_config = module.get_deploy_config()
-        proc_data = deploy_config.procfile
+        if deploy_config.procfile:
+            proc_data = {name: {"command": command} for name, command in deploy_config.procfile.items()}
 
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
-        proc_data_form_source = metadata_reader.get_procfile(version_info)
+        proc_data_form_source = {
+            name: {"command": command} for name, command in metadata_reader.get_procfile(version_info).items()
+        }
     except GetProcfileError as e:
         if not proc_data:
             raise DeployShouldAbortError(reason=f'Procfile error: {e.message}') from e
@@ -76,7 +128,7 @@ def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None)
     if proc_data is None:
         raise DeployShouldAbortError(_("Missing process definition"))
     try:
-        return validate_procfile(procfile=proc_data)
+        return validate_processes(processes=proc_data)
     except ValidationError as e:
         raise DeployShouldAbortError(e.message) from e
 

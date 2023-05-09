@@ -113,14 +113,14 @@ class ProcessSpecManager:
     def __init__(self, wl_app: 'WlApp'):
         self.wl_app = wl_app
 
-    def sync(self, processes: List['DeclarativeProcess']):
+    def sync(self, processes: List['ProcessTmpl']):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: plain process spec structure,
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
         """
-        processes_map: Dict[str, 'DeclarativeProcess'] = {process.name: process for process in processes}
+        processes_map: Dict[str, 'ProcessTmpl'] = {process.name: process for process in processes}
         environment = get_metadata(self.wl_app).environment
 
         # Hardcode proc_type to "process" because no other values is supported at this moment.
@@ -205,8 +205,8 @@ def initialize_default_proc_spec_plans():
 
 
 @dataclass
-class DeclarativeProcess:
-    """This class declare process which can be used to sync process spec
+class ProcessTmpl:
+    """This class declare a process template which can be used to sync process spec or deploy a process(deployment)
 
     :param command: 启动指令
     :param replicas: 副本数
@@ -217,6 +217,9 @@ class DeclarativeProcess:
     command: str
     replicas: Optional[int] = None
     plan: Optional[str] = None
+
+    def __post_init__(self):
+        self.name = self.name.lower()
 
 
 @dataclass

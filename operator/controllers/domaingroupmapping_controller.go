@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping"
 	res "bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 )
@@ -115,7 +116,7 @@ func (r *DomainGroupMappingReconciler) reconcile(ctx context.Context, req ctrl.R
 
 	// Start the main sync procedure
 	if err = r.Sync(ctx, dgmapping); err != nil {
-		return ctrl.Result{RequeueAfter: paasv1alpha1.DefaultRequeueAfter}, err
+		return ctrl.Result{RequeueAfter: paasv1alpha2.DefaultRequeueAfter}, err
 	}
 	return ctrl.Result{}, nil
 }
@@ -189,8 +190,8 @@ func (r *DomainGroupMappingReconciler) SyncDeletion(
 func (r *DomainGroupMappingReconciler) GetRef(
 	ctx context.Context,
 	dgmapping *paasv1alpha1.DomainGroupMapping,
-) (paasv1alpha1.BkApp, error) {
-	refObj := paasv1alpha1.BkApp{}
+) (paasv1alpha2.BkApp, error) {
+	refObj := paasv1alpha2.BkApp{}
 	if dgmapping.Spec.Ref.Name == "" {
 		return refObj, errors.WithStack(ErrReferenceUndefined)
 	}
@@ -238,7 +239,7 @@ func (r *DomainGroupMappingReconciler) syncRefErrStatus(
 // current resource.
 func (r *DomainGroupMappingReconciler) syncProcessedStatus(
 	ctx context.Context,
-	bkapp *paasv1alpha1.BkApp,
+	bkapp *paasv1alpha2.BkApp,
 	dgmapping *paasv1alpha1.DomainGroupMapping,
 	domainGroups []res.DomainGroup,
 ) error {
@@ -301,14 +302,14 @@ func (r *DomainGroupMappingReconciler) SetupWithManager(
 		For(&paasv1alpha1.DomainGroupMapping{}).
 		WithOptions(opts).
 		Watches(&source.Kind{
-			Type: &paasv1alpha1.BkApp{},
+			Type: &paasv1alpha2.BkApp{},
 		}, handler.EnqueueRequestsFromMapFunc(handleEnqueueBkApp)).
 		Complete(r)
 }
 
 func getDGMappingOwnerNames(rawObj client.Object) []string {
 	dgmapping := rawObj.(*paasv1alpha1.DomainGroupMapping)
-	if dgmapping.Spec.Ref.Kind == paasv1alpha1.KindBkApp && dgmapping.Spec.Ref.Name != "" {
+	if dgmapping.Spec.Ref.Kind == paasv1alpha2.KindBkApp && dgmapping.Spec.Ref.Name != "" {
 		return []string{dgmapping.Spec.Ref.Name}
 	}
 	return nil
@@ -316,12 +317,12 @@ func getDGMappingOwnerNames(rawObj client.Object) []string {
 
 // ToAddressableStatus receives a list of DomainGroups, turns them into
 // addressable objects which can be used for BkApp's status field
-func ToAddressableStatus(groups []res.DomainGroup) []paasv1alpha1.Addressable {
-	var results []paasv1alpha1.Addressable
+func ToAddressableStatus(groups []res.DomainGroup) []paasv1alpha2.Addressable {
+	var results []paasv1alpha2.Addressable
 	for _, group := range groups {
 		for _, d := range group.Domains {
 			for _, url := range d.GetURLs() {
-				results = append(results, paasv1alpha1.Addressable{SourceType: string(group.SourceType), URL: url})
+				results = append(results, paasv1alpha2.Addressable{SourceType: string(group.SourceType), URL: url})
 			}
 		}
 	}

@@ -297,7 +297,8 @@ def get_processes_status(app: WlApp) -> List[Process]:
     results: List[Process] = []
 
     try:
-        procfile = Release.objects.get_latest(app).get_procfile()
+        release: Release = Release.objects.get_latest(app)
+        procfile = release.get_procfile()
     except Release.DoesNotExist:
         return results
 

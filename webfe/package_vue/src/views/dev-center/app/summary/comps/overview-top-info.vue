@@ -31,7 +31,7 @@
               v-bk-tooltips="$t('所有进程 Memory limit 的总和')"
               class="tip"
             >{{ $t('内存') }}:</span>
-            {{ appInfo.data.memProd || '-- ' }}G（{{ $t('生产环境') }}）、{{ appInfo.data.memStag || '-- ' }}G（{{ $t('预发布') }}）
+            {{ appInfo.data.memProd || '-- ' }}G{{ $t('（生产环境 ）') }}、{{ appInfo.data.memStag || '-- ' }}G{{ $t('（预发布）') }}
           </p>
         </div>
       </div>

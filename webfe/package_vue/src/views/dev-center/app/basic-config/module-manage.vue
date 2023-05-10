@@ -18,7 +18,7 @@
       <section v-if="!isLoading">
         <div class="module-info-item mt15">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div class="info">
             {{ $t('模块的基本信息') }}
@@ -387,7 +387,7 @@
                   class="has-right-border"
                   style="width: 150px;"
                 >
-                  {{ $t('生产环境') }}
+                  {{ $t('生产环境-label') }}
                 </td>
                 <td>
                   <div class="">

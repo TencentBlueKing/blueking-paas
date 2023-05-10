@@ -53,3 +53,6 @@ class Template(AuditedModel):
     repo_url = models.CharField(verbose_name=_('代码仓库信息'), max_length=256, blank=True, default='')
 
     objects = TemplateManager()
+
+    class Meta:
+        ordering = ['created']

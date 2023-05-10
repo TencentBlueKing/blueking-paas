@@ -970,5 +970,7 @@
     }
     .mouseStyle {
         cursor: default;
+        display: inline-block;
+        min-width: 33px;
     }
 </style>

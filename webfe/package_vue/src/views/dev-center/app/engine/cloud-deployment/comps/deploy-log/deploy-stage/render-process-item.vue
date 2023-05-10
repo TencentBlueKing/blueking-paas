@@ -69,7 +69,7 @@
           :key="index"
           class="log-item"
         >
-          <span v-html="item.timestamp" />
+          <span v-html="formatTime(item.timestamp)" />
           <span
             style="margin-left: 25px;"
             v-html="item.message"
@@ -83,6 +83,8 @@
     import appBaseMixin from '@/mixins/app-base-mixin.js';
     import RenderStage from '../render-deploy-stage';
     import StatusItem from './render-status-item';
+    import { formatDate } from '@/common/tools';
+
     export default {
         name: '',
         components: {
@@ -146,7 +148,7 @@
                         }
                     };
                     const res = await this.$store.dispatch('processes/getInstanceLog', params);
-                    this.logs = JSON.parse(JSON.stringify(res.data.logs)).reverse();
+                    this.logs = JSON.parse(JSON.stringify(res.logs)).reverse();
                 } catch (e) {
                     this.$paasMessage({
                         theme: 'error',
@@ -163,6 +165,10 @@
 
             async handleRefresh () {
                 await this.fetchProcessInstanceLog();
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

@@ -43,6 +43,7 @@ import alarm from './modules/alarm';
 import docuManagement from './modules/docu-management';
 import cloudApi from './modules/cloud-api';
 import credential from './modules/credential';
+import overview from './modules/overview';
 import plugin from './modules/plugin';
 import pluginMembers from './modules/plugin-members';
 import http from '@/api';
@@ -76,7 +77,9 @@ const state = {
     secondaryColor: '#FAFAFC'
   },
   localLanguage: localLanguage,
-  navType: {}
+  navType: {},
+  applyUrl: '',
+  envEventData: ['stag', 'prod']
 };
 
 const getters = {
@@ -223,6 +226,16 @@ const mutations = {
   },
   updateNavType (state, data) {
     state.navType = data;
+  },
+  updateApplyUrl (state, data) {
+    state.applyUrl = data;
+  },
+  updataEnvEventData (state, data) {
+    if (data.length) {
+      state.envEventData.push(...data);
+    } else {
+      state.envEventData = [];
+    }
   }
 };
 
@@ -292,6 +305,10 @@ const actions = {
       }
       commit('updateAppInfo', { appCode, moduleId, data: response });
       return response;
+    }).catch((err) => {
+      if (err.apply_url_for_dev) {
+        commit('updateApplyUrl', err.apply_url_for_dev);
+      }
     }).finally(() => {
       commit('updateAppLoading', false);
     });
@@ -399,6 +416,7 @@ export default new Vuex.Store({
     docuManagement,
     cloudApi,
     credential,
+    overview,
     // 插件开发者中心
     plugin,
     pluginMembers

@@ -189,7 +189,7 @@
                             if (nav.name === 'appMarketing') {
                                 nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
                             }
-                            return ['appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
+                            return ['appSummary', 'appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
                         });
                     }
 
@@ -332,7 +332,7 @@
                                     child.isSelected = true;
                                     nav.isActived = true;
                                     nav.isExpanded = true;
-                                } else if (child.destRoute.name === routeName) {
+                                } else if (child.destRoute && child.destRoute.name === routeName) {
                                     child.isSelected = true;
                                     nav.isActived = true;
                                     nav.isExpanded = true;
@@ -368,7 +368,7 @@
                     });
                 } catch (e) {
                     console.warn('error', e);
-                    if (e.name === 'appSummary') {
+                    if (e && e.name === 'appSummary') {
                         this.$router.push({
                             name: 'appSummary',
                             params: {
@@ -378,13 +378,13 @@
                         });
                     } else {
                         this.$router.push({
-                            name: 'appBaseInfo',
+                            name: 'appSummary',
                             params: {
                                 id: this.curAppInfo.application.code
                             }
                         });
                     }
-                    if (e.label || e.name) {
+                    if (e && (e.label || e.name)) {
                         this.$bkNotify({
                             theme: 'error',
                             message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
@@ -531,7 +531,7 @@
                     };
                     this.$router.push(routeConf);
                 } catch (e) {
-                    if (e.name === 'appSummary') {
+                    if (e && e.name === 'appSummary') {
                         this.$router.push({
                             name: 'appSummary',
                             params: {
@@ -547,7 +547,7 @@
                             }
                         });
                     }
-                    if (e.label || e.name) {
+                    if (e && (e.label || e.name)) {
                         this.$bkNotify({
                             theme: 'error',
                             message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,

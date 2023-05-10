@@ -15,10 +15,16 @@
             onerror="this.src='/static/images/plugin-default.svg'"
           >
           <div class="pl10">
-            <div class="plugin-name">
+            <div
+              v-bk-overflow-tips
+              class="plugin-name ellipsis"
+            >
               {{ curPluginInfo.name_zh_cn }}
             </div>
-            <div class="guide-plugin-desc">
+            <div
+              v-bk-overflow-tips
+              class="guide-plugin-desc"
+            >
               {{ curPluginInfo.id }}
             </div>
           </div>
@@ -198,6 +204,7 @@
     };
 </script>
 <style lang="scss" scoped>
+@import '~@/assets/css/mixins/ellipsis.scss';
 .quick-nav{
     border-bottom: 2px solid #F5F7FA;
     cursor: pointer;
@@ -211,6 +218,10 @@
             }
             .plugin-name{
                 font-weight: bold;
+                &.ellipsis {
+                    line-height: 24px;
+                    @include ellipsis(130px);
+                }
             }
             .right-icon{
                 font-size: 12px;
@@ -289,6 +300,9 @@
                     background: #eeeff3;
                 }
             }
+        }
+        .guide-plugin-desc {
+            @include ellipsis(130px);
         }
     }
 }

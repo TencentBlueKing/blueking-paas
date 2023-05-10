@@ -77,7 +77,7 @@
 
 p.app-name {
     padding-left: 10px;
-    line-height: 40px;
+    line-height: 32px;
     color: #63656e;
     border: 1px solid #dcdee5;
     border-radius: 2px;
@@ -106,7 +106,7 @@ p.app-name {
 
 .form-label {
     color: #63656e;
-    line-height: 36px;
+    line-height: 32px;
     font-size: 14px;
     padding-top: 10px;
     width: 90px;
@@ -179,10 +179,6 @@ p.app-name {
     left: -600px;
 }
 
-input.ps-form-control {
-    padding: 4px 10px;
-}
-
 .form-group{
     display: flex;
     &-flex{
@@ -212,13 +208,11 @@ input.ps-form-control {
             font-size: 12px;
             display: inline-block;
             vertical-align: middle;
-            padding-left: 5px;
         }
     }
 }
 
 .form-actions {
-    text-align: center;
     margin: 24px 0 18px;
 }
 
@@ -583,6 +577,10 @@ input::-webkit-input-placeholder {
     }
 }
 
+.en-label.wrap .form-label {
+    width: 100px;
+}
+
 .form-group-dir{
     display: flex;
     &-flex{
@@ -643,8 +641,15 @@ input::-webkit-input-placeholder {
 
 .form-actions{
     .ps-btn-primary{
-        background: #1768EF;
         font-size: 14px;
+        background: #3a84ff;
+        margin-left: 0 !important;
+        &:hover {
+            
+            background-color: #699df4;
+            border-color: #699df4;
+            opacity: 1;
+        }
     }
     .ps-btn-isdisabled{
         background-color: #dcdee5 !important;

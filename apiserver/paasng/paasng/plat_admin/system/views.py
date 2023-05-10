@@ -28,20 +28,24 @@ from rest_framework.response import Response
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
-from paasng.engine.display_blocks import ServicesInfo
+from paasng.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
     get_contact_info,
     query_uni_apps_by_ids,
+    query_uni_apps_by_keyword,
     query_uni_apps_by_username,
 )
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
     ContactInfo,
+    MinimalAppSLZ,
     QueryUniApplicationsByID,
     QueryUniApplicationsByUserName,
+    SearchApplicationSLZ,
     UniversalAppSLZ,
 )
+from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -106,6 +110,28 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         username = data['username']
         uni_apps = query_uni_apps_by_username(username)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
+
+    @swagger_auto_schema(
+        tags=['SYSTEMAPI'], responses={200: MinimalAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
+    )
+    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    def list_minimal_app(self, request):
+        """查询多平台应用基本信息，可根据 id 或者 name 模糊搜索, 最多只返回 1000 条数据"""
+        serializer = SearchApplicationSLZ(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        paginator = MaxLimitOffsetPagination()
+        offset = paginator.get_offset(request)
+        limit = paginator.get_limit(request)
+
+        keyword = data.get('keyword')
+        applications = query_uni_apps_by_keyword(keyword, offset, limit)
+
+        # Paginate results
+        applications = paginator.paginate_queryset(applications, request, self)
+        serializer = MinimalAppSLZ(applications, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):

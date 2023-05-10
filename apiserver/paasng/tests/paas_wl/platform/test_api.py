@@ -33,11 +33,11 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.django_db(databases=["workloads"])
 def test_create_app_ignore_duplicated():
-    info = create_app_ignore_duplicated(settings.FOR_TESTS_DEFAULT_REGION, 'foo-app', WlAppType.DEFAULT)
+    info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, 'foo-app', WlAppType.DEFAULT)
     assert info.name == 'foo-app'
 
     # Create again with the same name
-    recreated_info = create_app_ignore_duplicated(settings.FOR_TESTS_DEFAULT_REGION, 'foo-app', WlAppType.DEFAULT)
+    recreated_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, 'foo-app', WlAppType.DEFAULT)
     assert recreated_info.uuid == info.uuid
 
 

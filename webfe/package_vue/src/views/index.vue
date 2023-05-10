@@ -107,7 +107,7 @@
                     </router-link>
                   </template>
                   <template v-else>
-                    <router-link :to="{ name: 'appBaseInfo', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
+                    <router-link :to="{ name: 'appSummary', params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId } }">
                       <img
                         :src="recordItem.applogo"
                         width="38px"
@@ -125,10 +125,6 @@
                   <em v-bk-tooltips="recordItem.time">{{ smartTime(recordItem.time,'fromNow') }}</em>
                 </div>
                 <div class="paas-operation-section section2 section-wrapper">
-                  <span
-                    v-if="recordItem.represent_info.props.display_module && recordItem.represent_info.props.provide_links"
-                    class="module-name"
-                  >{{ recordItem.represent_info.module_name + $t('模块') }}</span>
                   <span
                     v-bk-tooltips.bottom="recordItem.type"
                     class="bottom-middle text-style"
@@ -809,6 +805,7 @@
     };
 </script>
 <style lang="scss" scoped>
+    @import '~@/assets/css/mixins/ellipsis.scss';
     .paas-highcharts {
         width: 50%;
         position: relative;
@@ -860,6 +857,7 @@
         &.time-section {
             padding: 0;
             width: 100px;
+            @include ellipsis;
         }
         &.section1 {
             width: 210px;

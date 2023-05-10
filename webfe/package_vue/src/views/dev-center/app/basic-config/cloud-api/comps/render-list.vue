@@ -102,6 +102,7 @@
           :show-overflow-tooltip="true"
           @page-change="pageChange"
           @page-limit-change="limitChange"
+          @filter-change="handleFilterChange"
         >
           <div slot="empty">
             <table-empty
@@ -138,7 +139,6 @@
                   class="api-link"
                 >
                   <span
-                    v-bk-overflow-tips
                     v-html="highlight(props.row)"
                   />
                   <i
@@ -164,12 +164,18 @@
               <span v-html="highlightDesc(props.row)" />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level) ? 'sensitive' : ''">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -178,10 +184,11 @@
             <bk-table-column
               :label="$t('状态')"
               prop="permission_status"
+              column-key="permission_status"
               :filters="statusFilters"
-              :filter-method="statusFilterMethod"
               :filter-multiple="true"
               :min-width="110"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -222,6 +229,7 @@
           <bk-table-column
             v-else
             :label="$t('状态')"
+            :render-header="$renderHeader"
           >
             <template slot-scope="props">
               <template v-if="props.row.permission_status === 'owned'">
@@ -416,7 +424,9 @@
                 tableEmptyConf: {
                     keyword: '',
                     isAbnormal: false
-                }
+                },
+                filterStatus: [],
+                filterData: []
             };
         },
         computed: {
@@ -563,9 +573,18 @@
                 return `${Math.ceil(payload.expires_in / (24 * 3600))}天`;
             },
 
-            statusFilterMethod (value, row, column) {
-                const property = column.property;
-                return row[property] === value;
+            // 状态筛选
+            handleFilterChange (filter) {
+                this.filterStatus = filter['permission_status'] || [];
+                // 重置
+                if (this.filterStatus.length === 0) {
+                  this.filterData = this.allData;
+                } else {
+                  this.filterData = this.allData.filter(item => this.filterStatus.includes(item['permission_status']));
+                }
+                this.pagination.current = 1;
+                this.pagination.count = this.filterData.length;
+                this.tableList = this.filterData.slice((this.pagination.current - 1) * this.pagination.limit, this.pagination.current * this.pagination.limit);
             },
 
             handleClickOutside () {
@@ -770,7 +789,12 @@
                 if (endIndex > this.allData.length) {
                     endIndex = this.allData.length;
                 }
-                return this.allData.slice(startIndex, endIndex);
+                // 当前状态数据
+                if (this.filterStatus.length) {
+                  return this.filterData.slice(startIndex, endIndex);
+                } else {
+                  return this.allData.slice(startIndex, endIndex);
+                }
             },
 
             limitChange (currentLimit, prevLimit) {
@@ -805,6 +829,7 @@
                     // this.apiList = Object.freeze(res.data.sort(this.compare('name')))
                     this.apiList = Object.freeze(res.data);
                     this.allData = this.apiList;
+                    this.filterStatus = [];
                     this.initPageConf();
                     this.tableList = this.getDataByPage();
                     this.updateTableEmptyConfig();

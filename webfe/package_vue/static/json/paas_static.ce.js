@@ -522,6 +522,17 @@ export const PAAS_STATIC_CONFIG = {
         "message": staticI18n.$t("应用左侧导航"),
         "cloudList": [
             {
+                "name": "appSummary",
+                "label": staticI18n.$t("概览"),
+                "matchRouters": ["appSummaryEmpty", "appSummary"],
+                "iconfontName": "metrics",
+                "supportModule": true,
+                "destRoute": {
+                  "name": "appSummary"
+                },
+                "children": []
+            },
+            {
                 "name": "cloudAppDeployForProcess",
                 "label": staticI18n.$t("应用编排"),
                 "matchRouters": [
@@ -603,6 +614,25 @@ export const PAAS_STATIC_CONFIG = {
                   "name": "imageCredential"
                 },
                 "children": []
+            },
+            {
+                "name": "appMarketing",
+                "label": staticI18n.$t("应用推广"),
+                "iconfontName": "volumn",
+                "children": [
+                    {
+                        "name": staticI18n.$t("应用市场"),
+                        "destRoute": {
+                          "name": "appMarket"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("应用市场 (移动端)"),
+                        "destRoute": {
+                          "name": "appMobileMarket"
+                        }
+                    }
+                ]
             },
             {
                 "name": "appConfigs",

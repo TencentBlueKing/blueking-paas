@@ -130,6 +130,7 @@ class AppIDField(serializers.RegexField):
     def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
         preset_kwargs = dict(
             max_length=16,
+            min_length=3,
             required=True,
             help_text='应用 ID',
             validators=[
@@ -245,8 +246,13 @@ class CreateApplicationV2SLZ(AppBasicInfoMixin):
 class CreateThirdPartyApplicationSLZ(AppBasicInfoMixin):
     """创建外链应用的表单"""
 
-    engine_enabled = serializers.BooleanField(default=False, required=False)
+    engine_enabled = serializers.BooleanField(default=False)
     market_params = MarketParamsMixin()
+
+    def validate(self, attrs):
+        if attrs['engine_enabled']:
+            raise ValidationError(_('该接口只支持创建外链应用'))
+        return attrs
 
 
 class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
@@ -266,10 +272,19 @@ class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
         return code
 
 
+class CloudNativeParamsSLZ(serializers.Serializer):
+    """创建云原生应用的详细参数"""
+
+    image = serializers.CharField(label=_('容器镜像地址'), required=True)
+    command = serializers.ListField(help_text=_('启动命令'), child=serializers.CharField(), required=False, default=list)
+    args = serializers.ListField(help_text=_('命令参数'), child=serializers.CharField(), required=False, default=list)
+    target_port = serializers.IntegerField(label=_('容器端口'), required=False)
+
+
 class CreateCloudNativeAppSLZ(AppBasicInfoMixin):
     """创建云原生架构应用的表单"""
 
-    cloud_native_params = serializers.JSONField(label=_('云原生架构应用参数'), required=True)
+    cloud_native_params = CloudNativeParamsSLZ(label=_('云原生架构应用参数'), required=True)
     advanced_options = AdvancedCreationParamsMixin(required=False)
 
 
@@ -384,7 +399,7 @@ class ApplicationMemberRoleOnlySLZ(serializers.Serializer):
 class ApplicationListDetailedSLZ(serializers.Serializer):
     """Serializer for detailed app list"""
 
-    valid_order_by_fields = ('code', 'created', 'latest_operated_at')
+    valid_order_by_fields = ('code', 'created', 'latest_operated_at', 'name')
     exclude_collaborated = serializers.BooleanField(default=False)
     include_inactive = serializers.BooleanField(default=False)
     region = serializers.ListField(required=False)
@@ -392,7 +407,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     search_term = serializers.CharField(required=False)
     source_origin = serializers.ChoiceField(required=False, allow_null=True, choices=SourceOrigin.get_choices())
     type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), required=False)
-    order_by = serializers.CharField(default='-created')
+    order_by = serializers.CharField(default='name')
     prefer_marked = serializers.BooleanField(default=True)
 
     def validate_order_by(self, value):

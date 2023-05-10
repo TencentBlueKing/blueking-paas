@@ -204,3 +204,13 @@ export function clearFilter (refInstance) {
     };
   }
 }
+
+/**
+ *  设置bk-talbe表头tips
+ *
+ * @param refInstance {h, { column }} 渲染函数
+ *
+ */
+export function renderHeader (h, { column }) {
+  return h('p', { class: 'table-header-tips-cls', directives: [{ name: 'bk-overflow-tips' }] }, [column.label]);
+}

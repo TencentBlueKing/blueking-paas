@@ -30,7 +30,7 @@ from paas_wl.monitoring.metrics.exceptions import RequestMetricBackendError
 from paas_wl.monitoring.metrics.models import ResourceMetricManager
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
 from paas_wl.workloads.processes.managers import AppProcessManager
-from tests.paas_wl.utils.engine_app import random_fake_app, random_fake_instance, release_setup
+from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_instance, create_wl_release
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -38,12 +38,12 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestResourceMetricManager:
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
-        self.app = random_fake_app(force_app_info={'region': settings.FOR_TESTS_DEFAULT_REGION})
-        release_setup(fake_app=self.app)
+        self.app = create_wl_app(force_app_info={'region': settings.DEFAULT_REGION_NAME})
+        create_wl_release(wl_app=self.app)
         self.web_process = AppProcessManager(app=self.app).assemble_process('web')
         self.worker_process = AppProcessManager(app=self.app).assemble_process('worker')
-        self.web_process.instances = [random_fake_instance(self.app), random_fake_instance(self.app)]
-        self.worker_process.instances = [random_fake_instance(self.app)]
+        self.web_process.instances = [create_wl_instance(self.app), create_wl_instance(self.app)]
+        self.worker_process.instances = [create_wl_instance(self.app)]
 
     @pytest.fixture
     def metric_client(self):
@@ -99,7 +99,7 @@ class TestResourceMetricManager:
 
     def test_gen_series_query(self, metric_client):
         temp_process = self.worker_process
-        temp_process.instances[0].name = f"{settings.FOR_TESTS_DEFAULT_REGION}-test-test-stag-asdfasdf"
+        temp_process.instances[0].name = f"{settings.DEFAULT_REGION_NAME}-test-test-stag-asdfasdf"
         manager = ResourceMetricManager(process=temp_process, metric_client=metric_client, bcs_cluster_id='')
         query = manager.gen_series_query(
             instance_name=temp_process.instances[0].name,
@@ -111,7 +111,7 @@ class TestResourceMetricManager:
         assert query.type_name == "current"
         assert query.query.startswith(
             'sum by(container_name)(container_memory_working_set_bytes{'
-            f'pod_name="{settings.FOR_TESTS_DEFAULT_REGION}-test-test-stag-asdfasdf",container_name!="POD",'
+            f'pod_name="{settings.DEFAULT_REGION_NAME}-test-test-stag-asdfasdf",container_name!="POD",'
         )
 
     def test_gen_all_series_query(self, metric_client):

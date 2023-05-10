@@ -28,7 +28,7 @@ from paasng.engine.constants import JobStatus
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
 if TYPE_CHECKING:
-    from paasng.engine.deploy.infras import DeployStream
+    from paasng.engine.utils.output import DeployStream
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class MarkStatusMixin:
         self.status = status.value
         self.save(update_fields=update_fields)  # type: ignore
 
-    def mark_and_write_to_steam(self, stream: 'DeployStream', status: 'JobStatus', extra_info: Optional[dict] = None):
+    def mark_and_write_to_stream(self, stream: 'DeployStream', status: 'JobStatus', extra_info: Optional[dict] = None):
         """标记状态，并写到 stream"""
         self.mark_procedure_status(status)
         detail = self.to_dict()

@@ -13,10 +13,55 @@
       >
         <img src="/static/images/permissions.png">
         <p> {{ $t('您没有访问当前应用该功能的权限') }} </p>
+        <bk-button
+          v-if="applyUrl"
+          :theme="'primary'"
+          :title="$t('申请成为开发者')"
+          class="mr10"
+          @click="toApplication"
+        >
+          {{ $t('申请成为开发者') }}
+        </bk-button>
       </div>
     </div>
   </div>
 </template>
+
+<script>
+    export default {
+        computed: {
+            isPlugin () {
+                  return this.$route.meta.plugin;
+            },
+            applyUrl () {
+                if (this.isPlugin) {
+                    return this.$store.state.plugin.pluginApplyUrl;
+                }
+                return this.$store.state.applyUrl;
+            },
+            id () {
+                return this.$route.params.id;
+            },
+            pluginTypeId () {
+                return this.$route.params.pluginTypeId;
+            }
+        },
+        async created () {
+            if (!this.applyUrl) {
+                if (this.isPlugin) {
+                    await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.id, pluginTypeId: this.pluginTypeId });
+                } else {
+                    await this.$store.dispatch('getAppInfo', { appCode: this.id });
+                }
+            }
+        },
+        methods: {
+            toApplication () {
+                window.open(this.applyUrl, '_blank');
+            }
+        }
+    };
+</script>
 
 <style lang="css" scoped>
     .nofound {

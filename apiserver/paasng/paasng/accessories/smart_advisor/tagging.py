@@ -25,6 +25,7 @@ from typing import List
 
 from unipath import Path
 
+from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.models.deployment import Deployment
 
 from .constants import DeployFailurePatternType
@@ -85,7 +86,7 @@ def get_deployment_tags(deployment: Deployment) -> List[Tag]:
     tag_strs = []
 
     # Find deployment failure tags by comparing logs with existed patterns
-    logs = deployment.logs
+    logs = get_all_logs(deployment)
     for pattern in patterns:
         if re.search(pattern.value, logs, re.IGNORECASE):
             logger.debug('Deployment failure pattern match found: %s', pattern.value)

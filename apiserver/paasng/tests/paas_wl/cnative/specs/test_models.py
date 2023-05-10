@@ -46,9 +46,10 @@ def test_create_app_resource():
                     'command': [],
                     'args': [],
                     'targetPort': None,
-                    'cpu': '4000m',
-                    'memory': '1024Mi',
+                    'cpu': '500m',
+                    'memory': '256Mi',
                     'imagePullPolicy': 'IfNotPresent',
+                    'autoscaling': None,
                 }
             ],
             'hooks': None,

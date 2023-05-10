@@ -105,6 +105,51 @@
         </dropdown>
       </template>
 
+      <!-- 概览页时间选择 -->
+      <template v-if="isOverview">
+        <span class="span" />
+        <dropdown
+          ref="dropdown"
+          style="display: inline-block; vertical-align: middle;"
+          :options="{
+            openOn: 'click',
+            position: 'bottom left'
+          }"
+        >
+          <div slot="trigger">
+            <a
+              href="javascript: void(0);"
+              class="module-name time-text"
+            >
+              <i class="paasng-icon paasng-time icon-time-cls" />
+              {{ curTime.text }}
+              <i class="paasng-icon paasng-angle-line-down icon-down-cls" />
+            </a>
+          </div>
+          <div
+            slot="content"
+            style="width: 185px;"
+          >
+            <div class="bk-dropdown-content left-align">
+              <ul class="bk-dropdown-list">
+                <li
+                  v-for="(date, index) in shortcuts"
+                  :key="index"
+                  @click="handleChangeTime(date, date.id)"
+                >
+                  <a
+                    href="javascript: void(0);"
+                    :class="{ active: curTime.id === date.id }"
+                  >
+                    {{ date.text }}
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </dropdown>
+      </template>
+
       <div
         v-if="$slots['right']"
         class="right-slot"
@@ -117,6 +162,7 @@
 
 <script>
     import dropdown from '@/components/ui/Dropdown';
+    import { formatDate } from '@/common/tools';
 
     export default {
         components: {
@@ -158,6 +204,17 @@
             hideTitle: {
                 type: Boolean,
                 default: false
+            },
+            isOverview: {
+                type: Boolean,
+                default: false
+            },
+            shortcuts: {
+                type: Array,
+                default: () => []
+            },
+            curTime: {
+                type: Object
             }
         },
         data () {
@@ -220,6 +277,12 @@
             },
             toHelpDocu () {
                 window.open(this.GLOBAL.DOC.MODULE_INTRO);
+            },
+            handleChangeTime (time, id) {
+                const date = time.value();
+                const startTime = formatDate(date[0], 'YYYY-MM-DD');
+                const endTime = formatDate(date[1], 'YYYY-MM-DD');
+                this.$emit('change-date', [startTime, endTime], id);
             }
         }
     };
@@ -293,6 +356,17 @@
             &:hover {
                 color: #699df4;
             }
+            &.time-text {
+                font-size: 12px
+            }
+        }
+
+        .icon-time-cls {
+            font-size: 13px !important;
+            transform: scale(1) !important;
+        }
+        .icon-down-cls {
+            font-size: 13px !important;
         }
 
         .paasng-icon {

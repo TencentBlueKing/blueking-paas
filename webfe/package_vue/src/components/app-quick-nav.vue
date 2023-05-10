@@ -11,7 +11,6 @@
           slot="trigger"
           href="javascript:"
           class="overview-title-icon fright"
-          @click="getAppLinks"
         >
           <i class="paasng-icon paasng-angle-down" />
         </a>
@@ -140,7 +139,12 @@
               <span>{{ appInfo.region_name }}</span>
             </div>
           </div>
-          <p>{{ appInfo.code }}</p>
+          <p
+            v-bk-overflow-tips
+            class="app-code-box"
+          >
+            {{ appInfo.code }}
+          </p>
         </div>
       </template>
     </div>
@@ -204,22 +208,15 @@
             appInfo () {
                 this.initAppList();
             },
-            '$route' () {
-                // 路由切换时需更新appLinks
-                // 初始化左侧下拉导航快速访问入口
-                this.appLinks = {
-                    stag: '',
-                    prod: ''
-                };
-                this.getAppLinks();
-            },
             filterKey (newVal, oldVal) {
                 if (newVal === '' && oldVal !== '') {
                     this.propsfilterKey = '';
                     this.$refs.searchAppList.enterSelect();
                 }
+            },
+            appCode () {
+                this.getAppLinks();
             }
-
         },
         mounted () {
             bus.$on('market_switch', () => {
@@ -283,7 +280,7 @@
                 if (this.curAppInfo.web_config.engine_enabled) {
                     ['stag', 'prod'].forEach(env => {
                         this.$store.dispatch('fetchAppExposedLinkUrl', {
-                            appCode: this.$route.params.id,
+                            appCode: this.appCode,
                             env
                         }).then(link => {
                             this.appLinks[env] = link;
@@ -544,6 +541,7 @@
         top: 0;
         right: 0;
         transition: all .35s;
+        z-index: 99;
 
         .paasng-icon {
             font-size: 12px;
@@ -656,5 +654,13 @@
         &.marked {
             background: #FF9C01;
         }
+    }
+
+    .app-code-box {
+        max-width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        display: inline-block;
     }
 </style>

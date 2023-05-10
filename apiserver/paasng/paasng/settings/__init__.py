@@ -55,7 +55,6 @@ from environ import Env
 from .utils import (
     get_database_conf,
     get_default_keepalive_options,
-    get_internal_services_jwt_auth_conf,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
     is_redis_backend,
@@ -198,6 +197,7 @@ MIDDLEWARE = [
     'paasng.accounts.internal.user.SysUserFromVerifiedClientMiddleware',
     # Other utilities middlewares
     'paasng.utils.middlewares.AutoDisableCSRFMiddleware',
+    'paasng.utils.middlewares.APILanguageMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
@@ -297,6 +297,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 )
 
 TEMPLATE_DIRS = [str(BASE_DIR / 'templates')]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -358,7 +359,9 @@ LOGGING = {
         },
         'simple': {'format': '%(levelname)s %(message)s'},
     },
-    'filters': {'request_id': {'()': 'paasng.utils.log.RequestIDFilter'}},
+    'filters': {
+        'request_id': {'()': 'paasng.utils.logging.RequestIDFilter'},
+    },
     'handlers': {
         'null': {'level': LOG_LEVEL, 'class': 'logging.NullHandler'},
         'mail_admins': {'level': LOG_LEVEL, 'class': 'django.utils.log.AdminEmailHandler'},
@@ -385,6 +388,7 @@ LOGGING = {
         "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
         "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+        "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
         "iam": {"level": settings.get('IAM_LOG_LEVEL', "ERROR"), "handlers": _default_handlers, "propagate": False},
     },
 }
@@ -581,6 +585,7 @@ HEALTHZ_PROBES = settings.get(
         'paasng.monitoring.healthz.probes.PlatformRedisProbe',
         'paasng.monitoring.healthz.probes.ServiceHubProbe',
         'paasng.monitoring.healthz.probes.PlatformBlobStoreProbe',
+        'paasng.monitoring.healthz.probes.BKIAMProbe',
     ],
 )
 
@@ -606,7 +611,9 @@ PAAS_LEGACY_DBCONF = get_database_conf(
 # 旧版本 PaaS 数据库，敏感字段所使用的加密 key
 PAAS_LEGACY_DB_ENCRYPT_KEY = settings.get('PAAS_LEGACY_DB_ENCRYPT_KEY')
 
-# == 对象存储相关
+# ---------------
+# 对象存储配置
+# ---------------
 
 BLOBSTORE_TYPE = settings.get('BLOBSTORE_TYPE')
 
@@ -677,6 +684,7 @@ BK_IAM_RESOURCE_API_HOST = settings.get('BK_IAM_RESOURCE_API_HOST', BKPAAS_URL)
 # 权限中心应用ID，用于拼接权限中心的在桌面的访问地址
 BK_IAM_V3_APP_CODE = "bk_iam"
 
+
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get('BK_CC_URL', '')
 BK_JOB_URL = settings.get('BK_JOB_URL', '')
@@ -701,6 +709,9 @@ BK_PLATFORM_URLS = settings.get(
         'BK_JOB_HOST': BK_JOB_URL,
     },
 )
+
+# 权限中心用户组申请链接
+BK_IAM_USER_GROUP_APPLY_TMPL = BK_IAM_URL + "/apply-join-user-group?id={user_group_id}"
 
 # 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 BKPAAS_WEIXIN_URL_MAP = settings.get(
@@ -844,12 +855,6 @@ CONFIGVAR_PROTECTED_NAMES = (
 # 环境变量保留前缀列表
 CONFIGVAR_PROTECTED_PREFIXES = settings.get('CONFIGVAR_PROTECTED_PREFIXES', ["BKPAAS_", "KUBERNETES_"])
 
-# 后端引擎 API 服务地址
-ENGINE_CONTROLLER_HOST = settings.get('ENGINE_CONTROLLER_URL', 'http://localhost:8080')
-
-# 微服务（后端引擎 API、增强服务 API）通用的默认 JWT 鉴权信息，用于请求其他服务
-INTERNAL_SERVICES_JWT_AUTH_CONF = get_internal_services_jwt_auth_conf(settings)
-
 # 用于校验内部服务间请求的 JWT 配置，携带用以下任何一个 key 签名的 JWT 的请求会被认为有效
 PAAS_SERVICE_JWT_CLIENTS = get_paas_service_jwt_clients(settings)
 
@@ -971,6 +976,9 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
 # --------------
 # 应用日志相关配置
 # --------------
+# 默认的日志采集器类型, 可选性 "ELK", "BK_LOG"
+# 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器, 如需要支持 k8s 1.12 版本(含) 以下集群, 默认值不能设置成 BK_LOG
+LOG_COLLECTOR_TYPE = settings.get("LOG_COLLECTOR_TYPE", "ELK")
 
 # 日志 ES 服务地址
 ELASTICSEARCH_HOSTS = settings.get('ELASTICSEARCH_HOSTS', [{'host': 'localhost', 'port': "9200"}])
@@ -1136,10 +1144,14 @@ DISPLAY_BK_PLUGIN_APPS = settings.get("DISPLAY_BK_PLUGIN_APPS", True)
 # -----------------
 # 是否支持使用蓝鲸监控，启用后才能在社区版提供指标信息
 ENABLE_BK_MONITOR = settings.get('ENABLE_BK_MONITOR', False)
+# 蓝鲸监控运维相关的额外配置
+BKMONITOR_METRIC_RELABELINGS = settings.get('BKMONITOR_METRIC_RELABELINGS', [])
 # 蓝鲸监控的API是否已经注册在 APIGW
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # 同步告警策略到监控的配置
 MONITOR_AS_CODE_CONF = settings.get('MONITOR_AS_CODE_CONF', {})
+# Rabbitmq 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'rabbitmq'}
+RABBITMQ_MONITOR_CONF = settings.get('RABBITMQ_MONITOR_CONF', {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get('BK_MONITOR_APIGW_SERVICE_STAGE', 'stage')
 

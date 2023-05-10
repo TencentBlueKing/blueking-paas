@@ -22,16 +22,17 @@ import (
 	"fmt"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // DGroupMappingSpecFixture makes a faked Spec object which contains all 3 kinds of
 // example domain groups.
-func DGroupMappingSpecFixture(bkapp *paasv1alpha1.BkApp) paasv1alpha1.DomainGroupMappingSpec {
+func DGroupMappingSpecFixture(bkapp *paasv1alpha2.BkApp) paasv1alpha1.DomainGroupMappingSpec {
 	return paasv1alpha1.DomainGroupMappingSpec{
 		Ref: paasv1alpha1.MappingRef{
 			Name:       bkapp.Name,
-			Kind:       paasv1alpha1.KindBkApp,
-			APIVersion: paasv1alpha1.GroupVersion.String(),
+			Kind:       paasv1alpha2.KindBkApp,
+			APIVersion: paasv1alpha2.GroupVersion.String(),
 		},
 		Data: []paasv1alpha1.DomainGroup{
 			{

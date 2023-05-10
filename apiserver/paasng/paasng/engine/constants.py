@@ -53,7 +53,7 @@ class JobStatus(str, StructuredEnum):
 
 
 class BuildStatus(str, StructuredEnum):
-    """While `BuildStatus` has same members with `JobStatus`, differnet statuses might be added in the future"""
+    """While `BuildStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = 'successful'
     FAILED = 'failed'
@@ -66,21 +66,19 @@ class BuildStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class DeployEventStatus(ChoicesEnum):
-    """部署事件状态"""
+class ReleaseStatus(str, StructuredEnum):
+    """While `ReleaseStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
-    STARTED = 'started'
-    FINISHED = 'finished'
-    ABORTED = 'aborted'
+    SUCCESSFUL = 'successful'
+    FAILED = 'failed'
+    PENDING = 'pending'
+    INTERRUPTED = 'interrupted'
 
-    @classmethod
-    def get_job_status(cls, event_status: 'DeployEventStatus') -> 'JobStatus':
-        """通过 Event Status 映射到 Job Status"""
-        return JobStatus(
-            {cls.STARTED: JobStatus.PENDING, cls.FINISHED: JobStatus.SUCCESSFUL, cls.ABORTED: JobStatus.FAILED}[
-                event_status
-            ]
-        )
+    def to_job_status(self) -> JobStatus:
+        """Transform to `JobStatus`"""
+        # Do type transformation directly because two types are sharing the same
+        # members currently.
+        return JobStatus(self.value)
 
 
 class OperationTypes(ChoicesEnum):

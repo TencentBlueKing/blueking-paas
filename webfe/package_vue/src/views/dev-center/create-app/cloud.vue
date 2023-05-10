@@ -34,12 +34,13 @@
                 name="code"
                 data-parsley-required="true"
                 :data-parsley-required-message="$t('该字段是必填项')"
+                data-parsley-minlength="3"
                 data-parsley-maxlength="16"
                 data-parsley-pattern="[a-z][a-z0-9-]+"
-                :data-parsley-pattern-message="$t('格式不正确，只能包含：小写字母、数字、连字符(-)，首字母必须是字母，长度小于 16 个字符')"
+                :data-parsley-pattern-message="$t('格式不正确，只能包含：3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
                 data-parsley-trigger="input blur"
                 class="ps-form-control"
-                :placeholder="$t('由小写字母、数字、连字符(-)组成，首字母必须是字母，长度小于 16 个字符')"
+                :placeholder="$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
               >
             </p>
             <p class="whole-item-tips">

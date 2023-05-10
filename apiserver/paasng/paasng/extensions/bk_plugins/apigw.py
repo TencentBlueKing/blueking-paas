@@ -42,6 +42,16 @@ def safe_sync_apigw(plugin_app: Application):
     except PluginApiGatewayServiceError:
         logger.exception('Unable to sync API Gateway resource for "%s"', plugin_app)
     else:
+        # Authorisation of pre_distributors after creation of gateway
+        if pre_distributors := plugin_app.bk_plugin_profile.pre_distributors:
+            for distributor in pre_distributors:
+                try:
+                    logger.info('Granting permissions on distributer: %s, plugin: %s', distributor, plugin_app)
+                    gw_service.grant(distributor)
+                except PluginApiGatewayServiceError as e:
+                    logger.exception('grant permissions error on %s, detail: %s', distributor, e)
+
+        # After marking a gateway as synchronised, gateway creation and pre-authorisation will no longer be performed
         plugin_app.bk_plugin_profile.mark_synced(id_, gw_service.gw_name)
 
 

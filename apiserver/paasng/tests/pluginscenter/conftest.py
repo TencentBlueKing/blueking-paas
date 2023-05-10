@@ -27,7 +27,8 @@ from translated_fields import to_attribute
 
 from paasng.accounts.constants import AccountFeatureFlag as AFF
 from paasng.accounts.models import AccountFeatureFlag
-from paasng.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod
+from paasng.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod, PluginRole
+from paasng.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.pluginscenter.models import (
@@ -101,7 +102,18 @@ def pd():
             "email": {
                 "pattern": r"[\w'.%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,4}",
                 "description": "电子邮箱",
-            }
+            },
+            "distributor_codes": {
+                "title": "插件使用方",
+                "type": "array",
+                "items": {"type": "string"},
+                "ui:component": {
+                    "name": "select",
+                    "props": {
+                        "remoteConfig": {"url": "/api/bk_plugin_distributors/", "label": "name", "value": "code_name"},
+                    },
+                },
+            },
         },
         api={
             "create": make_api_resource("create-instance"),
@@ -146,6 +158,15 @@ def plugin(pd, bk_user):
         },
     )
     plugin.refresh_from_db()
+    return plugin
+
+
+@pytest.fixture
+def plugin_with_role(plugin):
+    # 初始化成员信息
+    G(PluginGradeManager, pd_id=plugin.pd.identifier, plugin_id=plugin.id, grade_manager_id=1)
+    G(PluginUserGroup, pd_id=plugin.pd.identifier, plugin_id=plugin.id, role=PluginRole.ADMINISTRATOR, user_group_id=1)
+    G(PluginUserGroup, pd_id=plugin.pd.identifier, plugin_id=plugin.id, role=PluginRole.DEVELOPER, user_group_id=2)
     return plugin
 
 

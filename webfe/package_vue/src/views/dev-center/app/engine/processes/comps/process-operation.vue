@@ -174,14 +174,19 @@
                       :key="instanceIndex"
                     >
                       <td class="name">
-                        <p>{{ instance.display_name }}</p>
+                        <p v-bk-overflow-tips>
+                          {{ instance.display_name }}
+                        </p>
                       </td>
                       <td class="run-state">
                         <i
                           class="paasng-icon"
                           :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
                         />
-                        <span v-bk-tooltips="{content: getInstanceStateToolTips(instance)}">{{ instance.state }}</span>
+                        <span
+                          v-bk-tooltips="{content: getInstanceStateToolTips(instance)}"
+                          v-dashed="9"
+                        >{{ instance.state }}</span>
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">
@@ -230,6 +235,7 @@
         :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
+        :before-close="handleBeforeClose"
       >
         <div
           id="log-container"
@@ -314,6 +320,7 @@
         :is-show.sync="chartSlider.isShow"
         :title="chartSlider.title"
         :quick-close="true"
+        :before-close="handleChartBeforeClose"
         @hidden="handlerChartHide"
       >
         <div
@@ -552,6 +559,7 @@
     import appBaseMixin from '@/mixins/app-base-mixin';
     import $ from 'jquery';
     import i18n from '@/language/i18n.js';
+    import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 
     let maxReplicasNum = 0;
 
@@ -574,7 +582,7 @@
             numInput,
             chart: ECharts
         },
-        mixins: [appBaseMixin],
+        mixins: [appBaseMixin, sidebarDiffMixin],
         props: {
             environment: {
                 type: String
@@ -800,6 +808,9 @@
             },
             localLanguage () {
                 return this.$store.state.localLanguage;
+            },
+            envEventData () {
+                return this.$store.state.envEventData;
             }
         },
         watch: {
@@ -821,7 +832,7 @@
             });
             this.isDateChange = false;
         },
-        destroyed () {
+        beforedestroy () {
             this.closeServerPush();
             this.closeLogDetail();
         },
@@ -923,6 +934,7 @@
                 this.processSlider.isShow = true;
                 this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
                 this.loadInstanceLog();
+                this.initSidebarFormData(this.curLogTimeRange);
             },
 
             getParams () {
@@ -944,8 +956,8 @@
                     }
                 };
 
-                params.query.terms['pod_name'] = [this.curInstance.name];
-                params.query.terms['environment'] = [this.environment];
+                params.query.terms.pod_name = [this.curInstance.name];
+                params.query.terms.environment = [this.environment];
 
                 return params;
             },
@@ -971,7 +983,7 @@
                         params,
                         filter
                     });
-                    const data = res.data.logs.reverse();
+                    const data = res.logs.reverse();
                     data.forEach((item) => {
                         item.podShortName = item.pod_name.split('-').reverse()[0];
                     });
@@ -1454,10 +1466,12 @@
             },
 
             watchServerPush () {
+                if (this.envEventData.includes(this.environment)) return;
                 const url = `${BACKEND_URL}/svc_workloads/api/processes/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/processes/watch/?rv_proc=${this.prevProcessVersion}&rv_inst=${this.prevInstanceVersion}&timeout_seconds=${this.serverTimeout}`;
                 this.serverEvent = new EventSource(url, {
                     withCredentials: true
                 });
+                this.$store.commit('updataEnvEventData', [this.environment]);
 
                 // 收藏服务推送消息
                 this.serverEvent.onmessage = (event) => {
@@ -1484,8 +1498,9 @@
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
+                        this.$store.commit('updataEnvEventData', []);
                         this.watchServerPush();
-                    }, 5000);
+                    }, 10000);
                 };
 
                 // 服务结束
@@ -1495,6 +1510,7 @@
 
                     // 推迟调用，防止过于频繁导致服务性能问题
                     setTimeout(() => {
+                        this.$store.commit('updataEnvEventData', []);
                         this.watchServerPush();
                     }, 5000);
                 });
@@ -1632,6 +1648,7 @@
                 this.curProcessKey = process.name;
                 this.chartSlider.title = `${this.$t('进程')} ${process.name}${this.$t('详情')}`;
                 this.chartSlider.isShow = true;
+                this.initSidebarFormData(this.initDateTimeRange);
                 if (this.curAppInfo.feature.RESOURCE_METRICS) {
                     this.getInstanceChart(process);
                 }
@@ -1708,6 +1725,7 @@
                         res => {
                             this.processConfigDialog.isLoading = false;
                             this.processConfigDialog.visiable = false;
+                            this.$store.commit('updataEnvEventData', []);
                             this.updateProcessConfig();
                         },
                         // 验证失败
@@ -1917,6 +1935,15 @@
                     return instance.state;
                 }
                 return instance.state_message;
+            },
+
+            async handleBeforeClose () {
+                return this.$isSidebarClosed(JSON.stringify(this.curLogTimeRange));
+            },
+
+            async handleChartBeforeClose () {
+                const time = this.initDateTimeRange.map(time => moment(time).format('YYYY-MM-DD HH:mm:ss'));
+                return this.$isSidebarClosed(JSON.stringify(time));
             }
         }
     };

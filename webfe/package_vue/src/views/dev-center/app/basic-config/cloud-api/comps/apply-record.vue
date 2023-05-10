@@ -114,7 +114,10 @@
               @clear-filter="clearFilterKey"
             />
           </div>
-          <bk-table-column :label="$t('申请人')">
+          <bk-table-column
+            :label="$t('申请人')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ props.row.applied_by }}
             </template>
@@ -123,8 +126,12 @@
             prop="applied_time"
             :label="$t('申请时间')"
             :show-overflow-tooltip="true"
+            :render-header="$renderHeader"
           />
-          <bk-table-column :label="$t('API类型')">
+          <bk-table-column
+            :label="$t('API类型')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ typeMap[props.row.type] }}
             </template>
@@ -144,7 +151,10 @@
               </template>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('审批人')">
+          <bk-table-column
+            :label="$t('审批人')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <template v-if="getHandleBy(props.row.handled_by) === '--'">
                 --
@@ -155,7 +165,10 @@
               >{{ getHandleBy(props.row.handled_by) }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('审批状态')">
+          <bk-table-column
+            :label="$t('审批状态')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <template v-if="props.row.apply_status === 'approved'">
                 <span class="paasng-icon paasng-pass" /> {{ getStatusDisplay(props.row.apply_status) }}
@@ -171,7 +184,10 @@
               </template>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('审批时间')">
+          <bk-table-column
+            :label="$t('审批时间')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ props.row.handled_time || '--' }}
             </template>
@@ -719,7 +735,8 @@
                     this.tableEmptyConf.keyword = 'placeholder';
                     return;
                 }
-                this.tableEmptyConf.keyword = '';
+                // 恒定条件不展示清空交互
+                this.tableEmptyConf.keyword = '$CONSTANT';
             }
         }
     };

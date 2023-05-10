@@ -81,7 +81,7 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
         application = ApplicationDetailSLZ(self.get_application()).data
         kwargs['application'] = application
         kwargs['cluster_choices'] = [
-            {'id': cluster['name'], 'name': f"{cluster['name']} -- {ClusterType.get_choice_label(cluster['type'])}"}
+            {'id': cluster.name, 'name': f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
             for cluster in RegionClusterService(application['region']).list_clusters()
         ]
         return kwargs

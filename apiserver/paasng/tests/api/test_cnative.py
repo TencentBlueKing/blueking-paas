@@ -20,7 +20,7 @@ import pytest
 from django.conf import settings
 from django.urls import reverse
 
-from paasng.cnative.constants import BKPAAS_ADDONS_ANNO_KEY
+from paas_wl.cnative.specs.constants import BKPAAS_ADDONS_ANNO_KEY
 from paasng.dev_resources.servicehub.services import ServiceObj
 from tests.utils import mock
 

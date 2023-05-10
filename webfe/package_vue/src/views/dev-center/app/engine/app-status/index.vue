@@ -275,9 +275,11 @@ le<template lang="html">
             if (this.environment === 'prod') {
                 this.activeIndex = 1;
             }
+            this.$store.commit('updataEnvEventData', []);
             this.init();
         },
         beforeDestroy () {
+            this.$store.commit('updataEnvEventData', ['stag', 'prod']);
             clearInterval(this.intervalTimer);
         },
         methods: {

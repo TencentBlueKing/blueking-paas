@@ -16,11 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from operator import attrgetter
 from unittest import mock
 
 import arrow
 import pytest
 from django.conf import settings
+from django.utils import translation
 
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound
 from paasng.engine.constants import OperationTypes
@@ -30,6 +32,7 @@ from paasng.plat_admin.system.applications import (
     query_default_apps_by_ids,
     query_legacy_apps_by_ids,
     query_uni_apps_by_ids,
+    query_uni_apps_by_keyword,
     str_username,
 )
 from tests.engine.setup_utils import create_fake_deployment
@@ -70,6 +73,32 @@ class TestQueryUniApps:
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
         assert results[legacy_app.code].name == legacy_app.name
+
+    @pytest.mark.parametrize(
+        "keyword, expected_count, language,name_field",
+        [
+            ("", 2, "", "name"),
+            ("bk_app", 1, "en", "name_en"),
+            ("legacy_app", 1, "en", "name"),
+        ],
+    )
+    def test_query_by_keyword(self, bk_app, keyword, expected_count, language, name_field):
+        keyword_app = bk_app
+        legacy_app = create_legacy_application()
+
+        if keyword == "bk_app":
+            keyword = bk_app.code
+        elif keyword == "legacy_app":
+            keyword_app = legacy_app
+            keyword = legacy_app.name
+
+        translation.activate(language)
+
+        uni_apps_list = query_uni_apps_by_keyword(keyword, offset=0, limit=10)
+        assert len(uni_apps_list) == expected_count
+
+        uni_apps_dict = {app.code: app.name for app in uni_apps_list}
+        uni_apps_dict[keyword_app.code] = attrgetter(name_field)(keyword_app)
 
 
 class TestGetContactInfo:

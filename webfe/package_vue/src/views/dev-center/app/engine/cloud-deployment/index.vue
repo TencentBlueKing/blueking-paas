@@ -61,6 +61,7 @@
           ref="dropdown"
           align="right"
           trigger="click"
+          :class="[isDisabled ? 'deploy-dropdown-menu' : '']"
           @show="dropdownShow"
           @hide="dropdownHide"
         >
@@ -69,6 +70,7 @@
             :loading="buttonLoading"
             class="pl20 pr20"
             :theme="'primary'"
+            :disabled="isDisabled"
           >
             {{ $t('发布') }}
             <i
@@ -135,6 +137,7 @@
 
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin.js';
+    import { bus } from '@/common/bus';
 
     export default {
         components: {
@@ -155,7 +158,8 @@
                     stage: 'stag'
                 },
                 replicasChanges: [],
-                manifestExt: {}
+                manifestExt: {},
+                isDisabled: false
             };
         },
         computed: {
@@ -191,6 +195,9 @@
         },
         created () {
             this.init();
+            bus.$on('release-disabled', (value) => {
+                this.isDisabled = value;
+            });
         },
         methods: {
 
@@ -243,6 +250,7 @@
             },
 
             dropdownShow () {
+                if (this.isDisabled) return;
                 this.isDropdownShow = true;
             },
             dropdownHide () {
@@ -252,9 +260,21 @@
                 this.$refs.dropdown.hide();
             },
 
-            deployDialog (env) {
-                this.buttonLoading = true;
-                this.getCloudAppInfo(env);
+            async deployDialog (env) {
+                if (this.deployModule === 'process') { // 进程配置需要单独处理下
+                    try {
+                       const res = await this.$refs.square.formDataValidate();
+                       if (res) {
+                           this.buttonLoading = true;
+                           this.getCloudAppInfo(env);
+                       }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                } else {
+                    this.buttonLoading = true;
+                    this.getCloudAppInfo(env);
+                }
             },
 
             showDeployDialog (env) {
@@ -300,8 +320,8 @@
             async handleDeploy (env) {
                 const environment = env === 'stag' ? this.$t('预发布') : this.$t('生产');
                 this.$bkInfo({
-                    title: this.$t(`确认发布至{environment}环境`, { environment: environment }),
-                    subTitle: this.$t(`确认要将应用（{code}）发布到{environment}环境`, { code: this.appCode, environment: environment }),
+                    title: this.$t('确认发布至{environment}环境', { environment: environment }),
+                    subTitle: this.$t('确认要将应用（{code}）发布到{environment}环境', { code: this.appCode, environment: environment }),
                     width: 520,
                     confirmLoading: true,
                     cancelFn: () => {
@@ -322,6 +342,7 @@
                 const portReg = /^[0-9]*$/;
                 for (let i = 0; i < processes.length; i++) {
                     // image 镜像地址
+                    console.log('!processes[i].image', !processes[i].image);
                     if (!processes[i].image) {
                         this.$bkMessage({
                             theme: 'error',
@@ -539,5 +560,10 @@
         display: inline-block;
         min-width: 65px;
     }
+}
+</style>
+<style lang="scss">
+.deploy-dropdown-menu .bk-dropdown-content{
+    display: none !important;
 }
 </style>

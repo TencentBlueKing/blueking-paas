@@ -78,6 +78,7 @@
 <style lang="scss">
     @import './assets/css/patch.scss';
     @import './assets/css/ps-style.scss';
+    @import '~@/assets/css/mixins/dashed.scss';
 
     .gray-bg {
         background: #fafbfd;
@@ -160,5 +161,20 @@
 
     .plugin-min-width {
         min-width: 1366px;
+    }
+
+    .table-header-tips-cls {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+    .v-text-toolips-dashed {
+        @include dashed();
+    }
+
+    @for $i from 8 through 12 {
+        .v-text-toolips-dashed#{$i} {
+            @include dashed($i + px);
+        }
     }
 </style>

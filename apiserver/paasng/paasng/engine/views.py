@@ -52,28 +52,20 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.dev_resources.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
-from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
-from paasng.engine.deploy.infras import DeploymentCoordinator
-from paasng.engine.deploy.preparations import initialize_deployment
-from paasng.engine.deploy.protections import ModuleEnvDeployInspector
-from paasng.engine.deploy.release import create_release
-from paasng.engine.deploy.runner import DeployTaskRunner
-from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
-from paasng.engine.models.config_var import (
-    ENVIRONMENT_NAME_FOR_GLOBAL,
-    ConfigVar,
-    add_prefix_to_key,
+from paasng.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
 )
-from paasng.engine.models.deployment import Deployment, interrupt_deployment
-from paasng.engine.models.managers import (
-    ConfigVarManager,
-    DeployPhaseManager,
-    ExportedConfigVars,
-    OfflineManager,
-    PlainConfigVar,
-)
+from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoPrefixAppRunTimeBuiltinEnv
+from paasng.engine.deploy.archive import OfflineManager
+from paasng.engine.deploy.engine_svc import get_all_logs
+from paasng.engine.deploy.interruptions import interrupt_deployment
+from paasng.engine.deploy.release import create_release
+from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
+from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
+from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar, add_prefix_to_key
+from paasng.engine.models.deployment import Deployment
+from paasng.engine.models.managers import ConfigVarManager, DeployPhaseManager, ExportedConfigVars, PlainConfigVar
 from paasng.engine.models.offline import OfflineOperation
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.models.processes import ProcessManager
@@ -98,6 +90,8 @@ from paasng.engine.serializers import (
     QueryOperationsSLZ,
     ResourceMetricsSLZ,
 )
+from paasng.engine.workflow import DeploymentCoordinator
+from paasng.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.extensions.declarative.exceptions import DescriptionValidationError
 from paasng.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import AppEnvironment, AppFeatureFlag
@@ -106,7 +100,8 @@ from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.models import Module
-from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url, get_preallocated_url
+from paasng.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.publish.entrance.preallocated import get_preallocated_url
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import allow_resp_patch
 
@@ -123,7 +118,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = self.serializer_class(request.query_params)
 
         try:
-            deployment = Deployment.objects.filter(app_environment=module_env).latest_succeeded()
+            deployment = Deployment.objects.filter_by_env(env=module_env).latest_succeeded()
         except Deployment.DoesNotExist:
             raise error_codes.APP_NOT_RELEASED
 
@@ -194,7 +189,7 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_deployment_data(env) -> Optional[Dict]:
         """Try to get the latest deployment data by querying Deployment model"""
         try:
-            deployment = Deployment.objects.filter(app_environment=env).latest_succeeded()
+            deployment = Deployment.objects.filter_by_env(env=env).latest_succeeded()
         except Deployment.DoesNotExist:
             # Cloud-native app does not has any deployment objects
             return None
@@ -479,7 +474,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         hint = get_failure_hint(deployment)
         result = {
             'status': deployment.status,
-            'logs': deployment.logs,
+            'logs': get_all_logs(deployment),
             'error_detail': deployment.err_detail,
             'error_tips': asdict(hint),
         }

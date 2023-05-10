@@ -18,10 +18,14 @@
 
 import copy from './copy';
 import charts from './charts';
+import dashed from './dashed';
+import enClass from './en-class';
 
 const directives = {
   copy,
-  charts
+  charts,
+  dashed,
+  enClass
 };
 
 export default {

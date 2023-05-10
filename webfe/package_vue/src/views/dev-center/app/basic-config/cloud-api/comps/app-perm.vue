@@ -76,6 +76,7 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
         >
@@ -102,7 +103,10 @@
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('API类型')">
+          <bk-table-column
+            :label="$t('API类型')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ typeMap[props.row.type] }}
             </template>
@@ -112,6 +116,7 @@
               :label="isComponentApi ? $t('系统') : $t('网关')"
               min-width="100"
               :prop="isComponentApi ? 'system_name' : 'api_name'"
+              :column-key="isComponentApi ? 'system_name' : 'api_name'"
               :filters="nameFilters"
               :filter-method="nameFilterMethod"
               :filter-multiple="true"
@@ -174,17 +179,23 @@
           >
             <template slot-scope="props">
               <span
-                v-bk-tooltips="props.row.description"
+                v-bk-tooltips="{ content: props.row.description, disabled: props.row.description === '' }"
                 v-html="highlightDesc(props.row)"
               />
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限等级')">
+          <bk-table-column
+            :label="$t('权限等级')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('权限期限')">
+          <bk-table-column
+            :label="$t('权限期限')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="props">
               {{ getComputedExpires(props.row) }}
             </template>
@@ -193,9 +204,11 @@
             <bk-table-column
               :label="$t('状态')"
               prop="permission_status"
+              column-key="status"
               :filters="statusFilters"
               :filter-method="statusFilterMethod"
               :filter-multiple="true"
+              :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
@@ -217,7 +230,10 @@
             </bk-table-column>
           </template>
           <template v-else>
-            <bk-table-column :label="$t('状态')">
+            <bk-table-column
+              :label="$t('状态')"
+              :render-header="$renderHeader"
+            >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
                   <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
@@ -343,7 +359,8 @@
                 tableEmptyConf: {
                     keyword: '',
                     isAbnormal: false
-                }
+                },
+                allFilterData: {}
             };
         },
         computed: {
@@ -429,6 +446,14 @@
                 return row[property] === value;
             },
 
+            filterChange (filters) {
+                Object.entries(filters).forEach(item => {
+                    const [name, value] = item;
+                    this.allFilterData[name] = value;
+                });
+                this.updateTableEmptyConfig();
+            },
+
             handleSelect (value, option) {
                 this.pagination = Object.assign({}, {
                     current: 1,
@@ -502,6 +527,7 @@
                 }
                 this.initPageConf();
                 this.tableList = this.getDataByPage();
+                this.updateTableEmptyConfig();
             },
 
             /**
@@ -714,6 +740,7 @@
                     this.catchErrorHandler(e);
                 } finally {
                     this.loading = false;
+                    this.$emit('data-ready');
                 }
             },
 
@@ -751,6 +778,8 @@
             },
             clearFilterKey () {
                 this.searchValue = '';
+                this.isRenewalPerm = false;
+                this.allFilterData = {};
                 this.$refs.permRef.clearFilter();
                 if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
                     const tableHeader = this.$refs.permRef.$refs.tableHeader;
@@ -760,7 +789,24 @@
             },
 
             updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.searchValue;
+                let isTableFilter = this.isFilterCriteria();
+
+                if (this.searchValue || this.isRenewalPerm || isTableFilter) {
+                    this.tableEmptyConf.keyword = 'placeholder';
+                    return;
+                }
+                this.tableEmptyConf.keyword = '$CONSTANT';
+            },
+
+            // 表头是否存在筛选条件
+            isFilterCriteria () {
+                let isFilter = false;
+                for (const key in this.allFilterData) {
+                    if (this.allFilterData[key].length) {
+                        isFilter = true;
+                    }
+                };
+                return isFilter;
             }
         }
     };

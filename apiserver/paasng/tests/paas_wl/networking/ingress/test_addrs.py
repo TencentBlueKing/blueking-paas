@@ -62,7 +62,7 @@ class TestEnvAddresses:
         )
 
         # Create a successful release record to by-paas deployment check
-        create_release(bk_stag_env, bk_user, failed=False)
+        create_release(bk_stag_env.wl_app, bk_user, failed=False)
         addrs = EnvAddresses(bk_stag_env).get()
         assert addrs == [
             Address(AddressType.SUBDOMAIN, 'http://foo.example.org:8080/', False),

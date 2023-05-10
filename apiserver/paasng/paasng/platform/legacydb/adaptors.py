@@ -19,12 +19,13 @@ to the current version of the project delivered to anyone in the future.
 import datetime
 import logging
 import re
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.utils import timezone
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError as SqlIntegrityError
 from sqlalchemy.orm import Session
 
@@ -51,6 +52,30 @@ class AppAdaptor:
     def get_by_app_id(self, app_id: int) -> "legacy_models.LApplication":
         app = self.session.query(self.model).filter_by(id=app_id).scalar()
         return app
+
+    def get_by_keyword(self, keyword: str) -> List[Dict[str, str]]:
+        """Query application info not in PaaS3.0 by keywords (APP ID, APP Name)"""
+        legacy_apps = (
+            self.session.query(self.model)
+            .filter(
+                self.model.from_paasv3 == 0,
+                self.model.migrated_to_paasv3 == 0,
+                self.model.is_lapp == 0,
+            )
+            .order_by(self.model.code)
+        )
+
+        if keyword:
+            # 模糊匹配的关键字
+            fuzzy_keyword = f"%{keyword}%"
+            legacy_apps = legacy_apps.filter(
+                or_(
+                    self.model.name.like(fuzzy_keyword),
+                    self.model.name_en.like(fuzzy_keyword),
+                    self.model.code.like(fuzzy_keyword),
+                )
+            )
+        return [{"code": app.code, "name": app.name, "name_en": app.name} for app in legacy_apps]
 
     def update(self, code: str, data: dict) -> int:
         """

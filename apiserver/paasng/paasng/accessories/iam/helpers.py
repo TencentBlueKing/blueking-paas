@@ -168,3 +168,17 @@ def delete_builtin_user_groups(app_code: str):
     user_groups = ApplicationUserGroup.objects.filter(app_code=app_code)
     IAM_CLI.delete_user_groups(user_groups.values_list('user_group_id', flat=True))
     user_groups.delete()
+
+
+def user_group_apply_url(app_code: str) -> dict:
+    """应用用户组权限申请链接"""
+    ops_user_group_id = ApplicationUserGroup.objects.get(
+        app_code=app_code, role=ApplicationRole.OPERATOR
+    ).user_group_id
+    dev_user_group_id = ApplicationUserGroup.objects.get(
+        app_code=app_code, role=ApplicationRole.DEVELOPER
+    ).user_group_id
+    return {
+        "apply_url_for_ops": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=ops_user_group_id),
+        "apply_url_for_dev": settings.BK_IAM_USER_GROUP_APPLY_TMPL.format(user_group_id=dev_user_group_id),
+    }

@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import json
 from collections import defaultdict
+from contextlib import closing
 from typing import Dict, List
 
 from bkpaas_auth.core.constants import ProviderType
@@ -41,12 +42,12 @@ from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.engine.constants import AppEnvName
-from paasng.engine.deploy.infras import DeploymentCoordinator
-from paasng.engine.deploy.preparations import initialize_deployment
-from paasng.engine.deploy.runner import DeployTaskRunner
+from paasng.engine.deploy.engine_svc import get_all_logs
+from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.models import ConfigVar, Deployment
 from paasng.engine.models.managers import DeployPhaseManager
 from paasng.engine.streaming.constants import EventType
+from paasng.engine.workflow import DeploymentCoordinator
 from paasng.extensions.bk_plugins import api_serializers, serializers
 from paasng.extensions.bk_plugins.apigw import safe_update_gateway_status
 from paasng.extensions.bk_plugins.models import BkPluginTag, make_bk_plugin
@@ -118,7 +119,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application.language = module.language
         application.save(update_fields=['language'])
 
-        post_create_application.send(sender=self.__class__, application=application)
+        post_create_application.send(sender=self.__class__, application=application, extra_fields=data['extra_fields'])
         create_market_config(
             application=application,
             # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
@@ -276,23 +277,27 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_GET_DEPLOYMENT
 
         subscriber = StreamChannelSubscriber(deploy_id, redis_db=get_default_redis())
-        channel_state = subscriber.get_channel_state()
-        if channel_state == 'none' or channel_state == 'unknown':
-            # redis 管道已结束, 取数据库中存储的日志
-            return Response(
-                data=api_serializers.PluginReleaseLogsResponseSLZ(
-                    {"finished": True, "logs": deployment.logs.split("\n")}
-                ).data
-            )
 
-        logs = []
-        finished = False
-        events = subscriber.get_history_events(last_event_id=0, ignore_special=False)
+        with closing(subscriber):
+            channel_state = subscriber.get_channel_state()
+            if channel_state == 'none' or channel_state == 'unknown':
+                # redis 管道已结束, 取数据库中存储的日志
+                return Response(
+                    data=api_serializers.PluginReleaseLogsResponseSLZ(
+                        {"finished": True, "logs": get_all_logs(deployment).split("\n")}
+                    ).data
+                )
+
+            logs = []
+            finished = False
+            events = subscriber.get_history_events(last_event_id=0, ignore_special=False)
+
         for event in events:
             if event["event"] == EventType.MSG.value:
                 logs.append(json.loads(event["data"])["line"])
             if event["event"] == EventType.CLOSE.value:
                 finished = True
+
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 
 

@@ -9,7 +9,7 @@
       <section>
         <div class="basic-info-item">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div class="info">
             {{ $t('管理员、开发者可以修改插件名称等基本信息') }}
@@ -236,13 +236,18 @@
                 style="width: calc(100% - 180px);"
                 :class="{ 'input-show-index': isFormEdited.profileInput }"
               >
-                <bk-input
-                  ref="profileInput"
-                  :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
-                  :readonly="!isFormEdited.profileInput"
-                  ext-cls="paas-info-app-name-cls"
-                  :clearable="false"
-                />
+                <div
+                  v-bk-tooltips="marketInfo.introduction ? marketInfo.introduction : marketDefault"
+                  class="introductory"
+                >
+                  <bk-input
+                    ref="profileInput"
+                    :value="marketInfo.introduction ? marketInfo.introduction : marketDefault"
+                    :readonly="!isFormEdited.profileInput"
+                    ext-cls="paas-info-app-name-cls"
+                    :clearable="false"
+                  />
+                </div>
               </bk-form-item>
             </bk-form>
             <bk-form
@@ -304,7 +309,7 @@
                     class="unfold-btn"
                     @click="changeInfoUnfold"
                   >
-                    {{ isUnfold ? '收起' : '展开' }}
+                    {{ isUnfold ? $t('收起') : $t('展开') }}
                     <i :class="['paasng-icon', isUnfold ? 'paasng-angle-line-up' : 'paasng-angle-line-down']" />
                   </span>
                 </div>
@@ -367,7 +372,7 @@
                   :source-list="pluginList"
                   :display-key="'name'"
                   :setting-key="'code_name'"
-                  :show-overflow-tips="true"
+                  :show-overflow-tips="false"
                   :empty-content="promptContent"
                   :title="titleArr"
                   @change="transferChange"
@@ -1377,5 +1382,9 @@
             display: none;
         }
     }
-
+    .introductory .paas-info-app-name-cls input {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
 </style>

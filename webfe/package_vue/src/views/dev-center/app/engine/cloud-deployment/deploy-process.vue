@@ -213,6 +213,9 @@
             >
               <bk-input
                 v-model="formData.replicas"
+                type="number"
+                :max="5"
+                :min="1"
                 style="width: 150px"
               />
             </bk-form-item>
@@ -267,6 +270,7 @@
 
 <script>
     import _ from 'lodash';
+    import { bus } from '@/common/bus';
 
     export default {
         components: {
@@ -294,8 +298,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: 8080
                 },
@@ -318,9 +322,9 @@
                     { key: '1024 Mi', value: '1024Mi' }
                 ],
                 cpuData: [
+                    { key: '500m', value: '500m' },
                     { key: '1000m', value: '1000m' },
-                    { key: '2000m', value: '2000m' },
-                    { key: '4000m', value: '4000m' }
+                    { key: '2000m', value: '2000m' }
                 ],
                 hooks: null,
                 isLoading: true,
@@ -398,7 +402,7 @@
                     if (this.localCloudAppData.spec) {
                         val.name = this.panels[this.panelActive] && this.panels[this.panelActive].name;
                         val.replicas = val.replicas && Number(val.replicas);
-                        if (val.targetPort) {
+                        if (val.targetPort && /^\d+$/.test(val.targetPort)) { // 有值且为数字字符串
                             val.targetPort = Number(val.targetPort);
                         }
                         this.$set(this.localCloudAppData.spec.processes, this.panelActive, val);
@@ -460,6 +464,15 @@
                         }
                     }
                 }
+            },
+
+            panels: {
+              handler (val) {
+                if (!val.length) return;
+                const isDisabled = val[this.panelActive].isEdit;
+                bus.$emit('release-disabled', isDisabled);
+              },
+              deep: true
             }
         },
         created () {
@@ -482,8 +495,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: null
                 };
@@ -555,7 +568,7 @@
                 });
             },
 
-            // 处理重复添加
+            // 处理重复添加和正则
             handleRepeatData (index) {
                 if (!this.isBlur) return;
                 this.isBlur = false; // 处理enter会触发两次的bug
@@ -568,6 +581,16 @@
                     this.$paasMessage({
                         theme: 'error',
                         message: this.$t('不允许添加同名进程')
+                    });
+                    setTimeout(() => {
+                        this.isBlur = true;
+                        this.$refs.panelInput[0] && this.$refs.panelInput[0].focus();
+                    }, 100);
+                    return false;
+                } if (!/^[a-z0-9]([-a-z0-9]){1,11}$/.test(this.itemValue)) {
+                    this.$paasMessage({
+                        theme: 'error',
+                        message: this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')
                     });
                     setTimeout(() => {
                         this.isBlur = true;
@@ -614,12 +637,18 @@
                 this.preFormData.loaclEnabled = !this.preFormData.loaclEnabled;
             },
 
-            formDataValidate (index) {
-                console.log('触发');
-                this.$refs.formResource.validate();
-                this.$refs.formDeploy.validate();
-                if (index) {
-                    this.handlePanelValidateSwitch(index);
+            async formDataValidate (index) {
+                console.log('触发', index);
+                try {
+                  await this.$refs.formResource.validate();
+                  await this.$refs.formDeploy.validate();
+                  if (index) {
+                      this.handlePanelValidateSwitch(index);
+                  }
+                  return true;
+                } catch (error) {
+                  console.error(error);
+                  return false;
                 }
             },
 
@@ -630,8 +659,8 @@
                     image: '',
                     command: [],
                     args: [],
-                    memory: '1024Mi',
-                    cpu: '4000m',
+                    memory: '256Mi',
+                    cpu: '500m',
                     replicas: 1,
                     targetPort: 8080
                 };

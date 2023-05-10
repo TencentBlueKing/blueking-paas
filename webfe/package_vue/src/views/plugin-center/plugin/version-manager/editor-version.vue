@@ -100,19 +100,19 @@
                   v-bk-tooltips.top="$t('非兼容式升级时使用')"
                   :value="curVersion.semver_choices.major"
                 >
-                  {{ $t('重大版本') }}
+                  <span v-dashed="12">{{ $t('重大版本') }}</span>
                 </bk-radio>
                 <bk-radio
                   v-bk-tooltips.top="$t('兼容式功能更新时使用')"
                   :value="curVersion.semver_choices.minor"
                 >
-                  {{ $t('次版本') }}
+                  <span v-dashed="12">{{ $t('次版本') }}</span>
                 </bk-radio>
                 <bk-radio
                   v-bk-tooltips.top="$t('兼容式问题修正时使用')"
                   :value="curVersion.semver_choices.patch"
                 >
-                  {{ $t('修正版本') }}
+                  <span v-dashed="12">{{ $t('修正版本') }}</span>
                 </bk-radio>
               </bk-radio-group>
             </bk-form-item>
@@ -186,6 +186,7 @@
             :label="$t('Commit ID')"
             prop="name"
             :show-overflow-tooltip="true"
+            :render-header="$renderHeader"
           />
           <bk-table-column
             :label="$t('状态')"
@@ -199,8 +200,12 @@
           <bk-table-column
             :label="$t('提交者')"
             prop="operator"
+            :render-header="$renderHeader"
           />
-          <bk-table-column :label="$t('提交时间')">
+          <bk-table-column
+            :label="$t('提交时间')"
+            :render-header="$renderHeader"
+          >
             <template slot-scope="{ row }">
               <span v-bk-tooltips="row.message">{{ row.message || '--' }}</span>
             </template>

@@ -1,6 +1,9 @@
 <template lang="html">
   <div class="paas-content white">
-    <div class="wrap">
+    <div
+      v-en-class="'en-label'"
+      class="wrap"
+    >
       <div class="paas-application-tit establish-title mt30">
         <span> {{ $t('创建模块') }} </span>
       </div>
@@ -320,10 +323,9 @@
                     />
                   </label>
                   <div class="form-group-flex">
-                    <p class="mt10">
+                    <p>
                       <bk-input
                         v-model="sourceDirVal"
-                        size="large"
                         class="source-dir"
                         :class="sourceDirError ? 'error' : ''"
                         :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
@@ -378,6 +380,7 @@
               v-else
               v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
               class="ps-btn-disabled"
+              style="text-align: center;"
             >
               {{ $t('创建模块') }}
             </div>

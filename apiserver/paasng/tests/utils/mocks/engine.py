@@ -34,7 +34,7 @@ def build_default_cluster():
 
     cluster = Cluster(
         name=CLUSTER_NAME_FOR_TESTING,
-        region=settings.FOR_TESTS_DEFAULT_REGION,
+        region=settings.DEFAULT_REGION_NAME,
         is_default=True,
         ingress_config=cattr.structure(
             {
@@ -49,6 +49,7 @@ def build_default_cluster():
         annotations={
             "bcs_cluster_id": "",
             "bcs_project_id": "",
+            "bk_biz_id": "",
         },
         ca_data=settings.FOR_TESTS_CLUSTER_CONFIG["ca_data"],
         cert_data=settings.FOR_TESTS_CLUSTER_CONFIG["cert_data"],

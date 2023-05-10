@@ -16,8 +16,58 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
+from types import MethodType
+from typing import Tuple, Type
+
 from django.apps import apps
-from django.conf import settings
+from django.db import connections
+from django.db.migrations import Migration
+from django.db.migrations.loader import MigrationRecorder
+from django.db.migrations.operations.base import Operation
+from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger(__name__)
+
+
+def skip_if_found_record(sentinel: Tuple[str, str]):
+    """patch `Migration.operations` to control whether to apply database_forwards on workloads db."""
+
+    def migration_decorator(cls: Type[Migration]):
+        cls.operations = [_patch_operation(op, sentinel) for op in cls.operations]
+        return cls
+
+    return migration_decorator
+
+
+def _patch_operation(op: Operation, sentinel: Tuple[str, str]):
+    """patch operation to control whether to apply database_forwards on workloads db.
+
+    由于架构调整, workloads.services(k8s ingress 模块) 重命名为 ingress, 以避免与 apiserver 中的 services(增强服务模块) 重名冲突
+    应用重命名会导致 migrations 重复执行, 因此需要 patch `Operation.allow_migrate_model` 方法, 在哨兵记录存在时跳过操作
+
+    哨兵值为 `django_migrations` 表的记录, 用于判断重命名前的 migrations 是否已执行
+    如在 0005_auto_20221212_1810.py 中应该使用 ("services", "0005_auto_20221212_1810") 作为哨兵值
+
+    Note:
+    1. 无论是否跳过 operation 的执行, 在执行 db migrate 后均会产生 ingress app 的 migrations 记录
+    2. 新增的 migrations 无需进行 patch
+    """
+    origin_allow_migrate_model = op.allow_migrate_model
+
+    def allow_migrate_model(self, connection_alias, model):
+        if connection_alias != WorkloadsDBRouter()._workloads_db_name:
+            return False
+
+        connection = connections[connection_alias]
+        # 如果哨兵记录已存在, 表示该环境并未全新部署. 跳过执行 operation
+        if MigrationRecorder(connection).migration_qs.filter(app=sentinel[0], name=sentinel[1]).exists():
+            logger.info(_("检测到重命名前的 migration 记录 {}, 跳过执行当前 migration").format(str(sentinel)))
+            return False
+        return origin_allow_migrate_model(connection_alias, model)
+
+    op.allow_migrate_model = MethodType(allow_migrate_model, op)
+    return op
 
 
 class WorkloadsDBRouter:
@@ -48,9 +98,8 @@ class WorkloadsDBRouter:
     def allow_migrate(self, db, app_label, **hints):
         app_config = apps.get_app_config(app_label)
         if self._app_from_wl(app_config):
-            # db migrations are forbidden except in unit tests
-            # And paas_wl migrations can only apply to workloads db
-            return settings.RUNNING_TESTS and db == self._workloads_db_name
+            # workloads db migrations are forbidden except apply to workloads db
+            return db == self._workloads_db_name
 
         # other migrations can not apply to workloads db
         if db == self._workloads_db_name:

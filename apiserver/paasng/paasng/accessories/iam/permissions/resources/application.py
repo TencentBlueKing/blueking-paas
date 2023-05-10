@@ -17,16 +17,21 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from datetime import datetime, timedelta
 from typing import Dict, Type
 
 from attrs import define, field, validators
+from bkpaas_auth.core.encoder import user_id_encoder
 from blue_krill.data_types.enum import EnumField, StructuredEnum
+from django.conf import settings
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from iam.exceptions import AuthAPIError
 
 from paasng.accessories.iam.constants import ResourceType
 from paasng.accessories.iam.permissions.perm import PermCtx, Permission, ResCreatorAction, validate_empty
 from paasng.accessories.iam.permissions.request import ResourceRequest
+from paasng.accounts.permissions.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP
 
 logger = logging.getLogger(__name__)
 
@@ -217,4 +222,13 @@ class ApplicationPermission(Permission):
             logger.warning("generate user app filters failed: %s", str(e))
             return None
 
-        return filters
+        # 因权限中心同步（用户组成员信息 —> 具体的权限策略）存在时延（约 20s），
+        # 因此在应用创建后的短时间内，需特殊豁免以免在列表页无法查询到最新的应用
+        perm_exempt_filter = Q(
+            owner=user_id_encoder.encode(settings.USER_TYPE, request.subject.id),
+            created__gt=datetime.now() - timedelta(seconds=PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP),
+        )
+        if not filters:
+            return perm_exempt_filter
+
+        return filters | perm_exempt_filter

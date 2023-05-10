@@ -43,6 +43,7 @@ def create_fake_deployment(module, app_environment='prod', operator=None, **kwar
         source_version_name='trunk',
         advanced_options={},
         procfile=deploy_config.procfile.copy(),
+        processes={k: {"name": k, "command": v} for k, v in deploy_config.procfile.items()},
         hooks=deepcopy(deploy_config.hooks),
         **kwargs
     )

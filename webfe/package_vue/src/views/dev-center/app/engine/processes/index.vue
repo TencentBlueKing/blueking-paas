@@ -9,7 +9,7 @@
 
     <section class="app-container middle">
       <paas-content-loader
-        :is-loading="isStagLoading || isProdLoading"
+        :is-loading="isLoading"
         placeholder="process-loading"
         :offset-top="10"
       >
@@ -25,6 +25,7 @@
           >
             <div class="environment environment-instance">
               <process-operation
+                v-if="environment === 'stag'"
                 ref="stagComponent"
                 :app-code="appCode"
                 :environment="'stag'"
@@ -38,6 +39,7 @@
           >
             <div class="environment environment-instance">
               <process-operation
+                v-if="environment === 'prod'"
                 ref="prodComponent"
                 :app-code="appCode"
                 :environment="'prod'"
@@ -85,8 +87,7 @@
         mixins: [appBaseMixin],
         data () {
             return {
-                isStagLoading: true,
-                isProdLoading: true,
+                isLoading: true,
                 environment: 'stag',
                 advisedDocLinks: []
             };
@@ -98,26 +99,26 @@
         },
         watch: {
             '$route' (to, from) {
-                this.isStagLoading = true;
-                this.isProdLoading = true;
+                this.isLoading = true;
             }
         },
         created () {
-            this.init();
+          this.$store.commit('updataEnvEventData', []);
+          this.init();
+        },
+        beforedestroy () {
+          this.$store.commit('updataEnvEventData', ['stag', 'prod']);
         },
         methods: {
             init () {
                 this.loadAdvisedDocLinks();
                 // 获取当前tab项
-                if (this.$route.query && this.$route.query.focus === 'prod') {
+                if (this.$route.query && this.$route.query.env === 'prod') {
                     this.environment = 'prod';
                 }
             },
             changeEnv (environment) {
-                if (this.environment === environment) {
-                    return;
-                }
-                this.environment = environment;
+                this.isLoading = true;
                 if (environment === 'stag') {
                     this.$refs.prodComponent.closeLogDetail();
                 } else if (environment === 'prod') {
@@ -132,11 +133,7 @@
             },
             handlerDataReady (env) {
                 setTimeout(() => {
-                    if (env === 'stag') {
-                        this.isStagLoading = false;
-                    } else {
-                        this.isProdLoading = false;
-                    }
+                    this.isLoading = false;
                 }, 200);
             }
         }

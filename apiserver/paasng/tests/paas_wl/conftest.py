@@ -19,10 +19,8 @@ to the current version of the project delivered to anyone in the future.
 import copy
 import logging
 import tempfile
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Dict
-from unittest import mock
 
 import pytest
 import yaml
@@ -33,13 +31,15 @@ from kubernetes.client.exceptions import ApiException
 
 from paas_wl.cluster.models import Cluster
 from paas_wl.cluster.utils import get_default_cluster_by_region
-from paas_wl.platform.applications.models import WlApp
-from paas_wl.resources.base.base import get_client_by_cluster_name
+from paas_wl.platform.applications.models import Build, BuildProcess, WlApp
+from paas_wl.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
 from paas_wl.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paas_wl.workloads.processes.models import ProcessSpec, ProcessSpecPlan
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
+from tests.paas_wl.utils.build import create_build_proc
+from tests.paas_wl.utils.wl_app import create_wl_release
 from tests.utils.mocks.engine import build_default_cluster
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,10 @@ def django_db_setup(django_db_setup, django_db_blocker):
     """Create default cluster for testing"""
     with django_db_blocker.unblock():
         with transaction.atomic():
+            # Clear cached configuration pool before creating default cluster in case
+            # there are some stale configurations in the pool.
+            get_global_configuration_pool.cache_clear()
+
             cluster = create_default_cluster()
             setup_default_client(cluster)
 
@@ -86,7 +90,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
     :return: Whether the CRDs are successfully configured
     """
     with django_db_blocker.unblock():
-        client = get_client_by_cluster_name(get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION).name)
+        client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
         version = VersionApi(client).get_code()
 
     # Minimal required version is 1.17
@@ -131,7 +135,7 @@ def _skip_when_no_crds(request, crds_is_configured):
 
 @pytest.fixture
 def k8s_client(settings):
-    client = get_client_by_cluster_name(get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION).name)
+    client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
     return client
 
 
@@ -143,7 +147,7 @@ def k8s_version(k8s_client):
 @pytest.fixture(scope="module")
 def namespace_maker(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        k8s_client = get_client_by_cluster_name(get_default_cluster_by_region(settings.FOR_TESTS_DEFAULT_REGION).name)
+        k8s_client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
         k8s_version = VersionApi(k8s_client).get_code()
 
     class Maker:
@@ -180,20 +184,25 @@ def namespace_maker(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def _auto_create_ns(request):
     """Create the k8s namespace when the mark is found, supported fixture:
-    app / bk_stag_wl_app
+    bk_stag_wl_app / bk_prod_wl_app
     """
     if not request.keywords.get('auto_create_ns'):
         yield
         return
 
-    if "bk_stag_wl_app" in request.fixturenames:
-        app = request.getfixturevalue("bk_stag_wl_app")
-    else:
+    fixtures = ["bk_stag_wl_app", "bk_prod_wl_app", "wl_app"]
+    used_fixtures = []
+    for fixture in fixtures:
+        if fixture in request.fixturenames:
+            used_fixtures.append(fixture)
+    if not used_fixtures:
         yield
         return
 
     namespace_maker = request.getfixturevalue("namespace_maker")
-    namespace_maker.make(app.namespace)
+    for fixture in used_fixtures:
+        app = request.getfixturevalue(fixture)
+        namespace_maker.make(app.namespace)
     yield
     namespace_maker.set_block()
 
@@ -259,28 +268,6 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
     return _wrapped
 
 
-@contextmanager
-def override_cluster_ingress_attrs(attrs):
-    """Context manager which updates app's `cluster.ingress_config`"""
-
-    def _hook_set_sub_path_domain(cluster):
-        for key, value in attrs.items():
-            setattr(cluster.ingress_config, key, value)
-        cluster.save()
-        cluster.refresh_from_db()
-        return cluster
-
-    # Mock all related occurrences
-    with mock.patch(
-        'paas_wl.networking.ingress.managers.misc.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ), mock.patch(
-        'paas_wl.networking.ingress.managers.subpath.get_cluster_by_app',
-        get_cluster_with_hook(_hook_set_sub_path_domain),
-    ):
-        yield
-
-
 @pytest.fixture(autouse=True)
 def clear_kubernetes_dynamic_discoverer_cache():
     # delete all discoverer cache files to ensure tests successful of the multiple kubernetes clusters
@@ -313,3 +300,37 @@ def bk_stag_wl_app(bk_stag_env, with_wl_apps):
 @pytest.fixture
 def bk_prod_wl_app(bk_prod_env, with_wl_apps):
     return bk_prod_env.wl_app
+
+
+@pytest.fixture
+def wl_app(bk_stag_wl_app) -> WlApp:
+    return bk_stag_wl_app
+
+
+@pytest.fixture
+def wl_release(wl_app):
+    return create_wl_release(
+        wl_app=wl_app,
+        build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
+        release_params={"version": 5},
+    )
+
+
+@pytest.fixture
+def build_proc(wl_app) -> BuildProcess:
+    """A new BuildProcess object with random info"""
+    return create_build_proc(wl_app)
+
+
+@pytest.fixture
+def wl_build(bk_stag_wl_app, bk_user) -> Build:
+    build_params = {
+        "owner": bk_user,
+        "app": bk_stag_wl_app,
+        "slug_path": "",
+        "source_type": "foo",
+        "branch": "bar",
+        "revision": "1",
+        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
+    }
+    return Build.objects.create(**build_params)

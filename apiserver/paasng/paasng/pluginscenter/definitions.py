@@ -24,13 +24,20 @@ import cattr
 from pydantic import BaseModel, Field
 
 
-def registry(pydantic_model: Type[BaseModel]):
-    cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
-    cattr.register_unstructure_hook(pydantic_model, partial(pydantic_model.dict, by_alias=True))
-    return pydantic_model
+def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool = True, exclude_none: bool = False):
+    def register_core(pydantic_model: Type[BaseModel]):
+        cattr.register_structure_hook(pydantic_model, lambda obj, cl: pydantic_model.parse_obj(obj))
+        cattr.register_unstructure_hook(
+            pydantic_model, partial(pydantic_model.dict, by_alias=by_alias, exclude_none=exclude_none)
+        )
+        return pydantic_model
+
+    if pydantic_model is not None:
+        return register_core(pydantic_model)
+    return register_core
 
 
-@registry
+@register
 class UIComponent(BaseModel):
     """ui组件"""
 
@@ -38,18 +45,18 @@ class UIComponent(BaseModel):
     props: Dict = Field(default_factory=dict)
 
 
-@registry
+@register
 class UIProps(BaseModel):
     """ui属性"""
 
     required: bool
 
 
-@registry
+@register(exclude_none=True)
 class FieldSchema(BaseModel):
     """字段定义"""
 
-    type: Literal["string"] = Field(default="string", description="字段类型")
+    type: Literal["string", "array"] = Field(default="string", description="字段类型")
     title: str = Field(default="", description="字段标题")
     description: str = Field(default="", description="该字段的说明提示")
     pattern: Optional[str] = Field(description="该字段匹配的正则表达式模板")
@@ -58,9 +65,11 @@ class FieldSchema(BaseModel):
     uiComponent: Optional[UIComponent] = Field(alias="ui:component")
     uiValidator: Optional[List] = Field(alias="ui:validator")
     uiProps: Optional[UIProps] = Field(alias="ui:props")
+    uiReactions: Optional[List] = Field(alias="ui:reactions")
+    items: Optional[Dict] = Field(alias="items")
 
 
-@registry
+@register
 class PluginBackendAPIResource(BaseModel):
     """插件后台操作接口"""
 
@@ -72,7 +81,7 @@ class PluginBackendAPIResource(BaseModel):
         frozen = True
 
 
-@registry
+@register
 class PluginBackendAPI(BaseModel):
     create: Optional[PluginBackendAPIResource]
     read: Optional[PluginBackendAPIResource]
@@ -80,7 +89,7 @@ class PluginBackendAPI(BaseModel):
     delete: Optional[PluginBackendAPIResource]
 
 
-@registry
+@register
 class PluginReleaseAPI(BaseModel):
     """插件发布操作集"""
 
@@ -89,7 +98,7 @@ class PluginReleaseAPI(BaseModel):
     log: Optional[PluginBackendAPIResource] = Field(description="日志接口")
 
 
-@registry
+@register
 class PluginCodeTemplate(BaseModel):
     id: str = Field(description="模板id")
     name: str = Field(description="模板名称")
@@ -106,13 +115,13 @@ class PluginCodeTemplate(BaseModel):
         return source_dir
 
 
-@registry
+@register
 class PluginFeature(BaseModel):
     name: str = Field(description="功能特性名称")
     value: bool = Field(default=False, description="功能特性开关")
 
 
-@registry
+@register
 class PluginBasicInfoDefinition(BaseModel):
     """插件基础信息定义"""
 
@@ -126,7 +135,7 @@ class PluginBasicInfoDefinition(BaseModel):
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
 
 
-@registry
+@register
 class PluginVisibleRangeLevel(BaseModel):
     """插件可见范围级别"""
 
@@ -135,7 +144,7 @@ class PluginVisibleRangeLevel(BaseModel):
     type: Literal["department"]
 
 
-@registry
+@register
 class PluginVisibleRangeDefinition(BaseModel):
     """插件可见范围"""
 
@@ -145,7 +154,7 @@ class PluginVisibleRangeDefinition(BaseModel):
     topLevel: PluginVisibleRangeLevel
 
 
-@registry
+@register
 class PluginMarketInfoDefinition(BaseModel):
     """插件市场信息定义"""
 
@@ -161,7 +170,7 @@ class PluginMarketInfoDefinition(BaseModel):
     # TODO: visibleRange
 
 
-@registry
+@register
 class ReleaseRevisionDefinition(BaseModel):
     """发布版本定义"""
 
@@ -175,7 +184,7 @@ class ReleaseRevisionDefinition(BaseModel):
     api: Optional[PluginBackendAPI] = Field(description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口")
 
 
-@registry
+@register
 class ReleaseStageDefinition(BaseModel):
     """发布阶段定义"""
 
@@ -189,7 +198,7 @@ class ReleaseStageDefinition(BaseModel):
     builtinParams: Optional[Dict] = Field(description="内置阶段额外参数(完善市场信息market, 灰度grayScale, 上线online)")
 
 
-@registry
+@register
 class PluginConfigColumnDefinition(BaseModel):
     """插件配置-列信息定义"""
 
@@ -202,7 +211,7 @@ class PluginConfigColumnDefinition(BaseModel):
     unique: bool = Field(False, description="该列是否唯一(多列同时标记唯一时仅支持 unique_together)")
 
 
-@registry
+@register
 class PluginConfigDefinition(BaseModel):
     """插件配置定义"""
 
@@ -213,7 +222,7 @@ class PluginConfigDefinition(BaseModel):
     columns: List[PluginConfigColumnDefinition] = Field(default_factory=list, min_items=1)
 
 
-@registry
+@register
 class PluginInstanceSpec(BaseModel):
     """插件实例相关属性"""
 
@@ -222,7 +231,7 @@ class PluginInstanceSpec(BaseModel):
     configInfo: Optional[PluginConfigDefinition] = Field(description="「配置管理」功能相关配置")
 
 
-@registry
+@register
 class ElasticSearchHost(BaseModel):
     """ES 配置"""
 
@@ -233,7 +242,7 @@ class ElasticSearchHost(BaseModel):
     use_ssl: bool = Field(False, alias="useSSL")
 
 
-@registry
+@register
 class ElasticSearchParams(BaseModel):
     """ES 搜索相关配置"""
 
@@ -267,7 +276,7 @@ class BKLogConfig(BaseModel):
     bkdataAuthenticationMethod: Optional[Literal["token", "user"]] = Field(description="数据平台认证方式")
 
 
-@registry
+@register
 class PluginLogConfig(BaseModel):
     """插件日志配置"""
 
@@ -281,7 +290,7 @@ class PluginLogConfig(BaseModel):
     json_: Optional[ElasticSearchParams] = Field(alias="json")
 
 
-@registry
+@register
 class PluginCreateApproval(BaseModel):
     """创建插件审批配置"""
 
@@ -291,7 +300,7 @@ class PluginCreateApproval(BaseModel):
     itsmServiceName: str = Field(default="", description="审批流程 itsm 服务名称")
 
 
-@registry
+@register
 class PluginDefinition(BaseModel):
     """插件模板定义"""
 

@@ -62,6 +62,9 @@ import './assets/iconfont/style.css';
 // 平台配置
 import { PLATFORM_CONFIG } from '../static/json/paas_static.js';
 
+// 表头配置
+import { renderHeader } from '@/common/utils';
+
 // composition-api
 import VueCompositionAPI from '@vue/composition-api';
 Vue.use(VueCompositionAPI);
@@ -153,6 +156,7 @@ Vue.prototype.$bkMessage = function (config) {
   bkMessage(config);
 };
 Vue.prototype.$bkNotify = bkNotify;
+Vue.prototype.$renderHeader = renderHeader;
 
 Vue.prototype.$paasMessage = function (conf) {
   conf.offsetY = 52;

@@ -21,6 +21,8 @@ from django.utils import timezone
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.publish.entrance.preallocated import get_bk_doc_url_prefix
+
 from .constants import DeployFailurePatternType
 from .tags import get_default_tagset, get_dynamic_tag
 
@@ -87,9 +89,6 @@ class DocumentaryLink(models.Model):
 
     @property
     def format_location(self) -> str:
-        # 放在文件头部会导致循环引用
-        from paasng.publish.entrance.exposer import get_bk_doc_url_prefix
-
         return self.location.format(doc_url_prefix=get_bk_doc_url_prefix())
 
 

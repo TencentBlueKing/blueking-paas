@@ -51,7 +51,7 @@
             font-weight: bold;
         }
     }
-
+    
     .form-group{
         display: flex;
         &-flex{
@@ -76,12 +76,11 @@
                 font-size: 12px;
                 display: inline-block;
                 vertical-align: middle;
-                padding-left: 5px;
             }
         }
     }
-    
 
+    
     .form-group-dir{
         display: flex;
         &-flex{
@@ -93,6 +92,10 @@
             align-items: center;
             margin-top: 3px;
         }
+    }
+
+    &.flex-end .form-group-dir {
+        align-items: flex-end;
     }
 }
 
@@ -124,7 +127,24 @@
     margin-right: 10px;
     &.template {
         line-height: 48px;
+        flex: 0 0 90px !important;
     }
+    &::after {
+        height: 8px;
+        line-height: 1;
+        content: '*';
+        color: #EA3636;
+        font-size: 12px;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    // 非必填
+    &.optional::after {
+        opacity: 0;
+    }
+}
+.establish.en-label .form-label {
+    width: 100px;
 }
 
 .card-container {
@@ -217,10 +237,6 @@
     left: -600px;
 }
 
-input.ps-form-control {
-    padding: 4px 10px;
-}
-
 .form-group {
     // margin-bottom: 10px;
     &.mt {
@@ -237,7 +253,6 @@ input.ps-form-control {
 }
 
 .form-actions {
-    text-align: center;
     margin: 24px 0 18px;
 }
 
@@ -255,7 +270,6 @@ input.ps-form-control {
         padding: 12px 18px;
     }
     .submit-mr{
-        background: #1768EF;
         font-size: 14px;
     }
 }
@@ -419,6 +433,16 @@ input.ps-form-control {
         cursor: pointer;
         &:hover {
             color: #699df4;
+        }
+    }
+
+    &.frame-wrapper {
+        display: flex;
+        .frame-placeholder {
+            width: 90px;
+        }
+        .frame-panel {
+            flex: 1;
         }
     }
 }

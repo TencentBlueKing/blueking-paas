@@ -1,5 +1,8 @@
 <template>
-  <div :class="['ps-header','clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]">
+  <div
+    v-en-class="'en-header-cls'"
+    :class="['ps-header','clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]"
+  >
     <div class="ps-header-visible clearfix">
       <router-link
         :to="{ name: 'index' }"
@@ -95,7 +98,7 @@
         v-if="userInitialized && user.isAuthenticated"
         class="ps-head-right"
       >
-        <template v-if="GLOBAL.APP_VERSION === 'te'">
+        <template>
           <li class="mr20">
             <dropdown
               ref="dropdown"
@@ -168,6 +171,7 @@
             </dropdown>
           </li>
           <li
+            v-if="userFeature.PHALANX"
             v-bk-tooltips.bottom="{ content: $t('我的告警'), distance: 20 }"
             class="ps-head-last my-alarm"
           >
@@ -414,8 +418,8 @@
 
     export default {
         components: {
-            'dropdown': Dropdown,
-            'searchAppList': searchAppList,
+            dropdown: Dropdown,
+            searchAppList: searchAppList,
             logVersion
         },
         mixins: [psHeaderInfo, selectEventMixin],
@@ -464,7 +468,7 @@
             }
         },
         watch: {
-            '$route': 'checkRouter',
+            $route: 'checkRouter',
             filterKey: function () {
                 this.curActiveIndex = -1;
             },
@@ -889,6 +893,7 @@
         padding: 8px 10px;
         display: flex;
         align-items: center;
+        height: 50px;
 
         li {
             float: left;
@@ -1051,6 +1056,9 @@
         line-height: 32px;
         border-left: solid 1px #30303d;
         padding: 5px 0 62px 0;
+    }
+    .en-header-cls .ps-header-invisible>dl {
+        width: 145px;
     }
 
     .ps-header-invisible>dl:last-child {

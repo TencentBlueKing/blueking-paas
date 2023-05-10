@@ -29,11 +29,8 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_prod_env_root_domains
-from paasng.publish.entrance.exposer import (
-    get_deployed_status,
-    get_preallocated_urls,
-    update_exposed_url_type_to_subdomain,
-)
+from paasng.publish.entrance.exposer import get_deployed_status, update_exposed_url_type_to_subdomain
+from paasng.publish.entrance.preallocated import get_preallocated_urls
 from paasng.publish.entrance.serializers import (
     ApplicationAvailableEntranceSLZ,
     ApplicationCustomDomainEntranceSLZ,

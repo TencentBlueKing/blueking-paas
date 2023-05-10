@@ -19,4 +19,4 @@
 source .env
 
 mkdir -p $STORAGE_ROOT
-docker-compose up -d --remove-orphan
+docker-compose up -d

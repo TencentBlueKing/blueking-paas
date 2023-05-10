@@ -20,10 +20,11 @@ from blue_krill.monitoring.probe.base import ProbeSet
 
 from paasng.monitoring.healthz.probes import PlatformMysqlProbe, WorkloadsMysqlProbe
 
+from .base import GaugeMetric
 
-class MySQLAvailableMetric:
+
+class MySQLAvailableMetric(GaugeMetric):
     name = 'mysql_service'
-    metric_type = 'gauge'
     description = 'mysql service available'
 
     @classmethod

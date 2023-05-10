@@ -117,3 +117,12 @@ class ModuleEnvBasicSLZ(serializers.ModelSerializer):
 
 class AddonCredentialsSLZ(serializers.Serializer):
     credentials = serializers.DictField(child=serializers.CharField())
+
+
+class SearchApplicationSLZ(serializers.Serializer):
+    keyword = serializers.CharField(default="", allow_blank=False, help_text="应用ID、应用名称")
+
+
+class MinimalAppSLZ(serializers.Serializer):
+    code = serializers.CharField(help_text="应用ID")
+    name = serializers.CharField(help_text="应用名称")

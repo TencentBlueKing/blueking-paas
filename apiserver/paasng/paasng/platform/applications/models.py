@@ -460,7 +460,7 @@ class ApplicationEnvironment(TimestampedModel):
 
         # Check if latest deployment has been succeed
         try:
-            Deployment.objects.filter(app_environment=self).latest_succeeded()
+            Deployment.objects.filter_by_env(self).latest_succeeded()
             return True
         except Deployment.DoesNotExist:
             return False

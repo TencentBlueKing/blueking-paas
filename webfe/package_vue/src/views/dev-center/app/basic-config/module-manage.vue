@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="right-main">
+  <div
+    v-en-class="'en-label'"
+    class="right-main"
+  >
     <app-top-bar
       :title="$t('模块管理')"
       :can-create="canCreateModule"
@@ -15,7 +18,7 @@
       <section v-if="!isLoading">
         <div class="module-info-item mt15">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div class="info">
             {{ $t('模块的基本信息') }}
@@ -191,7 +194,6 @@
                   <p class="mt10">
                     <bk-input
                       v-model="sourceControlChangeForm.sourceDir"
-                      size="large"
                       class="source-dir"
                       :class="isSourceDirInvalid ? 'error' : ''"
                       :placeholder="$t('请输入应用所在子目录，并确保 Procfile 文件在该目录下，不填则默认为根目录')"
@@ -385,7 +387,7 @@
                   class="has-right-border"
                   style="width: 150px;"
                 >
-                  {{ $t('生产环境') }}
+                  {{ $t('生产环境-label') }}
                 </td>
                 <td>
                   <div class="">
@@ -964,14 +966,24 @@
         },
         watch: {
             appInfo () {
-                this.init();
+                // 云原生应用无需请求模块接口
+                if (this.curAppModule.repo && this.curAppModule.repo.type) {
+                    this.init();
+                }
             },
             '$route' () {
                 this.resetParams();
-                this.init();
+                if (this.curAppModule.repo && this.curAppModule.repo.type) {
+                    this.init();
+                }
             },
             'curAppModule.name' (val) {
                 this.getLessCode();
+            },
+            'curAppModule.repo' (repo) {
+                if (!repo) {
+                    this.curAppModule.repo = {};
+                }
             }
         },
         created () {
@@ -1076,7 +1088,7 @@
 
                     if (this.curAppModule.repo.type !== 'bk_svn') {
                         const match = this.gitExtendConfig[this.selectedSourceControlType];
-                        match.selectedRepoUrl = this.curAppModule.repo.trunk_url;
+                        match.selectedRepoUrl = this.curAppModule.repo.trunk_url || '';
                         match.sourceDir = this.curAppModule.repo.source_dir || '';
                         if (match.authInfo) {
                             match.authInfo.account = this.curAppModule.repo_auth_info.username;
@@ -1356,7 +1368,7 @@
                         this.selectedSourceControlType = this.curAppModule.repo.type;
                         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
                         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
-                        if (this.curAppModule.repo.type !== 'bk_svn') {
+                        if (this.curAppModule.repo.type !== 'bk_svn' && this.gitExtendConfig[this.curAppModule.repo.type]) {
                             this.gitExtendConfig[this.curAppModule.repo.type].selectedRepoUrl = this.curAppModule.repo.trunk_url;
                             this.gitExtendConfig[this.curAppModule.repo.type].sourceDir = this.curAppModule.repo.source_dir || '';
                         }
@@ -2041,6 +2053,11 @@
     text-align: right;
     margin-right: 10px;
 }
+
+.en-label .form-label {
+    width: 100px;
+}
+
 .form-group{
     display: flex;
     &-flex{
@@ -2069,5 +2086,12 @@
 }
 .bk-form-item+.bk-form-item {
     margin-top: 13px;
+}
+</style>
+<style lang="scss">
+.form-group-flex .source-dir.error .bk-input-text {
+    input {
+       border-color: #ff3737 !important;
+    }
 }
 </style>

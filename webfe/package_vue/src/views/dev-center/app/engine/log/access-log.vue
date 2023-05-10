@@ -214,7 +214,7 @@
                   >
                     <td class="log-time">
                       <i :class="['paasng-icon ps-toggle-btn', { 'paasng-right-shape': !log.isToggled, 'paasng-down-shape': log.isToggled }]" />
-                      {{ log.ts }}
+                      {{ formatTime(log.timestamp) }}
                     </td>
                     <template v-for="field of fieldSelectedList">
                       <td
@@ -227,7 +227,7 @@
                   </tr>
                   <tr
                     v-if="log.isToggled"
-                    :key="index"
+                    :key="index + 'child'"
                   >
                     <td
                       :colspan="fieldSelectedList.length + 2"
@@ -290,6 +290,7 @@
     import xss from 'xss';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import logFilter from './comps/log-filter.vue';
+    import { formatDate } from '@/common/tools';
 
     const xssOptions = {
         whiteList: {
@@ -336,7 +337,6 @@
                 streamLogList: [],
                 searchFilterKey: [],
                 tableFilters: [],
-                streamLogFilters: [],
                 envList: [],
                 processList: [],
                 filterData: [],
@@ -391,7 +391,7 @@
                     if (field.name !== 'response_time') {
                         field.list.forEach(item => {
                             options[field.name].push({
-                                text: item.text,
+                                text: String(item.text),
                                 value: item.id
                             });
                         });
@@ -613,8 +613,6 @@
                 this.streamList = [];
                 this.processList = [];
                 this.logList = [];
-                this.streamLogList = [];
-                this.streamLogFilters = [];
                 this.pagination = {
                     current: 1,
                     count: 0,
@@ -728,9 +726,10 @@
                         pageSize,
                         filter
                     });
-                    const data = res.data.logs;
+                    const data = res.logs;
                     data.forEach((item) => {
                         item.message = this.highlight(logXss.process(item.message));
+                        item.detail = JSON.parse(JSON.stringify(item));
                         if (item.detail) {
                             for (const key in item.detail) {
                                 item.detail[key] = this.highlight(logXss.process(item.detail[key]));
@@ -740,7 +739,7 @@
                     });
 
                     this.logList.splice(0, this.logList.length, ...data);
-                    this.pagination.count = res.data.page.total;
+                    this.pagination.count = res.total;
                     this.pagination.current = page;
                     if (!this.fieldSelectedList.length) {
                         this.fieldSelectedList = [...this.staticFileds];
@@ -772,7 +771,7 @@
                     const res = await this.$store.dispatch('log/getFilterData', { appCode, moduleId, params });
                     const filters = [];
                     const fieldList = [];
-                    const data = res.data;
+                    const data = res;
 
                     data.forEach(item => {
                         const condition = {
@@ -787,11 +786,11 @@
                                 text: option[0]
                             });
                         });
-                        if (condition.id === 'environment') {
+                        if (condition.name === 'environment') {
                             this.envList = condition.list;
-                        } else if (condition.id === 'process_id') {
+                        } else if (condition.name === 'process_id') {
                             this.processList = condition.list;
-                        } else if (condition.id === 'stream') {
+                        } else if (condition.name === 'stream') {
                             this.streamList = condition.list;
                         } else {
                             fieldList.push(condition);
@@ -921,6 +920,10 @@
 
             updateTableEmptyConfig () {
                 this.tableEmptyConf.keyword = this.logParams.keyword;
+            },
+
+            formatTime (time) {
+                return time ? formatDate(time * 1000) : '--';
             }
         }
     };

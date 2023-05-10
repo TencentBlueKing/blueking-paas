@@ -86,7 +86,7 @@ export default {
          * @param {Object} params 包括appCode instanceName env
          */
     getInstanceLog ({ commit, state }, { appCode, moduleId, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/standard_output/list/?time_range=5m`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/log/stdout/list/?time_range=5m`;
       return http.post(url, data, config);
     }
   }

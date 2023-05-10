@@ -1,0 +1,20 @@
+kind: BkApp
+apiVersion: paas.bk.tencent.com/v1alpha2
+metadata:
+  name: sample-app-v1a2
+spec:
+  build:
+    image: nginx:latest
+  processes:
+    - name: web
+      replicas: 1
+      resQuotaPlan: "default"
+  hooks:
+    preRelease:
+      command:
+        - "/bin/sh"
+      args:
+        - "-c"
+        - "echo hello; sleep 1;"
+  configuration:
+    env: []

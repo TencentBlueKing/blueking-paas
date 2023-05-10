@@ -60,7 +60,7 @@ var _ = Describe("test webhook.Defaulter", func() {
 
 		web := bkapp.Spec.GetWebProcess()
 		Expect(web.TargetPort).To(Equal(int32(5000)))
-		Expect(web.ResQuotaPlan).To(Equal("default"))
+		Expect(web.ResQuotaPlan).To(Equal(paasv1alpha2.ResQuotaPlanDefault))
 	})
 })
 
@@ -79,19 +79,22 @@ var _ = Describe("test webhook.Validator", func() {
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
-					Image: "nginx:latest",
+					Image:           "nginx:latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
 				},
 				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Replicas:   paasv1alpha2.ReplicasTwo,
-						TargetPort: 80,
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 					{
-						Name:     "hi",
-						Replicas: paasv1alpha2.ReplicasTwo,
-						Command:  []string{"/bin/sh"},
-						Args:     []string{"-c", "echo hi"},
+						Name:         "hi",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						Command:      []string{"/bin/sh"},
+						Args:         []string{"-c", "echo hi"},
 					},
 				},
 			},
@@ -124,6 +127,14 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Name = "bkapp-sample-UPPER-CASE"
 			err = bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("must match regex"))
+		})
+	})
+
+	Context("Test spec.build fields", func() {
+		It("Image pull policy invalid", func() {
+			bkapp.Spec.Build.ImagePullPolicy = "ALWAYS"
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"IfNotPresent\", \"Always\""))
 		})
 	})
 
@@ -163,6 +174,12 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(
 				err.Error(),
 			).To(ContainSubstring(fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas())))
+		})
+
+		It("resource quota plan unsupported", func() {
+			bkapp.Spec.Processes[0].ResQuotaPlan = "fake"
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"1C512M\""))
 		})
 	})
 

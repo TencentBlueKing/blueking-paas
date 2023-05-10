@@ -56,13 +56,13 @@ var _ = Describe("Test build deployments from BkApp", func() {
 					{
 						Name:         "web",
 						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						TargetPort:   80,
 					},
 					{
 						Name:         "hi",
 						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						Command:      []string{"/bin/sh"},
 						Args:         []string{"-c", "echo hi"},
 					},
@@ -208,11 +208,11 @@ var _ = Describe("Test build deployments from BkApp", func() {
 				{
 					Name:         "web",
 					Replicas:     paasv1alpha2.ReplicasOne,
-					ResQuotaPlan: "default",
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 				}, {
 					Name:         "worker",
 					Replicas:     paasv1alpha2.ReplicasOne,
-					ResQuotaPlan: "default",
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 				},
 			}
 

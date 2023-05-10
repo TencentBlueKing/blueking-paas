@@ -48,13 +48,13 @@ var _ = Describe("test build expect service", func() {
 					{
 						Name:         "web",
 						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						TargetPort:   80,
 					},
 					{
 						Name:         "hi",
 						Replicas:     paasv1alpha2.ReplicasTwo,
-						ResQuotaPlan: "default",
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
 						TargetPort:   5000,
 						Command:      []string{"/bin/sh"},
 						Args:         []string{"-c", "echo hi"},

@@ -7,6 +7,7 @@ apiserver 项目为 bkpaas 的主控模块。
 ## 准备依赖环境
 
 本地开发时依赖的一些服务，可使用 `docker-compose` 快速启动。
+
 1. [安装 Docker](https://docs.docker.com/engine/install/)
 
 2. [安装 Docker Compose](https://docs.docker.com/compose/install/)
@@ -27,7 +28,9 @@ apiserver 项目为 bkpaas 的主控模块。
 1. 安装 Python 3.8
 
 可以使用 [pyenv](https://github.com/pyenv/pyenv) 管理本地的 python 环境
+
 - 依照 [相关指引](https://github.com/pyenv/pyenv#getting-pyenv) 安装 pyenv
+
 - 使用 pyenv 安装 Python 3.8
 
 ```bash

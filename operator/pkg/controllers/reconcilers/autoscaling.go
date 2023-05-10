@@ -91,7 +91,25 @@ func (r *AutoscalingReconciler) getCurrentState(
 
 // 将给定的 general-pod-autoscaler 下发到 k8s 集群中, 如果不存在则创建，若存在，则更新，不会进行版本比较
 func (r *AutoscalingReconciler) deploy(ctx context.Context, gpa *autoscaling.GeneralPodAutoscaler) error {
-	return UpsertObject(ctx, r.Client, gpa, nil)
+	return UpsertObject(ctx, r.Client, gpa, r.updateHandler)
+}
+
+// GPA 更新策略: 总是更新，但是需要填充 resourceVersion，uid 等信息，否则无法通过 gpa webhook 的检查
+func (r *AutoscalingReconciler) updateHandler(
+	ctx context.Context,
+	cli client.Client,
+	current *autoscaling.GeneralPodAutoscaler,
+	want *autoscaling.GeneralPodAutoscaler,
+) error {
+	want.UID = current.UID
+	want.Generation = current.Generation
+	want.ResourceVersion = current.ResourceVersion
+	want.CreationTimestamp = current.CreationTimestamp
+
+	if err := cli.Update(ctx, want); err != nil {
+		return errors.Wrapf(err, "failed to update GPA(%s)", want.GetName())
+	}
+	return nil
 }
 
 // 根据 GPA 状态（Conditions），更新 BkApp 状态（Conditions）

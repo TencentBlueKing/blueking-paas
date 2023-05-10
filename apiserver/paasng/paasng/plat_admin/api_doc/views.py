@@ -42,7 +42,7 @@ schema_view = get_schema_view(
 
 
 class FullSwaggerConfigurationView(schema_view):  # type: ignore
-    """A swagger view base on auto generate docs, and merged the hand-write swagger docs and workloads docs"""
+    """A swagger view base on auto generate docs, and merged the hand-write swagger docs"""
 
     def get(self, request):
         auto_gen_resp = super().get(request)

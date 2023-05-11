@@ -28,6 +28,7 @@ type ProjectConfigReader interface {
 
 	// Platform related methods
 	GetIngressClassName() string
+	IsAutoscalingEnabled() bool
 }
 
 // defaultConfig is a default implementation of ProjectConfigReader, it will be used
@@ -48,6 +49,10 @@ func (d defaultConfig) GetProcDefaultMemLimits() string {
 
 func (d defaultConfig) GetIngressClassName() string {
 	return "nginx"
+}
+
+func (d defaultConfig) IsAutoscalingEnabled() bool {
+	return false
 }
 
 // Global global config instance

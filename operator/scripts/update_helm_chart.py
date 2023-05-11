@@ -199,6 +199,11 @@ content_patch_conf = {
             ),
         ),
         (
+            # 自动扩缩容配置挪到 values 顶层
+            '.Values.controllerConfig.autoscalingConfig',
+            '.Values.autoscaling',
+        ),
+        (
             # 平台配置挪到 values 顶层
             '.Values.controllerConfig.platformConfig',
             '.Values.platformConfig',
@@ -431,10 +436,10 @@ data:
 '''.lstrip(),  # noqa: E501
     ),
     'mutating-webhook-configuration.yaml': WrapContent(
-        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n', '{{- end -}}',
+        '{{ define "bkpaas-app-operator.mutatingWebhook" -}}\n', '{{- end -}}\n',
     ),
     'validating-webhook-configuration.yaml': WrapContent(
-        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n', '{{- end -}}',
+        '{{ define "bkpaas-app-operator.validatingWebhook" -}}\n', '{{- end -}}\n',
     ),
 }
 
@@ -601,6 +606,9 @@ class HelmChartUpdater:
         # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
         del values['controllerConfig']['ingressPluginConfig']
+
+        values['autoscaling'] = {'enabled': False}
+        del values['controllerConfig']['autoscalingConfig']
 
         # 平台配置挪到顶层
         values['platformConfig'] = values['controllerConfig']['platformConfig']

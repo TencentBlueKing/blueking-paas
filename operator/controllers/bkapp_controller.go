@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -139,20 +140,22 @@ func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return err
 	}
 
-	err = mgr.GetFieldIndexer().IndexField(
-		ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
-	)
-	if err != nil {
-		return err
-	}
-
-	return ctrl.NewControllerManagedBy(mgr).
+	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&paasv1alpha2.BkApp{}).
 		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Pod{}).
-		Owns(&autoscaling.GeneralPodAutoscaler{}).
-		Complete(r)
+		Owns(&corev1.Pod{})
+
+	if config.Global.IsAutoscalingEnabled() {
+		if err = mgr.GetFieldIndexer().IndexField(
+			ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
+		); err != nil {
+			return err
+		}
+		controllerBuilder = controllerBuilder.Owns(&autoscaling.GeneralPodAutoscaler{})
+	}
+
+	return controllerBuilder.Complete(r)
 }
 
 func getOwnerNames(rawObj client.Object) []string {

@@ -27,7 +27,7 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
 安装 ginkgo 命令行工具：
 
-    $ go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@latest
+    $ make install-ginkgo
 
 执行单元测试：
 
@@ -35,9 +35,9 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
 安装格式化 & lint 工具：
 
-    $ go install github.com/segmentio/golines@latest 
-    $ go install mvdan.cc/gofumpt@latest
-    $ brew install golangci-lint
+    $ make install-golines 
+    $ make install-gofumpt
+    $ make install-golangci-lint
 
 执行 fmt & lint
 

@@ -25,6 +25,15 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
+          autoscalingConfig:
+            description: AutoscalingConfig contains the config for autoscaling
+            properties:
+              enabled:
+                description: Enabled indicates whether autoscaling is enabled
+                type: boolean
+            required:
+            - enabled
+            type: object
           cacheNamespace:
             description: "CacheNamespace if specified restricts the manager's cache
               to watch objects in the desired namespace Defaults to all namespaces
@@ -243,6 +252,7 @@ spec:
                 type: integer
             type: object
         required:
+        - autoscalingConfig
         - ingressPluginConfig
         - platformConfig
         - resLimitConfig

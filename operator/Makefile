@@ -171,42 +171,42 @@ KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+.PHONY: install-kustomize
+install-kustomize: $(KUSTOMIZE) ## 安装 kustomize 二进制
 $(KUSTOMIZE): $(LOCALBIN)
 	curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN)
 
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+.PHONY: install-controller-gen
+install-controller-gen: $(CONTROLLER_GEN) ## 安装 controller-gen 二进制
 $(CONTROLLER_GEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
-.PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+.PHONY: install-envtest
+install-envtest: $(ENVTEST) ## 安装 envtest-setup 二进制
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-.PHONY: ginkgo
-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
+.PHONY: install-ginkgo
+install-ginkgo: $(GINKGO) ## 安装 ginkgo 二进制
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 
-.PHONY: golines
-golines: $(GOLINES) ## Download golines locally if necessary
+.PHONY: install-golines
+install-golines: $(GOLINES) ## 安装 golines 二进制
 $(GOLINES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
-.PHONY: gofumpt
-gofumpt: $(GOFUMPT) ## Download gofumpt locally if necessary
+.PHONY: install-gofumpt
+install-gofumpt: $(GOFUMPT) ## 安装 gofumpt 二进制
 $(GOFUMPT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
-.PHONY: golangci-lint
-golangci-lint: $(GOCILINT) ## Download golangci-lint locally if necessary
+.PHONY: install-golangci-lint
+install-golangci-lint: $(GOCILINT) ## 安装 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3
 
-.PHONY: helmify
-helmify: $(HELMIFY) ## Download helmify locally if necessary
+.PHONY: install-helmify
+install-helmify: $(HELMIFY) ## 安装 helmify 二进制
 $(HELMIFY): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@v0.3.18

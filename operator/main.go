@@ -67,7 +67,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(paasv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(autoscaling.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -99,6 +98,11 @@ func main() {
 	}
 
 	config.SetConfig(projConf)
+
+	// Don't add autoscaling to scheme in init() as it is optional.
+	if config.Global.IsAutoscalingEnabled() {
+		utilruntime.Must(autoscaling.AddToScheme(scheme))
+	}
 
 	// TODO: This is not the desired way to use the global config, we should refactor
 	// the code in current file to avoid type assertion entirely.

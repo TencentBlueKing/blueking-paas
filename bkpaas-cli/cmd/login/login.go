@@ -68,12 +68,15 @@ func loginByBrowser() {
 	color.Cyan("Now we will open your browser...")
 	color.Cyan("Please copy and paste the access_token from your browser.")
 
-	// wait 2 seconds for user read tips
-	time.Sleep(2 * time.Second)
+	// waiting for user read tips
+	time.Sleep(1 * time.Second)
 
 	if err := browser.OpenURL(account.GetOAuthTokenUrl()); err != nil {
 		color.Red("Failed to open browser, error: " + err.Error())
-		return
+		color.Cyan(
+			"Don't worry, you can still manually open the browser to get the access_token: %s",
+			account.GetOAuthTokenUrl(),
+		)
 	}
 	loginByAccessToken()
 }

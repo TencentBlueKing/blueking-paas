@@ -67,7 +67,7 @@ help: ## 展示可用 make 命令及说明
 ##@ 开发/构建命令
 
 .PHONY: build
-build: tidy # build executable binary
+build: tidy ## 构建 bkpaas-cli 可执行文件
 	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o ${BIN_NAME} ./main.go
 
 .PHONY: fmt
@@ -94,21 +94,21 @@ lint: ## 执行 golangci-lint run
 ##@ 开发工具安装命令
 
 .PHONY: install-ginkgo
-install-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
+install-ginkgo: $(GINKGO) ## 下载 ginkgo 二进制
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 
 .PHONY: install-golines
-install-golines: $(GOLINES) ## Download golines locally if necessary
+install-golines: $(GOLINES) ## 下载 golines 二进制
 $(GOLINES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
 .PHONY: install-gofumpt
-install-gofumpt: $(GOFUMPT) ## Download gofumpt locally if necessary
+install-gofumpt: $(GOFUMPT) ## 下载 gofumpt 二进制
 $(GOFUMPT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
 .PHONY: install-golangci-lint
-install-golangci-lint: $(GOCILINT) ## Download golangci-lint locally if necessary
+install-golangci-lint: $(GOCILINT) ## 下载 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3

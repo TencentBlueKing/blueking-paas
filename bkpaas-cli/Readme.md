@@ -355,13 +355,50 @@ GoVersion: go1.19.4
 
 bkpaas-cli 将提供适用于 Linux，MacOS，Windows 等多种系统 / 架构的二进制可执行文件。
 
-// TODO
+你可以在 [Release 页面](https://github.com/TencentBlueKing/blueking-paas/releases) 下载适用于你的系统 / 架构的最新版本的 bkpaas-cli。
 
 ## 开发指南
 
 如果你想参与到 bkpaas-cli 的开发工作中，以下内容将对你有一定的帮助。
 
-// TODO
+### 开发环境
+
+```yaml
+go              1.19.4
+ginkgo          v2.1.4
+golines         v0.11.0
+gofumpt         v0.4.0
+golangci-lint   v1.47.3
+```
+
+### 常用命令
+
+bkpaas-cli 项目使用 Makefile 来管理开发的常用命令，你可以输入 `make help` 来查看可用命令及说明
+
+```shell
+>>> make help
+
+Usage:
+
+  make <target>
+  help             展示可用 make 命令及说明
+
+开发/构建命令
+
+  build            构建 bkpaas-cli 可执行文件
+  fmt              执行 golines，gofumpt ...
+  vet              执行 go vet ./...
+  tidy             执行 go mod tidy
+  test             执行 ginkgo 单元测试
+  lint             执行 golangci-lint run
+
+开发工具安装命令
+
+  install-ginkgo         下载 ginkgo 二进制
+  install-golines        下载 golines 二进制
+  install-gofumpt        下载 gofumpt 二进制
+  install-golangci-lint  下载 golangci-lint 二进制
+```
 
 ## 建议反馈
 

@@ -11,7 +11,7 @@
       <section>
         <div class="basic-info-item mt15">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div
             v-if="isSmartApp"

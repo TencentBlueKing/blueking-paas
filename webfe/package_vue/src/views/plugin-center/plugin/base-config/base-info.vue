@@ -9,7 +9,7 @@
       <section>
         <div class="basic-info-item">
           <div class="title">
-            {{ $t('基本信息') }}
+            {{ $t('基本信息-title') }}
           </div>
           <div class="info">
             {{ $t('管理员、开发者可以修改插件名称等基本信息') }}
@@ -309,7 +309,7 @@
                     class="unfold-btn"
                     @click="changeInfoUnfold"
                   >
-                    {{ isUnfold ? '收起' : '展开' }}
+                    {{ isUnfold ? $t('收起') : $t('展开') }}
                     <i :class="['paasng-icon', isUnfold ? 'paasng-angle-line-up' : 'paasng-angle-line-down']" />
                   </span>
                 </div>

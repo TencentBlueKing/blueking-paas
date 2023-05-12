@@ -31,6 +31,8 @@ from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 from paasng.engine.configurations.building import SlugBuilderTemplate
+from paasng.engine.configurations.image import generate_image_repository
+from paasng.engine.models import EngineApp
 from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
@@ -47,7 +49,7 @@ def generate_builder_name(app: 'WlApp') -> str:
 
 
 def generate_slug_path(bp: BuildProcess):
-    """Get the slug path for store builded slug"""
+    """Get the slug path for storing slug"""
     app: 'WlApp' = bp.app
     slug_name = f'{app.name}:{bp.branch}:{bp.revision}'
     return f'{app.region}/home/{slug_name}/push'
@@ -58,31 +60,44 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'WlApp' = bp.app
-    cache_path = '%s/home/%s/cache' % (app.region, app.name)
-
     env_vars: Dict[str, str] = {}
-    env_vars.update(
-        # Path of source tarball
-        TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
-        # Path to store compiled slug package
-        PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
-        # Path to store cache to speed up build process
-        CACHE_PATH='%s/%s' % (bucket, cache_path),
-        # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
-        # TODO: 将 slug.tgz 抽成常量
-        SLUG_SET_URL=store.generate_presigned_url(
-            key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
-        ),
-        SOURCE_GET_URL=store.generate_presigned_url(
-            key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        ),
-        CACHE_GET_URL=store.generate_presigned_url(
-            key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        ),
-        CACHE_SET_URL=store.generate_presigned_url(
-            key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
-        ),
-    )
+
+    if metadata and metadata.get("is_cnb_runtime"):
+        # build application as image
+        engine_app = EngineApp.objects.get(id=app.pk)
+        env_vars.update(
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            OUTPUT_IMAGE=generate_image_repository(engine_app) + ":" + bp.revision,
+            CACHE_IMAGE=generate_image_repository(engine_app) + ":" + "cnb-build-cache",
+        )
+    else:
+        # build application as slug
+        cache_path = '%s/home/%s/cache' % (app.region, app.name)
+        env_vars.update(
+            # Path of source tarball
+            TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
+            # Path to store compiled slug package
+            PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
+            # Path to store cache to speed up build process
+            CACHE_PATH='%s/%s' % (bucket, cache_path),
+            # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
+            # TODO: 将 slug.tgz 抽成常量
+            SLUG_SET_URL=store.generate_presigned_url(
+                key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            ),
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            CACHE_GET_URL=store.generate_presigned_url(
+                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            CACHE_SET_URL=store.generate_presigned_url(
+                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            ),
+        )
+
     env_vars.update(AppConfigVarManager(app=app).get_envs())
 
     # Inject extra env vars in settings for development purpose

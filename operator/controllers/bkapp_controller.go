@@ -24,6 +24,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
@@ -164,8 +166,12 @@ func getOwnerNames(rawObj client.Object) []string {
 	if owner == nil {
 		return nil
 	}
-	// 确保 Owner 类型为 BkApp
-	if owner.APIVersion == paasv1alpha2.GroupVersion.String() && owner.Kind == paasv1alpha2.KindBkApp {
+	// 确保 Owner 类型为 BkApp，但需要兼容多版本的情况
+	ownerApiVersions := []string{
+		paasv1alpha1.GroupVersion.String(),
+		paasv1alpha2.GroupVersion.String(),
+	}
+	if lo.Contains(ownerApiVersions, owner.APIVersion) && owner.Kind == paasv1alpha2.KindBkApp {
 		return []string{owner.Name}
 	}
 	return nil

@@ -27,22 +27,22 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
 安装 ginkgo 命令行工具：
 
-    $ make install-ginkgo
-
-执行单元测试：
-
-    $ make test
+    $ make ginkgo
 
 安装格式化 & lint 工具：
 
-    $ make install-golines 
-    $ make install-gofumpt
-    $ make install-golangci-lint
+    $ make golines 
+    $ make gofumpt
+    $ make golangci-lint
 
 执行 fmt & lint
 
     $ make fmt
     $ make lint
+
+执行单元测试：
+
+    $ make test
 
 更新 helm-chart
 

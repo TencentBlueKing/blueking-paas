@@ -21,6 +21,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.platform.applications.models import WlApp
@@ -107,11 +108,19 @@ class ImageCredentials(AppEntity):
 
     @classmethod
     def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
+        # TODO: add builtin credential
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
+        credentials.append(
+            ImageCredential(
+                registry=settings.SAAS_DOCKER_REGISTRY_HOST,
+                username=settings.SAAS_DOCKER_REGISTRY_USERNAME,
+                password=settings.SAAS_DOCKER_REGISTRY_PASSWORD,
+            )
+        )
         return ImageCredentials(
             app=app,
             name=constants.KUBE_RESOURCE_NAME,

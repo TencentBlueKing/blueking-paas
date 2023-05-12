@@ -54,7 +54,9 @@ class RuntimeConfig:
 
     def get_command(self, command_type: str, procfile: Dict[str, str]) -> List[str]:
         if self.type == RuntimeType.BUILDPACK:
-            return ["start", command_type]
+            if self.endpoint == ['bash', '/runner/init']:
+                return ["start", command_type]
+            return [command_type]
         return shlex.split(procfile[command_type])
 
 

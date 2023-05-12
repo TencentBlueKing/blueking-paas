@@ -354,6 +354,15 @@ class Process(AppEntity):
         envs.update(release.get_envs())
         envs.update(extra_envs or {})
 
+        entrypoint = config.runtime.get_entrypoint()
+        # cnb runtime 的 entrypoint 只需要设置成 type_ 即可
+        # TODO: 更好的方式区分 cnb runtime 和 heroku runtime?
+        if entrypoint == ["launcher"]:
+            entrypoint = type_
+            command = []
+        else:
+            command = config.runtime.get_command(type_, procfile)
+
         mapper_version = AppResVerManager(release.app).curr_version
         process = Process(
             app=release.app,
@@ -365,8 +374,8 @@ class Process(AppEntity):
             runtime=Runtime(
                 envs=envs,
                 image=config.get_image(),
-                command=config.runtime.get_entrypoint(),
-                args=config.runtime.get_command(type_, procfile),
+                command=entrypoint,
+                args=command,
                 proc_command=procfile[type_],
                 image_pull_policy=config.runtime.get_image_pull_policy(),
                 image_pull_secrets=[{"name": PULL_SECRET_NAME}],

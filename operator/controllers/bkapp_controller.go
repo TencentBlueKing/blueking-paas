@@ -35,6 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
@@ -164,8 +165,10 @@ func getOwnerNames(rawObj client.Object) []string {
 	if owner == nil {
 		return nil
 	}
-	// 确保 Owner 类型为 BkApp
-	if owner.APIVersion == paasv1alpha2.GroupVersion.String() && owner.Kind == paasv1alpha2.KindBkApp {
+	// 确保 Owner 类型为 BkApp，但需要兼容多版本的情况
+	if (owner.APIVersion == paasv1alpha2.GroupVersion.String() ||
+		owner.APIVersion == paasv1alpha1.GroupVersion.String()) &&
+		owner.Kind == paasv1alpha2.KindBkApp {
 		return []string{owner.Name}
 	}
 	return nil

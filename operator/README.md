@@ -29,10 +29,6 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
     $ make install-ginkgo
 
-执行单元测试：
-
-    $ make test
-
 安装格式化 & lint 工具：
 
     $ make install-golines 
@@ -43,6 +39,10 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
     $ make fmt
     $ make lint
+
+执行单元测试：
+
+    $ make test
 
 更新 helm-chart
 

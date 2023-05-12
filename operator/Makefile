@@ -64,34 +64,34 @@ help: ## 展示可用 make 命令及说明
 ##@ 研发命令
 
 .PHONY: manifests
-manifests: controller-gen ## 生成 WebhookConfiguration，ClusterRole，CustomResourceDefinition 等配置（YAML）
+manifests:  ## 生成 WebhookConfiguration，ClusterRole，CustomResourceDefinition 等配置（YAML）
 	# 备注：output:none 将会丢弃其他的输出，适用于仅特定配置如 crd，webhook 需要更新的情况：https://book.kubebuilder.io/reference/controller-gen.html#output-rules
 	$(CONTROLLER_GEN) crd webhook paths="./..." rbac:roleName=manager-role "crd:crdVersions=v1" output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:none
 
 .PHONY: generate
-generate: controller-gen ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代码实现（Go）
+generate:  ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代码实现（Go）
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: fmt
-fmt: ## 执行 golines，gofumpt ...
+fmt:  ## 执行 golines，gofumpt ...
 	$(GOLINES) ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
 	$(GOFUMPT) -l -w .
 
 .PHONY: vet
-vet: ## 执行 go vet ./...
+vet:  ## 执行 go vet ./...
 	go vet ./...
 
 .PHONY: tidy
-tidy: ## 执行 go mod tidy
+tidy:  ## 执行 go mod tidy
 	go mod tidy
 
 .PHONY: test
-test: manifests generate fmt vet envtest ginkgo ## 执行 go test ./... 并输出覆盖率报告
+test: manifests generate fmt vet  ## 执行 go test ./... 并输出覆盖率报告
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
 	$(GINKGO) --cover --coverprofile cover.out ./...
 
 .PHONY: lint
-lint: ## 执行 golangci-lint run
+lint:  ## 执行 golangci-lint run
 	$(GOCILINT) run
 
 .PHONY: update-helm-chart

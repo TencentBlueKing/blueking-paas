@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 from operator import attrgetter
 from unittest import mock
 
@@ -23,8 +24,11 @@ import arrow
 import pytest
 from django.conf import settings
 from django.utils import translation
+from django_dynamic_fixture import G
 
+from paasng.dev_resources.servicehub.constants import Category
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound
+from paasng.dev_resources.services.models import Plan, Service, ServiceCategory
 from paasng.engine.constants import OperationTypes
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.plat_admin.system.applications import (
@@ -188,6 +192,33 @@ class TestSysAddonsAPIViewSet:
         return generate_random_string()
 
     @pytest.fixture
+    def service(self, bk_app):
+        # Add a service in database
+        category = G(ServiceCategory, id=Category.DATA_STORAGE)
+        svc = G(
+            Service,
+            name='mysql',
+            category=category,
+            region=bk_app.region,
+            logo_b64="dummy",
+            config={'specifications': [{'name': 'instance_type', 'description': '', 'recommended_value': 'ha'}]},
+        )
+        # Create default plans
+        G(
+            Plan,
+            name='no-ha',
+            service=svc,
+            config=json.dumps({'specifications': {'instance_type': 'no-ha'}}),
+        )
+        G(
+            Plan,
+            name='ha',
+            service=svc,
+            config=json.dumps({'specifications': {'instance_type': 'ha'}}),
+        )
+        return svc
+
+    @pytest.fixture
     def url(self, bk_app, bk_module, bk_stag_env, service_name):
         url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service_name}/'
         return url
@@ -204,3 +235,20 @@ class TestSysAddonsAPIViewSet:
 
         response = sys_api_client.get(url)
         assert response.status_code == 404
+
+    @pytest.mark.parametrize(
+        "specs, expected_code",
+        [
+            ({}, 200),
+            ({'instance_type': 'no-ha'}, 200),
+            ({'instance_type': 'test'}, 400),
+            ({'unknown_spec_name': ''}, 400),
+        ],
+    )
+    @mock.patch('paasng.dev_resources.servicehub.local.manager.LocalEngineAppInstanceRel.provision', return_value=None)
+    def test_validate_specs_for_provision_service(
+        self, provision, bk_app, bk_module, bk_stag_env, sys_api_client, service, specs, expected_code
+    ):
+        url = f'/sys/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/envs/stag/addons/{service.name}/'
+        response = sys_api_client.post(url, data={'specs': specs})
+        assert response.status_code == expected_code

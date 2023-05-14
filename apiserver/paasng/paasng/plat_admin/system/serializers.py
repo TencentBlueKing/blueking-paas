@@ -150,4 +150,4 @@ class AddonSpecsSLZ(serializers.Serializer):
             if set(specs.items()).issubset(set(valid_specs.items())):
                 return specs
 
-        raise ValidationError(f'specs {specs} is invalid for addon service {svc.name}')
+        raise ValidationError(f'{specs} is invalid for addon service {svc.name}')

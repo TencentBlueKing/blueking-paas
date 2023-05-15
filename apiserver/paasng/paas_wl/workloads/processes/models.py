@@ -356,9 +356,10 @@ class Process(AppEntity):
 
         entrypoint = config.runtime.get_entrypoint()
         # cnb runtime 的 entrypoint 只需要设置成 type_ 即可
+        # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
         # TODO: 更好的方式区分 cnb runtime 和 heroku runtime?
         if entrypoint == ["launcher"]:
-            entrypoint = type_
+            entrypoint = [type_]
             command = []
         else:
             command = config.runtime.get_command(type_, procfile)

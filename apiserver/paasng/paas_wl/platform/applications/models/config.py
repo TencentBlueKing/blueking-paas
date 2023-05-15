@@ -38,13 +38,15 @@ class RuntimeConfig:
 
     image: Optional[str] = None
     type: RuntimeType = field(default=RuntimeType.BUILDPACK)
+    # [Deprecated] using entrypoint instead
     endpoint: List[str] = field(factory=list)
+    entrypoint: List[str] = field(factory=list)
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
 
     def get_entrypoint(self) -> List[str]:
         if self.type == RuntimeType.CUSTOM_IMAGE:
             return ["env"]
-        return self.endpoint or ['bash', '/runner/init']
+        return self.endpoint or self.entrypoint or ['bash', '/runner/init']
 
     def get_image_pull_policy(self) -> ImagePullPolicy:
         try:
@@ -54,7 +56,7 @@ class RuntimeConfig:
 
     def get_command(self, command_type: str, procfile: Dict[str, str]) -> List[str]:
         if self.type == RuntimeType.BUILDPACK:
-            if self.endpoint == ['bash', '/runner/init']:
+            if self.get_entrypoint() == ['bash', '/runner/init']:
                 return ["start", command_type]
             return [command_type]
         return shlex.split(procfile[command_type])

@@ -1112,16 +1112,16 @@ SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
 
 
 # ------------------
-# SaaS 应用镜像仓库配置
+# App 应用镜像仓库配置
 # ------------------
-# SaaS 镜像仓库的 Registry 的域名
-SAAS_DOCKER_REGISTRY_HOST = settings.get('SAAS_DOCKER_REGISTRY_ADDR', 'registry.hub.docker.com')
-# SaaS 镜像仓库的命名空间, 即在 Registry 中的项目名
-SAAS_DOCKER_REGISTRY_NAMESPACE = settings.get('SAAS_DOCKER_NAMESPACE', 'bkpaas/docker')
+# App 镜像仓库的 Registry 的域名
+APP_DOCKER_REGISTRY_HOST = settings.get('APP_DOCKER_REGISTRY_ADDR', 'registry.hub.docker.com')
+# App 镜像仓库的命名空间, 即在 Registry 中的项目名
+APP_DOCKER_REGISTRY_NAMESPACE = settings.get('APP_DOCKER_NAMESPACE', 'bkpaas/docker')
 # 用于访问 Registry 的账号
-SAAS_DOCKER_REGISTRY_USERNAME = settings.get('SAAS_DOCKER_USERNAME', 'bkpaas')
+APP_DOCKER_REGISTRY_USERNAME = settings.get('APP_DOCKER_USERNAME', 'bkpaas')
 # 用于访问 Registry 的密码
-SAAS_DOCKER_REGISTRY_PASSWORD = settings.get('SAAS_DOCKER_PASSWORD', 'blueking')
+APP_DOCKER_REGISTRY_PASSWORD = settings.get('APP_DOCKER_PASSWORD', 'blueking')
 
 
 # ------------------

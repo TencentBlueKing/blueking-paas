@@ -33,8 +33,8 @@ if TYPE_CHECKING:
     from paasng.platform.modules.models.runtime import AppBuildPack, AppSlugBuilder
 
 
-def build_saas_registry_auth() -> str:
-    auth = f"{settings.SAAS_DOCKER_REGISTRY_USERNAME}:{settings.SAAS_DOCKER_REGISTRY_PASSWORD}".encode()
+def build_app_registry_auth() -> str:
+    auth = f"{settings.APP_DOCKER_REGISTRY_USERNAME}:{settings.APP_DOCKER_REGISTRY_PASSWORD}".encode()
     return "Basic " + base64.b64encode(auth).decode()
 
 
@@ -83,7 +83,7 @@ class SlugbuilderInfo:
             if manager.is_cnb_runtime:
                 is_cnb_runtime = True
                 environments.update(
-                    CNB_REGISTRY_AUTH=json.dumps({settings.SAAS_DOCKER_REGISTRY_HOST: build_saas_registry_auth()})
+                    CNB_REGISTRY_AUTH=json.dumps({settings.APP_DOCKER_REGISTRY_HOST: build_app_registry_auth()})
                 )
 
         buildpacks = buildpacks or []

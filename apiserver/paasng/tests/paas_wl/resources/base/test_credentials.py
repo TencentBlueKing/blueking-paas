@@ -33,6 +33,10 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.auto_create_ns
 class TestImageCredentialsHandler:
+    @pytest.fixture(autouse=True)
+    def clear_builtin_auth(self, settings):
+        settings.APP_DOCKER_REGISTRY_HOST = ""
+
     def test_create_empty(self, wl_app, scheduler_client: K8sScheduler):
         scheduler_client.ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=constants.KUBE_RESOURCE_NAME)

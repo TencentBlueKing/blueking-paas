@@ -21,5 +21,6 @@ module.exports = {
   extends: ['@blueking/eslint-config-bk/vue3'], // vue2 这里用 @blueking/eslint-config-bk/vue
   globals: {
     $: true,
+    BACKEND_URL: true,
   },
 };

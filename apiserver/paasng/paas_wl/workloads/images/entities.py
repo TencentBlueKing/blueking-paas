@@ -115,13 +115,14 @@ class ImageCredentials(AppEntity):
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
-        credentials.append(
-            ImageCredential(
-                registry=settings.APP_DOCKER_REGISTRY_HOST,
-                username=settings.APP_DOCKER_REGISTRY_USERNAME,
-                password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+        if settings.APP_DOCKER_REGISTRY_HOST:
+            credentials.append(
+                ImageCredential(
+                    registry=settings.APP_DOCKER_REGISTRY_HOST,
+                    username=settings.APP_DOCKER_REGISTRY_USERNAME,
+                    password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+                )
             )
-        )
         return ImageCredentials(
             app=app,
             name=constants.KUBE_RESOURCE_NAME,

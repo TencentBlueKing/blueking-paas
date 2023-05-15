@@ -24,7 +24,7 @@ from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.pluginscenter.itsm_adaptor.open_apis.views import PluginCallBackApiViewSet
 
 pytestmark = pytest.mark.django_db
-PluginCallBackApiViewSet.authentication_classes = ()  # type: ignore
+PluginCallBackApiViewSet.authentication_classes = []  # type: ignore
 
 CALLBACK_DATA = {
     "title": "标题",
@@ -64,9 +64,9 @@ class TestSysApis:
         'current_status, approve_result, stage_status',
         [
             (ItsmTicketStatus.FINISHED.value, True, PluginReleaseStatus.SUCCESSFUL.value),
-            # (ItsmTicketStatus.FINISHED.value, False, PluginReleaseStatus.FAILED.value),
-            # (ItsmTicketStatus.TERMINATED.value, False, PluginReleaseStatus.INTERRUPTED.value),
-            # (ItsmTicketStatus.REVOKED.value, True, PluginReleaseStatus.INTERRUPTED.value),
+            (ItsmTicketStatus.FINISHED.value, False, PluginReleaseStatus.FAILED.value),
+            (ItsmTicketStatus.TERMINATED.value, False, PluginReleaseStatus.INTERRUPTED.value),
+            (ItsmTicketStatus.REVOKED.value, True, PluginReleaseStatus.INTERRUPTED.value),
         ],
     )
     def test_itsm_online_callback(

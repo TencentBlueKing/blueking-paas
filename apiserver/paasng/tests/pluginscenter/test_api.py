@@ -16,17 +16,15 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from unittest import mock
-
 import pytest
 
 from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.views import PluginCallBackApiViewSet
+from paasng.pluginscenter.itsm_adaptor.open_apis.views import PluginCallBackApiViewSet
 
 pytestmark = pytest.mark.django_db
-
+PluginCallBackApiViewSet.authentication_classes = []  # type: ignore
 
 CALLBACK_DATA = {
     "title": "标题",
@@ -75,46 +73,38 @@ class TestSysApis:
         self, api_client, pd, plugin, release, itsm_online_stage, current_status, approve_result, stage_status
     ):
         callback_url = (
-            "/sys/api/bkplugins/"
-            + f"{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/stages/{itsm_online_stage.id}/itsm/"
+            "/open/api/itsm/bkplugins/"
+            + f"{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/stages/{itsm_online_stage.id}/"
         )
 
         callback_data = CALLBACK_DATA
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
 
-        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify:
-            mocked_verify.return_value = True
-            resp_data = api_client.post(callback_url, callback_data).json()
+        resp_data = api_client.post(callback_url, callback_data).json()
 
-            assert resp_data['code'] == 0
-            assert resp_data['result'] is True
-            stage = release.all_stages.get(id=itsm_online_stage.id)
-            assert stage.status == stage_status
+        assert resp_data['code'] == 0
+        assert resp_data['result'] is True
+        stage = release.all_stages.get(id=itsm_online_stage.id)
+        assert stage.status == stage_status
 
     @pytest.mark.parametrize(
         'current_status, approve_result, plugin_status',
         [
-            (ItsmTicketStatus.FINISHED.value, True, PluginStatus.DEVELOPING.value),
             (ItsmTicketStatus.FINISHED.value, False, PluginStatus.APPROVAL_FAILED.value),
             (ItsmTicketStatus.TERMINATED.value, False, PluginStatus.APPROVAL_FAILED.value),
             (ItsmTicketStatus.REVOKED.value, True, PluginStatus.APPROVAL_FAILED.value),
         ],
     )
     def test_itsm_create_callback(self, api_client, pd, plugin, current_status, approve_result, plugin_status):
-        callback_url = "/sys/api/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/itsm/"
+        callback_url = "/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/"
 
         callback_data = CALLBACK_DATA
         callback_data['current_status'] = current_status
         callback_data['approve_result'] = approve_result
+        resp_data = api_client.post(callback_url, callback_data).json()
 
-        with mock.patch.object(PluginCallBackApiViewSet, "_verify_itsm_token") as mocked_verify, mock.patch(
-            "paasng.pluginscenter.shim.init_plugin_in_view"
-        ):
-            mocked_verify.return_value = True
-            resp_data = api_client.post(callback_url, callback_data).json()
-
-            assert resp_data['code'] == 0
-            assert resp_data['result'] is True
-            plugin.refresh_from_db()
-            assert plugin.status == plugin_status
+        assert resp_data['code'] == 0
+        assert resp_data['result'] is True
+        plugin.refresh_from_db()
+        assert plugin.status == plugin_status

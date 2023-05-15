@@ -97,6 +97,12 @@ class PluginUniqueValidator:
         return queryset
 
 
+class ItsmDetailSLZ(serializers.Serializer):
+    ticket_url = serializers.CharField(default=None)
+    sn = serializers.CharField(help_text="ITSM 单据单号")
+    fields = serializers.ListField(child=serializers.DictField())
+
+
 class PluginRoleSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="角色名称")
     id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
@@ -143,6 +149,8 @@ class PlainReleaseStageSLZ(serializers.Serializer):
 
 
 class PluginReleaseStageSLZ(serializers.ModelSerializer):
+    itsm_detail = ItsmDetailSLZ()
+
     class Meta:
         model = PluginReleaseStage
         exclude = ("id", "release", "created", "updated", "next_stage")
@@ -172,12 +180,6 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     class Meta:
         model = PluginRelease
         exclude = ("plugin", "stages_shortcut")
-
-
-class ItsmDetailSLZ(serializers.Serializer):
-    ticket_url = serializers.CharField(default=None)
-    sn = serializers.CharField(help_text="ITSM 单据单号")
-    fields = serializers.ListField(child=serializers.DictField())
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):

@@ -20,6 +20,7 @@ from typing import Dict, Optional
 
 from django.conf import settings
 from elasticsearch_dsl import Search
+from elasticsearch_dsl.aggs import Agg
 from elasticsearch_dsl.query import Q, Query
 
 from paasng.utils.es_log.time_range import SmartTimeRange
@@ -61,6 +62,10 @@ class SmartSearch:
 
     def sort(self, keys: Dict):
         self.search = self.search.sort(keys)
+        return self
+
+    def agg(self, field_name: str, agg: Agg):
+        self.search.aggs[field_name] = agg
         return self
 
     def highlight(self, *fields: str, highlight_query: Optional[Dict]):

@@ -19,10 +19,10 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 from collections import defaultdict
-from operator import attrgetter
 from typing import Counter, Dict, List, Optional
 
 import jinja2
+from elasticsearch_dsl.aggs import Terms
 from rest_framework.fields import get_attribute
 
 from paasng.platform.applications.models import ModuleEnvironment
@@ -36,8 +36,30 @@ from paasng.utils.text import calculate_percentage
 logger = logging.getLogger(__name__)
 
 
-def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:
-    """从日志样本(logs) 中统计 ES 日志的字段分布, 返回对应的 FieldFilters
+def agg_builtin_filters(search: SmartSearch, mappings: dict):
+    """添加内置过滤条件查询语句, 内置过滤条件有 environment, process_id, stream"""
+    for field_name in ["environment", "process_id", "stream"]:
+        search = search.agg(
+            field_name,
+            Terms(
+                field=get_es_term(field_name, mappings),
+                # 不能设置太低, 否则应用的进程太多就会筛选不到
+                size=10,
+            ),
+        )
+    return search
+
+
+def count_filters_options_from_agg(aggregations: dict, properties: Dict[str, FieldFilter]) -> Dict[str, FieldFilter]:
+    """根据 ES 聚合查询结果统计可用的过滤选项"""
+    for field_name, agg in aggregations.items():
+        if f := properties.get(field_name):
+            f.options = [(bucket["key"], calculate_percentage(1, len(agg["buckets"]))) for bucket in agg["buckets"]]
+    return properties
+
+
+def count_filters_options_from_logs(logs: List, properties: Dict[str, FieldFilter]) -> Dict[str, FieldFilter]:
+    """从日志样本(logs) 中统计 ES 日志的字段分布, 返回对应的 FieldFilters. 会忽略无可选 options 的 filters
 
     :param logs: 日志样本
     :param properties: 需要统计的ES 字段
@@ -56,20 +78,26 @@ def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> Lis
             except TypeError:
                 logger.warning("Field<%s> got an unhashable value: %s", log_field, value)
 
-    result = []
+    result = {}
     for title, values in field_counter.items():
-        options = []
+        f = properties[title]
+        options = dict(f.options)
         total = sum(values.values())
-        if total == 0:
+        if total == 0 and len(options) == 0:
             # 该 field 无值可选时, 不允许使用该字段作为过滤条件
             continue
 
         for value, count in values.items():
-            percentage = calculate_percentage(count, total)
-            options.append((value, percentage))
-        result.append(FieldFilter(name=title, key=properties[title].key, options=options, total=total))
-    # 根据 field 在所有日志记录中出现的次数进行降序排序, 再根据 key 的字母序排序(保证前缀接近的 key 靠近在一起, 例如 json.*)
-    return sorted(result, key=attrgetter("total", "key"), reverse=True)
+            if value not in options:
+                percentage = calculate_percentage(count, total)
+                options[value] = percentage
+        result[title] = FieldFilter(
+            name=f.name,
+            key=f.key,
+            options=[(k, v) for k, v in options.items()],
+            total=total,
+        )
+    return result
 
 
 class ESFilter:
@@ -140,7 +168,7 @@ class EnvFilter(ESFilter):
         if "engine_app_name" in term_fields and "tojson" in self.search_params.termTemplate["engine_app_name"]:
             search = search.filter(
                 "terms",
-                **{get_es_term("engine_app_name", self.mappings): json.loads(term_fields.pop("engine_app_name"))}
+                **{get_es_term("engine_app_name", self.mappings): json.loads(term_fields.pop("engine_app_name"))},
             )
         if term_fields:
             # [term] query doesn't support multiple fields
@@ -182,7 +210,7 @@ class ModuleFilter(ESFilter):
                 raise ValueError("engine_app_name template must be using will tojson filter")
             search = search.filter(
                 "terms",
-                **{get_es_term("engine_app_name", self.mappings): json.loads(term_fields.pop("engine_app_name"))}
+                **{get_es_term("engine_app_name", self.mappings): json.loads(term_fields.pop("engine_app_name"))},
             )
         if term_fields:
             # [term] query doesn't support multiple fields

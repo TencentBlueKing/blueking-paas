@@ -66,6 +66,12 @@ type ResLimitConfig struct {
 	MaxReplicas int32 `json:"maxReplicas"`
 }
 
+// AutoscalingConfig contains the config for autoscaling
+type AutoscalingConfig struct {
+	// Enabled indicates whether autoscaling is enabled
+	Enabled bool `json:"enabled"`
+}
+
 //+kubebuilder:object:root=true
 
 // ProjectConfig is the Schema for the project configs API
@@ -79,6 +85,7 @@ type ProjectConfig struct {
 	PlatformConfig      PlatformConfig      `json:"platformConfig"`
 	IngressPluginConfig IngressPluginConfig `json:"ingressPluginConfig"`
 	ResLimitConfig      ResLimitConfig      `json:"resLimitConfig"`
+	AutoscalingConfig   AutoscalingConfig   `json:"autoscalingConfig"`
 }
 
 // NewProjectConfig create project config
@@ -125,4 +132,9 @@ func (p *ProjectConfig) GetProcDefaultMemLimits() string {
 // GetIngressClassName returns the ingress class name
 func (p *ProjectConfig) GetIngressClassName() string {
 	return p.PlatformConfig.IngressClassName
+}
+
+// IsAutoscalingEnabled returns whether autoscaling is enabled
+func (p *ProjectConfig) IsAutoscalingEnabled() bool {
+	return p.AutoscalingConfig.Enabled
 }

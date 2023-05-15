@@ -25,8 +25,8 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.pluginscenter import constants, serializers, shim
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.pluginscenter.itsm_adaptor.open_apis.authentication import ItsmBasicAuthentication
 from paasng.pluginscenter.models import PluginInstance
-from paasng.pluginscenter.open_apis.authentication import ItsmBasicAuthentication
 
 logger = logging.getLogger(__name__)
 

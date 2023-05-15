@@ -21,7 +21,7 @@ import pytest
 from paasng.pluginscenter.constants import PluginReleaseStatus, PluginStatus
 from paasng.pluginscenter.exceptions import error_codes
 from paasng.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.pluginscenter.open_apis.views import PluginCallBackApiViewSet
+from paasng.pluginscenter.itsm_adaptor.open_apis.views import PluginCallBackApiViewSet
 
 pytestmark = pytest.mark.django_db
 PluginCallBackApiViewSet.authentication_classes = ()  # type: ignore

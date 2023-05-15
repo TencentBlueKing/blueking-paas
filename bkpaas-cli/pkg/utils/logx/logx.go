@@ -16,23 +16,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package logx
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/TencentBlueKing/blueking-paas/client/cmd"
+	"github.com/fatih/color"
+
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
 )
 
-func main() {
-	// load global config ...
-	if _, err := config.LoadConf(config.ConfigFilePath); err != nil {
-		logx.Error("Failed to load config, error: %s", err.Error())
-		logx.Tips("Please follow the user guide (Readme.md) to initialize the configuration...")
-		os.Exit(1)
-	}
+// Error 向终端输出错误类信息
+func Error(format string, args ...interface{}) {
+	color.Red(format, args...)
+}
 
-	cmd.Execute()
+// Tips 向终端输出提示类信息
+func Tips(format string, args ...interface{}) {
+	color.Cyan(format, args...)
+}
+
+// Info 向终端输出信息
+func Info(format string, args ...interface{}) {
+	fmt.Println(fmt.Sprintf(format, args...))
+}
+
+// Debug 向终端输出调试类信息
+func Debug(format string, args ...interface{}) {
+	if !config.G.Debug {
+		return
+	}
+	fmt.Println("[DEBUG]", fmt.Sprintf(format, args...))
 }

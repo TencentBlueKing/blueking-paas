@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
 )
 
 // NewCmdDeployResult returns a Command instance for 'app deploy-result' sub command
@@ -39,7 +39,7 @@ func NewCmdDeployResult() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			result, err := getDeployResult(appCode, appModule, appEnv)
 			if err != nil {
-				color.Red(fmt.Sprintf("failed to get application %s deploy result, error: %s", appCode, err.Error()))
+				logx.Error("failed to get application %s deploy result, error: %s", appCode, err.Error())
 				os.Exit(1)
 			}
 			fmt.Println(result)

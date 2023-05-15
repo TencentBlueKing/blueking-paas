@@ -21,12 +21,12 @@ package app
 import (
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
 )
 
 var appLongDesc = `
@@ -41,8 +41,11 @@ func NewCmd() *cobra.Command {
 		Long:                  appLongDesc,
 		DisableFlagsInUseLine: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// 由于重写 PersistentPreRun 方法，此处需要显式调用父命令 PersistentPreRun
+			cmd.Parent().PersistentPreRun(cmd.Parent(), args)
+
 			if !account.IsUserAuthorized(config.G.AccessToken) {
-				color.Red("User unauthorized! Please use `bkpaas-cli login` to login")
+				logx.Error("User unauthorized! Please use `bkpaas-cli login` to login")
 				os.Exit(1)
 			}
 		},

@@ -31,6 +31,7 @@ import (
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
 )
 
 // NewCmd create login command
@@ -65,15 +66,15 @@ func NewCmd() *cobra.Command {
 
 // 通过浏览器登录
 func loginByBrowser() {
-	color.Cyan("Now we will open your browser...")
-	color.Cyan("Please copy and paste the access_token from your browser.")
+	logx.Tips("Now we will open your browser...")
+	logx.Tips("Please copy and paste the access_token from your browser.")
 
 	// waiting for user read tips
 	time.Sleep(1 * time.Second)
 
 	if err := browser.OpenURL(account.GetOAuthTokenUrl()); err != nil {
-		color.Red("Failed to open browser, error: " + err.Error())
-		color.Cyan(
+		logx.Error("Failed to open browser, error: %s", err.Error())
+		logx.Tips(
 			"Don't worry, you can still manually open the browser to get the access_token: %s",
 			account.GetOAuthTokenUrl(),
 		)
@@ -87,7 +88,7 @@ func loginByAccessToken() {
 	fmt.Printf(">>> AccessToken: ")
 	accessToken, err := gopass.GetPasswdMasked()
 	if err != nil {
-		color.Red("Failed to read access token, error: " + err.Error())
+		logx.Error("Failed to read access token, error: %s", err.Error())
 		return
 	}
 	login(string(accessToken))
@@ -99,20 +100,22 @@ func loginByBkTicket() {
 	fmt.Printf(">>> BkTicket: ")
 	bkTicket, err := gopass.GetPasswdMasked()
 	if err != nil {
-		color.Red("Failed to read bk ticket, error: " + err.Error())
+		logx.Error("Failed to read bk ticket, error: %s", err.Error())
 		return
 	}
 
 	resp, err := grequests.Get(account.GetOAuthTokenUrl(), &grequests.RequestOptions{
 		Cookies: []*http.Cookie{{Name: "bk_ticket", Value: string(bkTicket)}},
 	})
+	logx.Debug("Response: %d -> %s", resp.StatusCode, resp.String())
+
 	if !resp.Ok || err != nil {
-		color.Red("Failed to get access token by bk ticket")
+		logx.Error("Failed to get access token by bk ticket")
 		return
 	}
 	respData := map[string]any{}
 	if err = resp.JSON(&respData); err != nil {
-		color.Red("Failed to parse oauth api response, error: " + err.Error())
+		logx.Error("Failed to parse oauth api response, error: %s", err.Error())
 		return
 	}
 	login(respData["access_token"].(string))
@@ -120,7 +123,7 @@ func loginByBkTicket() {
 
 // 通过提供 bkToken 进行登录
 func loginByBkToken() {
-	color.Red("login by bk_token currently unsupported...")
+	logx.Error("login by bk_token currently unsupported...")
 }
 
 // 用户登录
@@ -128,8 +131,8 @@ func login(accessToken string) {
 	fmt.Printf("User login... ")
 	username, err := account.FetchUserNameByAccessToken(accessToken)
 	if err != nil {
-		color.Red("Fail!")
-		color.Red(err.Error())
+		logx.Error("Fail!")
+		logx.Error(err.Error())
 		return
 	}
 	color.Green("Success!")
@@ -138,6 +141,6 @@ func login(accessToken string) {
 	config.G.Username = username
 	config.G.AccessToken = accessToken
 	if err = config.DumpConf(config.ConfigFilePath); err != nil {
-		color.Red("Failed to dump config, error: " + err.Error())
+		logx.Error("Failed to dump config, error: %s", err.Error())
 	}
 }

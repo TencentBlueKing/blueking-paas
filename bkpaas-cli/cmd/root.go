@@ -19,10 +19,8 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/cmd/app"
@@ -30,16 +28,25 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/cmd/login"
 	"github.com/TencentBlueKing/blueking-paas/client/cmd/version"
 	cliConf "github.com/TencentBlueKing/blueking-paas/client/pkg/config"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewRootCmd ...
 func NewRootCmd() *cobra.Command {
+	var debug bool
+
 	rootCmd := &cobra.Command{
 		Use: "bkpaas-cli",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Hello %s, welcome to use bkpaas-cli, use `bkpaas-cli -h` for help\n", cliConf.G.Username)
+			console.Info("Hello %s, welcome to use bkpaas-cli, use `bkpaas-cli -h` for help", cliConf.G.Username)
+		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if debug {
+				cliConf.EnableDebugMode()
+			}
 		},
 	}
+
 	// 用户登录
 	rootCmd.AddCommand(login.NewCmd())
 	// Cli 配置管理
@@ -49,13 +56,16 @@ func NewRootCmd() *cobra.Command {
 	// 版本信息
 	rootCmd.AddCommand(version.NewCmd())
 
+	// 允许通过指定 debug 参数开启调试模式
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug mode")
+
 	return rootCmd
 }
 
 // Execute bkpaas-cli command
 func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
-		color.Red(err.Error())
+		console.Error("Failed to init root command: %s", err.Error())
 		os.Exit(1)
 	}
 }

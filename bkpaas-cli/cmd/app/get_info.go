@@ -21,10 +21,10 @@ package app
 import (
 	"fmt"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdGetInfo returns a Command instance for 'app get-info' sub command
@@ -50,7 +50,7 @@ func displayAppInfo(appCode string) {
 	retriever := handler.NewBasicInfoRetriever()
 	appInfo, err := retriever.Exec(appCode)
 	if err != nil {
-		color.Red("Failed to get application info")
+		console.Error("Failed to get application info")
 		return
 	}
 	fmt.Println(appInfo)

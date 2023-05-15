@@ -47,10 +47,11 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 type DefaultAppDeployer struct{}
 
 // Deploy 执行部署操作
-func (d DefaultAppDeployer) Deploy(opts model.DeployOptions) (map[string]any, error) {
-	return apiresources.DefaultRequester.DeployDefaultApp(
+func (d DefaultAppDeployer) Deploy(opts model.DeployOptions) error {
+	_, err := apiresources.DefaultRequester.DeployDefaultApp(
 		opts.AppCode, opts.Module, opts.DeployEnv, opts.Branch,
 	)
+	return err
 }
 
 // GetResult 获取部署结果
@@ -134,10 +135,11 @@ var _ Deployer = DefaultAppDeployer{}
 type CNativeAppDeployer struct{}
 
 // Deploy 执行部署操作
-func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) (map[string]any, error) {
-	return apiresources.DefaultRequester.DeployCNativeApp(
+func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
+	_, err := apiresources.DefaultRequester.DeployCNativeApp(
 		opts.AppCode, opts.Module, opts.DeployEnv, opts.BkAppManifest,
 	)
+	return err
 }
 
 // GetResult 获取部署结果

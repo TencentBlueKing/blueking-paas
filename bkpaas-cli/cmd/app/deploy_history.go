@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdDeployHistory returns a Command instance for 'app deploy-history' sub command
@@ -39,7 +39,7 @@ func NewCmdDeployHistory() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			history, err := listDeployHistory(appCode, appModule, appEnv)
 			if err != nil {
-				color.Red(fmt.Sprintf("failed to list application %s deploy history, error: %s", appCode, err.Error()))
+				console.Error("failed to list application %s deploy history, error: %s", appCode, err.Error())
 				os.Exit(1)
 			}
 			fmt.Println(history)

@@ -38,7 +38,7 @@ type Retriever interface {
 // Deployer 部署器接口
 type Deployer interface {
 	// Deploy 下发部署命令
-	Deploy(opts model.DeployOptions) (map[string]any, error)
+	Deploy(opts model.DeployOptions) error
 	// GetResult 获取应用部署结果
 	GetResult(opts model.DeployOptions) (model.DeployResult, error)
 	// GetHistory 获取应用部署历史

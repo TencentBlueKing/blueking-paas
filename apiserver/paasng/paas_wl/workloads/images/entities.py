@@ -35,6 +35,19 @@ from paas_wl.workloads.images.models import AppImageCredential
 logger = logging.getLogger(__name__)
 
 
+def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
+    return {
+        "auths": {
+            item.registry: {
+                "username": item.username,
+                "password": item.password,
+                "auth": b64encode(f"{item.username}:{item.password}"),
+            }
+            for item in obj.credentials
+        }
+    }
+
+
 class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
     api_version = "v1"
 
@@ -47,19 +60,7 @@ class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
                 'name': obj.name,
                 'namespace': obj.app.namespace,
             },
-            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(self._build_dockerconfig(obj)))},
-        }
-
-    def _build_dockerconfig(self, obj: 'ImageCredentials') -> Dict:
-        return {
-            "auths": {
-                item.registry: {
-                    "username": item.username,
-                    "password": item.password,
-                    "auth": b64encode(f"{item.username}:{item.password}"),
-                }
-                for item in obj.credentials
-            }
+            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(build_dockerconfig(obj)))},
         }
 
 
@@ -116,9 +117,9 @@ class ImageCredentials(AppEntity):
         ]
         credentials.append(
             ImageCredential(
-                registry=settings.SAAS_DOCKER_REGISTRY_HOST,
-                username=settings.SAAS_DOCKER_REGISTRY_USERNAME,
-                password=settings.SAAS_DOCKER_REGISTRY_PASSWORD,
+                registry=settings.APP_DOCKER_REGISTRY_HOST,
+                username=settings.APP_DOCKER_REGISTRY_USERNAME,
+                password=settings.APP_DOCKER_REGISTRY_PASSWORD,
             )
         )
         return ImageCredentials(

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 import os
 import urllib.parse
@@ -29,7 +30,9 @@ from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
+from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
+from paas_wl.workloads.images.entities import ImageCredentials, build_dockerconfig
 from paasng.engine.configurations.building import SlugBuilderTemplate
 from paasng.engine.configurations.image import generate_image_repository
 from paasng.engine.models import EngineApp
@@ -48,11 +51,16 @@ def generate_builder_name(app: 'WlApp') -> str:
     return "slug-builder"
 
 
-def generate_slug_path(bp: BuildProcess):
+def generate_slug_path(bp: BuildProcess) -> str:
     """Get the slug path for storing slug"""
     app: 'WlApp' = bp.app
     slug_name = f'{app.name}:{bp.branch}:{bp.revision}'
     return f'{app.region}/home/{slug_name}/push'
+
+
+def generate_image_tag(bp: BuildProcess) -> str:
+    """Get the Image Tag for bp"""
+    return f"{bp.branch}-{bp.revision}"
 
 
 def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
@@ -62,15 +70,28 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
     app: 'WlApp' = bp.app
     env_vars: Dict[str, str] = {}
 
-    if metadata and metadata.get("is_cnb_runtime"):
-        # build application as image
+    if metadata and metadata.get("is_dockerbuild"):
+        # build application form Dockerfile
         engine_app = EngineApp.objects.get(id=app.pk)
+        image_repository = generate_image_repository(engine_app)
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
             ),
-            OUTPUT_IMAGE=generate_image_repository(engine_app) + ":" + bp.revision,
-            CACHE_IMAGE=generate_image_repository(engine_app) + ":" + "cnb-build-cache",
+            OUTPUT_IMAGE=f"{image_repository}:{generate_image_tag(bp)}",
+            CACHE_REPO=f"{image_repository}/dockerbuild-cache",
+            DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
+        )
+    elif metadata and metadata.get("is_cnb_runtime"):
+        # build application as image
+        engine_app = EngineApp.objects.get(id=app.pk)
+        image_repository = generate_image_repository(engine_app)
+        env_vars.update(
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            OUTPUT_IMAGE=f"{image_repository}:{generate_image_tag(bp)}",
+            CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
         )
     else:
         # build application as slug

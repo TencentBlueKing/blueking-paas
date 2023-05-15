@@ -34,10 +34,10 @@ if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
 
 
-def generate_image_repository(app: 'EngineApp'):
+def generate_image_repository(app: 'EngineApp') -> str:
     """Get the image repository for storing contaienr image"""
     env = app.env
-    system_prefix = f"{settings.SAAS_DOCKER_REGISTRY_HOST}/{settings.SAAS_DOCKER_REGISTRY_NAMESPACE}"
+    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
     app_part = f"{env.application.code}/{env.module.name}/{env.environment}"
     return f"{system_prefix}/{app_part}"
 
@@ -109,8 +109,8 @@ class RuntimeImageInfo:
         return getattr(slug_runner, "full_image", '')
 
     @property
-    def endpoint(self) -> List:
-        """返回当前 engine_app 镜像启动的 endpoint"""
+    def entrypoint(self) -> List:
+        """返回当前 engine_app 镜像启动的 entrypoint"""
         if self.type == RuntimeType.CUSTOM_IMAGE:
             return ["env"]
         # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
@@ -119,7 +119,7 @@ class RuntimeImageInfo:
             return ["launcher"]
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         metadata: Dict = getattr(slug_runner, "metadata", {})
-        return metadata.get("endpoint", ['bash', '/runner/init'])
+        return metadata.get("entrypoint", ['bash', '/runner/init'])
 
 
 def update_image_runtime_config(
@@ -132,7 +132,7 @@ def update_image_runtime_config(
     runtime_dict = {
         "image": runtime.image,
         "type": runtime.type,
-        "endpoint": runtime.endpoint,
+        "entrypoint": runtime.entrypoint,
         "image_pull_policy": image_pull_policy.value,
     }
 

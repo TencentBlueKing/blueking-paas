@@ -26,7 +26,7 @@ import (
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdDeployResult returns a Command instance for 'app deploy-result' sub command
@@ -39,7 +39,7 @@ func NewCmdDeployResult() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			result, err := getDeployResult(appCode, appModule, appEnv)
 			if err != nil {
-				logx.Error("failed to get application %s deploy result, error: %s", appCode, err.Error())
+				console.Error("failed to get application %s deploy result, error: %s", appCode, err.Error())
 				os.Exit(1)
 			}
 			fmt.Println(result)

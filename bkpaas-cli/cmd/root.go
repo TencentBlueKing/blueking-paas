@@ -28,7 +28,7 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/cmd/login"
 	"github.com/TencentBlueKing/blueking-paas/client/cmd/version"
 	cliConf "github.com/TencentBlueKing/blueking-paas/client/pkg/config"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewRootCmd ...
@@ -38,7 +38,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "bkpaas-cli",
 		Run: func(cmd *cobra.Command, args []string) {
-			logx.Info("Hello %s, welcome to use bkpaas-cli, use `bkpaas-cli -h` for help", cliConf.G.Username)
+			console.Info("Hello %s, welcome to use bkpaas-cli, use `bkpaas-cli -h` for help", cliConf.G.Username)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if debug {
@@ -65,7 +65,7 @@ func NewRootCmd() *cobra.Command {
 // Execute bkpaas-cli command
 func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
-		logx.Error("Failed to init root command: %s", err.Error())
+		console.Error("Failed to init root command: %s", err.Error())
 		os.Exit(1)
 	}
 }

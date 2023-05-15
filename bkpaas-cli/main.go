@@ -23,14 +23,14 @@ import (
 
 	"github.com/TencentBlueKing/blueking-paas/client/cmd"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 func main() {
 	// load global config ...
 	if _, err := config.LoadConf(config.ConfigFilePath); err != nil {
-		logx.Error("Failed to load config, error: %s", err.Error())
-		logx.Tips("Please follow the user guide (Readme.md) to initialize the configuration...")
+		console.Error("Failed to load config, error: %s", err.Error())
+		console.Tips("Please follow the user guide (Readme.md) to initialize the configuration...")
 		os.Exit(1)
 	}
 

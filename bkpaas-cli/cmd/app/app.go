@@ -26,7 +26,7 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/account"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 	cmdUtil "github.com/TencentBlueKing/blueking-paas/client/pkg/utils/cmd"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 var appLongDesc = `
@@ -45,7 +45,7 @@ func NewCmd() *cobra.Command {
 			cmd.Parent().PersistentPreRun(cmd.Parent(), args)
 
 			if !account.IsUserAuthorized(config.G.AccessToken) {
-				logx.Error("User unauthorized! Please use `bkpaas-cli login` to login")
+				console.Error("User unauthorized! Please use `bkpaas-cli login` to login")
 				os.Exit(1)
 			}
 		},

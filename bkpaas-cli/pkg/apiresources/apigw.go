@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // DefaultRequester 默认 API 调用入口
@@ -39,10 +39,10 @@ func (r apigwRequester) CheckToken(accessToken string) (map[string]any, error) {
 	ro := grequests.RequestOptions{
 		Params: map[string]string{"access_token": accessToken},
 	}
-	logx.Debug("Request Url: %s, Params: %v", config.G.CheckTokenUrl, ro.Params)
+	console.Debug("Request Url: %s, Params: %v", config.G.CheckTokenUrl, ro.Params)
 
 	resp, err := grequests.Get(config.G.CheckTokenUrl, &ro)
-	logx.Debug("Response %d -> %s", resp.StatusCode, resp.String())
+	console.Debug("Response %d -> %s", resp.StatusCode, resp.String())
 
 	if !resp.Ok || err != nil {
 		return nil, AuthApiErr
@@ -132,14 +132,14 @@ type gReqFunc func(string, *grequests.RequestOptions) (*grequests.Response, erro
 func (r apigwRequester) handlePaaSApiRequest(
 	reqFunc gReqFunc, url string, opts grequests.RequestOptions,
 ) (map[string]any, error) {
-	logx.Debug("Request Url: %s, Headers: %v, Params: %v, Body: %v", url, opts.Headers, opts.Params, opts.JSON)
+	console.Debug("Request Url: %s, Headers: %v, Params: %v, Body: %v", url, opts.Headers, opts.Params, opts.JSON)
 
 	resp, err := reqFunc(url, &opts)
 	if err != nil {
 		return nil, PaaSApiErr
 	}
 
-	logx.Debug("Response %d -> %s", resp.StatusCode, resp.String())
+	console.Debug("Response %d -> %s", resp.StatusCode, resp.String())
 
 	if !resp.Ok {
 		return nil, errors.Errorf("%d -> %s", resp.StatusCode, resp.String())

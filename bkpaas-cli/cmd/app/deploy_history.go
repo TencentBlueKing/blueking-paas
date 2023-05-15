@@ -26,7 +26,7 @@ import (
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdDeployHistory returns a Command instance for 'app deploy-history' sub command
@@ -39,7 +39,7 @@ func NewCmdDeployHistory() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			history, err := listDeployHistory(appCode, appModule, appEnv)
 			if err != nil {
-				logx.Error("failed to list application %s deploy history, error: %s", appCode, err.Error())
+				console.Error("failed to list application %s deploy history, error: %s", appCode, err.Error())
 				os.Exit(1)
 			}
 			fmt.Println(history)

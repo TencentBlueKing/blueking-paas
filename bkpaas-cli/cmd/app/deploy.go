@@ -30,7 +30,7 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/helper"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdDeploy returns a Command instance for 'app deploy' sub command
@@ -42,9 +42,9 @@ func NewCmdDeploy() *cobra.Command {
 		Use:   "deploy",
 		Short: "Deploy PaaS application",
 		Run: func(cmd *cobra.Command, args []string) {
-			logx.Info("Application %s deploying...", appCode)
+			console.Info("Application %s deploying...", appCode)
 			if err := deployApp(appCode, appModule, appEnv, branch, filePath); err != nil {
-				logx.Error("failed to deploy application %s, error: %s", appCode, err.Error())
+				console.Error("failed to deploy application %s, error: %s", appCode, err.Error())
 				os.Exit(1)
 			}
 			if noWatch {
@@ -53,12 +53,12 @@ func NewCmdDeploy() *cobra.Command {
 			// TODO 添加超时机制?
 			// TODO 轮询体验优化，比如支持滚动更新日志？
 			for {
-				logx.Info("Waiting for deploy finished...")
+				console.Info("Waiting for deploy finished...")
 				time.Sleep(5 * time.Second)
 
 				result, err := getDeployResult(appCode, appModule, appEnv)
 				if err != nil {
-					logx.Error("failed to get app %s deploy result, error: %s", appCode, err.Error())
+					console.Error("failed to get app %s deploy result, error: %s", appCode, err.Error())
 					os.Exit(1)
 				}
 				// 到达稳定状态后输出部署结果

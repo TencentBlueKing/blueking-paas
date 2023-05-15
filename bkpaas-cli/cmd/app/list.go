@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/logx"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
 )
 
 // NewCmdList returns a Command instance for 'app list' sub command
@@ -42,7 +42,7 @@ func NewCmdList() *cobra.Command {
 func listApps() {
 	applications, err := handler.NewAppLister().Exec()
 	if err != nil {
-		logx.Error("Failed to list applications")
+		console.Error("Failed to list applications")
 		return
 	}
 	fmt.Println(applications)

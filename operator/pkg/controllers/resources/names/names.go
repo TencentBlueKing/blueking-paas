@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 )
 
 // PreReleaseHook 生成用于执行 pre-release-hook 的 Pod 名称
-func PreReleaseHook(bkapp *v1alpha1.BkApp) string {
+func PreReleaseHook(bkapp *paasv1alpha2.BkApp) string {
 	revision := defaultRevision
 	if rev := bkapp.Status.Revision; rev != nil {
 		revision = rev.Revision
@@ -40,12 +40,17 @@ func PreReleaseHook(bkapp *v1alpha1.BkApp) string {
 }
 
 // Deployment 为应用的不同进程生成 Deployment 资源名称
-func Deployment(bkapp *v1alpha1.BkApp, process string) string {
+func Deployment(bkapp *paasv1alpha2.BkApp, process string) string {
 	return DNSSafeName(bkapp.GetName() + "--" + process)
 }
 
 // Service Return the service name for each process
-func Service(bkapp *v1alpha1.BkApp, process string) string {
+func Service(bkapp *paasv1alpha2.BkApp, process string) string {
+	return DNSSafeName(bkapp.GetName() + "--" + process)
+}
+
+// GPA Return the general-pod-autoscaler name for each process
+func GPA(bkapp *paasv1alpha2.BkApp, process string) string {
 	return DNSSafeName(bkapp.GetName() + "--" + process)
 }
 

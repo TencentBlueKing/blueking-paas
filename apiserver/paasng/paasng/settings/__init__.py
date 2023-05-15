@@ -55,7 +55,6 @@ from environ import Env
 from .utils import (
     get_database_conf,
     get_default_keepalive_options,
-    get_internal_services_jwt_auth_conf,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
     is_redis_backend,
@@ -857,12 +856,6 @@ CONFIGVAR_PROTECTED_NAMES = (
 )
 # 环境变量保留前缀列表
 CONFIGVAR_PROTECTED_PREFIXES = settings.get('CONFIGVAR_PROTECTED_PREFIXES', ["BKPAAS_", "KUBERNETES_"])
-
-# 后端引擎 API 服务地址
-ENGINE_CONTROLLER_HOST = settings.get('ENGINE_CONTROLLER_URL', 'http://localhost:8080')
-
-# 微服务（后端引擎 API、增强服务 API）通用的默认 JWT 鉴权信息，用于请求其他服务
-INTERNAL_SERVICES_JWT_AUTH_CONF = get_internal_services_jwt_auth_conf(settings)
 
 # 用于校验内部服务间请求的 JWT 配置，携带用以下任何一个 key 签名的 JWT 的请求会被认为有效
 PAAS_SERVICE_JWT_CLIENTS = get_paas_service_jwt_clients(settings)

@@ -58,6 +58,22 @@
 ## 数据库访问 USER
 # DATABASE_USER: root
 
+## 注：WL 数据库即为源 workloads 模块数据库，
+## 在模块合并后，apiserver 将使用两个数据库（bk_paas_ng, bk_engine_ng）
+
+## 数据库 Host
+# WL_DATABASE_HOST: ''
+## 数据库名称
+# WL_DATABASE_NAME: bk_engine_ng
+## 数据库相关配置
+# WL_DATABASE_OPTIONS: {}
+## 数据库访问密码
+# WL_DATABASE_PASSWORD: ''
+## 数据库端口
+# WL_DATABASE_PORT: 3306
+## 数据库访问 USER
+# WL_DATABASE_USER: root
+
 ## Redis 服务地址
 # REDIS_URL: redis://127.0.0.1:6379/0
 ## Redis Sentinel master name
@@ -370,20 +386,12 @@
 
 ## ------------------------------------ 引擎相关配置项 ------------------------------------
 
-# 用于服务间鉴权的 JWT key，该配置可替代 INTERNAL_SERVICES_JWT_AUTH_CONF 和 PAAS_SERVICE_JWT_CLIENTS
+# 用于服务间鉴权的 JWT key，该配置可替代 PAAS_SERVICE_JWT_CLIENTS
 # 当 PaaS 的所有服务都使用同一个 JWT key 时，可使用该配置项。
 # ONE_SIMPLE_JWT_AUTH_KEY: ''
 
 ## 环境变量保留前缀列表
 # CONFIGVAR_PROTECTED_PREFIXES: ["BKPAAS_", "KUBERNETES_"]
-
-## PaaS workloads 服务地址
-# ENGINE_CONTROLLER_URL: ''
-
-## 调用内部服务（如：workloads） JWT 配置，支持使用 ONE_SIMPLE_JWT_AUTH_KEY 简化配置
-# INTERNAL_SERVICES_JWT_AUTH_CONF:
-#   iss: paas-v3
-#   key: ''
 
 ## 调用 PAAS 服务 JWT 配置，支持使用 ONE_SIMPLE_JWT_AUTH_KEY 简化配置
 # PAAS_SERVICE_JWT_CLIENTS:
@@ -732,8 +740,131 @@
 ## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
 # VALID_CUSTOM_DOMAIN_SUFFIXES: []
 
+## ------------------------------------ 原 workloads 配置，合并到 apiserver 中 ------------------------------------
 
-# ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
+
+## ---------------------------------------- 运行时默认配置 ----------------------------------------
+
+## 默认 slug 包运行镜像，默认值 bkpaas/slugrunner
+# DEFAULT_SLUGRUNNER_IMAGE: bkpaas/slugrunner
+## 默认 slug 包构建镜像，默认值 bkpaas/slugbuilder
+# DEFAULT_SLUGBUILDER_IMAGE: bkpaas/slugbuilder
+
+## 源码构建用户身份
+# BUILDER_USERNAME: blueking
+## 构建 Python 应用时，强制使用该地址覆盖 PYPI Server 地址
+# PYTHON_BUILDPACK_PIP_INDEX_URL: ''
+## 从源码构建应用时，额外注入的环境变量
+# BUILD_EXTRA_ENV_VARS: {}
+
+
+## ---------------------------------------- 服务导出配置 ----------------------------------------
+
+## 默认容器内监听地址，默认 5000
+# CONTAINER_PORT: 5000
+
+## 服务相关插件配置
+# SERVICES_PLUGINS: {}
+
+
+## ---------------------------------------- 资源限制配置 ----------------------------------------
+
+## Web 模块默认副本数量，默认值：{'stag': 1, 'prod': 2}
+# DEFAULT_WEB_REPLICAS_MAP:
+#   stag: 1
+#   prod: 2
+
+## 构建 slug 包资源规格，按 k8s 资源配额格式书写
+# SLUGBUILDER_RESOURCES_SPEC:
+#   limits:
+#     cpu: 2000m
+#     memory: 4096Mi
+#   requests:
+#     cpu: 500m
+#     memory: 1024Mi
+
+
+## ---------------------------------------- 部署环境相关 ----------------------------------------
+
+## 系统注入环境变量统一前缀，默认值为 BKPAAS_，一般不需要修改
+# SYSTEM_CONFIG_VARS_KEY_PREFIX: BKPAAS_
+
+## （兼容）应用日志存储卷名称，默认为 applogs
+# VOLUME_NAME_APP_LOGGING: applogs
+## （兼容）应用日志写入路径，默认为
+# VOLUME_MOUNT_APP_LOGGING_DIR: /app/logs
+## （兼容）应用日志挂载到 Host 的路径，默认为 /tmp/logs
+# VOLUME_HOST_PATH_APP_LOGGING_DIR: /tmp/logs
+
+
+## 多模块应用日志存储卷名称，默认为 appv3logs
+# MUL_MODULE_VOLUME_NAME_APP_LOGGING: appv3logs
+## 多模块应用日志写入路径，默认为 /app/v3logs
+# MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR: /app/v3logs
+## 多模块应用日志挂载到 Host 的路径，默认为 /tmp/v3logs
+# MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR: /tmp/v3logs
+
+
+## ---------------------------------------- 调度集群相关 ----------------------------------------
+
+## 指定 kubectl 使用的 config.yaml 文件路径，容器化交付时由 secret 挂载而来
+## 默认值：/data/kubelet/conf/kubeconfig.yaml
+# KUBE_CONFIG_FILE: /data/kubelet/conf/kubeconfig.yaml
+
+
+## ---------------------------------------- Ingress 配置 ----------------------------------------
+
+## 不指定则使用默认，可以指定为 bk-ingress-nginx
+# APP_INGRESS_CLASS: ''
+
+## ingress extensions/v1beta1 资源路径是否保留末尾斜杠，默认值为 true
+# APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH: true
+
+## 是否开启“现代” Ingress 资源的支持，将产生以下影响
+## - 支持使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须开启该选项。因为这些集群只能使用 networking.k8s.io/v1 版本的 Ingress 资源
+## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须使用 >1.0.0 版本的 ingress-nginx
+##
+## 假如关闭此配置，可能有以下风险：
+##  - 只能处理 extensions/v1beta1 和 networking.k8s.io/v1beta1 版本的 Ingress 资源, 如果未来的 Kubernetes 集群版本删除了对该
+##    apiVersion 的支持，服务会报错
+##  - 只能使用 <1.0 版本的 ingress-nginx
+# ENABLE_MODERN_INGRESS_SUPPORT: true
+
+## 应用独立域名相关配置
+# CUSTOM_DOMAIN_CONFIG:
+  ## 是否允许使用独立域名
+  # enabled: true
+  ## 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
+  # valid_domain_suffixes: []
+  ## 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
+  # allow_user_modifications: true
+
+## 独立域名简化版配置，表示允许用户配置的独立域名后缀列表，为空表示允许任意域名
+## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
+# VALID_CUSTOM_DOMAIN_SUFFIXES: []
+
+
+## ---------------------------------------- 监控数据配置 ----------------------------------------
+
+## 指标服务相关 Token 配置
+# METRIC_CLIENT_TOKEN_DICT:
+#   bkmonitor: example-metric-client-token
+
+## 调用 Healthz API 需要的 Token
+# HEALTHZ_TOKEN: example-healthz-token
+
+## 插件监控图表相关配置
+# MONITOR_CONFIG:
+#   metrics:
+#     bkmonitor:
+#       basic_auth:
+#         - bkmonitor-api
+#         - example-auth-token
+#       host: http://bkmonitor-query.example.com
+
+
+## ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 
 ## 运维开发相关的 BK-DATA 数据上报相关配置
 # PAAS_X_BK_DATA_DB_CONF: {}
@@ -766,3 +897,20 @@
 
 ## 允许通过 API 创建第三方应用(外链应用)的系统ID,多个以英文逗号分割
 # ALLOW_THIRD_APP_SYS_IDS: ""
+
+## 测试用 k8s apiserver 地址
+# FOR_TESTS_APISERVER_URL： 'http://localhost:28080'
+
+## 测试用 k8s 证书相关数据
+# FOR_TESTS_CA_DATA: ''
+# FOR_TESTS_CERT_DATA: ''
+# FOR_TESTS_KEY_DATA: ''
+
+## 测试用 k8s 集群 Bearer Token
+# FOR_TESTS_TOKEN_VALUE: ''
+
+## 在请求 APIServer 时, 使用该 hostname 替换具体的 backend 中的 hostname
+# FOR_TESTS_FORCE_DOMAIN: ''
+
+## 测试 ingress end-to-end 用特殊配置
+# FOR_TEST_E2E_INGRESS_CONFIG: {}

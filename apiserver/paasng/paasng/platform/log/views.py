@@ -283,21 +283,25 @@ class LogAPIView(LogBaseAPIView):
     def aggregate_fields_filters(self, request, code, module_name, environment):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()
+        mappings = log_client.get_mappings(
+            log_config.search_params.indexPattern,
+            time_range=self.parse_time_range(),
+            timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
+        )
         search = self.make_search(
-            mappings=log_client.get_mappings(
-                log_config.search_params.indexPattern,
-                time_range=self.parse_time_range(),
-                timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
-            ),
+            mappings=mappings,
             time_field=log_config.search_params.timeField,
         )
-
         fields_filters = log_client.aggregate_fields_filters(
-            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            index=log_config.search_params.indexPattern,
+            search=search,
+            mappings=mappings,
+            timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
         )
         if log_config.search_params.filedMatcher:
             matcher = re.compile(log_config.search_params.filedMatcher)
             fields_filters = [f for f in fields_filters if matcher.fullmatch(f.name)]
+
         return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 

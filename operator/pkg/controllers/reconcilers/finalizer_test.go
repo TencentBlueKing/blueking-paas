@@ -33,35 +33,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources/names"
 )
 
 var _ = Describe("Test BkappFinalizer", func() {
-	var bkapp *v1alpha1.BkApp
+	var bkapp *paasv1alpha2.BkApp
 	var pod *corev1.Pod
 	var builder *fake.ClientBuilder
 	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		bkapp = &v1alpha1.BkApp{
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.KindBkApp,
-				APIVersion: v1alpha1.GroupVersion.String(),
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.AppSpec{
-				Processes: []v1alpha1.Process{
+			Spec: paasv1alpha2.AppSpec{
+				Build: paasv1alpha2.BuildConfig{
+					Image: "nginx:latest",
+				},
+				Processes: []paasv1alpha2.Process{
 					{
-						Name:       "web",
-						Image:      "nginx:latest",
-						Replicas:   v1alpha1.ReplicasTwo,
-						TargetPort: 80,
-						CPU:        "100m",
-						Memory:     "100Mi",
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
 					},
 				},
 			},
@@ -76,15 +77,15 @@ var _ = Describe("Test BkappFinalizer", func() {
 				Name:      names.PreReleaseHook(bkapp),
 				Namespace: bkapp.Namespace,
 				Labels: map[string]string{
-					v1alpha1.BkAppNameKey:    bkapp.GetName(),
-					v1alpha1.ResourceTypeKey: "hook",
-					v1alpha1.HookTypeKey:     "pre-release",
+					paasv1alpha2.BkAppNameKey:    bkapp.GetName(),
+					paasv1alpha2.ResourceTypeKey: "hook",
+					paasv1alpha2.HookTypeKey:     "pre-release",
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(bkapp, schema.GroupVersionKind{
-						Group:   v1alpha1.GroupVersion.Group,
-						Version: v1alpha1.GroupVersion.Version,
-						Kind:    v1alpha1.KindBkApp,
+						Group:   paasv1alpha2.GroupVersion.Group,
+						Version: paasv1alpha2.GroupVersion.Version,
+						Kind:    paasv1alpha2.KindBkApp,
 					}),
 				},
 			},
@@ -92,7 +93,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
-		_ = v1alpha1.AddToScheme(scheme)
+		_ = paasv1alpha2.AddToScheme(scheme)
 		_ = appsv1.AddToScheme(scheme)
 		_ = corev1.AddToScheme(scheme)
 		_ = networkingv1.AddToScheme(scheme)
@@ -131,7 +132,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 	Context("test Reconcile", func() {
 		BeforeEach(func() {
-			controllerutil.AddFinalizer(bkapp, v1alpha1.BkAppFinalizerName)
+			controllerutil.AddFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)
 			deletionTimestamp := metav1.Now()
 			bkapp.DeletionTimestamp = &deletionTimestamp
 		})
@@ -143,7 +144,7 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 			Expect(ret.err).NotTo(HaveOccurred())
 			Expect(r.Reconcile(context.Background(), bkapp).ShouldAbort()).To(BeFalse())
-			Expect(controllerutil.ContainsFinalizer(bkapp, v1alpha1.BkAppFinalizerName)).To(BeFalse())
+			Expect(controllerutil.ContainsFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)).To(BeFalse())
 		})
 
 		It("test be blocked", func() {
@@ -154,9 +155,9 @@ var _ = Describe("Test BkappFinalizer", func() {
 
 			Expect(ret.err).NotTo(HaveOccurred())
 			Expect(r.Reconcile(context.Background(), bkapp).ShouldAbort()).To(BeTrue())
-			Expect(controllerutil.ContainsFinalizer(bkapp, v1alpha1.BkAppFinalizerName)).To(BeTrue())
+			Expect(controllerutil.ContainsFinalizer(bkapp, paasv1alpha2.BkAppFinalizerName)).To(BeTrue())
 
-			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, v1alpha1.AppAvailable)
+			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AppAvailable)
 			Expect(cond.Reason).To(Equal("Terminating"))
 		})
 	})

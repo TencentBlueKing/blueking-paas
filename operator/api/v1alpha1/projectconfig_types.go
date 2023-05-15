@@ -66,6 +66,12 @@ type ResLimitConfig struct {
 	MaxReplicas int32 `json:"maxReplicas"`
 }
 
+// AutoscalingConfig contains the config for autoscaling
+type AutoscalingConfig struct {
+	// Enabled indicates whether autoscaling is enabled
+	Enabled bool `json:"enabled"`
+}
+
 //+kubebuilder:object:root=true
 
 // ProjectConfig is the Schema for the project configs API
@@ -79,6 +85,7 @@ type ProjectConfig struct {
 	PlatformConfig      PlatformConfig      `json:"platformConfig"`
 	IngressPluginConfig IngressPluginConfig `json:"ingressPluginConfig"`
 	ResLimitConfig      ResLimitConfig      `json:"resLimitConfig"`
+	AutoscalingConfig   AutoscalingConfig   `json:"autoscalingConfig"`
 }
 
 // NewProjectConfig create project config
@@ -103,4 +110,31 @@ func NewProjectConfig() *ProjectConfig {
 
 func init() {
 	SchemeBuilder.Register(&ProjectConfig{})
+}
+
+// Below functions implements the ProjectConfigReader interface
+
+// GetProcMaxReplicas returns the max replicas of a process
+func (p *ProjectConfig) GetProcMaxReplicas() int32 {
+	return p.ResLimitConfig.MaxReplicas
+}
+
+// GetProcDefaultCpuLimits returns the default cpu limits of a process
+func (p *ProjectConfig) GetProcDefaultCpuLimits() string {
+	return p.ResLimitConfig.ProcDefaultCPULimits
+}
+
+// GetProcDefaultMemLimits returns the default memory limits of a process
+func (p *ProjectConfig) GetProcDefaultMemLimits() string {
+	return p.ResLimitConfig.ProcDefaultMemLimits
+}
+
+// GetIngressClassName returns the ingress class name
+func (p *ProjectConfig) GetIngressClassName() string {
+	return p.PlatformConfig.IngressClassName
+}
+
+// IsAutoscalingEnabled returns whether autoscaling is enabled
+func (p *ProjectConfig) IsAutoscalingEnabled() bool {
+	return p.AutoscalingConfig.Enabled
 }

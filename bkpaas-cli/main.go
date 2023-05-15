@@ -31,6 +31,7 @@ func main() {
 	// load global config ...
 	if _, err := config.LoadConf(config.ConfigFilePath); err != nil {
 		color.Red("Failed to load config, error: " + err.Error())
+		color.Cyan("Please follow the user guide (Readme.md) to initialize the configuration...")
 		os.Exit(1)
 	}
 

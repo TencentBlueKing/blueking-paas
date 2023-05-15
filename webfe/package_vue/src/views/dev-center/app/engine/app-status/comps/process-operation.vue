@@ -1642,11 +1642,10 @@
             },
 
             transfer_cpu_unit (cpuLimit) {
-                const numRe = /^\d+/;
-                const cpuNum = numRe.exec(cpuLimit);
-
-                // now we only use m as cpu unit
-                return parseInt(cpuNum) / 1000 + this.$t('核');
+                if (cpuLimit.endsWith('m')) {
+                    cpuLimit = parseInt(/^\d+/.exec(cpuLimit)) / 1000;
+                }
+                return cpuLimit + this.$t('核');
             },
 
             saveProcessConfig () {

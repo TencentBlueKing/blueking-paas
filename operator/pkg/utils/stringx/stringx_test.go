@@ -16,19 +16,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package basic
+package stringx_test
 
 import (
-	"math/rand"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
 )
 
-var letters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var _ = Describe("Test stringx tools", func() {
+	DescribeTable("test RandLetters", func(length int) {
+		Expect(len(stringx.RandLetters(length))).To(Equal(length))
+	},
+		Entry("zero", 0),
+		Entry("eight", 8),
+		Entry("hundred", 128),
+		Entry("thousand", 1024),
+	)
 
-// RandStr generates a random string with given length
-func RandStr(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
+	It("test ToStrArray with alias", func() {
+		type MyString string
+		Expect(stringx.ToStrArray([]MyString{"2C", "2TB"})).To(Equal([]string{"2C", "2TB"}))
+	})
+
+	It("test ToStrArray without alias", func() {
+		Expect(stringx.ToStrArray([]string{"2C", "2TB"})).To(Equal([]string{"2C", "2TB"}))
+	})
+})

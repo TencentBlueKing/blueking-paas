@@ -25,6 +25,25 @@ else
     GITCOMMIT=$(shell git rev-parse HEAD)
 endif
 
+ifdef GOOS
+    GOOS=${GOOS}
+else
+    GOOS=""
+endif
+
+ifdef GOARCH
+    GOARCH=${GOARCH}
+else
+    GOARCH=""
+endif
+
+ifeq (${GOOS}, windows)
+    BIN_NAME=bkpaas-cli.exe
+else
+    BIN_NAME=bkpaas-cli
+endif
+
+
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
@@ -45,11 +64,11 @@ GOCILINT ?= $(LOCALBIN)/golangci-lint
 help: ## 展示可用 make 命令及说明
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ 开发常用命令
+##@ 开发/构建命令
 
 .PHONY: build
-build: tidy # build executable binary
-	go build -ldflags ${LDFLAGS} -o bkpaas-cli ./main.go
+build: tidy ## 构建 bkpaas-cli 可执行文件
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags ${LDFLAGS} -o ${BIN_NAME} ./main.go
 
 .PHONY: fmt
 fmt: ## 执行 golines，gofumpt ...
@@ -75,21 +94,21 @@ lint: ## 执行 golangci-lint run
 ##@ 开发工具安装命令
 
 .PHONY: install-ginkgo
-install-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
+install-ginkgo: $(GINKGO) ## 下载 ginkgo 二进制
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 
 .PHONY: install-golines
-install-golines: $(GOLINES) ## Download golines locally if necessary
+install-golines: $(GOLINES) ## 下载 golines 二进制
 $(GOLINES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
 .PHONY: install-gofumpt
-install-gofumpt: $(GOFUMPT) ## Download gofumpt locally if necessary
+install-gofumpt: $(GOFUMPT) ## 下载 gofumpt 二进制
 $(GOFUMPT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
 .PHONY: install-golangci-lint
-install-golangci-lint: $(GOCILINT) ## Download golangci-lint locally if necessary
+install-golangci-lint: $(GOCILINT) ## 下载 golangci-lint 二进制
 $(GOCILINT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3

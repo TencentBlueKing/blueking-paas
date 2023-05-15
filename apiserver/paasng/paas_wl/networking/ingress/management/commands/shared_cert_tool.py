@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """A tool for managing shared tls certifications
 """
+# TODO: Remove this script, it has been replaced by the functions in admin dashboard.
 import argparse
 import logging
 import sys

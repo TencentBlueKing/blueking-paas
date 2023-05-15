@@ -52,7 +52,6 @@ def initialize_simple(
     :param command: Custom command
     :param args: Custom args
     :param target_port: Custom target port
-    :raises: BadResponseError when fail to request workloads service
     """
     if not cluster_name:
         cluster_name = get_default_cluster_name(module.region)
@@ -84,7 +83,7 @@ def create_engine_apps(
 def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:
     """get or create engine app from workload
 
-    :return: UUID of the workloads's EngineApp object
+    :return: EngineApp object
     """
     info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE)
     # Create EngineApp and binding relationships

@@ -224,7 +224,11 @@ class ApplicationPermission(Permission):
 
         # 因权限中心同步（用户组成员信息 —> 具体的权限策略）存在时延（约 20s），
         # 因此在应用创建后的短时间内，需特殊豁免以免在列表页无法查询到最新的应用
-        return filters | Q(
+        perm_exempt_filter = Q(
             owner=user_id_encoder.encode(settings.USER_TYPE, request.subject.id),
             created__gt=datetime.now() - timedelta(seconds=PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP),
         )
+        if not filters:
+            return perm_exempt_filter
+
+        return filters | perm_exempt_filter

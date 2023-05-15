@@ -24,6 +24,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/modern-go/reflect2"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,8 +36,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/reconcilers"
+
+	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 // NewBkAppReconciler will return a BkAppReconciler with given k8s client and scheme
@@ -85,7 +90,7 @@ func (r *BkAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	app := &v1alpha1.BkApp{}
+	app := &paasv1alpha2.BkApp{}
 	err := r.client.Get(ctx, req.NamespacedName, app)
 	if err != nil {
 		log.Error(err, "unable to fetch bkapp", "NamespacedName", req.NamespacedName)
@@ -96,8 +101,8 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
-		if !controllerutil.ContainsFinalizer(app, v1alpha1.BkAppFinalizerName) {
-			controllerutil.AddFinalizer(app, v1alpha1.BkAppFinalizerName)
+		if !controllerutil.ContainsFinalizer(app, paasv1alpha2.BkAppFinalizerName) {
+			controllerutil.AddFinalizer(app, paasv1alpha2.BkAppFinalizerName)
 			if err = r.client.Update(ctx, app); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -112,6 +117,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		reconcilers.NewHookReconciler(r.client),
 		reconcilers.NewDeploymentReconciler(r.client),
 		reconcilers.NewServiceReconciler(r.client),
+		reconcilers.NewAutoscalingReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue
@@ -126,22 +132,32 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BkAppReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, opts controller.Options) error {
-	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
+	err := mgr.GetFieldIndexer().IndexField(ctx, &appsv1.Deployment{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames)
 	if err != nil {
 		return err
 	}
 
-	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, v1alpha1.WorkloadOwnerKey, getOwnerNames)
+	err = mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames)
 	if err != nil {
 		return err
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.BkApp{}).
+	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
+		For(&paasv1alpha2.BkApp{}).
 		WithOptions(opts).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Pod{}).
-		Complete(r)
+		Owns(&corev1.Pod{})
+
+	if config.Global.IsAutoscalingEnabled() {
+		if err = mgr.GetFieldIndexer().IndexField(
+			ctx, &autoscaling.GeneralPodAutoscaler{}, paasv1alpha2.KubeResOwnerKey, getOwnerNames,
+		); err != nil {
+			return err
+		}
+		controllerBuilder = controllerBuilder.Owns(&autoscaling.GeneralPodAutoscaler{})
+	}
+
+	return controllerBuilder.Complete(r)
 }
 
 func getOwnerNames(rawObj client.Object) []string {
@@ -150,8 +166,12 @@ func getOwnerNames(rawObj client.Object) []string {
 	if owner == nil {
 		return nil
 	}
-	// 确保 Owner 类型为 BkApp
-	if owner.APIVersion == v1alpha1.GroupVersion.String() && owner.Kind == v1alpha1.KindBkApp {
+	// 确保 Owner 类型为 BkApp，但需要兼容多版本的情况
+	ownerApiVersions := []string{
+		paasv1alpha1.GroupVersion.String(),
+		paasv1alpha2.GroupVersion.String(),
+	}
+	if lo.Contains(ownerApiVersions, owner.APIVersion) && owner.Kind == paasv1alpha2.KindBkApp {
 		return []string{owner.Name}
 	}
 	return nil

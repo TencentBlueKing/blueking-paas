@@ -321,8 +321,7 @@
   </div>
 </template>
 
-<script>
-import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import overviewTopInfo from './comps/overview-top-info';
@@ -337,7 +336,7 @@ import dynamicState from './comps/dynamic-state';
 import { cloneDeep } from 'lodash';
 
 const timeMap = {
-  '1d': '24h',
+  '1d' : '24h',
   '3d': '72h',
   '7d': '168h',
 };
@@ -562,11 +561,11 @@ export default {
       this.isProcessDataReady = false;
 
       this.curProcessName = '';
-      this.appDevLang = this.curAppModule.language;
+      this.appDevLang = this.curAppModule?.language;
       await this.getOverViewData();
       // 获取动态
       this.getModuleOperations();
-      if (this.curAppModule && this.curAppModule.repo) {
+      if (this.curAppModule && this.curAppModule?.repo) {
         this.trunkUrl = this.curAppModule.repo.trunk_url || '';
         this.sourceType = this.curAppModule.repo.source_type || '';
       }

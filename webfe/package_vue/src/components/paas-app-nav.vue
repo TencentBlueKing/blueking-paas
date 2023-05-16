@@ -57,8 +57,7 @@
   </ul>
 </template>
 
-<script>
-import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -194,7 +193,7 @@ export default {
         }
 
         // tencent && clouds去掉应用市场移动端
-        if (this.curAppModule.region !== 'ieod') {
+        if (this.curAppModule?.region !== 'ieod') {
           navTree.forEach((nav) => {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
@@ -213,7 +212,8 @@ export default {
         }
 
         // smart应用或lesscode应用，包管理
-        if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP && this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
+        if (this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
+        && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
           navTree.forEach((nav) => {
             if (nav.name === 'appEngine') {
               nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
@@ -521,7 +521,7 @@ export default {
         const params = {
           ...navItem.destRoute.params || {},
           ...this.$router.params,
-          moduleId: this.curAppModule.name,
+          moduleId: this.curAppModule?.name,
         };
         const routeConf = {
           name: routeName,

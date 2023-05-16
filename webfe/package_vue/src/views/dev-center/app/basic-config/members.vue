@@ -52,7 +52,7 @@
             :label="$t('成员姓名')"
             :render-header="$renderHeader"
           >
-            <template slot-scope="props">
+            <template #default="props">
               <div v-bk-overflow-tips>
                 <span
                   v-if="props.row.user.avatar"
@@ -63,7 +63,7 @@
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('角色')">
-            <template slot-scope="props">
+            <template #default="props">
               <span
                 v-for="(role, index) in props.row.roles"
                 :key="index"
@@ -77,7 +77,7 @@
             :label="$t('权限')"
             min-width="170"
           >
-            <template slot-scope="props">
+            <template #default="props">
               <span
                 v-for="(perm, index) in genUserPerms(props.row.roles)"
                 :key="index"
@@ -88,7 +88,7 @@
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('操作')">
-            <template slot-scope="props">
+            <template #default="props">
               <template v-if="canManageMe(props.row)">
                 <bk-button
                   text
@@ -242,7 +242,7 @@
       <div class="tc">
         {{ $t('由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作') }}
       </div>
-      <template slot="footer">
+      <template #footer>
         <bk-button
           theme="primary"
           @click="iKnow"
@@ -255,453 +255,443 @@
 </template>
 
 <script>
-    import { APP_ROLE_NAMES } from '@/common/constants';
-    import auth from '@/auth';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import user from '@/components/user';
-    import i18n from '@/language/i18n.js';
+import { APP_ROLE_NAMES } from '@/common/constants';
+import auth from '@/auth';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import user from '@/components/user';
+import i18n from '@/language/i18n.js';
 
-    const ROLE_BACKEND_IDS = {
-        'administrator': 2,
-        'developer': 3,
-        'operator': 4
+const ROLE_BACKEND_IDS = {
+  administrator: 2,
+  developer: 3,
+  operator: 4,
+};
+
+const ROLE_SPEC = {
+  administrator: [
+    {
+      应用开发: true,
+    },
+    {
+      上线审核: true,
+    },
+    {
+      应用推广: true,
+    },
+    {
+      成员管理: true,
+    },
+  ],
+  developer: [
+    {
+      应用开发: true,
+    },
+    {
+      上线审核: false,
+    },
+    {
+      应用推广: true,
+    },
+    {
+      成员管理: false,
+    },
+  ],
+  operator: [
+    {
+      应用开发: false,
+    },
+    {
+      上线审核: true,
+    },
+    {
+      应用推广: true,
+    },
+    {
+      成员管理: false,
+    },
+  ],
+};
+
+const ROLE_DESC_MAP = {
+  administrator: i18n.t('该角色仅影响用户在“开发者中心”管理该应用的权限，不涉及应用内部权限，请勿混淆'),
+};
+
+export default {
+  components: {
+    user,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      currentUser: auth.getCurrentUser().username,
+      hasPerm: false,
+      loading: true,
+      memberList: [],
+      memberListShow: [],
+      roleNames: APP_ROLE_NAMES,
+      roleSpec: ROLE_SPEC,
+      roleName: 'administrator',
+      selectedMember: {
+        id: 0,
+        name: '',
+      },
+      personnelSelectorList: [],
+      memberMgrConfig: {
+        visiable: false,
+        isLoading: false,
+        type: 'create',
+        userEditable: true,
+        title: this.$t('新增成员'),
+        showForm: false,
+      },
+      leaveAppDialog: {
+        visiable: false,
+        isLoading: false,
+      },
+      removeUserDialog: {
+        visiable: false,
+        isLoading: false,
+      },
+      permissionNoticeDialog: {
+        visiable: false,
+      },
+
+      pagination: {
+        current: 1,
+        count: 0,
+        limit: 10,
+      },
+      currentBackup: 1,
+      enableToAddRole: false,
+      keyword: '',
+      memberListClone: [],
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
+  },
+  computed: {
+    currentRoleDesc() {
+      return ROLE_DESC_MAP[this.roleName] || '';
+    },
+  },
+  watch: {
+    '$route'() {
+      this.init();
+    },
+    'pagination.current'(value) {
+      this.currentBackup = value;
+    },
+    keyword(val) {
+      if (!val) {
+        this.handleSearch();
+      }
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    pageChange(page) {
+      if (this.currentBackup === page) {
+        return;
+      }
+      this.pagination.current = page;
 
-    const ROLE_SPEC = {
-        'administrator': [
-            {
-                '应用开发': true
-            },
-            {
-                '上线审核': true
-            },
-            {
-                '应用推广': true
-            },
-            {
-                '成员管理': true
-            }
-        ],
-        'developer': [
-            {
-                '应用开发': true
-            },
-            {
-                '上线审核': false
-            },
-            {
-                '应用推广': true
-            },
-            {
-                '成员管理': false
-            }
-        ],
-        'operator': [
-            {
-                '应用开发': false
-            },
-            {
-                '上线审核': true
-            },
-            {
-                '应用推广': true
-            },
-            {
-                '成员管理': false
-            }
-        ]
-    };
+      this.handleSearch();
+      // const start = this.pagination.limit * (this.pagination.current - 1)
+      // const end = start + this.pagination.limit
+      // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
+    },
 
-    const ROLE_DESC_MAP = {
-        'administrator': i18n.t('该角色仅影响用户在“开发者中心”管理该应用的权限，不涉及应用内部权限，请勿混淆')
-    };
+    limitChange(currentLimit, prevLimit) {
+      this.pagination.limit = currentLimit;
+      this.pagination.current = 1;
 
-    export default {
-        components: {
-            user
+      this.handleSearch();
+
+      // const start = this.pagination.limit * (this.pagination.current - 1)
+      // const end = start + this.pagination.limit
+      // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
+    },
+
+    iKnow() {
+      this.permissionNoticeDialog.visiable = false;
+      !localStorage.getItem('membersNoticeDialogHasShow') && localStorage.setItem('membersNoticeDialogHasShow', true);
+    },
+
+    updateValue(curVal) {
+      curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
+    },
+
+    init() {
+      this.enableToAddRole = this.curAppInfo && this.curAppInfo.role.name === 'administrator';
+      this.fetchMemberList();
+    },
+
+    async fetchMemberList() {
+      try {
+        const res = await this.$store.dispatch('member/getMemberList', { appCode: this.appCode });
+
+        this.pagination.count = res.results.length;
+        const start = this.pagination.limit * (this.pagination.current - 1);
+        const end = start + this.pagination.limit;
+
+        this.hasPerm = true;
+
+        this.memberList.splice(0, this.memberList.length, ...(res.results || []));
+
+        this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+        this.updateTableEmptyConfig();
+        this.tableEmptyConf.isAbnormal = false;
+      } catch (e) {
+        this.hasPerm = false;
+        this.tableEmptyConf.isAbnormal = true;
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    createMember() {
+      this.roleName = 'developer';
+      this.personnelSelectorList = [];
+      this.memberMgrConfig = {
+        visiable: true,
+        isLoading: false,
+        type: 'create',
+        userEditable: true,
+        title: this.$t('新增成员'),
+        showForm: true,
+      };
+    },
+
+    hookAfterClose() {
+      this.memberMgrConfig.showForm = false;
+    },
+
+    async createSave() {
+      this.memberMgrConfig.isLoading = true;
+      if (!this.personnelSelectorList.length) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请选择成员！'),
+        });
+        setTimeout(() => {
+          this.memberMgrConfig.isLoading = false;
+        }, 100);
+        return;
+      }
+
+      let createParam = {};
+      const createSuc = [];
+      for (let i = 0; i < this.personnelSelectorList.length; i++) {
+        createParam = {
+          application: {
+            code: this.appCode,
+          },
+          user: {
+            username: this.personnelSelectorList[i],
+          },
+          roles: [
+            {
+              id: ROLE_BACKEND_IDS[this.roleName],
+            },
+          ],
+        };
+        createSuc.push(createParam);
+      }
+
+      try {
+        await this.$store.dispatch('member/addMember', { appCode: this.appCode, postParams: createSuc });
+        this.closeMemberMgrModal();
+        this.fetchMemberList();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('新增成员成功！'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('添加用户角色失败：')} ${e.detail}`,
+        });
+      } finally {
+        this.memberMgrConfig.isLoading = false;
+      }
+    },
+
+    leaveApp(delMemberID, delMemberName) {
+      this.selectedMember.id = delMemberID;
+      this.selectedMember.name = delMemberName;
+      this.leaveAppDialog.visiable = true;
+    },
+
+    async leaveSave() {
+      try {
+        await this.$store.dispatch('member/quitApplication', { appCode: this.appCode });
+        this.closeLeaveApp();
+        this.$router.push({
+          path: '/',
+        });
+      } catch (e) {
+        this.closeLeaveApp();
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('退出应用失败：')} ${e.detail}`,
+        });
+      } finally {
+        this.leaveAppDialog.isLoading = false;
+      }
+    },
+
+    closeLeaveApp() {
+      this.leaveAppDialog.visiable = false;
+    },
+
+    updateMember(updateMemberID, updateMemberName, memberRoles) {
+      this.selectedMember.id = updateMemberID;
+      this.selectedMember.name = updateMemberName;
+      this.roleName = memberRoles[0].name;
+      this.memberMgrConfig = {
+        visiable: true,
+        isLoading: false,
+        type: 'edit',
+        userEditable: false,
+        title: this.$t('更换角色'),
+        showForm: true,
+      };
+    },
+
+    memberMgrSave() {
+      const mgrType = this.memberMgrConfig.type;
+      if (mgrType === 'edit') {
+        return this.updateSave();
+      } if (mgrType === 'create') {
+        return this.createSave();
+      }
+    },
+
+    async updateSave() {
+      const updateParam = {
+        role: {
+          id: ROLE_BACKEND_IDS[this.roleName],
         },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                currentUser: auth.getCurrentUser().username,
-                hasPerm: false,
-                loading: true,
-                memberList: [],
-                memberListShow: [],
-                roleNames: APP_ROLE_NAMES,
-                roleSpec: ROLE_SPEC,
-                roleName: 'administrator',
-                selectedMember: {
-                    id: 0,
-                    name: ''
-                },
-                personnelSelectorList: [],
-                memberMgrConfig: {
-                    visiable: false,
-                    isLoading: false,
-                    type: 'create',
-                    userEditable: true,
-                    title: this.$t('新增成员'),
-                    showForm: false
-                },
-                leaveAppDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                removeUserDialog: {
-                    visiable: false,
-                    isLoading: false
-                },
-                permissionNoticeDialog: {
-                    visiable: false
-                },
-
-                pagination: {
-                    current: 1,
-                    count: 0,
-                    limit: 10
-                },
-                currentBackup: 1,
-                enableToAddRole: false,
-                keyword: '',
-                memberListClone: [],
-                tableEmptyConf: {
-                    keyword: '',
-                    isAbnormal: false
-                }
-            };
-        },
-        computed: {
-            currentRoleDesc () {
-                return ROLE_DESC_MAP[this.roleName] || '';
-            }
-        },
-        watch: {
-            '$route' () {
-                this.init();
-            },
-            'pagination.current' (value) {
-                this.currentBackup = value;
-            },
-            keyword (val) {
-                if (!val) {
-                    this.handleSearch();
-                }
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            pageChange (page) {
-                if (this.currentBackup === page) {
-                    return;
-                }
-                this.pagination.current = page;
-
-                this.handleSearch();
-                // const start = this.pagination.limit * (this.pagination.current - 1)
-                // const end = start + this.pagination.limit
-                // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
-            },
-
-            limitChange (currentLimit, prevLimit) {
-                this.pagination.limit = currentLimit;
-                this.pagination.current = 1;
-
-                this.handleSearch();
-
-                // const start = this.pagination.limit * (this.pagination.current - 1)
-                // const end = start + this.pagination.limit
-                // this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end))
-            },
-
-            iKnow () {
-                this.permissionNoticeDialog.visiable = false;
-                !localStorage.getItem('membersNoticeDialogHasShow') && localStorage.setItem('membersNoticeDialogHasShow', true);
-            },
-
-            updateValue (curVal) {
-                curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
-            },
-
-            init () {
-                this.enableToAddRole = this.curAppInfo && this.curAppInfo.role.name === 'administrator';
-                this.fetchMemberList();
-                this.$nextTick(() => {
-                    // 如果使用git
-                    if (this.curAppDefaultModule.repo && this.curAppDefaultModule.repo.type.indexOf('git') > -1) {
-                        if (!localStorage.getItem('membersNoticeDialogHasShow')) {
-                            this.permissionNoticeDialog.visiable = true;
-                        }
-                    }
-                });
-            },
-
-            async fetchMemberList () {
-                try {
-                    const res = await this.$store.dispatch('member/getMemberList', { appCode: this.appCode });
-
-                    this.pagination.count = res.results.length;
-                    const start = this.pagination.limit * (this.pagination.current - 1);
-                    const end = start + this.pagination.limit;
-
-                    this.hasPerm = true;
-
-                    this.memberList.splice(0, this.memberList.length, ...(res.results || []));
-
-                    this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
-                    this.updateTableEmptyConfig();
-                    this.tableEmptyConf.isAbnormal = false;
-                } catch (e) {
-                    this.hasPerm = false;
-                    this.tableEmptyConf.isAbnormal = true;
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            createMember () {
-                this.roleName = 'developer';
-                this.personnelSelectorList = [];
-                this.memberMgrConfig = {
-                    visiable: true,
-                    isLoading: false,
-                    type: 'create',
-                    userEditable: true,
-                    title: this.$t('新增成员'),
-                    showForm: true
-                };
-            },
-
-            hookAfterClose () {
-                this.memberMgrConfig.showForm = false;
-            },
-
-            async createSave () {
-                this.memberMgrConfig.isLoading = true;
-                if (!this.personnelSelectorList.length) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('请选择成员！')
-                    });
-                    setTimeout(() => {
-                        this.memberMgrConfig.isLoading = false;
-                    }, 100);
-                    return;
-                }
-
-                let createParam = {};
-                const createSuc = [];
-                for (let i = 0; i < this.personnelSelectorList.length; i++) {
-                    createParam = {
-                        'application': {
-                            'code': this.appCode
-                        },
-                        'user': {
-                            'username': this.personnelSelectorList[i]
-                        },
-                        'roles': [
-                            {
-                                'id': ROLE_BACKEND_IDS[this.roleName]
-                            }
-                        ]
-                    };
-                    createSuc.push(createParam);
-                }
-
-                try {
-                    await this.$store.dispatch('member/addMember', { appCode: this.appCode, postParams: createSuc });
-                    this.closeMemberMgrModal();
-                    this.fetchMemberList();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('新增成员成功！')
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('添加用户角色失败：')} ${e.detail}`
-                    });
-                } finally {
-                    this.memberMgrConfig.isLoading = false;
-                }
-            },
-
-            leaveApp (delMemberID, delMemberName) {
-                this.selectedMember.id = delMemberID;
-                this.selectedMember.name = delMemberName;
-                this.leaveAppDialog.visiable = true;
-            },
-
-            async leaveSave () {
-                try {
-                    await this.$store.dispatch('member/quitApplication', { appCode: this.appCode });
-                    this.closeLeaveApp();
-                    this.$router.push({
-                        path: '/'
-                    });
-                } catch (e) {
-                    this.closeLeaveApp();
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('退出应用失败：')} ${e.detail}`
-                    });
-                } finally {
-                    this.leaveAppDialog.isLoading = false;
-                }
-            },
-
-            closeLeaveApp () {
-                this.leaveAppDialog.visiable = false;
-            },
-
-            updateMember (updateMemberID, updateMemberName, memberRoles) {
-                this.selectedMember.id = updateMemberID;
-                this.selectedMember.name = updateMemberName;
-                this.roleName = memberRoles[0].name;
-                this.memberMgrConfig = {
-                    visiable: true,
-                    isLoading: false,
-                    type: 'edit',
-                    userEditable: false,
-                    title: this.$t('更换角色'),
-                    showForm: true
-                };
-            },
-
-            memberMgrSave () {
-                const mgrType = this.memberMgrConfig.type;
-                if (mgrType === 'edit') {
-                    return this.updateSave();
-                } else if (mgrType === 'create') {
-                    return this.createSave();
-                }
-            },
-
-            async updateSave () {
-                const updateParam = {
-                    'role': {
-                        'id': ROLE_BACKEND_IDS[this.roleName]
-                    }
-                };
-                this.memberMgrConfig.isLoading = true;
-                try {
-                    await this.$store.dispatch('member/updateRole', { appCode: this.appCode, id: this.selectedMember.id, params: updateParam });
-                    this.closeMemberMgrModal();
-                    this.fetchMemberList();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('角色更换成功！')
-                    });
-                    if (this.selectedMember.name === this.currentUser && this.roleName !== 'administrator') {
-                        this.enableToAddRole = false;
-                    }
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('角色更换失败：')} ${e.detail}`
-                    });
-                } finally {
-                    this.memberMgrConfig.isLoading = false;
-                }
-            },
-
-            delMember (delMemberName, delMemberID) {
-                this.selectedMember.id = delMemberID;
-                this.selectedMember.name = delMemberName;
-                this.removeUserDialog.visiable = true;
-            },
-
-            async delSave () {
-                try {
-                    await this.$store.dispatch('member/deleteRole', { appCode: this.appCode, id: this.selectedMember.id });
-                    this.closeDelModal();
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('删除成员成功！')
-                    });
-                    this.fetchMemberList();
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: `${this.$t('删除成员失败：')} ${e.detail}`
-                    });
-                }
-            },
-
-            closeDelModal () {
-                this.removeUserDialog.visiable = false;
-            },
-
-            closeMemberMgrModal () {
-                this.memberMgrConfig.visiable = false;
-            },
-
-            canManageMe (roleInfo) {
-                if (roleInfo.user.username !== this.currentUser) {
-                    return false;
-                }
-                return true;
-            },
-
-            canManageMembers (roleInfo) {
-                if (roleInfo.user.username === this.currentUser || !this.enableToAddRole) {
-                    // 不能操作自身角色 || 非管理员不能操作角色管理
-                    return false;
-                }
-                return true;
-            },
-
-            canChangeMembers () {
-                if (!this.enableToAddRole) {
-                    return false;
-                }
-                return true;
-            },
-            handleSearch () {
-                if (this.keyword) {
-                    this.memberListShow = this.memberList.filter(apigw => {
-                        return apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1;
-                    });
-                    this.memberListClone = [...this.memberListShow];
-                    this.pagination.count = this.memberListClone.length;
-                    if (this.memberListClone.length > 10) {
-                        const start = this.pagination.limit * (this.pagination.current - 1);
-                        const end = start + this.pagination.limit;
-                        this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
-                    }
-                    this.updateTableEmptyConfig();
-                } else {
-                    this.fetchMemberList();
-                }
-            },
-            genUserPerms (userRoles) {
-                const userPerms = [];
-                for (let i = 0; i < userRoles.length; i++) {
-                    const rolePerm = this.roleSpec[userRoles[i].name];
-                    for (let j = 0; j < rolePerm.length; j++) {
-                        const perm = rolePerm[j];
-                        const name = Object.keys(perm)[0];
-                        if (perm[name] && userPerms.indexOf(name) === -1) {
-                            userPerms.push(name);
-                        }
-                    }
-                }
-                return userPerms;
-            },
-            clearFilterKey () {
-                this.keyword = '';
-            },
-            updateTableEmptyConfig () {
-                this.tableEmptyConf.keyword = this.keyword;
-            }
+      };
+      this.memberMgrConfig.isLoading = true;
+      try {
+        await this.$store.dispatch('member/updateRole', { appCode: this.appCode, id: this.selectedMember.id, params: updateParam });
+        this.closeMemberMgrModal();
+        this.fetchMemberList();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('角色更换成功！'),
+        });
+        if (this.selectedMember.name === this.currentUser && this.roleName !== 'administrator') {
+          this.enableToAddRole = false;
         }
-    };
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('角色更换失败：')} ${e.detail}`,
+        });
+      } finally {
+        this.memberMgrConfig.isLoading = false;
+      }
+    },
+
+    delMember(delMemberName, delMemberID) {
+      this.selectedMember.id = delMemberID;
+      this.selectedMember.name = delMemberName;
+      this.removeUserDialog.visiable = true;
+    },
+
+    async delSave() {
+      try {
+        await this.$store.dispatch('member/deleteRole', { appCode: this.appCode, id: this.selectedMember.id });
+        this.closeDelModal();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除成员成功！'),
+        });
+        this.fetchMemberList();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('删除成员失败：')} ${e.detail}`,
+        });
+      }
+    },
+
+    closeDelModal() {
+      this.removeUserDialog.visiable = false;
+    },
+
+    closeMemberMgrModal() {
+      this.memberMgrConfig.visiable = false;
+    },
+
+    canManageMe(roleInfo) {
+      if (roleInfo.user.username !== this.currentUser) {
+        return false;
+      }
+      return true;
+    },
+
+    canManageMembers(roleInfo) {
+      if (roleInfo.user.username === this.currentUser || !this.enableToAddRole) {
+        // 不能操作自身角色 || 非管理员不能操作角色管理
+        return false;
+      }
+      return true;
+    },
+
+    canChangeMembers() {
+      if (!this.enableToAddRole) {
+        return false;
+      }
+      return true;
+    },
+    handleSearch() {
+      if (this.keyword) {
+        this.memberListShow = this.memberList.filter(apigw => apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1);
+        this.memberListClone = [...this.memberListShow];
+        this.pagination.count = this.memberListClone.length;
+        if (this.memberListClone.length > 10) {
+          const start = this.pagination.limit * (this.pagination.current - 1);
+          const end = start + this.pagination.limit;
+          this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
+        }
+        this.updateTableEmptyConfig();
+      } else {
+        this.fetchMemberList();
+      }
+    },
+    genUserPerms(userRoles) {
+      const userPerms = [];
+      for (let i = 0; i < userRoles.length; i++) {
+        const rolePerm = this.roleSpec[userRoles[i].name];
+        for (let j = 0; j < rolePerm.length; j++) {
+          const perm = rolePerm[j];
+          const name = Object.keys(perm)[0];
+          if (perm[name] && userPerms.indexOf(name) === -1) {
+            userPerms.push(name);
+          }
+        }
+      }
+      return userPerms;
+    },
+    clearFilterKey() {
+      this.keyword = '';
+    },
+    updateTableEmptyConfig() {
+      this.tableEmptyConf.keyword = this.keyword;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

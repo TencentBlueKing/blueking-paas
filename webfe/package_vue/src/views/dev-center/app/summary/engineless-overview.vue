@@ -43,7 +43,7 @@
             ref="chart"
             :options="chartOption"
             auto-resize
-            style="width: 100%; height: 320px; background: #1e1e21;"
+            style="width: 100%; height: 320px;"
           />
         </div>
         <!-- 无数据统计模块 -->
@@ -61,7 +61,7 @@
             ref="notModuleChart"
             :options="notEnginelessOption"
             auto-resize
-            style="width: 100%; height: 420px; background: red;"
+            style="width: 100%; height: 420px;"
           />
           <div
             v-else

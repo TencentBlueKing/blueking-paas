@@ -131,13 +131,13 @@
                     {{ $t('容器镜像地址') }}: <span>{{ item.image }}</span>
                   </div>
                   <div class="pt20 pl20">
-                    {{ $t('镜像凭证') }}: {{ bkappAnnotations[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || '无' }}
+                    {{ $t('镜像凭证') }}: {{ bkappAnnotations[`bkapp.paas.bk.tencent.com/image-credentials.${item.name}`] || $t('无') }}
                   </div>
                   <div class="pt20 pl20">
-                    {{ $t('启动命令') }}: {{ item.command && item.command.length ? item.command.join(',') : '无' }}
+                    {{ $t('启动命令') }}: {{ item.command && item.command.length ? item.command.join(',') : $t('无') }}
                   </div>
                   <div class="pt20 pl20">
-                    {{ $t('命令参数') }}: {{ item.args && item.args.length ? item.args.join(',') : '无' }}
+                    {{ $t('命令参数') }}: {{ item.args && item.args.length ? item.args.join(',') : $t('无') }}
                   </div>
                   <div class="pt20 pl20">
                     {{ $t('副本数量') }}: {{ item.replicas }}
@@ -248,6 +248,7 @@
     import EditorStatus from './deploy-resource-editor/editor-status';
     import moment from 'moment';
     import { uniqBy } from 'lodash';
+    import i18n from '@/language/i18n.js';
     // import user from '@/components/user';
 
     export default {
@@ -286,11 +287,11 @@
                     isShow: false
                 },
                 tabData: [
-                    { name: 'processes', label: '进程配置' },
-                    { name: 'env', label: '环境变量' },
-                    { name: 'resource', label: '增强服务' },
+                    { name: 'processes', label: i18n.t('进程配置') },
+                    { name: 'env', label: i18n.t('环境变量') },
+                    { name: 'resource', label: i18n.t('增强服务') },
                     { name: 'yaml', label: 'YAML' },
-                    { name: 'hook', label: '钩子命令' }
+                    { name: 'hook', label: i18n.t('钩子命令') }
                 ],
                 active: 'processes',
                 processData: [],

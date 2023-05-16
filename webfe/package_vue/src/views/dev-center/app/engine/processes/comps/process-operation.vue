@@ -547,7 +547,7 @@
   </div>
 </template>
 
-<script> import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import dropdown from '@/components/ui/Dropdown';
@@ -576,7 +576,7 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components: {
+  components : {
     dropdown,
     tooltipConfirm,
     numInput,

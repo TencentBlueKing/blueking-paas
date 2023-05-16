@@ -69,7 +69,7 @@ s<template>
               text
               @click.stop.prevent="saveCommand"
             >
-              {{ $t('确认启用') }}
+              {{ $t('确认启用-button') }}
             </bk-button>
             <bk-button
               v-if="configInfo.loaclEnabled"
@@ -580,5 +580,8 @@ s<template>
                 cursor: pointer;
             }
         }
+    }
+    .paas-info-app-name-cls input {
+        padding-right: 130px !important;
     }
 </style>

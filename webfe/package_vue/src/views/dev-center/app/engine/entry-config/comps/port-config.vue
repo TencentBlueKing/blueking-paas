@@ -633,7 +633,7 @@
                 if (this.processIngress.service_name === service.name && this.processIngress.service_port_name === port.name) {
                     return;
                 }
-                this.changeEntryDialog.title = `确认设置${service.process_type}进程的${port.name}端口为主入口？`;
+                this.changeEntryDialog.title = this.$t(`确认设置{type}进程的{name}端口为主入口？`, { type: service.process_type, name: port.name });
                 this.curService = service;
                 this.curPort = port;
                 this.curServiceIndex = serviceIndex;

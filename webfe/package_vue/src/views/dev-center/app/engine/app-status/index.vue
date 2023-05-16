@@ -110,7 +110,7 @@ le<template lang="html">
                       :key="i"
                       class="pl15 message-container"
                     >
-                      {{ item.type }}: {{ item.reason }}, {{ item.message || '无' }}
+                      {{ item.type }}: {{ item.reason }}, {{ item.message || $t('无') }}
                       <i
                         v-if="item.status === 'True'"
                         class="paasng-icon paasng-correct success-icon"

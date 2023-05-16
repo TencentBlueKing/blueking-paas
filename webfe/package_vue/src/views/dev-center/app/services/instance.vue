@@ -248,7 +248,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`确认删除${name}实例？`"
+      :title="$t('确认删除实例？')"
       :theme="'primary'"
       :mask-close="false"
       :header-position="'left'"

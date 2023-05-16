@@ -2131,5 +2131,12 @@ export default {
   '开源社区': 'Open Rource Community',
   '迁移应用【{name}】到新版开发者中心': 'Migrate app [{name}] to the new version of the developer center',
   '（生产环境 ）': '(prod)',
-  '（预发布）': '(stag)'
+  '（预发布）': '(stag)',
+  'NAME是必填项': 'NAME is required',
+  '环境变量名称必须由字母字符、数字、下划线（_）、连接符（-）、点（.）组成，并且不得以数字开头（例如“my.env-name”或“MY_ENV.NAME”, 或 “MyEnvName1”）': 'Environment variable names must consist of alpha characters, numbers, underscores (_), hyphens (-), dots (.), and must not begin with a number (eg "my.env-name" or "MY_ENV.NAME", or " MyEnvName1")',
+  '版本详情': ' version details',
+  '资源': 'Resource',
+  '请输入有效域名': 'Please enter a valid domain name',
+  '确认删除实例？': 'Confirm to delete instance?',
+  '无匹配数据': 'No matching data'
 };

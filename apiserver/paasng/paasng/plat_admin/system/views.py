@@ -28,7 +28,7 @@ from rest_framework.response import Response
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
-from paasng.dev_resources.servicehub.services import ServiceObj
+from paasng.dev_resources.servicehub.services import ServiceObj, ServiceSpecificationHelper
 from paasng.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
@@ -175,7 +175,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             # 如果未启用增强服务, 则静默启用
             serializer = AddonSpecsSLZ(data=request.data, context={'svc': svc})
             serializer.is_valid(raise_exception=True)
-            specs = serializer.validated_data['specs'] or self._get_recommended_specs(svc)
+            specs = serializer.validated_data['specs'] or self._get_pub_recommended_specs(svc)
             try:
                 mixed_service_mgr.bind_service(svc, module, specs)
             except Exception as e:
@@ -198,11 +198,13 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         service_info = ServicesInfo.get_detail(engine_app)['services_info']
         return Response(data=service_info)
 
-    def _get_recommended_specs(self, svc: ServiceObj) -> Optional[dict]:
+    @staticmethod
+    def _get_pub_recommended_specs(svc: ServiceObj) -> Optional[dict]:
         """获取增强服务的推荐 specs"""
-        if definitions := svc.public_specifications:
-            return {spec_def.name: spec_def.recommended_value for spec_def in definitions}
-        return None
+        if not svc.public_specifications:
+            return None
+        # get_recommended_spec 可能会生成 value 是 None 的 spec
+        return ServiceSpecificationHelper.from_service_public_specifications(svc).get_recommended_spec()
 
 
 class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):

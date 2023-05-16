@@ -201,7 +201,12 @@ class TestSysAddonsAPIViewSet:
             category=category,
             region=bk_app.region,
             logo_b64="dummy",
-            config={'specifications': [{'name': 'instance_type', 'description': '', 'recommended_value': 'ha'}]},
+            config={
+                'specifications': [
+                    {'name': 'instance_type', 'description': '', 'recommended_value': 'ha'},
+                    {'name': 'version', 'description': '', 'recommended_value': '5.0.0'},
+                ]
+            },
         )
         # Create default plans
         G(
@@ -242,6 +247,7 @@ class TestSysAddonsAPIViewSet:
             ({}, 200),
             ({'instance_type': 'no-ha'}, 200),
             ({'instance_type': 'test'}, 400),
+            ({'instance_type': 'no-ha', 'version': '3.5'}, 400),
             ({'unknown_spec_name': ''}, 400),
         ],
     )

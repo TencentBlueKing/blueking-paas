@@ -18,10 +18,10 @@
           </router-link>
         </div>
         <div class="item-data">
-          {{ $t('启用未创建') }}: {{ notCreated || '无' }}
+          {{ $t('启用未创建') }}: {{ notCreated || $t('无') }}
         </div>
         <div class="item-data">
-          {{ $t('已创建实例') }}: {{ created || '无' }}
+          {{ $t('已创建实例') }}: {{ created || $t('无') }}
         </div>
       </div>
       <div class="resource-item no-border">

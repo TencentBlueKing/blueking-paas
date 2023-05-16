@@ -487,7 +487,7 @@
                 >
                   <bk-input
                     v-model="newVarConfig.description"
-                    placeholder="描述"
+                    :placeholder="$t('描述')"
                     :clearable="false"
                   />
                 </bk-form-item>

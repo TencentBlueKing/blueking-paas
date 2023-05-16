@@ -314,6 +314,7 @@
                         theme: 'error',
                         message: e.detail || e.message
                     });
+                    this.dialogAfterLeave();
                 }
             },
 

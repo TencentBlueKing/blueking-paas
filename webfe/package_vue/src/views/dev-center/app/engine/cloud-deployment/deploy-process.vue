@@ -638,7 +638,6 @@
             },
 
             async formDataValidate (index) {
-                console.log('触发', index);
                 try {
                   await this.$refs.formResource.validate();
                   await this.$refs.formDeploy.validate();

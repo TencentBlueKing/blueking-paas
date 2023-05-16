@@ -30,11 +30,11 @@ import (
 )
 
 // BkApp is the Schema for the bkapps API
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -73,6 +73,10 @@ type AppSpec struct {
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`
 
+	// Addons is a list of add-on service
+	// +optional
+	Addons []Addon `json:"addons,omitempty"`
+
 	// Hook commands of current BkApp resource
 	// +optional
 	Hooks *AppHooks `json:"hooks,omitempty"`
@@ -96,6 +100,25 @@ func (spec *AppSpec) FindProcess(name string) *Process {
 		}
 	}
 	return nil
+}
+
+// Addon is used to specify add-on service
+type Addon struct {
+	// Name of the add-on service, e.g. redis
+	Name string `json:"name"`
+
+	// Specifies of the add-on service, if not set, recommended specifies will be used
+	// +optional
+	Specs []AddonSpec `json:"specs,omitempty"`
+}
+
+// AddonSpec is used to specify add-on service, e.g. version: 6.0
+type AddonSpec struct {
+	// Name of the spec.
+	Name string `json:"name"`
+
+	// Value of the spec value
+	Value string `json:"value"`
 }
 
 // BuildConfig is the configuration related with application building, the platform
@@ -377,8 +400,9 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 
 // HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+//
+//	unhealthy is meaning that the Pod is restarting or is Failed
+//	progressing is meaning that the Pod is still running and condition `PodReady` is False.
 type HealthPhase string
 
 const (

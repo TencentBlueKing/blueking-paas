@@ -19,11 +19,14 @@
 package reconcilers
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -31,6 +34,8 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
+
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 )
 
 var _ = Describe("Test AddonReconciler", func() {
@@ -51,8 +56,8 @@ var _ = Describe("Test AddonReconciler", func() {
 				Namespace:   "default",
 				Annotations: map[string]string{},
 			},
+			Spec: paasv1alpha2.AppSpec{Addons: []paasv1alpha2.Addon{{Name: "foo-service"}}},
 		}
-		testing.WithAddons(bkapp, "foo-service")
 
 		builder = fake.NewClientBuilder()
 		scheme = runtime.NewScheme()
@@ -71,12 +76,35 @@ var _ = Describe("Test AddonReconciler", func() {
 		r = &AddonReconciler{
 			Client: builder.WithObjects(bkapp).Build(),
 			ExternalClient: external.NewTestClient(
-				"", "", &external.SimpleResponse{StatusCode: 200},
+				"", "", external.RoundTripFunc(func(req *http.Request) *http.Response {
+					switch req.Method {
+					case http.MethodGet:
+						// mock QueryAddonSpecs
+						return &http.Response{
+							StatusCode: 200,
+							Body:       ioutil.NopCloser(bytes.NewBufferString(`{"results": [{"version": "5.0.0"}]}`)),
+							Header:     make(http.Header),
+						}
+					case http.MethodPost:
+						// mock ProvisionAddonInstance
+						return &http.Response{
+							StatusCode: 200,
+							Body:       ioutil.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
+							Header:     make(http.Header),
+						}
+					default:
+						return &http.Response{
+							StatusCode: 400,
+							Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+							Header:     make(http.Header),
+						}
+					}
+				}),
 			),
 		}
 		ret := r.Reconcile(ctx, bkapp)
 
-		Expect(ret.err).NotTo(HaveOccurred())
+		Expect(ret.err).Should(Succeed())
 		Expect(ret.ShouldAbort()).To(BeFalse())
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
@@ -96,44 +124,26 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 		Expect(cond.Reason).To(Equal("InternalServerError"))
 		Expect(cond.Message).To(Equal(
-			"InvalidAnnotations: missing bkapp info, Detail: " +
+			"InvalidAnnotations: missing bkapp info, detail: " +
 				"for missing bkapp.paas.bk.tencent.com/region: unable to parse app metadata",
-		))
-	})
-
-	It("when extract addons failed", func() {
-		testing.WithAppInfoAnnotations(bkapp)
-		By("set a invalid addon list", func() {
-			bkapp.Annotations[paasv1alpha2.AddonsAnnoKey] = "['foo-service']"
-		})
-
-		r = &AddonReconciler{
-			Client: builder.WithObjects(bkapp).Build(),
-			ExternalClient: external.NewTestClient(
-				"", "", &external.SimpleResponse{StatusCode: 200},
-			),
-		}
-		ret := r.Reconcile(ctx, bkapp)
-
-		Expect(ret.err).To(HaveOccurred())
-		Expect(ret.ShouldAbort()).To(BeTrue())
-
-		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
-		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-		Expect(cond.Reason).To(Equal("InternalServerError"))
-		Expect(cond.Message).To(Equal(
-			"InvalidAnnotations: invalid value for 'bkapp.paas.bk.tencent.com/addons', Detail: " +
-				"invalid character '\\'' looking for beginning of value",
 		))
 	})
 
 	It("when provision addon failed", func() {
 		testing.WithAppInfoAnnotations(bkapp)
+
+		failMessage := "no available resource can provide"
 		By("set a failed external client", func() {
 			r = &AddonReconciler{
 				Client: builder.WithObjects(bkapp).Build(),
 				ExternalClient: external.NewTestClient(
-					"", "", &external.SimpleResponse{StatusCode: 400, Body: "bar"},
+					"",
+					"",
+					&external.SimpleResponse{
+						StatusCode: 400,
+						Body:       failMessage,
+						Header:     http.Header{"Content-Type": []string{"application/json"}},
+					},
 				),
 			}
 		})
@@ -147,7 +157,7 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 		Expect(cond.Reason).To(Equal("InternalServerError"))
 		Expect(cond.Message).To(Equal(
-			"ProvisionFailed: failed to provision 'foo-service' instance, Detail: response not ok",
+			fmt.Sprintf("Addon 'foo-service' provision failed, detail: %s: response not ok", failMessage),
 		))
 	})
 })

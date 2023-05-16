@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -32,6 +33,41 @@ import (
 type AddonInstance struct {
 	// Credentials contains the EnvVar offered by the AddonInstance
 	Credentials map[string]intstr.IntOrString `json:"credentials"`
+}
+
+// AddonSpecsData ...
+type AddonSpecsData struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// AddonSpecsResult ...
+type AddonSpecsResult struct {
+	Data []AddonSpecsData `json:"results,omitempty"`
+}
+
+// AddonSpecs define specs of the add-on service
+type AddonSpecs struct {
+	Specs map[string]string `json:"specs,omitempty"`
+}
+
+// ToRequestBody convert AddonSpecs to request body
+func (s *AddonSpecs) ToRequestBody() (io.Reader, error) {
+	if s == nil || s.Specs == nil {
+		return bytes.NewBuffer([]byte{}), nil
+	}
+
+	jsonData, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewBuffer(jsonData), nil
+}
+
+// ProvisionAddonResult contains the add-on service uuid
+type ProvisionAddonResult struct {
+	ServiceID string `json:"service_id"`
 }
 
 // QueryAddonInstance 调用 bkpaas 对应的接口, 查询应用的增强服务实例
@@ -59,11 +95,31 @@ func (c *Client) QueryAddonInstance(
 	return instance, nil
 }
 
+// QueryAddonSpecs 调用 bkpaas 对应的接口, 查询应用的增强服务规格
+func (c *Client) QueryAddonSpecs(ctx context.Context, appCode, moduleName, svcID string) (*AddonSpecsResult, error) {
+	result := &AddonSpecsResult{}
+	path := fmt.Sprintf(
+		"/system/bkapps/applications/%s/modules/%s/services/%s/specs",
+		appCode,
+		moduleName,
+		svcID,
+	)
+	req, err := c.NewRequest(ctx, "GET", path, bytes.NewBuffer([]byte{}))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	err = c.Do(req).Into(result, json.Unmarshal)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return result, nil
+}
+
 // ProvisionAddonInstance 调用 bkpaas 对应接口, 分配应用的增强服务实例
 func (c *Client) ProvisionAddonInstance(
 	ctx context.Context,
-	appCode, moduleName, environment, addonName string,
-) error {
+	appCode, moduleName, environment, addonName string, specs *AddonSpecs,
+) (string, error) {
 	path := fmt.Sprintf(
 		"/system/bkapps/applications/%s/modules/%s/envs/%s/addons/%s/",
 		appCode,
@@ -72,10 +128,21 @@ func (c *Client) ProvisionAddonInstance(
 		addonName,
 	)
 
-	req, err := c.NewRequest(ctx, "POST", path, bytes.NewBuffer([]byte{}))
+	body, err := specs.ToRequestBody()
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 
-	return errors.WithStack(c.Do(req).err)
+	req, err := c.NewRequest(ctx, "POST", path, body)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	var result ProvisionAddonResult
+	err = c.Do(req).Into(&result, json.Unmarshal)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return result.ServiceID, errors.WithStack(nil)
 }

@@ -82,9 +82,10 @@ var _ = Describe("", func() {
 					},
 				},
 				Configuration: paasv1alpha2.AppConfig{},
+				Addons:        []paasv1alpha2.Addon{{Name: "fake-addon"}},
 			},
 		}
-		bkapp = testing.WithAppInfoAnnotations(testing.WithAddons(bkapp, "fake-addon"))
+		bkapp = testing.WithAppInfoAnnotations(bkapp)
 
 		podCounter = func() int {
 			pods := &corev1.PodList{}
@@ -116,7 +117,7 @@ var _ = Describe("", func() {
 					// 分配增强服务
 					return &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(``)),
+						Body:       ioutil.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
 						Header:     make(http.Header),
 					}
 				}

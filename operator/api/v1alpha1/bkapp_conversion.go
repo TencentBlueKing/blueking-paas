@@ -53,6 +53,19 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
+	// convert Addons from "bkapp.paas.bk.tencent.com/addons" annotation
+	addons, err := src.ExtractAddons()
+	if err != nil {
+		return err
+	}
+	for _, addon := range addons {
+		dst.Spec.Addons = append(dst.Spec.Addons, paasv1alpha2.Addon{
+			Name: addon,
+		})
+	}
+	// remove "bkapp.paas.bk.tencent.com/addons" annotation
+	delete(dst.Annotations, AddonsAnnoKey)
+
 	// Handle fields that are using identical structures
 	_ = copier.CopyWithOption(
 		&dst.Spec.Configuration,

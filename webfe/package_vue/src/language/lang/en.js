@@ -847,7 +847,7 @@ export default {
   '请输入密码': 'Please enter password',
   '模块删除成功': 'Module deleted successfully',
   '确认清除预发布环境出口 IP 信息？': 'Confirm to clear the the Stag Env external egress IP?',
-  '确认清除生产环境出口IP信息？': 'Confirm to clear the egress IP of prod env?',
+  '确认清除生产环境出口 IP 信息？': 'Confirm to clear the egress IP of prod env?',
   'IP 列表可能会在下次重新获取时更新，届时请及时刷新外部服务白名单。': 'The IP list may be updated the next time it is retrieved, so please refresh the external service whitelist in time.',
   '创建模块': 'Create module',
   '所属应用': 'Owning app',
@@ -2139,5 +2139,10 @@ export default {
   '资源': 'Resource',
   '请输入有效域名': 'Please enter a valid domain name',
   '确认删除实例？': 'Confirm to delete instance?',
-  '无匹配数据': 'No matching data'
+  '无匹配数据': 'No matching data',
+  'API 数量': 'Number of APIs',
+  '平台为该类应用提供云 API 权限、应用市场等功能': 'The platform provides functions such as cloud API permission and application market for such applications',
+  '网关名': 'Gateway name',
+  '部署日志': ' deployment log',
+  '确认设置{type}进程的{name}端口为主入口？': 'Confirm using port {name} as main entry for {type} process?'
 };

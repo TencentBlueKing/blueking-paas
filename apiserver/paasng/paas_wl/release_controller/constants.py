@@ -23,6 +23,7 @@ class RuntimeType(str, StructuredEnum):
     BUILDPACK = EnumField("buildpack", label="Runtime for buildpack")
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image")
     BK_SMART = EnumField("bk-smart", label="Runtime for buildpack, but build as image")
+    DOCKERFILE = EnumField("dockerfile", label="Runtime for dockerfile")
 
 
 class ImagePullPolicy(str, StructuredEnum):

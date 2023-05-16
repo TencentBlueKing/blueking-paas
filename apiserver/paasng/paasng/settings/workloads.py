@@ -65,6 +65,7 @@ settings = LazySettings(
 # ---------------
 DEFAULT_SLUGRUNNER_IMAGE = settings.get('DEFAULT_SLUGRUNNER_IMAGE', 'bkpaas/slugrunner')
 DEFAULT_SLUGBUILDER_IMAGE = settings.get('DEFAULT_SLUGBUILDER_IMAGE', 'bkpaas/slugbuilder')
+KANIKO_IMAGE = settings.get("KANIKO_IMAGE", "bkpaas/kaniko-executor")
 
 BUILDER_USERNAME = settings.get('BUILDER_USERNAME', 'blueking')
 

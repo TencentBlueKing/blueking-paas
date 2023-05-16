@@ -141,7 +141,8 @@ class DeployConditions(ChoicesEnum):
 
 
 class RuntimeType(str, StructuredEnum):
-    BUILDPACK = EnumField("buildpack", label="Runtime for buildpack")
+    BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
+    DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image")
 
 

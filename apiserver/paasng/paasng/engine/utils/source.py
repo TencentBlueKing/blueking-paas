@@ -32,6 +32,7 @@ from paasng.dev_resources.sourcectl.controllers.package import PackageController
 from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetProcfileError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.repo_controller import get_repo_controller
+from paasng.dev_resources.sourcectl.utils import DockerIgnore
 from paasng.engine.configurations.source_file import get_metadata_reader
 from paasng.engine.exceptions import DeployShouldAbortError
 from paasng.engine.models import Deployment, EngineApp
@@ -72,6 +73,25 @@ def validate_processes(processes: Dict[str, Dict[str, str]]) -> TypeProcesses:
         raise ValidationError(f'Invalid process data, missing: {e}')
     except ValueError as e:
         raise ValidationError(f"Invalid process data, {e}")
+
+
+def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
+    """Get the DockerIgnore from SourceCode"""
+    module: Module = deployment.app_environment.module
+    operator = deployment.operator
+    version_info = deployment.version_info
+    relative_source_dir = deployment.get_source_dir()
+
+    try:
+        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
+        content = metadata_reader.get_dockerignore(version_info)
+    except GetProcfileError:
+        # 源码中无 dockerignore 文件, 忽略异常
+        return None
+    except NotImplementedError:
+        # 对于不支持从源码读取 .dockerignore 的应用, 忽略异常
+        return None
+    return DockerIgnore(content)
 
 
 def get_processes(deployment: Deployment, stream: Optional[DeployStream] = None) -> TypeProcesses:  # noqa: C901

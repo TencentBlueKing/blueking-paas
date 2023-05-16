@@ -96,6 +96,10 @@ class GetAppYamlError(ExceptionWithMessage):
     """When a valid app.yaml can not be found in application directory"""
 
 
+class GetDockerIgnoreError(ExceptionWithMessage):
+    """When .dockerignore can not be found in application directory"""
+
+
 class GitLabBranchNameBugError(Exception):
     """existing bug in gitlab
     https://gitlab.com/gitlab-org/gitlab-ce/issues/42231

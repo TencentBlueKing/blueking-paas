@@ -48,7 +48,7 @@ class SlugbuilderInfo:
     # builder + buildpacks 的环境变量
     environments: Dict
     # cnb runtime will build application as Container Image
-    is_cnb_runtime: bool = False
+    use_cnb: bool = False
 
     @property
     def build_image(self) -> Optional[str]:
@@ -77,11 +77,11 @@ class SlugbuilderInfo:
         buildpacks = manager.list_buildpacks()  # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
         environments = {}
         slugbuilder = manager.get_slug_builder(raise_exception=False)
-        is_cnb_runtime = False
+        use_cnb = False
         if slugbuilder:
             environments.update(slugbuilder.environments)
             if manager.is_cnb_runtime:
-                is_cnb_runtime = True
+                use_cnb = True
                 environments.update(
                     CNB_REGISTRY_AUTH=json.dumps({settings.APP_DOCKER_REGISTRY_HOST: build_app_registry_auth()})
                 )
@@ -95,7 +95,7 @@ class SlugbuilderInfo:
             slugbuilder=slugbuilder,
             buildpacks=buildpacks,
             environments=environments,
-            is_cnb_runtime=is_cnb_runtime,
+            use_cnb=use_cnb,
         )
 
     @classmethod

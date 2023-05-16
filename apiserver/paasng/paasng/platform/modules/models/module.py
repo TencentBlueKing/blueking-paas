@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 from django.db import models
 
 from paasng.dev_resources.sourcectl.source_types import get_sourcectl_names
+from paasng.engine.constants import RuntimeType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.models import BkUserField, OwnerTimestampedModel
 
@@ -52,6 +53,7 @@ class Module(OwnerTimestampedModel):
     source_repo_id = models.IntegerField(verbose_name=u'源码 ID', null=True)
     exposed_url_type = models.IntegerField(verbose_name='访问 URL 版本', null=True)
     user_preferred_root_domain = models.CharField(max_length=255, verbose_name="用户偏好的根域名", null=True)
+    runtime_type = models.CharField(max_length=32, verbose_name="运行时类型", default=RuntimeType.BUILDPACK)
 
     last_deployed_date = models.DateTimeField(verbose_name=u'最近部署时间', null=True)  # 范围：模块下的所有环境
     creator = BkUserField(null=True)

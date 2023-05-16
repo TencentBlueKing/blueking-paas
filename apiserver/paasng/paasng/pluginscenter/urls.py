@@ -170,15 +170,4 @@ urlpatterns = [
         "api/bkplugins/shim/iam/selection/plugin_view/",
         PluginSelectionView.as_view(),
     ),
-    # 需要给 ITSM 后台回调的 API
-    # 创建插件审批回调 API
-    path(
-        "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/itsm/",
-        views.PluginCallBackApiViewSet.as_view({"post": "itsm_create_callback"}),
-    ),
-    # 发布流程中上线审批阶段回调 API
-    path(
-        "sys/api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/itsm/",
-        views.PluginCallBackApiViewSet.as_view({"post": "itsm_stage_callback"}),
-    ),
 ]

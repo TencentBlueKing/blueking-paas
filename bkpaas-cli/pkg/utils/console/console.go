@@ -16,28 +16,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package cmd
+package console
 
 import (
-	"strings"
+	"fmt"
 
-	"github.com/spf13/cobra"
+	"github.com/fatih/color"
 
-	"github.com/TencentBlueKing/blueking-paas/client/pkg/utils/console"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
-// DefaultSubCmdRun prints a command's help string to the specified output if no
-// arguments (sub-commands) are provided, or a usage error otherwise.
-func DefaultSubCmdRun() func(c *cobra.Command, args []string) {
-	return func(c *cobra.Command, args []string) {
-		RequireNoArgs(args)
-		_ = c.Help()
-	}
+// Error 向终端输出错误类信息
+func Error(format string, args ...interface{}) {
+	color.Red(format, args...)
 }
 
-// RequireNoArgs exits with a usage error if extra arguments are provided.
-func RequireNoArgs(args []string) {
-	if len(args) > 0 {
-		console.Error("Unknown command: %q", strings.Join(args, " "))
+// Tips 向终端输出提示类信息
+func Tips(format string, args ...interface{}) {
+	color.Cyan(format, args...)
+}
+
+// Info 向终端输出信息
+func Info(format string, args ...interface{}) {
+	fmt.Println(fmt.Sprintf(format, args...))
+}
+
+// Debug 向终端输出调试类信息
+func Debug(format string, args ...interface{}) {
+	if !config.G.Debug {
+		return
 	}
+	fmt.Println("[DEBUG]", fmt.Sprintf(format, args...))
 }

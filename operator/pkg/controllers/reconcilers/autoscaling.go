@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/resources"
 	"bk.tencent.com/paas-app-operator/pkg/utils/kubestatus"
 
@@ -36,6 +37,9 @@ import (
 
 // NewAutoscalingReconciler will return a AutoscalingReconciler with given k8s client
 func NewAutoscalingReconciler(client client.Client) *AutoscalingReconciler {
+	if !config.Global.IsAutoscalingEnabled() {
+		return nil
+	}
 	return &AutoscalingReconciler{Client: client}
 }
 

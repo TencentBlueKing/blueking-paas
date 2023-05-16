@@ -47,11 +47,6 @@ func NewProcImageGetter(bkapp *BkApp) *ProcImageGetter {
 // - name: process name
 // - return: <image>, <imagePullPolicy>, <error>
 func (r *ProcImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
-	// Standard: the image was defined in build config directly
-	if image := r.bkapp.Spec.Build.Image; image != "" {
-		return r.bkapp.Spec.Build.Image, r.bkapp.Spec.Build.ImagePullPolicy, nil
-	}
-
 	// Legacy API version: read image configs from annotations
 	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[LegacyProcConfig](
 		r.bkapp,
@@ -59,6 +54,11 @@ func (r *ProcImageGetter) Get(name string) (string, corev1.PullPolicy, error) {
 	)
 	if cfg, ok := legacyProcImageConfig[name]; ok {
 		return cfg["image"], corev1.PullPolicy(cfg["policy"]), nil
+	}
+
+	// Standard: the image was defined in build config directly
+	if image := r.bkapp.Spec.Build.Image; image != "" {
+		return r.bkapp.Spec.Build.Image, r.bkapp.Spec.Build.ImagePullPolicy, nil
 	}
 
 	return "", corev1.PullIfNotPresent, errors.New("image not configured")
@@ -84,15 +84,6 @@ func (r *ProcResourcesGetter) GetDefault() corev1.ResourceRequirements {
 // - name: process name
 // - return: <resources requirements>, <error>
 func (r *ProcResourcesGetter) Get(name string) (result corev1.ResourceRequirements, err error) {
-	// Standard: read the "ResQuotaPlan" field from process
-	procObj := r.bkapp.Spec.FindProcess(name)
-	if procObj == nil {
-		return result, fmt.Errorf("process %s not found", name)
-	}
-	if plan := procObj.ResQuotaPlan; plan != "" {
-		return r.fromQuotaPlan(plan), nil
-	}
-
 	// Legacy version: try to read resources configs from legacy annotation
 	legacyProcResourcesConfig, _ := kubetypes.GetJsonAnnotation[LegacyProcConfig](
 		r.bkapp,
@@ -100,6 +91,15 @@ func (r *ProcResourcesGetter) Get(name string) (result corev1.ResourceRequiremen
 	)
 	if cfg, ok := legacyProcResourcesConfig[name]; ok {
 		return r.fromRawString(cfg["cpu"], cfg["memory"]), nil
+	}
+
+	// Standard: read the "ResQuotaPlan" field from process
+	procObj := r.bkapp.Spec.FindProcess(name)
+	if procObj == nil {
+		return result, fmt.Errorf("process %s not found", name)
+	}
+	if plan := procObj.ResQuotaPlan; plan != "" {
+		return r.fromQuotaPlan(plan), nil
 	}
 	return result, errors.New("resources unconfigured")
 }

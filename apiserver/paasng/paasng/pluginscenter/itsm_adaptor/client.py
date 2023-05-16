@@ -257,8 +257,10 @@ class ItsmClient:
             raise ItsmGatewayServiceError(f'verify token from itsm error: {e}')
 
         if resp.get('code') != 0:
-            logger.exception(f'verify token from itsm error, message:{resp} \ntoken: {token}')
+            logger.exception(f'verify token from itsm error, resp:{resp} \ntoken: {token}')
             raise ItsmApiError(resp['message'])
 
-        # 是否操作成功
-        return resp.get('data', {}).get('is_passed')
+        if not (is_passed := resp.get('data', {}).get('is_passed')):
+            logging.exception(f'itsm token checksum fails, resp:{resp} \ntoken: {token}')
+
+        return is_passed

@@ -71,6 +71,13 @@ func DumpConf(filePath string) error {
 	return nil
 }
 
+// EnableDebugMode 启用 Debug 模式
+func EnableDebugMode() {
+	if G != nil {
+		G.Debug = true
+	}
+}
+
 // Conf is bkpaas-cli's config
 type Conf struct {
 	// PaaSApigwUrl PaaS 平台注册的蓝鲸网关访问地址
@@ -83,6 +90,8 @@ type Conf struct {
 	Username string `yaml:"username"`
 	// AccessToken apigw 访问凭证
 	AccessToken string `yaml:"accessToken"`
+	// Debug 调试模式
+	Debug bool `yaml:"-"`
 }
 
 func (c *Conf) String() string {

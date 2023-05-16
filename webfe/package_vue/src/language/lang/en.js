@@ -1003,6 +1003,7 @@ export default {
   '未启用': 'Not activated',
   '部署前执行，如需执行多条命令，请封装在一个脚本中，如：': 'Execute before deploy. If you need to execute multiple commands, please encapsulate them in a script, such as:',
   '确认启用': 'Confirm enable',
+  '确认启用-button': 'Confirm',
   '部署命令': 'Deploy command',
   '由应用代码根目录下的Procfile文件定义': 'Defined by the Procfile file in the root directory of the app code',
   '文档：应用进程与Procfile': 'Doc: app Processes and Procfiles',

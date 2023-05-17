@@ -181,14 +181,6 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		copier.Option{IgnoreEmpty: true, DeepCopy: true},
 	)
 
-	dst.Annotations = make(map[string]string)
-	if src.Annotations != nil {
-		_ = copier.CopyWithOption(
-			&dst.Annotations,
-			&src.Annotations,
-			copier.Option{IgnoreEmpty: true, DeepCopy: true},
-		)
-	}
 	if src.Spec.Addons != nil {
 		dst.Spec.Addons = make([]Addon, 0)
 		_ = copier.CopyWithOption(

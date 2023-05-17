@@ -63,10 +63,10 @@ class DeployProcedure:
         phase: 'DeployPhase',
     ):
         self.stream = stream
-        self.title = title
         self.deployment = deployment
         self.phase = phase
         self.step_obj = self._get_step_obj(title)
+        self.title = _(title)
 
     def __enter__(self):
         self.stream.write_title(f'{self.TITLE_PREFIX}{self.title}')
@@ -89,10 +89,10 @@ class DeployProcedure:
         is_known_exc = exc_type in [DeployShouldAbortError, exceptions.ProvisionInstanceError]
         if is_known_exc:
             msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
-                title=Style.Title(_(self.title)), reason=Style.Warning(exc_val)
+                title=Style.Title(self.title), reason=Style.Warning(exc_val)
             )
         else:
-            msg = _("步骤 [{title}] 出错了，请稍候重试。").format(title=Style.Title(_(self.title)))
+            msg = _("步骤 [{title}] 出错了，请稍候重试。").format(title=Style.Title(self.title))
 
         coded_message = find_coded_error_message(exc_val)
         if coded_message:

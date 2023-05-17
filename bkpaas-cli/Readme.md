@@ -351,6 +351,33 @@ BuildTime: 2023-03-31T15:00:00+0800
 GoVersion: go1.19.4
 ```
 
+### 命令提示
+
+你可以在执行任意命令时，添加 `-h` 或 `--help` 参数以获取参数 / 子命令提示
+
+```shell
+>>> bkpaas-cli app deploy-history --help                                   
+List PaaS application deploy history
+
+Usage:
+  bkpaas-cli app deploy-history [flags]
+
+Flags:
+      --code string     app code
+      --env string      environment (stag/prod) (default "stag")
+  -h, --help            help for deploy-history
+      --module string   module name (default "default")
+
+Global Flags:
+      --debug   Enable debug mode
+```
+
+### 调试模式
+
+如果你在使用 bkpaas-cli 时遇到问题，可以在任何命令执行时添加 `--debug` 参数，这将为您提供更多的执行信息。
+
+如果需要联系蓝鲸助手或开发者以获取帮助，请提供调试模式下的输出结果，这将更有助于解决问题 : )
+
 ## 多系统支持
 
 bkpaas-cli 将提供适用于 Linux，MacOS，Windows 等多种系统 / 架构的二进制可执行文件。

@@ -195,6 +195,7 @@ class ModuleRuntimeManager:
 
     SECURE_ENCRYPTED_LABEL = "secureEncrypted"
     HTTP_SUPPORTED_LABEL = "supportHttp"
+    CNB_LABEL = "isCloudNativeBuilder"
 
     def __init__(self, module: 'Module'):
         self.module = module
@@ -223,9 +224,22 @@ class ModuleRuntimeManager:
         except AppSlugRunner.DoesNotExist:
             return True
         try:
-            return not str2bool(runner.get_label("supportHttp"))
+            return not str2bool(runner.get_label(self.HTTP_SUPPORTED_LABEL))
         except Exception:
             return True
+
+    @property
+    def is_cnb_runtime(self) -> bool:
+        """描述当前模块绑定的运行时是否使用 CloudNative Buildpacks 构建(构建产物为镜像)"""
+        try:
+            # runner 和 builder 使用同一镜像，判断其中之一即可
+            runner = self.get_slug_runner()
+        except AppSlugRunner.DoesNotExist:
+            return False
+        try:
+            return str2bool(runner.get_label(self.CNB_LABEL))
+        except Exception:
+            return False
 
     def get_slug_builder(self, raise_exception: bool = True) -> AppSlugBuilder:
         """返回当前模块绑定的 AppSlugBuilder

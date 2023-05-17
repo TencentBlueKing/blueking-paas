@@ -1110,6 +1110,20 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get('SMART_DOCKER_PASSWORD', 'blueking
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
 SMART_IMAGE_TAG = 'heroku-18-v1.6.1'
 
+
+# ------------------
+# App 应用镜像仓库配置
+# ------------------
+# App 镜像仓库的 Registry 的域名
+APP_DOCKER_REGISTRY_HOST = settings.get('APP_DOCKER_REGISTRY_ADDR', 'registry.hub.docker.com')
+# App 镜像仓库的命名空间, 即在 Registry 中的项目名
+APP_DOCKER_REGISTRY_NAMESPACE = settings.get('APP_DOCKER_NAMESPACE', 'bkpaas/docker')
+# 用于访问 Registry 的账号
+APP_DOCKER_REGISTRY_USERNAME = settings.get('APP_DOCKER_USERNAME', 'bkpaas')
+# 用于访问 Registry 的密码
+APP_DOCKER_REGISTRY_PASSWORD = settings.get('APP_DOCKER_PASSWORD', 'blueking')
+
+
 # ------------------
 # bk-lesscode 相关配置
 # ------------------

@@ -40,6 +40,15 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 				"memory": proc.Memory,
 			}
 		}
+		// Copy Autoscaling field, extra logics needs because of the pointer type
+		if proc.Autoscaling != nil {
+			dstProc.Autoscaling = &paasv1alpha2.AutoscalingSpec{
+				Enabled:     proc.Autoscaling.Enabled,
+				MinReplicas: proc.Autoscaling.MinReplicas,
+				MaxReplicas: proc.Autoscaling.MaxReplicas,
+				Policy:      paasv1alpha2.ScalingPolicy(proc.Autoscaling.Policy),
+			}
+		}
 
 		// Append to the destination process list
 		dst.Spec.Processes = append(dst.Spec.Processes, dstProc)
@@ -120,6 +129,17 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 			CPU:             legacyProcResConfig[proc.Name]["cpu"],
 			Memory:          legacyProcResConfig[proc.Name]["memory"],
 		}
+
+		// Copy Autoscaling field, extra logics needs because of the pointer type
+		if proc.Autoscaling != nil {
+			dstProc.Autoscaling = &AutoscalingSpec{
+				Enabled:     proc.Autoscaling.Enabled,
+				MinReplicas: proc.Autoscaling.MinReplicas,
+				MaxReplicas: proc.Autoscaling.MaxReplicas,
+				Policy:      ScalingPolicy(proc.Autoscaling.Policy),
+			}
+		}
+
 		// Append to the destination process list
 		dst.Spec.Processes = append(dst.Spec.Processes, dstProc)
 	}

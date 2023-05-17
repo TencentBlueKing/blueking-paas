@@ -500,7 +500,7 @@
 
                         stageItem.steps.forEach(stepItem => {
                             timeLineList.push({
-                                tag: stepItem.name,
+                                tag: stepItem.display_name,
                                 content: this.computedDeployTimelineTime(stepItem.start_time, stepItem.complete_time),
                                 status: stepItem.status || 'default',
                                 parentStage: stageItem.type

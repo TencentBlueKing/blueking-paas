@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Optional
 
 import redis
 from django.utils.encoding import force_text
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.dev_resources.servicehub import exceptions
 from paasng.engine.constants import JobStatus
@@ -89,10 +89,10 @@ class DeployProcedure:
         is_known_exc = exc_type in [DeployShouldAbortError, exceptions.ProvisionInstanceError]
         if is_known_exc:
             msg = _('步骤 [{title}] 出错了，原因：{reason}。').format(
-                title=Style.Title(self.title), reason=Style.Warning(exc_val)
+                title=Style.Title(_(self.title)), reason=Style.Warning(exc_val)
             )
         else:
-            msg = _("步骤 [{title}] 出错了，请稍候重试。").format(title=Style.Title(self.title))
+            msg = _("步骤 [{title}] 出错了，请稍候重试。").format(title=Style.Title(_(self.title)))
 
         coded_message = find_coded_error_message(exc_val)
         if coded_message:

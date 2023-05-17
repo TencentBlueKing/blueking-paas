@@ -104,7 +104,7 @@
         />
       </bk-form-item>
       <bk-form-item
-        v-if="!isSmartApp && !['ce', 'ee'].includes(GLOBAL.APP_VERSION)"
+        v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
         :label="$t('应用联系人：')"
         :required="!isSmartApp"
         :property="'contactArr'"
@@ -117,7 +117,7 @@
       </bk-form-item>
 
       <bk-form-item
-        v-if="!isSmartApp && !['ce', 'ee'].includes(GLOBAL.APP_VERSION)"
+        v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
         :label="$t('所属业务：')"
       >
         <bk-tag-input
@@ -161,22 +161,13 @@
           </span>
         </section>
         <p
-          v-if="GLOBAL.APP_VERSION === 'ee'"
+          v-if="GLOBAL.CONFIG.MARKET_TIPS"
           class="tip"
         >
           {{ $t('仅影响') }} <a
             :href="platFormConfig.LINK.APP_MARKET"
             target="_blank"
-          > {{ $t('蓝鲸桌面') }} </a> {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。') }}
-        </p>
-        <p
-          v-if="GLOBAL.APP_VERSION === 'ce'"
-          class="tip"
-        >
-          {{ $t('仅影响') }} <a
-            :href="platFormConfig.LINK.APP_MARKET"
-            target="_blank"
-          > {{ $t('蓝鲸工作台') }} </a> {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用') }}
+          > {{ GLOBAL.CONFIG.MARKET_TIPS }} </a> {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。') }}
         </p>
         <render-member-item
           v-if="users.length > 0"
@@ -337,7 +328,7 @@
         mixins: [appBaseMixin],
         data () {
             let userRules = [];
-            if (this.GLOBAL.APP_VERSION === 'te') {
+            if (this.GLOBAL.CONFIG.MARKET_INFO) {
                 userRules = [
                     {
                         validator: function (val) {

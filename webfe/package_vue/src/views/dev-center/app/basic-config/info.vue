@@ -241,23 +241,6 @@
                 <label class="title-label"> {{ $t('联系人员') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <!-- <bk-member-selector
-                  v-if="GLOBAL.APP_VERSION === 'te'"
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                />
-                <blueking-user-selector
-                  v-else
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  display-list-tips
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                /> -->
                 <user
                   ref="member_selector"
                   v-model="localeAppInfo.contact"

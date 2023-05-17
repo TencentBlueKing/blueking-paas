@@ -130,7 +130,16 @@ export const PLATFORM_CONFIG = {
         BK_APP_DOC: 'https://bk.tencent.com/docs/markdown/PaaS3.0',
 
         // 开源社区
-        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas'
+        BK_OPEN_COMMUNITY: 'https://github.com/TencentBlueKing/blueking-paas',
+
+        // 技术支持
+        BK_TECHNICAL_SUPPORT: 'https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true',
+
+        // 社区论坛
+        BK_COMMUNITY: 'https://bk.tencent.com/s-mart/community/',
+
+        // 产品官网
+        BK_OFFICIAL_WEBSITE: 'https://bk.tencent.com/'
     },
 
     // 文档
@@ -260,6 +269,24 @@ export const PLATFORM_CONFIG = {
         BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置'
+    },
+
+    CONFIG: {
+        IFRAME_CLASS: 'small',
+        // 版本日志
+        RELEASE_LOG: '',
+        // 镜像地址
+        MIRROR_PREFIX: '',
+        // 镜像示例
+        MIRROR_EXAMPLE: 'nginx:latest',
+        // region
+        REGION_CHOOSE: 'default',
+        // 市场信息
+        MARKET_INFO: '',
+        // 应用提示
+        MARKET_TIPS: staticI18n.$t('蓝鲸工作台'),
+        // 框架
+        GO_FRAME: ''
     }
 }
 

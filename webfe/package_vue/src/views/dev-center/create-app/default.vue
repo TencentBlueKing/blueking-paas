@@ -1178,7 +1178,7 @@
                 if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
                     params.type = 'default';
                     params.engine_params.source_control_type = 'tc_docker';
-                    params.engine_params.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                    params.engine_params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                     params.engine_params.source_repo_auth_info = {
                         username: '',
                         password: ''
@@ -1317,7 +1317,7 @@
                 this.$nextTick(() => {
                     // 蓝鲸可视化平台推送的源码包
                     if (codeSource === 'bkLesscode') {
-                        this.regionChoose = this.GLOBAL.APP_VERSION === 'te' ? 'ieod' : 'default';
+                        this.regionChoose = this.GLOBAL.CONFIG.REGION_CHOOSE;
                         this.structureType = 'soundCode';
                         this.handleCodeTypeChange(2);
                     } else if (codeSource === 'default') {

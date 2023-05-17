@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import json
 import logging
 import os
 import urllib.parse
@@ -29,8 +30,12 @@ from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
+from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
+from paas_wl.workloads.images.entities import ImageCredentials, build_dockerconfig
 from paasng.engine.configurations.building import SlugBuilderTemplate
+from paasng.engine.configurations.image import generate_image_repository
+from paasng.engine.models import EngineApp
 from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
@@ -46,11 +51,16 @@ def generate_builder_name(app: 'WlApp') -> str:
     return "slug-builder"
 
 
-def generate_slug_path(bp: BuildProcess):
-    """Get the slug path for store builded slug"""
+def generate_slug_path(bp: BuildProcess) -> str:
+    """Get the slug path for storing slug"""
     app: 'WlApp' = bp.app
     slug_name = f'{app.name}:{bp.branch}:{bp.revision}'
     return f'{app.region}/home/{slug_name}/push'
+
+
+def generate_image_tag(bp: BuildProcess) -> str:
+    """Get the Image Tag for bp"""
+    return f"{bp.branch}-{bp.revision}"
 
 
 def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
@@ -58,31 +68,57 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'WlApp' = bp.app
-    cache_path = '%s/home/%s/cache' % (app.region, app.name)
-
     env_vars: Dict[str, str] = {}
-    env_vars.update(
-        # Path of source tarball
-        TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
-        # Path to store compiled slug package
-        PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
-        # Path to store cache to speed up build process
-        CACHE_PATH='%s/%s' % (bucket, cache_path),
-        # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
-        # TODO: 将 slug.tgz 抽成常量
-        SLUG_SET_URL=store.generate_presigned_url(
-            key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
-        ),
-        SOURCE_GET_URL=store.generate_presigned_url(
-            key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        ),
-        CACHE_GET_URL=store.generate_presigned_url(
-            key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        ),
-        CACHE_SET_URL=store.generate_presigned_url(
-            key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
-        ),
-    )
+
+    if metadata and metadata.get("is_dockerbuild"):
+        # build application form Dockerfile
+        engine_app = EngineApp.objects.get(id=app.pk)
+        image_repository = generate_image_repository(engine_app)
+        env_vars.update(
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            OUTPUT_IMAGE=f"{image_repository}:{generate_image_tag(bp)}",
+            CACHE_REPO=f"{image_repository}/dockerbuild-cache",
+            DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
+        )
+    elif metadata and metadata.get("is_cnb_runtime"):
+        # build application as image
+        engine_app = EngineApp.objects.get(id=app.pk)
+        image_repository = generate_image_repository(engine_app)
+        env_vars.update(
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            OUTPUT_IMAGE=f"{image_repository}:{generate_image_tag(bp)}",
+            CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
+        )
+    else:
+        # build application as slug
+        cache_path = '%s/home/%s/cache' % (app.region, app.name)
+        env_vars.update(
+            # Path of source tarball
+            TAR_PATH='%s/%s' % (bucket, bp.source_tar_path),
+            # Path to store compiled slug package
+            PUT_PATH='%s/%s' % (bucket, generate_slug_path(bp)),
+            # Path to store cache to speed up build process
+            CACHE_PATH='%s/%s' % (bucket, cache_path),
+            # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
+            # TODO: 将 slug.tgz 抽成常量
+            SLUG_SET_URL=store.generate_presigned_url(
+                key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            ),
+            SOURCE_GET_URL=store.generate_presigned_url(
+                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            CACHE_GET_URL=store.generate_presigned_url(
+                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            ),
+            CACHE_SET_URL=store.generate_presigned_url(
+                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            ),
+        )
+
     env_vars.update(AppConfigVarManager(app=app).get_envs())
 
     # Inject extra env vars in settings for development purpose

@@ -45,7 +45,7 @@ class TestCommand:
     def command_model(self, wl_app):
         config = wl_app.latest_config
         config.runtime.image = "busybox:latest"
-        config.runtime.endpoint = ["sh", "-c"]
+        config.runtime.entrypoint = ["sh", "-c"]
         config.save()
         return G(
             CommandModel,

@@ -368,6 +368,7 @@ def start_build_process(
             'extra_envs': extra_envs or {},
             'image': image,
             'buildpacks': build_process.buildpacks_as_build_env(),
+            "is_cnb_runtime": build_info.is_cnb_runtime,
         },
     )
     return str(build_process.uuid)

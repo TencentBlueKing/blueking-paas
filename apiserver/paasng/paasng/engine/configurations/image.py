@@ -18,17 +18,28 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from django.conf import settings
+
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder
 from paasng.engine.constants import ImagePullPolicy, RuntimeType
 from paasng.extensions.smart_app.conf import bksmart_settings
 from paasng.extensions.smart_app.utils import SMartImageManager
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 
 if TYPE_CHECKING:
     from paasng.dev_resources.sourcectl.models import VersionInfo
     from paasng.engine.models import EngineApp
+
+
+def generate_image_repository(app: 'EngineApp') -> str:
+    """Get the image repository for storing contaienr image"""
+    env = app.env
+    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
+    app_part = f"{env.application.code}/{env.module.name}/{env.environment}"
+    return f"{system_prefix}/{app_part}"
 
 
 @dataclass
@@ -91,19 +102,24 @@ class RuntimeImageInfo:
 
             named = SMartImageManager(self.module).get_image_info(self.version_info.revision)
             return f"{named.domain}/{named.name}:{named.tag}"
-
-        slugrunner = self.module.slugrunners.last()
-        return getattr(slugrunner, "full_image", '')
+        mgr = ModuleRuntimeManager(self.module)
+        slug_runner = mgr.get_slug_runner(raise_exception=False)
+        if mgr.is_cnb_runtime:
+            return generate_image_repository(self.engine_app) + ":" + self.version_info.revision
+        return getattr(slug_runner, "full_image", '')
 
     @property
-    def endpoint(self) -> List:
-        """返回当前 engine_app 镜像启动的 endpoint"""
+    def entrypoint(self) -> List:
+        """返回当前 engine_app 镜像启动的 entrypoint"""
         if self.type == RuntimeType.CUSTOM_IMAGE:
             return ["env"]
         # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
-        slugrunner = self.module.slugrunners.last()
-        metadata: Dict = getattr(slugrunner, "metadata", {})
-        return metadata.get("endpoint", ['bash', '/runner/init'])
+        mgr = ModuleRuntimeManager(self.module)
+        if mgr.is_cnb_runtime:
+            return ["launcher"]
+        slug_runner = mgr.get_slug_runner(raise_exception=False)
+        metadata: Dict = getattr(slug_runner, "metadata", {})
+        return metadata.get("entrypoint", ['bash', '/runner/init'])
 
 
 def update_image_runtime_config(
@@ -116,7 +132,7 @@ def update_image_runtime_config(
     runtime_dict = {
         "image": runtime.image,
         "type": runtime.type,
-        "endpoint": runtime.endpoint,
+        "entrypoint": runtime.entrypoint,
         "image_pull_policy": image_pull_policy.value,
     }
 

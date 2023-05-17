@@ -53,7 +53,7 @@ def bulk_update_chunk_by_chunk(
         f"UPDATE {table_name} SET {quote_name(to_field)} = {quote_name(from_field)} WHERE {quote_name(pk_field)} = %s"
     )
 
-    with schema_editor.connection.cursor() as cursor:
+    with schema_editor.connection.cursor() as cursor:  # type: CursorWrapper
         total_count = count_table(cursor, table_name)
         pks = fetchall_pks(cursor, table_name, pk_field, total_count, batch_size)
 

@@ -538,7 +538,7 @@
                         start_time: initStartDate,
                         end_time: initEndDate
                     });
-                    this.timerDisplay = '最近1天';
+                    this.timerDisplay = this.$t('最近1天');
                     this.searchParams.start_after = initStartDate;
                     this.searchParams.start_before = initEndDate;
                 }

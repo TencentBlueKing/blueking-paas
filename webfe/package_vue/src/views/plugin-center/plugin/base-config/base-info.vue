@@ -430,7 +430,7 @@
     <bk-dialog
       v-model="delPluginDialog.visiable"
       width="540"
-      :title="`${'确认下架插件'}【${pluginInfo.id}】？`"
+      :title="$t(`确认下架插件【{id}】？`, { id: pluginInfo.id })"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"

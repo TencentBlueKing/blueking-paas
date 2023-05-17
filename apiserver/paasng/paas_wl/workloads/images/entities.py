@@ -21,6 +21,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.platform.applications.models import WlApp
@@ -32,6 +33,19 @@ from paas_wl.workloads.images import constants
 from paas_wl.workloads.images.models import AppImageCredential
 
 logger = logging.getLogger(__name__)
+
+
+def build_dockerconfig(obj: 'ImageCredentials') -> Dict:
+    return {
+        "auths": {
+            item.registry: {
+                "username": item.username,
+                "password": item.password,
+                "auth": b64encode(f"{item.username}:{item.password}"),
+            }
+            for item in obj.credentials
+        }
+    }
 
 
 class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
@@ -46,19 +60,7 @@ class ImageCredentialsSerializer(AppEntitySerializer['ImageCredentials']):
                 'name': obj.name,
                 'namespace': obj.app.namespace,
             },
-            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(self._build_dockerconfig(obj)))},
-        }
-
-    def _build_dockerconfig(self, obj: 'ImageCredentials') -> Dict:
-        return {
-            "auths": {
-                item.registry: {
-                    "username": item.username,
-                    "password": item.password,
-                    "auth": b64encode(f"{item.username}:{item.password}"),
-                }
-                for item in obj.credentials
-            }
+            'data': {constants.KUBE_DATA_KEY: b64encode(json.dumps(build_dockerconfig(obj)))},
         }
 
 
@@ -107,11 +109,20 @@ class ImageCredentials(AppEntity):
 
     @classmethod
     def load_from_app(cls, app: WlApp) -> 'ImageCredentials':
+        # TODO: add builtin credential
         qs = AppImageCredential.objects.filter(app=app)
         credentials = [
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
+        if settings.APP_DOCKER_REGISTRY_HOST:
+            credentials.append(
+                ImageCredential(
+                    registry=settings.APP_DOCKER_REGISTRY_HOST,
+                    username=settings.APP_DOCKER_REGISTRY_USERNAME,
+                    password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+                )
+            )
         return ImageCredentials(
             app=app,
             name=constants.KUBE_RESOURCE_NAME,

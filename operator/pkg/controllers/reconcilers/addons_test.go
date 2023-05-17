@@ -109,6 +109,8 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
 		Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+		Expect(bkapp.Status.AddonStatuses[0].Name).To(Equal("foo-service"))
+		Expect(bkapp.Status.AddonStatuses[0].State).To(Equal(paasv1alpha2.AddonProvisioned))
 	})
 
 	It("when not metadata", func() {
@@ -159,5 +161,6 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(cond.Message).To(Equal(
 			fmt.Sprintf("Addon 'foo-service' provision failed, detail: %s: response not ok", failMessage),
 		))
+		Expect(bkapp.Status.AddonStatuses[0].State).To(Equal(paasv1alpha2.AddonFailed))
 	})
 })

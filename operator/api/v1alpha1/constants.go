@@ -47,7 +47,7 @@ const (
 	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 )
 
-// AddonsAnnoKey , BkApp 资源中用于保存增强服务相关信息的 annotation 键名
+// AddonsAnnoKey 是 BkApp 资源中用于保存增强服务相关信息的 annotation 键名
 const AddonsAnnoKey = "bkapp.paas.bk.tencent.com/addons"
 
 // DGroupMappingFinalizerName is the name of DomainGroupMapping finalizer

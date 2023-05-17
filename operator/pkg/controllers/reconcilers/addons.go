@@ -104,11 +104,11 @@ func (r *AddonReconciler) doReconcile(
 	addons := bkapp.Spec.Addons
 	for _, addon := range addons {
 		status, err := r.provisionAddon(ctx, appInfo, addon)
+		statuses = append(statuses, *status)
 		if err != nil {
 			log.Error(err, "failed to provision addon instance", "appInfo", appInfo, "addon", addon.Name)
 			return statuses, err
 		}
-		statuses = append(statuses, *status)
 	}
 
 	return statuses, nil

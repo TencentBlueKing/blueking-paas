@@ -2144,5 +2144,10 @@ export default {
   '平台为该类应用提供云 API 权限、应用市场等功能': 'The platform provides functions such as cloud API permission and application market for such applications',
   '网关名': 'Gateway name',
   '部署日志': ' deployment log',
-  '确认设置{type}进程的{name}端口为主入口？': 'Confirm using port {name} as main entry for {type} process?'
+  '确认设置{type}进程的{name}端口为主入口？': 'Confirm using port {name} as main entry for {type} process?',
+  'KEY 名称(A-Z)': 'KEY name (A-Z)',
+  '确认删除应用【{name}】？': 'Confirm to delete the app [{name}]？',
+  '最近半年': 'Last 6 months',
+  '质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。': 'The quality evaluation is based on Tencent open source governance index system (the document quality is temporarily calculated as 100 points), and the scoring is for reference only.',
+  '确认下架插件【{id}】？': 'Confirm the removal of the plug-in [{id}]?'
 };

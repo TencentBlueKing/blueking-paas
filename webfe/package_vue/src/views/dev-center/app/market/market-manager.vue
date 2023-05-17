@@ -7,7 +7,7 @@
       {{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}
     </div>
     <div class="ps-module-title mb24">
-      <strong class="title"> {{ $t('基本信息') }} </strong>
+      <strong class="title"> {{ $t('基本信息-title') }} </strong>
       <bk-form
         :label-width="20"
         style="width: 860px;"

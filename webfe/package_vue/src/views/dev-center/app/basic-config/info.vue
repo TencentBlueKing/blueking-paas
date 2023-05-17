@@ -556,7 +556,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`确认删除应用【${curAppInfo.application.name}】？`"
+      :title="$t(`确认删除应用【{name}】？`, { name: curAppInfo.application.name })"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"

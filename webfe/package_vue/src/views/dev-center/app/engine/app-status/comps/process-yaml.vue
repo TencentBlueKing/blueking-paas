@@ -120,7 +120,7 @@
                     const ext = Object.assign({}, this.detail.metadata.annotations, res.metadata.annotations);
                     this.$set(this.detail.metadata, 'annotations', ext);
                     this.$nextTick(() => {
-                        this.$refs.editorRef.setValue(this.detail);
+                        this.$refs.editorRef?.setValue(this.detail);
                     });
                 } catch (e) {
                     this.$paasMessage({

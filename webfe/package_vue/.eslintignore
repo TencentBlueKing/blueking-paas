@@ -1,7 +1,6 @@
-build/*.js
-config/*.js
-node_modules/*
-src/assets/lib/*
-src/components/paas-header.vue
-src/components/loader/*
-src/components/user-selector/*
+dist
+public
+postcss.config.js
+bk.config.js
+paas-server
+mock-server

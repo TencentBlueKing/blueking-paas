@@ -375,6 +375,8 @@ le<template lang="html">
         color: #FF9C01;
         font-size: 12px;
         padding-top: 2px;
+        height: 24px;
+        line-height: 24px;
     }
     .message-container{
         display: flex;

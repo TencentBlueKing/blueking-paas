@@ -20,10 +20,13 @@ package model
 
 import (
 	"bytes"
+	"fmt"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/jedib0t/go-pretty/v6/text"
+
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 )
 
 // EnvBasicInfo 应用部署环境基础信息
@@ -86,7 +89,10 @@ func (i AppBasicInfo) String() string {
 	if err != nil {
 		return err.Error()
 	}
-	return buf.String()
+	return buf.String() + fmt.Sprintf(
+		"\n↗ Open developer center for more details: %s/developer-center/apps/%s/default/summary\n",
+		config.G.PaaSUrl, i.Code,
+	)
 }
 
 var _ AppInfo = AppBasicInfo{}

@@ -89,7 +89,7 @@
             </bk-button>
             <div
               v-if="curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE"
-              class="path-exempt"
+              :class="['path-exempt', localLanguage === 'en' ? 'en-path': '']"
             >
               <bk-button
                 text
@@ -630,6 +630,9 @@
             },
             curModule () {
                 return this.curAppModuleList.find(item => item.is_default);
+            },
+            localLanguage () {
+                return this.$store.state.localLanguage;
             }
         },
         watch: {
@@ -1504,7 +1507,11 @@
             position: absolute;
             top: 20px;
             left: 336px;
+            &.en-path {
+                left: 382px;
+            }
         }
+
     }
 
     .middle {

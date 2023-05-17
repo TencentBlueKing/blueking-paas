@@ -163,7 +163,37 @@ type Process struct {
 
 	// Arguments to the entrypoint.
 	Args []string `json:"args,omitempty"`
+
+	// Autoscaling specifies the autoscaling configuration
+	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
 }
+
+// AutoscalingSpec is bkapp autoscaling config
+type AutoscalingSpec struct {
+	// Enabled indicates whether autoscaling is enabled
+	Enabled bool `json:"enabled"`
+
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+	// It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+	// is enabled and at least one Object or External metric is configured. Scaling is active as long as
+	// at least one metric value is available
+	MinReplicas int32 `json:"minReplicas"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	MaxReplicas int32 `json:"maxReplicas"`
+
+	// Policy defines the policy for autoscaling, its optional values depend on the policies supported by the operator.
+	Policy ScalingPolicy `json:"policy"`
+}
+
+// ScalingPolicy is used to specify which policy should be used while scaling
+type ScalingPolicy string
+
+const (
+	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
+	ScalingPolicyDefault ScalingPolicy = "default"
+)
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {

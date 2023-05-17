@@ -51,6 +51,12 @@ var _ = Describe("test conversion back and forth", func() {
 						Name:     "worker",
 						Replicas: ReplicasOne,
 						Image:    "worker:latest",
+						Autoscaling: &AutoscalingSpec{
+							Enabled:     true,
+							MinReplicas: 2,
+							MaxReplicas: 5,
+							Policy:      ScalingPolicyDefault,
+						},
 					},
 				},
 				Configuration: AppConfig{
@@ -127,6 +133,12 @@ var _ = Describe("test conversion back and forth", func() {
 						Replicas:     ReplicasOne,
 						Command:      []string{"celery", "start"},
 						ResQuotaPlan: "2x",
+						Autoscaling: &paasv1alpha2.AutoscalingSpec{
+							Enabled:     true,
+							MinReplicas: 1,
+							MaxReplicas: 10,
+							Policy:      paasv1alpha2.ScalingPolicyDefault,
+						},
 					},
 				},
 			},

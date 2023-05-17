@@ -21,32 +21,34 @@
       <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved.</div>
     </template>
     <template v-else>
-      <div class="info">
-        <bk-link
-          theme="primary"
-          href="https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true"
-          target="_blank"
-        >
-          {{ $t('技术支持') }}
-        </bk-link>
-        |
-        <bk-link
-          theme="primary"
-          href="https://bk.tencent.com/s-mart/community/"
-          target="_blank"
-        >
-          {{ $t('社区论坛') }}
-        </bk-link>
-        |
-        <bk-link
-          theme="primary"
-          href="https://bk.tencent.com/"
-          target="_blank"
-        >
-          {{ $t('产品官网') }}
-        </bk-link>
+      <div>
+        <div class="info">
+          <bk-link
+            theme="primary"
+            href="https://wpa1.qq.com/KziXGWJs?_type=wpa&qidian=true"
+            target="_blank"
+          >
+            {{ $t('技术支持') }}
+          </bk-link>
+          |
+          <bk-link
+            theme="primary"
+            href="https://bk.tencent.com/s-mart/community/"
+            target="_blank"
+          >
+            {{ $t('社区论坛') }}
+          </bk-link>
+          |
+          <bk-link
+            theme="primary"
+            href="https://bk.tencent.com/"
+            target="_blank"
+          >
+            {{ $t('产品官网') }}
+          </bk-link>
+        </div>
+        <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. {{ paasVersion }}</div>
       </div>
-      <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. {{ paasVersion }}</div>
     </template>
   </footer>
 </template>

@@ -398,11 +398,11 @@
                 curEnv: '',
                 envList: [
                     {
-                        name: i18n.t('预发布坏境'),
+                        name: i18n.t('预发布环境'),
                         id: 'stag'
                     },
                     {
-                        name: i18n.t('生产坏境'),
+                        name: i18n.t('生产环境'),
                         id: 'prod'
                     }
                 ],
@@ -538,7 +538,7 @@
                         start_time: initStartDate,
                         end_time: initEndDate
                     });
-                    this.timerDisplay = '最近1天';
+                    this.timerDisplay = this.$t('最近1天');
                     this.searchParams.start_after = initStartDate;
                     this.searchParams.start_before = initEndDate;
                 }

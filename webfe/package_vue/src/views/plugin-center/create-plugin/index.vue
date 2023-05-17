@@ -199,6 +199,24 @@
           </div>
         </bk-form-item>
       </bk-form>
+      <template v-if="Object.keys(extraFields).length">
+        <div class="base-info-tit">
+          {{ $t('更多信息') }}
+        </div>
+        <bk-form
+          ref="form"
+          :model="form"
+          :rules="informationRules"
+        >
+          <BkSchemaForm
+            class="mt20 bk-form-warp"
+            v-model="schemaFormData"
+            ref="bkForm"
+            :http-adapter="{ request }"
+            :schema="schema">
+          </BkSchemaForm>
+        </bk-form>
+      </template>
 
       <div class="button-warp">
         <bk-button
@@ -223,262 +241,291 @@
   </div>
 </template>
 <script>
-    import 'quill/dist/quill.core.css';
-    import 'quill/dist/quill.snow.css';
-    import 'quill/dist/quill.bubble.css';
-    import paasPluginTitle from '@/components/pass-plugin-title';
-    export default {
-        components: {
-            paasPluginTitle
-        },
-        data () {
-            return {
-                form: {
-                    pd_id: '',
-                    plugin_id: '',
-                    name: '',
-                    language: '',
-                    applicableLanguage: '',
-                    templateName: '',
-                    repositoryTemplateUrl: ''
-                },
-                rules: {
-                    pd_id: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    plugin_id: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    name: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
+import http from '@/api';
+import { quillEditor } from 'vue-quill-editor';
+import 'quill/dist/quill.core.css';
+import 'quill/dist/quill.snow.css';
+import 'quill/dist/quill.bubble.css';
+import paasPluginTitle from '@/components/pass-plugin-title';
+import createForm from '@blueking/bkui-form';
 
-                    language: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    applicableLanguage: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    templateName: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ],
-                    repositoryTemplateUrl: [
-                        {
-                            required: true,
-                            message: this.$t('该字段是必填项'),
-                            trigger: 'blur'
-                        }
-                    ]
-                },
-                informationRules: {},
-                pluginTypeList: [],
-                pluginTypeData: { plugin_type: {}, schema: {} },
-                pluginLanguage: [],
-                languageData: {},
-                applicableLanguageList: [],
-                pluginTemplateList: [],
-                extraFields: {},
-                buttonLoading: false,
-                editorOption: {
-                    placeholder: this.$t('@通知他人，ctrl+enter快速提交')
-                },
-                curPluginItem: {},
-                pdIdPlaceholder: '',
-                namePlaceholder: '',
-                pdIdMaxLength: 16,
-                nameMaxLength: 20,
-                isLoading: true
-            };
-        },
-        computed: {
-            curPluginInfo () {
-                const curPluginData = this.pluginTypeList.filter(item => item.plugin_type.id === this.form.pd_id);
-                return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
-            },
-            defaultPluginType () {
-                return this.$route.query.type;
-            }
-        },
-        watch: {
-            'form.plugin_id' (value) {
-                if (this.pluginTypeData.schema.repository_group && value) {
-                    this.form.repositoryTemplateUrl = `${this.pluginTypeData.schema.repository_group}${value}.git`;
-                }
-            },
-            'form.pd_id' (value) {
-                const selected = this.pluginTypeList.filter(item => item.plugin_type.id === value);
-                this.curPluginItem = selected[0];
-                this.addRules();
-                this.changePlaceholder();
-            }
-        },
-        mounted () {
-            this.fetchPluginTypeList();
-        },
-        methods: {
-            // 获取插件类型数据
-            async fetchPluginTypeList () {
-                try {
-                    const res = await this.$store.dispatch('plugin/getPluginsTypeList');
-                    // 当前是否存在该插件类型
-                    let isQuery = false;
-                    this.pluginTypeList = res && res.map(e => {
-                        if (e.plugin_type.id === this.defaultPluginType) {
-                            isQuery = true;
-                        }
-                        e.name = e.plugin_type.name;
-                        return e;
-                    });
-                    // 参数指定插件类型，没有指定默认为第一项
-                    this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
-                    this.addRules();
-                    this.changePlaceholder();
-                } catch (e) {
-                    this.$paasMessage({
-                        limit: 1,
-                        theme: 'error',
-                        message: e.message
-                    });
-                } finally {
-                    setTimeout(() => {
-                        this.isLoading = false;
-                    }, 200);
-                }
-            },
-            // 添加校验规则
-            addRules () {
-                if (this.curPluginInfo.schema) {
-                    this.pdIdMaxLength = this.curPluginInfo.schema.id.maxlength || 16;
-                    this.nameMaxLength = this.curPluginInfo.schema.name.maxlength || 20;
-                }
-                const baseRule = {
-                    required: true,
-                    message: this.$t('该字段是必填项'),
-                    trigger: 'blur'
-                };
-                const rulesPluginId = [baseRule];
-                const rulesName = [baseRule];
-                // 插件ID
-                rulesPluginId.push({
-                    regex: new RegExp(this.curPluginInfo.schema.id.pattern),
-                    message: this.$t(this.curPluginInfo.schema.id.description),
-                    trigger: 'blur change'
-                });
-                rulesPluginId.push({
-                    max: this.curPluginInfo.schema.id.maxlength || 16,
-                    message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
-                    trigger: 'blur change'
-                });
-                // 插件名称
-                rulesName.push({
-                    regex: new RegExp(this.curPluginInfo.schema.name.pattern),
-                    message: this.$t(this.curPluginInfo.schema.name.description),
-                    trigger: 'blur change'
-                });
-                rulesName.push({
-                    max: this.curPluginInfo.schema.name.maxlength || 20,
-                    message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
-                    trigger: 'blur change'
-                });
-                this.rules.plugin_id = rulesPluginId;
-                this.rules.name = rulesName;
-            },
-            changePlaceholder () {
-                this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
-                this.namePlaceholder = this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
-            },
-            // 选中具体插件类型
-            changePluginType (value) {
-                this.form.pd_id = value;
-                this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);
-                this.form.repositoryTemplateUrl = this.form.plugin_id
-                    ? `${this.pluginTypeData.schema.repository_group}${this.form.plugin_id}.git`
-                    : this.pluginTypeData.schema.repository_template;
-                this.pluginLanguage = this.pluginTypeData.schema.init_templates;
-                this.extraFields = this.pluginTypeData.schema.extra_fields;
-            },
-            // 选中具体插件开发语言
-            changePluginLanguage (value) {
-                this.languageData = this.pluginLanguage.find(e => e.id === value);
-                // 初始化模板
-                this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
-            },
-            // 富文本编辑
-            onEditorChange (e) {
-                this.$set(this.formData, 'description', e.html);
-            },
+const BkSchemaForm = createForm();
 
-            submitPluginForm () {
-                this.$refs.pluginForm.validate().then(validator => {
-                    this.buttonLoading = true;
-                    this.save();
-                }).catch(() => {
-                    this.buttonLoading = false;
-                });
-            },
+export default {
+  components: {
+    quillEditor,
+    paasPluginTitle,
+    BkSchemaForm,
+  },
+  data() {
+    return {
+      form: {
+        pd_id: '',
+        plugin_id: '',
+        name: '',
+        language: '',
+        applicableLanguage: '',
+        templateName: '',
+        repositoryTemplateUrl: '',
+      },
+      rules: {
+        pd_id: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        plugin_id: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        name: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
 
-            // 提交
-            async save () {
-                try {
-                    this.buttonLoading = true;
-                    const params = {
-                        id: this.form.plugin_id,
-                        name: this.form.name,
-                        template: this.form.templateName,
-                        pd_id: this.form.pd_id,
-                        extra_fields: this.extraFields
-                    };
-                    const res = await this.$store.dispatch('plugin/savePlugins', params);
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: this.$t('插件创建成功！')
-                    });
-                    this.$router.push({
-                        name: 'pluginSummary',
-                        params: { pluginTypeId: res.pd_id, id: res.id }
-                    });
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                } finally {
-                    this.buttonLoading = false;
-                }
-            },
-
-            // 取消
-            back () {
-                this.$router.push({
-                    name: 'plugin'
-                });
-            }
-        }
+        language: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        applicableLanguage: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        templateName: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+        repositoryTemplateUrl: [
+          {
+            required: true,
+            message: this.$t('该字段是必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
+      informationRules: {},
+      pluginTypeList: [],
+      pluginTypeData: { plugin_type: {}, schema: {} },
+      pluginLanguage: [],
+      languageData: {},
+      applicableLanguageList: [],
+      pluginTemplateList: [],
+      extraFields: {},
+      buttonLoading: false,
+      editorOption: {
+        placeholder: this.$t('@通知他人，ctrl+enter快速提交'),
+      },
+      curPluginItem: {},
+      pdIdPlaceholder: '',
+      namePlaceholder: '',
+      pdIdMaxLength: 16,
+      nameMaxLength: 20,
+      isLoading: true,
+      schemaFormData: {},
+      schema: {},
     };
+  },
+  computed: {
+    curPluginInfo() {
+      const curPluginData = this.pluginTypeList.filter(item => item.plugin_type.id === this.form.pd_id);
+      return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
+    },
+    defaultPluginType() {
+      return this.$route.query.type;
+    },
+  },
+  watch: {
+    'form.plugin_id'(value) {
+      if (this.pluginTypeData.schema.repository_group && value) {
+        this.form.repositoryTemplateUrl = `${this.pluginTypeData.schema.repository_group}${value}.git`;
+      }
+    },
+    'form.pd_id'(value) {
+      const selected = this.pluginTypeList.filter(item => item.plugin_type.id === value);
+      this.curPluginItem = selected[0];
+      this.addRules();
+      this.changePlaceholder();
+    },
+  },
+  mounted() {
+    this.fetchPluginTypeList();
+  },
+  methods: {
+    // 获取插件类型数据
+    async fetchPluginTypeList() {
+      try {
+        const res = await this.$store.dispatch('plugin/getPluginsTypeList');
+        // 当前是否存在该插件类型
+        let isQuery = false;
+        this.pluginTypeList = res && res.map((e) => {
+          if (e.plugin_type.id === this.defaultPluginType) {
+            isQuery = true;
+          }
+          e.name = e.plugin_type.name;
+          e.properties = e.schema.extra_fields;
+          return e;
+        });
+        // 参数指定插件类型，没有指定默认为第一项
+        this.form.pd_id = isQuery ? this.defaultPluginType : res[0].plugin_type.id;
+
+        console.log('res', res);
+        const properties = res[0]?.schema.extra_fields;
+        this.schema = { type: 'object', properties };
+        this.addRules();
+        this.changePlaceholder();
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: e.message,
+        });
+      } finally {
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 200);
+      }
+    },
+    // 添加校验规则
+    addRules() {
+      if (this.curPluginInfo.schema) {
+        this.pdIdMaxLength = this.curPluginInfo.schema.id.maxlength || 16;
+        this.nameMaxLength = this.curPluginInfo.schema.name.maxlength || 20;
+      }
+      const baseRule = {
+        required: true,
+        message: this.$t('该字段是必填项'),
+        trigger: 'blur',
+      };
+      const rulesPluginId = [baseRule];
+      const rulesName = [baseRule];
+      // 插件ID
+      rulesPluginId.push({
+        regex: new RegExp(this.curPluginInfo.schema.id.pattern),
+        message: this.$t(this.curPluginInfo.schema.id.description),
+        trigger: 'blur change',
+      });
+      rulesPluginId.push({
+        max: this.curPluginInfo.schema.id.maxlength || 16,
+        message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 16 }),
+        trigger: 'blur change',
+      });
+      // 插件名称
+      rulesName.push({
+        regex: new RegExp(this.curPluginInfo.schema.name.pattern),
+        message: this.$t(this.curPluginInfo.schema.name.description),
+        trigger: 'blur change',
+      });
+      rulesName.push({
+        max: this.curPluginInfo.schema.name.maxlength || 20,
+        message: this.$t('不能多于{maxLength}个字符', { maxLength: this.curPluginInfo.schema.id.maxlength || 20 }),
+        trigger: 'blur change',
+      });
+      this.rules.plugin_id = rulesPluginId;
+      this.rules.name = rulesName;
+    },
+    changePlaceholder() {
+      this.pdIdPlaceholder = this.curPluginInfo.schema.id.description || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
+      this.namePlaceholder = this.curPluginInfo.schema.name.description || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
+    },
+    // 选中具体插件类型
+    changePluginType(value) {
+      this.form.pd_id = value;
+      this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);
+      this.form.repositoryTemplateUrl = this.form.plugin_id
+        ? `${this.pluginTypeData.schema.repository_group}${this.form.plugin_id}.git`
+        : this.pluginTypeData.schema.repository_template;
+      this.pluginLanguage = this.pluginTypeData.schema.init_templates;
+      this.extraFields = this.pluginTypeData.schema.extra_fields;
+      this.schema = { type: 'object', properties: this.pluginTypeData.properties };
+    },
+    // 选中具体插件开发语言
+    changePluginLanguage(value) {
+      this.languageData = this.pluginLanguage.find(e => e.id === value);
+      // 初始化模板
+      this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
+    },
+    // 富文本编辑
+    onEditorChange(e) {
+      this.$set(this.formData, 'description', e.html);
+    },
+
+    submitPluginForm() {
+      this.$refs.pluginForm.validate().then(() => {
+        this.buttonLoading = true;
+        this.save();
+      })
+        .catch(() => {
+          this.buttonLoading = false;
+        });
+    },
+
+    // 提交
+    async save() {
+      try {
+        this.buttonLoading = true;
+        const params = {
+          id: this.form.plugin_id,
+          name: this.form.name,
+          template: this.form.templateName,
+          pd_id: this.form.pd_id,
+          extra_fields: this.schemaFormData,
+        };
+        const res = await this.$store.dispatch('plugin/savePlugins', params);
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('插件创建成功！'),
+        });
+        this.$router.push({
+          name: 'pluginSummary',
+          params: { pluginTypeId: res.pd_id, id: res.id },
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      } finally {
+        this.buttonLoading = false;
+      }
+    },
+
+    // 取消
+    back() {
+      this.$router.push({
+        name: 'plugin',
+      });
+    },
+
+    async request(url) {
+      url = `${window.BACKEND_URL}/api/bk_plugin_distributors/`;
+      try {
+        console.log();
+        const data = await http.get(url);
+        console.log('data', data);
+        return data.map(e => ({ label: e.name, value: e.code_name }));
+      } catch (error) {
+        console.log('error', error);
+      }
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
 .bk-create-plugin-warp {
@@ -552,8 +599,11 @@
 }
 </style>
 <style>
-    .guide-input input {
-        border: none;
-        border-bottom: 1px solid #c4c6cc;
-    }
+  .bk-form-warp{
+    width: 630px !important;
+  }
+  .guide-input input {
+      border: none;
+      border-bottom: 1px solid #c4c6cc;
+  }
 </style>

@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import copy
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type, Union, overload
 
 from django.conf import settings
@@ -70,6 +70,26 @@ def i18n(
             for language_code in languages:
                 i18n_field_name = to_translated_field(attr, language_code=language_code)
                 _declared_fields[i18n_field_name] = copy.deepcopy(field)
+
+        super_to_internal_value = getattr(cls, "to_internal_value")
+
+        def to_internal_value(self, data):
+            # override_field_name to the one without i18n suffix before calling to_internal_value to
+            # make sure the errors will set by field_name without i18n suffix
+            # ---
+            # Warning: May not be compatible with all DRF versions
+            # Warning: Currently affects the following logic in to_internal_value
+            # - validate_method = getattr(self, 'validate_' + field.field_name, None)
+            # - errors[field.field_name] = ...
+            with ExitStack() as stack:
+                for raw_field_name in fields.keys():
+                    for language_code in languages:
+                        i18n_field_name = to_translated_field(attr, language_code=language_code)
+
+                        stack.enter_context(self.fields[i18n_field_name].override_field_name(raw_field_name))
+                return super_to_internal_value(self, data)
+
+        setattr(cls, "to_internal_value", to_internal_value)
         return cls
 
     if cls_or_languages is None:
@@ -229,7 +249,7 @@ class FallbackMixin(_Base):
         Called when a field is added to the parent serializer instance.
         """
         # bind _fallback_field_name to origin field_name, because field_name will be used to initialize ValidationError
-        super().bind(field_name=self._fallback_field_name, parent=parent)
+        super().bind(field_name=field_name, parent=parent)
         # set _i18n_field_name
         self._i18n_field_name = field_name
         # self.source should default to being the same as the field name.
@@ -264,14 +284,13 @@ class FallbackMixin(_Base):
 
     @contextmanager
     def override_field_name(self, field_name: str):
-        cache = (self.field_name, self.source, self.source_attrs)
+        cache = (self.field_name, self.source)
         try:
             self.field_name = field_name
             self.source = field_name
-            self.source_attrs = field_name.split(".")
             yield
         finally:
-            self.field_name, self.source, self.source_attrs = cache
+            self.field_name, self.source = cache
 
 
 class DjangoTranslatedCharField(serializers.CharField):

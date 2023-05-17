@@ -1,349 +1,370 @@
 <template lang="html">
   <div class="overview-tit">
     <div class="title">
-      <dropdown
-        ref="dropdown"
-        :options="{ position: 'bottom right', classes: 'ps-nav-dropdown' }"
-        @open="handlerOpen"
-        @close="handlerClose"
-      >
-        <a
-          slot="trigger"
-          href="javascript:"
-          class="overview-title-icon fright"
+      <div>
+        <img
+          :src="appInfo.logo_url"
+          class="overview-title-pic fleft"
         >
-          <i class="paasng-icon paasng-angle-down" />
-        </a>
         <div
-          slot="content"
-          class="nav-dropdown overview-slidedown"
+          class="app-collect-btn"
+          :class="{ 'marked': curAppInfo.marked }"
+          @click="toggleAppMarked"
         >
-          <div class="quick-access border-box">
-            <h3>
-              {{ $t('快速访问') }}
-              <span style="color: #c4c6cc; font-size: 12px;"> {{ $t('(主模块)') }} </span>
-            </h3>
-            <template v-if="appDeployed">
-              <div class="link">
-                <a
-                  v-if="appLinks.stag"
-                  :href="appLinks.stag"
-                  target="_blank"
-                  class="blue"
-                > {{ $t('预发布环境') }} </a>
-                <a
-                  v-if="appLinks.prod"
-                  :href="appLinks.prod"
-                  target="_blank"
-                  class="blue"
-                > {{ $t('生产环境') }} </a>
-              </div>
-            </template>
-            <template v-else>
-              <p class="no-data">
-                {{ engineAbled ? $t('应用暂未部署') : $t('暂无') }}
-              </p>
-            </template>
-            <div
-              v-if="showEntrances"
-              class="entrances-wrapper"
-            >
-              <section
-                v-for="(item, key, index) in customDomainEntrances"
-                v-if="customDomainEntrances[key].length"
-                :key="key"
-                :class="{ 'set-mt': index !== 0 }"
+          <i class="paasng-icon paasng-star-cover" />
+        </div>
+        <template v-if="appInfo.name">
+          <div class="overview-title-text">
+            <div class="overflow-app-metedata">
+              <strong
+                v-bk-tooltips="appInfo.name"
+                class="app-title"
+              >{{ appInfo.name }}</strong>
+              <div
+                v-if="platformFeature.REGION_DISPLAY"
+                :class="['overview-region region-tag',
+                         { inner: appInfo.region === 'ieod', clouds: appInfo.region === 'clouds' }]"
               >
-                <h3>
-                  {{ $t('独立域名') }}
-                  <span style="color: #c4c6cc; font-size: 12px;">({{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }})</span>
-                </h3>
-                <div class="entrances-adress">
-                  <p
-                    v-for="(url, urlIndex) in customDomainEntrances[key]"
-                    :key="urlIndex"
-                    :class="{ 'set-pb': urlIndex !== customDomainEntrances[key].length - 1 }"
-                  >
-                    <a
-                      v-bk-tooltips="{ content: url.hostname, placement: 'left', boundary: 'window' }"
-                      :href="url.address"
-                      target="_blank"
-                      class="address-link blue"
-                    >
-                      <span style="cursor: pointer;">{{ url.hostname }}</span>
-                    </a>
-                  </p>
-                </div>
-              </section>
-            </div>
-          </div>
-          <div class="app-dropdown">
-            <h3> {{ $t('应用列表') }} ( {{ appList.length }} )</h3>
-            <div :class="['paas-search',{ 'focus': isFocused }]">
-              <div class="application-search">
-                <input
-                  ref="keywordInput"
-                  v-model="filterKey"
-                  type="text"
-                  :placeholder="$t('输入应用名称、ID，按Enter搜索')"
-                  @focus="focusInput(true)"
-                  @blur="focusInput(false)"
-                  @keydown.down.prevent="searchAppKeyDown"
-                  @keydown.up.prevent="searchAppKeyUp"
-                  @keyup.enter="searchApp"
-                >
-                <span
-                  v-if="filterKey === ''"
-                  class="paasng-icon paasng-search input-icon"
-                />
-                <span
-                  v-else
-                  class="paasng-icon paasng-close input-icon"
-                  @click="clearInputValue"
-                />
+                <span>{{ appInfo.region_name }}</span>
               </div>
             </div>
-            <searchAppList
-              ref="searchAppList"
-              :filter-key="propsfilterKey"
-              :search-apps-router-name="'customed'"
-              :params="{ include_inactive: true }"
-              @selectAppCallback="selectAppCallback"
-              @search-ready="handlerSearchReady"
-            />
+            <p
+              v-bk-overflow-tips
+              class="app-code-box"
+            >
+              {{ appInfo.code }}
+            </p>
+          </div>
+
+          <div class="dropdown-btn" @click.stop="dropdownShow">
+            <a
+              href="javascript:"
+              class="overview-title-icon"
+            >
+              <i
+                class="paasng-icon right-icon paasng-angle-line-down"
+                :class="{ 'right-icon-up': isDropdownShow }"
+              />
+            </a>
+          </div>
+        </template>
+      </div>
+
+
+      <div
+        v-show="isDropdownShow"
+        @click.stop="dropOpen"
+        class="nav-dropdown overview-slidedown"
+      >
+        <div class="quick-access border-box">
+          <h3>
+            {{ $t('快速访问') }}
+            <span style="color: #c4c6cc; font-size: 12px;"> {{ $t('(主模块)') }} </span>
+          </h3>
+          <template v-if="appDeployed">
+            <div class="link">
+              <a
+                v-if="appLinks.stag"
+                :href="appLinks.stag"
+                target="_blank"
+                class="blue"
+              > {{ $t('预发布环境') }} </a>
+              <a
+                v-if="appLinks.prod"
+                :href="appLinks.prod"
+                target="_blank"
+                class="blue"
+              > {{ $t('生产环境') }} </a>
+            </div>
+          </template>
+          <template v-else>
+            <p class="no-data">
+              {{ engineAbled ? $t('应用暂未部署') : $t('暂无') }}
+            </p>
+          </template>
+          <div
+            v-if="showEntrances"
+            class="entrances-wrapper"
+          >
+            <section
+              v-for="(item, key, index) in customDomainEntrances"
+              v-if="customDomainEntrances[key].length"
+              :key="key"
+              :class="{ 'set-mt': index !== 0 }"
+            >
+              <h3>
+                {{ $t('独立域名') }}
+                <span style="color: #c4c6cc; font-size: 12px;">({{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }})</span>
+              </h3>
+              <div class="entrances-adress">
+                <p
+                  v-for="(url, urlIndex) in customDomainEntrances[key]"
+                  :key="urlIndex"
+                  :class="{ 'set-pb': urlIndex !== customDomainEntrances[key].length - 1 }"
+                >
+                  <a
+                    v-bk-tooltips="{ content: url.hostname, placement: 'left', boundary: 'window' }"
+                    :href="url.address"
+                    target="_blank"
+                    class="address-link blue"
+                  >
+                    <span style="cursor: pointer;">{{ url.hostname }}</span>
+                  </a>
+                </p>
+              </div>
+            </section>
           </div>
         </div>
-      </dropdown>
-      <img
-        :src="appInfo.logo_url"
-        class="overview-title-pic fleft"
-      >
-      <div
-        class="app-collect-btn"
-        :class="{ 'marked': curAppInfo.marked }"
-        @click="toggleAppMarked"
-      >
-        <i class="paasng-icon paasng-star-cover" />
-      </div>
-      <template v-if="appInfo.name">
-        <div class="overview-title-text">
-          <div class="overflow-app-metedata">
-            <strong
-              v-bk-tooltips="appInfo.name"
-              class="app-title"
-            >{{ appInfo.name }}</strong>
-            <div
-              v-if="platformFeature.REGION_DISPLAY"
-              :class="['overview-region region-tag', { inner: appInfo.region === 'ieod', clouds: appInfo.region === 'clouds' }]"
-            >
-              <span>{{ appInfo.region_name }}</span>
+        <div class="app-dropdown">
+          <h3> {{ $t('应用列表') }} ( {{ appList.length }} )</h3>
+          <div :class="['paas-search',{ 'focus': isFocused }]">
+            <div class="application-search">
+              <input
+                ref="keywordInput"
+                v-model="filterKey"
+                type="text"
+                :placeholder="$t('输入应用名称、ID，按Enter搜索')"
+                @focus="focusInput(true)"
+                @blur="focusInput(false)"
+                @keydown.down.prevent="searchAppKeyDown"
+                @keydown.up.prevent="searchAppKeyUp"
+                @keyup.enter="searchApp"
+              >
+              <span
+                v-if="filterKey === ''"
+                class="paasng-icon paasng-search input-icon"
+              />
+              <span
+                v-else
+                class="paasng-icon paasng-close input-icon"
+                @click="clearInputValue"
+              />
             </div>
           </div>
-          <p
-            v-bk-overflow-tips
-            class="app-code-box"
-          >
-            {{ appInfo.code }}
-          </p>
+          <searchAppList
+            ref="searchAppList"
+            :filter-key="propsfilterKey"
+            :search-apps-router-name="'customed'"
+            :params="{ include_inactive: true }"
+            @selectAppCallback="selectAppCallback"
+            @search-ready="handlerSearchReady"
+          />
         </div>
-      </template>
+      </div>
+
     </div>
   </div>
 </template>
 
 <script>
-    import Dropdown from '@/components/ui/Dropdown';
-    import searchAppList from '@/components/searching/searchAppList';
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import { bus } from '@/common/bus';
+import searchAppList from '@/components/searching/searchAppList';
+import appBaseMixin from '@/mixins/app-base-mixin';
+import { bus } from '@/common/bus';
 
-    export default {
-        components: {
-            'dropdown': Dropdown,
-            'searchAppList': searchAppList
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isFocused: false,
-                filterKey: '',
-                appList: [],
-                appLinks: {
-                    stag: '',
-                    prod: ''
-                },
-                propsfilterKey: '',
-                customDomainEntrances: {}
-            };
-        },
-        computed: {
-            appInfo () {
-                const appInfo = this.$store.state.curAppInfo;
-                let logo = '';
-                if (appInfo.application && appInfo.application.logo_url) {
-                    logo = appInfo.application.logo_url;
-                } else {
-                    logo = '/static/images/default_logo.png';
-                }
-                return {
-                    logo_url: logo,
-                    ...appInfo.application
-
-                };
-            },
-            appDeployed () {
-                return this.appLinks.stag || this.appLinks.prod;
-            },
-            engineAbled () {
-                return this.appInfo.web_config && this.appInfo.web_config.engine_enabled;
-            },
-            showEntrances () {
-                return Object.keys(this.customDomainEntrances).some(key => this.customDomainEntrances[key].length);
-            },
-            platformFeature () {
-                return this.$store.state.platformFeature;
-            }
-        },
-        watch: {
-            appInfo () {
-                this.initAppList();
-            },
-            filterKey (newVal, oldVal) {
-                if (newVal === '' && oldVal !== '') {
-                    this.propsfilterKey = '';
-                    this.$refs.searchAppList.enterSelect();
-                }
-            },
-            appCode () {
-                this.getAppLinks();
-            }
-        },
-        mounted () {
-            bus.$on('market_switch', () => {
-                this.getAppLinks();
-            });
-            bus.$on('update_entrance', () => {
-                this.fetchAppCustomDomainEntrance();
-            });
-        },
-        created () {
-            this.getAppLinks();
-            this.fetchAppCustomDomainEntrance();
-        },
-        methods: {
-            searchApp () {
-                this.propsfilterKey = this.filterKey;
-                this.$refs.searchAppList.enterSelect();
-            },
-
-            searchAppKeyDown () {
-                this.$refs.searchAppList.onKeyDown();
-            },
-
-            searchAppKeyUp () {
-                this.$refs.searchAppList.onKeyUp();
-            },
-
-            async fetchAppCustomDomainEntrance () {
-                try {
-                    const res = await this.$store.dispatch('getAppCustomDomainEntrance', this.$route.params.id);
-                    const domainEntrances = {
-                        'stag': [],
-                        'prod': []
-                    }
-                    ;(res || []).forEach(item => {
-                        item.addresses.forEach(address => {
-                            this.$set(address, 'is_default', item.module.is_default);
-                        });
-                        domainEntrances[item.env].push(...item.addresses);
-                    });
-                    this.customDomainEntrances = JSON.parse(JSON.stringify(domainEntrances));
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message
-                    });
-                }
-            },
-
-            // 清空筛选框值
-            clearInputValue () {
-                this.isFocused = false;
-                this.filterKey = '';
-                this.propsfilterKey = '';
-            },
-            focusInput (isFocus) {
-                this.isFocused = isFocus;
-            },
-            // update appLinks when dropdown
-            getAppLinks () {
-                if (this.curAppInfo.web_config.engine_enabled) {
-                    ['stag', 'prod'].forEach(env => {
-                        this.$store.dispatch('fetchAppExposedLinkUrl', {
-                            appCode: this.appCode,
-                            env
-                        }).then(link => {
-                            this.appLinks[env] = link;
-                        });
-                    });
-                }
-            },
-            // 切换APP后的回调方法
-            selectAppCallback () {
-                this.$refs.dropdown.close();
-            },
-            handlerClose () {
-                this.filterKey = '';
-                this.propsfilterKey = '';
-                const addressDom = document.querySelectorAll('.address-link');
-                for (const item of addressDom) {
-                    if (item._tippy) {
-                        item._tippy.hide();
-                    }
-                }
-            },
-            handlerOpen () {
-                this.$refs.keywordInput.focus();
-            },
-            // 关闭导航下拉
-            toggleDropdown () {
-                this.$refs.dropdown.close();
-            },
-            // init AppList
-            initAppList () {
-                this.$refs.searchAppList.fetchObj();
-            },
-            handlerSearchReady (list) {
-                this.fetchAppCustomDomainEntrance();
-                this.appList = list;
-            },
-            // 标记应用
-            async toggleAppMarked () {
-                if (this.isAppMarking) {
-                    return false;
-                }
-                this.isAppMarking = true;
-                const appCode = this.curAppInfo.application.code;
-                const msg = this.curAppInfo.marked ? this.$t('取消收藏成功') : this.$t('应用收藏成功');
-
-                try {
-                    await this.$store.dispatch('toggleAppMarked', { appCode: appCode, isMarked: this.curAppInfo.marked });
-                    this.curAppInfo.marked = !this.curAppInfo.marked;
-                    this.$paasMessage({
-                        theme: 'success',
-                        message: msg
-                    });
-                } catch (error) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: this.$t('无法标记应用，请稍后再试')
-                    });
-                } finally {
-                    this.isAppMarking = false;
-                }
-            }
-        }
+export default {
+  components: {
+    searchAppList,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isFocused: false,
+      filterKey: '',
+      appList: [],
+      appLinks: {
+        stag: '',
+        prod: '',
+      },
+      propsfilterKey: '',
+      customDomainEntrances: {},
+      isDropdownShow: false,
     };
+  },
+  computed: {
+    appInfo() {
+      const appInfo = this.$store.state.curAppInfo;
+      let logo = '';
+      if (appInfo.application && appInfo.application.logo_url) {
+        logo = appInfo.application.logo_url;
+      } else {
+        logo = '/static/images/default_logo.png';
+      }
+      return {
+        logo_url: logo,
+        ...appInfo.application,
+
+      };
+    },
+    appDeployed() {
+      return this.appLinks.stag || this.appLinks.prod;
+    },
+    engineAbled() {
+      return this.appInfo.web_config && this.appInfo.web_config.engine_enabled;
+    },
+    showEntrances() {
+      return Object.keys(this.customDomainEntrances).some(key => this.customDomainEntrances[key].length);
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
+  },
+  watch: {
+    appInfo() {
+      this.initAppList();
+    },
+    filterKey(newVal, oldVal) {
+      if (newVal === '' && oldVal !== '') {
+        this.propsfilterKey = '';
+        this.$refs.searchAppList.enterSelect();
+      }
+    },
+    appCode() {
+      this.getAppLinks();
+    },
+  },
+  mounted() {
+    bus.$on('market_switch', () => {
+      this.getAppLinks();
+    });
+    bus.$on('update_entrance', () => {
+      this.fetchAppCustomDomainEntrance();
+    });
+  },
+  created() {
+    this.getAppLinks();
+    this.fetchAppCustomDomainEntrance();
+  },
+  methods: {
+    searchApp() {
+      this.propsfilterKey = this.filterKey;
+      this.$refs.searchAppList.enterSelect();
+    },
+
+    searchAppKeyDown() {
+      this.$refs.searchAppList.onKeyDown();
+    },
+
+    searchAppKeyUp() {
+      this.$refs.searchAppList.onKeyUp();
+    },
+
+    async fetchAppCustomDomainEntrance() {
+      try {
+        const res = await this.$store.dispatch('getAppCustomDomainEntrance', this.$route.params.id);
+        const domainEntrances = {
+          stag: [],
+          prod: [],
+        }
+                    ;(res || []).forEach((item) => {
+          item.addresses.forEach((address) => {
+            this.$set(address, 'is_default', item.module.is_default);
+          });
+          domainEntrances[item.env].push(...item.addresses);
+        });
+        this.customDomainEntrances = JSON.parse(JSON.stringify(domainEntrances));
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message,
+        });
+      }
+    },
+
+    // 清空筛选框值
+    clearInputValue() {
+      this.isFocused = false;
+      this.filterKey = '';
+      this.propsfilterKey = '';
+    },
+    focusInput(isFocus) {
+      this.isFocused = isFocus;
+    },
+    // update appLinks when dropdown
+    getAppLinks() {
+      if (this.curAppInfo.web_config.engine_enabled) {
+        ['stag', 'prod'].forEach((env) => {
+          this.$store.dispatch('fetchAppExposedLinkUrl', {
+            appCode: this.appCode,
+            env,
+          }).then((link) => {
+            this.appLinks[env] = link;
+          });
+        });
+      }
+    },
+    // 切换APP后的回调方法
+    selectAppCallback() {
+    //   this.$refs.dropdown.close();
+      this.isDropdownShow = false;
+    },
+    handlerClose() {
+      this.filterKey = '';
+      this.propsfilterKey = '';
+      const addressDom = document.querySelectorAll('.address-link');
+      for (const item of addressDom) {
+        if (item._tippy) {
+          item._tippy.hide();
+        }
+      }
+    },
+    handlerOpen() {
+      this.$refs.keywordInput.focus();
+    },
+    // init AppList
+    initAppList() {
+      this.$refs.searchAppList.fetchObj();
+    },
+    handlerSearchReady(list) {
+      this.fetchAppCustomDomainEntrance();
+      this.appList = list;
+    },
+    // 标记应用
+    async toggleAppMarked() {
+      if (this.isAppMarking) {
+        return false;
+      }
+      this.isAppMarking = true;
+      const appCode = this.curAppInfo.application.code;
+      const msg = this.curAppInfo.marked ? this.$t('取消收藏成功') : this.$t('应用收藏成功');
+
+      try {
+        await this.$store.dispatch('toggleAppMarked', { appCode, isMarked: this.curAppInfo.marked });
+        this.curAppInfo.marked = !this.curAppInfo.marked;
+        this.$paasMessage({
+          theme: 'success',
+          message: msg,
+        });
+      } catch (error) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('无法标记应用，请稍后再试'),
+        });
+      } finally {
+        this.isAppMarking = false;
+      }
+    },
+
+
+    dropdownShow() {
+      this.filterKey = '';
+      this.isDropdownShow = !this.isDropdownShow;
+
+      // 监听点击事件
+      if (this.isDropdownShow) {
+        document.getElementsByTagName('body')[0].className += ' drop-open';
+        document.getElementsByClassName('drop-open')[0].addEventListener('click', () => {
+          this.isDropdownShow = false;
+          document.getElementsByTagName('body')[0].className = 'ps-app-detail';
+        });
+      } else {
+        document.getElementsByTagName('body')[0].className = 'ps-app-detail';
+      }
+    },
+    dropOpen() {
+      console.log('stop bubbling');
+    },
+  },
+};
 
 </script>
 <style lang="css">
@@ -437,7 +458,7 @@
     .overview-slidedown {
         position: absolute;
         width: 240px;
-        top: -1px;
+        top: 60px;
         background: #fff;
         z-index: 9;
         border: solid 1px #eaeeee;
@@ -557,6 +578,10 @@
                 transform: rotate(-180deg);
             }
         }
+
+        .right-icon-up{
+            transform: rotate(-180deg);
+        }
     }
 
     .overview-title-icon.open {
@@ -662,5 +687,15 @@
         white-space: nowrap;
         text-overflow: ellipsis;
         display: inline-block;
+    }
+
+    .title {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        /deep/ .bk-dropdown-content {
+            width: 540px;
+            height: 385px;
+        }
     }
 </style>

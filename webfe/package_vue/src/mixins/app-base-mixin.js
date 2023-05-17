@@ -21,66 +21,64 @@
  */
 
 export default {
-  data () {
+  data() {
     return {
-      winHeight: 300
+      winHeight: 300,
     };
   },
   computed: {
-    appCode () {
+    appCode() {
       return this.$route.params.id;
     },
-    curAppCode () {
+    curAppCode() {
       return this.$store.state.curAppCode;
     },
-    curAppInfo () {
+    curAppInfo() {
       return this.$store.state.curAppInfo;
     },
-    curAppModuleList () {
+    curAppModuleList() {
       return this.$store.state.curAppModuleList;
     },
-    curAppModule () {
+    curAppModule() {
       return this.$store.state.curAppModule;
     },
-    isLesscodeApp () {
+    isLesscodeApp() {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.LESSCODE_APP;
     },
-    isSmartApp () {
+    isSmartApp() {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
     },
-    isDockerApp () {
+    isDockerApp() {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE;
     },
-    curAppDefaultModule () {
+    curAppDefaultModule() {
       return this.$store.state.curAppDefaultModule;
     },
-    curModuleId () {
-      return this.curAppModule.name;
+    curModuleId() {
+      return this.curAppModule?.name;
     },
-    confirmRequiredWhenPublish () {
+    confirmRequiredWhenPublish() {
       if (this.curAppInfo) {
         return this.curAppInfo.web_config.confirm_required_when_publish;
-      } else {
-        return false;
       }
+      return false;
     },
-    productInfoProvided () {
+    productInfoProvided() {
       if (this.curAppInfo) {
         // return !this.canPublishToMarket || Boolean(this.curAppInfo.product)
         return this.confirmRequiredWhenPublish || Boolean(this.curAppInfo.product);
-      } else {
-        return false;
       }
+      return false;
     },
-    canCreateModule () {
+    canCreateModule() {
       // smart应用不允许创建模块，先在前端隐藏入口
       // return !this.isSmartApp && this.$store.state.canCreateModule
 
       // 统一根据 can_create_extra_modules 字段判断
       return this.$store.state.curAppInfo.web_config.can_create_extra_modules;
-    }
+    },
   },
-  mounted () {
+  mounted() {
     this.winHeight = window.innerHeight;
-  }
+  },
 };

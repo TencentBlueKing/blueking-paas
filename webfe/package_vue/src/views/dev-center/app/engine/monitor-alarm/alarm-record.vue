@@ -398,11 +398,11 @@
                 curEnv: '',
                 envList: [
                     {
-                        name: i18n.t('预发布坏境'),
+                        name: i18n.t('预发布环境'),
                         id: 'stag'
                     },
                     {
-                        name: i18n.t('生产坏境'),
+                        name: i18n.t('生产环境'),
                         id: 'prod'
                     }
                 ],

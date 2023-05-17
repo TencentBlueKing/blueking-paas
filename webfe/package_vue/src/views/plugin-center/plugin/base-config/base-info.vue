@@ -478,7 +478,7 @@
     import user from '@/components/user';
     import authenticationInfo from '@/components/authentication-info.vue';
     import xss from 'xss';
-    import 'BKSelectMinCss';
+    // import 'BKSelectMinCss';
 
     const xssOptions = {
         whiteList: {

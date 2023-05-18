@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Optional
 
 import redis
 from django.utils.encoding import force_text
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.dev_resources.servicehub import exceptions
 from paasng.engine.constants import JobStatus
@@ -63,10 +63,10 @@ class DeployProcedure:
         phase: 'DeployPhase',
     ):
         self.stream = stream
-        self.title = title
         self.deployment = deployment
         self.phase = phase
         self.step_obj = self._get_step_obj(title)
+        self.title = _(title)
 
     def __enter__(self):
         self.stream.write_title(f'{self.TITLE_PREFIX}{self.title}')

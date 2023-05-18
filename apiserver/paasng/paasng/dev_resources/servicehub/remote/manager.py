@@ -28,7 +28,7 @@ import arrow
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from paas_wl.cluster.shim import EnvClusterService, get_cluster_egress_info
 from paasng.accessories.bkmonitorv3.client import make_bk_monitor_client

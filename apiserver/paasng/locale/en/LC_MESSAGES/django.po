@@ -2094,11 +2094,11 @@ msgstr "delete module"
 
 #: paasng/platform/operations/constant.py:68
 msgid "申请网关 API 权限"
-msgstr ""
+msgstr "Apply for Gateway API permissions"
 
 #: paasng/platform/operations/constant.py:69
 msgid "续期网关 API 权限"
-msgstr ""
+msgstr "Renewal Gateway API Permissions"
 
 #: paasng/platform/operations/models.py:100
 msgid "未知操作类型"

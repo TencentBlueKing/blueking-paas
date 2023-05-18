@@ -460,7 +460,7 @@ export default {
         width: 240px;
         top: 60px;
         background: #fff;
-        z-index: 9;
+        z-index: 9999;
         border: solid 1px #eaeeee;
         border-radius: 0 2px 2px 0;
         left: 0;

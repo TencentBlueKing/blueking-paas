@@ -93,15 +93,16 @@ class ApplicationBuilder(DeployStep):
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
-        with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
+        # DB 中存储的步骤名为中文，所以这里必须传中文，不能做国际化处理
+        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
             self.deployment.update_fields(processes=processes)
 
-        with self.procedure_force_phase(_('上传仓库代码'), phase=preparation_phase):
+        with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
             self.compress_and_upload(relative_source_dir, source_destination_path)
 
-        with self.procedure_force_phase(_('配置资源实例'), phase=preparation_phase) as p:
+        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
             self._provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息

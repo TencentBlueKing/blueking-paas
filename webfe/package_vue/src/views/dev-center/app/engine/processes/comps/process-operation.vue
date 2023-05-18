@@ -538,7 +538,10 @@
               :value.sync="processPlan.targetReplicas"
             />
           </bk-form-item>
-          <bk-form :rules="scalingRules" :model="scalingConfig" class="auto-container" :label-width="0" v-if="autoscaling">
+        </bk-form>
+        <bk-form :rules="scalingRules" :model="scalingConfig"
+          ref="scalingConfigForm"
+          class="auto-container" :label-width="0" v-if="autoscaling">
             <bk-form-item property="maxReplicas">
               <p>{{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}</p>
               <bk-input
@@ -570,7 +573,6 @@
               </bk-input>
             </bk-form-item>
           </bk-form>
-        </bk-form>
       </div>
     </bk-dialog>
     <!-- 进程设置 end -->
@@ -1818,21 +1820,56 @@ export default {
 
     saveProcessConfig() {
       this.processConfigDialog.isLoading = true;
-      setTimeout(() => {
-        this.$refs.processConfigForm.validate().then(
-          // 验证成功
-          () => {
+      console.log(11111)
+      setTimeout(async () => {
+        try {
+          const manualValidate = await this.$refs.processConfigForm.validate()
+          const autoValidate = await this.$refs.scalingConfigForm.validate()
+        if(!this.autoscaling && manualValidate) {
+          this.processConfigDialog.isLoading = false;
+          this.processConfigDialog.visiable = false;
+          this.$store.commit('updataEnvEventData', []);
+          this.updateProcessConfig();
+        } if(this.autoscaling && autoValidate) {
+          console.log('autoValidate', autoValidate)
+          this.processConfigDialog.isLoading = false;
+          this.processConfigDialog.visiable = false;
+          this.$store.commit('updataEnvEventData', []);
+          this.updateProcessConfig();
+        } 
+          console.log('manualValidate', manualValidate)
+        } catch (error) {
+            console.log(11,error)
             this.processConfigDialog.isLoading = false;
-            this.processConfigDialog.visiable = false;
-            this.$store.commit('updataEnvEventData', []);
-            this.updateProcessConfig();
-          },
-          // 验证失败
-          () => {
-            this.processConfigDialog.isLoading = false;
-          },
-        );
-      }, 200);
+        }
+        // const autoValidate = await this.$refs.scalingConfigForm.validate()
+        // if(!this.autoscaling && manualValidate) {
+        //   this.processConfigDialog.isLoading = false;
+        //   this.processConfigDialog.visiable = false;
+        //   this.$store.commit('updataEnvEventData', []);
+        //   this.updateProcessConfig();
+        // } if(this.autoscaling && autoValidate) {
+        //   this.processConfigDialog.isLoading = false;
+        //   this.processConfigDialog.visiable = false;
+        //   this.$store.commit('updataEnvEventData', []);
+        //   this.updateProcessConfig();
+        // } else {
+        //   this.processConfigDialog.isLoading = false;
+        // }
+      })
+      // setTimeout(() => {
+      //   this.$refs.processConfigForm.validate().then(
+      //     // 验证成功
+      //     () => {
+            
+      //     },
+      //     // 验证失败
+      //     (e) => {
+      //       console.log(11,e)
+      //       this.processConfigDialog.isLoading = false;
+      //     },
+      //   );
+      // }, 200);
     },
 
     closeProcessConfig() {
@@ -1846,6 +1883,7 @@ export default {
     // 进程实例设置
     async updateProcessConfig() {
       // 不允许小于1或者大于最大值，如果没有改变也不允许操作
+      console.log(11)
       if (this.processPlan.targetReplicas < 1 || this.processPlan.targetReplicas > this.processPlan.maxReplicas || this.processPlan.targetReplicas === this.processPlan.replicas) {
         return;
       }
@@ -1855,8 +1893,17 @@ export default {
         process_type: processType,
         operate_type: 'scale',
         target_replicas: this.processPlan.targetReplicas,
+        autoscaling: this.autoscaling,
+        scaling_config:{
+          min_replicas: scalingConfig.minReplicas,
+          max_replicas: scalingConfig.maxReplicas,
+          metrics: scalingConfig.metrics
+        }
       };
       this.pendingProcessList.push(processType);
+
+      console.log('planForm', planForm)
+      debugger
 
       try {
         await this.$store.dispatch('processes/updateProcess', {

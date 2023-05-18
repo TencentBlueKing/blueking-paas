@@ -28,16 +28,22 @@
               class="process-basic-info"
               @click="showProcessDetail(process)"
             >
-              <a class="ps-icon-btn-circle no-border expanded-icon">
-                <i :class="['paasng-icon paasng-bold',{ 'paasng-down-shape': process.name === curProcessKey, 'paasng-right-shape': process !== curProcess || !curProcessKey }]" />
-              </a>
-              <b
-                v-bk-tooltips="process.name"
-                class="process-name"
-              >{{ process.name }}</b>
-              <div class="instance-count">
-                <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
+              <div>
+                <a class="ps-icon-btn-circle no-border expanded-icon">
+                  <i
+                    :class="['paasng-icon paasng-bold',{
+                      'paasng-down-shape': process.name === curProcessKey,
+                      'paasng-right-shape': process !== curProcess || !curProcessKey }]" />
+                </a>
+                <b
+                  v-bk-tooltips="process.name"
+                  class="process-name"
+                >{{ process.name }}</b>
+                <div class="instance-count">
+                  <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
+                </div>
               </div>
+              <div class="auto-scal">{{ $t('自动扩缩容') }}</div>
             </div>
             <div
               class="process-command"
@@ -45,111 +51,113 @@
             >
               {{ process.cmd }}
             </div>
-            <div class="process-operate">
-              <a
-                slot="trigger"
-                v-bk-tooltips="$t('进程详情')"
-                class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
-                @click="showProcessDetailDialog(process, index)"
-              >
-                <i class="paasng-icon paasng-info-line" />
-              </a>
-              <a
-                v-if="platformFeature.ENABLE_WEB_CONSOLE"
-                slot="trigger"
-                v-bk-tooltips="$t('访问控制台')"
-                class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
-                @click="showProcessDetail(process)"
-              >
-                <i class="paasng-icon paasng-diff-2" />
-              </a>
-              <template v-if="process.targetStatus === 'start'">
-                <div
-                  v-bk-tooltips="process.operateIconTitle"
-                  class="tool-confirm-wrapper"
-                  @click="confirmClick(process)"
-                  @mouseover="clearTooltipTimer(process)"
-                  @mouseout="hideTooltipConfirm(process)"
-                >
-                  <tooltip-confirm
-                    ref="tooltipConfirm"
-                    :ok-text="$t('确定')"
-                    :cancel-text="$t('取消')"
-                    :theme="'ps-tooltip'"
-                    @ok="updateProcess(process, index)"
-                    @cancel="closeProcess(process)"
-                    @mouseover="clearTooltipTimer(process, 'show')"
-                    @mouseout="hideTooltipConfirm(process)"
-                  >
-                    <a
-                      slot="trigger"
-                      class="ps-icon-btn-circle operate-process-icon stop"
-                      href="javascript:;"
-                      :class="{ 'disabled': isAppOfflined }"
-                    >
-                      <div class="square-icon" />
-                      <!-- <i></i> -->
-                      <img
-                        src="/static/images/btn_loading.gif"
-                        class="loading"
-                        style="margin-right: 0;"
-                      >
-                    </a>
-                  </tooltip-confirm>
-                </div>
-              </template>
-              <template v-else>
-                <a
-                  v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
-                  class="ps-icon-btn-circle operate-process-icon on start"
-                  href="javascript:"
-                  :class="{ 'disabled': isAppOfflined }"
-                  @click="patchProcess(process, index)"
-                >
-                  <i />
-                  <img
-                    src="/static/images/btn_loading.gif"
-                    class="loading"
-                    style="margin-right: 0;"
-                  >
-                </a>
-              </template>
-
-              <dropdown
-                ref="operateDropRef"
-                :options="{ position: 'bottom right' }"
-              >
+            <div class="status-container">
+              <div class="process-operate">
                 <a
                   slot="trigger"
-                  href="javascript:void(0);"
-                  class="ps-icon-btn-circle no-border a-more"
+                  v-bk-tooltips="$t('进程详情')"
+                  class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
+                  @click="showProcessDetailDialog(process, index)"
                 >
-                  <i class="paasng-icon paasng-icon-more" />
+                  <i class="paasng-icon paasng-info-line" />
                 </a>
-                <div slot="content">
-                  <ul class="ps-list-group-link spacing-x0">
-                    <li>
+                <a
+                  v-if="platformFeature.ENABLE_WEB_CONSOLE"
+                  slot="trigger"
+                  v-bk-tooltips="$t('访问控制台')"
+                  class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
+                  @click="showProcessDetail(process)"
+                >
+                  <i class="paasng-icon paasng-diff-2" />
+                </a>
+                <template v-if="process.targetStatus === 'start'">
+                  <div
+                    v-bk-tooltips="process.operateIconTitle"
+                    class="tool-confirm-wrapper"
+                    @click="confirmClick(process)"
+                    @mouseover="clearTooltipTimer(process)"
+                    @mouseout="hideTooltipConfirm(process)"
+                  >
+                    <tooltip-confirm
+                      ref="tooltipConfirm"
+                      :ok-text="$t('确定')"
+                      :cancel-text="$t('取消')"
+                      :theme="'ps-tooltip'"
+                      @ok="updateProcess(process, index)"
+                      @cancel="closeProcess(process)"
+                      @mouseover="clearTooltipTimer(process, 'show')"
+                      @mouseout="hideTooltipConfirm(process)"
+                    >
                       <a
-                        href="javascript:void(0);"
-                        class="blue"
-                        @click="showProcessConfigDialog(process, index)"
-                      > {{ $t('调整实例数') }} </a>
-                    </li>
-                  </ul>
-                </div>
-              </dropdown>
-            </div>
-            <div
-              v-if="process.status === 'Running'"
-              class="process-status"
-            >
-              <img
-                src="/static/images/btn_loading.gif"
-                class="loading"
+                        slot="trigger"
+                        class="ps-icon-btn-circle operate-process-icon stop"
+                        href="javascript:;"
+                        :class="{ 'disabled': isAppOfflined }"
+                      >
+                        <div class="square-icon" />
+                        <!-- <i></i> -->
+                        <img
+                          src="/static/images/btn_loading.gif"
+                          class="loading"
+                          style="margin-right: 0;"
+                        >
+                      </a>
+                    </tooltip-confirm>
+                  </div>
+                </template>
+                <template v-else>
+                  <a
+                    v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
+                    class="ps-icon-btn-circle operate-process-icon on start"
+                    href="javascript:"
+                    :class="{ 'disabled': isAppOfflined }"
+                    @click="patchProcess(process, index)"
+                  >
+                    <i />
+                    <img
+                      src="/static/images/btn_loading.gif"
+                      class="loading"
+                      style="margin-right: 0;"
+                    >
+                  </a>
+                </template>
+
+                <dropdown
+                  ref="operateDropRef"
+                  :options="{ position: 'bottom right' }"
+                >
+                  <a
+                    slot="trigger"
+                    href="javascript:void(0);"
+                    class="ps-icon-btn-circle no-border a-more"
+                  >
+                    <i class="paasng-icon paasng-icon-more" />
+                  </a>
+                  <div slot="content">
+                    <ul class="ps-list-group-link spacing-x0">
+                      <li>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue"
+                          @click="showProcessConfigDialog(process, index)"
+                        > {{ $t('扩缩容') }} </a>
+                      </li>
+                    </ul>
+                  </div>
+                </dropdown>
+              </div>
+              <div
+                v-if="process.status === 'Running'"
+                class="process-status"
               >
-              <span>
-                {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
-              </span>
+                <img
+                  src="/static/images/btn_loading.gif"
+                  class="loading"
+                >
+                <span>
+                  {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                </span>
+              </div>
             </div>
           </div>
           <div
@@ -232,7 +240,7 @@
 
       <bk-sideslider
         :width="800"
-        v-model:is-show="processSlider.isShow"
+        :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
         :before-close="handleBeforeClose"
@@ -317,7 +325,7 @@
 
       <bk-sideslider
         :width="750"
-        v-model:is-show="chartSlider.isShow"
+        :is-show.sync="chartSlider.isShow"
         :title="chartSlider.title"
         :quick-close="true"
         :before-close="handleChartBeforeClose"
@@ -481,8 +489,8 @@
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
-      width="400"
-      :title="$t('调整实例数')"
+      width="640"
+      :title="$t('web进程扩缩容')"
       :header-position="'left'"
       :loading="processConfigDialog.isLoading"
       :theme="'primary'"
@@ -495,19 +503,29 @@
         v-if="processConfigDialog.showForm"
         style="min-height: 65px;"
       >
+        <bk-radio-group v-model="autoscaling" @change="handlerChange" class="mb20">
+          <bk-radio-button class="radio-cls" :value="false">
+            {{ $t('手动调节') }}
+          </bk-radio-button>
+          <bk-radio-button class="radio-cls" :value="true">
+            {{ $t('自动调节') }}
+          </bk-radio-button>
+        </bk-radio-group>
         <bk-form
           ref="processConfigForm"
-          :label-width="100"
+          :label-width="110"
           :model="processPlan"
         >
-          <bk-form-item :label="$t('类型：')">
-            <bk-input
-              v-model="processPlan.processType"
-              :disabled="true"
-            />
+          <bk-form-item :label="$t('当前副本数：')">
+            <span>{{ curTargetReplicas }}</span>
           </bk-form-item>
+          <bk-form-item v-if="autoscaling" :label="$t('触发条件：')">
+            <span>{{ $t('CPU 使用率') }} = 85%</span>
+          </bk-form-item>
+          <!-- 手动调节展示 -->
           <bk-form-item
-            :label="$t('实例数：')"
+            v-else
+            :label="$t('副本数量：')"
             :required="true"
             :rules="processPlanRules.targetReplicas"
             :property="'targetReplicas'"
@@ -516,9 +534,22 @@
               type="number"
               :placeholder="$t('请输入')"
               :min="0"
-              v-model:value="processPlan.targetReplicas"
+              :value.sync="processPlan.targetReplicas"
             />
           </bk-form-item>
+          <div class="capacity-container">
+            <div>
+              <p>当 CPU 使用率 > 85% 时，会触发扩容</p>
+              <bk-num-input
+                type="number"
+                placeholder="1-65535"
+                style="display: inline-block;"
+                :min="1"
+                :max="65535"
+                :value.sync="port.target_port"
+              />
+            </div>
+          </div>
         </bk-form>
       </div>
     </bk-dialog>
@@ -576,7 +607,7 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components : {
+  components: {
     dropdown,
     tooltipConfirm,
     numInput,
@@ -797,6 +828,8 @@ export default {
       dateShortCut,
       initDateTimeRange: [initStartDate, initEndDate],
       isDatePickerOpen: false,
+      curTargetReplicas: 0,
+      autoscaling: false,
     };
   },
   computed: {
@@ -1185,8 +1218,8 @@ export default {
         this.clearChart();
       } finally {
         this.isChartLoading = false;
-        conf.cpuRef.hideLoading();
-        conf.memRef.hideLoading();
+        conf.cpuRef?.hideLoading();
+        conf.memRef?.hideLoading();
       }
     },
 
@@ -1594,7 +1627,7 @@ export default {
         callback && callback(processes);
 
         // 发起服务监听
-        this.$store.commit('updataEnvEventData', []);
+        // this.$store.commit('updataEnvEventData', []);
         this.watchServerPush();
         this.$emit('data-ready', this.environment);
       } catch (e) {
@@ -1629,6 +1662,7 @@ export default {
       };
       this.processConfigDialog.visiable = true;
       this.processConfigDialog.showForm = true;
+      this.curTargetReplicas = this.processPlan.targetReplicas;
     },
 
     showProcessDetailDialog(process, index) {
@@ -1722,14 +1756,14 @@ export default {
       setTimeout(() => {
         this.$refs.processConfigForm.validate().then(
           // 验证成功
-          (res) => {
+          () => {
             this.processConfigDialog.isLoading = false;
             this.processConfigDialog.visiable = false;
             this.$store.commit('updataEnvEventData', []);
             this.updateProcessConfig();
           },
           // 验证失败
-          (res) => {
+          () => {
             this.processConfigDialog.isLoading = false;
           },
         );
@@ -1964,10 +1998,12 @@ export default {
             color: #63656e;
             border: solid 1px #dcdee5;
             background: #fff;
+            display: flex;
+            justify-content: space-between;
             .process-basic-info {
-                display: inline-block;
-                padding: 16px 24px;
-                min-width: 185px;
+                display: flex;
+                padding: 16px 0 16px 24px;
+                min-width: 205px;
                 max-width: 230px;
                 vertical-align: middle;
                 cursor: pointer;
@@ -1993,6 +2029,17 @@ export default {
                     text-overflow: ellipsis;
                     white-space: nowrap;
                 }
+                .auto-scal{
+                  width: 76px;
+                  height: 22px;
+                  line-height: 22px;
+                  background: #E4FAF0;
+                  border-radius: 2px;
+                  color: #14A568;
+                  font-size: 12px;
+                  text-align: center;
+                  margin-left: 8px;
+                }
             }
             .process-command {
                 display: inline-block;
@@ -2006,9 +2053,6 @@ export default {
             .process-status {
                 display: inline-block;
                 padding: 26px 0 0 0;
-                margin-right: 75px;
-                width: 100px;
-                float: right;
 
                 img, span {
                     vertical-align: middle;
@@ -2016,40 +2060,43 @@ export default {
                 }
             }
 
-            .process-operate {
-                position: relative;
-                display: inline-block;
-                padding: 24px 0 0 0;
-                margin-right: 27px;
-                width: 55px;
-                vertical-align: middle;
-                float: right;
-                .icon-info-base{
-                    font-size: 24px;
-                }
-                .icon-info-l{
-                    position: absolute;
-                    left: -45px;
-                    top: 21px;
-                }
-                .icon-info-d{
-                    position: absolute;
-                    left: -90px;
-                    top: 21px;
-                }
-                .a-more {
-                    position: relative;
-                    top: 0;
-                    left: 10px;
-                    .paasng-icon-more {
-                        font-size: 24px;
-                    }
-                    &:hover {
-                        .paasng-icon-more:before {
-                            color: #3a84ff !important;
-                        }
-                    }
-                }
+            .status-container{
+              width: 260px;
+              .process-operate {
+                  position: relative;
+                  display: inline-block;
+                  padding: 24px 0 0 0;
+                  margin-right: 27px;
+                  width: 55px;
+                  vertical-align: middle;
+                  float: right;
+                  .icon-info-base{
+                      font-size: 24px;
+                  }
+                  .icon-info-l{
+                      position: absolute;
+                      left: -45px;
+                      top: 21px;
+                  }
+                  .icon-info-d{
+                      position: absolute;
+                      left: -90px;
+                      top: 21px;
+                  }
+                  .a-more {
+                      position: relative;
+                      top: 0;
+                      left: 10px;
+                      .paasng-icon-more {
+                          font-size: 24px;
+                      }
+                      &:hover {
+                          .paasng-icon-more:before {
+                              color: #3a84ff !important;
+                          }
+                      }
+                  }
+              }
             }
         }
 
@@ -2612,6 +2659,12 @@ export default {
         font-size: 12px;
         /deep/ .bk-icon {
             font-size: 16px;
+        }
+    }
+
+    .radio-cls{
+      /deep/ .bk-radio-button-text {
+            padding: 0 119px;
         }
     }
 

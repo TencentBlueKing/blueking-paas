@@ -2150,4 +2150,10 @@ export default {
   最近半年: 'Last 6 months',
   '质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。': 'The quality evaluation is based on Tencent open source governance index system (the document quality is temporarily calculated as 100 points), and the scoring is for reference only.',
   '确认下架插件【{id}】？': 'Confirm the removal of the plug-in [{id}]?',
+  自动扩缩容: 'Automatic scaling',
+  web进程扩缩容: 'Web process expansion and contraction',
+  扩缩容: 'expansion and contraction',
+  手动调节: 'manual adjustment',
+  自动调节: 'automatic adjustment',
+  'CPU 使用率': 'CPU usage',
 };

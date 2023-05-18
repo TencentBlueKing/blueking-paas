@@ -232,7 +232,7 @@
 
       <bk-sideslider
         :width="800"
-        v-model:is-show="processSlider.isShow"
+        :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
         :before-close="handleBeforeClose"
@@ -317,7 +317,7 @@
 
       <bk-sideslider
         :width="750"
-        v-model:is-show="chartSlider.isShow"
+        :is-show.sync="chartSlider.isShow"
         :title="chartSlider.title"
         :quick-close="true"
         :before-close="handleChartBeforeClose"

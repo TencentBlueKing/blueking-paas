@@ -72,7 +72,7 @@ def get_cluster_id(app_code: str, run_env: str, module_name: str) -> str:
     return cluster_info['bcs_cluster_id']
 
 
-@functools.lru_cache(maxsize=10)
+@functools.lru_cache(maxsize=32)
 def _get_namespace_cache(app_code: str, run_env: str, module_name: str) -> str:
     return ApplicationEnvironment.objects.get(
         application__code=app_code, module__name=module_name, environment=run_env

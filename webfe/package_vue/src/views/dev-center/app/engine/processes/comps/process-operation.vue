@@ -533,23 +533,43 @@
             <num-input
               type="number"
               :placeholder="$t('请输入')"
+              class="dia-input"
               :min="0"
               :value.sync="processPlan.targetReplicas"
             />
           </bk-form-item>
-          <div class="capacity-container">
-            <div>
-              <p>当 CPU 使用率 > 85% 时，会触发扩容</p>
-              <bk-num-input
+          <bk-form :rules="scalingRules" :model="scalingConfig" class="auto-container" :label-width="0" v-if="autoscaling">
+            <bk-form-item property="maxReplicas">
+              <p>{{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}</p>
+              <bk-input
                 type="number"
-                placeholder="1-65535"
-                style="display: inline-block;"
+                placeholder="1-12"
                 :min="1"
-                :max="65535"
-                :value.sync="port.target_port"
-              />
-            </div>
-          </div>
+                :max="12"
+                class="dia-input mt5"
+                v-model="scalingConfig.maxReplicas"
+              >
+                <template slot="prepend">
+                  <div class="group-text">{{$t('扩容上限')}}</div>
+                </template>
+              </bk-input>
+            </bk-form-item>
+            <bk-form-item property="minReplicas">
+              <p>{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">45%</span> {{$t('时')}}，{{$t('会触发缩容')}}</p>
+              <bk-input
+                type="number"
+                placeholder="1-12"
+                :min="1"
+                :max="12"
+                class="dia-input mt5"
+                v-model="scalingConfig.minReplicas"
+              >
+                <template slot="prepend">
+                  <div class="group-text">{{$t('缩容下限')}}</div>
+                </template>
+              </bk-input>
+            </bk-form-item>
+          </bk-form>
         </bk-form>
       </div>
     </bk-dialog>
@@ -578,7 +598,7 @@
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script> import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import dropdown from '@/components/ui/Dropdown';
@@ -607,7 +627,7 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components: {
+  components : {
     dropdown,
     tooltipConfirm,
     numInput,
@@ -830,6 +850,17 @@ export default {
       isDatePickerOpen: false,
       curTargetReplicas: 0,
       autoscaling: false,
+      scalingConfig: {
+        minReplicas: '',
+        maxReplicas: '',
+        metrics: [
+          {
+            metric: 'cpuUtilization',
+            value: '85'
+          }
+        ]
+      },
+      scalingRules: null
     };
   },
   computed: {
@@ -853,6 +884,40 @@ export default {
     '$route'() {
       this.init();
     },
+    'processConfigDialog.visiable'(val) {
+      if(val) {
+        const that = this
+        this.scalingRules = {
+          maxReplicas: [
+            {
+              validator(v) {
+                  const manReplicas = Number(v)
+                  const minReplicas = Number(that.scalingConfig.minReplicas)
+                  return manReplicas >= minReplicas;
+                },
+              message() {
+                return `${i18n.t('扩容上限应 >= 缩容下限')}`;
+              },
+              trigger: 'blur',
+            },
+          ],
+          minReplicas: [
+            {
+                validator(v) {
+                  const minReplicas = Number(v)
+                  const maxReplicas = Number(that.scalingConfig.maxReplicas)
+                  return minReplicas < maxReplicas;
+                },
+                message() {
+                  return `${i18n.t('缩容下限应 < 扩容上限')}`;
+                },
+                trigger: 'blur',
+              },
+            ]
+        }
+        console.log('this.scalingRules', this.scalingRules)
+      }
+    }
   },
   created() {
     // moment日期中英文显示
@@ -2738,4 +2803,17 @@ export default {
     .process-empty {
         height: 280px;
     }
+    .auto-container{
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #DCDEE5;
+
+      .cpu-num{
+        color: #FF9C01;
+        font-weight: 700;
+      }
+    }
+    .dia-input {
+        width: 240px
+      }
 </style>

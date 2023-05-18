@@ -5,6 +5,7 @@ const PreTaskPlugin = require('./pre-task-plugin');
 const now = new Date();
 const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.getDate(), '_', now.getHours(), ':', now.getMinutes(), ':', now.getSeconds()].join(''); // 版本号，eg: 2019-2-25_9:12:52
 
+console.log('process.env.BK_APP_HOST', process.env.BK_APP_HOST);
 module.exports = {
   host: process.env.BK_APP_HOST,
   port: 6060,

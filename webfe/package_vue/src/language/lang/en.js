@@ -2156,4 +2156,7 @@ export default {
   手动调节: 'manual adjustment',
   自动调节: 'automatic adjustment',
   'CPU 使用率': 'CPU usage',
+  当: 'when',
+  扩容上限: 'Expansion limit',
+  缩容下限: 'Shrink limit'
 };

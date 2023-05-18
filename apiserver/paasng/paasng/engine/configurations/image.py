@@ -42,6 +42,11 @@ def generate_image_repository(app: 'EngineApp') -> str:
     return f"{system_prefix}/{app_part}"
 
 
+def generate_image_tag(version: "VersionInfo") -> str:
+    """Get the Image Tag for version"""
+    return f"{version.version_name}-{version.revision}"
+
+
 @dataclass
 class ImageCredential:
     registry: str
@@ -105,7 +110,8 @@ class RuntimeImageInfo:
         mgr = ModuleRuntimeManager(self.module)
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
-            return generate_image_repository(self.engine_app) + ":" + self.version_info.revision
+            # TODO: 构建和发布都需要生成 image 信息, 应该在 Deployment 或其他和部署相关的模型存储这个字段
+            return generate_image_repository(self.engine_app) + ":" + generate_image_tag(self.version_info)
         return getattr(slug_runner, "full_image", '')
 
     @property

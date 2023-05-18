@@ -20,7 +20,8 @@ RUN sed -i "s/DEFAULT@SECLEVEL=2/DEFAULT@SECLEVEL=0/g" /etc/ssl/openssl.cnf
 ADD ./pyproject.toml .
 ADD ./poetry.lock .
 # Install dependecies in system
-RUN poetry config virtualenvs.create false && poetry install --no-root -vvv
+# Disable "new installer" to fix https://github.com/python-poetry/poetry/issues/6301
+RUN poetry config virtualenvs.create false && poetry config experimental.new-installer false && poetry install --no-root -vvv
 
 ADD ./data ./data
 ADD ./docs ./docs

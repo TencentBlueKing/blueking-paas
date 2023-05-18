@@ -262,6 +262,8 @@ class FallbackMixin(_Base):
         """
         Given the *incoming* primitive data, return the value for this field
         that should be validated and transformed to a native value.
+
+        get_value is using `field_name` to get value from dictionary
         """
         with self.override_field_name(self._i18n_field_name):
             value = super().get_value(dictionary)
@@ -274,23 +276,28 @@ class FallbackMixin(_Base):
         """
         Given the *outgoing* object instance, return the primitive value
         that should be used for this field.
+
+        get_attribute is using `source_attrs` to get attribute from instance
         """
         try:
-            with self.override_field_name(self._i18n_field_name):
+            with self.override_field_name(self._i18n_field_name, override_source_attrs=True):
                 return super().get_attribute(instance)
         except (KeyError, AttributeError):
-            with self.override_field_name(self._fallback_field_name):
+            with self.override_field_name(self._fallback_field_name, override_source_attrs=True):
                 return super().get_attribute(instance)
 
     @contextmanager
-    def override_field_name(self, field_name: str):
-        cache = (self.field_name, self.source)
+    def override_field_name(self, field_name: str, override_source: bool = False, override_source_attrs: bool = False):
+        cache = self.field_name, self.source, self.source_attrs
         try:
             self.field_name = field_name
-            self.source = field_name
+            if override_source:
+                self.source = field_name
+            if override_source_attrs:
+                self.source_attrs = field_name.split(".")
             yield
         finally:
-            self.field_name, self.source = cache
+            self.field_name, self.source, self.source_attrs = cache
 
 
 class DjangoTranslatedCharField(serializers.CharField):

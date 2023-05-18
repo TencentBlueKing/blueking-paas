@@ -159,12 +159,11 @@ func (r *AddonReconciler) provisionAddon(
 	// 将增强服务 Specs 添加到 .status.addonStatuses.specs
 	specResult, err := r.ExternalClient.QueryAddonSpecs(timeoutCtx, appInfo.AppCode, appInfo.ModuleName, svcID)
 	if err != nil {
-		for _, status := range specResult.Data {
-			addOnStatus.Specs = append(
-				addOnStatus.Specs,
-				paasv1alpha2.AddonSpec{Name: status.Name, Value: status.Value},
-			)
-		}
+		return addOnStatus, errors.Wrapf(err, "QueryAddonSpecs failed, detail")
+	}
+
+	for _, status := range specResult.Data {
+		addOnStatus.Specs = append(addOnStatus.Specs, paasv1alpha2.AddonSpec{Name: status.Name, Value: status.Value})
 	}
 
 	return addOnStatus, nil

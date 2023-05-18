@@ -82,8 +82,10 @@ var _ = Describe("Test AddonReconciler", func() {
 						// mock QueryAddonSpecs
 						return &http.Response{
 							StatusCode: 200,
-							Body:       ioutil.NopCloser(bytes.NewBufferString(`{"results": [{"version": "5.0.0"}]}`)),
-							Header:     make(http.Header),
+							Body: ioutil.NopCloser(
+								bytes.NewBufferString(`{"results": [{"name": "version", "value": "5.0.0"}]}`),
+							),
+							Header: make(http.Header),
 						}
 					case http.MethodPost:
 						// mock ProvisionAddonInstance
@@ -111,6 +113,9 @@ var _ = Describe("Test AddonReconciler", func() {
 		Expect(cond.Status).To(Equal(metav1.ConditionTrue))
 		Expect(bkapp.Status.AddonStatuses[0].Name).To(Equal("foo-service"))
 		Expect(bkapp.Status.AddonStatuses[0].State).To(Equal(paasv1alpha2.AddonProvisioned))
+		Expect(
+			bkapp.Status.AddonStatuses[0].Specs[0],
+		).To(Equal(paasv1alpha2.AddonSpec{Name: "version", Value: "5.0.0"}))
 	})
 
 	It("when not metadata", func() {

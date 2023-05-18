@@ -21,3 +21,7 @@ class BKMonitorGatewayServiceError(Exception):
     """This error indicates that there's something wrong when operating bkmonitor's
     API Gateway resource
     """
+
+
+class BKMonitorNotSupportedError(Exception):
+    """This error indicates that there's something wrong because bkmonitor does not support"""

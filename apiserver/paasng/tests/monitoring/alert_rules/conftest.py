@@ -31,6 +31,7 @@ from paasng.monitoring.monitor.models import AppAlertRule
 from tests.utils.helpers import generate_random_string
 
 random_vhost = generate_random_string()
+random_cluster_id = generate_random_string()
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -40,10 +41,13 @@ def mock_import_configs():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def mock_get_vhost():
+def mock_metric_label():
     with mock.patch.dict(
         'paasng.monitoring.monitor.alert_rules.config.metric_label.LABEL_VALUE_QUERY_FUNCS',
-        {'vhost': lambda app_code, run_env, module_name: random_vhost},
+        {
+            'vhost': lambda app_code, run_env, module_name: random_vhost,
+            'bcs_cluster_id': lambda app_code, run_env, module_name: random_cluster_id,
+        },
     ):
         yield
 
@@ -105,8 +109,11 @@ def bk_app_init_rule_configs(bk_app, wl_namespaces):
                 run_env=env,
                 alert_code=alert_code,
                 enabled=True,
-                metric_labels={'namespace': f'bkapp-{app_code}-{env}', 'vhost': random_vhost},
-                namespace=wl_namespaces[env],
+                metric_labels={
+                    'namespace': wl_namespaces[env],
+                    'vhost': random_vhost,
+                    'bcs_cluster_id': random_cluster_id,
+                },
                 threshold_expr=module_scoped_configs[alert_code]['threshold_expr'],
                 notice_group_name=notice_group_name,
             )

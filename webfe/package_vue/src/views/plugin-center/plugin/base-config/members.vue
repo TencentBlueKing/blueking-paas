@@ -145,7 +145,10 @@
             :required="true"
           >
             <template v-if="memberMgrConfig.userEditable">
-              <user v-model="personnelSelectorList" />
+              <user
+                v-model="personnelSelectorList"
+                :placeholder="$t('请输入用户')"
+              />
               <!-- <bk-member-selector
                                 @change="updateValue"
                                 v-model="personnelSelectorList"

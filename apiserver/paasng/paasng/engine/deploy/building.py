@@ -57,6 +57,7 @@ from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.modules.models.module import Module
 from paasng.utils.blobstore import make_blob_store
+from paasng.utils.i18n.celery import I18nTask
 
 if TYPE_CHECKING:
     from paasng.dev_resources.sourcectl.models import VersionInfo
@@ -306,7 +307,7 @@ class BuildProcessResultHandler(CallbackHandler):
             app_builder.callback_build_process(build_process_id, result.data)
 
 
-@shared_task
+@shared_task(base=I18nTask)
 def start_build(deployment_id, *args, **kwargs):
     """Start a deployment process
 
@@ -316,7 +317,7 @@ def start_build(deployment_id, *args, **kwargs):
     deploy_controller.start()
 
 
-@shared_task
+@shared_task(base=I18nTask)
 def start_build_error_callback(*args, **kwargs):
     context = args[0]
     exc: Exception = args[1]

@@ -241,7 +241,7 @@
                   > {{ $t('产品文档') }} </a>
                 </li>
                 <li
-                  v-if="GLOBAL.APP_VERSION === 'ee'"
+                  v-if="GLOBAL.CONFIG.RELEASE_LOG"
                   class="nav-item"
                 >
                   <a
@@ -401,7 +401,7 @@
         <dd class="last" />
       </dl>
     </div>
-    <log-version v-model:dialog-show="showLogVersion" />
+    <log-version :dialog-show.sync="showLogVersion" />
   </div>
 </template>
 

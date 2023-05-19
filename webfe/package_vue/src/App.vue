@@ -19,60 +19,60 @@
         border="0"
         width="500"
         height="400"
-        :class="GLOBAL.APP_VERSION !== 'te' ? 'small' : ''"
+        :class="GLOBAL.CONFIG.IFRAME_CLASS"
       />
     </div>
   </div>
 </template>
 
 <script>
-    import { bus } from '@/common/bus';
-    import paasHeader from '@/components/paas-header';
-    import paasFooter from '@/components/paas-footer';
+import { bus } from '@/common/bus';
+import paasHeader from '@/components/paas-header';
+import paasFooter from '@/components/paas-footer';
 
-    export default {
-        components: {
-            paasHeader,
-            paasFooter
-        },
-        data () {
-            const loginCallbackURL = `${window.location.origin}/static/login_success.html?is_ajax=1`;
-            const loginURL = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
-            return {
-                userInfo: {},
-                loginURL: loginURL,
-                showLoginModal: false,
-                isPlugin: false
-            };
-        },
-        computed: {
-            isGray () {
-                return ['myApplications', 'appLegacyMigration'].includes(this.$route.name);
-            }
-        },
-        watch: {
-            '$route': {
-                handler (value) {
-                    this.isPlugin = value.path.includes('/plugin-center');
-                },
-                immediate: true
-            }
-        },
-        created () {
-            bus.$on('show-login-modal', () => {
-                this.showLoginModal = true;
-            });
-            bus.$on('close-login-modal', () => {
-                this.showLoginModal = false;
-                window.location.reload();
-            });
-        },
-        methods: {
-            hideLoginModal () {
-                this.showLoginModal = false;
-            }
-        }
+export default {
+  components: {
+    paasHeader,
+    paasFooter,
+  },
+  data() {
+    const loginCallbackURL = `${window.location.origin}/static/login_success.html?is_ajax=1`;
+    const loginURL = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/plain/?size=big&app_code=1&c_url=${loginCallbackURL}`;
+    return {
+      userInfo: {},
+      loginURL,
+      showLoginModal: false,
+      isPlugin: false,
     };
+  },
+  computed: {
+    isGray() {
+      return ['myApplications', 'appLegacyMigration'].includes(this.$route.name);
+    },
+  },
+  watch: {
+    $route: {
+      handler(value) {
+        this.isPlugin = value.path.includes('/plugin-center');
+      },
+      immediate: true,
+    },
+  },
+  created() {
+    bus.$on('show-login-modal', () => {
+      this.showLoginModal = true;
+    });
+    bus.$on('close-login-modal', () => {
+      this.showLoginModal = false;
+      window.location.reload();
+    });
+  },
+  methods: {
+    hideLoginModal() {
+      this.showLoginModal = false;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

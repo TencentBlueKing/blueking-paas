@@ -1201,7 +1201,6 @@ export default {
   仅影响: 'Only affects',
   '上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。': 'Users outside the visible range can still open the app through the app access address.',
   蓝鲸工作台: 'BlueKing Workbench',
-  '上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用': 'The visible range of the app on the upper limit, users outside the visible range can still open the app through the app access address',
   窗口属性: 'window properties',
   '打开方式：': 'Open mode: ',
   桌面: 'Desktop',

@@ -75,11 +75,8 @@
               />
               <p class="whole-item-tips">
                 {{ $t('示例镜像：') }}
-                <span v-if="['ce', 'ee'].includes(GLOBAL.APP_VERSION)">
-                  nginx:latest
-                </span>
-                <span v-else>
-                  mirrors.tencent.com/bkpaas/django-helloworld:latest
+                <span>
+                  {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
                 </span>
                 &nbsp;
                 <span
@@ -702,14 +699,13 @@
             },
 
             useExample () {
-                if (['ce', 'ee'].includes(this.GLOBAL.APP_VERSION)) {
-                    this.formData.image = 'nginx:latest';
+                this.formData.image = this.GLOBAL.CONFIG.MIRROR_EXAMPLE;
+                if (this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx:latest') {
                     this.formData.command = [];
                     this.formData.args = [];
                     this.formData.targetPort = 80;
                     return;
                 }
-                this.formData.image = 'mirrors.tencent.com/bkpaas/django-helloworld:latest';
                 this.formData.command = ['bash', '/app/start_web.sh'];
                 this.formData.args = [];
                 this.formData.targetPort = 5000;

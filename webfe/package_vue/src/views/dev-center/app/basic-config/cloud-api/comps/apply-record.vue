@@ -27,6 +27,7 @@
         <div class="member-wrapper">
           <user
             v-model="applicants"
+            :placeholder="$t('请输入用户')"
             style="width: 142px;"
             :multiple="false"
             @change="handleMemberSelect"

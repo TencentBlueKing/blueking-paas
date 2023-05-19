@@ -100,8 +100,7 @@ export default {
     },
     async getVersionLogsList () {
       try {
-        // const data = await this.$store.dispatch('getVersionLog');
-        const data = [{"version":"V1.1.0","date":"2023-05-17","content":"# V1.1.0 版本更新日志\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n### 新增功能\n\n* 架构调整: workloads 服务合并至 apiserver\n- 支持云原生应用（需搭配 bkpaas-app-operator 使用）\n\n\n### 功能优化\n\n- Python 构建工具，默认 Python 版本为 3.10\n- 优化插件查询体验\n- 顶部导航样式修改\n- Python 构建工具中, python 版本的指定优先级 runtime.txt > 构建工具默认版本 > 缓存版本\n\n### 缺陷修复\n- 镜像凭证不能填写大于 255 个字符的问题\n- 概览页面、进程管理页面的报错问题\n- 日志查询的部分问题"},{"version":"V0.1.4","date":"2023-03-20","content":"# V0.1.4 版本更新日志\n### 新增功能\n- 支持 GitHub、Gitee OAuth 授权拉取代码\n- 提供 WebConsole 功能\n- 新增蓝鲸 APM 增强服务\n- 支持 IPV6\n- 支持 Redis 使用 sentinel 模式\n- 环境配置：显示内置环境变量\n- 初始化应用集群脚本支持设置容忍和污点\n- 应用权限迁移至权限中心\n\n### 缺陷修复\n- 创建 Smart 应用时应用名称未显示问题\n- 初始化集群，应用访问协议默认为 https 问题\n- 代码库管理无内容展示问题"},{"version":"V0.1.0","date":"2022-11-17","content":"# V0.1.0 版本更新日志\n### 新增功能\n- 全新设计的用户界面\n- 支持前后端分离的开发模式\n- 支持自定义后台进程及启动命令\n- 提供 MySQL、RabbitMQ、对象存储（bk-repo） 等增强服务\n- 支持通过镜像部署应用\n- 全面升级 Python 开发框架，并新增 Node.js 开发框架"}]
+        const data = await this.$store.dispatch('getVersionLog');
         return data.map(item => ({ title: item.version, date: item.date, detail: item.content }));
       } catch (e) {
         this.$paasMessage({

@@ -114,20 +114,15 @@
                   >
                 </a>
               </template>
-
-              <dropdown
-                ref="operateDropRef"
-                :options="{ position: 'bottom right' }"
+              <bk-dropdown-menu
+                trigger="click"
+                align="right"
+                ext-cls="dropdown-menu-cls"
               >
-                <a
-                  slot="trigger"
-                  href="javascript:void(0);"
-                  class="ps-icon-btn-circle no-border a-more"
-                >
+                <template slot="dropdown-trigger">
                   <i class="paasng-icon paasng-icon-more" />
-                </a>
-                <div slot="content">
-                  <ul class="ps-list-group-link spacing-x0">
+                </template>
+                <ul class="bk-dropdown-list" slot="dropdown-content">
                     <li>
                       <a
                         href="javascript:void(0);"
@@ -135,9 +130,8 @@
                         @click="showProcessConfigDialog(process, index)"
                       > {{ $t('调整实例数') }} </a>
                     </li>
-                  </ul>
-                </div>
-              </dropdown>
+                </ul>
+              </bk-dropdown-menu>
             </div>
             <div
               v-if="process.status === 'Running'"
@@ -1607,9 +1601,6 @@ export default {
     },
 
     showProcessConfigDialog(process, index) {
-      this.$refs.operateDropRef.forEach((ref) => {
-        ref.close();
-      });
 
       if (this.isAppOfflined) {
         this.$paasMessage({
@@ -1632,9 +1623,6 @@ export default {
     },
 
     showProcessDetailDialog(process, index) {
-      this.$refs.operateDropRef.forEach((ref) => {
-        ref.close();
-      });
       this.processPlan = {
         replicas: process.instance,
         processType: process.name,
@@ -2684,5 +2672,12 @@ export default {
     }
     .process-empty {
         height: 280px;
+    }
+    .dropdown-menu-cls {
+      left: 10px;
+      i {
+        font-size: 24px;
+        color: #3A84FF;
+      }
     }
 </style>

@@ -19,7 +19,7 @@
         border="0"
         width="500"
         height="400"
-        :class="GLOBAL.APP_VERSION !== 'te' ? 'small' : ''"
+        :class="GLOBAL.CONFIG.IFRAME_CLASS"
       />
     </div>
   </div>

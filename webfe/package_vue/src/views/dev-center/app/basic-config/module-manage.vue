@@ -313,11 +313,11 @@
                 clearable
               >
                 <template
-                  v-if="GLOBAL.APP_VERSION === 'te'"
+                  v-if="GLOBAL.CONFIG.MIRROR_PREFIX"
                   slot="prepend"
                 >
                   <div class="group-text">
-                    mirrors.tencent.com/
+                    {{ GLOBAL.CONFIG.MIRROR_PREFIX }}
                   </div>
                 </template>
               </bk-input>
@@ -1207,7 +1207,6 @@
                         }
                     };
 
-                    console.log('config', config);
                     if (config && config.authInfo) {
                         params.data.source_repo_auth_info = {
                             username: config.authInfo.account,
@@ -1217,7 +1216,7 @@
 
                     if (this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE) {
                         params.data.source_control_type = 'tc_docker';
-                        params.data.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                        params.data.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                         params.data.source_repo_auth_info = {
                             username: '',
                             password: ''
@@ -1695,7 +1694,7 @@
             // 编辑镜像地址
             editDockerUrl () {
                 this.isText = false;
-                this.mirrorData.url = this.GLOBAL.APP_VERSION === 'te' ? this.curAppModule.repo.repo_url.split('.com/')[1] : this.curAppModule.repo.repo_url;
+                this.mirrorData.url = this.GLOBAL.CONFIG.MIRROR_PREFIX ? this.curAppModule.repo.repo_url.split('.com/')[1] : this.curAppModule.repo.repo_url;
             },
 
             async getLessCode () {

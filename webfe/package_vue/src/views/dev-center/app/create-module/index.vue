@@ -141,11 +141,11 @@
                       :placeholder="$t('请输入镜像地址,不包含版本(tag)信息')"
                     >
                       <template
-                        v-if="GLOBAL.APP_VERSION === 'te'"
+                        v-if="GLOBAL.CONFIG.MIRROR_PREFIX"
                         slot="prepend"
                       >
                         <div class="group-text">
-                          mirrors.tencent.com/
+                          {{ GLOBAL.CONFIG.MIRROR_PREFIX }}
                         </div>
                       </template>
                     </bk-input>
@@ -883,7 +883,7 @@
                 if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
                     params.type = 'default';
                     params.source_control_type = 'tc_docker';
-                    params.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                    params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                     params.source_repo_auth_info = {
                         username: '',
                         password: ''

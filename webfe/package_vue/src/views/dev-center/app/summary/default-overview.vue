@@ -904,7 +904,8 @@ export default {
     // 概览数据接口
     async getOverViewData() {
       try {
-        this.overViewData = await this.$store.dispatch('overview/getOverViewInfo', { appCode: this.appCode });
+        const code = this.appInfo.application?.code;
+        this.overViewData = await this.$store.dispatch('overview/getOverViewInfo', { appCode: code || this.appCode });
         // 默认展开第一个
         if (Object.keys(this.overViewData).length) {
           this.activeName = [Object.keys(this.overViewData)[0]];

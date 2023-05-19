@@ -516,7 +516,7 @@
               type="number"
               :placeholder="$t('请输入')"
               :min="0"
-              v-model:value="processPlan.targetReplicas"
+              :value.sync="processPlan.targetReplicas"
             />
           </bk-form-item>
         </bk-form>

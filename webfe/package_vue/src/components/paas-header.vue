@@ -401,7 +401,7 @@
         <dd class="last" />
       </dl>
     </div>
-    <log-version v-model:dialog-show="showLogVersion" />
+    <log-version :dialog-show.sync="showLogVersion" />
   </div>
 </template>
 

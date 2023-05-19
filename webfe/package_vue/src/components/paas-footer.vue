@@ -18,7 +18,7 @@
           {{ $t('蓝鲸桌面') }}
         </bk-link>
       </template>
-      <template v-else>
+      <div v-else>
         <bk-link
           theme="primary"
           :href="GLOBAL.LINK.BK_TECHNICAL_SUPPORT"
@@ -42,9 +42,9 @@
         >
           {{ $t('产品官网') }}
         </bk-link>
-      </template>
+      </div>
     </div>
-    <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. {{ GLOBAL.LINK.BK_HELP ? '' : paasVersion }}</div>
+    <div>Copyright © 2012-{{ curYear }} Tencent BlueKing. All Rights Reserved. {{ paasVersion || '' }}</div>
   </footer>
 </template>
 

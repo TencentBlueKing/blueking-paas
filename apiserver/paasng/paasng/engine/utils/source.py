@@ -29,7 +29,7 @@ from paas_wl.workloads.processes.models import ProcessTmpl
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.dev_resources.sourcectl.controllers.package import PackageController
-from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetProcfileError
+from paasng.dev_resources.sourcectl.exceptions import GetAppYamlError, GetDockerIgnoreError, GetProcfileError
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.repo_controller import get_repo_controller
 from paasng.dev_resources.sourcectl.utils import DockerIgnore
@@ -85,7 +85,7 @@ def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
         content = metadata_reader.get_dockerignore(version_info)
-    except GetProcfileError:
+    except GetDockerIgnoreError:
         # 源码中无 dockerignore 文件, 忽略异常
         return None
     except NotImplementedError:

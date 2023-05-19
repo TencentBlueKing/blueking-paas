@@ -2,6 +2,7 @@
   <!-- 普通应用 -->
   <default-overview
     v-if="isEngineless"
+    :app-info="curAppInfo"
     ref="defaultApp"
   />
   <!-- 外链应用 -->
@@ -24,10 +25,5 @@
                 return this.curAppInfo.web_config.engine_enabled;
             }
         },
-        mounted () {
-            if (this.isEngineless) {
-                this.$refs.defaultApp.init();
-            }
-        }
     };
 </script>

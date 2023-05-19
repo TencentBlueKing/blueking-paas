@@ -520,7 +520,7 @@
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script> import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -540,7 +540,7 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components : {
+  components: {
     // dropdown,
     tooltipConfirm,
     numInput,
@@ -1657,6 +1657,7 @@ export default {
           (res) => {
             this.processConfigDialog.isLoading = false;
             this.processConfigDialog.visiable = false;
+            this.$store.commit('updataEnvEventData', []);
             this.updateProcessConfig();
           },
           // 验证失败

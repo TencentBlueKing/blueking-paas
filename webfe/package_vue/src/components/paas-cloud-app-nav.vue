@@ -431,7 +431,7 @@ export default {
             if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
               nav.isActived = true;
               // nav.destRoute might be `undefined`
-            } else if (nav.destRoute && nav.destRoute.name === this.curRouteName) {
+            } else if (nav.destRoute && nav.destRoute?.name === this.curRouteName) {
               nav.isActived = true;
             } else {
               nav.isActived = false;
@@ -471,7 +471,7 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
           reject(router);
         }
       });

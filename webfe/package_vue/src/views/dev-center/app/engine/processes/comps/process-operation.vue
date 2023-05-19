@@ -543,7 +543,12 @@
           <bk-form :rules="scalingRules" :model="scalingConfig"
             ref="scalingConfigForm"
             class="auto-form" :label-width="0">
-              <p class="mb10">{{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}</p>
+              <p class="mb10">
+                {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
+                <i
+                    class="paasng-icon paasng-exclamation-circle uv-tips"
+                  />
+              </p>
               <bk-form-item property="maxReplicas">
                 <bk-input
                   type="number"
@@ -1845,11 +1850,10 @@ export default {
 
     saveProcessConfig() {
       this.processConfigDialog.isLoading = true;
-      console.log(11111)
       setTimeout(async () => {
         try {
-          const manualValidate = await this.$refs.processConfigForm.validate()
-          const autoValidate = await this.$refs.scalingConfigForm.validate()
+          const manualValidate = await this.$refs?.processConfigForm?.validate()
+          const autoValidate = await this.$refs?.scalingConfigForm?.validate()
         if(!this.autoscaling && manualValidate) {
           this.processConfigDialog.isLoading = false;
           this.processConfigDialog.visiable = false;

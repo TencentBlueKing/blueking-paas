@@ -297,7 +297,7 @@
 </template>
 
 <script>
-    import marked from 'marked';
+    import { marked } from 'marked';
     import appBaseMixin from '@/mixins/app-base-mixin';
     import appTopBar from '@/components/paas-app-bar';
     import ConfigView from './comps/config-view';
@@ -362,6 +362,7 @@
                         $(this).attr('target', '_blank');
                     });
                 });
+                console.log('marked', marked)
                 return marked(this.serviceMarkdown, { sanitize: true });
             },
             hasAdminUrl () {

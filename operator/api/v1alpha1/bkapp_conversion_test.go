@@ -104,7 +104,7 @@ var _ = Describe("test conversion back and forth", func() {
 			v1alpha1bkapp.Annotations[AddonsAnnoKey],
 		).To(Equal(v1alpha1bkappFromConverted.Annotations[AddonsAnnoKey]))
 		// 信息不丢失的情况下，转回 v1alpha1 后 Spec 会增加 Addons
-		v1alpha1bkapp.Spec.Addons = []Addon{{Name: "add-on1"}}
+		v1alpha1bkapp.Spec.Addons = []paasv1alpha2.Addon{{Name: "add-on1"}}
 		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
 	})
 
@@ -162,6 +162,13 @@ var _ = Describe("test conversion back and forth", func() {
 				},
 				DeployId:           "1",
 				ObservedGeneration: 2,
+				AddonStatuses: []paasv1alpha2.AddonStatus{
+					{
+						Name:  "addon-2",
+						State: paasv1alpha2.AddonProvisioned,
+						Specs: []paasv1alpha2.AddonSpec{{Name: "version", Value: "5.0"}},
+					},
+				},
 			},
 		}
 

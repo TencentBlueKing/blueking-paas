@@ -17,14 +17,11 @@ var _ conversion.Convertible = &BkApp{}
 func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*paasv1alpha2.BkApp)
 
-	err := copier.CopyWithOption(
+	_ = copier.CopyWithOption(
 		&dst.ObjectMeta,
 		&src.ObjectMeta,
 		copier.Option{DeepCopy: true},
 	)
-	if err != nil {
-		return err
-	}
 
 	// Handle Processes field
 	legacyProcImageConfig := make(paasv1alpha2.LegacyProcConfig)
@@ -56,10 +53,10 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	// Save legacy proc image and resource configs to annotations
-	if err = kubetypes.SetJsonAnnotation(dst, LegacyProcImageAnnoKey, legacyProcImageConfig); err != nil {
+	if err := kubetypes.SetJsonAnnotation(dst, LegacyProcImageAnnoKey, legacyProcImageConfig); err != nil {
 		return err
 	}
-	if err = kubetypes.SetJsonAnnotation(dst, LegacyProcResAnnoKey, legacyProcResConfig); err != nil {
+	if err := kubetypes.SetJsonAnnotation(dst, LegacyProcResAnnoKey, legacyProcResConfig); err != nil {
 		return err
 	}
 
@@ -69,22 +66,17 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
-	tempAddons := make([]paasv1alpha2.Addon, 0)
-	if src.Spec.Addons != nil {
-		_ = copier.CopyWithOption(
-			&tempAddons,
-			&src.Spec.Addons,
-			copier.Option{IgnoreEmpty: true, DeepCopy: true},
-		)
+	specsMap := make(map[string][]paasv1alpha2.AddonSpec)
+	for _, addon := range src.Spec.Addons {
+		tempSpecs := make([]paasv1alpha2.AddonSpec, 0)
+		_ = copier.CopyWithOption(&tempSpecs, &addon.Specs, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+		specsMap[addon.Name] = tempSpecs
 	}
-	specMap := make(map[string][]paasv1alpha2.AddonSpec)
-	for _, addon := range tempAddons {
-		specMap[addon.Name] = addon.Specs
-	}
+
 	for _, addonName := range addons {
 		dst.Spec.Addons = append(dst.Spec.Addons, paasv1alpha2.Addon{
 			Name:  addonName,
-			Specs: specMap[addonName],
+			Specs: specsMap[addonName],
 		})
 	}
 	// remove "bkapp.paas.bk.tencent.com/addons" annotation
@@ -138,14 +130,11 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*paasv1alpha2.BkApp)
 
-	err := copier.CopyWithOption(
+	_ = copier.CopyWithOption(
 		&dst.ObjectMeta,
 		&src.ObjectMeta,
 		copier.Option{DeepCopy: true},
 	)
-	if err != nil {
-		return err
-	}
 
 	// Handle Processes field
 	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
@@ -182,7 +171,7 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 	)
 
 	if src.Spec.Addons != nil {
-		dst.Spec.Addons = make([]Addon, 0)
+		dst.Spec.Addons = make([]paasv1alpha2.Addon, 0)
 		_ = copier.CopyWithOption(
 			&dst.Spec.Addons,
 			&src.Spec.Addons,

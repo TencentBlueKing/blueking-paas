@@ -252,6 +252,45 @@ spec:
           status:
             description: AppStatus defines the observed state of BkApp
             properties:
+              addonStatuses:
+                description: AddonStatuses is the status of add-on service include
+                  specifications
+                items:
+                  description: AddonStatus is the status of add-on service
+                  properties:
+                    message:
+                      description: if add-on service state is failed, message will
+                        be the fail message
+                      type: string
+                    name:
+                      type: string
+                    specs:
+                      items:
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
+                        properties:
+                          name:
+                            description: Name of the spec.
+                            type: string
+                          value:
+                            description: Value of the spec value
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                    state:
+                      description: AddonState is the state of add-on with app
+                      enum:
+                      - provisioned
+                      - failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
               addresses:
                 description: Addresses holds all addressable locations of current
                   BkApp, user may visit app via these locations, includes all domain

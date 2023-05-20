@@ -75,7 +75,7 @@ type AppSpec struct {
 
 	// Addons is a list of add-on service
 	// +optional
-	Addons []Addon `json:"addons,omitempty"`
+	Addons []paasv1alpha2.Addon `json:"addons,omitempty"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -100,25 +100,6 @@ func (spec *AppSpec) FindProcess(name string) *Process {
 		}
 	}
 	return nil
-}
-
-// Addon is used to specify add-on service
-type Addon struct {
-	// Name of the add-on service, e.g. redis
-	Name string `json:"name"`
-
-	// Specifies of the add-on service, if not set, recommended specifies will be used
-	// +optional
-	Specs []AddonSpec `json:"specs,omitempty"`
-}
-
-// AddonSpec is used to specify add-on service, e.g. version: 6.0
-type AddonSpec struct {
-	// Name of the spec.
-	Name string `json:"name"`
-
-	// Value of the spec value
-	Value string `json:"value"`
 }
 
 // BuildConfig is the configuration related with application building, the platform
@@ -297,6 +278,10 @@ type AppStatus struct {
 	// .metadata.generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// AddonStatuses is the status of add-on service include specifications
+	// +optional
+	AddonStatuses []paasv1alpha2.AddonStatus `json:"addonStatuses,omitempty"`
 }
 
 // Addressable includes URL and other related properties

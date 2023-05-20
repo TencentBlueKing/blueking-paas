@@ -105,7 +105,7 @@ var _ = Describe("TestClient", func() {
 	fakeSvcID := uuid.New().String()
 	DescribeTable(
 		"test ProvisionAddonInstance",
-		func(handler http.RoundTripper, specs *AddonSpecs, errMatcher types.GomegaMatcher) {
+		func(handler http.RoundTripper, specs AddonSpecs, errMatcher types.GomegaMatcher) {
 			client := NewTestClient("", "", handler)
 			svcID, err := client.ProvisionAddonInstance(context.Background(), "", "", "", "", specs)
 			Expect(err).To(errMatcher)
@@ -117,17 +117,17 @@ var _ = Describe("TestClient", func() {
 		Entry(
 			"200 for provision successfully",
 			&SimpleResponse{StatusCode: 200, Body: toJsonString(ProvisionAddonResult{ServiceID: fakeSvcID})},
-			&AddonSpecs{Specs: map[string]string{"version": "5.0.0"}},
+			AddonSpecs{Specs: map[string]string{"version": "5.0.0"}},
 			BeNil(),
 		),
 		Entry(
 			"204 for no need provision",
 			&SimpleResponse{StatusCode: 204, Body: toJsonString(ProvisionAddonResult{ServiceID: fakeSvcID})},
-			nil,
+			AddonSpecs{},
 			BeNil(),
 		),
-		Entry("404 for addon not found", &SimpleResponse{StatusCode: 404}, &AddonSpecs{}, HaveOccurred()),
-		Entry("500 for provision failed", &SimpleResponse{StatusCode: 500}, &AddonSpecs{}, HaveOccurred()),
+		Entry("404 for addon not found", &SimpleResponse{StatusCode: 404}, AddonSpecs{}, HaveOccurred()),
+		Entry("500 for provision failed", &SimpleResponse{StatusCode: 500}, AddonSpecs{}, HaveOccurred()),
 	)
 })
 

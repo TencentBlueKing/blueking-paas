@@ -52,8 +52,8 @@ type AddonSpecs struct {
 }
 
 // ToRequestBody convert AddonSpecs to request body
-func (s *AddonSpecs) ToRequestBody() (io.Reader, error) {
-	if s == nil || s.Specs == nil {
+func (s AddonSpecs) ToRequestBody() (io.Reader, error) {
+	if len(s.Specs) == 0 {
 		return bytes.NewBuffer([]byte{}), nil
 	}
 
@@ -118,7 +118,7 @@ func (c *Client) QueryAddonSpecs(ctx context.Context, appCode, moduleName, svcID
 // ProvisionAddonInstance 调用 bkpaas 对应接口, 分配应用的增强服务实例
 func (c *Client) ProvisionAddonInstance(
 	ctx context.Context,
-	appCode, moduleName, environment, addonName string, specs *AddonSpecs,
+	appCode, moduleName, environment, addonName string, specs AddonSpecs,
 ) (string, error) {
 	path := fmt.Sprintf(
 		"/system/bkapps/applications/%s/modules/%s/envs/%s/addons/%s/",
@@ -144,5 +144,5 @@ func (c *Client) ProvisionAddonInstance(
 		return "", errors.WithStack(err)
 	}
 
-	return result.ServiceID, errors.WithStack(nil)
+	return result.ServiceID, nil
 }

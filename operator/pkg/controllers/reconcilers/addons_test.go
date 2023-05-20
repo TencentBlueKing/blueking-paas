@@ -27,6 +27,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -34,8 +35,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
-
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 )
 
 var _ = Describe("Test AddonReconciler", func() {
@@ -106,7 +105,7 @@ var _ = Describe("Test AddonReconciler", func() {
 		}
 		ret := r.Reconcile(ctx, bkapp)
 
-		Expect(ret.err).Should(Succeed())
+		Expect(ret.err).NotTo(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeFalse())
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)

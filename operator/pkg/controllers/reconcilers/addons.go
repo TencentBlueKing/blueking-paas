@@ -55,8 +55,8 @@ type AddonReconciler struct {
 // Reconcile ...
 func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	// 未启用增强服务, 直接返回
-	if bkapp.Spec.Addons == nil {
-		return r.Result.withError(nil)
+	if len(bkapp.Spec.Addons) == 0 {
+		return r.Result
 	}
 
 	addonStatuses, err := r.doReconcile(ctx, bkapp)
@@ -101,10 +101,9 @@ func (r *AddonReconciler) doReconcile(
 	}
 
 	statuses := make([]paasv1alpha2.AddonStatus, 0)
-	addons := bkapp.Spec.Addons
-	for _, addon := range addons {
+	for _, addon := range bkapp.Spec.Addons {
 		status, err := r.provisionAddon(ctx, appInfo, addon)
-		statuses = append(statuses, *status)
+		statuses = append(statuses, status)
 		if err != nil {
 			log.Error(err, "failed to provision addon instance", "appInfo", appInfo, "addon", addon.Name)
 			return statuses, err
@@ -118,20 +117,14 @@ func (r *AddonReconciler) provisionAddon(
 	ctx context.Context,
 	appInfo *applications.BluekingAppInfo,
 	addon paasv1alpha2.Addon,
-) (*paasv1alpha2.AddonStatus, error) {
-	var reqSpecs *external.AddonSpecs
-	if addon.Specs != nil {
-		specsMap := make(map[string]string)
-		for _, spec := range addon.Specs {
-			specsMap[spec.Name] = spec.Value
-		}
-		reqSpecs = &external.AddonSpecs{
-			Specs: specsMap,
-		}
+) (paasv1alpha2.AddonStatus, error) {
+	specsMap := make(map[string]string)
+	for _, spec := range addon.Specs {
+		specsMap[spec.Name] = spec.Value
 	}
 
-	timeoutCtx, pCancel := context.WithTimeout(ctx, external.DefaultTimeout)
-	defer pCancel()
+	timeoutCtx, postCancel := context.WithTimeout(ctx, external.DefaultTimeout)
+	defer postCancel()
 
 	svcID, err := r.ExternalClient.ProvisionAddonInstance(
 		timeoutCtx,
@@ -139,32 +132,32 @@ func (r *AddonReconciler) provisionAddon(
 		appInfo.ModuleName,
 		appInfo.Environment,
 		addon.Name,
-		reqSpecs,
+		external.AddonSpecs{Specs: specsMap},
 	)
 	if err != nil {
-		return &paasv1alpha2.AddonStatus{
+		return paasv1alpha2.AddonStatus{
 			Name:    addon.Name,
 			State:   paasv1alpha2.AddonFailed,
 			Message: fmt.Sprintf("Provision failed: %s", err),
 		}, errors.Wrapf(err, "Addon '%s' provision failed, detail", addon.Name)
 	}
 
-	addOnStatus := &paasv1alpha2.AddonStatus{
+	addonStatus := paasv1alpha2.AddonStatus{
 		Name:  addon.Name,
 		State: paasv1alpha2.AddonProvisioned,
 	}
 
-	timeoutCtx, gCancel := context.WithTimeout(ctx, external.DefaultTimeout)
-	defer gCancel()
+	timeoutCtx, getCancel := context.WithTimeout(ctx, external.DefaultTimeout)
+	defer getCancel()
 	// 将增强服务 Specs 添加到 .status.addonStatuses.specs
 	specResult, err := r.ExternalClient.QueryAddonSpecs(timeoutCtx, appInfo.AppCode, appInfo.ModuleName, svcID)
 	if err != nil {
-		return addOnStatus, errors.Wrapf(err, "QueryAddonSpecs failed, detail")
+		return addonStatus, errors.Wrapf(err, "QueryAddonSpecs failed, detail")
 	}
 
-	for _, status := range specResult.Data {
-		addOnStatus.Specs = append(addOnStatus.Specs, paasv1alpha2.AddonSpec{Name: status.Name, Value: status.Value})
+	for _, spec := range specResult.Data {
+		addonStatus.Specs = append(addonStatus.Specs, paasv1alpha2.AddonSpec{Name: spec.Name, Value: spec.Value})
 	}
 
-	return addOnStatus, nil
+	return addonStatus, nil
 }

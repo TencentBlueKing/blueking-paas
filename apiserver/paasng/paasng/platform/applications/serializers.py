@@ -488,14 +488,6 @@ class ApplicationMinimalSLZ(serializers.ModelSerializer):
         fields = ['id', 'code', 'name']
 
 
-class AppMinimalWithModuleSLZ(serializers.ModelSerializer):
-    name = TranslatedCharField()
-
-    class Meta:
-        model = Application
-        fields = ['id', 'code', 'name']
-
-
 class ApplicationSLZ4Record(serializers.ModelSerializer):
     """用于操作记录"""
 

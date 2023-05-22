@@ -266,7 +266,7 @@ class ApplicationViewSet(viewsets.ViewSet):
             # then sort it
             applications = sorted(applications, key=lambda app: app.id in marked_application_ids, reverse=True)
 
-        serializer = slzs.AppMinimalWithModuleSLZ(applications, many=True)
+        serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
         return Response({'count': len(applications), 'results': serializer.data})
 
     def destroy(self, request, code):

@@ -62,6 +62,9 @@
             close () {
                 this.instance.close();
                 this.$emit('close');
+            },
+            hide () {
+                this.instance.toggle(false);
             }
         }
     };

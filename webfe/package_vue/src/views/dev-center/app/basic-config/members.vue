@@ -792,4 +792,9 @@ export default {
         border-color: #3c96ff;
         color: #3c96ff;
     }
+
+    .app-container .header {
+      display: flex;
+      justify-content: space-between;
+    }
 </style>

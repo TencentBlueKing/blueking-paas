@@ -63,7 +63,7 @@
                   <div
                     v-bk-tooltips="process.operateIconTitle"
                     class="tool-confirm-wrapper"
-                    @click="confirmClick(process)"
+                    @click="confirmClick(process, index)"
                     @mouseover="clearTooltipTimer(process)"
                     @mouseout="hideTooltipConfirm(process)"
                   >
@@ -112,7 +112,7 @@
                 </template>
               </div>
               <div
-                v-if="process.status === 'Running'"
+                v-if="process.status === 'Running' && currentClickObj.index === index"
                 class="process-status"
               >
                 <img
@@ -540,7 +540,7 @@ const initStartDate = moment().subtract(1, 'hours')
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
-  components: {
+  components : {
     // dropdown,
     tooltipConfirm,
     numInput,
@@ -881,13 +881,17 @@ export default {
       process.operateIconTitle = process.operateIconTitleCopy;
     },
 
-    confirmClick(process) {
+    confirmClick(process, index) {
       process.isShowTooltipConfirm = !process.isShowTooltipConfirm;
       if (process.isShowTooltipConfirm) {
         process.operateIconTitle = '';
       } else {
         process.operateIconTitle = process.operateIconTitleCopy;
       }
+      this.currentClickObj = Object.assign({}, {
+        operateIconTitle: process.operateIconTitle,
+        index,
+      });
     },
 
     /**

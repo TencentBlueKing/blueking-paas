@@ -38,7 +38,7 @@ from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
 
-from .exceptions import BKMonitorGatewayServiceError
+from .exceptions import BKMonitorGatewayServiceError, BKMonitorNotSupportedError
 from .models import AppAlertRule
 from .phalanx import Client
 from .serializer import (
@@ -229,6 +229,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 
         try:
             AlertRuleManager(application).init_rules()
+        except BKMonitorNotSupportedError as e:
+            raise error_codes.INIT_ALERT_RULES_FAILED.f(str(e))
         except AsCodeAPIError:
             raise error_codes.INIT_ALERT_RULES_FAILED
 

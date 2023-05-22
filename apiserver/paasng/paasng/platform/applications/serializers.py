@@ -490,15 +490,10 @@ class ApplicationMinimalSLZ(serializers.ModelSerializer):
 
 class AppMinimalWithModuleSLZ(serializers.ModelSerializer):
     name = TranslatedCharField()
-    default_module_name = serializers.CharField()
-
-    def to_representation(self, instance):
-        setattr(instance, 'default_module_name', instance.get_default_module().name)
-        return super().to_representation(instance)
 
     class Meta:
         model = Application
-        fields = ['id', 'code', 'name', 'default_module_name']
+        fields = ['id', 'code', 'name']
 
 
 class ApplicationSLZ4Record(serializers.ModelSerializer):

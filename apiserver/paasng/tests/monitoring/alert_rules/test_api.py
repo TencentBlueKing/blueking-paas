@@ -59,6 +59,6 @@ class TestAlertRulesView:
 
 
 class TestInitAlertRulesAPI:
-    def test_init_alert_rules(self, api_client, bk_app):
+    def test_init_alert_rules(self, api_client, bk_app, wl_namespaces):
         resp = api_client.post(f'/api/monitor/applications/{bk_app.code}/alert_rules/init/')
         assert resp.status_code == 200

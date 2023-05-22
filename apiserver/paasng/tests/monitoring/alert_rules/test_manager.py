@@ -41,7 +41,7 @@ class TestAlertRuleManager:
         manager.create_module_rules(create_module_for_alert.name)
         assert AppAlertRule.objects.filter(module=create_module_for_alert, alert_code='high_cpu_usage').count() == 2
 
-    def test_update(self, bk_app, cpu_usage_alert_rule_obj):
+    def test_update(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
         from tests.utils.helpers import generate_random_string
 
         receivers = [generate_random_string(6)]

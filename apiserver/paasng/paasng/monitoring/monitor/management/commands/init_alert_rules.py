@@ -24,6 +24,7 @@ from django.db.models import QuerySet
 
 from paasng.monitoring.monitor.alert_rules.ascode import exceptions
 from paasng.monitoring.monitor.alert_rules.manager import AlertRuleManager
+from paasng.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.platform.applications.models import Application
 
 
@@ -57,7 +58,7 @@ class Command(BaseCommand):
     def _init_rules(self, app: Application):
         try:
             AlertRuleManager(app).init_rules()
-        except exceptions.AsCodeAPIError as e:
+        except (exceptions.AsCodeAPIError, BKMonitorNotSupportedError) as e:
             self.stdout.write(self.style.ERROR(f'Initialize alert rules for {app.code} failed: {e}'))
         else:
             self.stdout.write(self.style.SUCCESS(f'Initialize alert rules for {app.code} success'))

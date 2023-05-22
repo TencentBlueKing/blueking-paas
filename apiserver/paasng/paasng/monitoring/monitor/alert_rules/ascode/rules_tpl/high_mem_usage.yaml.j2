@@ -11,7 +11,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum by (pod_name, container_name, namespace) (container_memory_working_set_bytes{container_name!="POD",namespace="{{ metric_labels['namespace'] }}"}) / sum by (pod_name, container_name, namespace) (kube_pod_container_resource_limits_memory_bytes{namespace="{{ metric_labels['namespace'] }}"})'
+  - metric: 'sum by (pod_name, container_name, namespace) (container_memory_working_set_bytes{container_name!="POD",namespace="{{ metric_labels['namespace'] }}",bcs_cluster_id="{{ metric_labels['bcs_cluster_id'] }}"}) / sum by (pod_name, container_name, namespace) (kube_pod_container_resource_limits_memory_bytes{namespace="{{ metric_labels['namespace'] }}",bcs_cluster_id="{{ metric_labels['bcs_cluster_id'] }}"})'
     interval: 60
 
 detect: # 检测配置

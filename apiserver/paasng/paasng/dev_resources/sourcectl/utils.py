@@ -40,9 +40,8 @@ class DockerIgnore:
         for pattern_str in self.content:
             invert = pattern_str.startswith("!")
             if invert:
-                self.patterns.append((invert, Pattern(pattern_str[1:])))
-            else:
-                self.patterns.append((False, Pattern(pattern_str)))
+                pattern_str = pattern_str[1:]
+            self.patterns.append((invert, Pattern(pattern_str)))
 
     def should_ignore(self, filename: str) -> bool:
         """detect whether to ignore given filename,

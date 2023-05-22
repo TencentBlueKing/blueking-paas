@@ -256,10 +256,6 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     min-width: 64px;
 }
 
-.drop-element.drop-open {
-    z-index: 10000;
-}
-
 .bk-searcher-wrapper .placeholder {
     top: 0 !important;
 }
@@ -332,8 +328,12 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     margin-right: 20px;
 }
 
-.drop-element.drop-open {
+.drop.drop-element {
     z-index: 10000;
+}
+
+.drop-element.drop-open {
+    display: none;
 }
 
 .bk-searcher-wrapper .placeholder {

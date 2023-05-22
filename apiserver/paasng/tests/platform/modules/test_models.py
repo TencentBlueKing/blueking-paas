@@ -20,7 +20,6 @@ import pytest
 
 from paasng.platform.modules.constants import APP_CATEGORY, SourceOrigin
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner
-from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
@@ -31,13 +30,13 @@ class TestAppSlugBuilder:
         [
             (..., False, False),
             (..., True, True),
-            (generate_random_string(), True, True),
-            (generate_random_string(), True, True),
+            ("random_name", True, True),
+            ("random_name", True, True),
         ],
     )
-    def test_filter(self, bk_module, slugbuilder, region, is_hidden, expect_empty):
+    def test_filter(self, request, bk_module, slugbuilder, region, is_hidden, expect_empty):
         if region is not ...:
-            slugbuilder.region = region
+            slugbuilder.region = request.getfixturevalue(region)
         slugbuilder.is_hidden = is_hidden
         slugbuilder.save()
 
@@ -62,19 +61,21 @@ class TestAppSlugBuilder:
     @pytest.mark.parametrize(
         "region, is_hidden, bind, expect_empty",
         [
-            (generate_random_string(), False, False, True),
-            (generate_random_string(), True, False, True),
-            (generate_random_string(), True, True, False),
-            (generate_random_string(), False, True, False),
+            ("random_name", False, False, True),
+            ("random_name", True, False, True),
+            ("random_name", True, True, False),
+            ("random_name", False, True, False),
             (..., False, True, False),
             (..., True, True, False),
             (..., True, False, True),
             (..., False, False, False),
         ],
     )
-    def test_get_buildpack_choices(self, bk_module, buildpack, slugbuilder, region, is_hidden, bind, expect_empty):
+    def test_get_buildpack_choices(
+        self, request, bk_module, buildpack, slugbuilder, region, is_hidden, bind, expect_empty
+    ):
         if region is not ...:
-            buildpack.region = region
+            buildpack.region = request.getfixturevalue(region)
         if bind:
             buildpack.modules.add(bk_module)
         buildpack.is_hidden = is_hidden
@@ -130,13 +131,13 @@ class TestAppSlugRunner:
         [
             (..., False, False),
             (..., True, True),
-            (generate_random_string(), True, True),
-            (generate_random_string(), True, True),
+            ("random_name", True, True),
+            ("random_name", True, True),
         ],
     )
-    def test_filter(self, bk_module, slugrunner, region, is_hidden, expect_empty):
+    def test_filter(self, request, bk_module, slugrunner, region, is_hidden, expect_empty):
         if region is not ...:
-            slugrunner.region = region
+            slugrunner.region = request.getfixturevalue(region)
         slugrunner.is_hidden = is_hidden
         slugrunner.save()
 

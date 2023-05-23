@@ -124,6 +124,8 @@
                   @keypress.enter="enterCallBack($event)"
                   @compositionstart="handleCompositionstart"
                   @compositionend="handleCompositionend"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
                 >
                 <div class="ps-search-icon">
                   <span
@@ -142,7 +144,7 @@
                 slot="content"
                 class="header-search-result"
               >
-              <div v-if="isShowInput">
+              <div v-if="isShowInput && isFocus">
                 <div
                   v-if="filterKey !== ''"
                   class="paas-search-trigger"
@@ -456,6 +458,7 @@ export default {
         },
       ],
       isShowInput: true,
+      isFocus: false,
       // eslint-disable-next-line comma-dangle
       link: this.GLOBAL.LINK.APIGW_INDEX,
       navText: '',
@@ -551,6 +554,14 @@ export default {
 
     handleCompositionend() {
       this.isInputing = false;
+    },
+
+    handleFocus() {
+      this.isFocus = true
+    },
+
+    handleBlur() {
+      this.isFocus = false
     },
 
     handleToSearchPage() {

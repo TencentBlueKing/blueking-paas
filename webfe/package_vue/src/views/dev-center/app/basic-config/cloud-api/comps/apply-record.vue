@@ -779,7 +779,7 @@
             line-height: 32px;
         }
         .select-wrapper {
-            width: 85px;
+            width: 98px;
         }
         .set-ml {
             margin-left: 18px;

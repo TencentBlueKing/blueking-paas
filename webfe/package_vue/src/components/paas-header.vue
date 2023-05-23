@@ -561,7 +561,9 @@ export default {
     },
 
     handleBlur() {
-      this.isFocus = false
+      setTimeout(() => {
+        this.isFocus = false
+      }, 500);
     },
 
     handleToSearchPage() {

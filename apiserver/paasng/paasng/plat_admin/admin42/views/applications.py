@@ -39,8 +39,8 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
-from paasng.platform.applications.tasks import sync_developers_to_sentry
-from paasng.platform.applications.utils import cal_app_resource_quotas
+from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
+from paasng.platform.core.storages.redisdb import DefaultRediStore
 from paasng.utils.error_codes import error_codes
 
 
@@ -59,12 +59,27 @@ class ApplicationListView(GenericTemplateView):
         if 'view' not in kwargs:
             kwargs['view'] = self
 
+        # 获取所有应用的资源使用总量
+        store = DefaultRediStore(rkey='quotas::app')
+        app_resource_quotas = store.get()
+        # 未获取到，则在在后台计算
+        if not app_resource_quotas:
+            cal_app_resource_quotas.delay()
+        else:
+            # 以获取到所有应用的资源使用量，则按资源使用率排序分页
+            return self.get_app_resource_context_data(app_resource_quotas, **kwargs)
+
+        data = self.list(self.request, *self.args, **self.kwargs)
+        kwargs['application_list'] = data
+        kwargs['pagination'] = self.get_pagination_context(self.request)
+        return kwargs
+
+    def get_app_resource_context_data(self, app_resource_quotas, **kwargs):
         # 手动按资源的使用量排序分页
         offset = self.paginator.get_offset(self.request)
         limit = self.paginator.get_limit(self.request)
 
         # 应用资源排序后的信息
-        app_resource_quotas = cal_app_resource_quotas()
         page_app_code_list = list(app_resource_quotas.keys())[offset : offset + limit]
         page = self.filter_queryset(self.get_queryset()).filter(code__in=page_app_code_list)
         data = self.get_serializer(page, many=True, context={"app_resource_quotas": app_resource_quotas}).data

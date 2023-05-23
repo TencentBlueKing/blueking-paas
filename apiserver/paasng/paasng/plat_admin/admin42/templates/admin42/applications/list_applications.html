@@ -64,12 +64,12 @@
                 <span>$[props.row.resource_quotas.memory]G / $[props.row.resource_quotas.cpu]核</span>
             </template>
         </bk-table-column>
+        <bk-table-column label="应用类型" prop="app_type"></bk-table-column>
         <bk-table-column label="创建时间" prop="created">
             <template slot-scope="props">
                 <span v-bk-tooltips="{content: props.row.created }">$[props.row.created_humanized] </span>
             </template>
         </bk-table-column>
-        <bk-table-column label="应用类型" prop="type"></bk-table-column>
         <bk-table-column label="创建人" prop="owner"></bk-table-column>
     </bk-table>
     <pagination

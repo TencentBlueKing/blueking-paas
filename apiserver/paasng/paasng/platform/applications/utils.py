@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -33,7 +33,6 @@ from paasng.platform.applications.constants import AppEnvironment, ApplicationTy
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application, pre_delete_module
 from paasng.platform.applications.specs import AppSpecs
-from paasng.platform.core.storages.cache import region as cache_region
 from paasng.platform.modules.constants import ModuleName, SourceOrigin
 from paasng.platform.modules.manager import ModuleCleaner
 from paasng.platform.modules.models import Module
@@ -299,15 +298,3 @@ class ResQuotasAggregation:
         # 内存的单位从默认的 Mi 转为 G
         memory = sum([v["memory_total"] for v in quotas.values()]) // 1024
         return {"cpu": cpu, "memory": memory}
-
-
-@cache_region.cache_on_arguments(namespace="app_resource", expiration_time=60 * 60 * 24)
-def cal_app_resource_quotas() -> dict:
-    """计算所有应用的资源配额，用于应用列表页面的排序展示"""
-    app_resource_quotas = OrderedDict()
-    for app in Application.objects.all():
-        quotas = ResQuotasAggregation(app).get_resource_quotas()
-        app_resource_quotas[app.code] = quotas
-    # 按内存的使用大小排序
-    sorted_app_quotas = OrderedDict(sorted(app_resource_quotas.items(), key=lambda x: x[1]['memory'], reverse=True))
-    return sorted_app_quotas

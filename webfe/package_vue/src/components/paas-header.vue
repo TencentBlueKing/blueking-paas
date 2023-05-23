@@ -561,12 +561,8 @@ export default {
         },
       });
     },
-    handleInput() {
-      console.log(this.filterKey)
-    },
     // 键盘上下键 选择事件回调
     emitChildKeyUp() {
-      console.log(1111223)
       if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
         return;
       }
@@ -576,7 +572,6 @@ export default {
       this.$refs.searchPanelList[this.curActiveIndex].onKeyUp();
     },
     emitChildKeyDown() {
-      console.log(1111223)
       if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
         return;
       }

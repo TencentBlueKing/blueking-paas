@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
@@ -29,12 +29,17 @@ from django.utils.translation import gettext as _
 from paas_wl.platform.applications.models.build import BuildProcess
 from paas_wl.platform.applications.models.misc import OutputStream
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.dev_resources.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
+from paasng.dev_resources.sourcectl.utils import (
+    ExcludeChecker,
+    compress_directory_ext,
+    generate_temp_dir,
+    generate_temp_file,
+)
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
 from paasng.engine.configurations.building import SlugbuilderInfo
 from paasng.engine.configurations.config_var import get_env_variables
-from paasng.engine.constants import BuildStatus, JobStatus
+from paasng.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
@@ -47,6 +52,7 @@ from paasng.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
     get_app_description_handler,
+    get_dockerignore,
     get_processes,
     get_source_package_path,
     tag_module_from_source_files,
@@ -66,7 +72,103 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ApplicationBuilder(DeployStep):
+class BaseBuilder(DeployStep):
+    PHASE_TYPE = DeployPhaseTypes.BUILD
+
+    def compress_and_upload(
+        self, relative_source_dir: Path, source_destination_path: str, should_ignore: Optional[ExcludeChecker] = None
+    ):
+        """Download, compress and upload module source files
+
+        :param Path relative_source_dir: 源码目录(相对路径), 当源码目录不为 Path(".") 时, 表示仅打包上传 relative_source_dir 下的源码文件.
+        :param str source_destination_path: 表示将源码归档包上传至对象存储中的位置.
+        """
+        module = self.deployment.app_environment.module
+        with generate_temp_dir() as working_dir:
+            source_dir = working_dir.absolute() / relative_source_dir
+            download_source_to_dir(module, self.deployment.operator, self.deployment, working_dir)
+
+            if not source_dir.exists():
+                message = (
+                    "The source directory '{source_dir}' does not exist,please check the repository to confirm."
+                ).format(source_dir=str(relative_source_dir))
+                self.stream.write_message(Style.Error(message))
+                raise FileNotFoundError(message)
+            if source_dir.is_file():
+                message = _(
+                    "The source directory '{source_dir}' is not a legal directory,please check repository to confirm."
+                ).format(source_dir=str(relative_source_dir))
+                self.stream.write_message(Style.Error(message))
+                raise NotADirectoryError(message)
+
+            tag_module_from_source_files(module, source_dir)
+            with generate_temp_file(suffix='.tar.gz') as package_path:
+                compress_directory_ext(source_dir, package_path, should_ignore=should_ignore)
+                check_source_package(self.engine_app, package_path, self.stream)
+                logger.info(f"Uploading source files to {source_destination_path}")
+                make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE).upload_file(
+                    package_path, source_destination_path
+                )
+
+    def handle_app_description(self):
+        """Handle application description for deployment"""
+        module = self.deployment.app_environment.module
+        application = module.application
+        operator = self.deployment.operator
+        version_info = self.deployment.version_info
+        relative_source_dir = self.deployment.get_source_dir()
+
+        if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION):
+            logger.debug("App description disabled.")
+            return
+
+        handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
+        if not handler:
+            logger.debug("No valid app description file found.")
+            return
+
+        if not isinstance(handler, AppDescriptionHandler):
+            logger.debug(
+                "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
+            )
+            return
+
+        handler.handle_deployment(self.deployment)
+
+    def provision_services(self, p: DeployProcedure, module: Module):
+        """Provision all preset services
+
+        :param p: DeployProcedure object for writing hint messages
+        :param module: Module to evaluate provision
+        """
+        self.notify_unexpected_missing_services(p, module)
+
+        for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
+            p.stream.write_message(
+                'Creating new service instance of %s, it will take several minutes...' % rel.get_service().display_name
+            )
+            rel.provision()
+
+    def notify_unexpected_missing_services(self, p: DeployProcedure, module: Module):
+        """Find services which should be bound but not bound, display warning messages"""
+        try:
+            tmpl = Template.objects.get(name=module.source_init_template, type=TemplateType.NORMAL)
+        except ObjectDoesNotExist:
+            return
+
+        # Find services which SHOULD have be bound but unbound yet
+        preset_service_names = set(tmpl.preset_services_config.keys())
+        bound_service_names = {service_obj.name for service_obj in mixed_service_mgr.list_binded(module)}
+        unbound_service_names = preset_service_names - bound_service_names
+        if unbound_service_names:
+            message = _(
+                "The predefined Add-ons {unbound_service_names} in the initial template are not enabled, "
+                "please check if they need to be enabled"
+            ).format(unbound_service_names=unbound_service_names)
+            self.stream.write_message(Style.Warning(message))
+
+
+class ApplicationBuilder(BaseBuilder):
     """The main controller for building an application"""
 
     PHASE_TYPE = DeployPhaseTypes.BUILD
@@ -104,7 +206,7 @@ class ApplicationBuilder(DeployStep):
             self.compress_and_upload(relative_source_dir, source_destination_path)
 
         with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
-            self._provision_services(p, module)
+            self.provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
@@ -114,64 +216,6 @@ class ApplicationBuilder(DeployStep):
             self.async_start_build_process(
                 source_destination_path, procfile={p.name: p.command for p in processes.values()}
             )
-
-    def compress_and_upload(self, relative_source_dir: Path, source_destination_path: str):
-        """Download, compress and upload module source files
-
-        :param Path relative_source_dir: 源码目录(相对路径), 当源码目录不为 Path(".") 时, 表示仅打包上传 relative_source_dir 下的源码文件.
-        :param str source_destination_path: 表示将源码归档包上传至对象存储中的位置.
-        """
-        module = self.deployment.app_environment.module
-        with generate_temp_dir() as working_dir:
-            source_dir = working_dir.absolute() / relative_source_dir
-            download_source_to_dir(module, self.deployment.operator, self.deployment, working_dir)
-
-            if not source_dir.exists():
-                message = (
-                    "The source directory '{source_dir}' does not exist,please check the repository to confirm."
-                ).format(source_dir=str(relative_source_dir))
-                self.stream.write_message(Style.Error(message))
-                raise FileNotFoundError(message)
-            if source_dir.is_file():
-                message = _(
-                    "The source directory '{source_dir}' is not a legal directory,please check repository to confirm."
-                ).format(source_dir=str(relative_source_dir))
-                self.stream.write_message(Style.Error(message))
-                raise NotADirectoryError(message)
-
-            tag_module_from_source_files(module, source_dir)
-            with generate_temp_file(suffix='.tar.gz') as package_path:
-                compress_directory(source_dir, package_path)
-                check_source_package(self.engine_app, package_path, self.stream)
-                logger.info(f"Uploading source files to {source_destination_path}")
-                make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE).upload_file(
-                    package_path, source_destination_path
-                )
-
-    def handle_app_description(self):
-        """Handle application description for deployment"""
-        module = self.deployment.app_environment.module
-        application = module.application
-        operator = self.deployment.operator
-        version_info = self.deployment.version_info
-        relative_source_dir = self.deployment.get_source_dir()
-
-        if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION):
-            logger.debug("App description disabled.")
-            return
-
-        handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
-        if not handler:
-            logger.debug("No valid app description file found.")
-            return
-
-        if not isinstance(handler, AppDescriptionHandler):
-            logger.debug(
-                "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
-            )
-            return
-
-        handler.handle_deployment(self.deployment)
 
     def async_start_build_process(self, source_tar_path: str, procfile: Dict[str, str]):
         """Start a new build process and check the status periodically"""
@@ -202,37 +246,56 @@ class ApplicationBuilder(DeployStep):
             post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.BUILD)
             ApplicationPreReleaseExecutor.from_deployment_id(self.deployment.id).start()
 
-    def _provision_services(self, p: DeployProcedure, module: Module):
-        """Provision all preset services
 
-        :param p: DeployProcedure object for writing hint messages
-        :param module: Module to evaluate provision
-        """
-        self._notify_unexpected_missing_services(p, module)
+class ImageBuilder(BaseBuilder):
+    """The main controller for building an image"""
 
-        for rel in mixed_service_mgr.list_unprovisioned_rels(self.engine_app):
-            p.stream.write_message(
-                'Creating new service instance of %s, it will take several minutes...' % rel.get_service().display_name
+    @DeployStep.procedures
+    def start(self):
+        # Trigger signal
+        pre_appenv_build.send(self.deployment.app_environment, deployment=self.deployment, step=self)
+
+        pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
+        preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
+        relative_source_dir = self.deployment.get_source_dir()
+        module = self.deployment.app_environment.module
+        with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
+            processes = get_processes(deployment=self.deployment, stream=self.stream)
+            self.deployment.update_fields(processes=processes)
+
+        with self.procedure_force_phase(_('解析 .dockerignore 文件'), phase=preparation_phase):
+            dockerignore = get_dockerignore(deployment=self.deployment)
+
+        with self.procedure_force_phase(_('上传仓库代码'), phase=preparation_phase):
+            source_destination_path = get_source_package_path(self.deployment)
+            self.compress_and_upload(
+                relative_source_dir,
+                source_destination_path,
+                should_ignore=dockerignore.should_ignore if dockerignore else None,
             )
-            rel.provision()
 
-    def _notify_unexpected_missing_services(self, p: DeployProcedure, module: Module):
-        """Find services which should be bound but not bound, display warning messages"""
-        try:
-            tmpl = Template.objects.get(name=module.source_init_template, type=TemplateType.NORMAL)
-        except ObjectDoesNotExist:
-            return
+        with self.procedure_force_phase(_('配置资源实例'), phase=preparation_phase) as p:
+            self.provision_services(p, module)
 
-        # Find services which SHOULD have be bound but unbound yet
-        preset_service_names = set(tmpl.preset_services_config.keys())
-        bound_service_names = {service_obj.name for service_obj in mixed_service_mgr.list_binded(module)}
-        unbound_service_names = preset_service_names - bound_service_names
-        if unbound_service_names:
-            message = _(
-                "The predefined Add-ons {unbound_service_names} in the initial template are not enabled, "
-                "please check if they need to be enabled"
-            ).format(unbound_service_names=unbound_service_names)
-            self.stream.write_message(Style.Warning(message))
+        # 由于准备阶段比较特殊，额外手动发送 phase end 消息
+        post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
+
+        pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
+        with self.procedure(_('启动应用构建任务')):
+            self.async_start_build_process(
+                source_destination_path, procfile={p.name: p.command for p in processes.values()}
+            )
+
+    def async_start_build_process(self, source_tar_path: str, procfile: Dict[str, str]):
+        """Start a new build process and check the status periodically"""
+        # TODO: 获取构建相关的参数(例如 build-arg)
+        build_process_id = start_docker_build(
+            self.deployment, self.version_info, str(self.deployment.id), source_tar_path, procfile
+        )
+
+        self.state_mgr.update(build_process_id=build_process_id)
+        params = {"build_process_id": build_process_id, "deployment_id": self.deployment.id}
+        BuildProcessPoller.start(params, BuildProcessResultHandler)
 
 
 class BuildProcessPoller(DeployPoller):
@@ -308,12 +371,18 @@ class BuildProcessResultHandler(CallbackHandler):
 
 
 @shared_task(base=I18nTask)
-def start_build(deployment_id, *args, **kwargs):
+def start_build(deployment_id, runtime_type: RuntimeType, *args, **kwargs):
     """Start a deployment process
 
     :param deployment_id: ID of deployment object
+    :param runtime_type: runtime type of Application
     """
-    deploy_controller = ApplicationBuilder.from_deployment_id(deployment_id)
+    if runtime_type == RuntimeType.BUILDPACK:
+        deploy_controller = ApplicationBuilder.from_deployment_id(deployment_id)
+    elif runtime_type == RuntimeType.DOCKERFILE:
+        deploy_controller = ImageBuilder.from_deployment_id(deployment_id)
+    else:
+        raise NotImplementedError
     deploy_controller.start()
 
 
@@ -336,7 +405,7 @@ def start_build_process(
     procfile: Dict[str, str],
     extra_envs: Dict[str, str],
 ) -> str:
-    """Start a new build process, this will start a celery task in the background without
+    """Start a new build process[using Buildpack], this will start a celery task in the background without
     blocking current process.
     """
     env = deploy.app_environment
@@ -370,7 +439,50 @@ def start_build_process(
             'extra_envs': extra_envs or {},
             'image': image,
             'buildpacks': build_process.buildpacks_as_build_env(),
-            "is_cnb_runtime": build_info.is_cnb_runtime,
+            "use_cnb": build_info.use_cnb,
+        },
+    )
+    return str(build_process.uuid)
+
+
+def start_docker_build(
+    deploy: Deployment,
+    version: 'VersionInfo',
+    stream_channel_id: str,
+    source_tar_path: str,
+    procfile: Dict[str, str],
+):
+    """Start a new build process[using Dockerfile], this will start a celery task in the background without
+    blocking current process.
+    """
+    env = deploy.app_environment
+
+    builder_image = settings.KANIKO_IMAGE
+    # 注入构建环境所需环境变量
+    extra_envs = {
+        "DOCKERFILE_PATH": "",
+        "BUILD_ARG": "",
+    }
+
+    # Create the Build object and start a background build task
+    build_process = BuildProcess.objects.create(
+        app=env.wl_app,
+        source_tar_path=source_tar_path,
+        revision=version.revision,
+        branch=version.version_name,
+        output_stream=OutputStream.objects.create(),
+        image=builder_image,
+    )
+    # Start the background build process
+    start_bg_build_process.delay(
+        deploy.id,
+        build_process.uuid,
+        stream_channel_id=stream_channel_id,
+        metadata={
+            'procfile': procfile,
+            'extra_envs': extra_envs or {},
+            'image': builder_image,
+            "use_dockerfile": True,
         },
     )
     return str(build_process.uuid)

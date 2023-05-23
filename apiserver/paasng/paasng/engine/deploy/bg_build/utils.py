@@ -70,7 +70,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
     app: 'WlApp' = bp.app
     env_vars: Dict[str, str] = {}
 
-    if metadata and metadata.get("is_dockerbuild"):
+    if metadata and metadata.get("use_dockerfile"):
         # build application form Dockerfile
         engine_app = EngineApp.objects.get(id=app.pk)
         image_repository = generate_image_repository(engine_app)
@@ -82,7 +82,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
             DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
         )
-    elif metadata and metadata.get("is_cnb_runtime"):
+    elif metadata and metadata.get("use_cnb"):
         # build application as image
         engine_app = EngineApp.objects.get(id=app.pk)
         image_repository = generate_image_repository(engine_app)

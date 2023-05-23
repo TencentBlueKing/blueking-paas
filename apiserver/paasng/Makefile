@@ -30,3 +30,4 @@ i18n_tpl:
 # compile django.po and djangojs.po to django.mo and djangojs.mo
 i18n_mo:
 	python manage.py  compilemessages
+

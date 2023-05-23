@@ -142,6 +142,7 @@
                 slot="content"
                 class="header-search-result"
               >
+              <div v-if="isShowInput">
                 <div
                   v-if="filterKey !== ''"
                   class="paas-search-trigger"
@@ -167,6 +168,7 @@
                     @key-down-overflow="onKeyDown(), emitChildKeyDown()"
                   />
                 </div>
+              </div>
               </div>
             </dropdown>
           </li>
@@ -552,7 +554,10 @@ export default {
     },
 
     handleToSearchPage() {
-      this.$refs.dropdown.close();
+      console.log('this.$refs.dropdown', this.$refs.dropdown)
+      setTimeout(() => {
+        this.$refs.dropdown.close();
+      }, 2000);
       this.isShowInput = false;
       this.$router.push({
         name: 'search',

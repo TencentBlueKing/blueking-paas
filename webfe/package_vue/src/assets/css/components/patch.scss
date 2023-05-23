@@ -307,7 +307,7 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 }
 
 .bk-transfer .source-list, .bk-transfer .target-list {
-    height: 280px;
+    height: 280px !important;
 }
 
 .bk-dialog-wrapper .bk-dialog {
@@ -330,10 +330,6 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 
 .drop.drop-element {
     z-index: 10000;
-}
-
-.drop-element.drop-open {
-    display: none;
 }
 
 .bk-searcher-wrapper .placeholder {
@@ -387,7 +383,7 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 }
 
 .bk-transfer .source-list, .bk-transfer .target-list {
-    height: 280px;
+    height: 280px !important;
 }
 
 .bk-dialog-wrapper .bk-dialog {

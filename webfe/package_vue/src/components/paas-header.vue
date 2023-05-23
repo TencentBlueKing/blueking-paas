@@ -565,10 +565,7 @@ export default {
     },
 
     handleToSearchPage() {
-      console.log('this.$refs.dropdown', this.$refs.dropdown)
-      setTimeout(() => {
-        this.$refs.dropdown.close();
-      }, 2000);
+      this.$refs.dropdown.close();
       this.isShowInput = false;
       this.$router.push({
         name: 'search',

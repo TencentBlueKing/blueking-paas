@@ -66,7 +66,7 @@ def get_cluster_id(app_code: str, run_env: str, module_name: str) -> str:
     """
     cluster_info = _get_cluster_info_cache(app_code, run_env, module_name)
     version = cluster_info['version']
-    if (int(version.major), int(version.minor)) < (1, 12):
+    if (int(version.major), int(version.minor.rstrip('+'))) < (1, 12):
         raise BKMonitorNotSupportedError(f'bkmonitor does not support k8s version {version} which below 1.12')
 
     return cluster_info['bcs_cluster_id']

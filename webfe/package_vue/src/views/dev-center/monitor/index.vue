@@ -28,7 +28,7 @@
             >
               <div
                 slot="trigger"
-                style="width: 310px;"
+                style="width: 310px;display: flex;justify-content: end;"
                 @click="toggleDatePicker"
               >
                 <button class="action-btn timer">
@@ -576,11 +576,7 @@
     .data-search {
         display: inline-block;
         position: relative;
-        top: 3px;
-        left: 183px;
-        &.reset-left {
-            left: 40px;
-        }
+        top: 1px;
     }
 
     .paas-search {

@@ -32,7 +32,7 @@
               :key="key"
             >
               <td class="has-right-border td-title">
-                {{ key === 'prod' ? $t('生产') : $t('预发布') }} {{ $t('环境') }}
+                {{ key === 'prod' ? $t('生产') : $t('预发布') }}{{ $t('环境') }}
               </td>
               <td>
                 <div

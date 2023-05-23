@@ -225,7 +225,7 @@
             >
               <span class="bk-icon icon-refresh f18" />
             </bk-button>
-
+            
             <bk-form
               form-type="inline"
               class="fr mr5"
@@ -2492,7 +2492,7 @@ export default {
 
     .action-box {
         position: absolute;
-        top: 7px;
+        top: 12px;
         right: 10px;
     }
 

@@ -87,7 +87,7 @@
             tabActive () {
                 this.$nextTick(() => {
                     if (this.tabActive === 'structured') {
-                        this.$refs.customLog.initTableBox();
+                      this.$refs.customLog?.initTableBox();
                     }
                     if (this.tabActive === 'access') {
                         this.$refs.accessLog.initTableBox();
@@ -99,7 +99,11 @@
             this.isLoading = true;
             if (this.$route.query.tab) {
                 const isExistTab = ['structured', 'stream', 'access'].includes(this.$route.query.tab);
-                this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
+                if(this.curAppInfo.application.type === 'cloud_native') {
+                  this.tabActive = 'stream'
+                } else {
+                  this.tabActive = isExistTab ? this.$route.query.tab : 'structured';
+                }
             }
             setTimeout(() => {
                 this.isLoading = false;

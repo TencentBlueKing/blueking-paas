@@ -332,6 +332,10 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     z-index: 10000;
 }
 
+.drop.drop-element.drop-open:not(.exclude-drop) {
+    display: none;
+}
+
 .bk-searcher-wrapper .placeholder {
     top: 0 !important;
 }

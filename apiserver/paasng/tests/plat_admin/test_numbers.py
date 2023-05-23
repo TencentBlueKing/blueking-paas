@@ -39,7 +39,7 @@ from tests.utils.helpers import create_legacy_application
 
 # Create application with source obj to make tests work
 create_app = functools.partial(helper_create_app, additional_modules=['sourcectl'])
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
 @pytest.fixture(autouse=True)

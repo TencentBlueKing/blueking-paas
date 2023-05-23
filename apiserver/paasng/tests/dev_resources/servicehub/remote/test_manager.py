@@ -39,7 +39,7 @@ from tests.utils.api import mock_json_response
 
 from .utils import gen_plan
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
 class TestRemotePlanObj:

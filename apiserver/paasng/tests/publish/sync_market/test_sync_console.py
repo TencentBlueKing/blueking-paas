@@ -44,7 +44,7 @@ from paasng.publish.sync_market.managers import AppDeveloperManger, AppManger, A
 from tests.conftest import mark_skip_if_console_not_configured
 from tests.utils.helpers import create_app, generate_random_string
 
-pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db]
+pytestmark = [mark_skip_if_console_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
 logger = logging.getLogger(__name__)

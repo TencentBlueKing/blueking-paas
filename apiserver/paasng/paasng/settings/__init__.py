@@ -93,7 +93,7 @@ DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
 
-RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0]
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ
 
 INSTALLED_APPS = [
     # WARNING: never enable django.contrib.admin here

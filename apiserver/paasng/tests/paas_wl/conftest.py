@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import atexit
 import copy
 import logging
 import tempfile
@@ -268,11 +269,11 @@ def get_cluster_with_hook(hook_func: Callable) -> Callable:
     return _wrapped
 
 
-@pytest.fixture(autouse=True)
+@atexit.register
 def clear_kubernetes_dynamic_discoverer_cache():
-    # delete all discoverer cache files to ensure tests successful of the multiple kubernetes clusters
+    # Delete all discoverer caches to ensure that the next test run is not affected after switching kubernetes clusters
     for f in Path(tempfile.gettempdir()).glob("osrcp-*.json"):
-        f.unlink()
+        f.unlink(missing_ok=True)
 
 
 @pytest.fixture

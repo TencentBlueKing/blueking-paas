@@ -16,14 +16,28 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
+from paasng.dev_resources.servicehub.remote import store as store_m
 from paasng.dev_resources.servicehub.remote.client import RemoteSvcConfig
-from paasng.dev_resources.servicehub.remote.store import get_remote_store
+from paasng.dev_resources.servicehub.remote.store import MemoryStore, get_remote_store
 from tests.platform.mgrlegacy.utils import get_migration_instance
 from tests.utils.helpers import configure_regions
+
+
+def pytest_collection_modifyitems(config, items):
+    # pytest_collection_modifyitems always receives all collected items,
+    # not only those under the conftest.py where it is implemented.
+    rootdir = Path(__file__).parent
+    for item in items:
+        try:
+            if Path(item.fspath).relative_to(rootdir):
+                item.add_marker(pytest.mark.xdist_group(name="legacy-db"))
+        except ValueError:
+            continue
 
 
 @pytest.fixture(autouse=True)
@@ -58,9 +72,12 @@ def svc_config():
 @pytest.fixture()
 def store():
     """Mocked Store"""
-    raw_store = get_remote_store()
-    yield raw_store
-    raw_store.empty()
+    old_store = get_remote_store()
+    memory_store = MemoryStore()
+    store_m._g_services_store = memory_store
+    assert get_remote_store() is memory_store
+    yield memory_store
+    store_m._g_services_store = old_store
 
 
 @pytest.fixture(autouse=True)

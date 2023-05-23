@@ -31,7 +31,7 @@ from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMi
 from tests.conftest import skip_if_legacy_not_configured
 from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db]
+pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
 dummy_service = RemoteServiceObj(

@@ -333,6 +333,9 @@ th.bk-table-column-selection .cell .bk-table-header-label {
 }
 
 .drop.drop-element.drop-open:not(.exclude-drop) {
+    display: block;
+}
+.drop.drop-element:not(.exclude-drop) {
     display: none;
 }
 

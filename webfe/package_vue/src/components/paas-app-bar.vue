@@ -246,12 +246,6 @@
                 return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
             }
         },
-        mounted () {
-          window.addEventListener('click', this.closeDropdown);
-          this.$once('hook:beforeDestroy', ()=>{
-            window.removeEventListener('click', this.closeDropdown);
-          });
-        },
         methods: {
             handleModuleSelect (module) {
                 this.$refs.dropdown.close();
@@ -295,12 +289,6 @@
                 const startTime = formatDate(date[0], 'YYYY-MM-DD');
                 const endTime = formatDate(date[1], 'YYYY-MM-DD');
                 this.$emit('change-date', [startTime, endTime], id);
-            },
-            closeDropdown (e) {
-              const targetEl = document.querySelector('.module-wrapper')
-              if (!targetEl?.contains(e.target)) {
-                this.$refs.dropdown?.hide(e.target);
-              }
             }
         }
     };

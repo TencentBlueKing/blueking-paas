@@ -451,6 +451,5 @@ le<template lang="html">
     .status-tab-cls{
         border: 1px solid #e6e9ea;
         border-top: none;
-        margin-bottom: 20px;
     }
 </style>

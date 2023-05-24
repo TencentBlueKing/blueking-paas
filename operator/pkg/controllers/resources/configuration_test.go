@@ -76,8 +76,9 @@ var _ = Describe("Get App Envs", func() {
 
 	Context("with addon envs", func() {
 		BeforeEach(func() {
-			annotation := bkapp.GetAnnotations()
-			annotation[paasv1alpha2.AddonsAnnoKey] = "[\"foo-service\"]"
+			bkapp.Spec.Addons = []paasv1alpha2.Addon{
+				{Name: "foo-service"},
+			}
 		})
 
 		AfterEach(func() {

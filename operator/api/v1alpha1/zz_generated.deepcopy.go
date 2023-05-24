@@ -24,6 +24,7 @@
 package v1alpha1
 
 import (
+	"bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -150,6 +151,13 @@ func (in *AppSpec) DeepCopyInto(out *AppSpec) {
 		}
 	}
 	in.Configuration.DeepCopyInto(&out.Configuration)
+	if in.Addons != nil {
+		in, out := &in.Addons, &out.Addons
+		*out = make([]v1alpha2.Addon, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Hooks != nil {
 		in, out := &in.Hooks, &out.Hooks
 		*out = new(AppHooks)
@@ -202,6 +210,13 @@ func (in *AppStatus) DeepCopyInto(out *AppStatus) {
 	if in.LastUpdate != nil {
 		in, out := &in.LastUpdate, &out.LastUpdate
 		*out = (*in).DeepCopy()
+	}
+	if in.AddonStatuses != nil {
+		in, out := &in.AddonStatuses, &out.AddonStatuses
+		*out = make([]v1alpha2.AddonStatus, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

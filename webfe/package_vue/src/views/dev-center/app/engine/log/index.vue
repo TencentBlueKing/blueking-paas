@@ -12,6 +12,7 @@
 
     <paas-content-loader
       class="app-container log-middle"
+      :class="{ 'log-container': tabActive === 'stream' }"
       :is-loading="isLoading"
       placeholder="log-loading"
       :offset-top="60"
@@ -125,3 +126,9 @@
         }
     };
 </script>
+
+<style scoped>
+    .log-container {
+        margin-bottom: 0;
+    }
+</style>

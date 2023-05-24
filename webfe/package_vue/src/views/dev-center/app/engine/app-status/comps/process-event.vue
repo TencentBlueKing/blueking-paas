@@ -1,7 +1,7 @@
 <template>
   <div class="event-container">
     <paas-content-loader
-      class="app-container middle event-container-loading"
+      class="app-container middle"
       :is-loading="isLoading"
       placeholder="event-list-loading"
     >
@@ -120,8 +120,5 @@ export default {
 <style lang="scss" scoped>
 .event-container {
     padding: 0 20px 20px;
-}
-.event-container-loading {
-    min-height: 500px !important;
 }
 </style>

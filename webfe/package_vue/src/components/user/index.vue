@@ -21,7 +21,7 @@
 
 <script>
     import BluekingUserSelector from '@blueking/user-selector';
-    import 'BKSelectMinCss';
+    // import 'BKSelectMinCss';
 
     export default {
         name: 'CmdbFormObjuser',

@@ -241,23 +241,6 @@
                 <label class="title-label"> {{ $t('联系人员') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <!-- <bk-member-selector
-                  v-if="GLOBAL.APP_VERSION === 'te'"
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                />
-                <blueking-user-selector
-                  v-else
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  display-list-tips
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                /> -->
                 <user
                   ref="member_selector"
                   v-model="localeAppInfo.contact"
@@ -556,7 +539,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="`确认删除应用【${curAppInfo.application.name}】？`"
+      :title="$t(`确认删除应用【{name}】？`, { name: curAppInfo.application.name })"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"

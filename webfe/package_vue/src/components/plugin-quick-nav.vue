@@ -42,7 +42,7 @@
           <bk-input
             v-model="searchValue"
             behavior="simplicity"
-            placeholder="请输入关键字"
+            :placeholder="$t('请输入关键字')"
             :left-icon="'bk-icon icon-search'"
             :clearable="true"
             @enter="searchPlugin"

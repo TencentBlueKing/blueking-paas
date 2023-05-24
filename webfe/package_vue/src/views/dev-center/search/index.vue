@@ -100,7 +100,7 @@
   </div>
 </template>
 <script>
-    import merge from 'webpack-merge';
+    // import merge from 'webpack-merge';
     import { bus } from '@/common/bus';
     import App from './comps/application';
     import Docu from './comps/docu';
@@ -258,7 +258,7 @@
                 } finally {
                     this.isLoading = false;
                     this.$router.push({
-                        query: merge(this.$route.query, { keyword: this.filterKey })
+                        query: Object.assign(this.$route.query, { keyword: this.filterKey })
                     });
                 }
             },
@@ -337,7 +337,7 @@
                 });
 
                 this.$router.push({
-                    query: merge(this.$route.query, { tab: this.curTab })
+                    query: Object.assign(this.$route.query, { tab: this.curTab })
                 });
             },
 

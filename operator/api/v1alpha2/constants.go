@@ -72,8 +72,6 @@ const (
 	HookTypeKey = "bkapp.paas.bk.tencent.com/hook-type"
 	// ProcessNameKey 注解或标签中存储进程名称的键名
 	ProcessNameKey = "bkapp.paas.bk.tencent.com/process-name"
-	// AddonsAnnoKey 注解中存储当前应用依赖的增强服务列表
-	AddonsAnnoKey = "bkapp.paas.bk.tencent.com/addons"
 	// AccessControlAnnoKey 注解中存储当前应用是否启用白名单功能的键名
 	AccessControlAnnoKey = "bkapp.paas.bk.tencent.com/access-control"
 	// ImageCredentialsRefAnnoKey 注解中存储镜像凭证引用的键名

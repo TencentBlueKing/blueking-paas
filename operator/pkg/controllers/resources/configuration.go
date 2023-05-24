@@ -49,8 +49,8 @@ func retrieveAddonEnvVar(bkapp *paasv1alpha2.BkApp) []corev1.EnvVar {
 		return envs
 	}
 
-	var addons []string
-	if addons, err = bkapp.ExtractAddons(); err != nil {
+	addons := bkapp.Spec.Addons
+	if addons == nil {
 		return envs
 	}
 
@@ -60,7 +60,7 @@ func retrieveAddonEnvVar(bkapp *paasv1alpha2.BkApp) []corev1.EnvVar {
 	}
 
 	// TODO: 处理获取环境变量报错的情景, 将错误逐层往上传递
-	for _, addonName := range addons {
+	for _, addon := range addons {
 		ctx, cancel := context.WithTimeout(context.Background(), external.DefaultTimeout)
 		defer cancel()
 
@@ -69,7 +69,7 @@ func retrieveAddonEnvVar(bkapp *paasv1alpha2.BkApp) []corev1.EnvVar {
 			metadata.AppCode,
 			metadata.ModuleName,
 			metadata.Environment,
-			addonName,
+			addon.Name,
 		)
 		if err != nil {
 			logf.Log.Error(err, "An err occur when QueryAddonInstance")

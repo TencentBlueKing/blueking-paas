@@ -104,9 +104,9 @@
               ref="dropdown"
               :options="{
                 position: 'bottom right',
-                classes: 'ps-header-dropdown',
+                classes: 'ps-header-dropdown exclude-drop',
                 tetherOptions: {
-                  targetOffset: '0px 40px'
+                  targetOffset: '0px 30px'
                 }, beforeClose
               }"
             >
@@ -124,6 +124,8 @@
                   @keypress.enter="enterCallBack($event)"
                   @compositionstart="handleCompositionstart"
                   @compositionend="handleCompositionend"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
                 >
                 <div class="ps-search-icon">
                   <span
@@ -142,6 +144,7 @@
                 slot="content"
                 class="header-search-result"
               >
+              <div v-if="isShowInput && isFocus">
                 <div
                   v-if="filterKey !== ''"
                   class="paas-search-trigger"
@@ -167,6 +170,7 @@
                     @key-down-overflow="onKeyDown(), emitChildKeyDown()"
                   />
                 </div>
+              </div>
               </div>
             </dropdown>
           </li>
@@ -196,7 +200,7 @@
             <div class="header-mind is-left header-mind-cls">
               <span :class="`bk-icon icon-${localLanguage === 'en' ? 'english' : 'chinese'} lang-icon nav-lang-icon`" />
             </div>
-            <template slot="content">
+            <template #content>
               <ul class="monitor-navigation-admin">
                 <li
                   class="nav-item"
@@ -232,7 +236,7 @@
                 <path d="M32,4C16.5,4,4,16.5,4,32c0,3.6,0.7,7.1,2,10.4V56c0,1.1,0.9,2,2,2h13.6C36,63.7,52.3,56.8,58,42.4S56.8,11.7,42.4,6C39.1,4.7,35.6,4,32,4z M31.3,45.1c-1.7,0-3-1.3-3-3s1.3-3,3-3c1.7,0,3,1.3,3,3S33,45.1,31.3,45.1z M36.7,31.7c-2.3,1.3-3,2.2-3,3.9v0.9H29v-1c-0.2-2.8,0.7-4.4,3.2-5.8c2.3-1.4,3-2.2,3-3.8s-1.3-2.8-3.3-2.8c-1.8-0.1-3.3,1.2-3.5,3c0,0.1,0,0.1,0,0.2h-4.8c0.1-4.4,3.1-7.4,8.5-7.4c5,0,8.3,2.8,8.3,6.9C40.5,28.4,39.2,30.3,36.7,31.7z" />
               </svg>
             </div>
-            <template slot="content">
+            <template #content>
               <ul class="monitor-navigation-admin">
                 <li class="nav-item">
                   <a
@@ -241,7 +245,7 @@
                   > {{ $t('产品文档') }} </a>
                 </li>
                 <li
-                  v-if="GLOBAL.APP_VERSION === 'ee'"
+                  v-if="GLOBAL.CONFIG.RELEASE_LOG"
                   class="nav-item"
                 >
                   <a
@@ -283,7 +287,7 @@
             {{ user.chineseName || user.username }}
             <i class="bk-icon icon-down-shape" />
           </div>
-          <template slot="content">
+          <template #content>
             <ul class="monitor-navigation-admin">
               <li class="nav-item">
                 <a
@@ -406,317 +410,328 @@
 </template>
 
 <script>
-    import auth from '@/auth';
-    import { bus } from '@/common/bus';
-    import { bk_logout as bkLogout } from '../../static/js/bklogout';
-    import selectEventMixin from '@/components/searching/selectEventMixin';
-    import searchAppList from '@/components/searching/searchAppList';
-    import Dropdown from '@/components/ui/Dropdown';
-    import { psHeaderInfo } from '@/mixins/ps-static-mixin';
-    import defaultUserLogo from '../../static/images/default-user.png';
-    import logVersion from './log-version.vue';
+import auth from '@/auth';
+import { bus } from '@/common/bus';
+import { bk_logout as bkLogout } from '../../static/js/bklogout';
+import selectEventMixin from '@/components/searching/selectEventMixin';
+import searchAppList from '@/components/searching/searchAppList';
+import Dropdown from '@/components/ui/Dropdown';
+import { psHeaderInfo } from '@/mixins/ps-static-mixin';
+import defaultUserLogo from '../../static/images/default-user.png';
+import logVersion from './log-version.vue';
 
-    export default {
-        components: {
-            dropdown: Dropdown,
-            searchAppList: searchAppList,
-            logVersion
+export default {
+  components: {
+    dropdown: Dropdown,
+    searchAppList,
+    logVersion,
+  },
+  mixins: [psHeaderInfo, selectEventMixin],
+  props: [],
+  data() {
+    const user = auth.getAnonymousUser();
+    return {
+      userInitialized: false,
+      avatars: defaultUserLogo,
+      curpage: -1, // 当前页导航底部线标志控制
+      is_static: false, // 头部导航背景色块控制
+      navIndex: 0,
+      curSubNav: [],
+      loginFlag: false,
+      user,
+      userInfoShow: false,
+      backgroundHidden: false,
+      navHideController: 0,
+      navShowController: 0,
+      filterKey: '',
+      enableSearchApp: true, // 是否开启搜索APP功能
+      currenSearchPanelIndex: -1,
+      showLogVersion: false,
+      searchComponentList: [
+        {
+          title: this.$t('蓝鲸应用'),
+          component: 'searchAppList',
+          max: 4,
+          params: {
+            include_inactive: true,
+          },
         },
-        mixins: [psHeaderInfo, selectEventMixin],
-        props: [],
-        data () {
-            const user = auth.getAnonymousUser();
-            return {
-                userInitialized: false,
-                avatars: defaultUserLogo,
-                curpage: -1, // 当前页导航底部线标志控制
-                is_static: false, // 头部导航背景色块控制
-                navIndex: 0,
-                curSubNav: [],
-                loginFlag: false,
-                user: user,
-                userInfoShow: false,
-                backgroundHidden: false,
-                navHideController: 0,
-                navShowController: 0,
-                filterKey: '',
-                enableSearchApp: true, // 是否开启搜索APP功能
-                currenSearchPanelIndex: -1,
-                showLogVersion: false,
-                searchComponentList: [
-                    {
-                        title: this.$t('蓝鲸应用'),
-                        component: 'searchAppList',
-                        max: 4,
-                        params: {
-                            include_inactive: true
-                        }
-                    }
-                ],
-                isShowInput: true,
-                // eslint-disable-next-line comma-dangle
-                link: this.GLOBAL.LINK.APIGW_INDEX,
-                navText: ''
-            };
-        },
-        computed: {
-            localLanguage () {
-                return this.$store.state.localLanguage;
-            },
-            userFeature () {
-                return this.$store.state.userFeature;
-            }
-        },
-        watch: {
-            $route: 'checkRouter',
-            filterKey: function () {
-                this.curActiveIndex = -1;
-            },
-            userFeature: {
-              handler (val) {
-                if (!val.ALLOW_PLUGIN_CENTER) {
-                  this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
-                }
-              },
-              deep: true
-            }
-        },
-        created () {
-            this.checkRouter();
-            window.addEventListener('scroll', this.handleScroll);
-
-            bus.$on('page-header-be-transparent', () => {
-                this.backgroundHidden = true;
-            });
-
-            bus.$on('on-leave-search', () => {
-                this.isShowInput = true;
-                this.clearInputValue();
-            });
-
-            bus.$on('on-being-search', () => {
-                this.isShowInput = false;
-            });
-
-            this.getCurrentUser();
-        },
-        methods: {
-            goRouter (sitem) {
-                if (!sitem.url.startsWith('javascript')) {
-                    const to = `/developer-center/service/${sitem.url}`;
-                    this.$router.push({
-                        path: to
-                    });
-                }
-                this.hideSubNav(0);
-            },
-            handleToMonitor () {
-                this.$router.push({
-                    name: 'myMonitor'
-                });
-            },
-            clearInputValue () {
-                this.filterKey = '';
-            },
-            beforeClose (event, instance) {
-                // return !instance.target.contains(event.target)
-            },
-            // enter键 选择事件回调
-            enterCallBack (event) {
-                if (this.isInputing) {
-                    return;
-                }
-                event.currentTarget.blur();
-                if (this.$refs.searchPanelList[this.curActiveIndex]) {
-                    this.$refs.searchPanelList[this.curActiveIndex].enterSelect();
-                }
-                this.$refs.dropdown.close();
-
-                if (this.filterKey !== '') {
-                    this.isShowInput = false;
-                    this.$router.push({
-                        name: 'search',
-                        query: {
-                            keyword: this.filterKey
-                        }
-                    });
-                }
-            },
-
-            handleCompositionstart () {
-                this.isInputing = true;
-            },
-
-            handleCompositionend () {
-                this.isInputing = false;
-            },
-
-            handleToSearchPage () {
-                this.$refs.dropdown.close();
-                this.isShowInput = false;
-                this.$router.push({
-                    name: 'search',
-                    query: {
-                        keyword: this.filterKey
-                    }
-                });
-            },
-            // 键盘上下键 选择事件回调
-            emitChildKeyUp () {
-                if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
-                    return;
-                }
-                if (this.curActiveIndex === -1) {
-                    this.onKeyUp();
-                }
-                this.$refs.searchPanelList[this.curActiveIndex].onKeyUp();
-            },
-            emitChildKeyDown () {
-                if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
-                    return;
-                }
-                if (this.curActiveIndex === -1) {
-                    this.onKeyDown();
-                }
-                this.$refs.searchPanelList[this.curActiveIndex].onKeyDown();
-            },
-            getSelectListLength () {
-                return this.$refs.searchPanelList.length;
-            },
-            // 鼠标选择事件回调
-            selectAppCallback (item) {
-                // 清空搜索条件，不再显示APP下拉框
-                this.filterKey = '';
-                this.$refs.dropdown.close();
-            },
-            getCurrentUser () {
-                auth.requestCurrentUser().then((user) => {
-                    this.userInitialized = true;
-                    this.user = user;
-                    if (user.avatarUrl) {
-                        this.avatars = user.avatarUrl;
-                    }
-                });
-            },
-            // 监听滚动事件（滚动是头部样式切换）
-            handleScroll () {
-                if (window.scrollY > 0) {
-                    this.is_static = true;
-                } else {
-                    this.is_static = false;
-                }
-            },
-            hideSubNav (timeout = 300) {
-                clearTimeout(this.navShowController);
-                this.navHideController = setTimeout(() => {
-                    this.navIndex = 0;
-                    this.navText = '';
-                }, 300);
-            },
-            // 二级导航mouseover
-            showSubNav (index, item) {
-                clearTimeout(this.navHideController);
-                if (index === 0 || index === 1 || index === 2 || (index === 3 && this.userFeature.ALLOW_PLUGIN_CENTER)) {
-                    this.navIndex = index;
-                } else {
-                    this.navShowController = setTimeout(() => {
-                        this.navIndex = index;
-                        this.navText = item.text;
-                        switch (index) {
-                            case 3:
-                              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-                                this.curSubNav = this.headerStaticInfo.list.subnav_service;
-                              }
-                              break;
-                            case 4:
-                            if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-                              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-                            } else {
-                              this.curSubNav = this.headerStaticInfo.list.subnav_service;
-                            }
-                              break;
-                            case 5:
-                              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
-                              break;
-                            default:
-                              this.curSubNav = [];
-                        }
-                    }, 500);
-                }
-            },
-            open_login_dialog () {
-                bus.$emit('show-login-modal');
-            },
-            // 路由页面重定向时导航标记
-            checkRouter () {
-                let noteIndex = -1;
-                if (this.$route.name === 'index' || this.$route.name === 'home') {
-                    noteIndex = 0;
-                }
-                if (this.$route.path.indexOf('/developer-center/app') !== -1) {
-                    noteIndex = 1;
-                }
-                if (this.$route.path.indexOf('/plugin-center') !== -1) {
-                    noteIndex = 2;
-                }
-                if (this.$route.path.indexOf('/developer-center/service') !== -1) {
-                    noteIndex = 3;
-                }
-                switch (noteIndex) {
-                    case 0:
-                        this.backgroundHidden = false;
-                        this.curpage = 0;
-                        break;
-                    case 1:
-                        this.backgroundHidden = false;
-                        this.curpage = 1;
-                        break;
-                    case 2:
-                        this.backgroundHidden = false;
-                        this.curpage = 2;
-                        break;
-                    case 3:
-                        this.backgroundHidden = false;
-                        this.curpage = 3;
-                        break;
-                    default:
-                        this.curpage = -1;
-                }
-            },
-            userInfoSlide (n) {
-                if (n) {
-                    this.userInfoShow = true;
-                } else {
-                    this.userInfoShow = false;
-                }
-            },
-            logout () {
-                bkLogout.logout();
-                window.location = window.GLOBAL_CONFIG.LOGIN_SERVICE_URL + '/?c_url=' + window.location.href;
-            },
-            async switchLanguage (language) {
-                const data = new URLSearchParams();
-                data.append('language', language);
-                this.$http.post(BACKEND_URL + '/i18n/setlang/', data, {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                }).then(res => {
-                    this.$i18n.locale = language;
-                    this.$store.commit('updateLocalLanguage', language);
-                    this.$router.go(0);
-                }, (e) => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.message || e.detail || this.$t('接口异常')
-                    });
-                });
-            },
-            handlerLogVersion () {
-                this.showLogVersion = true;
-            }
-        }
+      ],
+      isShowInput: true,
+      isFocus: false,
+      // eslint-disable-next-line comma-dangle
+      link: this.GLOBAL.LINK.APIGW_INDEX,
+      navText: '',
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
+  },
+  watch: {
+    $route: 'checkRouter',
+    filterKey() {
+      this.curActiveIndex = -1;
+    },
+    userFeature: {
+      handler(val) {
+        if (!val.ALLOW_PLUGIN_CENTER) {
+          this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
+        }
+      },
+      deep: true,
+    },
+  },
+  created() {
+    this.checkRouter();
+    window.addEventListener('scroll', this.handleScroll);
+
+    bus.$on('page-header-be-transparent', () => {
+      this.backgroundHidden = true;
+    });
+
+    bus.$on('on-leave-search', () => {
+      this.isShowInput = true;
+      this.clearInputValue();
+    });
+
+    bus.$on('on-being-search', () => {
+      this.isShowInput = false;
+    });
+
+    this.getCurrentUser();
+  },
+  methods: {
+    goRouter(sitem) {
+      if (!sitem.url.startsWith('javascript')) {
+        const to = `/developer-center/service/${sitem.url}`;
+        this.$router.push({
+          path: to,
+        });
+      }
+      this.hideSubNav(0);
+    },
+    handleToMonitor() {
+      this.$router.push({
+        name: 'myMonitor',
+      });
+    },
+    clearInputValue() {
+      this.filterKey = '';
+    },
+    beforeClose(event, instance) {
+      // return !instance.target.contains(event.target)
+    },
+    // enter键 选择事件回调
+    enterCallBack(event) {
+      if (this.isInputing) {
+        return;
+      }
+      event.currentTarget.blur();
+      if (this.$refs.searchPanelList[this.curActiveIndex]) {
+        this.$refs.searchPanelList[this.curActiveIndex].enterSelect();
+      }
+      this.$refs.dropdown.close();
+
+      if (this.filterKey !== '') {
+        this.isShowInput = false;
+        this.$router.push({
+          name: 'search',
+          query: {
+            keyword: this.filterKey,
+          },
+        });
+      }
+    },
+
+    handleCompositionstart() {
+      this.isInputing = true;
+    },
+
+    handleCompositionend() {
+      this.isInputing = false;
+    },
+
+    handleFocus() {
+      this.isFocus = true
+    },
+
+    handleBlur() {
+      setTimeout(() => {
+        this.isFocus = false
+      }, 500);
+    },
+
+    handleToSearchPage() {
+      this.$refs.dropdown.close();
+      this.isShowInput = false;
+      this.$router.push({
+        name: 'search',
+        query: {
+          keyword: this.filterKey,
+        },
+      });
+    },
+    // 键盘上下键 选择事件回调
+    emitChildKeyUp() {
+      if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
+        return;
+      }
+      if (this.curActiveIndex === -1) {
+        this.onKeyUp();
+      }
+      this.$refs.searchPanelList[this.curActiveIndex].onKeyUp();
+    },
+    emitChildKeyDown() {
+      if (this.$refs.searchPanelList.filter(panel => panel.getSelectListLength()).length === 0) {
+        return;
+      }
+      if (this.curActiveIndex === -1) {
+        this.onKeyDown();
+      }
+      this.$refs.searchPanelList[this.curActiveIndex].onKeyDown();
+    },
+    getSelectListLength() {
+      return this.$refs.searchPanelList.length;
+    },
+    // 鼠标选择事件回调
+    selectAppCallback(item) {
+      // 清空搜索条件，不再显示APP下拉框
+      this.filterKey = '';
+      this.$refs.dropdown.close();
+    },
+    getCurrentUser() {
+      auth.requestCurrentUser().then((user) => {
+        this.userInitialized = true;
+        this.user = user;
+        if (user.avatarUrl) {
+          this.avatars = user.avatarUrl;
+        }
+      });
+    },
+    // 监听滚动事件（滚动是头部样式切换）
+    handleScroll() {
+      if (window.scrollY > 0) {
+        this.is_static = true;
+      } else {
+        this.is_static = false;
+      }
+    },
+    hideSubNav(timeout = 300) {
+      clearTimeout(this.navShowController);
+      this.navHideController = setTimeout(() => {
+        this.navIndex = 0;
+        this.navText = '';
+      }, 300);
+    },
+    // 二级导航mouseover
+    showSubNav(index, item) {
+      clearTimeout(this.navHideController);
+      if (index === 0 || index === 1 || index === 2 || (index === 3 && this.userFeature.ALLOW_PLUGIN_CENTER)) {
+        this.navIndex = index;
+      } else {
+        this.navShowController = setTimeout(() => {
+          this.navIndex = index;
+          this.navText = item.text;
+          switch (index) {
+            case 3:
+              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
+                this.curSubNav = this.headerStaticInfo.list.subnav_service;
+              }
+              break;
+            case 4:
+              if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
+                this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+              } else {
+                this.curSubNav = this.headerStaticInfo.list.subnav_service;
+              }
+              break;
+            case 5:
+              this.curSubNav = this.headerStaticInfo.list.subnav_doc;
+              break;
+            default:
+              this.curSubNav = [];
+          }
+        }, 500);
+      }
+    },
+    open_login_dialog() {
+      bus.$emit('show-login-modal');
+    },
+    // 路由页面重定向时导航标记
+    checkRouter() {
+      let noteIndex = -1;
+      if (this.$route.name === 'index' || this.$route.name === 'home') {
+        noteIndex = 0;
+      }
+      if (this.$route.path.indexOf('/developer-center/app') !== -1) {
+        noteIndex = 1;
+      }
+      if (this.$route.path.indexOf('/plugin-center') !== -1) {
+        noteIndex = 2;
+      }
+      if (this.$route.path.indexOf('/developer-center/service') !== -1) {
+        noteIndex = 3;
+      }
+      switch (noteIndex) {
+        case 0:
+          this.backgroundHidden = false;
+          this.curpage = 0;
+          break;
+        case 1:
+          this.backgroundHidden = false;
+          this.curpage = 1;
+          break;
+        case 2:
+          this.backgroundHidden = false;
+          this.curpage = 2;
+          break;
+        case 3:
+          this.backgroundHidden = false;
+          this.curpage = 3;
+          break;
+        default:
+          this.curpage = -1;
+      }
+    },
+    userInfoSlide(n) {
+      if (n) {
+        this.userInfoShow = true;
+      } else {
+        this.userInfoShow = false;
+      }
+    },
+    logout() {
+      bkLogout.logout();
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?c_url=${window.location.href}`;
+    },
+    async switchLanguage(language) {
+      const data = new URLSearchParams();
+      data.append('language', language);
+      this.$http.post(`${BACKEND_URL}/i18n/setlang/`, data, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }).then((res) => {
+        this.$i18n.locale = language;
+        this.$store.commit('updateLocalLanguage', language);
+        this.$router.go(0);
+      }, (e) => {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.message || e.detail || this.$t('接口异常'),
+        });
+      });
+    },
+    handlerLogVersion() {
+      this.showLogVersion = true;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -893,7 +908,7 @@
         padding: 8px 10px;
         display: flex;
         align-items: center;
-        height: 50px;
+        color: #96A2B9;
 
         li {
             float: left;

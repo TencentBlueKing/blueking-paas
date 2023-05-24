@@ -78,7 +78,7 @@
                             this.$nextTick(() => {
                                 setTimeout(() => {
                                     this.detail = val;
-                                    this.$refs.editorRef.setValue(val);
+                                    this.$refs.editorRef?.setValue(val);
                                 }, 500);
                             });
                         }

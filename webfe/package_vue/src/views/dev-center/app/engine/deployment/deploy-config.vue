@@ -69,7 +69,7 @@ s<template>
               text
               @click.stop.prevent="saveCommand"
             >
-              {{ $t('确认启用') }}
+              {{ $t('确认启用-button') }}
             </bk-button>
             <bk-button
               v-if="configInfo.loaclEnabled"
@@ -223,7 +223,7 @@ s<template>
                 >
                   <bk-input
                     v-model="newVarConfig.command"
-                    placeholder="$t('启动命令。包含参数，例如：gunicorn wsgi -w 4 -b :$PORT')"
+                    :placeholder="$t('启动命令。包含参数，例如：gunicorn wsgi -w 4 -b :$PORT')"
                     :clearable="false"
                   />
                 </bk-form-item>
@@ -243,7 +243,7 @@ s<template>
             <td>
               <bk-form-item>
                 <p class="mt-minus">
-                  在<span @click="skip"> {{ $t('访问入口-进程服务管理') }} </span> {{ $t('中可设置将应用进程暴露给应用内部与外部用户') }}
+                  {{ $t('在') }}<span @click="skip"> {{ $t('访问入口-进程服务管理') }} </span> {{ $t('中可设置将应用进程暴露给应用内部与外部用户') }}
                 </p>
               </bk-form-item>
             </td>
@@ -580,5 +580,8 @@ s<template>
                 cursor: pointer;
             }
         }
+    }
+    .paas-info-app-name-cls input {
+        padding-right: 130px !important;
     }
 </style>

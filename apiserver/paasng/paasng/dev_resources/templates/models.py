@@ -24,6 +24,7 @@ from django.utils.translation import gettext_lazy as _
 from translated_fields import TranslatedFieldWithFallback
 
 from paasng.dev_resources.templates.constants import TemplateType
+from paasng.engine.constants import RuntimeType
 from paasng.utils.models import AuditedModel
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ class Template(AuditedModel):
     processes = models.JSONField(verbose_name=_('进程配置'), blank=True, default=dict)
     tags = models.JSONField(verbose_name=_('标签'), blank=True, default=list)
     repo_url = models.CharField(verbose_name=_('代码仓库信息'), max_length=256, blank=True, default='')
+    runtime_type = models.CharField(verbose_name=_("运行时类型"), max_length=32, default=RuntimeType.BUILDPACK)
 
     objects = TemplateManager()
 

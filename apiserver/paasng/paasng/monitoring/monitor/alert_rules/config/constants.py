@@ -29,22 +29,22 @@ DEFAULT_RULE_CONFIGS = {
     'module_scoped': {
         'high_cpu_usage': {
             'display_name': _('CPU 使用率过高'),
-            'metric_label_names': ['namespace'],
+            'metric_label_names': ['namespace', 'bcs_cluster_id'],
             'threshold_expr': '>= 0.8',  # 使用率 80%
         },
         'high_mem_usage': {
             'display_name': _('内存使用率过高'),
-            'metric_label_names': ['namespace'],
+            'metric_label_names': ['namespace', 'bcs_cluster_id'],
             'threshold_expr': '>= 0.95',  # 使用率 95%
         },
         'pod_restart': {
             'display_name': _('异常重启'),
-            'metric_label_names': ['namespace'],
+            'metric_label_names': ['namespace', 'bcs_cluster_id'],
             'threshold_expr': '>= 1',  # 出现至少 1 次
         },
         'oom_killed': {
             'display_name': _('OOMKilled 退出'),
-            'metric_label_names': ['namespace'],
+            'metric_label_names': ['namespace', 'bcs_cluster_id'],
             'threshold_expr': '>= 1',  # 出现至少 1 次
         },
     }

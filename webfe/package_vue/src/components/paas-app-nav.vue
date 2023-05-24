@@ -57,521 +57,520 @@
   </ul>
 </template>
 
-<script>
-    import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
-    import _ from 'lodash';
+<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+import _ from 'lodash';
 
-    export default {
-        data () {
-            return {
-                navTree: [],
-                allowedRouterName: [],
-                allNavItems: [],
-                region: 'ieod',
-                roleAllowRouters: {
-                    administrator: [
-                        'appSummary', // 概览
-                        'appEngine', // 应用引擎
-                        'appServices', // 增强服务
-                        'appPermissions', // 权限管理
-                        'appMarketing', // 市场推广
-                        'appConfigs', // 基本设置
-                        'moduleManage', // 模块管理
-                        'appAnalysis', // 数据统计
-                        'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appCloudAPI' // 云 API 权限管理
-                    ],
+export default {
+  data() {
+    return {
+      navTree: [],
+      allowedRouterName: [],
+      allNavItems: [],
+      region: 'ieod',
+      roleAllowRouters: {
+        administrator: [
+          'appSummary', // 概览
+          'appEngine', // 应用引擎
+          'appServices', // 增强服务
+          'appPermissions', // 权限管理
+          'appMarketing', // 市场推广
+          'appConfigs', // 基本设置
+          'moduleManage', // 模块管理
+          'appAnalysis', // 数据统计
+          'monitorAlarm', // 监控告警
+          'docuManagement', // 文档管理
+          'appCloudAPI', // 云 API 权限管理
+        ],
 
-                    developer: [
-                        'appSummary', // 概览
-                        'appEngine', // 应用引擎
-                        'appServices', // 增强服务
-                        'appMarketing', // 市场推广
-                        'appConfigs', // 基本设置
-                        'moduleManage', // 模块管理
-                        'appAnalysis', // 数据统计
-                        'monitorAlarm', // 监控告警
-                        'docuManagement', // 文档管理
-                        'appCloudAPI' // 云 API 权限管理
-                    ],
+        developer: [
+          'appSummary', // 概览
+          'appEngine', // 应用引擎
+          'appServices', // 增强服务
+          'appMarketing', // 市场推广
+          'appConfigs', // 基本设置
+          'moduleManage', // 模块管理
+          'appAnalysis', // 数据统计
+          'monitorAlarm', // 监控告警
+          'docuManagement', // 文档管理
+          'appCloudAPI', // 云 API 权限管理
+        ],
 
-                    operator: [
-                        'appPermissions', // 权限管理
-                        'appMarketing', // 市场推广
-                        'appConfigs', // 基本设置
-                        'appAnalysis', // 数据统计
-                        'monitorAlarm', // 监控告警
-                        'docuManagement' // 文档管理
-                    ]
-                }
-            };
-        },
-        computed: {
-            curAppInfo () {
-                return this.$store.state.curAppInfo;
-            },
-            curRouteName () {
-                return this.$route.name;
-            },
-            curAppModule () {
-                return this.$store.state.curAppModule;
-            }
-        },
-        watch: {
-            curAppInfo () {
-                this.init();
-            },
-            'curAppInfo.feature': {
-                handler (newValue, oldValue) {
-                    if (!Object.keys(newValue).length) {
-                        this.curAppInfo.feature = _.cloneDeep(oldValue);
-                    }
-                    this.init();
-                },
-                deep: true
-            },
-            '$route' (newVal, oldVal) {
-                const isReload = (newVal.params.id !== oldVal.params.id) || (newVal.params.moduleId !== oldVal.params.moduleId);
-                this.init(isReload);
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            /**
+        operator: [
+          'appPermissions', // 权限管理
+          'appMarketing', // 市场推广
+          'appConfigs', // 基本设置
+          'appAnalysis', // 数据统计
+          'monitorAlarm', // 监控告警
+          'docuManagement', // 文档管理
+        ],
+      },
+    };
+  },
+  computed: {
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
+    },
+    curRouteName() {
+      return this.$route.name;
+    },
+    curAppModule() {
+      return this.$store.state.curAppModule;
+    },
+  },
+  watch: {
+    curAppInfo() {
+      this.init();
+    },
+    'curAppInfo.feature': {
+      handler(newValue, oldValue) {
+        if (!Object.keys(newValue).length) {
+          this.curAppInfo.feature = _.cloneDeep(oldValue);
+        }
+        this.init();
+      },
+      deep: true,
+    },
+    '$route'(newVal, oldVal) {
+      const isReload = (newVal.params.id !== oldVal.params.id) || (newVal.params.moduleId !== oldVal.params.moduleId);
+      this.init(isReload);
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    /**
              * 侧导航初始化入口
              */
-            async init (isReload = true) {
-                if (!this.curAppInfo.application) return;
-                const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
+    async init(isReload = true) {
+      if (!this.curAppInfo.application) return;
+      const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
 
-                if (isReload) {
-                    this.navTree = await this.initNavByRegion(appNav.list);
-                    await this.initRouterPermission();
-                }
+      if (isReload) {
+        this.navTree = await this.initNavByRegion(appNav.list);
+        await this.initRouterPermission();
+      }
 
-                await this.selectRouterByName(this.curRouteName);
-            },
+      await this.selectRouterByName(this.curRouteName);
+    },
 
-            /**
+    /**
              * 根据接口来展示对应的导航项
              */
-            async initNavByRegion (navTree) {
-                try {
-                    const region = this.curAppInfo.application.region;
-                    const res = await this.$store.dispatch('fetchRegionInfo', region);
-                    // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
-                    this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
+    async initNavByRegion(navTree) {
+      try {
+        const { region } = this.curAppInfo.application;
+        const res = await this.$store.dispatch('fetchRegionInfo', region);
+        // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
+        this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
 
-                    // 添加增强服务
-                    res.services.categories.forEach(category => {
-                        navTree = this.addServiceNavItem(navTree, category.id, category.name);
-                    });
+        // 添加增强服务
+        res.services.categories.forEach((category) => {
+          navTree = this.addServiceNavItem(navTree, category.id, category.name);
+        });
 
-                    // 添加权限管理
-                    if (res.access_control && res.access_control.module) {
-                        res.access_control.module.forEach(moduleType => {
-                            navTree = this.addPermissionNavItem(navTree, moduleType);
-                        });
-                    }
+        // 添加权限管理
+        if (res.access_control && res.access_control.module) {
+          res.access_control.module.forEach((moduleType) => {
+            navTree = this.addPermissionNavItem(navTree, moduleType);
+          });
+        }
 
-                    // 添加访问入口
-                    this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问入口'));
+        // 添加访问入口
+        this.simpleAddNavItem(navTree, 'appEngine', 'appEntryConfig', this.$t('访问入口'));
 
-                    // 添加代码检查
-                    this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
+        // 添加代码检查
+        this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
 
-                    // 如果不开启引擎，仅仅显示应用推广和基本信息以及数据统计
-                    if (!this.curAppInfo.web_config.engine_enabled) {
-                        navTree = navTree.filter(nav => {
-                            if (nav.name === 'appMarketing') {
-                                nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
-                            }
-                            return ['appSummary', 'appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
-                        });
-                    }
+        // 如果不开启引擎，仅仅显示应用推广和基本信息以及数据统计
+        if (!this.curAppInfo.web_config.engine_enabled) {
+          navTree = navTree.filter((nav) => {
+            if (nav.name === 'appMarketing') {
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
+            }
+            return ['appSummary', 'appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
+          });
+        }
 
-                    // tencent && clouds去掉应用市场移动端
-                    if (this.curAppModule.region !== 'ieod') {
-                        navTree.forEach(nav => {
-                            if (nav.name === 'appMarketing') {
-                                nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
-                            }
-                        });
-                    }
+        // tencent && clouds去掉应用市场移动端
+        if (this.curAppModule?.region !== 'ieod') {
+          navTree.forEach((nav) => {
+            if (nav.name === 'appMarketing') {
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
+            }
+          });
+        }
 
-                    // 当角色为开发者时，过滤部分功能入口
-                    if (this.curAppInfo.role.name === 'developer') {
-                        navTree = navTree.filter(nav => this.roleAllowRouters['developer'].includes(nav.name));
-                    }
+        // 当角色为开发者时，过滤部分功能入口
+        if (this.curAppInfo.role.name === 'developer') {
+          navTree = navTree.filter(nav => this.roleAllowRouters.developer.includes(nav.name));
+        }
 
-                    // 当角色运营者时，过滤部分功能入口
-                    if (this.curAppInfo.role.name === 'operator') {
-                        navTree = navTree.filter(nav => this.roleAllowRouters['operator'].includes(nav.name));
-                    }
+        // 当角色运营者时，过滤部分功能入口
+        if (this.curAppInfo.role.name === 'operator') {
+          navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
+        }
 
-                    // smart应用或lesscode应用，包管理
-                    if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP && this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
-                        navTree.forEach(nav => {
-                            if (nav.name === 'appEngine') {
-                                nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
-                            }
-                        });
-                    }
+        // smart应用或lesscode应用，包管理
+        if (this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
+        && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
+          navTree.forEach((nav) => {
+            if (nav.name === 'appEngine') {
+              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
+            }
+          });
+        }
 
-                    // 初始化属性
-                    this.allNavItems = [];
-                    navTree = navTree.map(nav => {
-                        nav.isExpanded = false; // 是否展开，有子项时可应用
-                        nav.isActived = false; // 是否激活，本身匹配或子项匹配时应用
-                        nav.hasChildSelected = false; // 是否展开，只有子项匹配时应用
+        // 初始化属性
+        this.allNavItems = [];
+        navTree = navTree.map((nav) => {
+          nav.isExpanded = false; // 是否展开，有子项时可应用
+          nav.isActived = false; // 是否激活，本身匹配或子项匹配时应用
+          nav.hasChildSelected = false; // 是否展开，只有子项匹配时应用
 
-                        if (nav.children && nav.children.length) {
-                            nav.children.forEach(child => {
-                                child.isSelected = false;
-                            });
+          if (nav.children && nav.children.length) {
+            nav.children.forEach((child) => {
+              child.isSelected = false;
+            });
 
-                            this.allNavItems = this.allNavItems.concat(nav.children);
-                        } else {
-                            this.allNavItems.push(nav);
-                        }
+            this.allNavItems = this.allNavItems.concat(nav.children);
+          } else {
+            this.allNavItems.push(nav);
+          }
 
-                        return nav;
-                    });
+          return nav;
+        });
 
-                    // 接入feature flag来控制应用导航
-                    const featureMaps = {
-                        'appAnalysis': 'ANALYTICS', // 数据统计
-                        'docuManagement': 'DOCUMENT_MANAGEMENT', // 文档管理
-                        'appCloudAPI': 'API_GATEWAY' // 云API权限管理
-                    };
-                    const subFeatureMaps = {
-                        'appWebAnalysis': 'PA_WEBSITE_ANALYTICS', // 网站访问统计
-                        'appLogAnalysis': 'PA_INGRESS_ANALYTICS', // 访问日志统计
-                        'appEventAnalysis': 'PA_CUSTOM_EVENT_ANALYTICS', // 自定义事件统计
-                        'codeReview': 'CI', // 代码检查
-                        'monitorAlarm': 'PHALANX' // 告警记录
-                    };
-                    // 一级
-                    navTree = navTree.filter(nav => {
-                        const key = featureMaps[nav.name];
-                        if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
-                            return this.curAppInfo.feature[key];
-                        }
-                        return true;
-                    });
-                    // 二级
-                    for (let i = 0; i < navTree.length; i++) {
-                        const nav = navTree[i];
-                        if (!nav.children.length) {
-                            continue;
-                        }
-                        const children = nav.children.filter(sub => {
-                            const key = subFeatureMaps[sub.destRoute.name];
-                            // 如果有相应key，根据key来处理是否启用
-                            if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
-                                return this.curAppInfo.feature[key];
-                            }
-                            return true;
-                        });
-                        if (children.length) {
-                            nav.children = [...children];
-                        } else {
-                            navTree.splice(i, 1);
-                        }
-                    }
-                    return navTree;
-                } catch (e) {
-                    console.error(e);
-                }
-            },
+        // 接入feature flag来控制应用导航
+        const featureMaps = {
+          appAnalysis: 'ANALYTICS', // 数据统计
+          docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
+          appCloudAPI: 'API_GATEWAY', // 云API权限管理
+        };
+        const subFeatureMaps = {
+          appWebAnalysis: 'PA_WEBSITE_ANALYTICS', // 网站访问统计
+          appLogAnalysis: 'PA_INGRESS_ANALYTICS', // 访问日志统计
+          appEventAnalysis: 'PA_CUSTOM_EVENT_ANALYTICS', // 自定义事件统计
+          codeReview: 'CI', // 代码检查
+          monitorAlarm: 'PHALANX', // 告警记录
+        };
+        // 一级
+        navTree = navTree.filter((nav) => {
+          const key = featureMaps[nav.name];
+          if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
+            return this.curAppInfo.feature[key];
+          }
+          return true;
+        });
+        // 二级
+        for (let i = 0; i < navTree.length; i++) {
+          const nav = navTree[i];
+          if (!nav.children.length) {
+            continue;
+          }
+          const children = nav.children.filter((sub) => {
+            const key = subFeatureMaps[sub.destRoute.name];
+            // 如果有相应key，根据key来处理是否启用
+            if (key && this.curAppInfo.feature.hasOwnProperty(key)) {
+              return this.curAppInfo.feature[key];
+            }
+            return true;
+          });
+          if (children.length) {
+            nav.children = [...children];
+          } else {
+            navTree.splice(i, 1);
+          }
+        }
+        return navTree;
+      } catch (e) {
+        console.error(e);
+      }
+    },
 
-            /**
+    /**
              * 根据角色，初始访问权限
              */
-            initRouterPermission () {
-                const appRole = this.curAppInfo.role;
-                const allowRouters = this.roleAllowRouters[appRole.name] || [];
+    initRouterPermission() {
+      const appRole = this.curAppInfo.role;
+      const allowRouters = this.roleAllowRouters[appRole.name] || [];
 
-                this.allowedRouterName = [];
+      this.allowedRouterName = [];
 
-                this.navTree.forEach(nav => {
-                    if (allowRouters.includes(nav.name)) {
-                        if (nav.children && nav.children.length) {
-                            nav.children.forEach(child => {
-                                if (child.matchRouters) {
-                                    this.allowedRouterName = this.allowedRouterName.concat(child.matchRouters);
-                                } else {
-                                    this.allowedRouterName.push(child.destRoute.name);
-                                }
-                            });
-                        } else {
-                            this.allowedRouterName.push(nav.name);
-                        }
-                    }
-                });
-            },
+      this.navTree.forEach((nav) => {
+        if (allowRouters.includes(nav.name)) {
+          if (nav.children && nav.children.length) {
+            nav.children.forEach((child) => {
+              if (child.matchRouters) {
+                this.allowedRouterName = this.allowedRouterName.concat(child.matchRouters);
+              } else {
+                this.allowedRouterName.push(child.destRoute.name);
+              }
+            });
+          } else {
+            this.allowedRouterName.push(nav.name);
+          }
+        }
+      });
+    },
 
-            /**
+    /**
              * 根据当前routeName选中导航
              */
-            async selectRouterByName (routeName) {
-                try {
-                    await this.checkPermission(routeName);
-                    this.navTree.forEach(nav => {
-                        // 如果有子项，先遍历匹配
-                        if (nav.children && nav.children.length) {
-                            nav.isActived = false;
-                            nav.isExpanded = false;
+    async selectRouterByName(routeName) {
+      try {
+        await this.checkPermission(routeName);
+        this.navTree.forEach((nav) => {
+          // 如果有子项，先遍历匹配
+          if (nav.children && nav.children.length) {
+            nav.isActived = false;
+            nav.isExpanded = false;
 
-                            nav.children.forEach(child => {
-                                // 优先使用matchRouters来匹配，其次是destRoute
-                                if (child.matchRouters && child.matchRouters.includes(routeName)) {
-                                    child.isSelected = true;
-                                    nav.isActived = true;
-                                    nav.isExpanded = true;
-                                } else if (child.destRoute && child.destRoute.name === routeName) {
-                                    child.isSelected = true;
-                                    nav.isActived = true;
-                                    nav.isExpanded = true;
-                                } else {
-                                    child.isSelected = false;
-                                }
+            nav.children.forEach((child) => {
+              // 优先使用matchRouters来匹配，其次是destRoute
+              if (child.matchRouters && child.matchRouters.includes(routeName)) {
+                child.isSelected = true;
+                nav.isActived = true;
+                nav.isExpanded = true;
+              } else if (child.destRoute.name === routeName) {
+                child.isSelected = true;
+                nav.isActived = true;
+                nav.isExpanded = true;
+              } else {
+                child.isSelected = false;
+              }
 
-                                // 若命中，有配置参数，也需要再匹配一次，像增强服务里的数据存储和健康检查是通过category_id区分
-                                if (child.isSelected && child.destRoute.params) {
-                                    const childParams = child.destRoute.params;
-                                    const routeParams = this.$route.params;
-                                    for (const key in childParams) {
-                                        if (childParams[key] !== String(routeParams[key])) {
-                                            child.isSelected = false;
-                                        }
-                                    }
-                                }
-                            });
-                        } else {
-                            // 优先使用matchRouters来匹配，其次是destRoute
-                            nav.isExpanded = false;
-                            nav.hasChildSelected = false;
-
-                            if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
-                                nav.isActived = true;
-                            // nav.destRoute might be `undefined`
-                            } else if (nav.destRoute && nav.destRoute.name === this.curRouteName) {
-                                nav.isActived = true;
-                            } else {
-                                nav.isActived = false;
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.warn('error', e);
-                    if (e && e.name === 'appSummary') {
-                        this.$router.push({
-                            name: 'appSummary',
-                            params: {
-                                id: this.curAppInfo.application.code,
-                                moduleId: 'default'
-                            }
-                        });
-                    } else {
-                        this.$router.push({
-                            name: 'appSummary',
-                            params: {
-                                id: this.curAppInfo.application.code
-                            }
-                        });
-                    }
-                    if (e && (e.label || e.name)) {
-                        this.$bkNotify({
-                            theme: 'error',
-                            message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
-                            offsetY: 80
-                        });
-                    }
+              // 若命中，有配置参数，也需要再匹配一次，像增强服务里的数据存储和健康检查是通过category_id区分
+              if (child.isSelected && child.destRoute.params) {
+                const childParams = child.destRoute.params;
+                const routeParams = this.$route.params;
+                for (const key in childParams) {
+                  if (childParams[key] !== String(routeParams[key])) {
+                    child.isSelected = false;
+                  }
                 }
-            },
+              }
+            });
+          } else {
+            // 优先使用matchRouters来匹配，其次是destRoute
+            nav.isExpanded = false;
+            nav.hasChildSelected = false;
 
-            checkPermission (routeName) {
-                return new Promise((resolve, reject) => {
-                    if (this.allowedRouterName.includes(routeName)) {
-                        resolve(true);
-                    } else {
-                        const router = this.allNavItems.find(nav => {
-                            return (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute.name === routeName;
-                        });
-                        reject(router);
-                    }
-                });
+            if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
+              nav.isActived = true;
+              // nav.destRoute might be `undefined`
+            } else if (nav.destRoute && nav.destRoute?.name === this.curRouteName) {
+              nav.isActived = true;
+            } else {
+              nav.isActived = false;
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('error', e);
+        if (e && e.name === 'appSummary') {
+          this.$router.push({
+            name: 'appSummary',
+            params: {
+              id: this.curAppInfo.application.code,
+              moduleId: 'default',
             },
+          });
+        } else {
+          this.$router.push({
+            name: 'appSummary',
+            params: {
+              id: this.curAppInfo.application.code,
+            },
+          });
+        }
+        if (e && (e.label || e.name)) {
+          this.$bkNotify({
+            theme: 'error',
+            message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
+            offsetY: 80,
+          });
+        }
+      }
+    },
 
-            /**
+    checkPermission(routeName) {
+      return new Promise((resolve, reject) => {
+        if (this.allowedRouterName.includes(routeName)) {
+          resolve(true);
+        } else {
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
+          reject(router);
+        }
+      });
+    },
+
+    /**
              * 返回导航目录对应的Icon
              * @param {Object} navItem 导航
              * @return {Array} Classes
              */
-            getIconClass (navItem) {
-                const classes = ['paasng-icon', 'app-nav-icon'];
-                classes.push('paasng-' + (navItem.iconfontName || 'gear'));
-                return classes;
-            },
+    getIconClass(navItem) {
+      const classes = ['paasng-icon', 'app-nav-icon'];
+      classes.push(`paasng-${navItem.iconfontName || 'gear'}`);
+      return classes;
+    },
 
-            simpleAddNavItem (navTree, categoryName, destRouter, name) {
-                const category = navTree.find(item => item.name === categoryName);
-                category.children.push({
-                    'categoryName': categoryName,
-                    'name': name,
-                    'matchRouters': [destRouter],
-                    'destRoute': {
-                        'name': destRouter
-                    }
-                });
+    simpleAddNavItem(navTree, categoryName, destRouter, name) {
+      const category = navTree.find(item => item.name === categoryName);
+      category.children.push({
+        categoryName,
+        name,
+        matchRouters: [destRouter],
+        destRoute: {
+          name: destRouter,
+        },
+      });
 
-                return navTree;
-            },
+      return navTree;
+    },
 
-            /**
+    /**
              * 强服务添加子项
              * @param {Number} id id
              * @param {String} name 名称
              */
-            addServiceNavItem (navTree, id, name) {
-                const category = navTree.find(item => item.name === 'appServices');
-                category.children.push({
-                    'categoryName': 'appServices',
-                    'name': name,
-                    'matchRouters': ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
-                    'destRoute': {
-                        'name': 'appService',
-                        'params': {
-                            'category_id': id.toString()
-                        }
-                    }
-                });
+    addServiceNavItem(navTree, id, name) {
+      const category = navTree.find(item => item.name === 'appServices');
+      category.children.push({
+        categoryName: 'appServices',
+        name,
+        matchRouters: ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
+        destRoute: {
+          name: 'appService',
+          params: {
+            category_id: id.toString(),
+          },
+        },
+      });
 
-                return navTree;
-            },
+      return navTree;
+    },
 
-            /**
+    /**
              * 权限管理添加子项
              * @param {String} type 类型
              */
-            addPermissionNavItem (navTree, type) {
-                const nav = {
-                    user_access_control: {
-                        'categoryName': 'appPermissions',
-                        'name': this.$t('用户限制'),
-                        'matchRouters': ['appPermissionUser', 'appPermissionPathExempt'],
-                        'destRoute': {
-                            'name': 'appPermissionUser'
-                        }
-                    },
-                    ip_access_control: {
-                        'categoryName': 'appPermissions',
-                        'name': this.$t('IP限制'),
-                        'matchRouters': ['appPermissionIP'],
-                        'destRoute': {
-                            'name': 'appPermissionIP'
-                        }
-                    },
-                    approval: {
-                        'categoryName': 'appPermissions',
-                        'name': this.$t('单据审批'),
-                        'matchRouters': ['appOrderAudit'],
-                        'destRoute': {
-                            'name': 'appOrderAudit'
-                        }
-                    }
-                };
+    addPermissionNavItem(navTree, type) {
+      const nav = {
+        user_access_control: {
+          categoryName: 'appPermissions',
+          name: this.$t('用户限制'),
+          matchRouters: ['appPermissionUser', 'appPermissionPathExempt'],
+          destRoute: {
+            name: 'appPermissionUser',
+          },
+        },
+        ip_access_control: {
+          categoryName: 'appPermissions',
+          name: this.$t('IP限制'),
+          matchRouters: ['appPermissionIP'],
+          destRoute: {
+            name: 'appPermissionIP',
+          },
+        },
+        approval: {
+          categoryName: 'appPermissions',
+          name: this.$t('单据审批'),
+          matchRouters: ['appOrderAudit'],
+          destRoute: {
+            name: 'appOrderAudit',
+          },
+        },
+      };
 
-                const category = navTree.find(item => item.name === 'appPermissions');
-                if (type && nav[type]) {
-                    category.children.push(nav[type]);
-                }
+      const category = navTree.find(item => item.name === 'appPermissions');
+      if (type && nav[type]) {
+        category.children.push(nav[type]);
+      }
 
-                return navTree;
-            },
+      return navTree;
+    },
 
-            /**
+    /**
              * 切换展开状态
              *
              * @param {Object} category 父导航项
              */
-            toggleNavCategory (category) {
-                this.navTree.forEach(item => {
-                    if (category.name === item.name) {
-                        category.isExpanded = !category.isExpanded;
-                    } else {
-                        item.isExpanded = false;
-                    }
-                });
-            },
+    toggleNavCategory(category) {
+      this.navTree.forEach((item) => {
+        if (category.name === item.name) {
+          category.isExpanded = !category.isExpanded;
+        } else {
+          item.isExpanded = false;
+        }
+      });
+    },
 
-            /**
+    /**
              * 访问相应路由
              *
              * @param {Object} nav 导航对象
              */
-            async goPage (navItem) {
-                try {
-                    await this.checkPermission(navItem.destRoute.name);
-                    // if (navItem.isSelected) return
+    async goPage(navItem) {
+      try {
+        await this.checkPermission(navItem.destRoute?.name);
+        // if (navItem.isSelected) return
 
-                    const routeName = navItem.destRoute.name;
-                    const params = {
-                        ...navItem.destRoute.params || {},
-                        ...this.$router.params,
-                        moduleId: this.curAppModule.name
-                    };
-                    const routeConf = {
-                        name: routeName,
-                        params: params
-                    };
-                    this.$router.push(routeConf);
-                } catch (e) {
-                    if (e && e.name === 'appSummary') {
-                        this.$router.push({
-                            name: 'appSummary',
-                            params: {
-                                id: this.curAppInfo.application.code,
-                                moduleId: 'default'
-                            }
-                        });
-                    } else {
-                        this.$router.push({
-                            name: 'appBaseInfo',
-                            params: {
-                                id: this.curAppInfo.application.code
-                            }
-                        });
-                    }
-                    if (e && (e.label || e.name)) {
-                        this.$bkNotify({
-                            theme: 'error',
-                            message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
-                            offsetY: 80
-                        });
-                    }
-                }
+        const routeName = navItem.destRoute.name;
+        const params = {
+          ...navItem.destRoute.params || {},
+          ...this.$router.params,
+          moduleId: this.curAppModule?.name,
+        };
+        const routeConf = {
+          name: routeName,
+          params,
+        };
+        this.$router.push(routeConf);
+      } catch (e) {
+        if (e && e.name === 'appSummary') {
+          this.$router.push({
+            name: 'appSummary',
+            params: {
+              id: this.curAppInfo.application.code,
+              moduleId: 'default',
             },
-
-            enter (el, done) {
-                done();
+          });
+        } else {
+          this.$router.push({
+            name: 'appBaseInfo',
+            params: {
+              id: this.curAppInfo.application.code,
             },
-
-            afterEnter (el) {
-                $(el).hide().slideDown(400);
-            },
-
-            leave (el, done) {
-                $(el).slideUp(400, () => {
-                    done();
-                });
-            }
+          });
         }
-    };
+        if (e && (e.label || e.name)) {
+          this.$bkNotify({
+            theme: 'error',
+            message: `【${e.label || e.name}】${this.$t('没有访问权限！')}`,
+            offsetY: 80,
+          });
+        }
+      }
+    },
+
+    enter(el, done) {
+      done();
+    },
+
+    afterEnter(el) {
+      $(el).hide()
+        .slideDown(400);
+    },
+
+    leave(el, done) {
+      $(el).slideUp(400, () => {
+        done();
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

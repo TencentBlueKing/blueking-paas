@@ -156,6 +156,7 @@
 </template>
 <script>
     import PaasngAlert from './paasng-alert';
+    import i18n from '@/language/i18n';
     export default {
         name: '',
         components: {
@@ -168,7 +169,7 @@
             },
             title: {
                 type: String,
-                default: '批量申请权限'
+                default: i18n.t('批量申请权限')
             },
             rows: {
                 type: Array,

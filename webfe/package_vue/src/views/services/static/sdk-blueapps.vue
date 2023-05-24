@@ -24,7 +24,7 @@
                     ]
                 }
             ];
-            if (this.GLOBAL.APP_VERSION === 'te') {
+            if (this.GLOBAL.CONFIG.GO_FRAME) {
                 appList.push({
                     'title': `Go ${this.$t('开发框架')}`,
                     'explain': `Go  ${this.$t('开发框架在 Beego 基础上，集成用户登录、蓝鲸组件调用和其他增强服务。')}`,

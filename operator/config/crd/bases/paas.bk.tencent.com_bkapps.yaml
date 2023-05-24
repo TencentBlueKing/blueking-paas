@@ -45,6 +45,36 @@ spec:
           spec:
             description: AppSpec defines the desired state of BkApp
             properties:
+              addons:
+                description: Addons is a list of add-on service
+                items:
+                  description: Addon is used to specify add-on service
+                  properties:
+                    name:
+                      description: Name of the add-on service, e.g. redis
+                      type: string
+                    specs:
+                      description: Specifies of the add-on service, if not set, recommended
+                        specifies will be used
+                      items:
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
+                        properties:
+                          name:
+                            description: Name of the spec.
+                            type: string
+                          value:
+                            description: Value of the spec value
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  type: object
+                type: array
               build:
                 description: 'BuildConfig is the configuration related with application
                   building, the platform support 3 types of build config currently:
@@ -177,6 +207,38 @@ spec:
                       items:
                         type: string
                       type: array
+                    autoscaling:
+                      description: Autoscaling specifies the autoscaling configuration
+                      properties:
+                        enabled:
+                          description: Enabled indicates whether autoscaling is enabled
+                          type: boolean
+                        maxReplicas:
+                          description: maxReplicas is the upper limit for the number
+                            of replicas to which the autoscaler can scale up. It cannot
+                            be less that minReplicas.
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          description: minReplicas is the lower limit for the number
+                            of replicas to which the autoscaler can scale down. It
+                            defaults to 1 pod. minReplicas is allowed to be 0 if the
+                            alpha feature gate GPAScaleToZero is enabled and at least
+                            one Object or External metric is configured. Scaling is
+                            active as long as at least one metric value is available
+                          format: int32
+                          type: integer
+                        policy:
+                          description: Policy defines the policy for autoscaling,
+                            its optional values depend on the policies supported by
+                            the operator.
+                          type: string
+                      required:
+                      - enabled
+                      - maxReplicas
+                      - minReplicas
+                      - policy
+                      type: object
                     command:
                       description: Entrypoint array. Not executed within a shell.
                       items:
@@ -222,6 +284,45 @@ spec:
           status:
             description: AppStatus defines the observed state of BkApp
             properties:
+              addonStatuses:
+                description: AddonStatuses is the status of add-on service include
+                  specifications
+                items:
+                  description: AddonStatus is the status of add-on service
+                  properties:
+                    message:
+                      description: if add-on service state is failed, message will
+                        be the fail message
+                      type: string
+                    name:
+                      type: string
+                    specs:
+                      items:
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
+                        properties:
+                          name:
+                            description: Name of the spec.
+                            type: string
+                          value:
+                            description: Value of the spec value
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                    state:
+                      description: AddonState is the state of add-on with app
+                      enum:
+                      - provisioned
+                      - failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
               addresses:
                 description: Addresses holds all addressable locations of current
                   BkApp, user may visit app via these locations, includes all domain
@@ -411,6 +512,36 @@ spec:
           spec:
             description: AppSpec defines the desired state of BkApp
             properties:
+              addons:
+                description: Addons is a list of add-on service
+                items:
+                  description: Addon is used to specify add-on service
+                  properties:
+                    name:
+                      description: Name of the add-on service, e.g. redis
+                      type: string
+                    specs:
+                      description: Specifies of the add-on service, if not set, recommended
+                        specifies will be used
+                      items:
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
+                        properties:
+                          name:
+                            description: Name of the spec.
+                            type: string
+                          value:
+                            description: Value of the spec value
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  type: object
+                type: array
               build:
                 description: 'BuildConfig is the configuration related with application
                   building, the platform support 3 types of build config currently:
@@ -631,6 +762,45 @@ spec:
           status:
             description: AppStatus defines the observed state of BkApp
             properties:
+              addonStatuses:
+                description: AddonStatuses is the status of add-on service include
+                  specifications
+                items:
+                  description: AddonStatus is the status of add-on service
+                  properties:
+                    message:
+                      description: if add-on service state is failed, message will
+                        be the fail message
+                      type: string
+                    name:
+                      type: string
+                    specs:
+                      items:
+                        description: 'AddonSpec is used to specify add-on service,
+                          e.g. version: 6.0'
+                        properties:
+                          name:
+                            description: Name of the spec.
+                            type: string
+                          value:
+                            description: Value of the spec value
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                    state:
+                      description: AddonState is the state of add-on with app
+                      enum:
+                      - provisioned
+                      - failed
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
               addresses:
                 description: Addresses holds all addressable locations of current
                   BkApp, user may visit app via these locations, includes all domain

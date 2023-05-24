@@ -27,7 +27,8 @@ from paas_wl.networking.egress.models import RegionClusterState
 from paas_wl.resources.base.kres import KNode
 from tests.paas_wl.utils.basic import random_resource_name
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+# GenState 依赖 k8s node 状态, 不能并发执行
+pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.xdist_group(name="k8s-node")]
 
 
 REGION_NAME = settings.DEFAULT_REGION_NAME
@@ -55,7 +56,7 @@ class TestCommandGenState:
         return "node-{}".format(random_resource_name())
 
     @pytest.fixture(autouse=True)
-    def setup(self, node_maker, default_node_name):
+    def setup(self, request, node_maker, default_node_name):
         # Always create a new node before starting any tests
         node_maker(
             body={

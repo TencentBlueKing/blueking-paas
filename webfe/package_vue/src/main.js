@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -23,18 +24,25 @@ import store from '@/store';
 import http from '@/api';
 import auth from '@/auth';
 import { bus } from '@/common/bus';
+import $ from 'jquery';
 import '@/common/jquery_tools';
-import {
-  bkBadge, bkButton, bkLink, bkCheckbox, bkCheckboxGroup, bkCol, bkCollapse, bkCollapseItem, bkContainer, bkDatePicker,
-  bkDialog, bkDropdownMenu, bkException, bkForm, bkFormItem, bkInfoBox, bkInput, bkLoading, bkMessage,
-  bkNavigation, bkNavigationMenu, bkNavigationMenuItem, bkNotify, bkOption, bkOptionGroup, bkPagination,
-  bkPopover, bkProcess, bkProgress, bkRadio, bkRadioGroup, bkRoundProgress, bkRow, bkSearchSelect, bkSelect, bkOverflowTips,
-  bkSideslider, bkSlider, bkSteps, bkSwitcher, bkTab, bkTabPanel, bkTable, bkTableColumn, bkTagInput, bkTimePicker,
-  bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside, bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard,
-  bkTag} from 'bk-magic-vue';
+// import {
+//   bkBadge, bkButton, bkLink, bkCheckbox, bkCheckboxGroup, bkCol, bkCollapse,
+// bkCollapseItem, bkContainer, bkDatePicker,
+//   bkDialog, bkDropdownMenu, bkException, bkForm, bkFormItem, bkInfoBox, bkInput, bkLoading, bkMessage,
+//   bkNavigation, bkNavigationMenu, bkNavigationMenuItem, bkNotify, bkOption, bkOptionGroup, bkPagination,
+//   bkPopover, bkProcess, bkProgress, bkRadio, bkRadioGroup,
+//   bkRoundProgress, bkRow, bkSearchSelect, bkSelect, bkOverflowTips,
+//   bkSideslider, bkSlider, bkSteps, bkSwitcher, bkTab, bkTabPanel, bkTable, bkTableColumn, bkTagInput, bkTimePicker,
+//   bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside,
+//   bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard,
+//   bkTag } from 'bk-magic-vue';
+
+import { bkInfoBox, bkMessage, bkNotify } from 'bk-magic-vue';
 import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
+import '@/common/bkmagic.js';
 // eslint-disable-next-line
 import Blob from '@/common/Blob'
 // eslint-disable-next-line
@@ -43,12 +51,12 @@ import PaasContentLoader from '@/components/loader';
 
 // 时间格式过滤器引入
 import SmartTime from '@/components/filters/SmartTime';
-import 'Extension/tippy.js/dist/tippy.css';
-import 'Extension/tether-drop/dist/css/drop-theme-basic.css';
+// import 'Extension/tippy.js/dist/tippy.css';
+// import 'Extension/tether-drop/dist/css/drop-theme-basic.css';
 
-// Styles for vex
-import 'Extension/vex-js/sass/vex.sass';
-import 'Extension/vex-js/sass/vex-theme-default.sass';
+// // Styles for vex
+// import 'Extension/vex-js/sass/vex.sass';
+// import 'Extension/vex-js/sass/vex-theme-default.sass';
 import passLoading from '@/components/ui/LoadingSlot';
 
 import roundLoading from '@/components/round-loading';
@@ -67,85 +75,88 @@ import { renderHeader } from '@/common/utils';
 
 // composition-api
 import VueCompositionAPI from '@vue/composition-api';
+
+window.$ = $;
+
 Vue.use(VueCompositionAPI);
 
 Vue.config.devtools = true;
 
 // components use
-Vue.use(bkBadge);
-Vue.use(bkButton);
-Vue.use(bkLink);
-Vue.use(bkCheckbox);
-Vue.use(bkCheckboxGroup);
-Vue.use(bkCol);
-Vue.use(bkCollapse);
-Vue.use(bkCollapseItem);
-Vue.use(bkContainer);
-Vue.use(bkDatePicker);
-Vue.use(bkDialog, {
-  headerPosition: 'left'
-});
-Vue.use(bkDropdownMenu);
-Vue.use(bkException);
-Vue.use(bkForm);
-Vue.use(bkFormItem);
-Vue.use(bkInput);
-Vue.use(bkNavigation);
-Vue.use(bkNavigationMenu);
-Vue.use(bkNavigationMenuItem);
-Vue.use(bkOption);
-Vue.use(bkOptionGroup);
-Vue.use(bkPagination);
-Vue.use(bkPopover);
-Vue.use(bkProcess);
-Vue.use(bkProgress);
-Vue.use(bkRadio);
-Vue.use(bkRadioGroup);
-Vue.use(bkRoundProgress);
-Vue.use(bkRow);
-Vue.use(bkSearchSelect);
-Vue.use(bkSelect);
-Vue.use(bkSideslider);
-Vue.use(bkSlider);
-Vue.use(bkSteps);
-Vue.use(bkSwitcher);
-Vue.use(bkTab);
-Vue.use(bkOverflowTips);
-Vue.use(bkTabPanel);
-Vue.use(bkTable);
-Vue.use(bkTableColumn, {
-  showOverflowTooltip: true
-});
-Vue.use(bkTagInput, {
-  'tooltipKey': 'name'
-});
-Vue.use(bkTimePicker);
-Vue.use(bkTimeline);
-Vue.use(bkTransfer, {
-  showOverflowTips: true
-});
-Vue.use(bkTree);
-Vue.use(bkUpload);
-Vue.use(bkSwiper);
-Vue.use(bkRate);
-Vue.use(bkAnimateNumber);
-Vue.use(bkVirtualScroll);
-Vue.use(bkPopconfirm);
-// directives use
-Vue.use(bkClickoutside);
-Vue.use(bkTooltips);
-Vue.use(bkLoading);
-// Vue.use(bkOverflowTips)
-Vue.use(bkAlert);
-Vue.use(bkCard);
-Vue.use(bkTag);
+// Vue.use(bkBadge);
+// Vue.use(bkButton);
+// Vue.use(bkLink);
+// Vue.use(bkCheckbox);
+// Vue.use(bkCheckboxGroup);
+// Vue.use(bkCol);
+// Vue.use(bkCollapse);
+// Vue.use(bkCollapseItem);
+// Vue.use(bkContainer);
+// Vue.use(bkDatePicker);
+// Vue.use(bkDialog, {
+//   headerPosition: 'left',
+// });
+// Vue.use(bkDropdownMenu);
+// Vue.use(bkException);
+// Vue.use(bkForm);
+// Vue.use(bkFormItem);
+// Vue.use(bkInput);
+// Vue.use(bkNavigation);
+// Vue.use(bkNavigationMenu);
+// Vue.use(bkNavigationMenuItem);
+// Vue.use(bkOption);
+// Vue.use(bkOptionGroup);
+// Vue.use(bkPagination);
+// Vue.use(bkPopover);
+// Vue.use(bkProcess);
+// Vue.use(bkProgress);
+// Vue.use(bkRadio);
+// Vue.use(bkRadioGroup);
+// Vue.use(bkRoundProgress);
+// Vue.use(bkRow);
+// Vue.use(bkSearchSelect);
+// Vue.use(bkSelect);
+// Vue.use(bkSideslider);
+// Vue.use(bkSlider);
+// Vue.use(bkSteps);
+// Vue.use(bkSwitcher);
+// Vue.use(bkTab);
+// Vue.use(bkOverflowTips);
+// Vue.use(bkTabPanel);
+// Vue.use(bkTable);
+// Vue.use(bkTableColumn, {
+//   showOverflowTooltip: true,
+// });
+// Vue.use(bkTagInput, {
+//   tooltipKey: 'name',
+// });
+// Vue.use(bkTimePicker);
+// Vue.use(bkTimeline);
+// Vue.use(bkTransfer, {
+//   showOverflowTips: true,
+// });
+// Vue.use(bkTree);
+// Vue.use(bkUpload);
+// Vue.use(bkSwiper);
+// Vue.use(bkRate);
+// Vue.use(bkAnimateNumber);
+// Vue.use(bkVirtualScroll);
+// Vue.use(bkPopconfirm);
+// // directives use
+// Vue.use(bkClickoutside);
+// Vue.use(bkTooltips);
+// Vue.use(bkLoading);
+// // Vue.use(bkOverflowTips)
+// Vue.use(bkAlert);
+// Vue.use(bkCard);
+// Vue.use(bkTag);
 
 Vue.use(Directives);
-Vue.component('paas-content-loader', PaasContentLoader);
-Vue.component('paas-loading', passLoading);
-Vue.component('round-loading', roundLoading);
-Vue.component('table-empty', tableEmpty);
-Vue.component('empty-dark', emptyDark);
+Vue.component('PaasContentLoader', PaasContentLoader);
+Vue.component('PaasLoading', passLoading);
+Vue.component('RoundLoading', roundLoading);
+Vue.component('TableEmpty', tableEmpty);
+Vue.component('EmptyDark', emptyDark);
 
 Vue.prototype.$http = http;
 Vue.http = http;
@@ -172,14 +183,14 @@ Vue.prototype.$paasMessage = function (conf) {
 Vue.prototype.catchErrorHandler = function (error) {
   this.$bkMessage({
     theme: 'error',
-    message: error.detail || error.message
+    message: error.detail || error.message,
   });
 };
 
 // 注入全局配置
 window.GLOBAL_CONFIG = {
   ...PLATFORM_CONFIG,
-  ...window.GLOBAL_CONFIG
+  ...window.GLOBAL_CONFIG,
 };
 Vue.prototype.GLOBAL = window.GLOBAL_CONFIG;
 
@@ -192,7 +203,7 @@ window.showDeployTip = function () {
     type: 'notify',
     delay: 0,
     title: i18n.t('系统提示'),
-    message: i18n.t('静态文件加载失败，请刷新页面重试')
+    message: i18n.t('静态文件加载失败，请刷新页面重试'),
   });
 };
 
@@ -221,15 +232,15 @@ auth.requestCurrentUser().then((user) => {
       store,
       i18n,
       components: {
-        App
+        App,
       },
-      created () {
+      created() {
         // 获取功能开头详情
         this.$store.dispatch('getUserFeature');
         this.$store.dispatch('getPlatformFeature');
       },
       methods: {},
-      template: '<App />'
+      template: '<App />',
     });
 
     window.GLOBAL_I18N = global.paasVue;
@@ -258,6 +269,6 @@ auth.requestCurrentUser().then((user) => {
                         <div class="text-wrap" v-if="${status === 403}">
                             <a class="text-btn bk-primary bk-button-normal bk-button" href="${link}">去申请</a>
                         </div>
-                    </bk-exception>`
+                    </bk-exception>`,
   });
 });

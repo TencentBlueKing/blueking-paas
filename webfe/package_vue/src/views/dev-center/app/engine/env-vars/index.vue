@@ -334,9 +334,7 @@
                     <div
                       v-bk-tooltips="{ content: varItem.key, trigger: 'mouseenter', maxWidth: 400, extCls: 'env-var-popover' }"
                       class="desc-form-content"
-                    >
-                      {{ varItem.key }}
-                    </div>
+                    >{{ varItem.key }}</div>
                   </template>
                   <template v-else>
                     <bk-input
@@ -783,14 +781,14 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script> import _ from 'lodash';
 import dropdown from '@/components/ui/Dropdown';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
 export default {
-  components : {
+  components: {
     dropdown,
     tooltipConfirm,
     appTopBar,

@@ -129,15 +129,6 @@
         line-height: 48px;
         flex: 0 0 90px !important;
     }
-    &::after {
-        height: 8px;
-        line-height: 1;
-        content: '*';
-        color: #EA3636;
-        font-size: 12px;
-        display: inline-block;
-        vertical-align: middle;
-    }
     // 非必填
     &.optional::after {
         opacity: 0;

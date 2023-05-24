@@ -36,7 +36,7 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.oauth2.utils import create_oauth2_client
 from tests.utils.helpers import register_iam_after_create_application
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 
 
 @pytest.fixture

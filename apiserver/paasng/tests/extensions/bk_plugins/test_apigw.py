@@ -138,7 +138,7 @@ class TestSetDistributors:
             # Grant permissions should be called twice
             call_args_list = fake_good_client.grant_permissions.call_args_list
             assert len(call_args_list) == 2
-            assert [kwargs['data']['target_app_code'] for _, kwargs in call_args_list] == [
+            assert sorted([kwargs['data']['target_app_code'] for _, kwargs in call_args_list]) == [
                 dis_1.bk_app_code,
                 dis_2.bk_app_code,
             ]
@@ -146,7 +146,7 @@ class TestSetDistributors:
             # Revoke permissions should be called twice
             call_args_list = fake_good_client.revoke_permissions.call_args_list
             assert len(call_args_list) == 2
-            assert [kwargs['data']['target_app_codes'] for _, kwargs in call_args_list] == [
+            assert sorted([kwargs['data']['target_app_codes'] for _, kwargs in call_args_list]) == [
                 [dis_1.bk_app_code],
                 [dis_2.bk_app_code],
             ]

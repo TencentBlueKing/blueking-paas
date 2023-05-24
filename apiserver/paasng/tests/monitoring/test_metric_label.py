@@ -41,7 +41,10 @@ class FakeVersionInfo:
     [
         FakeVersionInfo('1', '8'),
         FakeVersionInfo('1', '10'),
+        pytest.param(FakeVersionInfo('1', '11+')),
         pytest.param(FakeVersionInfo('1', '12'), marks=pytest.mark.xfail),
+        pytest.param(FakeVersionInfo('1', '12+'), marks=pytest.mark.xfail),
+        pytest.param(FakeVersionInfo('1', '14+'), marks=pytest.mark.xfail),
         pytest.param(FakeVersionInfo('1', '20'), marks=pytest.mark.xfail),
     ],
 )

@@ -9,7 +9,7 @@
         {{ $t('批量续期') }}
       </bk-button>
       <section class="fr">
-        <div class="label">
+        <div class="label mr15">
           {{ $t('类型') }}
         </div>
         <div class="select-wrapper">

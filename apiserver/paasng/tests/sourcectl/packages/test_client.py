@@ -145,14 +145,15 @@ class TestLocalClient:
 @pytest.mark.parametrize("archive_maker", [gen_tar, gen_zip])
 class TestGenericRemoteClient:
     @pytest.mark.parametrize(
-        "url, contents, filename, ctx, expected",
+        "url_tmpl, contents, filename, ctx, expected",
         [
-            (f"http://foo/{generate_random_string()}", dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
-            (f"http://foo/{generate_random_string()}", dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
-            (f"http://foo/{generate_random_string()}", dict(File="A: B\n"), "file", pytest.raises(KeyError), None),
+            ("http://foo/{random}", dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
+            ("http://foo/{random}", dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
+            ("http://foo/{random}", dict(File="A: B\n"), "file", pytest.raises(KeyError), None),
         ],
     )
-    def test_http_protocol(self, mock_adapter, archive_maker, url, contents, filename, ctx, expected):
+    def test_http_protocol(self, mock_adapter, archive_maker, url_tmpl, contents, filename, ctx, expected):
+        url = url_tmpl.format(random=generate_random_string())
         with generate_temp_file() as file_path:
             archive_maker(file_path, contents)
             mock_adapter.register(url, open(file_path, mode="rb"))
@@ -161,15 +162,16 @@ class TestGenericRemoteClient:
                 assert cli.read_file(filename) == expected
 
     @pytest.mark.parametrize(
-        "obj_key, contents, filename, ctx, expected",
+        "contents, filename, ctx, expected",
         [
-            # NOTE: 这是数据库存量数据的格式
-            (f"{generate_random_string()}", dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
-            (f"{generate_random_string()}", dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
-            (f"{generate_random_string()}", dict(File="A: B\n"), "file", pytest.raises(KeyError), None),
+            (dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
+            (dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
+            (dict(File="A: B\n"), "file", pytest.raises(KeyError), None),
         ],
     )
-    def test_blobstore_protocol(self, archive_maker, obj_key, contents, filename, ctx, expected):
+    def test_blobstore_protocol(self, archive_maker, contents, filename, ctx, expected):
+        # NOTE: 这是数据库存量数据的格式
+        obj_key = generate_random_string()
         with generate_temp_file() as file_path, override_settings(BLOBSTORE_BKREPO_CONFIG={}):
             archive_maker(file_path, contents)
             obj_url = upload_to_blob_store(file_path, obj_key, allow_overwrite=True)

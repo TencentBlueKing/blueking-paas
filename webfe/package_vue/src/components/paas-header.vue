@@ -104,7 +104,7 @@
               ref="dropdown"
               :options="{
                 position: 'bottom right',
-                classes: 'ps-header-dropdown',
+                classes: 'ps-header-dropdown exclude-drop',
                 tetherOptions: {
                   targetOffset: '0px 30px'
                 }, beforeClose

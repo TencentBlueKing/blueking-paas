@@ -36,7 +36,7 @@ from paasng.dev_resources.services.models import Plan, Service, ServiceCategory,
 from tests.dev_resources.servicehub import data_mocks
 from tests.utils.helpers import BaseTestCaseWithApp
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
 class TestMixedMgr:

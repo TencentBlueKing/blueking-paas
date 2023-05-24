@@ -132,6 +132,11 @@
                 return this.$store.state.userFeature;
             }
         },
+        watch: {
+            '$route' () {
+                this.resetAppSecret();
+            },
+        },
         methods: {
             onSecretToggle () {
                 if (!this.userFeature.VERIFICATION_CODE) {
@@ -231,6 +236,12 @@
                         }
                     );
                 });
+            },
+
+            resetAppSecret () {
+                this.appSecret = null;
+                this.showingSecret = false;
+                this.appSecretTimer = 0;
             }
         }
     };

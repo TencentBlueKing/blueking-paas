@@ -151,7 +151,10 @@
             :required="true"
           >
             <template v-if="memberMgrConfig.userEditable">
-              <user v-model="personnelSelectorList" />
+              <user
+                v-model="personnelSelectorList"
+                :placeholder="$t('请输入用户')"
+              />
               <!-- <bk-member-selector
                                 @change="updateValue"
                                 v-model="personnelSelectorList"
@@ -788,5 +791,10 @@ export default {
         margin: 0px 8px;
         border-color: #3c96ff;
         color: #3c96ff;
+    }
+
+    .app-container .header {
+      display: flex;
+      justify-content: space-between;
     }
 </style>

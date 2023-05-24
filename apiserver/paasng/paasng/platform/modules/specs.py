@@ -49,7 +49,6 @@ class ModuleSpecs:
         self.app_specs = AppSpecs(module.application)
         self.source_origin_specs = SourceOriginSpecs.get(SourceOrigin(module.get_source_origin()))
 
-    runtime_type = source_origin_property('runtime_type')
     has_template_code = source_origin_property('has_template_code')
     deploy_via_package = source_origin_property('deploy_via_package')
 
@@ -58,6 +57,12 @@ class ModuleSpecs:
         """Whether current module has templated source"""
         # TODO: Do not read value from application, store metadata in module object itself
         return self.app_specs.require_templated_source and self.has_template_code
+
+    @property
+    def runtime_type(self) -> RuntimeType:
+        if runtime_type := getattr(self.source_origin_specs, "runtime_type", None):
+            return runtime_type
+        return RuntimeType(self.module.runtime_type)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -72,7 +77,7 @@ class SourceOriginSpecs(ABC):
     source_origin: SourceOrigin
 
     # Describe the type of runtime system
-    runtime_type: RuntimeType = RuntimeType.BUILDPACK
+    runtime_type: RuntimeType
 
     # Whether current module has template code, the code was usually initialized during module creation
     has_template_code: bool = True
@@ -101,7 +106,6 @@ class AuthorizedVcsSpecs(SourceOriginSpecs):
     """Specs for source_origin: AUTHORIZED_VCS"""
 
     source_origin = SourceOrigin.AUTHORIZED_VCS
-    runtime_type = RuntimeType.BUILDPACK
     has_template_code = True
     deploy_via_package = False
 

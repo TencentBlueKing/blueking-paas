@@ -500,10 +500,10 @@
 </script>
 <style lang="scss">
     .tag-extra, .tag-extra .bk-tag-input {
-        min-height: 40px;
+        min-height: 34px;
     }
     .tag-extra .bk-tag-input .placeholder {
-        line-height: 38px;
+        line-height: 32px;
     }
     .paas-info-command-cls .bk-form-input{
         padding: 20px 10px;

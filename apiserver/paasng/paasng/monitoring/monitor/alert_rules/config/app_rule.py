@@ -16,17 +16,21 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import logging
 from typing import Dict, List, Optional
 
 import cattrs
 from attrs import define, field
 from typing_extensions import Protocol
 
+from paasng.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
 from .constants import DEFAULT_RULE_CONFIGS
 from .metric_label import get_metric_labels
+
+logger = logging.getLogger(__name__)
 
 
 class RuleConfig(Protocol):
@@ -146,9 +150,13 @@ class ModuleScopedRuleConfig(AppScopedRuleConfig):
             )
 
         if not self.metric_labels:
-            self.metric_labels = get_metric_labels(
-                r_configs['metric_label_names'], self.app_code, self.run_env, self.module_name
-            )
+            try:
+                self.metric_labels = get_metric_labels(
+                    r_configs['metric_label_names'], self.app_code, self.run_env, self.module_name
+                )
+            except BKMonitorNotSupportedError as e:
+                logger.info(f'generate metric labels failed: {e}')
+                self.metric_labels = {}
 
     @classmethod
     def from_alert_rule_obj(

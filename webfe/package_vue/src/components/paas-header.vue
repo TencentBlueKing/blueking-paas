@@ -104,9 +104,9 @@
               ref="dropdown"
               :options="{
                 position: 'bottom right',
-                classes: 'ps-header-dropdown',
+                classes: 'ps-header-dropdown exclude-drop',
                 tetherOptions: {
-                  targetOffset: '0px 40px'
+                  targetOffset: '0px 30px'
                 }, beforeClose
               }"
             >
@@ -124,6 +124,8 @@
                   @keypress.enter="enterCallBack($event)"
                   @compositionstart="handleCompositionstart"
                   @compositionend="handleCompositionend"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
                 >
                 <div class="ps-search-icon">
                   <span
@@ -142,6 +144,7 @@
                 slot="content"
                 class="header-search-result"
               >
+              <div v-if="isShowInput && isFocus">
                 <div
                   v-if="filterKey !== ''"
                   class="paas-search-trigger"
@@ -167,6 +170,7 @@
                     @key-down-overflow="onKeyDown(), emitChildKeyDown()"
                   />
                 </div>
+              </div>
               </div>
             </dropdown>
           </li>
@@ -454,6 +458,7 @@ export default {
         },
       ],
       isShowInput: true,
+      isFocus: false,
       // eslint-disable-next-line comma-dangle
       link: this.GLOBAL.LINK.APIGW_INDEX,
       navText: '',
@@ -549,6 +554,16 @@ export default {
 
     handleCompositionend() {
       this.isInputing = false;
+    },
+
+    handleFocus() {
+      this.isFocus = true
+    },
+
+    handleBlur() {
+      setTimeout(() => {
+        this.isFocus = false
+      }, 500);
     },
 
     handleToSearchPage() {

@@ -15,16 +15,37 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import atexit
 from datetime import datetime
 from functools import partial
+from pathlib import Path
 
 import pytest
+from filelock import FileLock
 
 from paasng.accessories.bkmonitorv3.params import QueryAlertsParams
 from tests.utils.helpers import generate_random_string
 
-SEARCH_KEYWORD = generate_random_string(6)
-FAKE_APP_CODE = generate_random_string(6)
+fn = Path(__file__).parent / ".random"
+with FileLock(str(fn.absolute()) + ".lock"):
+    if fn.is_file():
+        SEARCH_KEYWORD, FAKE_APP_CODE = (
+            fn.read_text()
+            .strip()
+            .split(
+                "|",
+            )
+        )
+    else:
+        SEARCH_KEYWORD = generate_random_string(6)
+        FAKE_APP_CODE = generate_random_string(6)
+        fn.write_text("|".join([SEARCH_KEYWORD, FAKE_APP_CODE]))
+
+
+@atexit.register
+def clear_filelock():
+    fn.unlink(missing_ok=True)
+
 
 AppQueryAlertsParams = partial(
     QueryAlertsParams, app_code=FAKE_APP_CODE, start_time=datetime.now(), end_time=datetime.now()

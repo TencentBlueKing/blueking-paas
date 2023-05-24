@@ -146,6 +146,10 @@ class ModuleInitializer:
             return {'code': 'OK', "extra_info": {}, "dest_type": 'null'}
 
         result = connector.sync_templated_sources(context)
+        # TODO: 这个赋值写的有点挫, 后面再优化
+        template = Template.objects.get(name=self.module.source_init_template, type=TemplateType.NORMAL)
+        self.module.runtime_type = template.runtime_type
+        self.module.save(update_fields=["runtime_type", "updated"])
 
         if result.is_success():
             return {'code': 'OK', "extra_info": result.extra_info, "dest_type": result.dest_type}

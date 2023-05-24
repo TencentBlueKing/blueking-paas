@@ -65,6 +65,7 @@ ensure-apigw() {
     
     # 同步网关资源
     python manage.py sync_apigw_resources \
+    --delete \
     --api-name "${api_name}" \
     -f support-files/apigw/resources.yaml
     

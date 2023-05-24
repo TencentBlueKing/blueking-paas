@@ -51,104 +51,101 @@
             >
               {{ process.cmd }}
             </div>
-            <div class="status-container">
-              <div class="process-operate">
-                <a
-                  slot="trigger"
-                  v-bk-tooltips="$t('进程详情')"
-                  class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
-                  @click="showProcessDetailDialog(process, index)"
+            <div class="process-operate">
+              <a
+                slot="trigger"
+                v-bk-tooltips="$t('进程详情')"
+                class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
+                @click="showProcessDetailDialog(process, index)"
+              >
+                <i class="paasng-icon paasng-info-line" />
+              </a>
+              <a
+                v-if="platformFeature.ENABLE_WEB_CONSOLE"
+                slot="trigger"
+                v-bk-tooltips="$t('访问控制台')"
+                class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
+                @click="showProcessDetail(process)"
+              >
+                <i class="paasng-icon paasng-diff-2" />
+              </a>
+              <template v-if="process.targetStatus === 'start'">
+                <div
+                  v-bk-tooltips="process.operateIconTitle"
+                  class="tool-confirm-wrapper"
+                  @click="confirmClick(process)"
+                  @mouseover="clearTooltipTimer(process)"
+                  @mouseout="hideTooltipConfirm(process)"
                 >
-                  <i class="paasng-icon paasng-info-line" />
-                </a>
-                <a
-                  v-if="platformFeature.ENABLE_WEB_CONSOLE"
-                  slot="trigger"
-                  v-bk-tooltips="$t('访问控制台')"
-                  class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
-                  @click="showProcessDetail(process)"
-                >
-                  <i class="paasng-icon paasng-diff-2" />
-                </a>
-                <template v-if="process.targetStatus === 'start'">
-                  <div
-                    v-bk-tooltips="process.operateIconTitle"
-                    class="tool-confirm-wrapper"
-                    @click="confirmClick(process)"
-                    @mouseover="clearTooltipTimer(process)"
+                  <tooltip-confirm
+                    ref="tooltipConfirm"
+                    :ok-text="$t('确定')"
+                    :cancel-text="$t('取消')"
+                    :theme="'ps-tooltip'"
+                    @ok="updateProcess(process, index)"
+                    @cancel="closeProcess(process)"
+                    @mouseover="clearTooltipTimer(process, 'show')"
                     @mouseout="hideTooltipConfirm(process)"
                   >
-                    <tooltip-confirm
-                      ref="tooltipConfirm"
-                      :ok-text="$t('确定')"
-                      :cancel-text="$t('取消')"
-                      :theme="'ps-tooltip'"
-                      @ok="updateProcess(process, index)"
-                      @cancel="closeProcess(process)"
-                      @mouseover="clearTooltipTimer(process, 'show')"
-                      @mouseout="hideTooltipConfirm(process)"
+                    <a
+                      slot="trigger"
+                      class="ps-icon-btn-circle operate-process-icon stop"
+                      href="javascript:;"
+                      :class="{ 'disabled': isAppOfflined }"
                     >
-                      <a
-                        slot="trigger"
-                        class="ps-icon-btn-circle operate-process-icon stop"
-                        href="javascript:;"
-                        :class="{ 'disabled': isAppOfflined }"
+                      <div class="square-icon" />
+                      <!-- <i></i> -->
+                      <img
+                        src="/static/images/btn_loading.gif"
+                        class="loading"
+                        style="margin-right: 0;"
                       >
-                        <div class="square-icon" />
-                        <!-- <i></i> -->
-                        <img
-                          src="/static/images/btn_loading.gif"
-                          class="loading"
-                          style="margin-right: 0;"
-                        >
-                      </a>
-                    </tooltip-confirm>
-                  </div>
-                </template>
-                <template v-else>
-                  <a
-                    v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
-                    class="ps-icon-btn-circle operate-process-icon on start"
-                    href="javascript:"
-                    :class="{ 'disabled': isAppOfflined }"
-                    @click="patchProcess(process, index)"
-                  >
-                    <i />
-                    <img
-                      src="/static/images/btn_loading.gif"
-                      class="loading"
-                      style="margin-right: 0;"
-                    >
-                  </a>
-                </template>
-
-                <dropdown
-                  ref="operateDropRef"
-                  :options="{ position: 'bottom right' }"
+                    </a>
+                  </tooltip-confirm>
+                </div>
+              </template>
+              <template v-else>
+                <a
+                  v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
+                  class="ps-icon-btn-circle operate-process-icon on start"
+                  href="javascript:"
+                  :class="{ 'disabled': isAppOfflined }"
+                  @click="patchProcess(process, index)"
                 >
-                  <a
-                    slot="trigger"
-                    href="javascript:void(0);"
-                    class="ps-icon-btn-circle no-border a-more"
+                  <i />
+                  <img
+                    src="/static/images/btn_loading.gif"
+                    class="loading"
+                    style="margin-right: 0;"
                   >
-                    <i class="paasng-icon paasng-icon-more" />
-                  </a>
-                  <div slot="content">
-                    <ul class="ps-list-group-link spacing-x0">
-                      <li>
-                        <a
-                          href="javascript:void(0);"
-                          class="blue"
-                          @click="showProcessConfigDialog(process, index)"
-                        > {{ $t('扩缩容') }} </a>
-                      </li>
-                    </ul>
-                  </div>
-                </dropdown>
-              </div>
-              <div
-                v-if="process.status === 'Running'"
-                class="process-status"
+                </a>
+              </template>
+              <bk-dropdown-menu
+                trigger="click"
+                align="right"
+                ext-cls="dropdown-menu-cls"
+              >
+                <template slot="dropdown-trigger">
+                  <i class="paasng-icon paasng-icon-more" />
+                </template>
+                <ul class="bk-dropdown-list" slot="dropdown-content">
+                    <li>
+                      <a
+                        href="javascript:void(0);"
+                        class="blue"
+                        @click="showProcessConfigDialog(process, index)"
+                      > {{ $t('调整实例数') }} </a>
+                    </li>
+                </ul>
+              </bk-dropdown-menu>
+            </div>
+            <div
+              v-if="process.status === 'Running'"
+              class="process-status"
+            >
+              <img
+                src="/static/images/btn_loading.gif"
+                class="loading"
               >
                 <img
                   src="/static/images/btn_loading.gif"
@@ -1731,9 +1728,6 @@ export default {
     },
 
     showProcessConfigDialog(process, index) {
-      this.$refs.operateDropRef.forEach((ref) => {
-        ref.close();
-      });
 
       if (this.isAppOfflined) {
         this.$paasMessage({
@@ -1763,9 +1757,6 @@ export default {
     },
 
     showProcessDetailDialog(process, index) {
-      this.$refs.operateDropRef.forEach((ref) => {
-        ref.close();
-      });
       this.processPlan = {
         replicas: process.instance,
         processType: process.name,
@@ -2870,4 +2861,11 @@ export default {
     .dia-input {
         width: 240px
       }
+    .dropdown-menu-cls {
+      left: 10px;
+      i {
+        font-size: 24px;
+        color: #3A84FF;
+      }
+    }
 </style>

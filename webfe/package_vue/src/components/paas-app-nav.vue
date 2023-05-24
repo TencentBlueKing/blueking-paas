@@ -57,7 +57,7 @@
   </ul>
 </template>
 
-<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -359,7 +359,7 @@ export default {
             if (nav.matchRouters && nav.matchRouters.includes(this.curRouteName)) {
               nav.isActived = true;
               // nav.destRoute might be `undefined`
-            } else if (nav.destRoute && nav.destRoute.name === this.curRouteName) {
+            } else if (nav.destRoute && nav.destRoute?.name === this.curRouteName) {
               nav.isActived = true;
             } else {
               nav.isActived = false;
@@ -399,7 +399,7 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute.name === routeName);
+          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName);
           reject(router);
         }
       });
@@ -514,7 +514,7 @@ export default {
              */
     async goPage(navItem) {
       try {
-        await this.checkPermission(navItem.destRoute.name);
+        await this.checkPermission(navItem.destRoute?.name);
         // if (navItem.isSelected) return
 
         const routeName = navItem.destRoute.name;

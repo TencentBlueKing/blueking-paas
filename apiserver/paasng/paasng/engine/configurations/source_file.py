@@ -54,6 +54,12 @@ class MetaDataReader(Protocol):
         :raises: exceptions.GetAppYamlError
         """
 
+    def get_dockerignore(self, version_info: VersionInfo) -> str:
+        """Read .dockerignore from repository
+
+        :raises: exceptions.GetDockerIgnoreError
+        """
+
 
 class MetaDataFileReader:
     source_dir: Path = Path(".")
@@ -133,6 +139,29 @@ class MetaDataFileReader:
         if not isinstance(app_description, dict):
             raise exceptions.GetAppYamlError('file "app.yaml" must be dict type')
         return app_description
+
+    def get_dockerignore(self, version_info: VersionInfo) -> str:
+        """Read .dockerignore config from repository
+
+        :raises: exceptions.GetDockerIgnoreError
+        """
+        possible_keys = ['.dockerignore']
+        if self.source_dir != Path("."):
+            possible_keys = [str(self.source_dir / '.dockerignore'), '.dockerignore']
+
+        content = None
+        for possible_key in possible_keys:
+            try:
+                content = self.read_file(possible_key, version_info)
+                break
+            except Exception:
+                continue
+        if content is None:
+            error_msg = 'Can not read .dockerignore file from repository'
+            if self.error_tips:
+                error_msg += f', {self.error_tips}'
+            raise exceptions.GetDockerIgnoreError(error_msg)
+        return content.decode()
 
 
 class VCSMetaDataReader(MetaDataFileReader):

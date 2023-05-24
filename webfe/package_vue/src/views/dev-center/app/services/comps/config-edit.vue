@@ -97,7 +97,7 @@
 </template>
 
 <script>
-    import marked from 'marked';
+    import { marked } from 'marked';
 
     export default {
         name: '',
@@ -154,6 +154,7 @@
                         $(this).attr('target', '_blank');
                     });
                 });
+                console.log('marked', marked, this.guide)
                 return marked(this.guide, { sanitize: true });
             }
         },

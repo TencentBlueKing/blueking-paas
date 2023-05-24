@@ -51,7 +51,10 @@
             position: 'bottom left'
           }"
         >
-          <div slot="trigger">
+          <div
+            slot="trigger"
+            class="module-wrapper"
+          >
             <a
               href="javascript: void(0);"
               class="module-name"
@@ -116,7 +119,10 @@
             position: 'bottom left'
           }"
         >
-          <div slot="trigger">
+        <div
+          slot="trigger"
+          class="module-wrapper"
+        >
             <a
               href="javascript: void(0);"
               class="module-name time-text"
@@ -359,6 +365,10 @@
             &.time-text {
                 font-size: 12px
             }
+        }
+
+        .module-wrapper .module-name {
+            line-height: 42px;
         }
 
         .icon-time-cls {

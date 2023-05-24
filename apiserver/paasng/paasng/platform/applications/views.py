@@ -213,10 +213,8 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(type=ApplicationType.BK_PLUGIN)
 
-        results = [
-            {'application': application, 'product': application.product if hasattr(application, "product") else None}
-            for application in applications
-        ]
+        # 目前应用在市场的 name 和 Application 中的 name 一致
+        results = [{'application': application, 'product': {'name': application.name}} for application in applications]
         serializer = slzs.ApplicationWithMarketMinimalSLZ(results, many=True)
         return Response({'count': len(results), 'results': serializer.data})
 
@@ -268,7 +266,7 @@ class ApplicationViewSet(viewsets.ViewSet):
             # then sort it
             applications = sorted(applications, key=lambda app: app.id in marked_application_ids, reverse=True)
 
-        serializer = slzs.AppMinimalWithModuleSLZ(applications, many=True)
+        serializer = slzs.ApplicationMinimalSLZ(applications, many=True)
         return Response({'count': len(applications), 'results': serializer.data})
 
     def destroy(self, request, code):

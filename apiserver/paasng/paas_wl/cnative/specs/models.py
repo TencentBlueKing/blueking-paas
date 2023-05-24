@@ -188,11 +188,6 @@ class AppModelDeploy(TimestampedModel):
     message = models.TextField(verbose_name=_('状态描述文字'), null=True, blank=True)
     last_transition_time = models.DateTimeField(verbose_name=_('状态最近变更时间'), null=True)
 
-    # 在 BkApp 调和循环中，短暂失败是可接受的（如 Pod 未一步到位地就绪），该情况可能通过 k8s 重新调度等方式自愈，
-    # 如果在轮询到第一次 BkApp Error 状态就判定部署失败，是过于敏感的，因此添加 polling_failure_count 以记录失败次数，
-    # 允许在观测到 BkApp Error 状态后，轮询器重试一定次数；减少出现自愈后，服务已经就绪，但是部署状态还是失败的情况
-    polling_failure_count = models.IntegerField(verbose_name=_('轮询获得失败次数'), default=0)
-
     operator = BkUserField(verbose_name=_('操作者'))
 
     objects = AppModelDeployQuerySet.as_manager()

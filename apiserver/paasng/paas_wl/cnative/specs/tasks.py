@@ -59,13 +59,16 @@ class AppModelDeployStatusPoller(TaskPoller):
             return PollingResult.done(data={'state': state, 'last_update': mres.status.lastUpdate})
 
         elif state.status == DeployStatus.ERROR:
+            polling_failure_count = 1
+            if self.metadata.last_polling_data and 'polling_failure_count' in self.metadata.last_polling_data:
+                polling_failure_count = self.metadata.last_polling_data['polling_failure_count'] + 1
+
             # bkapp 存在无法一次就绪，但短时间内自愈的情况（如 Deployment does not have minimum availability），
             # 此处允许在获取到失败状态后，重新尝试获取状态，若失败次数超过一定值，则判定本次部署失败
-            if dp.polling_failure_count >= CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS:
+            if polling_failure_count > CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS:
                 return PollingResult.done(data={'state': state, 'last_update': mres.status.lastUpdate})
 
-            dp.polling_failure_count += 1
-            dp.save(update_fields=['polling_failure_count'])
+            return PollingResult.doing(data={'polling_failure_count': polling_failure_count})
 
         elif state.status == DeployStatus.PROGRESSING:
             # Also update status when it's progressing

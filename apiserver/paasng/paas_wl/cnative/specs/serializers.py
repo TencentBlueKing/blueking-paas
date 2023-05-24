@@ -77,7 +77,7 @@ class DeploySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AppModelDeploy
-        exclude = ('module_id', 'polling_failure_count')
+        exclude = 'module_id'
 
 
 class MresDeploymentStatusSLZ(serializers.Serializer):

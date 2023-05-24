@@ -51,6 +51,7 @@
             >
               {{ process.cmd }}
             </div>
+            <div class="status-container">
             <div class="process-operate">
               <a
                 slot="trigger"
@@ -134,11 +135,12 @@
                         href="javascript:void(0);"
                         class="blue"
                         @click="showProcessConfigDialog(process, index)"
-                      > {{ $t('调整实例数') }} </a>
+                      > {{ $t('扩缩容') }} </a>
                     </li>
                 </ul>
               </bk-dropdown-menu>
             </div>
+          </div>
             <div
               v-if="process.status === 'Running'"
               class="process-status"
@@ -156,7 +158,6 @@
                 </span>
               </div>
             </div>
-          </div>
           <div
             v-if="process.name === curProcessKey"
             class="process-item-table"
@@ -544,6 +545,7 @@
                 {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
                 <i
                     class="paasng-icon paasng-exclamation-circle uv-tips"
+                    v-bk-tooltips="autoScalingTip"
                   />
               </p>
               <bk-form-item property="maxReplicas">
@@ -560,7 +562,12 @@
                   </template>
                 </bk-input>
               </bk-form-item>
-              <p class="mb10 mt10">{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">45%</span> {{$t('时')}}，{{$t('会触发缩容')}}</p>
+              <p class="mb10 mt10">{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
+                <i
+                    class="paasng-icon paasng-exclamation-circle uv-tips"
+                    v-bk-tooltips="autoScalingTip"
+                  />
+              </p>
               <bk-form-item property="minReplicas">
                 <bk-input
                   type="number"
@@ -868,7 +875,14 @@ export default {
       },
       scalingRules: null,
       maxReplicasNum: 0,
-      minReplicasNum: 0
+      minReplicasNum: 0,
+      autoScalingTip: {
+          theme: 'light',
+          allowHtml: true,
+          content: this.$t('提示信息'),
+          html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('查看动态扩容计算规则')}</a>`,
+          placements: ['right']
+      },
     };
   },
   computed: {
@@ -884,6 +898,9 @@ export default {
     envEventData() {
       return this.$store.state.envEventData;
     },
+    shrinkLimit() {
+      return (this.curTargetReplicas - 1)/this.curTargetReplicas * 85 + '%'
+    }
   },
   watch: {
     curLogTimeRange(val) {
@@ -901,6 +918,16 @@ export default {
               required: true,
               message: i18n.t('请填写扩容上限'),
               trigger: 'blur',
+            },
+            {
+                validator: (v) => {
+                    const manReplicas = Number(v)
+                    return this.curTargetReplicas >= manReplicas
+                },
+                message() {
+                  return `${i18n.t('当前副本数已达到扩容上限，将不会触发扩容')}`;
+                },
+                trigger: 'blur'
             },
             {
               validator(v) {
@@ -1127,6 +1154,7 @@ export default {
              * @param {Object} data 进程
              */
     showProcessDetail(data) {
+      console.log('data', data)
       // 当前项折叠
       if (data.name === this.curProcessKey) {
         this.curProcess = {
@@ -2850,7 +2878,7 @@ export default {
       padding-top: 20px;
       border-top: 1px solid #DCDEE5;
       .auto-form{
-        width: 270px;
+        width: 280px;
       }
 
       .cpu-num{
@@ -2867,5 +2895,8 @@ export default {
         font-size: 24px;
         color: #3A84FF;
       }
+    }
+    .bk-form-control .group-box .group-text {
+        line-height: 32px;
     }
 </style>

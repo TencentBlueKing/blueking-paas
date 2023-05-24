@@ -150,10 +150,11 @@ DEFAULT_POD_LOGS_LINE = 512
 # 不指定则使用默认，可以指定为 bk-ingress-nginx
 APP_INGRESS_CLASS = settings.get('APP_INGRESS_CLASS')
 
-# 如果希望应用不需要带子路径的反斜杠也能访问, 则设置 APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH、APP_INGRESS_V1_PATH_TRAILING_SLASH 为 False
-# ingress extensions/v1beta1 资源路径是否保留末尾斜杠
+# 控制 ingress 资源路径是否严格匹配末尾斜杆, 如某个 ingress 路径设置成 "/foo/", 开启严格匹配将无法通过 "/foo" 访问应用
+# 如果希望通过 "/foo" 也能访问, 则需要设置 APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH、APP_INGRESS_V1_PATH_TRAILING_SLASH 为 False
+# ingress extensions/v1beta1 资源路径是否严格匹配末尾斜杆
 APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH = settings.get('APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH', True)
-# ingress v1 资源路径是否保留末尾斜杠
+# ingress v1 资源路径是否严格匹配末尾斜杆
 APP_INGRESS_V1_PATH_TRAILING_SLASH = APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH
 
 # 是否开启“现代” Ingress 资源的支持，将产生以下影响

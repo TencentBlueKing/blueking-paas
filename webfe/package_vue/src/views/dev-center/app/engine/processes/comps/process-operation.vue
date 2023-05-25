@@ -44,10 +44,7 @@
                 <div v-if="process.autoscaling" class="auto-scal">{{ $t('自动扩缩容') }}</div>
               </div>
               <div class="instance-count">
-                <span v-if="process.available_instance_count === process.desired_replicas">
-                  {{ $t('全部进程正常') }}
-                </span>
-                <div v-else>
+                <div>
                   <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
                 </div>
               </div>
@@ -2213,7 +2210,7 @@ export default {
                 }
             }
             .instance-count {
-                  padding-left: 54px;
+                  padding-left: 56px;
               }
             .process-command {
                 display: inline-block;

@@ -132,11 +132,6 @@
                 return this.$store.state.userFeature;
             }
         },
-        watch: {
-            '$route' () {
-                this.resetAppSecret();
-            },
-        },
         methods: {
             onSecretToggle () {
                 if (!this.userFeature.VERIFICATION_CODE) {

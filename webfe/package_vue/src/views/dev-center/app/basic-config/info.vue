@@ -418,7 +418,7 @@
           </div>
         </div>
         <!-- 鉴权信息 -->
-        <authentication-info />
+        <authentication-info ref="authenticationRef" />
         <!-- <div
           v-if="canViewSecret"
           class="basic-info-item"
@@ -710,6 +710,7 @@
                 if (value.application.type === 'bk_plugin') {
                     this.getProfile();
                 }
+                this.$refs.authenticationRef?.resetAppSecret();
                 setTimeout(() => {
                     this.isLoading = false;
                 }, 300);

@@ -39,7 +39,10 @@
                   v-bk-tooltips="process.name"
                   class="process-name"
                 >{{ process.name }}</b>
-                <div class="instance-count">
+                <div class="instance-count" v-if="process.available_instance_count === process.desired_replicas">
+                  {{ $t('全部进程正常') }}
+                </div>
+                <div class="instance-count" v-else>
                   <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
                 </div>
               </div>
@@ -56,13 +59,15 @@
               v-if="process.status === 'Running'"
               class="process-status"
             >
-              <img
-                src="/static/images/btn_loading.gif"
-                class="loading"
-              >
-                <span>
-                  {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
-                </span>
+              <span v-if="!process.autoscaling">
+                <img
+                  src="/static/images/btn_loading.gif"
+                  class="loading"
+                >
+                  <span>
+                    {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
+                  </span>
+              </span>
               </div>
               <div class="process-operate">
                 <a
@@ -71,7 +76,7 @@
                   class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
                   @click="showProcessDetailDialog(process, index)"
                 >
-                  <i class="paasng-icon paasng-info-line" />
+                  <i class="paasng-icon paasng-process-file" />
                 </a>
                 <a
                   v-if="platformFeature.ENABLE_WEB_CONSOLE"
@@ -497,7 +502,7 @@
         v-if="processConfigDialog.showForm"
         style="min-height: 65px;"
       >
-        <bk-radio-group v-model="autoscaling" @change="handlerChange" class="mb20">
+        <bk-radio-group v-model="autoscaling" @change="handleAutoChange" class="mb20">
           <bk-radio-button class="radio-cls" :value="false">
             {{ $t('手动调节') }}
           </bk-radio-button>
@@ -510,6 +515,7 @@
         <bk-form
           ref="processConfigForm"
           :label-width="110"
+          style="width: 390px"
           :model="processPlan"
         >
           <bk-form-item :label="$t('当前副本数：')">
@@ -550,8 +556,6 @@
                 <bk-input
                   type="number"
                   :placeholder="'1 - ' + maxReplicasNum"
-                  :min="1"
-                  :max="maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.maxReplicas"
                 >
@@ -570,8 +574,6 @@
                 <bk-input
                   type="number"
                   :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
-                  :min="minReplicasNum"
-                  :max="maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.minReplicas"
                 >
@@ -878,7 +880,7 @@ export default {
           theme: 'light',
           allowHtml: true,
           content: this.$t('提示信息'),
-          html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩容计算规则')}</a>`,
+          html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩缩容计算规则')}</a>`,
           placements: ['right']
       },
       autoScalDisableConfig: {}
@@ -898,7 +900,7 @@ export default {
       return this.$store.state.envEventData;
     },
     shrinkLimit() {
-      return (this.curTargetReplicas - 1)/this.curTargetReplicas * 85 + '%'
+      return ((this.curTargetReplicas - 1)/this.curTargetReplicas * 85).toFixed(1) + '%'
     }
   },
   watch: {
@@ -919,13 +921,23 @@ export default {
               trigger: 'blur',
             },
             {
+              validator(val) {
+                const maxReplicas = Number(val)
+                return maxReplicas <= maxReplicasNum;
+              },
+              message() {
+                return `${i18n.t('扩容上限最大值')}${maxReplicasNum}`;
+              },
+              trigger: 'blur',
+            },
+            {
               validator(v) {
                   const maxReplicas = Number(v)
                   const minReplicas = Number(that.scalingConfig.minReplicas)
                   return maxReplicas >= minReplicas;
                 },
               message() {
-                return `${i18n.t('扩容上限应 >= 缩容下限')}`;
+                return `${i18n.t('扩容上限不可小于缩容下限')}`;
               },
               trigger: 'blur',
             },
@@ -937,13 +949,23 @@ export default {
               trigger: 'blur',
             },
             {
+              validator(val) {
+                const maxReplicas = Number(val)
+                return maxReplicas <= maxReplicasNum;
+              },
+              message() {
+                return `${i18n.t('缩容下限最大值')}${maxReplicasNum}`;
+              },
+              trigger: 'blur',
+            },
+            {
                 validator(v) {
                   const minReplicas = Number(v)
                   const maxReplicas = Number(that.scalingConfig.maxReplicas)
-                  return minReplicas < maxReplicas;
+                  return minReplicas <= maxReplicas;
                 },
                 message() {
-                  return `${i18n.t('缩容下限应 < 扩容上限')}`;
+                  return `${i18n.t('缩容下限应小于等于扩容上限')}`;
                 },
                 trigger: 'blur',
               },
@@ -2112,6 +2134,10 @@ export default {
               message: e.message || e.detail || this.$t('接口异常')
           });
       }
+    },
+
+    handleAutoChange(val) {
+      this.processPlan.targetReplicas = this.curTargetReplicas
     }
   },
 };

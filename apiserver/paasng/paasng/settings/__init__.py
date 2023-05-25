@@ -536,6 +536,9 @@ IAM_APP_SECRET = settings.get('IAM_APP_SECRET', default=BK_APP_SECRET)
 # https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#21-django-migration
 BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 
+# 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
+BK_IAM_SKIP = settings.get('BK_IAM_SKIP', False)
+
 BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get('BKAUTH_DEFAULT_PROVIDER_TYPE', 'BK')
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项

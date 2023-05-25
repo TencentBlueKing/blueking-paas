@@ -99,7 +99,7 @@
         class="ps-head-right"
       >
         <template>
-          <li class="mr20">
+          <li class="mr20" v-if="curAppInfo.feature.AGGREGATE_SEARCH">
             <dropdown
               ref="dropdown"
               :options="{
@@ -470,6 +470,9 @@ export default {
     },
     userFeature() {
       return this.$store.state.userFeature;
+    },
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
     },
   },
   watch: {

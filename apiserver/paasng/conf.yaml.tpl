@@ -137,6 +137,9 @@
 # BK_IAM_USE_APIGATEWAY: true
 ## Auth 服务默认 PROVIDER 类型
 # BKAUTH_DEFAULT_PROVIDER_TYPE: BK
+## 跳过初始化已有应用数据到权限中心
+# BK_IAM_SKIP: false
+
 
 ## 网关访问 IAM 地址
 # BK_IAM_APIGATEWAY_URL: ''

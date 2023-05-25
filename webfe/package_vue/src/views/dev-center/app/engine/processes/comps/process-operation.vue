@@ -52,96 +52,7 @@
               {{ process.cmd }}
             </div>
             <div class="status-container">
-            <div class="process-operate">
-              <a
-                slot="trigger"
-                v-bk-tooltips="$t('进程详情')"
-                class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
-                @click="showProcessDetailDialog(process, index)"
-              >
-                <i class="paasng-icon paasng-info-line" />
-              </a>
-              <a
-                v-if="platformFeature.ENABLE_WEB_CONSOLE"
-                slot="trigger"
-                v-bk-tooltips="$t('访问控制台')"
-                class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
-                @click="showProcessDetail(process)"
-              >
-                <i class="paasng-icon paasng-diff-2" />
-              </a>
-              <template v-if="process.targetStatus === 'start'">
-                <div
-                  v-bk-tooltips="process.operateIconTitle"
-                  class="tool-confirm-wrapper"
-                  @click="confirmClick(process)"
-                  @mouseover="clearTooltipTimer(process)"
-                  @mouseout="hideTooltipConfirm(process)"
-                >
-                  <tooltip-confirm
-                    ref="tooltipConfirm"
-                    :ok-text="$t('确定')"
-                    :cancel-text="$t('取消')"
-                    :theme="'ps-tooltip'"
-                    @ok="updateProcess(process, index)"
-                    @cancel="closeProcess(process)"
-                    @mouseover="clearTooltipTimer(process, 'show')"
-                    @mouseout="hideTooltipConfirm(process)"
-                  >
-                    <a
-                      slot="trigger"
-                      class="ps-icon-btn-circle operate-process-icon stop"
-                      href="javascript:;"
-                      :class="{ 'disabled': isAppOfflined }"
-                    >
-                      <div class="square-icon" />
-                      <!-- <i></i> -->
-                      <img
-                        src="/static/images/btn_loading.gif"
-                        class="loading"
-                        style="margin-right: 0;"
-                      >
-                    </a>
-                  </tooltip-confirm>
-                </div>
-              </template>
-              <template v-else>
-                <a
-                  v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
-                  class="ps-icon-btn-circle operate-process-icon on start"
-                  href="javascript:"
-                  :class="{ 'disabled': isAppOfflined }"
-                  @click="patchProcess(process, index)"
-                >
-                  <i />
-                  <img
-                    src="/static/images/btn_loading.gif"
-                    class="loading"
-                    style="margin-right: 0;"
-                  >
-                </a>
-              </template>
-              <bk-dropdown-menu
-                trigger="click"
-                align="right"
-                ext-cls="dropdown-menu-cls"
-              >
-                <template slot="dropdown-trigger">
-                  <i class="paasng-icon paasng-icon-more" />
-                </template>
-                <ul class="bk-dropdown-list" slot="dropdown-content">
-                    <li>
-                      <a
-                        href="javascript:void(0);"
-                        class="blue"
-                        @click="showProcessConfigDialog(process, index)"
-                      > {{ $t('扩缩容') }} </a>
-                    </li>
-                </ul>
-              </bk-dropdown-menu>
-            </div>
-          </div>
-            <div
+              <div
               v-if="process.status === 'Running'"
               class="process-status"
             >
@@ -149,15 +60,100 @@
                 src="/static/images/btn_loading.gif"
                 class="loading"
               >
-                <img
-                  src="/static/images/btn_loading.gif"
-                  class="loading"
-                >
                 <span>
                   {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
                 </span>
               </div>
-            </div>
+              <div class="process-operate">
+                <a
+                  slot="trigger"
+                  v-bk-tooltips="$t('进程详情')"
+                  class="icon-info-l icon-info-base ps-icon-btn-circle no-border"
+                  @click="showProcessDetailDialog(process, index)"
+                >
+                  <i class="paasng-icon paasng-info-line" />
+                </a>
+                <a
+                  v-if="platformFeature.ENABLE_WEB_CONSOLE"
+                  slot="trigger"
+                  v-bk-tooltips="$t('访问控制台')"
+                  class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
+                  @click="showProcessDetail(process)"
+                >
+                  <i class="paasng-icon paasng-diff-2" />
+                </a>
+                <template v-if="process.targetStatus === 'start'">
+                  <div
+                    v-bk-tooltips="process.operateIconTitle"
+                    class="tool-confirm-wrapper"
+                    @click="confirmClick(process)"
+                    @mouseover="clearTooltipTimer(process)"
+                    @mouseout="hideTooltipConfirm(process)"
+                  >
+                    <tooltip-confirm
+                      ref="tooltipConfirm"
+                      :ok-text="$t('确定')"
+                      :cancel-text="$t('取消')"
+                      :theme="'ps-tooltip'"
+                      @ok="updateProcess(process, index)"
+                      @cancel="closeProcess(process)"
+                      @mouseover="clearTooltipTimer(process, 'show')"
+                      @mouseout="hideTooltipConfirm(process)"
+                    >
+                      <a
+                        slot="trigger"
+                        class="ps-icon-btn-circle operate-process-icon stop"
+                        href="javascript:;"
+                        :class="{ 'disabled': isAppOfflined }"
+                      >
+                        <div class="square-icon" />
+                        <!-- <i></i> -->
+                        <img
+                          src="/static/images/btn_loading.gif"
+                          class="loading"
+                          style="margin-right: 0;"
+                        >
+                      </a>
+                    </tooltip-confirm>
+                  </div>
+                </template>
+                <template v-else>
+                  <a
+                    v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
+                    class="ps-icon-btn-circle operate-process-icon on start"
+                    href="javascript:"
+                    :class="{ 'disabled': isAppOfflined }"
+                    @click="patchProcess(process, index)"
+                  >
+                    <i />
+                    <img
+                      src="/static/images/btn_loading.gif"
+                      class="loading"
+                      style="margin-right: 0;"
+                    >
+                  </a>
+                </template>
+                <bk-dropdown-menu
+                  trigger="click"
+                  align="right"
+                  ext-cls="dropdown-menu-cls"
+                >
+                  <template slot="dropdown-trigger">
+                    <i class="paasng-icon paasng-icon-more" />
+                  </template>
+                  <ul class="bk-dropdown-list" slot="dropdown-content">
+                      <li>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue"
+                          @click="showProcessConfigDialog(process, index)"
+                        > {{ $t('扩缩容') }} </a>
+                      </li>
+                  </ul>
+                </bk-dropdown-menu>
+              </div>
+          </div>
+        </div>
           <div
             v-if="process.name === curProcessKey"
             class="process-item-table"
@@ -505,7 +501,9 @@
           <bk-radio-button class="radio-cls" :value="false">
             {{ $t('手动调节') }}
           </bk-radio-button>
-          <bk-radio-button class="radio-cls" :value="true">
+          <bk-radio-button class="radio-cls" :value="true" 
+            :disabled="!autoScalDisableConfig.ENABLE_AUTOSCALING"
+            v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.ENABLE_AUTOSCALING }">
             {{ $t('自动调节') }}
           </bk-radio-button>
         </bk-radio-group>
@@ -880,9 +878,10 @@ export default {
           theme: 'light',
           allowHtml: true,
           content: this.$t('提示信息'),
-          html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('查看动态扩容计算规则')}</a>`,
+          html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩容计算规则')}</a>`,
           placements: ['right']
       },
+      autoScalDisableConfig: {}
     };
   },
   computed: {
@@ -920,20 +919,10 @@ export default {
               trigger: 'blur',
             },
             {
-                validator: (v) => {
-                    const manReplicas = Number(v)
-                    return this.curTargetReplicas >= manReplicas
-                },
-                message() {
-                  return `${i18n.t('当前副本数已达到扩容上限，将不会触发扩容')}`;
-                },
-                trigger: 'blur'
-            },
-            {
               validator(v) {
-                  const manReplicas = Number(v)
+                  const maxReplicas = Number(v)
                   const minReplicas = Number(that.scalingConfig.minReplicas)
-                  return manReplicas >= minReplicas;
+                  return maxReplicas >= minReplicas;
                 },
               message() {
                 return `${i18n.t('扩容上限应 >= 缩容下限')}`;
@@ -977,6 +966,7 @@ export default {
       next();
     });
     this.isDateChange = false;
+    this.getAutoScalFlag()
   },
   beforedestroy() {
     this.closeServerPush();
@@ -1154,7 +1144,6 @@ export default {
              * @param {Object} data 进程
              */
     showProcessDetail(data) {
-      console.log('data', data)
       // 当前项折叠
       if (data.name === this.curProcessKey) {
         this.curProcess = {
@@ -1776,7 +1765,6 @@ export default {
         status: process.status,
       };
 
-      console.log('process', process)
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || this.maxReplicasNum
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || this.minReplicasNum
       this.processConfigDialog.visiable = true;
@@ -1884,9 +1872,7 @@ export default {
           this.$store.commit('updataEnvEventData', []);
           this.updateProcessConfig();
         } 
-          console.log('manualValidate', manualValidate)
         } catch (error) {
-            console.log(11,error)
             this.processConfigDialog.isLoading = false;
         }
       })
@@ -1906,7 +1892,6 @@ export default {
     // 进程实例设置
     async updateProcessConfig() {
       // 不允许小于1或者大于最大值，如果没有改变也不允许操作
-      console.log(11)
       if (!this.autoscaling && (this.processPlan.targetReplicas < 1 || this.processPlan.targetReplicas > this.processPlan.maxReplicas || this.processPlan.targetReplicas === this.processPlan.replicas)) {
         return;
       }
@@ -1924,9 +1909,6 @@ export default {
         }
       };
       this.pendingProcessList.push(processType);
-
-      console.log('planForm', planForm)
-      debugger
 
       try {
         await this.$store.dispatch('processes/updateProcess', {
@@ -2115,6 +2097,22 @@ export default {
       const time = this.initDateTimeRange.map(time => moment(time).format('YYYY-MM-DD HH:mm:ss'));
       return this.$isSidebarClosed(JSON.stringify(time));
     },
+
+    async getAutoScalFlag() {
+      try {
+          const res = await this.$store.dispatch('deploy/getAutoScalFlagWithEnv', {
+              appCode: this.appCode,
+              moduleId: this.curModuleId,
+              env: this.environment,
+          });
+          this.autoScalDisableConfig = res
+      } catch (e) {
+          this.$paasMessage({
+              theme: 'error',
+              message: e.message || e.detail || this.$t('接口异常')
+          });
+      }
+    }
   },
 };
 </script>

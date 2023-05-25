@@ -1795,6 +1795,7 @@ export default {
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || this.minReplicasNum
       this.processConfigDialog.visiable = true;
       this.processConfigDialog.showForm = true;
+      this.autoscaling = process.autoscaling
       this.curTargetReplicas = this.processPlan.targetReplicas;
     },
 

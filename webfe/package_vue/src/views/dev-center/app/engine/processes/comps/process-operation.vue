@@ -1684,7 +1684,7 @@ export default {
         setTimeout(() => {
           this.$store.commit('updataEnvEventData', []);
           this.watchServerPush();
-        }, 5000);
+        }, 10000);
       });
     },
 

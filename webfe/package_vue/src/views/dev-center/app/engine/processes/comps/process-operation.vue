@@ -977,6 +977,16 @@ export default {
         }
       }
     },
+    'scalingConfig.maxReplicas' (val) {
+      if(val >= this.scalingConfig.minReplicas) {
+        this.$refs.scalingConfigForm?.clearError();
+      }
+    },
+    'scalingConfig.minReplicas' (val) {
+      if(val <= this.scalingConfig.maxReplicas) {
+        this.$refs.scalingConfigForm?.clearError();
+      }
+    },
     autoscaling() {
       this.$refs.processConfigForm?.clearError();
       this.$refs.scalingConfigForm?.clearError();

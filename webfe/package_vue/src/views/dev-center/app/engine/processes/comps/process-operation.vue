@@ -24,29 +24,33 @@
             :key="process.status"
             class="process-item-header"
           >
-            <div
-              class="process-basic-info"
-              @click="showProcessDetail(process)"
-            >
-              <div>
-                <a class="ps-icon-btn-circle no-border expanded-icon">
-                  <i
-                    :class="['paasng-icon paasng-bold',{
-                      'paasng-down-shape': process.name === curProcessKey,
-                      'paasng-right-shape': process !== curProcess || !curProcessKey }]" />
-                </a>
-                <b
-                  v-bk-tooltips="process.name"
-                  class="process-name"
-                >{{ process.name }}</b>
-                <div class="instance-count" v-if="process.available_instance_count === process.desired_replicas">
-                  {{ $t('全部进程正常') }}
+            <div>
+              <div
+                class="process-basic-info"
+                @click="showProcessDetail(process)"
+              >
+                <div>
+                  <a class="ps-icon-btn-circle no-border expanded-icon">
+                    <i
+                      :class="['paasng-icon paasng-bold',{
+                        'paasng-down-shape': process.name === curProcessKey,
+                        'paasng-right-shape': process !== curProcess || !curProcessKey }]" />
+                  </a>
+                  <b
+                    v-bk-tooltips="process.name"
+                    class="process-name"
+                  >{{ process.name }}</b>
                 </div>
-                <div class="instance-count" v-else>
+                <div v-if="process.autoscaling" class="auto-scal">{{ $t('自动扩缩容') }}</div>
+              </div>
+              <div class="instance-count">
+                <span v-if="process.available_instance_count === process.desired_replicas">
+                  {{ $t('全部进程正常') }}
+                </span>
+                <div v-else>
                   <span>{{ process.available_instance_count }} / {{ process.desired_replicas }}</span>
                 </div>
               </div>
-              <div v-if="process.autoscaling" class="auto-scal">{{ $t('自动扩缩容') }}</div>
             </div>
             <div
               class="process-command"
@@ -1754,7 +1758,7 @@ export default {
         callback && callback(processes);
 
         // 发起服务监听
-        // this.$store.commit('updataEnvEventData', []);
+        this.$store.commit('updataEnvEventData', []);
         this.watchServerPush();
         this.$emit('data-ready', this.environment);
       } catch (e) {
@@ -2161,9 +2165,8 @@ export default {
             justify-content: space-between;
             .process-basic-info {
                 display: flex;
-                padding: 16px 0 16px 24px;
-                min-width: 205px;
-                max-width: 230px;
+                padding: 16px 0 0px 24px;
+                width: 230px;
                 vertical-align: middle;
                 cursor: pointer;
                 .expanded-icon {
@@ -2175,9 +2178,6 @@ export default {
                         color: #3a84ff;
                     }
                 }
-                .instance-count {
-                    padding-left: 32px;
-                }
                 .process-name {
                     display: inline-block;
                     max-width: 150px;
@@ -2187,6 +2187,7 @@ export default {
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
+                    padding-top: 3px;
                 }
                 .auto-scal{
                   width: 76px;
@@ -2200,6 +2201,9 @@ export default {
                   margin-left: 8px;
                 }
             }
+            .instance-count {
+                  padding-left: 54px;
+              }
             .process-command {
                 display: inline-block;
                 padding: 16px 24px 16px 0;

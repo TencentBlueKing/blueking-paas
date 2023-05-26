@@ -884,7 +884,9 @@ export default {
           html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩缩容计算规则')}</a>`,
           placements: ['right']
       },
-      autoScalDisableConfig: {}
+      autoScalDisableConfig: {},
+      curTargetMaxReplicas: 0,
+      curTargetMinReplicas: 0
     };
   },
   computed: {
@@ -1800,6 +1802,8 @@ export default {
 
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || this.maxReplicasNum
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || this.minReplicasNum
+      this.curTargetMaxReplicas = this.scalingConfig.maxReplicas
+      this.curTargetMinReplicas = this.scalingConfig.minReplicas
       this.processConfigDialog.visiable = true;
       this.processConfigDialog.showForm = true;
       this.autoscaling = process.autoscaling
@@ -2149,7 +2153,10 @@ export default {
     },
 
     handleAutoChange(val) {
+      //切换tab 数据重置
       this.processPlan.targetReplicas = this.curTargetReplicas
+      this.scalingConfig.maxReplicas = this.curTargetMaxReplicas
+      this.scalingConfig.minReplicas = this.curTargetMinReplicas
     }
   },
 };

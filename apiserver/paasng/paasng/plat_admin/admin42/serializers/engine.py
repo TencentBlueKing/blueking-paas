@@ -89,4 +89,4 @@ class DeploymentForListSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Deployment
-        fields = '__all__'
+        exclude = ('procfile', 'processes', 'hooks')

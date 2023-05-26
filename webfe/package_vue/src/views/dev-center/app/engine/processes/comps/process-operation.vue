@@ -968,7 +968,7 @@ export default {
                   return minReplicas <= maxReplicas;
                 },
                 message() {
-                  return `${i18n.t('缩容下限应小于等于扩容上限')}`;
+                  return `${i18n.t('缩容下限不可大于扩容上限')}`;
                 },
                 trigger: 'blur',
               },
@@ -2382,15 +2382,11 @@ export default {
 
         tbody {
             tr {
-                td {
-                    border-bottom: 1px solid #e6e9ea;
-                }
+                border-bottom: 1px solid #e6e9ea;
             }
             tr {
                 &:last-child {
-                    td {
-                        border-bottom: none;
-                    }
+                  border-bottom: none;
                 }
             }
         }

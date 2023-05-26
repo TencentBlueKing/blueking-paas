@@ -17,6 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
+from collections import OrderedDict
 from typing import cast
 
 from celery import shared_task
@@ -24,6 +25,8 @@ from celery import shared_task
 from paasng.dev_resources.servicehub.manager import LocalServiceObj, mixed_service_mgr
 from paasng.dev_resources.servicehub.models import ServiceEngineAppAttachment
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.utils import ResQuotasAggregation
+from paasng.platform.core.storages.redisdb import DefaultRediStore
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +57,21 @@ def sync_developers_to_sentry(application_id):
             }
 
             service.patch_service_instance_by_plan(plan, params)
+
+
+@shared_task
+def cal_app_resource_quotas():
+    """Calculate resource quotas for all apps for sorting display of app list pages.
+    Testing 1000 apps, takes about 30s and needs to be put into the redis cache.
+    """
+    app_resource_quotas = OrderedDict()
+    for app in Application.objects.all():
+        quotas = ResQuotasAggregation(app).get_resource_quotas()
+        app_resource_quotas[app.code] = quotas
+    # Sort by memory usage size
+    sorted_app_quotas = OrderedDict(sorted(app_resource_quotas.items(), key=lambda x: x[1]['memory'], reverse=True))
+
+    # Save to redis
+    store = DefaultRediStore(rkey='quotas::app')
+    store.save(sorted_app_quotas)
+    return

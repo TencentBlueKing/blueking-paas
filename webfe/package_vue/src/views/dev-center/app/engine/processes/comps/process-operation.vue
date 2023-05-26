@@ -1957,7 +1957,7 @@ export default {
         });
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('修改成功'),
+          message: this.$t('提交成功'),
         });
       } catch (err) {
         this.$paasMessage({
@@ -2383,7 +2383,7 @@ export default {
                 font-size: 12px;
             }
         }
-        
+
         tbody {
             tr {
                 td {

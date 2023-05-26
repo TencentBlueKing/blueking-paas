@@ -39,12 +39,12 @@
         <label v-else>
           <p class="title-p mt15">bk_app_secret</p>
         </label>
-        <div class="item-practical-content">
+        <div class="item-practical-content pr20">
           <span>{{ appSecretText }}</span>
           <span
             v-if="!appSecret"
             v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
-            class="paasng-icon paasng-eye"
+            class="paasng-icon paasng-eye secret-icon"
             style="cursor: pointer;"
             @click="onSecretToggle"
           />
@@ -131,11 +131,6 @@
             userFeature () {
                 return this.$store.state.userFeature;
             }
-        },
-        watch: {
-            '$route' () {
-                this.resetAppSecret();
-            },
         },
         methods: {
             onSecretToggle () {
@@ -242,6 +237,7 @@
                 this.appSecret = null;
                 this.showingSecret = false;
                 this.appSecretTimer = 0;
+                this.isAcceptSMSCode = false;
             }
         }
     };
@@ -558,5 +554,9 @@
             margin-right: 5px;
             vertical-align: top;
         }
+    }
+
+    .secret-icon {
+        transform: translate(4px, -4px);
     }
 </style>

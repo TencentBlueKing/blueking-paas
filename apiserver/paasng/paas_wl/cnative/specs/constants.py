@@ -42,6 +42,9 @@ IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 # 注解中存储数据统计站点ID的键名
 PA_SITE_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
 
+# 轮询云原生应用的部署状态时，如果获取到失败状态的次数超过最大容忍次数，就认为部署失败
+CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
+
 
 class ApiVersion(str, StructuredEnum):
     """Kubernetes CRD API versions"""

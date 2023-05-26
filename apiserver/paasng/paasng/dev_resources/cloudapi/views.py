@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 
 class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
 
     @swagger_auto_schema(
@@ -200,14 +199,17 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # 记录操作记录
         try:
-            application = self.get_application()
-            Operation.objects.create(
-                region=application.region,
-                application=application,
-                type=operation_type,
-                user=request.user,
-                extra_values={"gateway_name": data['gateway_name']},
-            )
+            # 部分 API 没有带上网关名，则不记录到操作记录中
+            gateway_name = data.get('gateway_name')
+            if gateway_name:
+                application = self.get_application()
+                Operation.objects.create(
+                    region=application.region,
+                    application=application,
+                    type=operation_type,
+                    user=request.user,
+                    extra_values={"gateway_name": gateway_name},
+                )
         except Exception:
             logger.exception("An exception occurred in the operation record of adding cloud API permissions")
 

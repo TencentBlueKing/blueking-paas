@@ -18,6 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import re
+from collections import defaultdict
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from django.db import transaction
@@ -272,3 +274,27 @@ def get_processes_specs(application: Application, env: ModuleEnvironment) -> Lis
         return ProcessManager(env.engine_app).list_processes_specs()
 
     return CNativeProcSpecSLZ(get_proc_specs(env), many=True).data
+
+
+@dataclass
+class ResQuotasAggregation:
+    app: Application
+
+    def get_resource_quotas(self) -> dict:
+        quotas: dict = {"prod": defaultdict(int), "stag": defaultdict(int)}
+        for app_env in self.app.get_app_envs():
+            processes_specs = get_processes_specs(self.app, app_env)
+
+            for _specs in processes_specs:
+                quotas[app_env.environment]["memory_total"] += (
+                    _specs["resource_limit_quota"]['memory'] * _specs['target_replicas']
+                )
+                quotas[app_env.environment]["cpu_total"] += (
+                    _specs["resource_limit_quota"]['cpu'] * _specs['target_replicas']
+                )
+
+        # cpu 的单位从默认的 m 转为 核
+        cpu = sum([v["cpu_total"] for v in quotas.values()]) // 1000
+        # 内存的单位从默认的 Mi 转为 G
+        memory = sum([v["memory_total"] for v in quotas.values()]) // 1024
+        return {"cpu": cpu, "memory": memory}

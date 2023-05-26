@@ -204,7 +204,7 @@
                           --
                         </template>
                       </td>
-                      <td class="operate">
+                      <td class="operate-container">
                         <a
                           href="javascript:void(0);"
                           class="blue"
@@ -1955,6 +1955,10 @@ export default {
           env: this.environment,
           data: planForm,
         });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('修改成功'),
+        });
       } catch (err) {
         this.$paasMessage({
           theme: 'error',
@@ -2355,7 +2359,7 @@ export default {
                 }
             }
 
-            .operate {
+            .operate-container {
                 width: 165px;
 
                 .ps-icon-btn {
@@ -2379,14 +2383,18 @@ export default {
                 font-size: 12px;
             }
         }
-
+        
         tbody {
             tr {
-                border-bottom: 1px solid #e6e9ea;
+                td {
+                    border-bottom: 1px solid #e6e9ea;
+                }
             }
             tr {
                 &:last-child {
-                  border-bottom: none;
+                    td {
+                        border-bottom: none;
+                    }
                 }
             }
         }

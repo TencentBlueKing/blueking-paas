@@ -16,7 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import dataclasses
 from typing import Optional
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -87,11 +86,7 @@ class DeploymentForListSLZ(serializers.ModelSerializer):
     f_application_name = serializers.CharField(read_only=True)
     f_module_name = serializers.CharField(read_only=True)
     f_environment = serializers.CharField(read_only=True)
-    processes = serializers.SerializerMethodField()
 
     class Meta:
         model = Deployment
-        fields = '__all__'
-
-    def get_processes(self, dp: Deployment):
-        return {k: dataclasses.asdict(v) for k, v in dp.processes.items()}
+        exclude = ('procfile', 'processes', 'hooks')

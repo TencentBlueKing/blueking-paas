@@ -58,6 +58,8 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     )
     # 低于 k8s 1.9 的集群无法支持 GPA
     ENABLE_AUTOSCALING = FeatureFlagField(label=_("支持自动扩容"), default=False)
+    # 支持通过 BCS Egress Operator 提供固定的出口 IP，推荐仅在虚拟集群中使用
+    ENABLE_EGRESS_OPERATOR = FeatureFlagField(label=_("支持 BCS Egress"), default=False)
 
     @classmethod
     def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:

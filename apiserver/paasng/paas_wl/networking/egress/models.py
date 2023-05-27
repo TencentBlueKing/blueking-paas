@@ -21,10 +21,12 @@ import hashlib
 import logging
 from typing import Dict, List
 
+from django.conf import settings
 from django.db import models
 from django.utils.encoding import force_bytes
 from jsonfield import JSONField
 
+from paas_wl.networking.constants import NetworkProtocol
 from paas_wl.platform.applications.models import AuditedModel, WlApp
 
 logger = logging.getLogger(__name__)
@@ -135,3 +137,65 @@ def format_nodes_data(nodes: List[dict]) -> List[dict]:
         ip = next((addr["address"] for addr in (addresses or []) if addr.get("type") == "InternalIP"), "")
         results.append({"name": node["metadata"]["name"], "internal_ip_address": ip})
     return results
+
+
+class EgressSpec(AuditedModel):
+
+    wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE)
+    replicas = models.IntegerField(default=1)
+    cpu_limit = models.CharField(max_length=16)
+    memory_limit = models.CharField(max_length=16)
+
+    def build_manifest(self):
+        return {
+            "apiVersion": "bkbcs.tencent.com/v1alpha1",
+            "kind": "Egress",
+            "metadata": {
+                "name": self.wl_app.name,
+                "namespace": self.wl_app.namespace,
+            },
+            "spec": {
+                "replicas": self.replicas,
+                "gateImage": settings.BCS_EGRESS_GATE_IMAGE,
+                "podIPImage": settings.BCS_EGRESS_POD_IP_IMAGE,
+                "podDefaultDisabled": True,
+                "gateArgs": ["-backend=ipvs", "-outer=eth0"],
+                "annotations": {
+                    "tke.cloud.tencent.com/vpc-ip-claim-delete-policy": "Never",
+                    "tke.cloud.tencent.com/networks": "tke-route-eni",
+                },
+                "podCidrs": settings.BCS_EGRESS_POD_CIDRS,
+                "resources": {
+                    "cpu": self.cpu_limit,
+                    "memory": self.memory_limit,
+                    "tke.cloud.tencent.com/eni-ip": "1",
+                },
+                "rules": [
+                    {
+                        "dport": r.dst_port,
+                        "host": r.host,
+                        "protocol": r.potocol,
+                        "sport": r.src_port,
+                        "service": r.service,
+                    }
+                    for r in self.rules.all()
+                ],
+            },
+        }
+
+
+class EgressRule(AuditedModel):
+    """BCS Egress.spec.rules"""
+
+    spec = models.ForeignKey(EgressSpec, on_delete=models.CASCADE, related_name='rules')
+    # host 是目标服务的域名/IP，dport 为目标服务的端口
+    # egress pod 会对目标是 host:dport 的流量做转发
+    dst_port = models.IntegerField('目标端口')
+    host = models.CharField('目标主机', max_length=128)
+    # protocol 协议，一般是 TCP，也可以是 UDP
+    protocol = models.CharField('协议', choices=NetworkProtocol.get_django_choices(), max_length=32)
+    # service 指定后，会在同名命名空间中创建名称为该值的 service，sport 为 service 的端口
+    # 在启用定制版的 coredns 后，服务可以通过访问 service 达到原有的按域名访问的效果
+    # 一般来说，service 与 host 值相同，dport 与 sport 值相同
+    src_port = models.IntegerField('源端口')
+    service = models.CharField('服务名', max_length=128)

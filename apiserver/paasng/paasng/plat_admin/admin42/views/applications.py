@@ -78,16 +78,22 @@ class ApplicationListView(GenericTemplateView):
         # 手动按资源的使用量排序分页
         offset = self.paginator.get_offset(self.request)
         limit = self.paginator.get_limit(self.request)
+        queryset = self.filter_queryset(self.get_queryset())
 
-        # 应用资源排序后的信息
-        page_app_code_list = list(app_resource_quotas.keys())[offset : offset + limit]
-        page = self.filter_queryset(self.get_queryset()).filter(code__in=page_app_code_list)
+        if self.request.query_params.get('search_term'):
+            # 有查询参数则不按资源用量排序
+            page = queryset[offset : offset + limit]
+        else:
+            # 应用资源排序后的信息
+            page_app_code_list = list(app_resource_quotas.keys())[offset : offset + limit]
+            page = queryset.filter(code__in=page_app_code_list)
+
         data = self.get_serializer(page, many=True, context={"app_resource_quotas": app_resource_quotas}).data
         data = sorted(data, key=lambda item: item['resource_quotas']['memory'], reverse=True)
         kwargs['application_list'] = data
 
         # 没有调用默认的 paginate_queryset 方法，需要手动给 paginator 的参数赋值
-        self.paginator.count = self.paginator.get_count(self.get_queryset())
+        self.paginator.count = self.paginator.get_count(queryset)
         self.paginator.limit = limit
         self.paginator.offset = offset
         self.paginator.request = self.request

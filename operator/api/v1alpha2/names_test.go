@@ -16,38 +16,19 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package names
+package v1alpha2_test
 
 import (
-	"fmt"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-const (
-	defaultRevision int64 = 1
+var _ = DescribeTable("Get DNS-safe name",
+	func(s string, want string) {
+		Expect(paasv1alpha2.DNSSafeName(s)).To(Equal(want))
+	},
+	Entry("Normal", "bkapp-foo", "bkapp-foo"),
+	Entry("Contains _", "bkapp_foo", "bkapp0us0foo"),
 )
-
-// PreReleaseHook 生成用于执行 pre-release-hook 的 Pod 名称
-func PreReleaseHook(bkapp *paasv1alpha2.BkApp) string {
-	revision := defaultRevision
-	if rev := bkapp.Status.Revision; rev != nil {
-		revision = rev.Revision
-	}
-	return fmt.Sprintf("pre-release-hook-%d", revision)
-}
-
-// Deployment 为应用的不同进程生成 Deployment 资源名称
-func Deployment(bkapp *paasv1alpha2.BkApp, process string) string {
-	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
-}
-
-// Service Return the service name for each process
-func Service(bkapp *paasv1alpha2.BkApp, process string) string {
-	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
-}
-
-// GPA Return the general-pod-autoscaler name for each process
-func GPA(bkapp *paasv1alpha2.BkApp, process string) string {
-	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
-}

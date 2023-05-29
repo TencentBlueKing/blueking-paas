@@ -99,14 +99,14 @@
         class="ps-head-right"
       >
         <template>
-          <li class="mr20">
+          <li class="mr20" v-if="curAppInfo.feature.AGGREGATE_SEARCH">
             <dropdown
               ref="dropdown"
               :options="{
                 position: 'bottom right',
-                classes: 'ps-header-dropdown',
+                classes: 'ps-header-dropdown exclude-drop',
                 tetherOptions: {
-                  targetOffset: '0px 40px'
+                  targetOffset: '0px 30px'
                 }, beforeClose
               }"
             >
@@ -124,6 +124,8 @@
                   @keypress.enter="enterCallBack($event)"
                   @compositionstart="handleCompositionstart"
                   @compositionend="handleCompositionend"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
                 >
                 <div class="ps-search-icon">
                   <span
@@ -142,6 +144,7 @@
                 slot="content"
                 class="header-search-result"
               >
+              <div v-if="isShowInput && isFocus">
                 <div
                   v-if="filterKey !== ''"
                   class="paas-search-trigger"
@@ -167,6 +170,7 @@
                     @key-down-overflow="onKeyDown(), emitChildKeyDown()"
                   />
                 </div>
+              </div>
               </div>
             </dropdown>
           </li>
@@ -241,7 +245,7 @@
                   > {{ $t('产品文档') }} </a>
                 </li>
                 <li
-                  v-if="GLOBAL.APP_VERSION === 'ee'"
+                  v-if="GLOBAL.CONFIG.RELEASE_LOG"
                   class="nav-item"
                 >
                   <a
@@ -401,7 +405,7 @@
         <dd class="last" />
       </dl>
     </div>
-    <log-version v-model:dialog-show="showLogVersion" />
+    <log-version :dialog-show.sync="showLogVersion" />
   </div>
 </template>
 
@@ -454,6 +458,7 @@ export default {
         },
       ],
       isShowInput: true,
+      isFocus: false,
       // eslint-disable-next-line comma-dangle
       link: this.GLOBAL.LINK.APIGW_INDEX,
       navText: '',
@@ -465,6 +470,9 @@ export default {
     },
     userFeature() {
       return this.$store.state.userFeature;
+    },
+    curAppInfo() {
+      return this.$store.state.curAppInfo;
     },
   },
   watch: {
@@ -549,6 +557,16 @@ export default {
 
     handleCompositionend() {
       this.isInputing = false;
+    },
+
+    handleFocus() {
+      this.isFocus = true
+    },
+
+    handleBlur() {
+      setTimeout(() => {
+        this.isFocus = false
+      }, 500);
     },
 
     handleToSearchPage() {

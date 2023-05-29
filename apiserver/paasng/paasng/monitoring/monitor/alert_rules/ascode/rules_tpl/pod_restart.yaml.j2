@@ -11,7 +11,7 @@ query:
   data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: 'sum (increase (kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace="{{ metric_labels['namespace'] }}"}[5m])) by (namespace, pod_name)'
+  - metric: 'sum (increase (kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace="{{ metric_labels['namespace'] }}", bcs_cluster_id="{{ metric_labels['bcs_cluster_id'] }}"}[5m])) by (namespace, pod_name)'
     interval: 60 # 单位 s
 
 detect: # 检测配置

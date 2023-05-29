@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import copy
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type, Union, overload
 
 from django.conf import settings
@@ -60,7 +60,7 @@ def i18n(
         """Find all i18n fields, add with i18n suffix, finally extend modified fields to the `_declared_fields` attr.
         And The original field will be removed.
         """
-        _declared_fields = getattr(cls, "_declared_fields")
+        _declared_fields = getattr(cls, "_declared_fields")  # type: Dict[str, serializers.Field]
         fields = {}
         for attr, value in cls.__dict__.items():
             if isinstance(value, I18NExtend):
@@ -70,6 +70,26 @@ def i18n(
             for language_code in languages:
                 i18n_field_name = to_translated_field(attr, language_code=language_code)
                 _declared_fields[i18n_field_name] = copy.deepcopy(field)
+
+        super_to_internal_value = getattr(cls, "to_internal_value")
+
+        def to_internal_value(self, data):
+            # override_field_name to the one without i18n suffix before calling to_internal_value to
+            # make sure the errors will set by field_name without i18n suffix
+            # ---
+            # Warning: May not be compatible with all DRF versions
+            # Warning: Currently affects the following logic in to_internal_value
+            # - validate_method = getattr(self, 'validate_' + field.field_name, None)
+            # - errors[field.field_name] = ...
+            with ExitStack() as stack:
+                for raw_field_name in fields.keys():
+                    for language_code in languages:
+                        i18n_field_name = to_translated_field(attr, language_code=language_code)
+
+                        stack.enter_context(self.fields[i18n_field_name].override_field_name(raw_field_name))
+                return super_to_internal_value(self, data)
+
+        setattr(cls, "to_internal_value", to_internal_value)
         return cls
 
     if cls_or_languages is None:
@@ -118,20 +138,29 @@ class I18NExtend:
 
 class TranslatedCharField(serializers.CharField):
     """A CharField supported i18n, which will work with django translation rule.
-    This field should be used at **outgoing** field in the Serializer.
+    This field can be used at **incoming** or **outgoing** field in the Serializer.
 
-    Generally, This field assume that the fields of the incoming data follow the rule as follow:
+    For instance, assume that the fields of the data follow the rule as follow:
     >>> class Dummy:
     ... field_en: str
     ... field_zh_cn: str
 
-    In the example above, we can defind a Serializer with `TranslatedCharField` to auto return the `field` translated.
+    For the example data above, we can defind a Serializer with `TranslatedCharField`
+    to auto return the `field` translated.
+
+    When using at **incoming** field,
+    TranslatedCharField will colllect mulit fields are named with i18n suffix from `data`
+    and return only one field according to the request language. For Example:
 
     >>> class DummySLZ(serializers.Serializer):
     ...     field = TranslatedCharField()
     ... slz = DummySLZ(data={"field_en": "alpha", "field_zh_cn": "阿尔法"})
     ... slz.is_valid(raise_exception=True)
     ... assert slz.validated_data == {"field": "阿尔法"}
+
+    When using at **outgoing** field,
+    TranslatedCharField will collect multi fields are named with i18n suffix from `instnace`,
+    and return only one field according to the request language. For Example:
 
     >>> class DummySLZ(serializers.Serializer):
     ...     field = TranslatedCharField()
@@ -194,26 +223,52 @@ class TranslatedCharField(serializers.CharField):
 
 class FallbackMixin(_Base):
     """A Mixin for drf.Field
-    which will get value/attribute from `fallback_field_name` when we can't get value/attribute from the default one"""
+    which will get value/attribute from `fallback_field_name` when we can't get value/attribute from `i18n_field_name`
+    """
 
+    # origin field_name of drf.Field, will be used to initialize ValidationError
     field_name: str
+    # the field_name with i18n suffix, e.g. name_zh_cn
+    _i18n_field_name: str
+    # the field_name without i18n suffix, e.g. name
+    _fallback_field_name: str
 
     def __init__(self, **kwargs):
         self._fallback_field_name = kwargs.pop("fallback_field_name", None)
+        # _i18n_field_name is set up by `.bind()` when the field is added to a serializer.
+        self._i18n_field_name = None  # type: ignore
         source = kwargs.pop("source", None)
         assert source is None, (
             "The `source` argument is not meaningful FallbackCharField." "Remove `source=` from the field declaration."
         )
         super().__init__(**kwargs)
 
+    def bind(self, field_name: str, parent):
+        """
+        Initializes the field name and parent for the field instance.
+        Called when a field is added to the parent serializer instance.
+        """
+        # bind _fallback_field_name to origin field_name, because field_name will be used to initialize ValidationError
+        super().bind(field_name=field_name, parent=parent)
+        # set _i18n_field_name
+        self._i18n_field_name = field_name
+        # self.source should default to being the same as the field name.
+        self.source = field_name
+        # self.source_attrs is a list of attributes that need to be looked up
+        # when serializing the instance, or populating the validated data.
+        self.source_attrs = self.source.split('.')
+
     def get_value(self, dictionary):
         """
         Given the *incoming* primitive data, return the value for this field
         that should be validated and transformed to a native value.
+
+        get_value is using `field_name` to get value from dictionary
         """
-        value = super().get_value(dictionary)
+        with self.override_field_name(self._i18n_field_name):
+            value = super().get_value(dictionary)
         if value is serializers.empty:
-            with self.override_field_name():
+            with self.override_field_name(self._fallback_field_name):
                 value = super().get_value(dictionary)
         return value
 
@@ -221,25 +276,28 @@ class FallbackMixin(_Base):
         """
         Given the *outgoing* object instance, return the primitive value
         that should be used for this field.
+
+        get_attribute is using `source_attrs` to get attribute from instance
         """
         try:
-            return super().get_attribute(instance)
+            with self.override_field_name(self._i18n_field_name, override_source_attrs=True):
+                return super().get_attribute(instance)
         except (KeyError, AttributeError):
-            with self.override_field_name():
+            with self.override_field_name(self._fallback_field_name, override_source_attrs=True):
                 return super().get_attribute(instance)
 
     @contextmanager
-    def override_field_name(self):
-        field_name = self.field_name
+    def override_field_name(self, field_name: str, override_source: bool = False, override_source_attrs: bool = False):
+        cache = self.field_name, self.source, self.source_attrs
         try:
-            self.field_name = self._fallback_field_name
-            self.source = self._fallback_field_name
-            self.source_attrs = self.source.split(".")
+            self.field_name = field_name
+            if override_source:
+                self.source = field_name
+            if override_source_attrs:
+                self.source_attrs = field_name.split(".")
             yield
         finally:
-            self.field_name = field_name
-            self.source = field_name
-            self.source_attrs = field_name.split(".")
+            self.field_name, self.source, self.source_attrs = cache
 
 
 class DjangoTranslatedCharField(serializers.CharField):

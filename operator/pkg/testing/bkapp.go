@@ -19,8 +19,6 @@
 package testing
 
 import (
-	"encoding/json"
-
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
@@ -33,18 +31,5 @@ func WithAppInfoAnnotations(bkapp *paasv1alpha2.BkApp) *paasv1alpha2.BkApp {
 	annotations[paasv1alpha2.ModuleNameKey] = "module"
 	annotations[paasv1alpha2.EnvironmentKey] = "stag"
 	annotations[paasv1alpha2.EngineAppNameKey] = "bkapp-app-code-stag"
-	return bkapp
-}
-
-// WithAddons will set the addons keys to bkapp.annotations
-func WithAddons(bkapp *paasv1alpha2.BkApp, addons ...string) *paasv1alpha2.BkApp {
-	var data []byte
-	var err error
-	if data, err = json.Marshal(addons); err != nil {
-		panic(err)
-	}
-
-	annotations := bkapp.GetAnnotations()
-	annotations[paasv1alpha2.AddonsAnnoKey] = string(data)
 	return bkapp
 }

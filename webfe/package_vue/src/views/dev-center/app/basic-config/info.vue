@@ -241,23 +241,6 @@
                 <label class="title-label"> {{ $t('联系人员') }} </label>
               </bk-form-item>
               <bk-form-item style="width: calc(100% - 180px);">
-                <!-- <bk-member-selector
-                  v-if="GLOBAL.APP_VERSION === 'te'"
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                />
-                <blueking-user-selector
-                  v-else
-                  ref="member_selector"
-                  v-model="localeAppInfo.contact"
-                  ext-cls="member-cls"
-                  display-list-tips
-                  :disabled="isDisabled"
-                  @change="updateContact"
-                /> -->
                 <user
                   ref="member_selector"
                   v-model="localeAppInfo.contact"
@@ -435,7 +418,7 @@
           </div>
         </div>
         <!-- 鉴权信息 -->
-        <authentication-info />
+        <authentication-info ref="authenticationRef" />
         <!-- <div
           v-if="canViewSecret"
           class="basic-info-item"
@@ -727,6 +710,7 @@
                 if (value.application.type === 'bk_plugin') {
                     this.getProfile();
                 }
+                this.$refs.authenticationRef?.resetAppSecret();
                 setTimeout(() => {
                     this.isLoading = false;
                 }, 300);

@@ -38,6 +38,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-edit-2:before {
 	content: "\e23f";
 }
+.paasng-process-file:before {
+	content: "\e24e";
+}
 .paasng-bukeyulan:before {
 	content: "\e21c";
 }

@@ -16,11 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+import atexit
 import logging
-import os
 import urllib.parse
 from contextlib import suppress
 from dataclasses import asdict
+from pathlib import Path
 
 import pymysql
 import pytest
@@ -31,6 +32,7 @@ from django.core.management import call_command
 from django.test.utils import override_settings
 from django.utils.crypto import get_random_string
 from django_dynamic_fixture import G
+from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -64,8 +66,21 @@ logger = logging.getLogger(__file__)
 
 # The default region for testing
 DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+svn_lock_fn = Path(__file__).parent / ".svn"
 # A random cluster name for running unittests
-CLUSTER_NAME_FOR_TESTING = get_random_string(6)
+cluster_name_fn = Path(__file__).parent / ".random"
+with FileLock(str(cluster_name_fn.absolute()) + ".lock"):
+    if cluster_name_fn.is_file():
+        CLUSTER_NAME_FOR_TESTING = cluster_name_fn.read_text().strip()
+    else:
+        CLUSTER_NAME_FOR_TESTING = get_random_string(6)
+        cluster_name_fn.write_text(CLUSTER_NAME_FOR_TESTING)
+
+
+@atexit.register
+def clear_filelock():
+    cluster_name_fn.unlink(missing_ok=True)
+    svn_lock_fn.unlink(missing_ok=True)
 
 
 def pytest_addoption(parser):
@@ -238,6 +253,13 @@ def init_test_app_repo(request):
         repo_config = settings.FOR_TESTS_SVN_SERVER_CONF
     except Exception:
         return
+
+    # use filelock to ensure svn initial will only run once
+    with FileLock(str(svn_lock_fn) + ".lock"):
+        if svn_lock_fn.exists():
+            return
+        svn_lock_fn.write_text("")
+
     provider = RepoProvider(
         base_url=repo_config["base_url"], username=repo_config["su_name"], password=repo_config["su_pass"]
     )
@@ -249,13 +271,16 @@ def init_test_app_repo(request):
     )
     with generate_temp_dir() as working_dir:
         # step 1. checkout
-        rclient.checkout(working_dir, depth='empty')
+        rclient.checkout(working_dir)
+        procfile_path = working_dir / "Procfile"
         # step 2. 创建 Procfile
-        lclient = LocalClient(working_dir, username=repo_config["su_name"], password=repo_config["su_pass"])
-        with open(os.path.join(working_dir, "Procfile"), "w") as fh:
-            fh.write("web: echo 'test'")
+        procfile_path.write_text("web: echo 'test'")
         # ste[ 3. 推送 Procfile 至服务器
-        lclient.add(os.path.join(working_dir, "Procfile"))
+        lclient = LocalClient(working_dir, username=repo_config["su_name"], password=repo_config["su_pass"])
+        if not procfile_path.exists():
+            lclient.add(str(procfile_path))
+        else:
+            lclient.update(str(procfile_path))
         lclient.commit("for test", rel_filepaths=[working_dir])
 
 
@@ -319,10 +344,7 @@ def mock_iam():
     with mock.patch('paasng.accessories.iam.client.BKIAMClient', new=StubBKIAMClient), mock.patch(
         'paasng.accessories.iam.helpers.BKIAMClient',
         new=StubBKIAMClient,
-    ), mock.patch(
-        'paasng.platform.applications.helpers.BKIAMClient',
-        new=StubBKIAMClient,
-    ), mock.patch(
+    ), mock.patch('paasng.platform.applications.helpers.BKIAMClient', new=StubBKIAMClient,), mock.patch(
         'paasng.accessories.iam.helpers.IAM_CLI',
         new=StubBKIAMClient(),
     ), mock.patch(

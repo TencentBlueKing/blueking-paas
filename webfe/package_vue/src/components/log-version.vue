@@ -35,7 +35,7 @@
           <!-- eslint-disable vue/no-v-html -->
           <div
             class="detail-container"
-            v-html="currentLog.detail"
+            v-html="currentLog"
           />
           <!--eslint-enable-->
         </div>
@@ -45,6 +45,7 @@
 </template>
 
 <script>
+import { marked } from 'marked';
 export default {
   name: 'LogVersion',
   props: {
@@ -62,7 +63,7 @@ export default {
   },
   computed: {
     currentLog () {
-      return this.logList[this.active] || {};
+      return marked(this.logList[this.active]?.detail || '');
     }
   },
   watch: {
@@ -198,4 +199,173 @@ export default {
       }
     }
   }
+</style>
+<style lang="scss">
+.detail-container{
+  
+  font-size: 14px;
+        color: #313238;
+        h1,
+        h2,
+        h3,
+        h4,
+        h5 {
+            margin: 10px 0;
+            font: normal 14px/1.5 "Helvetica Neue",Helvetica Neue,Helvetica,Arial,Lantinghei SC,Hiragino Sans GB,Microsoft Yahei,sans-serif;
+            color: #34383e;
+            height: auto;
+            font-weight: bold;
+        }
+        h1 {
+            font-size: 30px
+        }
+
+        h2 {
+            font-size: 24px
+        }
+
+        h3 {
+            font-size: 18px
+        }
+
+        h4 {
+            font-size: 16px
+        }
+
+        h5 {
+            font-size: 14px
+        }
+
+        em {
+            font-style: italic
+        }
+
+        div,p,font,span,li {
+            line-height: 1.3
+        }
+
+        p {
+            margin: 0 0 1em
+        }
+
+        table,table p {
+            margin: 0
+        }
+
+        ul,ol {
+            padding: 0;
+            margin: 0 0 1em 2em;
+            text-indent: 0
+        }
+
+        ul {
+            padding: 0;
+            margin: 10px 0 10px 15px;
+            list-style-type: none
+        }
+
+        ol {
+            padding: 0;
+            margin: 10px 0 10px 25px
+        }
+
+        ol>li {
+            white-space: normal;
+            line-height: 1.8
+        }
+
+        ul>li {
+            white-space: normal;
+            padding-left: 15px !important;
+            line-height: 1.8;
+            &:before{
+                content: '';
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                margin-right: 9px;
+                margin-left: -15px;
+                border-radius: 50%;
+                background: #000;
+            }
+        }
+
+        li>ul {
+            margin-bottom: 10px
+        }
+
+        li ol {
+            padding-left: 20px !important
+        }
+
+        ul ul,ul ol,ol ol,ol ul {
+            margin-bottom: 0;
+            margin-left: 20px
+        }
+
+        ul.list-type-1>li {
+            list-style: circle !important;
+            padding-left: 0 !important;
+            margin-left: 15px !important;
+            background: none !important
+        }
+
+        ul.list-type-2>li {
+            list-style: square !important;
+            padding-left: 0 !important;
+            margin-left: 15px !important;
+            background: none !important
+        }
+
+        ol.list-type-1>li {
+            list-style: lower-greek !important
+        }
+
+        ol.list-type-2>li {
+            list-style: upper-roman !important
+        }
+
+        ol.list-type-3>li {
+            list-style: cjk-ideographic !important
+        }
+
+        pre,code {
+            padding: 0 3px 2px;
+            font-family: Monaco,Menlo,Consolas,"Courier New",monospace;
+            font-size: 14px;
+            color: #333;
+            -webkit-border-radius: 3px;
+            -moz-border-radius: 3px;
+            border-radius: 3px;
+            width: 95%
+        }
+
+        code {
+            font-family: Consolas,monospace,tahoma,Arial;
+            padding: 2px 4px;
+            color: #d14;
+            border: 1px solid #e1e1e8
+        }
+
+        pre {
+            font-family: Consolas,monospace,tahoma,Arial;
+            display: block;
+            padding: 9.5px;
+            margin: 0 0 10px;
+            font-size: 13px;
+            word-break: break-all;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            background-color: #f6f6f6;
+            border: 1px solid #ddd;
+            border: 1px solid rgba(0,0,0,0.15);
+            border-radius: 2px
+        }
+
+        pre code {
+            padding: 0;
+            white-space: pre-wrap;
+            border: 0
+        }
+}
 </style>

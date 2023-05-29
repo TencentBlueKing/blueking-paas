@@ -1201,7 +1201,6 @@ export default {
   仅影响: 'Only affects',
   '上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。': 'Users outside the visible range can still open the app through the app access address.',
   蓝鲸工作台: 'BlueKing Workbench',
-  '上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用': 'The visible range of the app on the upper limit, users outside the visible range can still open the app through the app access address',
   窗口属性: 'window properties',
   '打开方式：': 'Open mode: ',
   桌面: 'Desktop',
@@ -2150,4 +2149,14 @@ export default {
   最近半年: 'Last 6 months',
   '质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。': 'The quality evaluation is based on Tencent open source governance index system (the document quality is temporarily calculated as 100 points), and the scoring is for reference only.',
   '确认下架插件【{id}】？': 'Confirm the removal of the plug-in [{id}]?',
+  自动扩缩容: 'Automatic scaling',
+  web进程扩缩容: 'Web process expansion and contraction',
+  扩缩容: 'expansion and contraction',
+  手动调节: 'manual adjustment',
+  自动调节: 'automatic adjustment',
+  'CPU 使用率': 'CPU usage',
+  当: 'when',
+  扩容上限: 'Expansion limit',
+  缩容下限: 'Shrink limit',
+  请输入用户: 'Please enter user'
 };

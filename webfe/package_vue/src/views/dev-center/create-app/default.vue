@@ -134,13 +134,13 @@
                   {{ $t('蓝鲸可视化开发平台') }}
                 </li>
                 <!-- 蓝鲸插件创建入口 -->
-                <!-- <li
-                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION && allowPluginCreation(regionChoose)"
-                  :class="['tab-item', { 'active': localSourceOrigin === 3 }]"
+                <li
+                  v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION"
+                  :class="['tab-item template', { 'active': localSourceOrigin === 3 }]"
                   @click="handleCodeTypeChange(3)"
                 >
                   {{ $t('蓝鲸插件') }}
-                </li> -->
+                </li>
                 <li
                   v-if="sceneTemplateList.length && notBkLesscode"
                   :class="['tab-item template', { 'active': localSourceOrigin === 5 }]"
@@ -733,7 +733,10 @@
             },
             smartAlertText () {
                 return this.$t('平台为该类应用提供应用引擎、增强服务等功能，并提供源码包部署和通过配置文件定义应用信息的能力；适用于熟知蓝鲸官方S-mart打包流程的SaaS开发场景。');
-            }
+            },
+            curUserFeature () {
+                return this.$store.state.userFeature;
+            },
         },
         watch: {
             globalErrorMessage (val) {
@@ -1178,7 +1181,7 @@
                 if (this.sourceOrigin === this.GLOBAL.APP_TYPES.IMAGE) {
                     params.type = 'default';
                     params.engine_params.source_control_type = 'tc_docker';
-                    params.engine_params.source_repo_url = this.GLOBAL.APP_VERSION === 'te' ? `mirrors.tencent.com/${this.mirrorData.url}` : `${this.mirrorData.url}`;
+                    params.engine_params.source_repo_url = `${this.GLOBAL.CONFIG.MIRROR_PREFIX}${this.mirrorData.url}`;
                     params.engine_params.source_repo_auth_info = {
                         username: '',
                         password: ''
@@ -1317,7 +1320,7 @@
                 this.$nextTick(() => {
                     // 蓝鲸可视化平台推送的源码包
                     if (codeSource === 'bkLesscode') {
-                        this.regionChoose = this.GLOBAL.APP_VERSION === 'te' ? 'ieod' : 'default';
+                        this.regionChoose = this.GLOBAL.CONFIG.REGION_CHOOSE;
                         this.structureType = 'soundCode';
                         this.handleCodeTypeChange(2);
                     } else if (codeSource === 'default') {

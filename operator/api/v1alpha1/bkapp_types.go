@@ -30,11 +30,11 @@ import (
 )
 
 // BkApp is the Schema for the bkapps API
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -72,6 +72,10 @@ type AppSpec struct {
 	Build         BuildConfig `json:"build"`
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`
+
+	// Addons is a list of add-on service
+	// +optional
+	Addons []paasv1alpha2.Addon `json:"addons,omitempty"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -304,6 +308,10 @@ type AppStatus struct {
 	// .metadata.generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// AddonStatuses is the status of add-on service include specifications
+	// +optional
+	AddonStatuses []paasv1alpha2.AddonStatus `json:"addonStatuses,omitempty"`
 }
 
 // Addressable includes URL and other related properties
@@ -407,8 +415,9 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 
 // HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+//
+//	unhealthy is meaning that the Pod is restarting or is Failed
+//	progressing is meaning that the Pod is still running and condition `PodReady` is False.
 type HealthPhase string
 
 const (

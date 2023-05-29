@@ -35,8 +35,9 @@ var _ = Describe("test conversion back and forth", func() {
 				APIVersion: GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bkapp-sample",
-				Namespace: "default",
+				Name:        "bkapp-sample",
+				Namespace:   "default",
+				Annotations: map[string]string{AddonsAnnoKey: `["add-on1"]`},
 			},
 			Spec: AppSpec{
 				Processes: []Process{
@@ -104,8 +105,13 @@ var _ = Describe("test conversion back and forth", func() {
 		_ = v1alpha1bkappFromConverted.ConvertFrom(conversion.Hub(&v1alpha2bkapp))
 
 		// Make sure the conversion is lossless.
-		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
 		Expect(v1alpha1bkapp.Status).To(Equal(v1alpha1bkappFromConverted.Status))
+		Expect(
+			v1alpha1bkapp.Annotations[AddonsAnnoKey],
+		).To(Equal(v1alpha1bkappFromConverted.Annotations[AddonsAnnoKey]))
+		// 信息不丢失的情况下，转回 v1alpha1 后 Spec 会增加 Addons
+		v1alpha1bkapp.Spec.Addons = []paasv1alpha2.Addon{{Name: "add-on1"}}
+		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
 	})
 
 	It("hub -> v1alpha1 -> hub", func() {
@@ -141,6 +147,9 @@ var _ = Describe("test conversion back and forth", func() {
 						},
 					},
 				},
+				Addons: []paasv1alpha2.Addon{
+					{Name: "addon-2", Specs: []paasv1alpha2.AddonSpec{{Name: "version", Value: "5.0"}}},
+				},
 			},
 			Status: paasv1alpha2.AppStatus{
 				Phase: paasv1alpha2.AppRunning,
@@ -165,6 +174,13 @@ var _ = Describe("test conversion back and forth", func() {
 				},
 				DeployId:           "1",
 				ObservedGeneration: 2,
+				AddonStatuses: []paasv1alpha2.AddonStatus{
+					{
+						Name:  "addon-2",
+						State: paasv1alpha2.AddonProvisioned,
+						Specs: []paasv1alpha2.AddonSpec{{Name: "version", Value: "5.0"}},
+					},
+				},
 			},
 		}
 

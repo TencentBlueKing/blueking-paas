@@ -53,11 +53,6 @@ ensure-apigw() {
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml
     
-    # 同步网关策略
-    python manage.py sync_apigw_strategies \
-    --api-name "${api_name}" \
-    -f support-files/apigw/definition.yaml
-    
     # 为应用主动授权
     python manage.py grant_apigw_permissions \
     --api-name "${api_name}" \
@@ -65,6 +60,7 @@ ensure-apigw() {
     
     # 同步网关资源
     python manage.py sync_apigw_resources \
+    --delete \
     --api-name "${api_name}" \
     -f support-files/apigw/resources.yaml
     

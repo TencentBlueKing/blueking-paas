@@ -19,41 +19,23 @@
 package v1alpha2
 
 import (
-	"encoding/json"
-
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // BkApp is the Schema for the bkapps API
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-//+kubebuilder:storageversion
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="PreRelease Hook Phase",type=string,JSONPath=`.status.hookStatuses[?(@.type == "pre-release")].phase`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:storageversion
 type BkApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              AppSpec   `json:"spec,omitempty"`
 	Status            AppStatus `json:"status,omitempty"`
-}
-
-// ExtractAddons will return the addon name list defined in the annotations, if not found, return nil and err
-func (bkapp *BkApp) ExtractAddons() ([]string, error) {
-	// 未声明增强服务, 返回空列表
-	val, ok := bkapp.Annotations[AddonsAnnoKey]
-	if !ok {
-		return nil, nil
-	}
-
-	var addons []string
-	if err := json.Unmarshal([]byte(val), &addons); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return addons, nil
 }
 
 // Hub marks this type as a conversion hub.
@@ -77,6 +59,10 @@ type AppSpec struct {
 	Build         BuildConfig `json:"build"`
 	Processes     []Process   `json:"processes"`
 	Configuration AppConfig   `json:"configuration"`
+
+	// Addons is a list of add-on service
+	// +optional
+	Addons []Addon `json:"addons,omitempty"`
 
 	// Hook commands of current BkApp resource
 	// +optional
@@ -159,6 +145,25 @@ type Process struct {
 
 	// Autoscaling specifies the autoscaling configuration
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
+}
+
+// Addon is used to specify add-on service
+type Addon struct {
+	// Name of the add-on service, e.g. redis
+	Name string `json:"name"`
+
+	// Specifies of the add-on service, if not set, recommended specifies will be used
+	// +optional
+	Specs []AddonSpec `json:"specs,omitempty"`
+}
+
+// AddonSpec is used to specify add-on service, e.g. version: 6.0
+type AddonSpec struct {
+	// Name of the spec.
+	Name string `json:"name"`
+
+	// Value of the spec value
+	Value string `json:"value"`
 }
 
 // ResQuotaPlan is used to specify process resource quota
@@ -331,7 +336,31 @@ type AppStatus struct {
 	// .metadata.generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// AddonStatuses is the status of add-on service include specifications
+	// +optional
+	AddonStatuses []AddonStatus `json:"addonStatuses,omitempty"`
 }
+
+// AddonStatus is the status of add-on service
+type AddonStatus struct {
+	Name  string      `json:"name"`
+	State AddonState  `json:"state"`
+	Specs []AddonSpec `json:"specs,omitempty"`
+	// if add-on service state is failed, message will be the fail message
+	Message string `json:"message,omitempty"`
+}
+
+// AddonState is the state of add-on with app
+// +kubebuilder:validation:Enum=provisioned;failed
+type AddonState string
+
+const (
+	// AddonProvisioned means add-on is provisioned successfully
+	AddonProvisioned AddonState = "provisioned"
+	// AddonFailed means add-on failed to provision, maybe no available resources can be provided
+	AddonFailed AddonState = "failed"
+)
 
 // Addressable includes URL and other related properties
 type Addressable struct {
@@ -438,8 +467,9 @@ func (status *AppStatus) FindHookStatus(hookType HookType) *HookStatus {
 
 // HealthPhase Represents resource health status, such as pod, deployment(man by in the feature)
 // For a Pod, healthy is meaning that the Pod is successfully complete or is Ready
-//            unhealthy is meaning that the Pod is restarting or is Failed
-//            progressing is meaning that the Pod is still running and condition `PodReady` is False.
+//
+//	unhealthy is meaning that the Pod is restarting or is Failed
+//	progressing is meaning that the Pod is still running and condition `PodReady` is False.
 type HealthPhase string
 
 const (

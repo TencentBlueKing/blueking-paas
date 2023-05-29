@@ -18,9 +18,12 @@
 
 module.exports = {
   root: true,
-  extends: ['@blueking/eslint-config-bk/vue3'], // vue2 这里用 @blueking/eslint-config-bk/vue
+  extends: ['@blueking/eslint-config-bk/vue'], // vue2 这里用 @blueking/eslint-config-bk/vue
   globals: {
     $: true,
     BACKEND_URL: true,
+  },
+  rule: {
+    // 'linebreak-style': ['error', 'windows'], // 回车符使用windows风格（CRLF），默认是LF:使用mac风格
   },
 };

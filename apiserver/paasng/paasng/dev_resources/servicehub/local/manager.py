@@ -29,7 +29,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.dev_resources.servicehub import constants
 from paasng.dev_resources.servicehub.exceptions import (

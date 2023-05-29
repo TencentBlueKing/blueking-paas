@@ -32,6 +32,7 @@ from paasng.engine.utils.source import get_app_description_handler, get_processe
 from paasng.engine.workflow import DeployProcedure, DeployStep
 from paasng.extensions.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.extensions.declarative.handlers import AppDescriptionHandler
+from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ class ImageReleaseMgr(DeployStep):
         handler.handle_deployment(self.deployment)
 
 
-@shared_task
+@shared_task(base=I18nTask)
 def deploy_image(deployment_id, *args, **kwargs):
     """Start a deployment process
 

@@ -93,7 +93,7 @@ DEBUG = settings.get('DEBUG', False)
 
 SESSION_COOKIE_HTTPONLY = False
 
-RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0]
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.argv[0] or "PYTEST_XDIST_TESTRUNUID" in os.environ
 
 INSTALLED_APPS = [
     # WARNING: never enable django.contrib.admin here
@@ -536,6 +536,9 @@ IAM_APP_SECRET = settings.get('IAM_APP_SECRET', default=BK_APP_SECRET)
 # https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#21-django-migration
 BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 
+# 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
+BK_IAM_SKIP = settings.get('BK_IAM_SKIP', False)
+
 BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get('BKAUTH_DEFAULT_PROVIDER_TYPE', 'BK')
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
@@ -686,7 +689,8 @@ BK_IAM_RESOURCE_API_HOST = settings.get('BK_IAM_RESOURCE_API_HOST', BKPAAS_URL)
 # 权限中心应用ID，用于拼接权限中心的在桌面的访问地址
 BK_IAM_V3_APP_CODE = "bk_iam"
 
-
+# 蓝鲸根域名
+BK_DOMAIN = settings.get('BK_DOMAIN', '')
 # 蓝鲸平台体系的地址，用于内置环境变量的配置项
 BK_CC_URL = settings.get('BK_CC_URL', '')
 BK_JOB_URL = settings.get('BK_JOB_URL', '')

@@ -63,7 +63,7 @@
                   <div
                     v-bk-tooltips="process.operateIconTitle"
                     class="tool-confirm-wrapper"
-                    @click="confirmClick(process)"
+                    @click="confirmClick(process, index)"
                     @mouseover="clearTooltipTimer(process)"
                     @mouseout="hideTooltipConfirm(process)"
                   >
@@ -112,7 +112,7 @@
                 </template>
               </div>
               <div
-                v-if="process.status === 'Running'"
+                v-if="process.status === 'Running' && currentClickObj.index === index"
                 class="process-status"
               >
                 <img
@@ -205,7 +205,7 @@
 
       <bk-sideslider
         :width="800"
-        v-model:is-show="processSlider.isShow"
+        :is-show.sync="processSlider.isShow"
         :title="processSlider.title"
         :quick-close="true"
         :before-close="handleBeforeClose"
@@ -225,7 +225,7 @@
             >
               <span class="bk-icon icon-refresh f18" />
             </bk-button>
-
+            
             <bk-form
               form-type="inline"
               class="fr mr5"
@@ -290,7 +290,7 @@
 
       <bk-sideslider
         :width="750"
-        v-model:is-show="chartSlider.isShow"
+        :is-show.sync="chartSlider.isShow"
         :title="chartSlider.title"
         :quick-close="true"
         :before-close="handleChartBeforeClose"
@@ -489,7 +489,7 @@
               type="number"
               :placeholder="$t('请输入')"
               :min="0"
-              v-model:value="processPlan.targetReplicas"
+              :value.sync="processPlan.targetReplicas"
             />
           </bk-form-item>
         </bk-form>
@@ -520,7 +520,7 @@
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script> import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -881,13 +881,17 @@ export default {
       process.operateIconTitle = process.operateIconTitleCopy;
     },
 
-    confirmClick(process) {
+    confirmClick(process, index) {
       process.isShowTooltipConfirm = !process.isShowTooltipConfirm;
       if (process.isShowTooltipConfirm) {
         process.operateIconTitle = '';
       } else {
         process.operateIconTitle = process.operateIconTitleCopy;
       }
+      this.currentClickObj = Object.assign({}, {
+        operateIconTitle: process.operateIconTitle,
+        index,
+      });
     },
 
     /**
@@ -1657,6 +1661,7 @@ export default {
           (res) => {
             this.processConfigDialog.isLoading = false;
             this.processConfigDialog.visiable = false;
+            this.$store.commit('updataEnvEventData', []);
             this.updateProcessConfig();
           },
           // 验证失败
@@ -2487,7 +2492,7 @@ export default {
 
     .action-box {
         position: absolute;
-        top: 7px;
+        top: 12px;
         right: 10px;
     }
 

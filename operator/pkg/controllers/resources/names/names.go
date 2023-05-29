@@ -20,14 +20,12 @@ package names
 
 import (
 	"fmt"
-	"strings"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 const (
-	underscoreReplacer string = "0us0"
-	defaultRevision    int64  = 1
+	defaultRevision int64 = 1
 )
 
 // PreReleaseHook 生成用于执行 pre-release-hook 的 Pod 名称
@@ -41,21 +39,15 @@ func PreReleaseHook(bkapp *paasv1alpha2.BkApp) string {
 
 // Deployment 为应用的不同进程生成 Deployment 资源名称
 func Deployment(bkapp *paasv1alpha2.BkApp, process string) string {
-	return DNSSafeName(bkapp.GetName() + "--" + process)
+	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
 }
 
 // Service Return the service name for each process
 func Service(bkapp *paasv1alpha2.BkApp, process string) string {
-	return DNSSafeName(bkapp.GetName() + "--" + process)
+	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
 }
 
 // GPA Return the general-pod-autoscaler name for each process
 func GPA(bkapp *paasv1alpha2.BkApp, process string) string {
-	return DNSSafeName(bkapp.GetName() + "--" + process)
-}
-
-// DNSSafeName 通过替换 _ 等特殊字符串，将其变为可安全用于 DNS 域名的值，该算法与 bkpaas
-// 中其他逻辑保持一致。
-func DNSSafeName(name string) string {
-	return strings.ReplaceAll(name, "_", underscoreReplacer)
+	return paasv1alpha2.DNSSafeName(bkapp.GetName() + "--" + process)
 }

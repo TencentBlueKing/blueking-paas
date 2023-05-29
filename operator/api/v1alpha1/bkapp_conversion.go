@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	"github.com/jinzhu/copier"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
@@ -14,7 +16,12 @@ var _ conversion.Convertible = &BkApp{}
 // ConvertTo converts this BkApp to the Hub version (v1alpha2).
 func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*paasv1alpha2.BkApp)
-	dst.ObjectMeta = src.ObjectMeta
+
+	_ = copier.CopyWithOption(
+		&dst.ObjectMeta,
+		&src.ObjectMeta,
+		copier.Option{DeepCopy: true},
+	)
 
 	// Handle Processes field
 	legacyProcImageConfig := make(paasv1alpha2.LegacyProcConfig)
@@ -61,6 +68,28 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 	if err := kubetypes.SetJsonAnnotation(dst, LegacyProcResAnnoKey, legacyProcResConfig); err != nil {
 		return err
 	}
+
+	// convert Addons from "bkapp.paas.bk.tencent.com/addons" annotation to Spec.Addons
+	addons, err := src.ExtractAddons()
+	if err != nil {
+		return err
+	}
+
+	specsMap := make(map[string][]paasv1alpha2.AddonSpec)
+	for _, addon := range src.Spec.Addons {
+		tempSpecs := make([]paasv1alpha2.AddonSpec, 0)
+		_ = copier.CopyWithOption(&tempSpecs, &addon.Specs, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+		specsMap[addon.Name] = tempSpecs
+	}
+
+	for _, addonName := range addons {
+		dst.Spec.Addons = append(dst.Spec.Addons, paasv1alpha2.Addon{
+			Name:  addonName,
+			Specs: specsMap[addonName],
+		})
+	}
+	// remove "bkapp.paas.bk.tencent.com/addons" annotation
+	delete(dst.Annotations, AddonsAnnoKey)
 
 	// Handle fields that are using identical structures
 	_ = copier.CopyWithOption(
@@ -109,7 +138,12 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 // ConvertFrom converts from the Hub version (v1alpha2) to this version.
 func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*paasv1alpha2.BkApp)
-	dst.ObjectMeta = src.ObjectMeta
+
+	_ = copier.CopyWithOption(
+		&dst.ObjectMeta,
+		&src.ObjectMeta,
+		copier.Option{DeepCopy: true},
+	)
 
 	// Handle Processes field
 	legacyProcImageConfig, _ := kubetypes.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](src, LegacyProcImageAnnoKey)
@@ -155,6 +189,25 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		&src.Spec.Build,
 		copier.Option{IgnoreEmpty: true, DeepCopy: true},
 	)
+
+	if src.Spec.Addons != nil {
+		dst.Spec.Addons = make([]paasv1alpha2.Addon, 0)
+		_ = copier.CopyWithOption(
+			&dst.Spec.Addons,
+			&src.Spec.Addons,
+			copier.Option{IgnoreEmpty: true, DeepCopy: true},
+		)
+
+		addonNames := make([]string, 0)
+		for _, addon := range dst.Spec.Addons {
+			addonNames = append(addonNames, addon.Name)
+		}
+		addonAnnotation, err := json.Marshal(addonNames)
+		if err != nil {
+			return err
+		}
+		dst.Annotations[AddonsAnnoKey] = string(addonAnnotation)
+	}
 
 	// Copy Hooks field, extra logics needs because of the pointer type
 	if src.Spec.Hooks == nil {

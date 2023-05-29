@@ -23,7 +23,7 @@ from paas_wl.cnative.specs.models import (
     AppModelDeploy,
     AppModelResource,
     create_app_resource,
-    default_bkapp_name,
+    generate_bkapp_name,
     update_app_resource,
 )
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
@@ -148,5 +148,5 @@ class TestAppModelDeploy:
         assert AppModelDeploy.objects.any_successful(bk_stag_env) is True
 
 
-def test_default_bkapp_name(bk_app, bk_stag_env):
-    assert default_bkapp_name(bk_stag_env) == bk_app.code
+def test_bkapp_name_with_default_module(bk_app, bk_stag_env):
+    assert generate_bkapp_name(bk_stag_env) == bk_app.code

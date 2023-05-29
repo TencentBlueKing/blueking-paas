@@ -21,6 +21,8 @@ from typing import List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+DEFAULT_ENGINE_APP_PREFIX = 'bkapp'
+
 
 class ModuleName(str, Enum):
     DEFAULT = 'default'

@@ -32,7 +32,7 @@ from paas_wl.cnative.specs.constants import (
     MResConditionType,
     MResPhaseType,
 )
-from paas_wl.cnative.specs.models import default_bkapp_name
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.platform.applications.models import WlApp
 from paas_wl.resources.base import crd
@@ -56,7 +56,7 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
         try:
             # TODO 确定多版本交互后解除版本锁定
             data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).get(
-                default_bkapp_name(env), namespace=wl_app.namespace
+                generate_bkapp_name(env), namespace=wl_app.namespace
             )
         except ResourceNotFoundError:
             logger.info('Resource BkApp not found in cluster')
@@ -91,7 +91,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         # 创建或更新 BkApp
         # TODO 确定多版本交互后解除版本锁定
         bkapp, _ = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
-            default_bkapp_name(env),
+            generate_bkapp_name(env),
             namespace=wl_app.namespace,
             body=manifest,
             update_method='patch',

@@ -20,6 +20,7 @@ import logging
 from typing import Dict
 
 from django.db import models
+from django.utils.functional import cached_property
 from jsonfield import JSONField
 
 from paas_wl.platform.applications.constants import WlAppType
@@ -52,10 +53,19 @@ class App(UuidAuditedModel):
     def scheduler_safe_name_with_region(self):
         return f"{self.region}-{self.scheduler_safe_name}"
 
-    @property
+    @cached_property
     def namespace(self):
-        # Both default and cloud-native are using this method to get namespace
-        # at this moment.
+        # Both default and cloud-native are using this method to get namespace at this moment.
+        # The namespace of the cloud-native app follow naming rules that do not include the module name.
+
+        if self.type == WlAppType.CLOUD_NATIVE.value:
+            from paasng.engine.models import EngineApp
+            from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX
+
+            module_env = EngineApp.objects.get(region=self.region, name=self.name).env
+            cnative_ns = f'{DEFAULT_ENGINE_APP_PREFIX}-{module_env.application.code}-{module_env.environment}'
+            return cnative_ns.replace('_', '0us0')
+
         return self.scheduler_safe_name
 
     @property

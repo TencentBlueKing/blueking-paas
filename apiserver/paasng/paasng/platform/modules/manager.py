@@ -45,7 +45,7 @@ from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.log.shim import setup_env_log_model
-from paasng.platform.modules.constants import ModuleName, SourceOrigin
+from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, get_image_labels_by_module
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
@@ -62,7 +62,6 @@ make_app_metadata = ReplaceableFunction(default_factory=dict)
 class ModuleInitializer:
     """Initializer for Module"""
 
-    default_engine_app_prefix = 'bkapp'
     default_environments = ['stag', 'prod']
 
     def __init__(self, module: Module):
@@ -70,13 +69,7 @@ class ModuleInitializer:
         self.application = self.module.application
 
     def make_engine_app_name(self, env: str) -> str:
-        # 兼容考虑，如果模块名为 default 则不在 engine 名字中插入 module 名
-        if self.module.name == ModuleName.DEFAULT.value:
-            name = f'{self.default_engine_app_prefix}-{self.application.code}-{env}'
-        else:
-            # use `-m-` to divide module name and app code
-            name = f'{self.default_engine_app_prefix}-{self.application.code}-m-' f'{self.module.name}-{env}'
-        return name
+        return make_engine_app_name(self.module, self.application.code, env)
 
     def make_engine_meta_info(self, env: ModuleEnvironment) -> Dict[str, Any]:
         ext_metadata = make_app_metadata(env)
@@ -400,3 +393,13 @@ class DefaultServicesBinder:
                 continue
 
             mixed_service_mgr.bind_service(service_obj, self.module, config.get("specs"))
+
+
+def make_engine_app_name(module: Module, app_code: str, env: str) -> str:
+    # 兼容考虑，如果模块名为 default 则不在 engine 名字中插入 module 名
+    if module.name == ModuleName.DEFAULT.value:
+        name = f'{DEFAULT_ENGINE_APP_PREFIX}-{app_code}-{env}'
+    else:
+        # use `-m-` to divide module name and app code
+        name = f'{DEFAULT_ENGINE_APP_PREFIX}-{app_code}-m-{module.name}-{env}'
+    return name

@@ -93,7 +93,7 @@ var _ = Describe("HookUtils", func() {
 		It("normal case", func() {
 			hook := BuildPreReleaseHook(bkapp, nil)
 
-			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-1"))
+			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-fake-app-1"))
 			Expect(hook.Pod.ObjectMeta.Labels[paasv1alpha2.HookTypeKey]).To(Equal(string(paasv1alpha2.HookPreRelease)))
 			Expect(len(hook.Pod.Spec.Containers)).To(Equal(1))
 			Expect(hook.Pod.Spec.Containers[0].Image).To(Equal(bkapp.Spec.Build.Image))
@@ -117,7 +117,7 @@ var _ = Describe("HookUtils", func() {
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
 			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
-			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-100"))
+			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-release-hook-fake-app-100"))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthPhase("")))
 		})
 

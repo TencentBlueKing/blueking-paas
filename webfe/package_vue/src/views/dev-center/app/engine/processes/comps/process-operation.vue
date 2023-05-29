@@ -2230,6 +2230,7 @@ export default {
                 vertical-align: middle;
                 word-break: break-all;
                 cursor: pointer;
+                min-height: 75px;
             }
 
             .process-status {

@@ -547,6 +547,7 @@
             :required="true"
             :rules="processPlanRules.targetReplicas"
             :property="'targetReplicas'"
+            class="manual-form-cls"
           >
             <num-input
               type="number"
@@ -565,25 +566,23 @@
             >
               <bk-form-item property="maxReplicas">
                 <bk-input
-                  type="number"
                   :placeholder="'1 - ' + maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.maxReplicas"
                 >
                   <template slot="prepend">
-                    <div class="group-text">{{$t('最小副本数')}}</div>
+                    <div class="group-text">{{$t('最大副本数')}}</div>
                   </template>
                 </bk-input>
               </bk-form-item>
               <bk-form-item property="minReplicas" class="ml20">
                 <bk-input
-                  type="number"
                   :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.minReplicas"
                 >
                   <template slot="prepend">
-                    <div class="group-text">{{$t('最大副本数')}}</div>
+                    <div class="group-text">{{$t('最小副本数')}}</div>
                   </template>
                 </bk-input>
               </bk-form-item>
@@ -925,34 +924,6 @@ export default {
           maxReplicas: [
             {
               required: true,
-              message: i18n.t('请填写最小副本数'),
-              trigger: 'blur',
-            },
-            {
-              validator(val) {
-                const maxReplicas = Number(val)
-                return maxReplicas <= maxReplicasNum;
-              },
-              message() {
-                return `${i18n.t('最小副本数最大值')}${maxReplicasNum}`;
-              },
-              trigger: 'blur',
-            },
-            {
-              validator(v) {
-                  const maxReplicas = Number(v)
-                  const minReplicas = Number(that.scalingConfig.minReplicas)
-                  return maxReplicas >= minReplicas;
-                },
-              message() {
-                return `${i18n.t('最小副本数不可小于最大副本数')}`;
-              },
-              trigger: 'blur',
-            },
-          ],
-          minReplicas: [
-            {
-              required: true,
               message: i18n.t('请填写最大副本数'),
               trigger: 'blur',
             },
@@ -967,13 +938,41 @@ export default {
               trigger: 'blur',
             },
             {
+              validator(v) {
+                  const maxReplicas = Number(v)
+                  const minReplicas = Number(that.scalingConfig.minReplicas)
+                  return maxReplicas >= minReplicas;
+                },
+              message() {
+                return `${i18n.t('最大副本数不可小于最小副本数')}`;
+              },
+              trigger: 'blur',
+            },
+          ],
+          minReplicas: [
+            {
+              required: true,
+              message: i18n.t('请填写最小副本数'),
+              trigger: 'blur',
+            },
+            {
+              validator(val) {
+                const maxReplicas = Number(val)
+                return maxReplicas <= maxReplicasNum;
+              },
+              message() {
+                return `${i18n.t('最小副本数最大值')}${maxReplicasNum}`;
+              },
+              trigger: 'blur',
+            },
+            {
                 validator(v) {
                   const minReplicas = Number(v)
                   const maxReplicas = Number(that.scalingConfig.maxReplicas)
                   return minReplicas <= maxReplicas;
                 },
                 message() {
-                  return `${i18n.t('最大副本数不可大于最小副本数')}`;
+                  return `${i18n.t('最小副本数不可大于最大副本数')}`;
                 },
                 trigger: 'blur',
               },
@@ -2854,6 +2853,12 @@ export default {
       /deep/ .bk-radio-button-text {
             padding: 0 97px;
         }
+    }
+
+    .manual-form-cls{
+      /deep/ .bk-form-content .tooltips-icon {
+        right: 156px !important;
+      }
     }
 
     .stream-log {

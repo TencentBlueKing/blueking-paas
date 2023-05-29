@@ -41,7 +41,7 @@ import (
 var appLog = logf.Log.WithName("bkapp-resource")
 
 var (
-	// AppNameRegex 应用名称格式（与 BK_APP_CODE 相同）
+	// AppNameRegex 应用名称格式
 	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,64}$")
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")

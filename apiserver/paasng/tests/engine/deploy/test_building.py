@@ -106,12 +106,12 @@ class TestApplicationBuilder:
         ) as mocked_poller, mock.patch(
             'paasng.engine.utils.output.RedisChannelStream'
         ) as mocked_stream, mock.patch(
-            'paasng.engine.deploy.building.start_build_process'
-        ) as mocker_start_build_process:
+            'paasng.engine.deploy.building.start_buildpacks_build'
+        ) as mocker_start_buildpacks_build:
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
-            mocker_start_build_process.return_value = faked_build_process_id
+            mocker_start_buildpacks_build.return_value = faked_build_process_id
 
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
             builder = ApplicationBuilder.from_deployment_id(bk_deployment_full.id)
@@ -124,7 +124,7 @@ class TestApplicationBuilder:
             assert deployment.err_detail is None
 
             # Validate "start_build_process" arguments
-            assert mocker_start_build_process.called
+            assert mocker_start_buildpacks_build.called
             (
                 _,
                 version,
@@ -132,7 +132,7 @@ class TestApplicationBuilder:
                 source_tar_path,
                 procfile,
                 env_vars,
-            ) = mocker_start_build_process.call_args[0]
+            ) = mocker_start_buildpacks_build.call_args[0]
             assert version.revision == deployment.source_revision
             assert stream_channel_id == str(bk_deployment_full.id)
             assert source_tar_path != ''
@@ -183,8 +183,8 @@ class TestBuildProcessResultHandler:
             data={'build_id': deployment.id.hex, 'build_status': JobStatus.SUCCESSFUL.value},
         )
 
-        with mock.patch('paasng.engine.deploy.building.ApplicationPreReleaseExecutor') as mocked_release_mgr:
+        with mock.patch('paasng.engine.deploy.building.start_release_step') as mocked_release_mgr:
             BuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
             deployment.refresh_from_db()
             assert deployment.status == JobStatus.PENDING.value
-            assert mocked_release_mgr.from_deployment_id.called
+            assert mocked_release_mgr.called

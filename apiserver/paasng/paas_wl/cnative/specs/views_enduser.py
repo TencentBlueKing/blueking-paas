@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-import time
 from typing import Optional
 
 from bkpaas_auth.models import user_id_encoder
@@ -36,11 +35,10 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.cnative.specs.addresses import get_exposed_url
 from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DeployStatus
-from paas_wl.cnative.specs.credentials import get_references, validate_references
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
-from paas_wl.cnative.specs.resource import deploy, get_mres_from_cluster
+from paas_wl.cnative.specs.resource import get_mres_from_cluster
 from paas_wl.cnative.specs.serializers import (
     AppModelResourceSerializer,
     CreateDeploySerializer,
@@ -50,11 +48,11 @@ from paas_wl.cnative.specs.serializers import (
     MresStatusSLZ,
     QueryDeploysSerializer,
 )
-from paas_wl.cnative.specs.tasks import AppModelDeployStatusPoller, DeployStatusHandler
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
+from paasng.engine.deploy.release.operator import release_by_k8s_operator
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
 
@@ -130,7 +128,6 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         TODO 这里目前先包含配置更新的逻辑（manifest + update_app_resource），预期应该是保存与部署分离
         """
         application = self.get_application()
-        module = self.get_module_via_path()
         env = self.get_env_via_path()
 
         serializer = CreateDeploySerializer(data=request.data)
@@ -147,38 +144,24 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # TODO: Allow use other revisions
         revision = model_resource.revision
 
-        # Try to get and validate the image credentials
         try:
-            credential_refs = get_references(revision.json_value)
-            validate_references(application, credential_refs)
+            _, deployed_manifest = release_by_k8s_operator(env, revision, operator=request.user.pk)
         except ValueError:
             raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
-
-        # TODO: read name from request data or generate by model resource payload
-        # Add current timestamp in name to avoid conflicts
-        default_name = f'{application.code}-{revision.pk}-{int(time.time())}'
-
-        deployment = None
-        deployed_manifest = None
-        try:
-            # TODO: Integrity Check
-            deployment = AppModelDeploy.objects.create(
-                application_id=application.id,
-                module_id=module.id,
-                environment_name=env.environment,
-                name=default_name,
-                revision=revision,
-                status=DeployStatus.PENDING.value,
-                operator=request.user,
+        except UnprocessibleEntityError as e:
+            # 格式错误类异常（422）允许将错误信息提供给用户
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(
+                f"app: {application.code}, env: {environment}, summary: {e.summary()}"
             )
-            deployed_manifest = deploy(env, deployment.build_manifest(env, credential_refs=credential_refs))
         except Exception as e:
-            self._handle_deploy_failed(application, environment, deployment=deployment, exception=e)
-
-        assert deployment is not None
-        # TODO: 统计成功 metrics
-        # Poll status in background
-        AppModelDeployStatusPoller.start({'deploy_id': deployment.id}, DeployStatusHandler)
+            logger.exception(
+                "failed to deploy bkapp, app: %s, code: %s, env: %s, reason: %s",
+                application.name,
+                application.code,
+                environment,
+                e,
+            )
+            raise error_codes.DEPLOY_BKAPP_FAILED.f(f"app: {application.code}, env: {environment}")
         return Response(deployed_manifest)
 
     @swagger_auto_schema(request_body=CreateDeploySerializer, responses={"200": DeployPrepResultSLZ()})

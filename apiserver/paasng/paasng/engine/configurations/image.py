@@ -44,6 +44,7 @@ def generate_image_repository(app: 'EngineApp') -> str:
 
 def generate_image_tag(version: "VersionInfo") -> str:
     """Get the Image Tag for version"""
+    # TODO: 支持复杂的镜像 tag 规则
     return f"{version.version_name}-{version.revision}"
 
 
@@ -102,6 +103,10 @@ class RuntimeImageInfo:
             repo_url = self.module.get_source_obj().get_repo_url()
             reference = self.version_info.revision
             return f"{repo_url}:{reference}"
+        elif self.type == RuntimeType.DOCKERFILE:
+            app_image_repository = generate_image_repository(self.engine_app)
+            app_image_tag = generate_image_tag(self.version_info)
+            return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and self.version_info.version_type == "image":
             from paasng.extensions.smart_app.utils import SMartImageManager
 
@@ -117,7 +122,7 @@ class RuntimeImageInfo:
     @property
     def entrypoint(self) -> List:
         """返回当前 engine_app 镜像启动的 entrypoint"""
-        if self.type == RuntimeType.CUSTOM_IMAGE:
+        if self.type == RuntimeType.CUSTOM_IMAGE or self.type == RuntimeType.DOCKERFILE:
             return ["env"]
         # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
         mgr = ModuleRuntimeManager(self.module)
@@ -134,6 +139,8 @@ def update_image_runtime_config(
     image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT,
 ):
     """Update the image runtime config of the given engine app"""
+    # TODO: image 应该使用 Build 对象的 image 字段(目前逻辑上保证了 runtime.image == build.image)
+    # TODO: runtime 信息应该与 Build 关联(如果需要支持 cnb <-> docker build 互相切换)
     runtime = RuntimeImageInfo(engine_app=engine_app, version_info=version_info)
     runtime_dict = {
         "image": runtime.image,

@@ -28,7 +28,7 @@ from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.bg_command.tasks import exec_command
-from paasng.engine.deploy.release import ApplicationReleaseMgr
+from paasng.engine.deploy.release.legacy import ApplicationReleaseMgr
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes

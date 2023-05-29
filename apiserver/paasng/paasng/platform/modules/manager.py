@@ -75,7 +75,7 @@ class ModuleInitializer:
             name = f'{self.default_engine_app_prefix}-{self.application.code}-{env}'
         else:
             # use `-m-` to divide module name and app code
-            name = f'{self.default_engine_app_prefix}-{self.application.code}-m-' f'{self.module.name}-{env}'
+            name = f'{self.default_engine_app_prefix}-{self.application.code}-m-{self.module.name}-{env}'
         return name
 
     def make_engine_meta_info(self, env: ModuleEnvironment) -> Dict[str, Any]:

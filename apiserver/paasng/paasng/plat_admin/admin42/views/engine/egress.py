@@ -26,6 +26,9 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.cluster.constants import ClusterFeatureFlag
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.networking.egress.models import EgressRule, EgressSpec
+from paas_wl.resources.base.crd import Egress
+from paas_wl.resources.base.kres import KPod
+from paas_wl.resources.utils.basic import get_client_by_app
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
@@ -105,28 +108,53 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         ]
         EgressRule.objects.bulk_create(rules)
 
-        # 3. 下发 Egress 到 k8s 集群
-        # TODO 下发 Egress 到 k8s 集群，支持更新或者创建
+        # 3. 下发 Egress 到 k8s 集群，支持更新或者创建
+        manifest = egress_spec.build_manifest()
+        with get_client_by_app(wl_app) as client:
+            Egress(client, api_version=manifest['apiVersion']).create_or_update(
+                name=manifest['metadata']['name'],
+                namespace=manifest['metadata']['namespace'],
+                body=manifest,
+                update_method='patch',
+                content_type='application/merge-patch+json',
+            )
 
         return Response(status=status.HTTP_201_CREATED)
 
     def destroy(self, request, code, module_name, environment):
         wl_app = self.get_wl_app_via_path()
         egress_spec = EgressSpec.objects.filter(wl_app=wl_app).first()
-        if egress_spec:
-            # TODO 从集群中删除 egress 资源
-            egress_spec.delete()
+        if not egress_spec:
+            return Response(status.HTTP_200_OK)
 
+        # 从集群中删除 egress 资源
+        manifest = egress_spec.build_manifest()
+        with get_client_by_app(wl_app) as client:
+            Egress(client, api_version=manifest['apiVersion']).delete(
+                name=manifest['metadata']['name'],
+                namespace=manifest['metadata']['namespace'],
+            )
+
+        # 删除 egress_spec
+        egress_spec.delete()
         return Response(status.HTTP_200_OK)
 
     def get_egress_ips(self, request, code, module_name, environment):
-        # TODO 从集群中获取 egress pod 的 ip
-        return Response(
-            data={
-                'ips': [
-                    '127.0.0.1',
-                    '127.0.0.2',
-                    '127.0.0.3',
-                ]
-            }
-        )
+        wl_app = self.get_wl_app_via_path()
+        egress_spec = EgressSpec.objects.filter(wl_app=wl_app).first()
+        if not egress_spec:
+            raise error_codes.EGRESS_SPEC_NOT_FOUND
+
+        manifest = egress_spec.build_manifest()
+        with get_client_by_app(wl_app) as client:
+            pods = KPod(client).ops_label.list(
+                namespace=manifest['metadata']['namespace'],
+                labels={
+                    'app': 'gate',
+                    'bcs-egress-operator': 'egress',
+                    'bcs-egress-operator-controller': manifest['metadata']['name'],
+                },
+            )
+
+        pod_ips = [p.status.podIP for p in pods.items if p.status]
+        return Response(data={'ips': pod_ips})

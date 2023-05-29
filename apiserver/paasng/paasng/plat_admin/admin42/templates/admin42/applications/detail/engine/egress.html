@@ -3,6 +3,8 @@
 
 {% block main_content %}
 <div id="application-egress">
+    <bk-alert type="warning" title="启用 Egress 前需确认：1. 该环境部署的集群支持 BCS Egress，2. 应用在该环境已经成功部署，3. 用户提供的目标服务 Host/Port 是集群内可达的" class="mb15"></bk-alert>
+    <bk-alert type="warning" title="注意：任何页面上的副本数量，资源限制，Egress 规则的调整，都需要点击 `保存配置` 按钮才会保存并下发到集群中！"  class="mb15"></bk-alert>
     <bk-collapse accordion @item-click="fetchModuleEgressSpec" v-model="activeModuleName">
         <bk-collapse-item v-for="(module, mIdx) in application.modules" :name="module.name">
             <h4>$[ module.name ] 模块</h4>
@@ -94,7 +96,7 @@
                         <bk-table-column label="Protocol" prop="protocol"></bk-table-column>
                         <bk-table-column label="操作" width="150">
                             <template slot-scope="props">
-                                <bk-button theme="primary" text @click="deleteRule(props.row)">删除</bk-button>
+                                <bk-button theme="primary" text @click="deleteRule('prod', props.row)">删除</bk-button>
                             </template>
                         </bk-table-column>
                     </bk-table>
@@ -112,10 +114,10 @@
     <bk-dialog v-model="ruleDialog.visible" header-position="center" width="500" :confirm-fn="submitDialog" ok-text="添加">
         <div slot="header"><h4>添加 Egress 规则</h4></div>
         <bk-form :label-width="120" :model="ruleDialog.form">
-            <bk-form-item label="Host" :required="true">
+            <bk-form-item label="Host" :required="true" desc="目标服务的域名 / IP">
                 <bk-input v-model="ruleDialog.form.host"></bk-input>
             </bk-form-item>
-            <bk-form-item label="Port" :required="true">
+            <bk-form-item label="Port" :required="true" desc="目标服务的端口">
                 <bk-input v-model="ruleDialog.form.port" type="number" min="1" max="65535"></bk-input>
             </bk-form-item>
             <bk-form-item label="Protocol" :required="true">
@@ -231,6 +233,10 @@
                 // 点击新建按钮触发
                 clickNewSpecButton(env) {
                     let formData = this.getFormDataWithEnv(env)
+                    formData.replicas = 1
+                    formData.cpu_limit = '500m'
+                    formData.memory_limit = '256Mi'
+                    formData.rules = []
                     formData.enabled = true
                 },
                 // 点击删除规则触发
@@ -260,6 +266,10 @@
                 },
                 // 填写完规则保存触发
                 submitDialog() {
+                    if (!this.ruleDialog.form.host || !this.ruleDialog.form.port) {
+                        this.$bkMessage({theme: 'error', message: `Host / Port 为必填项`})
+                        return
+                    }
                     let formData = this.getFormDataWithEnv(this.ruleDialog.env)
                     formData.rules.push(this.ruleDialog.form)
 
@@ -274,8 +284,8 @@
                     try {
                         this.$http.get(url).then(resp => {
                             this.$bkInfo({
-                                width: 350,
-                                title: `出口 IP 列表`,
+                                width: 400,
+                                title: `模块 ${this.activeModuleName} 环境 ${env} 出口 IP 列表`,
                                 subHeader: h('div', {
                                     style: {
                                         'color': 'green',
@@ -293,14 +303,32 @@
                 saveEgress(env) {
                     let url = URLRouter.detail.replace("${module}", this.activeModuleName).replace("${env}", env)
                     let formData = this.getFormDataWithEnv(env)
-
-                    try {
-                        this.$http.post(url, formData).then(resp => {
-                            this.$bkMessage({theme: 'success', message: `保存 Egress 配置成功`})
-                        })
-                    } catch (e) {
-                        this.$bkMessage({theme: 'error', message: `保存 Egress 配置失败：${e}`})
+                    if (formData.rules.length === 0) {
+                        this.$bkMessage({theme: 'error', message: `至少需要包含一条 Egress 规则`})
+                        return
                     }
+
+                    // 保存需要进行二次确认
+                    this.$bkInfo({
+                        width: 400,
+                        title: `确认保存 Egress 配置并下发到集群？`,
+                        confirmLoading: true,
+                        confirmFn: async () => {
+                            try {
+                                this.$http.post(url, formData).then(resp => {
+                                    this.$bkMessage({theme: 'success', message: `保存 Egress 配置成功`})
+                                }, err => {
+                                    errMsg = `请确认应用在该环境已成功部署！`
+                                    if (err.detail) {
+                                        errMsg = `错误信息：${err.detail}`
+                                    }
+                                    this.$bkMessage({theme: 'error', message: `保存 Egress 配置失败，${errMsg}`})
+                                })
+                            } catch (e) {
+                                this.$bkMessage({theme: 'error', message: `保存 Egress 配置失败：${e}`})
+                            }
+                        }
+                    })
                 },
                 // 点击删除配置触发
                 deleteEgress(env) {
@@ -322,11 +350,14 @@
                             try {
                                 await this.$http.delete(url).then(resp => {
                                     this.$bkMessage({theme: 'success', message: `删除 Egress 配置成功`})
+                                }, err => {
+                                    this.$bkMessage({theme: 'error', message: `删除 Egress 配置失败，错误信息：${err.detail}`})
                                 })
                             } catch (e) {
                                 this.$bkMessage({theme: 'error', message: `删除 Egress 配置失败：${e}`})
                             } finally {
-                                location.reload()
+                                // 重新拉取数据
+                                this.fetchEnvEgressSpec(this.activeModuleName, env)
                             }
                         }
                     })

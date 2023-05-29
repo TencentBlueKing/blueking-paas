@@ -158,7 +158,7 @@ class EgressSpec(AuditedModel):
                 "replicas": self.replicas,
                 "gateImage": settings.BCS_EGRESS_GATE_IMAGE,
                 "podIPImage": settings.BCS_EGRESS_POD_IP_IMAGE,
-                "podDefaultDisabled": True,
+                "podDefaultDisabled": False,
                 "gateArgs": ["-backend=ipvs", "-outer=eth0"],
                 "annotations": {
                     "tke.cloud.tencent.com/vpc-ip-claim-delete-policy": "Never",
@@ -174,7 +174,7 @@ class EgressSpec(AuditedModel):
                     {
                         "dport": r.dst_port,
                         "host": r.host,
-                        "protocol": r.potocol,
+                        "protocol": r.protocol,
                         "sport": r.src_port,
                         "service": r.service,
                     }

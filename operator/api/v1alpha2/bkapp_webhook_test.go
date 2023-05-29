@@ -76,6 +76,10 @@ var _ = Describe("test webhook.Validator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
+				Annotations: map[string]string{
+					paasv1alpha2.BkAppCodeKey:  "bkapp-sample",
+					paasv1alpha2.ModuleNameKey: paasv1alpha2.DefaultModuleName,
+				},
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
@@ -120,14 +124,36 @@ var _ = Describe("test webhook.Validator", func() {
 
 	Context("Test app's basic fields", func() {
 		It("App name invalid", func() {
-			bkapp.Name = "bkapp-sample-very-long-long"
+			bkapp.Name = "bkapp-sample-very" + strings.Repeat("-long", 20)
+			bkapp.Annotations[paasv1alpha2.BkAppCodeKey] = bkapp.Name
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("must match regex"))
 
 			bkapp.Name = "bkapp-sample-UPPER-CASE"
+			bkapp.Annotations[paasv1alpha2.BkAppCodeKey] = bkapp.Name
 			err = bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("must match regex"))
 		})
+
+		DescribeTable(
+			"Validate annotations",
+			func(appName, appCode, moduleName, errMsgPart string) {
+				bkapp.Name = appName
+				bkapp.Annotations[paasv1alpha2.BkAppCodeKey] = appCode
+				bkapp.Annotations[paasv1alpha2.ModuleNameKey] = moduleName
+
+				err := bkapp.ValidateCreate()
+				if errMsgPart != "" {
+					Expect(err.Error()).To(ContainSubstring(errMsgPart))
+				} else {
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+			},
+			Entry("valid", "test-app-m-backend", "test-app", "backend", ""),
+			Entry("valid", "test-app", "test-app", paasv1alpha2.DefaultModuleName, ""),
+			Entry("invalid", "test-app", "test-app1", paasv1alpha2.DefaultModuleName, "don't match with"),
+			Entry("invalid", "test-app-m", "test-app", "backend", "don't match with"),
+		)
 	})
 
 	Context("Test spec.build fields", func() {
@@ -309,9 +335,17 @@ var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 
 	// A shortcut to build a v1alpha1/BkApp object
 	buildApp := func(spec paasv1alpha1.AppSpec) *paasv1alpha1.BkApp {
+		bkAppName := "bkapp-" + suffix
 		ret := &paasv1alpha1.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
-			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-" + suffix, Namespace: "default"},
+			TypeMeta: metav1.TypeMeta{Kind: paasv1alpha1.KindBkApp, APIVersion: paasv1alpha1.GroupVersion.String()},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bkAppName,
+				Namespace: "default",
+				Annotations: map[string]string{
+					paasv1alpha2.BkAppCodeKey:  bkAppName,
+					paasv1alpha2.ModuleNameKey: paasv1alpha2.DefaultModuleName,
+				},
+			},
 		}
 		ret.Spec = spec
 		return ret
@@ -369,9 +403,17 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 
 	// A shortcut to build a v1alpha2/BkApp object
 	buildApp := func(spec paasv1alpha2.AppSpec) *paasv1alpha2.BkApp {
+		bkAppName := "bkapp-" + suffix
 		ret := &paasv1alpha2.BkApp{
-			TypeMeta:   metav1.TypeMeta{Kind: paasv1alpha2.KindBkApp, APIVersion: paasv1alpha2.GroupVersion.String()},
-			ObjectMeta: metav1.ObjectMeta{Name: "bkapp-" + suffix, Namespace: "default"},
+			TypeMeta: metav1.TypeMeta{Kind: paasv1alpha2.KindBkApp, APIVersion: paasv1alpha2.GroupVersion.String()},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      bkAppName,
+				Namespace: "default",
+				Annotations: map[string]string{
+					paasv1alpha2.BkAppCodeKey:  bkAppName,
+					paasv1alpha2.ModuleNameKey: paasv1alpha2.DefaultModuleName,
+				},
+			},
 		}
 		ret.Spec = spec
 		return ret

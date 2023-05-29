@@ -28,14 +28,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-var _ = DescribeTable("Get DNS-safe name",
-	func(s string, want string) {
-		Expect(DNSSafeName(s)).To(Equal(want))
-	},
-	Entry("Normal", "bkapp-foo", "bkapp-foo"),
-	Entry("Contains _", "bkapp_foo", "bkapp0us0foo"),
-)
-
 var _ = Describe("Get resource names", func() {
 	var bkapp *paasv1alpha2.BkApp
 

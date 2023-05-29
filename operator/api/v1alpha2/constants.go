@@ -32,6 +32,9 @@ const (
 
 	// WebProcName 表示 web 进程名称
 	WebProcName = "web"
+
+	// 默认模块名
+	DefaultModuleName = "default"
 )
 
 // ReplicasOne 副本数 1, 用于替换测试程序内的魔数

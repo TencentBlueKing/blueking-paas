@@ -24,7 +24,7 @@ from typing import Optional
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, TaskPoller
 from django.utils import timezone
 
-from paas_wl.cnative.specs.constants import DeployStatus
+from paas_wl.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS, DeployStatus
 from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.cnative.specs.signals import post_cnative_env_deploy
@@ -41,8 +41,8 @@ class AppModelDeployStatusPoller(TaskPoller):
     - deploy_id: int, ID of AppModelDeploy object
     """
 
-    # over 30 min considered as timeout
-    overall_timeout_seconds = 1800
+    # over 15 min considered as timeout
+    overall_timeout_seconds = 15 * 60
 
     def query(self) -> PollingResult:
         dp = AppModelDeploy.objects.get(id=self.params['deploy_id'])
@@ -55,11 +55,28 @@ class AppModelDeployStatusPoller(TaskPoller):
             return PollingResult.doing()
 
         state = MresConditionParser(mres).detect_state()
-        if DeployStatus.is_stable(state.status):
+        if state.status == DeployStatus.READY:
             return PollingResult.done(data={'state': state, 'last_update': mres.status.lastUpdate})
+
+        elif state.status == DeployStatus.ERROR:
+            polling_failure_count = 1
+            if self.metadata.last_polling_data and 'polling_failure_count' in self.metadata.last_polling_data:
+                polling_failure_count = self.metadata.last_polling_data['polling_failure_count'] + 1
+
+            # When deploying bkapp, temporary failures may occur but will quickly resume
+            # e.g. Deployment does not have minimum availability
+            # When polling the deployment result, we should allow such cases and retry.
+            # Only when the consecutive polling failures count exceeds the limit,
+            # then current deployment should be considered as failed.
+            if polling_failure_count > CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS:
+                return PollingResult.done(data={'state': state, 'last_update': mres.status.lastUpdate})
+
+            return PollingResult.doing(data={'polling_failure_count': polling_failure_count})
+
         elif state.status == DeployStatus.PROGRESSING:
             # Also update status when it's progressing
             update_status(dp, state, last_transition_time=mres.status.lastUpdate)
+
         # Still pending, do another query later
         return PollingResult.doing()
 

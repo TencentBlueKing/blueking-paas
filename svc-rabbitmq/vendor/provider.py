@@ -198,7 +198,8 @@ class Provider(BaseProvider):
         if not engine_app_name:
             raise ArgumentInvalidError("engine_app_name is empty")
 
-        bill, _ = InstanceBill.objects.get_or_create(name=engine_app_name, action="create")
+        # 注意：请不要尝试复用 InstanceBill，由于增强服务默认采用异步删除机制，会导致 vhost 解绑后被重新分配，而后又被定时任务清除的情况出现
+        bill = InstanceBill.objects.create(name=engine_app_name, action="create")
         with bill.log_context() as context:  # type: dict
             context["engine_app_name"] = engine_app_name
 

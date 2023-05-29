@@ -21,6 +21,8 @@ import logging
 from blue_krill.data_types.enum import StructuredEnum
 from django.core.management.base import BaseCommand
 
+from paasng.accessories.iam.helpers import delete_builtin_user_groups
+from paasng.accessories.iam.members.models import ApplicationGradeManager
 from paasng.platform.applications.models import Application
 from paasng.platform.core.storages.sqlalchemy import console_db
 from paasng.publish.sync_market.managers import AppManger
@@ -84,6 +86,13 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.exception(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败: {e}")
                 return
+
+        # 删除权限中心相关数据
+        for app in to_del_apps:
+            delete_builtin_user_groups(app.code)
+            # TODO 支持调用 API 删除权限中心分级管理员（待 IAM 支持）
+            # 目前在初始化时候有兼容，会复用权限中心对应 AppCode 的分级管理员数据
+            ApplicationGradeManager.objects.get(app_code=app.code).delete()
 
         # 从 PaaS 3.0 中删除相关的信息
         to_del_apps.delete()

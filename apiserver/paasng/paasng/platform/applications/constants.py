@@ -22,13 +22,13 @@ from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField,
 
 
 class ApplicationType(str, StructuredEnum):
-    DEFAULT = EnumField('default')  # 默认类型：无任何定制逻辑
-    ENGINELESS_APP = EnumField('engineless_app')  # 无引擎应用：不部署，但可通过设置第三方地址上线到市场，也支持申请云 API
-    BK_PLUGIN = EnumField('bk_plugin')  # 蓝鲸插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑
+    DEFAULT = EnumField('default', label="普通应用")  # 默认类型：无任何定制逻辑
+    ENGINELESS_APP = EnumField('engineless_app', label="外链应用")  # 无引擎应用：不部署，但可通过设置第三方地址上线到市场，也支持申请云 API
+    BK_PLUGIN = EnumField('bk_plugin', label="蓝鲸应用插件")  # 蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑
 
     # 云原生架构应用：完全基于 YAML 模型的应用，当前作为一个独立应用类型存在，但未来它也许会成为所有应用
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
-    CLOUD_NATIVE = EnumField('cloud_native')
+    CLOUD_NATIVE = EnumField('cloud_native', label="云原生应用")
 
     @classmethod
     def normal_app_type(cls):

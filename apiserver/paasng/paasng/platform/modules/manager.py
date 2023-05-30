@@ -181,8 +181,8 @@ class ModuleInitializer:
             logger.warning("skip runtime binding because default image is not found")
             return
 
-        helper = ModuleRuntimeBinder(self.module, slugbuilder)
-        helper.bind_image(slugrunner)
+        helper = ModuleRuntimeBinder(self.module)
+        helper.bind_image(slugrunner, slugbuilder)
 
         # 应用初始化代码模板中配置了 required_buildpacks 的话，需要额外绑定，且顺序必须在语言相关的构建工具之前
         try:

@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 from operator import attrgetter
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, overload
 
 from django.db import transaction
 
@@ -27,7 +27,7 @@ from paas_wl.cluster.shim import EnvClusterService
 from paasng.engine.constants import AppEnvName
 from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -72,15 +72,13 @@ class SlugbuilderBinder:
 class ModuleRuntimeBinder:
     """模块相关运行时绑定工具"""
 
-    def __init__(self, module: 'Module', slugbuilder: Optional[AppSlugBuilder] = None):
+    def __init__(self, module: 'Module'):
         self.module = module
-        self.slugbuilder = slugbuilder
+        self.build_config = BuildConfig.objects.get_by_module(module)
 
     @transaction.atomic
-    def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: Optional[AppSlugBuilder] = None):
+    def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder):
         """绑定构建和运行镜像,如果两个镜像的名称不一致将会报错"""
-        slugbuilder = slugbuilder or self.slugbuilder
-        self.slugbuilder = slugbuilder
         module = self.module
 
         if slugbuilder is None:
@@ -103,28 +101,28 @@ class ModuleRuntimeBinder:
             )
 
         # 当前模块只能使用一个镜像
-        module.slugrunners.set([slugrunner], clear=True)
-
-        # 同上，先清空已有的镜像
-        module.slugbuilders.set([slugbuilder], clear=True)
+        self.build_config.buildpack_builder = slugbuilder
+        self.build_config.buildpack_runner = slugrunner
+        self.build_config.save(update_fields=["buildpack_builder", "buildpack_runner", "updated"])
 
     @transaction.atomic
-    def unbind_image(self, slugrunner: AppSlugRunner, slugbuilder: Optional[AppSlugBuilder] = None):
-        """解绑镜像"""
-        if self.slugbuilder is None:
-            return
+    def clear_runtime(self):
+        """清空所有运行时配置, 仅用于 bind 操作前"""
+        self.build_config.buildpacks.clear()
+        self.build_config.buildpack_builder = None
+        self.build_config.buildpack_runner = None
+        self.build_config.save(update_fields=["buildpack_builder", "buildpack_runner", "updated"])
 
-        slugbuilder = slugbuilder or self.slugbuilder
-        self.slugbuilder = slugbuilder
-        module = self.module
-
-        module.slugrunners.remove(slugrunner)
-        module.slugbuilders.remove(slugbuilder)
+    @transaction.atomic
+    def bind_buildpacks(self, buildpacks: Iterable[AppBuildPack], orders_bp_ids: List[int]):
+        """绑定多个 buildpack"""
+        for buildpack in self.get_ordered_buildpacks_list(buildpacks, orders_bp_ids):
+            self.bind_buildpack(buildpack)
 
     @transaction.atomic
     def bind_buildpack(self, buildpack: AppBuildPack):
         """绑定 Module/Slugbuilder/buildpack 三方关系"""
-        slugbuilder = self.slugbuilder
+        slugbuilder = self.build_config.buildpack_builder
         if slugbuilder is None:
             raise RuntimeError('slugbuilder is None')
 
@@ -134,40 +132,21 @@ class ModuleRuntimeBinder:
                 f"binding between slugbuilder {slugbuilder.full_image} and buildpack {buildpack.name} is not allowed"
             )
 
-        buildpack.modules.add(self.module)
-        slugbuilder.modules.add(self.module)
-
-    @transaction.atomic
-    def unbind_buildpack(self, buildpack: AppBuildPack):
-        """解绑 Module/Slugbuilder/buildpack 三方关系"""
-        if self.slugbuilder is None:
-            return
-
-        buildpack.modules.remove(self.module)
-
-    @transaction.atomic
-    def clear_runtime(self):
-        """清空所有运行时配置, 仅用于 bind 操作前"""
-        self.module.buildpacks.clear()
-        self.module.slugbuilders.clear()
-        self.module.slugrunners.clear()
-
-    @transaction.atomic
-    def bind_buildpacks(self, buildpacks: Iterable[AppBuildPack]):
-        """绑定多个 buildpack"""
-        for buildpack in buildpacks:
-            self.bind_buildpack(buildpack)
+        buildpack.related_build_configs.add(self.build_config)
+        self.build_config.buildpack_builder = slugbuilder
+        self.build_config.save(update_fields=["buildpack_builder", "updated"])
 
     def bind_buildpacks_by_name(self, names: List[str]):
         """根据给定的名称及顺序来绑定构建工具
 
         :raises: RuntimeError when no buildpacks can be found
         """
-        if not self.slugbuilder:
+        slugbuilder = self.build_config.buildpack_builder
+        if not slugbuilder:
             raise BindError("Can't bind buildpacks when without SlugBuilder")
 
         available_bps = {}
-        for bp in self.slugbuilder.get_buildpack_choices(self.module, name__in=names):
+        for bp in slugbuilder.get_buildpack_choices(self.module, name__in=names):
             available_bps[bp.name] = bp
 
         buildpacks = []
@@ -177,17 +156,35 @@ class ModuleRuntimeBinder:
             except KeyError:
                 raise RuntimeError('No buildpacks can be found for name: {}'.format(name))
 
-        self.bind_buildpacks(buildpacks)
+        if buildpacks:
+            self.bind_buildpacks(buildpacks, [bp.id for bp in buildpacks])
 
     def bind_buildpacks_by_module_language(self):
         """根据模块的语言筛选可用的 buildpack 进行绑定"""
-        assert self.slugbuilder
+        slugbuilder = self.build_config.buildpack_builder
+        if not slugbuilder:
+            raise BindError("Can't bind buildpacks when without SlugBuilder")
+
         # 选取指定语言的最新一个非隐藏的 buildpack
-        buildpacks = self.slugbuilder.get_buildpack_choices(self.module, language=self.module.language)
+        buildpacks = slugbuilder.get_buildpack_choices(self.module, language=self.module.language)
         if not buildpacks:
             return
         buildpack = sorted(buildpacks, key=attrgetter("created"))[-1]
         self.bind_buildpack(buildpack)
+
+    @staticmethod
+    def get_ordered_buildpacks_list(
+        buildpacks: Iterable["AppBuildPack"], buildpacks_id: List[int]
+    ) -> List['AppBuildPack']:
+        """Get the ordered buildpacks list.
+
+        :params buildpacks: the buildpacks list to be sorted
+        :params buildpacks_id: ordered buildpack ids
+        """
+        bp_id_to_bp: Dict[int, "AppBuildPack"] = {}
+        for bp in buildpacks:
+            bp_id_to_bp[bp.id] = bp
+        return [bp_id_to_bp[i] for i in buildpacks_id]
 
 
 class ModuleRuntimeManager:
@@ -199,6 +196,7 @@ class ModuleRuntimeManager:
 
     def __init__(self, module: 'Module'):
         self.module = module
+        self.build_config = BuildConfig.objects.get_by_module(module=self.module)
 
     @property
     def is_secure_encrypted_runtime(self) -> bool:
@@ -241,34 +239,47 @@ class ModuleRuntimeManager:
         except Exception:
             return False
 
-    def get_slug_builder(self, raise_exception: bool = True) -> AppSlugBuilder:
+    @overload
+    def get_slug_builder(self) -> AppSlugBuilder:
+        ...
+
+    @overload
+    def get_slug_builder(self, raise_exception: bool = False) -> Optional[AppSlugBuilder]:
+        ...
+
+    def get_slug_builder(self, raise_exception: bool = True) -> Optional[AppSlugBuilder]:
         """返回当前模块绑定的 AppSlugBuilder
 
         :param bool raise_exception: compatible with legacy app which don't bind any builder
         """
-        # Tips: 模型与 Builder 实际上是 N-1 的关系
-        builder = self.module.slugbuilders.last()
-        if not builder and raise_exception:
-            raise AppSlugBuilder.DoesNotExist("No builder bound")
-        return builder
+        if not self.build_config.buildpack_builder and raise_exception:
+            raise AppSlugBuilder.DoesNotExist("No runner bound")
+        return self.build_config.buildpack_builder
 
-    def get_slug_runner(self, raise_exception: bool = True) -> AppSlugRunner:
+    @overload
+    def get_slug_runner(self) -> AppSlugRunner:
+        ...
+
+    @overload
+    def get_slug_runner(self, raise_exception: bool = False) -> Optional[AppSlugRunner]:
+        ...
+
+    def get_slug_runner(self, raise_exception: bool = True) -> Optional[AppSlugRunner]:
         """返回当前模块绑定的 AppSlugRunner
 
         :param bool raise_exception: compatible with legacy app which don't bind any builder
         """
-        # Tips: 模型与 Runner 实际上是 N-1 的关系
-        runner = self.module.slugrunners.last()
-        if not runner and raise_exception:
+        if not self.build_config.buildpack_runner and raise_exception:
             raise AppSlugRunner.DoesNotExist("No runner bound")
-        return runner
+        return self.build_config.buildpack_runner
 
     def list_buildpacks(self) -> List[AppBuildPack]:
         """返回当前模块绑定的 AppSlugBuilder"""
         # Tips: 模型与 AppSlugBuilder 是 N-N 的关系, 这里借助中间表的自增 id 进行排序
+
         return [
             relationship.appbuildpack
-            for relationship in self.module.buildpacks.through.objects.filter(module=self.module)
+            for relationship in self.build_config.buildpacks.through.objects.filter(buildconfig=self.build_config)
             .order_by("id")
             .prefetch_related("appbuildpack")
         ]

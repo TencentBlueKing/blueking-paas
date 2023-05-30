@@ -43,7 +43,7 @@ class SlugbuilderInfo:
     """表示与模块相关的构建环境信息"""
 
     module: 'Module'
-    slugbuilder: 'AppSlugBuilder'
+    slugbuilder: Optional['AppSlugBuilder']
     buildpacks: List['AppBuildPack']
     # builder + buildpacks 的环境变量
     environments: Dict

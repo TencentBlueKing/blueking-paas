@@ -145,16 +145,19 @@
                   ext-cls="dropdown-menu-cls"
                 >
                   <template slot="dropdown-trigger">
-                    <i class="paasng-icon paasng-icon-more" />
+                    <i class="paasng-icon paasng-icon-more" v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'), disabled: process.available_instance_count || process.desired_replicas }" />
                   </template>
                   <ul class="bk-dropdown-list" slot="dropdown-content">
-                      <li>
+                      <!-- <li>
                         <a
+                          text
                           href="javascript:void(0);"
                           class="blue"
                           @click="showProcessConfigDialog(process, index)"
                         > {{ $t('扩缩容') }} </a>
-                      </li>
+                      </li> -->
+                      <bk-button text size="small" @click="showProcessConfigDialog(process, index)"
+                      :disabled="!process.available_instance_count && !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
                   </ul>
                 </bk-dropdown-menu>
               </div>
@@ -489,7 +492,7 @@
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
-      width="560"
+      width="576"
       :title="$t('web进程扩缩容')"
       :header-position="'left'"
       :loading="processConfigDialog.isLoading"
@@ -516,7 +519,7 @@
         <bk-form
           ref="processConfigForm"
           :label-width="110"
-          style="width: 500px"
+          style="width: 520px"
           :model="processPlan"
         >
           <bk-form-item :label="$t('当前副本数：')">
@@ -548,6 +551,7 @@
             :rules="processPlanRules.targetReplicas"
             :property="'targetReplicas'"
             class="manual-form-cls"
+            error-display-type="normal"
           >
             <num-input
               type="number"
@@ -564,8 +568,9 @@
             class="auto-form" :label-width="0"
             form-type="inline"
             >
-            <bk-form-item property="minReplicas">
+            <bk-form-item property="minReplicas" error-display-type="normal">
                 <bk-input
+                  type="number"
                   :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.minReplicas"
@@ -575,8 +580,9 @@
                   </template>
                 </bk-input>
               </bk-form-item>
-              <bk-form-item property="maxReplicas" class="ml20">
+              <bk-form-item property="maxReplicas" error-display-type="normal" class="ml20">
                 <bk-input
+                  type="number"
                   :placeholder="'1 - ' + maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.maxReplicas"
@@ -928,6 +934,11 @@ export default {
               trigger: 'blur',
             },
             {
+              regex: /^[1-9][0-9]*$/,
+              message: i18n.t('请填写大于0的整数'),
+              trigger: 'blur',
+            },
+            {
               validator(val) {
                 const maxReplicas = Number(val)
                 return maxReplicas <= maxReplicasNum;
@@ -953,6 +964,11 @@ export default {
             {
               required: true,
               message: i18n.t('请填写最小副本数'),
+              trigger: 'blur',
+            },
+            {
+              regex: /^[1-9][0-9]*$/,
+              message: i18n.t('请填写大于0的整数'),
               trigger: 'blur',
             },
             {
@@ -2851,7 +2867,7 @@ export default {
 
     .radio-cls{
       /deep/ .bk-radio-button-text {
-            padding: 0 97px;
+            padding: 0 102px;
         }
     }
 
@@ -2936,7 +2952,11 @@ export default {
       padding-top: 20px;
       border-top: 1px solid #DCDEE5;
       .auto-form{
+        display: flex;
         // width: 280px;
+        /deep/ .bk-form-content .form-error-tip {
+          padding-left: 90px !important;
+        }
       }
 
     }
@@ -2949,7 +2969,7 @@ export default {
       }
     }
     .dia-input {
-        width: 240px
+        width: 250px
       }
     .dropdown-menu-cls {
       left: 10px;
@@ -2967,5 +2987,9 @@ export default {
       .w80{
         width: 80px;
       }
+    }
+    .bk-dropdown-list{
+      width: 70px;
+      text-align: center;
     }
 </style>

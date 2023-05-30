@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.dev_resources.servicehub.services import ServiceSpecificationHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.serializers import UserNameField
@@ -126,3 +127,25 @@ class SearchApplicationSLZ(serializers.Serializer):
 class MinimalAppSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用ID")
     name = serializers.CharField(help_text="应用名称")
+
+
+class AddonSpecsSLZ(serializers.Serializer):
+    specs = serializers.DictField(default=dict)
+
+    def validate_specs(self, specs):
+        if not specs:
+            return specs
+
+        svc = self.context['svc']
+        if not svc.public_specifications:
+            raise ValidationError(f'addon service {svc.name} does not support custom specs')
+
+        # filter_plans 无法识别出 invalid spec name, 因此保留下面的逻辑
+        public_spec_names = [spec.name for spec in svc.public_specifications]
+        if invalid_spec_name := set(specs.keys()) - set(public_spec_names):
+            raise ValidationError(f'spec name {invalid_spec_name} is invalid for addon service {svc.name}')
+
+        if not ServiceSpecificationHelper.from_service_public_specifications(svc).filter_plans(specs):
+            raise ValidationError(f'{specs} is invalid for addon service {svc.name}')
+
+        return specs

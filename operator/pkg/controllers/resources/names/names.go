@@ -34,7 +34,7 @@ func PreReleaseHook(bkapp *paasv1alpha2.BkApp) string {
 	if rev := bkapp.Status.Revision; rev != nil {
 		revision = rev.Revision
 	}
-	return fmt.Sprintf("pre-release-hook-%s-%d", bkapp.GetName(), revision)
+	return fmt.Sprintf("pre-rel-%s-%d", bkapp.GetName(), revision)
 }
 
 // Deployment 为应用的不同进程生成 Deployment 资源名称

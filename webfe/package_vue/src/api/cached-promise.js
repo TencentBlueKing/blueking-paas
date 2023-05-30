@@ -21,7 +21,7 @@
  */
 
 export default class CachedPromise {
-  constructor () {
+  constructor() {
     this.cache = {};
   }
 
@@ -32,7 +32,7 @@ export default class CachedPromise {
      *
      * @return {Array|Promise} 缓存集合或promise 缓存对象
      */
-  get (id) {
+  get(id) {
     if (typeof id === 'undefined') {
       return Object.keys(this.cache).map(requestId => this.cache[requestId]);
     }
@@ -47,7 +47,7 @@ export default class CachedPromise {
      *
      * @return {Promise} promise 对象
      */
-  set (id, promise) {
+  set(id, promise) {
     this.cache = Object.assign({}, this.cache, { [id]: promise });
   }
 
@@ -58,12 +58,12 @@ export default class CachedPromise {
      *
      * @return {Promise} 以成功的状态返回 Promise 对象
      */
-  delete (deleteIds) {
+  delete(deleteIds) {
     let requestIds = [];
     if (typeof deleteIds === 'undefined') {
       requestIds = Object.keys(this.cache);
     } else if (deleteIds instanceof Array) {
-      deleteIds.forEach(id => {
+      deleteIds.forEach((id) => {
         if (this.get(id)) {
           requestIds.push(id);
         }
@@ -72,7 +72,7 @@ export default class CachedPromise {
       requestIds.push(deleteIds);
     }
 
-    requestIds.forEach(requestId => {
+    requestIds.forEach((requestId) => {
       delete this.cache[requestId];
     });
 

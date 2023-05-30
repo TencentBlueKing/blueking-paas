@@ -47,7 +47,8 @@ class PreTaskPlugin {
     fs.writeFileSync(paasStaticPath, staticData);
 
     // 复制runtime
-    // const PAASRUNTIME = APP_VERSION === 'te' ? `../../webfe-settings/runtime.${APP_VERSION}.js` : `../../static/runtime/runtime.${APP_VERSION}.js`;
+    // const PAASRUNTIME = APP_VERSION === 'te' ?
+    // `../../webfe-settings/runtime.${APP_VERSION}.js` : `../../static/runtime/runtime.${APP_VERSION}.js`;
     // const runtimeData = fs.readFileSync(path.resolve(RUNTIME_DIR_PATH, PAASRUNTIME));
     // let envs = {};
     // // let fileContent = runtimeData.toString();

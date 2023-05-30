@@ -157,7 +157,7 @@
                         > {{ $t('扩缩容') }} </a>
                       </li> -->
                       <bk-button text size="small" @click="showProcessConfigDialog(process, index)"
-                      :disabled="!process.available_instance_count && !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
+                      :disabled="!process.available_instance_count || !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
                   </ul>
                 </bk-dropdown-menu>
               </div>

@@ -489,7 +489,7 @@
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
-      width="520"
+      width="560"
       :title="$t('web进程扩缩容')"
       :header-position="'left'"
       :loading="processConfigDialog.isLoading"
@@ -516,14 +516,29 @@
         <bk-form
           ref="processConfigForm"
           :label-width="110"
-          style="width: 390px"
+          style="width: 500px"
           :model="processPlan"
         >
           <bk-form-item :label="$t('当前副本数：')">
             <span>{{ curTargetReplicas }}</span>
           </bk-form-item>
           <bk-form-item v-if="autoscaling" :label="$t('触发条件：')">
-            <span>{{ $t('CPU 使用率') }} = 85%</span>
+            <div class="rate-container">
+              <span>{{ $t('CPU 使用率') }} = <bk-input class="w80" v-model="defaultUtilizationRate" disabled></bk-input> </span>
+              <i
+                    class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                    v-bk-tooltips="autoScalingTip"
+                  />
+            </div>
+          </bk-form-item>
+          <bk-form-item v-if="autoscaling" class="desc-form-item" :label-width="10">
+            <div class="desc-container">
+              <p>
+                {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
+              </p>
+              <p>{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
+              </p>
+            </div>
           </bk-form-item>
           <!-- 手动调节展示 -->
           <bk-form-item
@@ -532,6 +547,7 @@
             :required="true"
             :rules="processPlanRules.targetReplicas"
             :property="'targetReplicas'"
+            class="manual-form-cls"
           >
             <num-input
               type="number"
@@ -545,41 +561,28 @@
         <div class="auto-container" v-if="autoscaling">
           <bk-form :rules="scalingRules" :model="scalingConfig"
             ref="scalingConfigForm"
-            class="auto-form" :label-width="0">
-              <p class="mb10">
-                {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
-                <i
-                    class="paasng-icon paasng-exclamation-circle uv-tips"
-                    v-bk-tooltips="autoScalingTip"
-                  />
-              </p>
-              <bk-form-item property="maxReplicas">
+            class="auto-form" :label-width="0"
+            form-type="inline"
+            >
+            <bk-form-item property="minReplicas">
                 <bk-input
-                  type="number"
-                  :placeholder="'1 - ' + maxReplicasNum"
-                  class="dia-input"
-                  v-model="scalingConfig.maxReplicas"
-                >
-                  <template slot="prepend">
-                    <div class="group-text">{{$t('扩容上限')}}</div>
-                  </template>
-                </bk-input>
-              </bk-form-item>
-              <p class="mb10 mt10">{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
-                <i
-                    class="paasng-icon paasng-exclamation-circle uv-tips"
-                    v-bk-tooltips="autoScalingTip"
-                  />
-              </p>
-              <bk-form-item property="minReplicas">
-                <bk-input
-                  type="number"
                   :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
                   class="dia-input"
                   v-model="scalingConfig.minReplicas"
                 >
                   <template slot="prepend">
-                    <div class="group-text">{{$t('缩容下限')}}</div>
+                    <div class="group-text">{{$t('最小副本数')}}</div>
+                  </template>
+                </bk-input>
+              </bk-form-item>
+              <bk-form-item property="maxReplicas" class="ml20">
+                <bk-input
+                  :placeholder="'1 - ' + maxReplicasNum"
+                  class="dia-input"
+                  v-model="scalingConfig.maxReplicas"
+                >
+                  <template slot="prepend">
+                    <div class="group-text">{{$t('最大副本数')}}</div>
                   </template>
                 </bk-input>
               </bk-form-item>
@@ -886,7 +889,8 @@ export default {
       },
       autoScalDisableConfig: {},
       curTargetMaxReplicas: 0,
-      curTargetMinReplicas: 0
+      curTargetMinReplicas: 0,
+      defaultUtilizationRate: '85%'
     };
   },
   computed: {
@@ -920,7 +924,7 @@ export default {
           maxReplicas: [
             {
               required: true,
-              message: i18n.t('请填写扩容上限'),
+              message: i18n.t('请填写最大副本数'),
               trigger: 'blur',
             },
             {
@@ -929,7 +933,7 @@ export default {
                 return maxReplicas <= maxReplicasNum;
               },
               message() {
-                return `${i18n.t('扩容上限最大值')}${maxReplicasNum}`;
+                return `${i18n.t('最大副本数最大值')}${maxReplicasNum}`;
               },
               trigger: 'blur',
             },
@@ -940,7 +944,7 @@ export default {
                   return maxReplicas >= minReplicas;
                 },
               message() {
-                return `${i18n.t('扩容上限不可小于缩容下限')}`;
+                return `${i18n.t('最大副本数不可小于最小副本数')}`;
               },
               trigger: 'blur',
             },
@@ -948,7 +952,7 @@ export default {
           minReplicas: [
             {
               required: true,
-              message: i18n.t('请填写缩容下限'),
+              message: i18n.t('请填写最小副本数'),
               trigger: 'blur',
             },
             {
@@ -957,7 +961,7 @@ export default {
                 return maxReplicas <= maxReplicasNum;
               },
               message() {
-                return `${i18n.t('缩容下限最大值')}${maxReplicasNum}`;
+                return `${i18n.t('最小副本数最大值')}${maxReplicasNum}`;
               },
               trigger: 'blur',
             },
@@ -968,7 +972,7 @@ export default {
                   return minReplicas <= maxReplicas;
                 },
                 message() {
-                  return `${i18n.t('缩容下限不可大于扩容上限')}`;
+                  return `${i18n.t('最小副本数不可大于最大副本数')}`;
                 },
                 trigger: 'blur',
               },
@@ -2847,8 +2851,14 @@ export default {
 
     .radio-cls{
       /deep/ .bk-radio-button-text {
-            padding: 0 85px;
+            padding: 0 97px;
         }
+    }
+
+    .manual-form-cls{
+      /deep/ .bk-form-content .tooltips-icon {
+        right: 156px !important;
+      }
     }
 
     .stream-log {
@@ -2926,9 +2936,13 @@ export default {
       padding-top: 20px;
       border-top: 1px solid #DCDEE5;
       .auto-form{
-        width: 280px;
+        // width: 280px;
       }
 
+    }
+    .desc-container{
+      background: #F0F1F5;
+      padding: 10px 20px;
       .cpu-num{
         color: #FF9C01;
         font-weight: 700;
@@ -2946,5 +2960,12 @@ export default {
     }
     .bk-form-control .group-box .group-text {
         line-height: 32px;
+    }
+    .rate-container{
+      display: flex;
+      align-items: center;
+      .w80{
+        width: 80px;
+      }
     }
 </style>

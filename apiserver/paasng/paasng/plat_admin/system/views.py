@@ -185,7 +185,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         # 如果未分配增强服务实例, 则进行分配
         rel = next(mixed_service_mgr.list_unprovisioned_rels(engine_app, service=svc), None)
         if not rel:
-            return Response(data={'service_id': svc.uuid}, status=status.HTTP_204_NO_CONTENT)
+            return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
 
         rel.provision()
         return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)

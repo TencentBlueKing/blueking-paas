@@ -41,8 +41,9 @@ import (
 var appLog = logf.Log.WithName("bkapp-resource")
 
 var (
-	// AppNameRegex 应用名称格式
-	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,64}$")
+	// AppNameRegex 应用名称格式.
+	// 长度 39 的计算规则为 16 + 3 + 20, 其中 16 是 app code 的最大长度(db 表中最大是 20), 3 是 -m-, 20 是 module name 的最大长度
+	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,40}$")
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
 )

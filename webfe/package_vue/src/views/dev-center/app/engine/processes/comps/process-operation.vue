@@ -564,18 +564,7 @@
             class="auto-form" :label-width="0"
             form-type="inline"
             >
-              <bk-form-item property="maxReplicas">
-                <bk-input
-                  :placeholder="'1 - ' + maxReplicasNum"
-                  class="dia-input"
-                  v-model="scalingConfig.maxReplicas"
-                >
-                  <template slot="prepend">
-                    <div class="group-text">{{$t('最大副本数')}}</div>
-                  </template>
-                </bk-input>
-              </bk-form-item>
-              <bk-form-item property="minReplicas" class="ml20">
+            <bk-form-item property="minReplicas">
                 <bk-input
                   :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
                   class="dia-input"
@@ -583,6 +572,17 @@
                 >
                   <template slot="prepend">
                     <div class="group-text">{{$t('最小副本数')}}</div>
+                  </template>
+                </bk-input>
+              </bk-form-item>
+              <bk-form-item property="maxReplicas" class="ml20">
+                <bk-input
+                  :placeholder="'1 - ' + maxReplicasNum"
+                  class="dia-input"
+                  v-model="scalingConfig.maxReplicas"
+                >
+                  <template slot="prepend">
+                    <div class="group-text">{{$t('最大副本数')}}</div>
                   </template>
                 </bk-input>
               </bk-form-item>

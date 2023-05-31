@@ -922,6 +922,7 @@ export default {
     },
     '$route'() {
       this.init();
+      this.getAutoScalFlag()  //切换路由也需要获取featureflag
     },
     'processConfigDialog.visiable'(val) {
       if(val) {
@@ -1021,7 +1022,6 @@ export default {
       next();
     });
     this.isDateChange = false;
-    this.getAutoScalFlag()
   },
   beforedestroy() {
     this.closeServerPush();
@@ -2244,13 +2244,11 @@ export default {
                   padding-left: 56px;
               }
             .process-command {
-                display: inline-block;
-                padding: 16px 24px 16px 0;
                 width: 490px;
-                vertical-align: middle;
-                word-break: break-all;
                 cursor: pointer;
                 min-height: 75px;
+                display: flex;
+                align-items: center;
             }
 
             .process-status {
@@ -2976,6 +2974,7 @@ export default {
       i {
         font-size: 24px;
         color: #3A84FF;
+        cursor: pointer;
       }
     }
     .bk-form-control .group-box .group-text {

@@ -63,7 +63,7 @@ class ClusterFeatureFlagsSLZ(serializers.Serializer):
     ENABLE_BK_MONITOR = serializers.BooleanField(help_text="支持蓝鲸监控", default=False)
     ENABLE_BK_LOG_COLLECTOR = serializers.BooleanField(help_text="使用蓝鲸日志平台方案采集日志", default=False)
     ENABLE_AUTOSCALING = serializers.BooleanField(help_text="支持自动扩容", default=False)
-    ENABLE_EGRESS_OPERATOR = serializers.BooleanField(help_text="支持 BCS Egress", default=False)
+    ENABLE_BCS_EGRESS = serializers.BooleanField(help_text="支持 BCS Egress", default=False)
 
 
 class ClusterSLZ(serializers.Serializer):

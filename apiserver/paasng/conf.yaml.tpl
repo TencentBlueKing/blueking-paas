@@ -814,7 +814,7 @@
 ## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
 # VALID_CUSTOM_DOMAIN_SUFFIXES: []
 
-## ---------------------------------------- Ingress 配置 ----------------------------------------
+## ---------------------------------------- Egress 配置 ----------------------------------------
 
 ## BCS Egress Gate 镜像地址
 # BCS_EGRESS_GATE_IMAGE: 'hub.bktencent.com/bcs/gate:1.0.0'

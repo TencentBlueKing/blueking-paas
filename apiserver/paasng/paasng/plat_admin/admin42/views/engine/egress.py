@@ -73,21 +73,21 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         wl_app = self.get_wl_app_via_path()
         cluster = get_cluster_by_app(wl_app)
 
-        if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_EGRESS_OPERATOR):
+        if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BCS_EGRESS):
             raise error_codes.FEATURE_FLAG_DISABLED.f(_('当前环境所部署的集群不支持 BCS Egress'))
 
         # 2. 检查是否有现存的配置，如果有则对比并更新，否则全部新建
-        egress_spec = EgressSpec.objects.filter(wl_app=wl_app).first()
-        if egress_spec:
-            # 更新 egress_spec
-            egress_spec.replicas = slz.data['replicas']
-            egress_spec.cpu_limit = slz.data['cpu_limit']
-            egress_spec.memory_limit = slz.data['memory_limit']
-            egress_spec.save()
+        spec = EgressSpec.objects.filter(wl_app=wl_app).first()
+        if spec:
+            # 更新 EgressSpec
+            spec.replicas = slz.data['replicas']
+            spec.cpu_limit = slz.data['cpu_limit']
+            spec.memory_limit = slz.data['memory_limit']
+            spec.save()
             # 现存的 EgressRule 都删光光，重新创建
-            EgressRule.objects.filter(spec=egress_spec).delete()
+            EgressRule.objects.filter(spec=spec).delete()
         else:
-            egress_spec = EgressSpec.objects.create(
+            spec = EgressSpec.objects.create(
                 wl_app=wl_app,
                 replicas=slz.data['replicas'],
                 cpu_limit=slz.data['cpu_limit'],
@@ -97,7 +97,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         # 批量创建规则，src/dst 的 host/port 保持一致
         rules = [
             EgressRule(
-                spec=egress_spec,
+                spec=spec,
                 dst_port=r['port'],
                 host=r['host'],
                 protocol=r['protocol'],
@@ -109,7 +109,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
         EgressRule.objects.bulk_create(rules)
 
         # 3. 下发 Egress 到 k8s 集群，支持更新或者创建
-        manifest = egress_spec.build_manifest()
+        manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
             Egress(client, api_version=manifest['apiVersion']).create_or_update(
                 name=manifest['metadata']['name'],
@@ -123,29 +123,29 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet, ApplicationCodeInPathM
 
     def destroy(self, request, code, module_name, environment):
         wl_app = self.get_wl_app_via_path()
-        egress_spec = EgressSpec.objects.filter(wl_app=wl_app).first()
-        if not egress_spec:
-            return Response(status.HTTP_200_OK)
+        spec = EgressSpec.objects.filter(wl_app=wl_app).first()
+        if not spec:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         # 从集群中删除 egress 资源
-        manifest = egress_spec.build_manifest()
+        manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
             Egress(client, api_version=manifest['apiVersion']).delete(
                 name=manifest['metadata']['name'],
                 namespace=manifest['metadata']['namespace'],
             )
 
-        # 删除 egress_spec
-        egress_spec.delete()
-        return Response(status.HTTP_200_OK)
+        # 删除 EgressSpec
+        spec.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_egress_ips(self, request, code, module_name, environment):
         wl_app = self.get_wl_app_via_path()
-        egress_spec = EgressSpec.objects.filter(wl_app=wl_app).first()
-        if not egress_spec:
+        spec = EgressSpec.objects.filter(wl_app=wl_app).first()
+        if not spec:
             raise error_codes.EGRESS_SPEC_NOT_FOUND
 
-        manifest = egress_spec.build_manifest()
+        manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
             pods = KPod(client).ops_label.list(
                 namespace=manifest['metadata']['namespace'],

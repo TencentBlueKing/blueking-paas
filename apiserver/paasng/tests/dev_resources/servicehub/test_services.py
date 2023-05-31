@@ -286,7 +286,7 @@ class TestServiceSpecificationHelper:
         mock_get_plans.return_value = []
         bk_service_r1.specifications = service_ssd_list
         helper = ServiceSpecificationHelper.from_service(bk_service_r1)
-        assert helper._validate_specs(data) == expected
+        assert helper._sanitize_specs(data) == expected
 
     @pytest.mark.parametrize(
         "data, expected",

@@ -5,7 +5,7 @@
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- *     http://opensource.org/licenses/MIT
+ *	http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -16,14 +16,15 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-module.exports = {
-  root: true,
-  extends: ['@blueking/eslint-config-bk/vue'], // vue2 这里用 @blueking/eslint-config-bk/vue
-  globals: {
-    $: true,
-    BACKEND_URL: true,
-  },
-  rule: {
-    // 'linebreak-style': ['error', 'windows'], // 回车符使用windows风格（CRLF），默认是LF:使用mac风格
-  },
-};
+package v1alpha2
+
+import "strings"
+
+// 替换非法的字符 _
+const underscoreReplacer = "0us0"
+
+// DNSSafeName 通过替换 _ 等特殊字符串，将其变为可安全用于 DNS 域名的值，该算法与 bkpaas
+// 中其他逻辑保持一致。
+func DNSSafeName(name string) string {
+	return strings.ReplaceAll(name, "_", underscoreReplacer)
+}

@@ -28,14 +28,6 @@ import (
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-var _ = DescribeTable("Get DNS-safe name",
-	func(s string, want string) {
-		Expect(DNSSafeName(s)).To(Equal(want))
-	},
-	Entry("Normal", "bkapp-foo", "bkapp-foo"),
-	Entry("Contains _", "bkapp_foo", "bkapp0us0foo"),
-)
-
 var _ = Describe("Get resource names", func() {
 	var bkapp *paasv1alpha2.BkApp
 
@@ -51,13 +43,13 @@ var _ = Describe("Get resource names", func() {
 
 	Context("pre-release hook", func() {
 		It("No revision", func() {
-			Expect(PreReleaseHook(bkapp)).To(Equal("pre-release-hook-1"))
+			Expect(PreReleaseHook(bkapp)).To(Equal("pre-rel-foo-app-1"))
 		})
 
 		It("Has revision", func() {
 			revision := GinkgoRandomSeed()
 			bkapp.Status.SetRevision(revision, "")
-			Expect(PreReleaseHook(bkapp)).To(Equal(fmt.Sprintf("pre-release-hook-%d", revision)))
+			Expect(PreReleaseHook(bkapp)).To(Equal(fmt.Sprintf("pre-rel-foo-app-%d", revision)))
 		})
 	})
 

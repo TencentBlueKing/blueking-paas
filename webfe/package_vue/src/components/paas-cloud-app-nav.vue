@@ -102,6 +102,8 @@ export default {
           'appCloudAPI',
           // 镜像凭证
           'imageCredential',
+          // 数据统计
+          'appAnalysis',
           // 应用推广
           'appMarketing',
           // 基本设置
@@ -136,6 +138,8 @@ export default {
           'appCloudAPI',
           // 镜像凭证
           'imageCredential',
+          // 数据统计
+          'appAnalysis',
           // 应用推广
           'appMarketing',
           // 基本设置
@@ -144,32 +148,10 @@ export default {
           'docuManagement',
         ],
         operator: [
-          // 概览
-          'appSummary',
-          // 应用编排
-          'cloudAppDeploy',
-          // 应用编排 - 进程配置
-          'cloudAppDeployForProcess',
-          // 应用编排 - 钩子命令
-          'cloudAppDeployForHook',
-          // 应用编排 - 环境变量
-          'cloudAppDeployForEnv',
-          // 应用编排 - 依赖资源
-          'cloudAppDeployForResource',
-          // 应用编排 - YAML
-          'cloudAppDeployForYaml',
-          // 部署状态
-          'appStatus',
-          // 日志查询
-          'appLog',
-          // 访问入口
-          'appAccessPortal',
-          // 增强服务
-          'appServices',
-          // 云 API 管理
-          'appCloudAPI',
-          // 镜像凭证
-          'imageCredential',
+          // 权限管理
+          'appPermissions',
+          // 数据统计
+          'appAnalysis',
           // 应用推广
           'appMarketing',
           // 基本设置

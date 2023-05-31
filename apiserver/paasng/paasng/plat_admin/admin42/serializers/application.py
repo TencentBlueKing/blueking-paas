@@ -22,6 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.publish.market.models import MarketConfig
 from paasng.publish.market.utils import MarketAvailableAddressHelper
@@ -39,6 +40,18 @@ class ApplicationSLZ(serializers.ModelSerializer):
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
     updated_humanized = HumanizeDateTimeField(source="updated")
+
+    app_type = serializers.SerializerMethodField(read_only=True)
+    resource_quotas = serializers.SerializerMethodField(read_only=True)
+
+    def get_app_type(self, instance: Application) -> str:
+        return ApplicationType.get_choice_label(instance.type)
+
+    def get_resource_quotas(self, instance: Application) -> dict:
+        default_quotas = {'memory': '--', 'cpu': '--'}
+        if app_resource_quotas := self.context.get('app_resource_quotas'):
+            return app_resource_quotas.get(instance.code)
+        return default_quotas
 
     class Meta:
         model = Application

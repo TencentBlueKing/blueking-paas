@@ -37,7 +37,7 @@ from paasng.dev_resources.sourcectl.utils import (
 )
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.configurations.building import SlugbuilderInfo
+from paasng.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
 from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import RuntimeImageInfo, generate_image_repository
 from paasng.engine.constants import BuildStatus, JobStatus, RuntimeType
@@ -470,8 +470,8 @@ def start_docker_build(
     app_image = RuntimeImageInfo(env.get_engine_app(), version_info=version).image
     # 注入构建环境所需环境变量
     extra_envs = {
-        "DOCKERFILE_PATH": "",
-        "BUILD_ARG": "",
+        "DOCKERFILE_PATH": get_dockerfile_path(env.module),
+        "BUILD_ARG": get_build_args(env.module),
     }
 
     # Create the Build object and start a background build task

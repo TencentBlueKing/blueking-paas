@@ -1022,6 +1022,7 @@ export default {
       next();
     });
     this.isDateChange = false;
+    this.getAutoScalFlag()
   },
   beforedestroy() {
     this.closeServerPush();

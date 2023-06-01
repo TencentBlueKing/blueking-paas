@@ -60,7 +60,7 @@ from paasng.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, NoP
 from paasng.engine.deploy.archive import OfflineManager
 from paasng.engine.deploy.engine_svc import get_all_logs
 from paasng.engine.deploy.interruptions import interrupt_deployment
-from paasng.engine.deploy.release.legacy import release_by_py
+from paasng.engine.deploy.release.legacy import release_by_engine
 from paasng.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.engine.exceptions import DeployInterruptionFailed, OfflineOperationExistError
 from paasng.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar, add_prefix_to_key
@@ -218,7 +218,7 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             try:
                 build_id = get_latest_build_id(application_env)
                 if build_id:
-                    release_by_py(application_env, str(build_id))
+                    release_by_engine(application_env, str(build_id))
             except Exception:
                 raise error_codes.CANNOT_DEPLOY_APP.f(_(u"服务异常"))
 

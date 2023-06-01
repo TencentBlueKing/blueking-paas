@@ -63,7 +63,7 @@ class ApplicationReleaseMgr(DeployStep):
             )
 
         with self.procedure(_('部署应用')):
-            release_id = release_by_py(
+            release_id = release_by_engine(
                 self.module_environment, str(self.deployment.build_id), deployment=self.deployment
             )
             self.sync_entrance_configs()
@@ -141,7 +141,7 @@ class ReleaseResultHandler(CallbackHandler):
         return details
 
 
-def release_by_py(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
+def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
     """Create a new release for the given environment. If the optional deployment
     object is given, will start an async waiting procedure which waits for the release
     to be finished.

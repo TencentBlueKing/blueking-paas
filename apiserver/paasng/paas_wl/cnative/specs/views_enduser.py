@@ -155,7 +155,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             )
         except Exception as e:
             logger.exception(
-                "failed to deploy bkapp, app: %s, code: %s, env: %s, reason: %s",
+                "failed to deploy bkapp, app name: %s, code: %s, env: %s, reason: %s",
                 application.name,
                 application.code,
                 environment,
@@ -209,7 +209,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             )
 
         logger.exception(
-            "failed to deploy bkapp, app: %s, code: %s, env: %s, reason: %s",
+            "failed to deploy bkapp, app name: %s, code: %s, env: %s, reason: %s",
             application.name,
             application.code,
             environment,

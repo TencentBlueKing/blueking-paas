@@ -57,7 +57,7 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
         """绑定应用在该部署环境下的出口网关信息"""
         # 由于该 Egress 实现导致 Pod 仅能调度在指定节点，对于集群运维极其不利，因此决定禁用增量的 RegionClusterState 配置
         # 如果还是有开启的需求，应该由平台管理员，使用 python manage.py create_rc_state_binding 命令添加
-        raise error_codes.EDITION_NOT_SUPPORT.f(_("新建出口 IP 绑定功能已禁用，如有需要请联系蓝鲸助手"))
+        raise error_codes.EDITION_NOT_SUPPORT.f(_("新建出口 IP 绑定功能已禁用，如有需要请联系管理员"))
 
     def destroy(self, request, code, module_name, environment):
         """清除已获取的出口网关信息"""

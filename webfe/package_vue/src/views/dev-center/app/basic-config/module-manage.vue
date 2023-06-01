@@ -462,7 +462,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('如有需要请联系蓝鲸助手获取') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -514,7 +514,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('如有需要请联系蓝鲸助手获取') }} </p>
+                    <p> {{ $t('如有需要请联系管理员获取') }} </p>
                   </div>
                 </template>
               </div>

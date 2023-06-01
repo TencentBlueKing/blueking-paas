@@ -39,7 +39,7 @@ class ClusterType(str, StructuredEnum):
 class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     """集群特性标志"""
 
-    ENABLE_EGRESS_IP = FeatureFlagField(label=_('支持提供出口 IP'), default=True)
+    ENABLE_EGRESS_IP = FeatureFlagField(label=_('支持提供出口 IP'), default=False)
     ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField(label=_('允许挂载日志到主机'), default=True)
     # Indicates if the paths defined on an Ingress use regular expressions
     # if not use regex, the cluster can only deploy ingress-nginx-controller <= 0.21.0
@@ -63,9 +63,8 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:
         """get default flags by cluster_type
 
-        for virtual cluster, ENABLE_EGRESS_IP and ENABLE_MOUNT_LOG_TO_HOST is default to False"""
+        for virtual cluster, ENABLE_MOUNT_LOG_TO_HOST is default to False"""
         default_flags = cls.get_default_flags()
         if cluster_type == ClusterType.VIRTUAL:
-            default_flags[cls.ENABLE_EGRESS_IP] = False
             default_flags[cls.ENABLE_MOUNT_LOG_TO_HOST] = False
         return default_flags

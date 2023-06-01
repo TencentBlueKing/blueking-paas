@@ -183,6 +183,15 @@ CUSTOM_DOMAIN_CONFIG = settings.get(
     },
 )
 
+# ---------------
+# egress 配置
+# ---------------
+# BCS Egress Gate 镜像地址
+BCS_EGRESS_GATE_IMAGE = settings.get('BCS_EGRESS_GATE_IMAGE', '')
+# BCS Egress PodIP 镜像地址
+BCS_EGRESS_POD_IP_IMAGE = settings.get('BCS_EGRESS_POD_IP_IMAGE', '')
+# 应用服务 Pod IP 可分配网段
+BCS_EGRESS_POD_CIDRS = settings.get('BCS_EGRESS_POD_CIDRS', [])
 
 # -----------
 # 进程相关配置

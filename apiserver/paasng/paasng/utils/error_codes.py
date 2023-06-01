@@ -146,6 +146,9 @@ class ErrorCodes:
     UPDATE_APP_MEMBERS_ERROR = ErrorCode(_('修改应用成员失败'))
     DELETE_APP_MEMBERS_ERROR = ErrorCode(_('删除应用成员失败'))
 
+    # BCS 组件相关
+    EGRESS_SPEC_NOT_FOUND = ErrorCode(_('指定环境的 Egress 配置不存在'))
+
     # 平台升级提醒
     ACTION_NOT_AVAILABLE = ErrorCode(_('因该功能正在升级改造，操作暂不可用。'), status_code=503)
 

@@ -39,3 +39,9 @@ class GPA(BaseKresource):
     """CRD: General pod autoscaler, powerful than hpa, provided by bcs"""
 
     kind = 'GeneralPodAutoscaler'
+
+
+class Egress(BaseKresource):
+    """CRD: Egress, support fixed egress ip, provided by bcs"""
+
+    kind = 'Egress'

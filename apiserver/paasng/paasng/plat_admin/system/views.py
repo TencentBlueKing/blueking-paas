@@ -217,7 +217,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service_id):
                 plan = rel.get_plan()
                 specs = plan.specifications
-                break
+                break  # 现阶段所有环境的服务规格一致，因此只需要拿一个
 
         spec_data: Dict[str, str] = {}
         for definition in service.specifications:

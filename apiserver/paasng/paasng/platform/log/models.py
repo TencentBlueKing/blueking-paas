@@ -140,7 +140,7 @@ class ProcessLogQueryConfig(UuidAuditedModel):
     """进程日志查询配置"""
 
     env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, db_constraint=False)
-    # TODO: 云原生应用确定了需要统一镜像, process_type 字段可上次
+    # TODO: 云原生应用确定了需要统一镜像, process_type 字段可删除
     process_type = models.CharField(_("进程类型(名称)"), max_length=16, blank=True, null=True)
 
     stdout = models.ForeignKey(
@@ -180,7 +180,7 @@ class CustomCollectorConfig(UuidAuditedModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False, db_index=True)
 
     name_en = models.CharField(
-        _("自定义采集项名词"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, unique=True
+        _("自定义采集项名称"), help_text="5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*", max_length=50, unique=True
     )
     collector_config_id = models.BigIntegerField(_("采集配置ID"), help_text="采集配置ID", unique=True)
     index_set_id = models.BigIntegerField(_("索引集ID"), help_text="查询时使用", null=True)

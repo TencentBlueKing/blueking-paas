@@ -112,6 +112,18 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         )
     elif collector_config.etl_type == ETLType.JSON:
         assert collector_config.time_field
+
+        def make_string_field(index: int, field_name: str) -> ETLField:
+            return ETLField(
+                field_index=index,
+                field_name=field_name,
+                field_type=FieldType.STRING,
+                is_time=False,
+                is_dimension=False,
+                is_analyzed=True,
+                option={},
+            )
+
         etl_config = ETLConfig(
             type=collector_config.etl_type,
             fields=[
@@ -126,7 +138,15 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
                         "time_format": collector_config.time_format,
                     },
                 ),
-                # TODO: bklog 目前不支持将日志内容本身存储为 json
+                # NOTE: bklog 目前不支持将日志内容本身存储为 json, 所以只能逐个字段定义
+                # TODO: 日志平台支持存储将日志内容本身存储为 json 后, 修改这里的字段定义
+                make_string_field(2, "message"),
+                make_string_field(3, "levelname"),
+                make_string_field(4, "pathname"),
+                make_string_field(5, "funcName"),
+                make_string_field(6, "otelSpanID"),
+                make_string_field(7, "otelServiceName"),
+                make_string_field(8, "otelTraceID"),
             ],
         )
     else:

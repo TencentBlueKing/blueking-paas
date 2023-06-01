@@ -22,7 +22,8 @@ import cattr
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
-from paasng.accessories.log_search.backend.apigw import Client
+from paasng.accessories.log_search.backend.apigw import Client as APIGWClient
+from paasng.accessories.log_search.backend.esb import get_client_by_username
 from paasng.accessories.log_search.definitions import CustomCollectorConfig
 from paasng.accessories.log_search.exceptions import (
     BkLogApiError,
@@ -142,7 +143,7 @@ class BkLogClient:
 
 def make_bk_log_client() -> BkLogClient:
     if settings.ENABLE_BK_LOG_APIGW:
-        apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
+        apigw_client = APIGWClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
         apigw_client.update_bkapi_authorization(
             # 日志平台必须要 bk_username 这个参数
             bk_app_code=settings.BK_APP_CODE,
@@ -150,4 +151,7 @@ def make_bk_log_client() -> BkLogClient:
             bk_username="admin",
         )
         return BkLogClient(apigw_client.api)
-    raise NotImplementedError
+
+    # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
+    esb_client = get_client_by_username("admin")
+    return BkLogClient(esb_client.api)

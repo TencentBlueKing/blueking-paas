@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
                 ('uuid', models.UUIDField(auto_created=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True, verbose_name='UUID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
-                ('name_en', models.CharField(help_text='5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*', max_length=50, unique=True, verbose_name='自定义采集项名词')),
+                ('name_en', models.CharField(help_text='5-50个字符，仅包含字母数字下划线, 查询索引是 name_en-*', max_length=50, unique=True, verbose_name='自定义采集项名称')),
                 ('collector_config_id', models.BigIntegerField(help_text='采集配置ID', unique=True, verbose_name='采集配置ID')),
                 ('index_set_id', models.BigIntegerField(help_text='查询时使用', verbose_name='索引集ID', null=True)),
                 ('bk_data_id', models.BigIntegerField(verbose_name='数据管道ID')),

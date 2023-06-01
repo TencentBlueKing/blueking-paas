@@ -817,7 +817,7 @@ export default {
   已获取: ' Acquired',
   复制: 'Copy',
   '暂未获取出流量 IP 列表': 'The traffic IP list has not been retrieved yet',
-  点击开关获取列表: 'Click the switch to get the list',
+  如有需要请联系蓝鲸助手获取: 'Contact BlueKing assistant to obtain',
   '注意：重复获取列表可能会获得不一样的结果，请及时刷新外部服务白名单列表': 'Note: Repeated access to the list may result in different results, please refresh the external service whitelist list in time',
   删除模块: 'Remove module',
   '模块被删除后，其所申请的所有增强服务资源也会被回收。请在删除前与应用其他成员沟通。': 'After the module is deleted, all Add-ons resources it applies for will also be recycled. Please communicate with other members of the app before deleting.',

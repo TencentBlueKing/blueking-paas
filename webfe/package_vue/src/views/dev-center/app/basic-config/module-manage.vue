@@ -462,7 +462,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('点击开关获取列表') }} </p>
+                    <p> {{ $t('如有需要请联系蓝鲸助手获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -514,7 +514,7 @@
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
-                    <p> {{ $t('点击开关获取列表') }} </p>
+                    <p> {{ $t('如有需要请联系蓝鲸助手获取') }} </p>
                   </div>
                 </template>
               </div>
@@ -949,10 +949,12 @@
                 return !this.displaySwitchDisabled;
             },
             curStagDisabled () {
-                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+                // 测试环境，没有启用 egress 的，也不再允许用户自己启用
+                return this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.stag.node_ip_addresses.length || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
             },
             curProdDisabled () {
-                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+                // 证书环境，没有启用 egress 的，也不再允许用户自己启用
+                return this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing || !this.gatewayInfos.prod.node_ip_addresses.length || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
             },
             entranceConfig () {
                 return this.$store.state.region.entrance_config;

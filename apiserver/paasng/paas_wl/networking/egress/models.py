@@ -141,7 +141,7 @@ def format_nodes_data(nodes: List[dict]) -> List[dict]:
 
 class EgressSpec(AuditedModel):
 
-    wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE)
+    wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE, db_constraint=False)
     replicas = models.IntegerField(default=1)
     cpu_limit = models.CharField(max_length=16)
     memory_limit = models.CharField(max_length=16)

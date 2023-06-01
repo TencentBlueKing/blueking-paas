@@ -35,15 +35,9 @@ type AddonInstance struct {
 	Credentials map[string]intstr.IntOrString `json:"credentials"`
 }
 
-// AddonSpecsData ...
-type AddonSpecsData struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
 // AddonSpecsResult ...
 type AddonSpecsResult struct {
-	Data []AddonSpecsData `json:"results,omitempty"`
+	Data map[string]string `json:"results,omitempty"`
 }
 
 // AddonSpecs define specs of the add-on service
@@ -99,7 +93,7 @@ func (c *Client) QueryAddonInstance(
 func (c *Client) QueryAddonSpecs(ctx context.Context, appCode, moduleName, svcID string) (*AddonSpecsResult, error) {
 	result := &AddonSpecsResult{}
 	path := fmt.Sprintf(
-		"/system/bkapps/applications/%s/modules/%s/services/%s/specs",
+		"/system/bkapps/applications/%s/modules/%s/services/%s/specs/",
 		appCode,
 		moduleName,
 		svcID,

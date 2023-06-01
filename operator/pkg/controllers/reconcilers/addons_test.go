@@ -82,7 +82,7 @@ var _ = Describe("Test AddonReconciler", func() {
 						return &http.Response{
 							StatusCode: 200,
 							Body: ioutil.NopCloser(
-								bytes.NewBufferString(`{"results": [{"name": "version", "value": "5.0.0"}]}`),
+								bytes.NewBufferString(`{"results": {"version": "5.0.0"}}`),
 							),
 							Header: make(http.Header),
 						}

@@ -198,6 +198,32 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         service_info = ServicesInfo.get_detail(engine_app)['services_info']
         return Response(data=service_info)
 
+    @swagger_auto_schema(tags=["SYSTEMAPI"])
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    def retrieve_specs(self, request, code, module_name, service_id):
+        """获取应用已绑定的服务规格.
+        接口实现逻辑参考 paasng.dev_resources.servicehub.views.ModuleServicesViewSet.retrieve_specs
+        """
+        application = self.get_application()
+        module = self.get_module_via_path()
+        service = mixed_service_mgr.get_or_404(service_id, region=application.region)
+
+        # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
+        if not mixed_service_mgr.module_is_bound_with(service, module):
+            raise Http404
+
+        specs = {}
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service_id):
+                plan = rel.get_plan()
+                specs = plan.specifications
+                break  # 现阶段所有环境的服务规格一致，因此只需要拿一个
+
+        spec_data: Dict[str, Optional[str]] = {
+            definition.name: specs.get(definition.name) for definition in service.specifications
+        }
+        return Response({'results': spec_data})
+
     @staticmethod
     def _get_pub_recommended_specs(svc: ServiceObj) -> Optional[dict]:
         """获取增强服务的推荐 specs"""

@@ -61,4 +61,13 @@ urlpatterns = [
         SysAddonsAPIViewSet.as_view({"get": "list_services"}),
         name="sys.api.applications.list_addons",
     ),
+    re_path(
+        make_app_pattern(
+            suffix="/services/(?P<service_id>[0-9a-f-]{32,36})/specs/",
+            include_envs=False,
+            prefix="sys/api/bkapps/applications/",
+        ),
+        SysAddonsAPIViewSet.as_view({"get": "retrieve_specs"}),
+        name="sys.api.applications.retrieve_specs",
+    ),
 ]

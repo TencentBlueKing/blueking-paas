@@ -54,8 +54,14 @@ type AddonReconciler struct {
 
 // Reconcile ...
 func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
-	// 未启用增强服务, 直接返回
+	// 未启用增强服务, 清空 addon 的历史 status 并返回
 	if len(bkapp.Spec.Addons) == 0 {
+		if bkapp.Status.AddonStatuses != nil {
+			bkapp.Status.AddonStatuses = nil
+			if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
+				return r.Result.withError(updateErr)
+			}
+		}
 		return r.Result
 	}
 
@@ -155,8 +161,8 @@ func (r *AddonReconciler) provisionAddon(
 		return addonStatus, errors.Wrapf(err, "QueryAddonSpecs failed, detail")
 	}
 
-	for _, spec := range specResult.Data {
-		addonStatus.Specs = append(addonStatus.Specs, paasv1alpha2.AddonSpec{Name: spec.Name, Value: spec.Value})
+	for name, value := range specResult.Data {
+		addonStatus.Specs = append(addonStatus.Specs, paasv1alpha2.AddonSpec{Name: name, Value: value})
 	}
 
 	return addonStatus, nil

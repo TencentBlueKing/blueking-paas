@@ -710,39 +710,6 @@
 ## 默认值：/data/kubelet/conf/kubeconfig.yaml
 # KUBE_CONFIG_FILE: /data/kubelet/conf/kubeconfig.yaml
 
-
-## ---------------------------------------- Ingress 配置 ----------------------------------------
-
-## 不指定则使用默认，可以指定为 bk-ingress-nginx
-# APP_INGRESS_CLASS: ''
-
-## ingress extensions/v1beta1 资源路径是否保留末尾斜杠，默认值为 true
-# APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH: true
-
-## 是否开启“现代” Ingress 资源的支持，将产生以下影响
-## - 支持使用 networking.k8s.io/v1 版本的 Ingress 资源
-## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须开启该选项。因为这些集群只能使用 networking.k8s.io/v1 版本的 Ingress 资源
-## - （**重要**）对于 K8S >= 1.22 版本的集群, 必须使用 >1.0.0 版本的 ingress-nginx
-##
-## 假如关闭此配置，可能有以下风险：
-##  - 只能处理 extensions/v1beta1 和 networking.k8s.io/v1beta1 版本的 Ingress 资源, 如果未来的 Kubernetes 集群版本删除了对该
-##    apiVersion 的支持，服务会报错
-##  - 只能使用 <1.0 版本的 ingress-nginx
-# ENABLE_MODERN_INGRESS_SUPPORT: true
-
-## 应用独立域名相关配置
-# CUSTOM_DOMAIN_CONFIG:
-  ## 是否允许使用独立域名
-  # enabled: true
-  ## 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
-  # valid_domain_suffixes: []
-  ## 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
-  # allow_user_modifications: true
-
-## 独立域名简化版配置，表示允许用户配置的独立域名后缀列表，为空表示允许任意域名
-## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
-# VALID_CUSTOM_DOMAIN_SUFFIXES: []
-
 ## ------------------------------------ 原 workloads 配置，合并到 apiserver 中 ------------------------------------
 
 
@@ -847,6 +814,18 @@
 ## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
 # VALID_CUSTOM_DOMAIN_SUFFIXES: []
 
+## ---------------------------------------- Egress 配置 ----------------------------------------
+
+## BCS Egress Gate 镜像地址
+# BCS_EGRESS_GATE_IMAGE: 'hub.bktencent.com/bcs/gate:1.0.0'
+
+## BCS Egress PodIP 镜像地址
+# BCS_EGRESS_POD_IP_IMAGE: 'hub.bktencent.com/bcs/podip:1.0.0'
+
+## 应用服务 Pod IP 可分配网段
+# BCS_EGRESS_POD_CIDRS:
+#  - 127.0.0.1/16
+#  - 192.168.0.0/16
 
 ## ---------------------------------------- 监控数据配置 ----------------------------------------
 

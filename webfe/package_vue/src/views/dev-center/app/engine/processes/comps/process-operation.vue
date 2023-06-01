@@ -553,12 +553,12 @@
             class="manual-form-cls"
             error-display-type="normal"
           >
-            <num-input
+            <bk-input
               type="number"
               :placeholder="$t('请输入')"
               class="dia-input"
               :min="0"
-              :value.sync="processPlan.targetReplicas"
+              v-model="processPlan.targetReplicas"
             />
           </bk-form-item>
         </bk-form>

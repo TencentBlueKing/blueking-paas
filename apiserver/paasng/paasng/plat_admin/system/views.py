@@ -219,12 +219,9 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
                 specs = plan.specifications
                 break  # 现阶段所有环境的服务规格一致，因此只需要拿一个
 
-        spec_data: Dict[str, str] = {}
-        for definition in service.specifications:
-            result = definition.as_dict()
-            result['value'] = specs.get(definition.name)
-            spec_data[result['name']] = result['value']
-
+        spec_data: Dict[str, Optional[str]] = {
+            definition.name: specs.get(definition.name) for definition in service.specifications
+        }
         return Response({'results': spec_data})
 
     @staticmethod

@@ -56,15 +56,13 @@ type AddonReconciler struct {
 func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) Result {
 	// 未启用增强服务, 清空 addon 的历史 status 并返回
 	if len(bkapp.Spec.Addons) == 0 {
-		// 因为在 NewRevisionReconciler 中默认初始化了 type 为 AddOnsProvisioned 的 condition, 这里需要删除
-		apimeta.RemoveStatusCondition(&bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)
-		bkapp.Status.AddonStatuses = nil
-
-		if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
-			return r.Result.withError(updateErr)
+		if bkapp.Status.AddonStatuses != nil {
+			bkapp.Status.AddonStatuses = nil
+			if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
+				return r.Result.withError(updateErr)
+			}
 		}
 		return r.Result
-
 	}
 
 	addonStatuses, err := r.doReconcile(ctx, bkapp)

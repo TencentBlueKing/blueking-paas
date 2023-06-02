@@ -28,7 +28,7 @@ import pytest
 from blue_krill.async_utils.poll_task import PollingMetadata, PollingStatus
 from django.dispatch import receiver
 
-from paasng.engine.processes.wait import (
+from paasng.engine.deploy.bg_wait.wait_deployment import (
     AbortedDetails,
     AbortedDetailsPolicy,
     DynamicReadyTimeoutPolicy,

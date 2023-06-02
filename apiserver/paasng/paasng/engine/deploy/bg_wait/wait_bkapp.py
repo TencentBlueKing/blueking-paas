@@ -16,7 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-"""Async tasks for specs module"""
+"""Wait for BkApp's reconciliation cycle to be stable"""
 import datetime
 import logging
 from typing import Optional

@@ -20,15 +20,17 @@ import logging
 from copy import deepcopy
 from typing import Dict, Optional
 
+from paas_wl.cnative.specs.models import AppModelResource, update_app_resource
 from paasng.dev_resources.sourcectl.models import VersionInfo
 from paasng.dev_resources.sourcectl.version_services import get_version_service
 from paasng.engine.constants import OperationTypes, RuntimeType
 from paasng.engine.deploy.building import start_build, start_build_error_callback
-from paasng.engine.deploy.image_release import deploy_image
+from paasng.engine.deploy.image_release import release_without_build
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.operations import ModuleEnvironmentOperations
 from paasng.engine.signals import pre_appenv_deploy
 from paasng.engine.utils.source import get_source_dir
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -38,7 +40,11 @@ logger = logging.getLogger(__name__)
 
 
 def initialize_deployment(
-    env: 'ModuleEnvironment', operator: str, version_info: VersionInfo, advanced_options: Optional[Dict] = None
+    env: 'ModuleEnvironment',
+    operator: str,
+    version_info: VersionInfo,
+    advanced_options: Optional[Dict] = None,
+    manifest: Optional[Dict] = None,
 ) -> Deployment:
     """初始化 Deployment 对象, 并记录该次部署事件.
 
@@ -46,10 +52,22 @@ def initialize_deployment(
     :param operator: 当前 operator 的 user id
     :param version_info: 需要部署的源码版本信息
     :param advanced_options: AdvancedOptionsField, 部署的高级选项.
+    :param manifest: BkApp 配置信息
+
+    :raise: `ValidationError`、`ValueError` from update_app_resource
     """
     module: Module = env.module
+    application = module.application
     version_service = get_version_service(module, operator=operator)
     source_location = version_service.build_url(version_info)
+
+    bkapp_revision_id = None
+    if manifest and application.type == ApplicationType.CLOUD_NATIVE:
+        update_app_resource(application, manifest)
+        # Get current module resource object
+        model_resource = AppModelResource.objects.get(application_id=application.id)
+        # TODO: Allow use other revisions
+        bkapp_revision_id = model_resource.revision.id
 
     deploy_config = module.get_deploy_config()
     deployment = Deployment.objects.create(
@@ -66,11 +84,13 @@ def initialize_deployment(
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
         ),
         hooks=deepcopy(deploy_config.hooks),
+        bkapp_revision_id=bkapp_revision_id,
     )
+    deployment.refresh_from_db()
     ModuleEnvironmentOperations.objects.create(
         operator=deployment.operator,
-        app_environment=deployment.app_environment,
-        application=deployment.app_environment.application,
+        app_environment=env,
+        application=application,
         operation_type=OperationTypes.ONLINE.value,
         object_uid=deployment.pk,
     )
@@ -96,8 +116,7 @@ class DeployTaskRunner:
         if self.require_build():
             start_build.apply_async(args=(deployment_id, self.runtime_type), link_error=start_build_error_callback.s())
         else:
-            # TODO: deploy_image 修改成更符合 not require_build 的名称
-            deploy_image.apply_async(args=(deployment_id,))
+            release_without_build.apply_async(args=(deployment_id,))
 
     def require_build(self) -> bool:
         if self.runtime_type == RuntimeType.CUSTOM_IMAGE:
@@ -107,4 +126,5 @@ class DeployTaskRunner:
             and self.deployment.version_info.version_type == "image"
         ):
             return False
-        return True
+        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布
+        return self.deployment.advanced_options.build_id is None

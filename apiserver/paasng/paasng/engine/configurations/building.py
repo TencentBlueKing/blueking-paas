@@ -129,3 +129,13 @@ class SlugBuilderTemplate:
     namespace: str
     runtime: ContainerRuntimeSpec
     schedule: Schedule
+
+
+def get_dockerfile_path(module: "Module") -> str:
+    # TODO: 调整成使用 BuildConfig 模型的字段
+    return "Dockerfile"
+
+
+def get_build_args(module: "Module") -> str:
+    # TODO: 调整成使用 BuildConfig 模型的字段
+    return ""

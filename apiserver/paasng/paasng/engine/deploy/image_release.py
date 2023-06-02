@@ -24,7 +24,7 @@ from django.utils.translation import gettext as _
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
 from paasng.engine.configurations.image import ImageCredentialManager
 from paasng.engine.constants import JobStatus
-from paasng.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.release import start_release_step
 from paasng.engine.models import DeployPhaseTypes
 from paasng.engine.signals import post_phase_end, pre_phase_start
 from paasng.engine.utils.output import Style
@@ -35,6 +35,16 @@ from paasng.extensions.declarative.handlers import AppDescriptionHandler
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(base=I18nTask)
+def release_without_build(deployment_id, *args, **kwargs):
+    """Skip the build and deploy the application directly
+
+    :param deployment_id: ID of deployment object
+    """
+    deploy_controller = ImageReleaseMgr.from_deployment_id(deployment_id)
+    deploy_controller.start()
 
 
 class ImageReleaseMgr(DeployStep):
@@ -62,10 +72,12 @@ class ImageReleaseMgr(DeployStep):
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
             processes = get_processes(deployment=self.deployment)
-            build_id = self.engine_client.create_build(
-                procfile={p.name: p.command for p in processes.values()},
-                extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
-            )
+            build_id = self.deployment.advanced_options.build_id
+            if not build_id:
+                build_id = self.engine_client.create_build(
+                    procfile={p.name: p.command for p in processes.values()},
+                    extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
+                )
             self.deployment.update_fields(processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
         with self.procedure_force_phase(_('配置镜像访问凭证'), phase=preparation_phase):
@@ -76,9 +88,7 @@ class ImageReleaseMgr(DeployStep):
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
-
-        # 执行部署前置命令
-        ApplicationPreReleaseExecutor.from_deployment_id(self.deployment.id).start()
+        start_release_step(deployment_id=self.deployment.id)
 
     def _provision_services(self, p: DeployProcedure):
         """Provision all preset services
@@ -95,6 +105,7 @@ class ImageReleaseMgr(DeployStep):
         """Setup Image Credentials for pulling image"""
         mgr = ImageCredentialManager(self.module_environment.module)
         credential = mgr.provide()
+        # TODO: AppImageCredential.objects.flush_from_refs 移动到这里处理
         if credential:
             self.engine_client.upsert_image_credentials(
                 registry=credential.registry,
@@ -117,13 +128,3 @@ class ImageReleaseMgr(DeployStep):
             return
 
         handler.handle_deployment(self.deployment)
-
-
-@shared_task(base=I18nTask)
-def deploy_image(deployment_id, *args, **kwargs):
-    """Start a deployment process
-
-    :param deployment_id: ID of deployment object
-    """
-    deploy_controller = ImageReleaseMgr.from_deployment_id(deployment_id)
-    deploy_controller.start()

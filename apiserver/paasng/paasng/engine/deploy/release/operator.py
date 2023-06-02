@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
+from typing import Optional
 
 from paas_wl.cnative.specs.constants import DeployStatus
 from paas_wl.cnative.specs.credentials import get_references, validate_references
@@ -26,6 +27,7 @@ from paas_wl.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.bg_wait.wait_bkapp import AppModelDeployStatusPoller, DeployStatusHandler
+from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
@@ -42,15 +44,22 @@ class BkAppReleaseMgr(DeployStep):
     def start(self):
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
         with self.procedure('部署应用'):
-            release_id = release_by_k8s_operator(self.module_environment, revision, operator=self.deployment.operator)
+            release_id = release_by_k8s_operator(
+                self.module_environment, revision, operator=self.deployment.operator, deployment_id=self.deployment.id
+            )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(release_id=release_id)
-        step_obj = self.phase.get_step_by_name(name="检测部署结果")
-        step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+        try:
+            step_obj = self.phase.get_step_by_name(name="检测部署结果")
+            step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+        except StepNotInPresetListError:
+            logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
 
 
-def release_by_k8s_operator(env: ModuleEnvironment, revision: AppModelRevision, operator: str) -> str:
+def release_by_k8s_operator(
+    env: ModuleEnvironment, revision: AppModelRevision, operator: str, deployment_id: Optional[str] = None
+) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
     this action will start an async waiting procedure which waits for the release to be finished.
 
@@ -99,5 +108,7 @@ def release_by_k8s_operator(env: ModuleEnvironment, revision: AppModelRevision, 
 
     # TODO: 统计成功 metrics
     # Poll status in background
-    AppModelDeployStatusPoller.start({'deploy_id': app_model_deploy.id}, DeployStatusHandler)
+    AppModelDeployStatusPoller.start(
+        {'deploy_id': app_model_deploy.id, 'deployment_id': deployment_id}, DeployStatusHandler
+    )
     return str(app_model_deploy.id)

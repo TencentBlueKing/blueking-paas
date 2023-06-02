@@ -28,6 +28,10 @@ from paas_wl.cnative.specs.constants import CNATIVE_DEPLOY_STATUS_POLLING_FAILUR
 from paas_wl.cnative.specs.models import AppModelDeploy
 from paas_wl.cnative.specs.resource import ModelResState, MresConditionParser, get_mres_from_cluster
 from paas_wl.cnative.specs.signals import post_cnative_env_deploy
+from paasng.engine.constants import JobStatus
+from paasng.engine.exceptions import StepNotInPresetListError
+from paasng.engine.models.phases import DeployPhaseTypes
+from paasng.engine.workflow.flow import DeploymentStateMgr
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -93,6 +97,19 @@ class DeployStatusHandler(CallbackHandler):
         else:
             logger.info('Update AppModelDeploy status with data: %s', result.data)
             update_status(dp, result.data['state'], last_transition_time=result.data['last_update'])
+
+        dp.refresh_from_db()
+        # 需要更新 deploy step 的状态
+        deployment_id = poller.params['deployment_id']
+        if deployment_id is not None:
+            state_mgr = DeploymentStateMgr.from_deployment_id(
+                deployment_id=deployment_id, phase_type=DeployPhaseTypes.RELEASE
+            )
+            try:
+                step_obj = state_mgr.get_step_by_name(name="检测部署结果")
+                step_obj.mark_and_write_to_stream(state_mgr.stream, deploy_status_to_job_status(dp.status))
+            except StepNotInPresetListError:
+                logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
         # 在部署流程结束后，发送信号触发操作审计等后续步骤
         post_cnative_env_deploy.send(dp.environment, deploy=dp)
 
@@ -100,7 +117,7 @@ class DeployStatusHandler(CallbackHandler):
 def update_status(dp: AppModelDeploy, state: ModelResState, last_transition_time: Optional[datetime.datetime] = None):
     """Update deployment status, `last_transition_time` will always be updated
 
-    :param db: The deploy obj
+    :param dp: The AppModelDeploy obj
     :param state: Current state
     :param last_transition_time: If not given, use current time.
     """
@@ -112,3 +129,11 @@ def update_status(dp: AppModelDeploy, state: ModelResState, last_transition_time
     dp.message = state.message
     dp.last_transition_time = last_transition_time
     dp.save(update_fields=["status", "reason", "message", "last_transition_time", "updated"])
+
+
+def deploy_status_to_job_status(status: DeployStatus) -> JobStatus:
+    if status == DeployStatus.READY:
+        return JobStatus.SUCCESSFUL
+    elif status == DeployStatus.ERROR:
+        return JobStatus.FAILED
+    return JobStatus.PENDING

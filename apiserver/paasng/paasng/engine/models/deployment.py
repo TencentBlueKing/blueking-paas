@@ -59,6 +59,10 @@ class AdvancedOptions:
     dev_hours_spent: Optional[float] = None
     source_dir: str = ""
     image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT
+    # 只构建, 不发布
+    build_only: bool = False
+    # 直接发布历史 build
+    build_id: Optional[str] = None
 
 
 AdvancedOptionsField = make_legacy_json_field(cls_name="AdvancedOptionsField", py_model=AdvancedOptions)
@@ -97,6 +101,7 @@ class Deployment(OperationVersionBase):
         default=dict, help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec"
     )
     hooks: HookList = HookListField(help_text="部署钩子", default=list)
+    bkapp_revision_id = models.IntegerField(help_text="BkApp Revision id", null=True)
 
     objects = DeploymentQuerySet().as_manager()
 

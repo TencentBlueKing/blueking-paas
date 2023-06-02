@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List, Union, cast
+from typing import Dict, List, Optional, Union, cast
 
 from django.http.response import Http404
 from django.utils.translation import gettext as _
@@ -28,6 +28,7 @@ from rest_framework.response import Response
 from paasng.accounts.permissions.constants import SiteAction
 from paasng.accounts.permissions.global_site import site_perm_required
 from paasng.dev_resources.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
+from paasng.dev_resources.servicehub.services import ServiceObj, ServiceSpecificationHelper
 from paasng.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
@@ -38,6 +39,7 @@ from paasng.plat_admin.system.applications import (
 )
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
+    AddonSpecsSLZ,
     ContactInfo,
     MinimalAppSLZ,
     QueryUniApplicationsByID,
@@ -154,7 +156,7 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
             raise error_codes.CANNOT_READ_INSTANCE_INFO.f(_("无法获取到有效的配置信息."))
         return Response(data=AddonCredentialsSLZ({"credentials": credentials}).data)
 
-    @swagger_auto_schema(tags=["SYSTEMAPI"])
+    @swagger_auto_schema(tags=["SYSTEMAPI"], request_body=AddonSpecsSLZ)
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
     def provision_service(self, request, code, module_name, environment, service_name):
         """分配增强服务实例"""
@@ -167,19 +169,26 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         except ServiceObjNotFound:
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(f"addon named '{service_name}' not found")
 
-        # 如果未启用增强服务, 则静默启用
         try:
             mixed_service_mgr.get_module_rel(service_id=svc.uuid, module_id=module.id)
         except SvcAttachmentDoesNotExist:
-            raise error_codes.CANNOT_PROVISION_INSTANCE.f("addon is unbound")
+            # 如果未启用增强服务, 则静默启用
+            serializer = AddonSpecsSLZ(data=request.data, context={'svc': svc})
+            serializer.is_valid(raise_exception=True)
+            specs = serializer.validated_data['specs'] or self._get_pub_recommended_specs(svc)
+            try:
+                mixed_service_mgr.bind_service(svc, module, specs)
+            except Exception as e:
+                logger.exception("bind service %s to module %s error %s", svc.uuid, module.name, e)
+                raise error_codes.CANNOT_BIND_SERVICE.f(str(e))
 
         # 如果未分配增强服务实例, 则进行分配
         rel = next(mixed_service_mgr.list_unprovisioned_rels(engine_app, service=svc), None)
         if not rel:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
 
         rel.provision()
-        return Response(status=status.HTTP_200_OK)
+        return Response(data={'service_id': svc.uuid}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
     @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
@@ -188,6 +197,40 @@ class SysAddonsAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):
         engine_app = self.get_engine_app_via_path()
         service_info = ServicesInfo.get_detail(engine_app)['services_info']
         return Response(data=service_info)
+
+    @swagger_auto_schema(tags=["SYSTEMAPI"])
+    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    def retrieve_specs(self, request, code, module_name, service_id):
+        """获取应用已绑定的服务规格.
+        接口实现逻辑参考 paasng.dev_resources.servicehub.views.ModuleServicesViewSet.retrieve_specs
+        """
+        application = self.get_application()
+        module = self.get_module_via_path()
+        service = mixed_service_mgr.get_or_404(service_id, region=application.region)
+
+        # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
+        if not mixed_service_mgr.module_is_bound_with(service, module):
+            raise Http404
+
+        specs = {}
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service_id):
+                plan = rel.get_plan()
+                specs = plan.specifications
+                break  # 现阶段所有环境的服务规格一致，因此只需要拿一个
+
+        spec_data: Dict[str, Optional[str]] = {
+            definition.name: specs.get(definition.name) for definition in service.specifications
+        }
+        return Response({'results': spec_data})
+
+    @staticmethod
+    def _get_pub_recommended_specs(svc: ServiceObj) -> Optional[dict]:
+        """获取增强服务的推荐 specs"""
+        if not svc.public_specifications:
+            return None
+        # get_recommended_spec 可能会生成 value 是 None 的 spec
+        return ServiceSpecificationHelper.from_service_public_specifications(svc).get_recommended_spec()
 
 
 class LessCodeSystemAPIViewSet(ApplicationCodeInPathMixin, viewsets.ViewSet):

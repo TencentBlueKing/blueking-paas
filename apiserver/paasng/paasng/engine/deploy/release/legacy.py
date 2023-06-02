@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """Releasing process of an application deployment
 """
 import logging
@@ -30,11 +31,11 @@ from paasng.engine.configurations.config_var import get_env_variables
 from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.engine.constants import JobStatus, ReleaseStatus
+from paasng.engine.deploy.bg_wait.wait_deployment import AbortedDetails, wait_for_release
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.models.processes import ProcessManager
-from paasng.engine.processes.wait import AbortedDetails, wait_for_release
 from paasng.engine.signals import on_release_created
 from paasng.engine.workflow import DeployStep
 from paasng.platform.applications.models import ModuleEnvironment
@@ -43,7 +44,9 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationReleaseMgr(DeployStep):
-    """The release manager"""
+    """Application Release Step, will schedule the Deployment/Ingress and so on by python k8s client.
+    Python k8s client will call k8s api at platform cluster.
+    """
 
     PHASE_TYPE = DeployPhaseTypes.RELEASE
 
@@ -60,7 +63,7 @@ class ApplicationReleaseMgr(DeployStep):
             )
 
         with self.procedure(_('部署应用')):
-            release_id = create_release(
+            release_id = release_by_engine(
                 self.module_environment, str(self.deployment.build_id), deployment=self.deployment
             )
             self.sync_entrance_configs()
@@ -83,10 +86,6 @@ class ApplicationReleaseMgr(DeployStep):
         :param status: status of release
         :param error_detail: detailed error message when release has failed
         """
-        if status == JobStatus.SUCCESSFUL:
-            self.deployment.app_environment.is_offlined = False
-            self.deployment.app_environment.save()
-
         step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
         step_obj.mark_and_write_to_stream(self.stream, status)
         self.state_mgr.update(release_status=status)
@@ -142,9 +141,9 @@ class ReleaseResultHandler(CallbackHandler):
         return details
 
 
-def create_release(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
+def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
     """Create a new release for the given environment. If the optional deployment
-    object is given, will start a async waiting procedure which waits for the release
+    object is given, will start an async waiting procedure which waits for the release
     to be finished.
 
     :param env: The environment to create the release for.

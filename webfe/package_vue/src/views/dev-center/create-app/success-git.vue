@@ -59,8 +59,8 @@
           >
             <div class="tips-wrapper">
               <div class="tips">
-                <code>{{ $t('初始化插件项目') }}
-                  {{ pluginTips }}
+                <code># {{ $t('初始化插件项目') }}
+                  <p>{{ pluginTips }}</p>
                 </code>
                 <i
                   v-copy="pluginTips"
@@ -68,13 +68,13 @@
                 />
               </div>
               <div class="tips tips-plugin">
-                <code># {{ $t('添加远程仓库地址并完成推送') }}
+                <code>
                   {{ initTips }}
                 </code>
               </div>
               <div class="tips">
                 <code># {{ $t('添加远程仓库地址并完成推送') }}
-                  {{ pushTips }}
+                  <p>{{ pushTips }}</p>
                 </code>
                 <i
                   v-copy="pushTips"
@@ -93,7 +93,7 @@
             <div class="tips-wrapper">
               <div class="tips">
                 <code># {{ $t('下载并解压代码到本地目录') }}
-                  {{ downloadTips }}
+                  <p>{{ downloadTips }}</p>
                 </code>
                 <i
                   v-copy="downloadTips"
@@ -102,7 +102,7 @@
               </div>
               <div class="tips">
                 <code># {{ $t('添加远程仓库地址并完成推送') }}
-                  {{ pushTips }}
+                  <p>{{ pushTips }}</p>
                 </code>
                 <i
                   v-copy="pushTips"
@@ -134,6 +134,7 @@
 
 <script>
     import appBaseMixin from '@/mixins/app-base-mixin';
+    import auth from '@/auth';
     export default {
         mixins: [appBaseMixin],
         data () {
@@ -148,7 +149,8 @@
                 advisedDocLinks: [],
                 downloadableAddress: '',
                 downloadableAddressExpiresIn: 3600,
-                isShowTips: false
+                isShowTips: false,
+                user: {}
             };
         },
         computed: {
@@ -167,11 +169,11 @@
             },
             initTips: function () {
                 return [
-                  `project_name：插件项目名`,
-                  `app_code：插件 APP CODE`,
+                  `project_name：${this.application.code}`,
+                  `app_code：${this.application.code}`,
                   `plugin_desc：插件描述`,
-                  `init_admin：插件应用初始化管理员`,
-                  `init_apigw_maintainer：插件应用网关管理员`
+                  `init_admin：${this.user.chineseName || this.user.username}`,
+                  `init_apigw_maintainer：${this.user.chineseName || this.user.username}`
                 ].join('\n');
             },
             pushTips: function () {
@@ -205,12 +207,21 @@
             this.$http.get(linkUrl).then((response) => {
                 this.advisedDocLinks = response.links;
             });
+
+            this.getCurrentUser();
         },
         mounted () {
             const objectKey = localStorage.getItem(this.$route.query.objectKey) === 'undefined' ? '' : localStorage.getItem(this.$route.query.objectKey);
             const extraInfo = JSON.parse(objectKey || '{}');
             this.downloadableAddress = extraInfo.downloadable_address;
             this.downloadableAddressExpiresIn = extraInfo.downloadable_address_expires_in;
+        },
+        methods: {
+          getCurrentUser() {
+            auth.requestCurrentUser().then((user) => {
+              this.user = user;
+            });
+          },
         }
     };
 </script>

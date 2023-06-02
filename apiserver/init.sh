@@ -128,6 +128,7 @@ ensure-python-buildpack() {
     --type tar \
     --address "${buildpack_url}/${buildpack_name}-${python_buildpack_version}.tar" \
     --environment \
+    "BUILDPACK_S3_BASE_URL=${vendor_url}/python" \
     "BUILDPACK_VENDOR_URL=${vendor_url}/python" \
     "PIP_INDEX_URL=${pip_index_url}" \
     "PIP_EXTRA_INDEX_URL=${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/" \

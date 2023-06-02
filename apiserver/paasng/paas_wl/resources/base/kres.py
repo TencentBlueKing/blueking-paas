@@ -312,7 +312,7 @@ class NameBasedOperations(BaseOperations):
             if not (e.status == 409 and json.loads(e.body)["reason"] == "AlreadyExists"):
                 raise
 
-        logger.info(f"Create {self.kres.kind} {name} failed, " f"already existed, continue update")
+        logger.info(f"Create {self.kres.kind} {name} failed, already existed, continue update")
         # Call replace/patch method
         _func = getattr(self.resource, update_method)
         update_kwargs = self.default_kwargs.copy()

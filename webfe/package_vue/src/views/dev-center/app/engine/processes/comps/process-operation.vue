@@ -145,16 +145,19 @@
                   ext-cls="dropdown-menu-cls"
                 >
                   <template slot="dropdown-trigger">
-                    <i class="paasng-icon paasng-icon-more" />
+                    <i class="paasng-icon paasng-icon-more" v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'), disabled: process.available_instance_count || process.desired_replicas }" />
                   </template>
                   <ul class="bk-dropdown-list" slot="dropdown-content">
-                      <li>
+                      <!-- <li>
                         <a
+                          text
                           href="javascript:void(0);"
                           class="blue"
                           @click="showProcessConfigDialog(process, index)"
                         > {{ $t('扩缩容') }} </a>
-                      </li>
+                      </li> -->
+                      <bk-button text size="small" @click="showProcessConfigDialog(process, index)"
+                      :disabled="!process.available_instance_count || !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
                   </ul>
                 </bk-dropdown-menu>
               </div>
@@ -489,7 +492,7 @@
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
-      width="520"
+      width="576"
       :title="$t('web进程扩缩容')"
       :header-position="'left'"
       :loading="processConfigDialog.isLoading"
@@ -516,14 +519,29 @@
         <bk-form
           ref="processConfigForm"
           :label-width="110"
-          style="width: 390px"
+          style="width: 520px"
           :model="processPlan"
         >
           <bk-form-item :label="$t('当前副本数：')">
             <span>{{ curTargetReplicas }}</span>
           </bk-form-item>
           <bk-form-item v-if="autoscaling" :label="$t('触发条件：')">
-            <span>{{ $t('CPU 使用率') }} = 85%</span>
+            <div class="rate-container">
+              <span>{{ $t('CPU 使用率') }} = <bk-input class="w80" v-model="defaultUtilizationRate" disabled></bk-input> </span>
+              <i
+                    class="paasng-icon paasng-exclamation-circle uv-tips ml10"
+                    v-bk-tooltips="autoScalingTip"
+                  />
+            </div>
+          </bk-form-item>
+          <bk-form-item v-if="autoscaling" class="desc-form-item" :label-width="10">
+            <div class="desc-container">
+              <p>
+                {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
+              </p>
+              <p>{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
+              </p>
+            </div>
           </bk-form-item>
           <!-- 手动调节展示 -->
           <bk-form-item
@@ -532,46 +550,25 @@
             :required="true"
             :rules="processPlanRules.targetReplicas"
             :property="'targetReplicas'"
+            class="manual-form-cls"
+            error-display-type="normal"
           >
-            <num-input
+            <bk-input
               type="number"
               :placeholder="$t('请输入')"
               class="dia-input"
               :min="0"
-              :value.sync="processPlan.targetReplicas"
+              v-model="processPlan.targetReplicas"
             />
           </bk-form-item>
         </bk-form>
         <div class="auto-container" v-if="autoscaling">
           <bk-form :rules="scalingRules" :model="scalingConfig"
             ref="scalingConfigForm"
-            class="auto-form" :label-width="0">
-              <p class="mb10">
-                {{$t('当')}} {{$t('CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时')}}，{{$t('会触发扩容')}}
-                <i
-                    class="paasng-icon paasng-exclamation-circle uv-tips"
-                    v-bk-tooltips="autoScalingTip"
-                  />
-              </p>
-              <bk-form-item property="maxReplicas">
-                <bk-input
-                  type="number"
-                  :placeholder="'1 - ' + maxReplicasNum"
-                  class="dia-input"
-                  v-model="scalingConfig.maxReplicas"
-                >
-                  <template slot="prepend">
-                    <div class="group-text">{{$t('扩容上限')}}</div>
-                  </template>
-                </bk-input>
-              </bk-form-item>
-              <p class="mb10 mt10">{{$t('当')}} {{$t('CPU 使用率')}} &lt; <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时')}}，{{$t('会触发缩容')}}
-                <i
-                    class="paasng-icon paasng-exclamation-circle uv-tips"
-                    v-bk-tooltips="autoScalingTip"
-                  />
-              </p>
-              <bk-form-item property="minReplicas">
+            class="auto-form" :label-width="0"
+            form-type="inline"
+            >
+            <bk-form-item property="minReplicas" error-display-type="normal">
                 <bk-input
                   type="number"
                   :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
@@ -579,7 +576,19 @@
                   v-model="scalingConfig.minReplicas"
                 >
                   <template slot="prepend">
-                    <div class="group-text">{{$t('缩容下限')}}</div>
+                    <div class="group-text">{{$t('最小副本数')}}</div>
+                  </template>
+                </bk-input>
+              </bk-form-item>
+              <bk-form-item property="maxReplicas" error-display-type="normal" class="ml20">
+                <bk-input
+                  type="number"
+                  :placeholder="'1 - ' + maxReplicasNum"
+                  class="dia-input"
+                  v-model="scalingConfig.maxReplicas"
+                >
+                  <template slot="prepend">
+                    <div class="group-text">{{$t('最大副本数')}}</div>
                   </template>
                 </bk-input>
               </bk-form-item>
@@ -886,7 +895,8 @@ export default {
       },
       autoScalDisableConfig: {},
       curTargetMaxReplicas: 0,
-      curTargetMinReplicas: 0
+      curTargetMinReplicas: 0,
+      defaultUtilizationRate: '85%'
     };
   },
   computed: {
@@ -912,6 +922,7 @@ export default {
     },
     '$route'() {
       this.init();
+      this.getAutoScalFlag()  //切换路由也需要获取featureflag
     },
     'processConfigDialog.visiable'(val) {
       if(val) {
@@ -920,7 +931,12 @@ export default {
           maxReplicas: [
             {
               required: true,
-              message: i18n.t('请填写扩容上限'),
+              message: i18n.t('请填写最大副本数'),
+              trigger: 'blur',
+            },
+            {
+              regex: /^[1-9][0-9]*$/,
+              message: i18n.t('请填写大于0的整数'),
               trigger: 'blur',
             },
             {
@@ -929,7 +945,7 @@ export default {
                 return maxReplicas <= maxReplicasNum;
               },
               message() {
-                return `${i18n.t('扩容上限最大值')}${maxReplicasNum}`;
+                return `${i18n.t('最大副本数最大值')}${maxReplicasNum}`;
               },
               trigger: 'blur',
             },
@@ -940,7 +956,7 @@ export default {
                   return maxReplicas >= minReplicas;
                 },
               message() {
-                return `${i18n.t('扩容上限不可小于缩容下限')}`;
+                return `${i18n.t('最大副本数不可小于最小副本数')}`;
               },
               trigger: 'blur',
             },
@@ -948,7 +964,12 @@ export default {
           minReplicas: [
             {
               required: true,
-              message: i18n.t('请填写缩容下限'),
+              message: i18n.t('请填写最小副本数'),
+              trigger: 'blur',
+            },
+            {
+              regex: /^[1-9][0-9]*$/,
+              message: i18n.t('请填写大于0的整数'),
               trigger: 'blur',
             },
             {
@@ -957,7 +978,7 @@ export default {
                 return maxReplicas <= maxReplicasNum;
               },
               message() {
-                return `${i18n.t('缩容下限最大值')}${maxReplicasNum}`;
+                return `${i18n.t('最小副本数最大值')}${maxReplicasNum}`;
               },
               trigger: 'blur',
             },
@@ -968,7 +989,7 @@ export default {
                   return minReplicas <= maxReplicas;
                 },
                 message() {
-                  return `${i18n.t('缩容下限不可大于扩容上限')}`;
+                  return `${i18n.t('最小副本数不可大于最大副本数')}`;
                 },
                 trigger: 'blur',
               },
@@ -2224,12 +2245,11 @@ export default {
                   padding-left: 56px;
               }
             .process-command {
-                display: inline-block;
-                padding: 16px 24px 16px 0;
                 width: 490px;
-                vertical-align: middle;
-                word-break: break-all;
                 cursor: pointer;
+                min-height: 75px;
+                display: flex;
+                align-items: center;
             }
 
             .process-status {
@@ -2846,8 +2866,14 @@ export default {
 
     .radio-cls{
       /deep/ .bk-radio-button-text {
-            padding: 0 85px;
+            padding: 0 102px;
         }
+    }
+
+    .manual-form-cls{
+      /deep/ .bk-form-content .tooltips-icon {
+        right: 156px !important;
+      }
     }
 
     .stream-log {
@@ -2925,25 +2951,45 @@ export default {
       padding-top: 20px;
       border-top: 1px solid #DCDEE5;
       .auto-form{
-        width: 280px;
+        display: flex;
+        // width: 280px;
+        /deep/ .bk-form-content .form-error-tip {
+          padding-left: 90px !important;
+        }
       }
 
+    }
+    .desc-container{
+      background: #F0F1F5;
+      padding: 10px 20px;
       .cpu-num{
         color: #FF9C01;
         font-weight: 700;
       }
     }
     .dia-input {
-        width: 240px
+        width: 250px
       }
     .dropdown-menu-cls {
       left: 10px;
       i {
         font-size: 24px;
         color: #3A84FF;
+        cursor: pointer;
       }
     }
     .bk-form-control .group-box .group-text {
         line-height: 32px;
+    }
+    .rate-container{
+      display: flex;
+      align-items: center;
+      .w80{
+        width: 80px;
+      }
+    }
+    .bk-dropdown-list{
+      width: 70px;
+      text-align: center;
     }
 </style>

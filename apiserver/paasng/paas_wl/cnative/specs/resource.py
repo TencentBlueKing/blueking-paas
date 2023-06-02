@@ -89,8 +89,7 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
             credentials.ImageCredentialsManager(client).upsert(image_credentials)
 
         # 创建或更新 BkApp
-        # TODO 确定多版本交互后解除版本锁定
-        bkapp, _ = crd.BkApp(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
+        bkapp, _ = crd.BkApp(client, api_version=manifest["apiVersion"]).create_or_update(
             generate_bkapp_name(env),
             namespace=wl_app.namespace,
             body=manifest,

@@ -16,3 +16,20 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.utils.translation import gettext as _
+from rest_framework import serializers
+
+from paas_wl.networking.constants import NetworkProtocol
+
+
+class EgressRuleSLZ(serializers.Serializer):
+    host = serializers.CharField(label=_('IP/域名'))
+    port = serializers.IntegerField(label=_('端口'))
+    protocol = serializers.ChoiceField(label=_('协议'), choices=NetworkProtocol.get_django_choices())
+
+
+class EgressSpecSLZ(serializers.Serializer):
+    replicas = serializers.IntegerField(label=_('副本数量'))
+    cpu_limit = serializers.CharField(label=_('CPU 限制'))
+    memory_limit = serializers.CharField(label=_('内存限制'))
+    rules = serializers.ListField(label=_('规则'), child=EgressRuleSLZ(), min_length=1)

@@ -52,12 +52,6 @@ def another_user(request):
     return user
 
 
-@pytest.fixture(autouse=True, scope="session")
-def mock_sync_developers_to_sentry():
-    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"):
-        yield
-
-
 class TestMembershipViewset:
     def test_list_succeed(self, api_client, bk_app):
         url = reverse("api.applications.members", kwargs=dict(code=bk_app.code))

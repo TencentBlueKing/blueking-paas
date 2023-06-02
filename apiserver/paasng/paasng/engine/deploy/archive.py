@@ -25,10 +25,10 @@ from django.utils.translation import gettext as _
 
 from paas_wl.resources.actions.archive import ArchiveOperationController
 from paasng.engine.constants import JobStatus, ReleaseStatus
+from paasng.engine.deploy.bg_wait.wait_deployment import wait_for_all_stopped
 from paasng.engine.exceptions import OfflineOperationExistError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.offline import OfflineOperation
-from paasng.engine.processes.wait import wait_for_all_stopped
 from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
 
 if TYPE_CHECKING:

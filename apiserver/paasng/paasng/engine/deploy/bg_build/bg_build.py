@@ -120,7 +120,7 @@ class BuildProcessExecutor(DeployStep):
 
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
-                slugbuilder_template = prepare_slugbuilder_template(self.wl_app, env_vars, metadata)
+                slugbuilder_template = prepare_slugbuilder_template(self.wl_app, env_vars, builder_image=self.bp.image)
 
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
                 self.start_slugbuilder(slugbuilder_template)
@@ -226,12 +226,16 @@ class BuildProcessExecutor(DeployStep):
         procfile = {}
         if metadata and 'procfile' in metadata:
             procfile = metadata['procfile']
+        image = None
+        if metadata and 'image' in metadata:
+            image = metadata['image']
 
         # starting create build
         build_instance = Build.objects.create(
             owner=settings.BUILDER_USERNAME,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
+            image=image,
             branch=self.bp.branch,
             revision=self.bp.revision,
             procfile=procfile,

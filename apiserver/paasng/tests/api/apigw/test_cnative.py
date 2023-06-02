@@ -90,9 +90,9 @@ class TestMresDeploymentsViewSet:
             },
         }
         with mock.patch(
-            "paas_wl.cnative.specs.views_enduser.deploy", new=lambda *args, **kwargs: manifest
+            "paasng.engine.deploy.release.operator.apply_bkapp_to_k8s", new=lambda *args, **kwargs: manifest
         ), mock.patch(
-            'paas_wl.cnative.specs.views_enduser.AppModelDeployStatusPoller.start', new=lambda *args, **kwargs: None
+            'paasng.engine.deploy.release.operator.AppModelDeployStatusPoller.start', new=lambda *args, **kwargs: None
         ):
             response = api_client.post(url, data={"manifest": manifest})
 

@@ -18,7 +18,6 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 import time
-from typing import Dict, Tuple
 
 from django.utils.translation import gettext as _
 
@@ -45,9 +44,7 @@ class BkAppReleaseMgr(DeployStep):
     def start(self):
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id)
         with self.procedure(_('部署应用')):
-            release_id, __ = release_by_k8s_operator(
-                self.module_environment, revision, operator=self.deployment.operator
-            )
+            release_id = release_by_k8s_operator(self.module_environment, revision, operator=self.deployment.operator)
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(release_id=release_id)
@@ -55,7 +52,7 @@ class BkAppReleaseMgr(DeployStep):
         step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
 
 
-def release_by_k8s_operator(env: ModuleEnvironment, revision: AppModelRevision, operator: str) -> Tuple[str, Dict]:
+def release_by_k8s_operator(env: ModuleEnvironment, revision: AppModelRevision, operator: str) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
     this action will start an async waiting procedure which waits for the release to be finished.
 
@@ -98,10 +95,11 @@ def release_by_k8s_operator(env: ModuleEnvironment, revision: AppModelRevision, 
             app_model_deploy.status = DeployStatus.ERROR
             app_model_deploy.save(update_fields=["status", "updated"])
         raise e
+    revision.deployed_value = deployed_manifest
     revision.has_deployed = True
-    revision.save(update_fields=["has_deployed", "updated"])
+    revision.save(update_fields=["deployed_value", "has_deployed", "updated"])
 
     # TODO: 统计成功 metrics
     # Poll status in background
     AppModelDeployStatusPoller.start({'deploy_id': app_model_deploy.id}, DeployStatusHandler)
-    return str(app_model_deploy.id), deployed_manifest
+    return str(app_model_deploy.id)

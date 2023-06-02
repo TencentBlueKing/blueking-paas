@@ -111,6 +111,7 @@ class AppModelRevision(TimestampedModel):
     json_value = models.JSONField(verbose_name=_('应用模型（JSON 格式）'))
 
     # status fields
+    deployed_value = models.JSONField(verbose_name=_("已部署的应用模型（JSON 格式）"), null=True)
     has_deployed = models.BooleanField(verbose_name=_('是否已部署'), default=False)
     is_draft = models.BooleanField(verbose_name=_('是否草稿'), default=False)
     is_deleted = models.BooleanField(verbose_name=_('是否已删除'), default=False)

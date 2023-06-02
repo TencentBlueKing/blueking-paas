@@ -145,7 +145,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         revision = model_resource.revision
 
         try:
-            _, deployed_manifest = release_by_k8s_operator(env, revision, operator=request.user.pk)
+            release_by_k8s_operator(env, revision, operator=request.user.pk)
         except ValueError:
             raise error_codes.DEPLOY_BKAPP_FAILED.f("invalid image-credentials")
         except UnprocessibleEntityError as e:
@@ -162,7 +162,8 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 e,
             )
             raise error_codes.DEPLOY_BKAPP_FAILED.f(f"app: {application.code}, env: {environment}")
-        return Response(deployed_manifest)
+        revision.refresh_from_db()
+        return Response(revision.deployed_value)
 
     @swagger_auto_schema(request_body=CreateDeploySerializer, responses={"200": DeployPrepResultSLZ()})
     def prepare(self, request, code, module_name, environment):

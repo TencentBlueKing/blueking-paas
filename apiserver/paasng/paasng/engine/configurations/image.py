@@ -123,6 +123,12 @@ class RuntimeImageInfo:
     def entrypoint(self) -> List:
         """返回当前 engine_app 镜像启动的 entrypoint"""
         if self.type == RuntimeType.CUSTOM_IMAGE or self.type == RuntimeType.DOCKERFILE:
+            # Note: 关于为什么要使用 env 命令作为 entrypoint, 而不是直接将用户的命令作为 entrypoint.
+            # 虽然实际上绝大部分 CRI 实现会在当 Command 非空时 忽略镜像的 CMD(即认为 ENTRYPOINT 和 CMD 是绑定的, 只要 ENTRYPOINT 被修改, 就会忽略 CMD)
+            # 但是, 根据 k8s 的文档, 如果 Command/Args 是空值，就会使用镜像的 ENTRYPOINT 和 CMD.
+            # 而 Heroku 风格的 Procfile 不是以 entrypoint/cmd 这样的格式描述, 如果只将 procfile 作为 Container 的 Command/Args 都会有潜在风险.
+            # 风险点在于: Command/Args 为空时, 有可能会使用镜像的 ENTRYPOINT 和 CMD.
+            # ref: https://github.com/containerd/containerd/blob/main/pkg/cri/opts/spec_opts.go#L63
             return ["env"]
         # TODO: 每个 slugrunner 可以配置镜像的 ENTRYPOINT
         mgr = ModuleRuntimeManager(self.module)

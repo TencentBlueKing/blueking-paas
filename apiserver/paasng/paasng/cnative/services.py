@@ -27,12 +27,12 @@ from paasng.engine.constants import AppEnvName
 from paasng.engine.models import EngineApp
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.log.shim import setup_env_log_model
+from paasng.platform.modules.manager import make_engine_app_name
 from paasng.platform.modules.models import Module
 from paasng.utils.configs import get_region_aware
 from paasng.utils.error_codes import error_codes
 
 # Model-Resource
-default_engine_app_prefix = 'bkapp'
 default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
 
 
@@ -70,7 +70,7 @@ def create_engine_apps(
     """Create engine app instances for application"""
     environments = environments or default_environments
     for environment in environments:
-        engine_app_name = f'{default_engine_app_prefix}-{application.code}-{environment}'
+        engine_app_name = make_engine_app_name(module, application.code, environment)
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
         engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
         env = ModuleEnvironment.objects.create(

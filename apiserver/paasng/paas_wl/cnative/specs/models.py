@@ -30,6 +30,7 @@ from paas_wl.platform.applications.relationship import ModuleAttrFromID, ModuleE
 from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.modules.constants import ModuleName
 
 from .constants import DEFAULT_PROCESS_NAME, DeployStatus
 from .v1alpha1.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
@@ -243,12 +244,16 @@ def to_error_string(exc: PDValidationError) -> str:
     return display_errors(exc.errors()).replace('\n', ' ')
 
 
-def default_bkapp_name(env: ModuleEnvironment) -> str:
-    """Get name of the default BkApp resource by env.
+def generate_bkapp_name(env: ModuleEnvironment) -> str:
+    """Generate name of the BkApp resource by env.
 
     :param env: ModuleEnv object
     :return: BkApp resource name
     """
-    # TODO: Should we add "environment" field to name? Result may exceeds the
-    # max-length limit on the operator side.
-    return f'{env.application.code}'
+    # 兼容考虑，如果模块名为 default 则不在 BkApp 名字中插入 module 名
+    module_name = env.module.name
+    if module_name == ModuleName.DEFAULT.value:
+        name = f'{env.application.code}'
+    else:
+        name = f'{env.application.code}-m-{module_name}'
+    return name.replace("_", "0us0")

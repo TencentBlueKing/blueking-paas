@@ -8,11 +8,10 @@ labels:
   - {{ alert_code }}
 
 query:
-  data_source: bk_monitor
+  data_source: prometheus
   data_type: time_series
   query_configs:
-  - metric: '{{ rabbitmq_metric_name_prefix }}rabbitmq_instance_queue_messages{vhost="{{ metric_labels['vhost'] }}"}'
-    method: sum
+  - metric: 'sum({{ rabbitmq_metric_name_prefix }}rabbitmq_instance_queue_messages{vhost="{{ metric_labels['vhost'] }}"})'
     interval: 60 # 单位 s
 
 detect: # 检测配置

@@ -100,7 +100,7 @@ class DeployStatusHandler(CallbackHandler):
 
         dp.refresh_from_db()
         # 需要更新 deploy step 的状态
-        deployment_id = poller.params['deployment_id']
+        deployment_id = poller.params.get('deployment_id')
         if deployment_id is not None:
             state_mgr = DeploymentStateMgr.from_deployment_id(
                 deployment_id=deployment_id, phase_type=DeployPhaseTypes.RELEASE

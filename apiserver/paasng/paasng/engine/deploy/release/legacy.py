@@ -23,7 +23,6 @@ import logging
 from typing import Optional, Tuple
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
-from django.utils.translation import gettext as _
 from pydantic import ValidationError as PyDanticValidationError
 
 from paasng.engine.configurations.building import get_processes_by_build
@@ -33,6 +32,7 @@ from paasng.engine.configurations.ingress import AppDefaultDomains, AppDefaultSu
 from paasng.engine.constants import JobStatus, ReleaseStatus
 from paasng.engine.deploy.bg_wait.wait_deployment import AbortedDetails, wait_for_release
 from paasng.engine.deploy.engine_svc import EngineDeployClient
+from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models.deployment import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.models.processes import ProcessManager
@@ -52,17 +52,17 @@ class ApplicationReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
-        with self.procedure(_('更新进程配置')):
+        with self.procedure('更新进程配置'):
             ProcessManager(self.engine_app).sync_processes_specs(self.deployment.get_processes())
 
-        with self.procedure(_('更新应用配置')):
+        with self.procedure('更新应用配置'):
             update_image_runtime_config(
                 self.engine_app,
                 self.deployment.version_info,
                 image_pull_policy=self.deployment.advanced_options.image_pull_policy,
             )
 
-        with self.procedure(_('部署应用')):
+        with self.procedure('部署应用'):
             release_id = release_by_engine(
                 self.module_environment, str(self.deployment.build_id), deployment=self.deployment
             )
@@ -72,8 +72,11 @@ class ApplicationReleaseMgr(DeployStep):
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(release_id=release_id)
-        step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
-        step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+        try:
+            step_obj = self.phase.get_step_by_name(name="检测部署结果")
+            step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING, extra_info=dict(release_id=release_id))
+        except StepNotInPresetListError:
+            logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
 
     def sync_entrance_configs(self):
         """Sync app's default subdomains/subpaths with engine backend"""
@@ -86,8 +89,11 @@ class ApplicationReleaseMgr(DeployStep):
         :param status: status of release
         :param error_detail: detailed error message when release has failed
         """
-        step_obj = self.phase.get_step_by_name(name=_("检测部署结果"))
-        step_obj.mark_and_write_to_stream(self.stream, status)
+        try:
+            step_obj = self.phase.get_step_by_name(name="检测部署结果")
+            step_obj.mark_and_write_to_stream(self.stream, status)
+        except StepNotInPresetListError:
+            logger.debug("Step not found or duplicated, name: %s", "检测部署结果")
         self.state_mgr.update(release_status=status)
         self.state_mgr.finish(status, err_detail=error_detail, write_to_stream=True)
 

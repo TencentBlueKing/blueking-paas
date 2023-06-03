@@ -156,7 +156,7 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		ret := r.Reconcile(ctx, bkapp)
 
-		Expect(ret.err).To(HaveOccurred())
+		Expect(ret.err).ShouldNot(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)

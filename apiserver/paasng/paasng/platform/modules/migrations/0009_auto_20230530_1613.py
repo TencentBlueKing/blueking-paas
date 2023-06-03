@@ -72,4 +72,6 @@ class Migration(migrations.Migration):
         ('modules', '0008_buildconfig'),
     ]
 
-    operations = [migrations.RunPython(migrate_to_buildconfig)]
+    operations = [
+        migrations.RunPython(migrate_to_buildconfig)
+    ]

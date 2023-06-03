@@ -74,7 +74,7 @@ class ModuleRuntimeBinder:
 
     def __init__(self, module: 'Module'):
         self.module = module
-        self.build_config = BuildConfig.objects.get_by_module(module)
+        self.build_config = BuildConfig.objects.get_or_create_by_module(module)
 
     @transaction.atomic
     def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder):
@@ -174,17 +174,15 @@ class ModuleRuntimeBinder:
 
     @staticmethod
     def get_ordered_buildpacks_list(
-        buildpacks: Iterable["AppBuildPack"], buildpacks_id: List[int]
+        buildpacks: Iterable["AppBuildPack"], ordered_bp_ids: List[int]
     ) -> List['AppBuildPack']:
         """Get the ordered buildpacks list.
 
         :params buildpacks: the buildpacks list to be sorted
-        :params buildpacks_id: ordered buildpack ids
+        :params ordered_bp_ids: ordered buildpack ids
         """
-        bp_id_to_bp: Dict[int, "AppBuildPack"] = {}
-        for bp in buildpacks:
-            bp_id_to_bp[bp.id] = bp
-        return [bp_id_to_bp[i] for i in buildpacks_id]
+        bp_id_to_bp = {bp.id: bp for bp in buildpacks}
+        return [bp_id_to_bp[i] for i in ordered_bp_ids]
 
 
 class ModuleRuntimeManager:
@@ -196,7 +194,7 @@ class ModuleRuntimeManager:
 
     def __init__(self, module: 'Module'):
         self.module = module
-        self.build_config = BuildConfig.objects.get_by_module(module=self.module)
+        self.build_config = BuildConfig.objects.get_or_create_by_module(module=self.module)
 
     @property
     def is_secure_encrypted_runtime(self) -> bool:

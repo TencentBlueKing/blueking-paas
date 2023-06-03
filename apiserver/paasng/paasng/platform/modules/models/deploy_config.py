@@ -85,8 +85,24 @@ class DeployConfig(UuidAuditedModel):
 DockerBuildArgsField = make_json_field("DockerBuildArgsField", Dict[str, str])
 
 
+@define
+class ImageTagOptions:
+    """镜像 Tag 选项"""
+
+    prefix: Optional[str] = None
+    # 镜像Tag 是否带有分支/标签
+    with_version: bool = True
+    # 镜像 Tag 是否带有构建时间
+    with_build_time: bool = True
+    # 镜像 Tag 是否带有提交ID(hash)
+    with_commit_id: bool = True
+
+
+ImageTagOptionsField = make_json_field("ImageTagOptionsField", ImageTagOptions)
+
+
 class BuildConfigManager(models.Manager):
-    def get_by_module(self, module) -> "BuildConfig":
+    def get_or_create_by_module(self, module) -> "BuildConfig":
         obj, _ = self.get_or_create(module=module)
         return obj
 
@@ -113,9 +129,5 @@ class BuildConfig(UuidAuditedModel):
     docker_build_args = DockerBuildArgsField(default=dict)
 
     # Image Tag Policy
-    tag_prefix = models.CharField(max_length=32, verbose_name=_("自定义前缀"), null=True)
-    tag_with_version_name = models.BooleanField(null=True, help_text="镜像Tag 是否带有分支/标签")
-    tag_with_build_time = models.BooleanField(null=True, help_text="镜像 Tag 是否带有构建时间")
-    tag_with_commit_id = models.BooleanField(null=True, help_text="镜像 Tag 是否带有提交ID(hash)")
-
+    tag_options: ImageTagOptions = ImageTagOptionsField(default=ImageTagOptions)
     objects = BuildConfigManager()

@@ -20,6 +20,8 @@ platformConfig:
 ingressPluginConfig:
   accessControlConfig:
     redisConfigKey: ""
+  paasAnalysisConfig:
+    enabled: false
 autoscalingConfig:
   enabled: false
 

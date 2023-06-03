@@ -70,7 +70,7 @@ class ImageReleaseMgr(DeployStep):
             logger.exception("Exception while processing app description file, skip.")
 
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
-        with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
+        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
             processes = get_processes(deployment=self.deployment)
             build_id = self.deployment.advanced_options.build_id
             if not build_id:
@@ -80,10 +80,10 @@ class ImageReleaseMgr(DeployStep):
                 )
             self.deployment.update_fields(processes=processes, build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
-        with self.procedure_force_phase(_('配置镜像访问凭证'), phase=preparation_phase):
+        with self.procedure_force_phase('配置镜像访问凭证', phase=preparation_phase):
             self._setup_image_credentials()
 
-        with self.procedure_force_phase(_('配置资源实例'), phase=preparation_phase) as p:
+        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
             self._provision_services(p)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息

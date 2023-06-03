@@ -89,7 +89,12 @@ func (r *AddonReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkA
 	if updateErr := r.Client.Status().Update(ctx, bkapp); updateErr != nil {
 		return r.Result.withError(updateErr)
 	}
-	return r.Result.withError(err)
+
+	// 增强服务分配失败, 直接终止 reconcile
+	if err != nil {
+		return r.Result.End()
+	}
+	return r.Result
 }
 
 func (r *AddonReconciler) doReconcile(

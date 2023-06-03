@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
+from paas_wl.platform.applications.models import Build
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.engine.deploy.engine_svc import EngineDeployClient
 
@@ -27,8 +28,9 @@ pytestmark = pytest.mark.django_db(databases=['default', 'workloads'])
 class TestEngineDeployClient:
     def test_create_build(self, bk_stag_env, with_wl_apps):
         c = EngineDeployClient(bk_stag_env.get_engine_app())
-        s = c.create_build({}, {})
-        assert s is not None
+        build_id = c.create_build('nginx:latest', {}, {})
+        assert build_id is not None
+        assert Build.objects.get(pk=build_id).image == "nginx:latest"
 
     def test_upsert_image_credentials(self, bk_stag_env, bk_stag_wl_app, with_wl_apps):
         c = EngineDeployClient(bk_stag_env.get_engine_app())

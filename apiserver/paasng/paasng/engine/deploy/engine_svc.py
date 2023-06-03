@@ -101,12 +101,13 @@ class EngineDeployClient:
             raise
         return release
 
-    def create_build(self, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
+    def create_build(self, image: str, extra_envs: Dict[str, str], procfile: Dict[str, str]) -> str:
         """Create the **fake** build for Image Type App"""
         build = Build.objects.create(
             app=self.wl_app,
             env_variables=extra_envs,
             procfile=procfile,
+            image=image,
         )
         return str(build.uuid)
 

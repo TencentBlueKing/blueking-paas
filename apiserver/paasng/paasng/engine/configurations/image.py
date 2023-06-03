@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+import arrow
 from django.conf import settings
 
 from paasng.dev_resources.sourcectl.models import RepoBasicAuthHolder
@@ -26,7 +27,7 @@ from paasng.extensions.smart_app.conf import bksmart_settings
 from paasng.extensions.smart_app.utils import SMartImageManager
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.modules.models.module import Module
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 
 if TYPE_CHECKING:
@@ -42,10 +43,20 @@ def generate_image_repository(app: 'EngineApp') -> str:
     return f"{system_prefix}/{app_part}"
 
 
-def generate_image_tag(version: "VersionInfo") -> str:
+def generate_image_tag(module: Module, version: "VersionInfo") -> str:
     """Get the Image Tag for version"""
-    # TODO: 支持复杂的镜像 tag 规则
-    return f"{version.version_name}-{version.revision}"
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    options = cfg.tag_options
+    parts: List[str] = []
+    if options.prefix:
+        parts.append(options.prefix)
+    if options.with_version:
+        parts.append(version.version_name)
+    if options.with_build_time:
+        parts.append(arrow.now().format("YYMMDDHHmm"))
+    if options.with_commit_id:
+        parts.append(version.revision)
+    return "-".join(parts)
 
 
 @dataclass
@@ -105,7 +116,7 @@ class RuntimeImageInfo:
             return f"{repo_url}:{reference}"
         elif self.type == RuntimeType.DOCKERFILE:
             app_image_repository = generate_image_repository(self.engine_app)
-            app_image_tag = generate_image_tag(self.version_info)
+            app_image_tag = generate_image_tag(module=self.module, version=self.version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and self.version_info.version_type == "image":
             from paasng.extensions.smart_app.utils import SMartImageManager
@@ -116,7 +127,11 @@ class RuntimeImageInfo:
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
             # TODO: 构建和发布都需要生成 image 信息, 应该在 Deployment 或其他和部署相关的模型存储这个字段
-            return generate_image_repository(self.engine_app) + ":" + generate_image_tag(self.version_info)
+            return (
+                generate_image_repository(self.engine_app)
+                + ":"
+                + generate_image_tag(module=self.module, version=self.version_info)
+            )
         return getattr(slug_runner, "full_image", '')
 
     @property

@@ -780,3 +780,12 @@ def with_wl_apps(request):
     else:
         bk_app = request.getfixturevalue("bk_app")
     create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_sync_developers_to_sentry():
+    # 避免单元测试时会往 celery 推送任务
+    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
+        "paasng.extensions.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
+    ):
+        yield

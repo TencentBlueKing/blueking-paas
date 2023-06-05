@@ -133,8 +133,5 @@ class RuntimeManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         binder = ModuleRuntimeBinder(module)
         binder.clear_runtime()
         binder.bind_image(slugrunner, slugbuilder)
-
-        orders = {bid: idx for idx, bid in enumerate(buildpack_ids)}
-        buildpacks = sorted(buildpacks, key=lambda item: orders[item.id])
-        binder.bind_buildpacks(buildpacks)
+        binder.bind_buildpacks(buildpacks, buildpack_ids)
         return Response(status=HTTP_204_NO_CONTENT)

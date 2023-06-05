@@ -28,7 +28,7 @@ from paasng.engine.configurations.image import update_image_runtime_config
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.bg_command.tasks import exec_command
-from paasng.engine.deploy.release import ApplicationReleaseMgr
+from paasng.engine.deploy.release.legacy import ApplicationReleaseMgr
 from paasng.engine.exceptions import StepNotInPresetListError
 from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
@@ -53,14 +53,10 @@ class ApplicationPreReleaseExecutor(DeployStep):
             # Start release process
             return ApplicationReleaseMgr.from_deployment_id(self.deployment.id).start()
 
-        with self.procedure(_('更新应用配置')):
-            update_image_runtime_config(
-                self.engine_app,
-                self.deployment.version_info,
-                image_pull_policy=self.deployment.advanced_options.image_pull_policy,
-            )
+        with self.procedure('更新应用配置'):
+            update_image_runtime_config(deployment=self.deployment)
 
-        with self.procedure(_('初始化指令执行环境')):
+        with self.procedure('初始化指令执行环境'):
             extra_envs = get_env_variables(self.engine_app.env, deployment=self.deployment)
             command_id = exec_command(
                 self.engine_app.env,
@@ -99,14 +95,14 @@ class ApplicationPreReleaseExecutor(DeployStep):
 
     def mark_step_start(self):
         try:
-            step = self.phase.get_step_by_name(_("执行部署前置命令"))
+            step = self.phase.get_step_by_name("执行部署前置命令")
         except StepNotInPresetListError:
             return
         step.mark_procedure_status(JobStatus.PENDING)
 
     def mark_step_finish(self, status: JobStatus):
         try:
-            step = self.phase.get_step_by_name(_("执行部署前置命令"))
+            step = self.phase.get_step_by_name("执行部署前置命令")
         except StepNotInPresetListError:
             return
         step.mark_and_write_to_stream(stream=self.stream, status=status)

@@ -21,7 +21,7 @@ import logging
 from typing import Dict, List, Tuple
 
 from paas_wl.cnative.specs.constants import ApiVersion
-from paas_wl.cnative.specs.models import default_bkapp_name
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, ReplicasOverlay
 from paas_wl.resources.base import crd
 from paas_wl.resources.base.base import EnhancedApiClient
@@ -46,7 +46,7 @@ class ProcReplicas:
         self.env = env
         self.wl_app = env.wl_app
         self.ns = self.wl_app.namespace
-        self.res_name = default_bkapp_name(self.env)
+        self.res_name = generate_bkapp_name(self.env)
 
     def get(self, proc_type: str) -> int:
         """Get the replicas count by process type"""

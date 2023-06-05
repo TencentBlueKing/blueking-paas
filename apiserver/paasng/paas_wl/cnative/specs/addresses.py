@@ -21,7 +21,7 @@ from typing import List, Optional, Set
 
 from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.cnative.specs.constants import DomainGroupSource
-from paas_wl.cnative.specs.models import default_bkapp_name
+from paas_wl.cnative.specs.models import generate_bkapp_name
 from paas_wl.cnative.specs.v1alpha1.domain_group_mapping import (
     Domain,
     DomainGroup,
@@ -78,7 +78,7 @@ class AddrResourceManager:
         subpath_group = DomainGroup(sourceType=DomainGroupSource.SUBPATH, domains=self._get_subpath_domains())
         custom_group = DomainGroup(sourceType=DomainGroupSource.CUSTOM, domains=self._get_custom_domains())
 
-        app_name = default_bkapp_name(self.env)
+        app_name = generate_bkapp_name(self.env)
         # Omit empty groups
         data = [subdomain_group, subpath_group, custom_group]
         data = [d for d in data if d.domains]

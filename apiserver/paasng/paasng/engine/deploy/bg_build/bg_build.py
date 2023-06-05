@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict
 from uuid import UUID
 
 from blue_krill.redis_tools.messaging import StreamChannel
@@ -108,7 +108,7 @@ class BuildProcessExecutor(DeployStep):
         self.wl_app: 'WlApp' = bp.app
         self._builder_name = generate_builder_name(self.wl_app)
 
-    def execute(self, metadata: Optional[Dict] = None):
+    def execute(self, metadata: Dict):
         """Execute the build process"""
         try:
             with self.procedure("准备构建环境"):
@@ -120,7 +120,7 @@ class BuildProcessExecutor(DeployStep):
 
             with self.procedure("启动构建任务"):
                 self.stream.write_message(f"Preparing to build {self.wl_app.name} ...")
-                slugbuilder_template = prepare_slugbuilder_template(self.wl_app, env_vars, metadata)
+                slugbuilder_template = prepare_slugbuilder_template(self.wl_app, env_vars, builder_image=self.bp.image)
 
                 self.stream.write_message(f"Starting build app: {self.wl_app.name}")
                 self.start_slugbuilder(slugbuilder_template)
@@ -218,20 +218,24 @@ class BuildProcessExecutor(DeployStep):
         logger.debug('SlugBuilder created: %s', slug_builder_name)
         return slug_builder_name
 
-    def create_and_bind_build_instance(self, metadata: Optional[Dict] = None) -> Build:
+    def create_and_bind_build_instance(self, metadata: Dict) -> Build:
         """Create the Build instance and bind it to self.BuildProcess instance
 
         :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
         """
         procfile = {}
-        if metadata and 'procfile' in metadata:
+        if 'procfile' in metadata:
             procfile = metadata['procfile']
+        if 'image' not in metadata:
+            raise KeyError("'image' is required")
+        image = metadata['image']
 
         # starting create build
         build_instance = Build.objects.create(
             owner=settings.BUILDER_USERNAME,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
+            image=image,
             branch=self.bp.branch,
             revision=self.bp.revision,
             procfile=procfile,

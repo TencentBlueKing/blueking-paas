@@ -34,8 +34,6 @@ from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.constants import PULL_SECRET_NAME
 from paas_wl.workloads.images.entities import ImageCredentials, build_dockerconfig
 from paasng.engine.configurations.building import SlugBuilderTemplate
-from paasng.engine.configurations.image import generate_image_repository
-from paasng.engine.models import EngineApp
 from paasng.utils.blobstore import make_blob_store
 
 if TYPE_CHECKING:
@@ -58,11 +56,6 @@ def generate_slug_path(bp: BuildProcess) -> str:
     return f'{app.region}/home/{slug_name}/push'
 
 
-def generate_image_tag(bp: BuildProcess) -> str:
-    """Get the Image Tag for bp"""
-    return f"{bp.branch}-{bp.revision}"
-
-
 def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
     """generate all env vars needed for building"""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
@@ -72,25 +65,25 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
 
     if metadata and metadata.get("use_dockerfile"):
         # build application form Dockerfile
-        engine_app = EngineApp.objects.get(id=app.pk)
-        image_repository = generate_image_repository(engine_app)
+        image_repository = metadata['image_repository']
+        output_image = metadata['image']
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
             ),
-            OUTPUT_IMAGE=f"{image_repository}:{generate_image_tag(bp)}",
+            OUTPUT_IMAGE=output_image,
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
             DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
         )
     elif metadata and metadata.get("use_cnb"):
         # build application as image
-        engine_app = EngineApp.objects.get(id=app.pk)
-        image_repository = generate_image_repository(engine_app)
+        image_repository = metadata['image_repository']
+        output_image = metadata['image']
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
             ),
-            OUTPUT_IMAGE=f"{image_repository}:{generate_image_tag(bp)}",
+            OUTPUT_IMAGE=output_image,
             CACHE_IMAGE=f"{image_repository}:cnb-build-cache",
         )
     else:
@@ -165,16 +158,18 @@ def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
         env_vars["REQUIRED_BUILDPACKS"] = buildpacks
 
 
-def prepare_slugbuilder_template(app: 'WlApp', env_vars: Dict, metadata: Optional[Dict]) -> SlugBuilderTemplate:
+def prepare_slugbuilder_template(
+    app: 'WlApp', env_vars: Dict, builder_image: Optional[str] = None
+) -> SlugBuilderTemplate:
     """Prepare the template for running a slug builder
 
     :param app: WlApp to build, provide info about namespace, region and etc.
     :param env_vars: Extra environment vars
-    :param metadata: metadata about slugbuilder
+    :param builder_image: image of slugbuilder
     :returns: args for start slugbuilder
     """
     # Builder image name
-    image = (metadata or {}).get("image", settings.DEFAULT_SLUGBUILDER_IMAGE)
+    image = builder_image or settings.DEFAULT_SLUGBUILDER_IMAGE
     logger.info(f"build wl_app<{app.name}> with slugbuilder<{image}>")
 
     return SlugBuilderTemplate(

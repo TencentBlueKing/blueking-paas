@@ -18,15 +18,14 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.cluster.utils import get_cluster_by_app
-from paas_wl.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paas_wl.networking.egress.models import RCStateAppBinding
 from paas_wl.networking.egress.serializers import RCStateAppBindingSLZ
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
@@ -55,24 +54,10 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
         )
 
     def create(self, request, code, module_name, environment):
-        """获取应用在该部署环境下的出口网关信息"""
-        wl_app = self.get_wl_app_via_path()
-        cluster = get_cluster_by_app(wl_app)
-
-        try:
-            state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
-            binding = RCStateAppBinding.objects.create(app=wl_app, state=state)
-        except RegionClusterState.DoesNotExist:
-            logger.warning('No cluster state can be found for region=%s', wl_app.region)
-            raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("集群数据未初始化，请稍候再试")
-        except IntegrityError:
-            raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("不能重复绑定")
-        except Exception:
-            logger.exception('Unable to crate RCStateBinding instance')
-            raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("请稍候再试")
-
-        serializer = RCStateAppBindingSLZ(binding)
-        return Response({'name': 'default', 'rcs_binding_data': serializer.data}, status=status.HTTP_201_CREATED)
+        """绑定应用在该部署环境下的出口网关信息"""
+        # 由于该 Egress 实现导致 Pod 仅能调度在指定节点，对于集群运维极其不利，因此决定禁用增量的 RegionClusterState 配置
+        # 如果还是有开启的需求，应该由平台管理员，使用 python manage.py create_rc_state_binding 命令添加
+        raise error_codes.EDITION_NOT_SUPPORT.f(_("新建出口 IP 绑定功能已禁用，如有需要请联系管理员"))
 
     def destroy(self, request, code, module_name, environment):
         """清除已获取的出口网关信息"""

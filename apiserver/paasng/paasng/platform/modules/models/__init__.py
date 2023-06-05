@@ -16,6 +16,6 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from .deploy_config import DeployConfig  # noqa
+from .deploy_config import BuildConfig, DeployConfig  # noqa
 from .module import Module  # noqa
 from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType  # noqa

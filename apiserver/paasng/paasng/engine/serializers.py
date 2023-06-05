@@ -52,9 +52,15 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
         choices=ImagePullPolicy.get_choices(),
         default=ImagePullPolicy.IF_NOT_PRESENT,
     )
+    build_only = serializers.BooleanField(help_text="是否仅构建, 不发布", default=False)
+    build_id = serializers.CharField(
+        help_text="构建产物ID, 提供该ID时将跳过构建", required=False, allow_null=True, allow_blank=True
+    )
 
 
 class CreateDeploymentSLZ(serializers.Serializer):
+    """创建部署"""
+
     version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
     version_name = serializers.CharField(required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name")
     revision = serializers.CharField(
@@ -63,6 +69,8 @@ class CreateDeploymentSLZ(serializers.Serializer):
     )
 
     advanced_options = DeploymentAdvancedOptionsSLZ(required=False, default={})
+    # 仅云原生应用需要该参数
+    manifest = serializers.JSONField(label=_('BkApp 配置信息'), required=False)
 
 
 class CreateDeploymentResponseSLZ(serializers.Serializer):

@@ -82,7 +82,7 @@ var _ = Describe("Test AddonReconciler", func() {
 						return &http.Response{
 							StatusCode: 200,
 							Body: ioutil.NopCloser(
-								bytes.NewBufferString(`{"results": [{"name": "version", "value": "5.0.0"}]}`),
+								bytes.NewBufferString(`{"results": {"version": "5.0.0"}}`),
 							),
 							Header: make(http.Header),
 						}
@@ -156,7 +156,7 @@ var _ = Describe("Test AddonReconciler", func() {
 
 		ret := r.Reconcile(ctx, bkapp)
 
-		Expect(ret.err).To(HaveOccurred())
+		Expect(ret.err).ShouldNot(HaveOccurred())
 		Expect(ret.ShouldAbort()).To(BeTrue())
 
 		cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AddOnsProvisioned)

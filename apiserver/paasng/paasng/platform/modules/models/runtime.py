@@ -27,23 +27,13 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.utils.basic import ChoicesEnum
+from paasng.platform.modules.constants import BuildPackType
 from paasng.utils.models import TimestampedModel
 
 if TYPE_CHECKING:
     from .module import Module
 
 logger = logging.getLogger(__name__)
-
-
-class BuildPackType(ChoicesEnum):
-    GIT = "git"
-    TAR = "tar"
-
-    _choices_labels = [
-        (GIT, "git"),
-        (TAR, "tar"),
-    ]
 
 
 class RuntimeResourceManager(models.Manager):
@@ -152,6 +142,7 @@ class AppBuildPack(TimestampedModel):
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况
     is_hidden = models.BooleanField(verbose_name='是否隐藏', default=False)
     description = TranslatedFieldWithFallback(models.CharField(verbose_name='描述', max_length=1024, blank=True))
+    # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="buildpacks")
 
     objects = RuntimeResourceManager()
@@ -218,6 +209,7 @@ class AppImage(TimestampedModel):
 class AppSlugRunner(AppImage):
     """应用运行环境"""
 
+    # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="slugrunners")
 
     objects = SlugManager()
@@ -228,6 +220,7 @@ class AppSlugBuilder(AppImage):
 
     # 字段指示该环境可用的 buildpacks
     buildpacks = models.ManyToManyField(AppBuildPack, related_name='slugbuilders')
+    # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="slugbuilders")
 
     objects = SlugManager()

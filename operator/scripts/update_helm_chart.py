@@ -183,15 +183,23 @@ content_patch_conf = {
                 ingressPluginConfig:
                   accessControlConfig:
                     redisConfigKey: {{ .Values.controllerConfig.ingressPluginConfig.accessControlConfig.redisConfigKey | quote }}
+                  paasAnalysisConfig:
+                    enabled: {{ .Values.controllerConfig.ingressPluginConfig.paasAnalysisConfig.enabled }}
                 ''',  # noqa: E501
             ),
             wrap_multiline_str(
                 4,
                 '''
-                {{ if .Values.accessControl.enabled -}}
+                {{- if or .Values.accessControl.enabled .Values.paasAnalysis.enabled }}
                 ingressPluginConfig:
+                  {{- if .Values.accessControl.enabled }}
                   accessControlConfig:
                     redisConfigKey: {{ .Values.accessControl.redisConfigKey }}
+                  {{- end }}
+                  {{- if .Values.paasAnalysis.enabled }}
+                  paasAnalysisConfig:
+                    enabled: {{ .Values.paasAnalysis.enabled }}
+                  {{- end }}
                 {{- else -}}
                 ingressPluginConfig: {}
                 {{- end }}
@@ -605,6 +613,8 @@ class HelmChartUpdater:
 
         # 白名单控制配置挪到顶层
         values['accessControl'] = {'enabled': False, 'redisConfigKey': ''}
+        # PA 访问日志统计挪到顶层
+        values['paasAnalysis'] = {'enabled': False}
         del values['controllerConfig']['ingressPluginConfig']
 
         values['autoscaling'] = {'enabled': False}

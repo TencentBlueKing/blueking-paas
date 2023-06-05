@@ -17,7 +17,6 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Iterable, List
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -70,10 +69,6 @@ from paasng.publish.market.protections import ModulePublishPreparer
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import permission_classes as perm_classes
-
-if TYPE_CHECKING:
-    from .models import AppBuildPack
-
 
 logger = logging.getLogger(__name__)
 
@@ -294,12 +289,6 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 强制转换成 dict 避免非 json 格式权限错误
         return Response(data=dict(slz.data))
 
-    def get_ordered_buildpacks_list(self, buildpacks: List, buildpacks_id: List) -> Iterable['AppBuildPack']:
-        grouped = {}
-        for i in buildpacks:
-            grouped[i.id] = i
-        return [grouped[i] for i in buildpacks_id]
-
     @transaction.atomic
     def bind(self, request, code, module_name):
         """解绑原有运行时，绑定新运行时"""
@@ -323,7 +312,7 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         binder = ModuleRuntimeBinder(module)
         binder.clear_runtime()
         binder.bind_image(slugrunner, slugbuilder)
-        binder.bind_buildpacks(self.get_ordered_buildpacks_list(buildpacks, buildpack_ids))
+        binder.bind_buildpacks(buildpacks, buildpack_ids)
 
         return Response(
             data={

@@ -37,12 +37,13 @@ from paasng.dev_resources.sourcectl.utils import (
 )
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
-from paasng.engine.configurations.building import SlugbuilderInfo
+from paasng.engine.configurations.building import SlugbuilderInfo, get_build_args, get_dockerfile_path
 from paasng.engine.configurations.config_var import get_env_variables
+from paasng.engine.configurations.image import RuntimeImageInfo, generate_image_repository
 from paasng.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.engine.deploy.base import DeployPoller
 from paasng.engine.deploy.bg_build.bg_build import start_bg_build_process
-from paasng.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.release import start_release_step
 from paasng.engine.models import Deployment
 from paasng.engine.models.phases import DeployPhaseTypes
 from paasng.engine.phases_steps.steps import update_step_by_line
@@ -70,6 +71,33 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(base=I18nTask)
+def start_build(deployment_id, runtime_type: RuntimeType, *args, **kwargs):
+    """Start a deployment process
+
+    :param deployment_id: ID of deployment object
+    :param runtime_type: runtime type of Application
+    """
+    if runtime_type == RuntimeType.BUILDPACK:
+        deploy_controller = ApplicationBuilder.from_deployment_id(deployment_id)
+    elif runtime_type == RuntimeType.DOCKERFILE:
+        deploy_controller = ImageBuilder.from_deployment_id(deployment_id)
+    else:
+        raise NotImplementedError
+    deploy_controller.start()
+
+
+@shared_task(base=I18nTask)
+def start_build_error_callback(*args, **kwargs):
+    context = args[0]
+    exc: Exception = args[1]
+    # celery.worker.request.Request own property `args` after celery==4.4.0
+    deployment_id = context._payload[0][0]
+
+    state_mgr = DeploymentStateMgr.from_deployment_id(phase_type=DeployPhaseTypes.BUILD, deployment_id=deployment_id)
+    state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)
 
 
 class BaseBuilder(DeployStep):
@@ -212,7 +240,7 @@ class ApplicationBuilder(BaseBuilder):
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
-        with self.procedure(_('启动应用构建任务')):
+        with self.procedure('启动应用构建任务'):
             self.async_start_build_process(
                 source_destination_path, procfile={p.name: p.command for p in processes.values()}
             )
@@ -220,31 +248,13 @@ class ApplicationBuilder(BaseBuilder):
     def async_start_build_process(self, source_tar_path: str, procfile: Dict[str, str]):
         """Start a new build process and check the status periodically"""
         env_vars = get_env_variables(self.module_environment, deployment=self.deployment)
-        build_process_id = start_build_process(
+        build_process_id = start_buildpacks_build(
             self.deployment, self.version_info, str(self.deployment.id), source_tar_path, procfile, env_vars
         )
 
         self.state_mgr.update(build_process_id=build_process_id)
         params = {"build_process_id": build_process_id, "deployment_id": self.deployment.id}
         BuildProcessPoller.start(params, BuildProcessResultHandler)
-
-    def callback_build_process(self, build_process_id: str, result: dict):
-        """Callback for a finished build process"""
-        try:
-            build_id = result['build_id']
-            build_status = result['build_status']
-        except KeyError:
-            self.state_mgr.finish(JobStatus.FAILED, "An unexpected error occurred while building application")
-            return
-
-        self.state_mgr.update(build_id=build_id, build_status=build_status, build_process_id=build_process_id)
-        if build_status == BuildStatus.FAILED:
-            self.state_mgr.finish(JobStatus.FAILED, "Building failed, please check logs for more details")
-        elif build_status == BuildStatus.INTERRUPTED:
-            self.state_mgr.finish(JobStatus.INTERRUPTED, "Building interrupted")
-        else:
-            post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.BUILD)
-            ApplicationPreReleaseExecutor.from_deployment_id(self.deployment.id).start()
 
 
 class ImageBuilder(BaseBuilder):
@@ -259,14 +269,14 @@ class ImageBuilder(BaseBuilder):
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
         relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
-        with self.procedure_force_phase(_('解析应用进程信息'), phase=preparation_phase):
+        with self.procedure_force_phase('解析应用进程信息', phase=preparation_phase):
             processes = get_processes(deployment=self.deployment, stream=self.stream)
             self.deployment.update_fields(processes=processes)
 
-        with self.procedure_force_phase(_('解析 .dockerignore 文件'), phase=preparation_phase):
+        with self.procedure_force_phase('解析 .dockerignore', phase=preparation_phase):
             dockerignore = get_dockerignore(deployment=self.deployment)
 
-        with self.procedure_force_phase(_('上传仓库代码'), phase=preparation_phase):
+        with self.procedure_force_phase('上传仓库代码', phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
             self.compress_and_upload(
                 relative_source_dir,
@@ -274,14 +284,14 @@ class ImageBuilder(BaseBuilder):
                 should_ignore=dockerignore.should_ignore if dockerignore else None,
             )
 
-        with self.procedure_force_phase(_('配置资源实例'), phase=preparation_phase) as p:
+        with self.procedure_force_phase('配置资源实例', phase=preparation_phase) as p:
             self.provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.BUILD)
-        with self.procedure(_('启动应用构建任务')):
+        with self.procedure('启动应用构建任务'):
             self.async_start_build_process(
                 source_destination_path, procfile={p.name: p.command for p in processes.values()}
             )
@@ -357,6 +367,8 @@ class BuildProcessResultHandler(CallbackHandler):
     """Result handler for a finished build process"""
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
+        """Callback for a finished build process"""
+        build_process_id = poller.params['build_process_id']
         deployment_id = poller.params['deployment_id']
         state_mgr = DeploymentStateMgr.from_deployment_id(
             deployment_id=deployment_id, phase_type=DeployPhaseTypes.BUILD
@@ -364,40 +376,26 @@ class BuildProcessResultHandler(CallbackHandler):
 
         if result.is_exception:
             state_mgr.finish(JobStatus.FAILED, "build process failed")
+            return
+
+        try:
+            build_id = result.data['build_id']
+            build_status = result.data['build_status']
+        except KeyError:
+            state_mgr.finish(JobStatus.FAILED, "An unexpected error occurred while building application")
+            return
+
+        state_mgr.update(build_id=build_id, build_status=build_status, build_process_id=build_process_id)
+        if build_status == BuildStatus.FAILED:
+            state_mgr.finish(JobStatus.FAILED, "Building failed, please check logs for more details")
+        elif build_status == BuildStatus.INTERRUPTED:
+            state_mgr.finish(JobStatus.INTERRUPTED, "Building interrupted")
         else:
-            build_process_id = poller.params['build_process_id']
-            app_builder = ApplicationBuilder.from_deployment_id(deployment_id)
-            app_builder.callback_build_process(build_process_id, result.data)
+            post_phase_end.send(state_mgr, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.BUILD)
+            start_release_step(deployment_id)
 
 
-@shared_task(base=I18nTask)
-def start_build(deployment_id, runtime_type: RuntimeType, *args, **kwargs):
-    """Start a deployment process
-
-    :param deployment_id: ID of deployment object
-    :param runtime_type: runtime type of Application
-    """
-    if runtime_type == RuntimeType.BUILDPACK:
-        deploy_controller = ApplicationBuilder.from_deployment_id(deployment_id)
-    elif runtime_type == RuntimeType.DOCKERFILE:
-        deploy_controller = ImageBuilder.from_deployment_id(deployment_id)
-    else:
-        raise NotImplementedError
-    deploy_controller.start()
-
-
-@shared_task(base=I18nTask)
-def start_build_error_callback(*args, **kwargs):
-    context = args[0]
-    exc: Exception = args[1]
-    # celery.worker.request.Request own property `args` after celery==4.4.0
-    deployment_id = context._payload[0][0]
-
-    state_mgr = DeploymentStateMgr.from_deployment_id(phase_type=DeployPhaseTypes.BUILD, deployment_id=deployment_id)
-    state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)
-
-
-def start_build_process(
+def start_buildpacks_build(
     deploy: Deployment,
     version: 'VersionInfo',
     stream_channel_id: str,
@@ -412,11 +410,15 @@ def start_build_process(
 
     # get slugbuilder and buildpacks from engine_app
     build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())
+    runtime_info = RuntimeImageInfo(env.get_engine_app())
     # 注入构建环境所需环境变量
     extra_envs = {**extra_envs, **build_info.environments}
 
     # Use the default image when it's None, which means no images are bound to the app
-    image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
+    builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
+
+    app_image_repository = generate_image_repository(env.get_engine_app())
+    app_image = runtime_info.generate_image(version_info=version)
     # Create the Build object and start a background build task
     build_process = BuildProcess.objects.create(
         # TODO: Set the correct owner value
@@ -426,7 +428,7 @@ def start_build_process(
         revision=version.revision,
         branch=version.version_name,
         output_stream=OutputStream.objects.create(),
-        image=image,
+        image=builder_image,
         buildpacks=build_info.buildpacks_info or [],
     )
     # Start the background build process
@@ -437,7 +439,9 @@ def start_build_process(
         metadata={
             'procfile': procfile,
             'extra_envs': extra_envs or {},
-            'image': image,
+            # TODO: 不传递 image_repository
+            'image_repository': app_image_repository,
+            'image': app_image,
             'buildpacks': build_process.buildpacks_as_build_env(),
             "use_cnb": build_info.use_cnb,
         },
@@ -458,10 +462,12 @@ def start_docker_build(
     env = deploy.app_environment
 
     builder_image = settings.KANIKO_IMAGE
+    app_image_repository = generate_image_repository(env.get_engine_app())
+    app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(version_info=version)
     # 注入构建环境所需环境变量
     extra_envs = {
-        "DOCKERFILE_PATH": "",
-        "BUILD_ARG": "",
+        "DOCKERFILE_PATH": get_dockerfile_path(env.module),
+        "BUILD_ARG": get_build_args(env.module),
     }
 
     # Create the Build object and start a background build task
@@ -481,7 +487,9 @@ def start_docker_build(
         metadata={
             'procfile': procfile,
             'extra_envs': extra_envs or {},
-            'image': builder_image,
+            # TODO: 不传递 image_repository
+            'image_repository': app_image_repository,
+            'image': app_image,
             "use_dockerfile": True,
         },
     )

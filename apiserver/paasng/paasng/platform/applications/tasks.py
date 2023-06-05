@@ -55,7 +55,6 @@ def sync_developers_to_sentry(application_id):
                 'application_code': application.code,
                 'application_id': application.id,
             }
-
             service.patch_service_instance_by_plan(plan, params)
 
 

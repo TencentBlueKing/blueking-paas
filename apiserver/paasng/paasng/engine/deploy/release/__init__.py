@@ -16,8 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.apps import AppConfig
+from paasng.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
+from paasng.engine.deploy.release.operator import BkAppReleaseMgr
+from paasng.engine.models.deployment import Deployment
+from paasng.platform.applications.constants import ApplicationType
 
 
-class ProcessesConfig(AppConfig):
-    name = 'processes'
+def start_release_step(deployment_id: str):
+    """start a release process"""
+    deployment = Deployment.objects.get(pk=deployment_id)
+    application = deployment.app_environment.application
+
+    if application.type == ApplicationType.CLOUD_NATIVE:
+        release_mgr = BkAppReleaseMgr.from_deployment_id(deployment_id)
+    else:
+        release_mgr = ApplicationPreReleaseExecutor.from_deployment_id(deployment_id)
+    release_mgr.start()

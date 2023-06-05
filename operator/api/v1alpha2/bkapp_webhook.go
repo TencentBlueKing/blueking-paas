@@ -41,8 +41,9 @@ import (
 var appLog = logf.Log.WithName("bkapp-resource")
 
 var (
-	// AppNameRegex 应用名称格式（与 BK_APP_CODE 相同）
-	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,16}$")
+	// AppNameRegex 应用名称格式.
+	// 长度 39 的计算规则为 16 + 3 + 20, 其中 16 是 app code 的最大长度(db 表中最大是 20), 3 是 -m-, 20 是 module name 的最大长度
+	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,39}$")
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
 )
@@ -117,6 +118,9 @@ func (r *BkApp) validateApp() error {
 	if err := r.validateAppName(); err != nil {
 		allErrs = append(allErrs, err)
 	}
+	if err := r.validateAnnotations(); err != nil {
+		allErrs = append(allErrs, err)
+	}
 	if err := r.validateAppSpec(); err != nil {
 		allErrs = append(allErrs, err)
 	}
@@ -136,6 +140,39 @@ func (r *BkApp) validateAppName() *field.Error {
 			field.NewPath("metadata").Child("name"), r.Name, "must match regex "+AppNameRegex.String(),
 		)
 	}
+	return nil
+}
+
+func (r *BkApp) validateAnnotations() *field.Error {
+	annotations := r.GetAnnotations()
+	if _, ok := annotations[BkAppCodeKey]; !ok {
+		return field.Invalid(field.NewPath("metadata").Child("annotations"), annotations, "missing "+BkAppCodeKey)
+	}
+	if _, ok := annotations[ModuleNameKey]; !ok {
+		return field.Invalid(field.NewPath("metadata").Child("annotations"), annotations, "missing "+ModuleNameKey)
+	}
+
+	// 校验 BkApp 的 name 是否满足注解 bkapp.paas.bk.tencent.com/code 和 bkapp.paas.bk.tencent.com/module-name 的拼接规则
+	var expectedRawName string
+	if annotations[ModuleNameKey] != DefaultModuleName {
+		expectedRawName = fmt.Sprintf("%s-m-%s", annotations[BkAppCodeKey], annotations[ModuleNameKey])
+	} else {
+		expectedRawName = annotations[BkAppCodeKey]
+	}
+	if r.Name != DNSSafeName(expectedRawName) {
+		return field.Invalid(
+			field.NewPath("metadata").Child("annotations"),
+			annotations,
+			fmt.Sprintf(
+				"%s and %s don't match with %s %s",
+				BkAppCodeKey,
+				ModuleNameKey,
+				field.NewPath("metadata").Child("name").String(),
+				r.Name,
+			),
+		)
+	}
+
 	return nil
 }
 

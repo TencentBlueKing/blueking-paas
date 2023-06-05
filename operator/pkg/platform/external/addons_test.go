@@ -92,13 +92,15 @@ var _ = Describe("TestClient", func() {
 			Expect(err).To(BeNil())
 			Expect(*result).To(Equal(expectedSpecs))
 		},
-		Entry("return valid specs", &SimpleResponse{StatusCode: 200, Body: toJsonString(fakeAddonSpecsResult{
-			Data: []addonSpecsData{{Name: "version", Value: "5.0.0", RecommendedValue: "5.0.0", DisplayName: "版本"}},
-		})}, AddonSpecsResult{Data: []AddonSpecsData{{Name: "version", Value: "5.0.0"}}}),
+		Entry(
+			"return valid specs",
+			&SimpleResponse{StatusCode: 200, Body: `{"results": {"version": "5.0.0"}}`},
+			AddonSpecsResult{Data: map[string]string{"version": "5.0.0"}},
+		),
 		Entry(
 			"return empty list",
-			&SimpleResponse{StatusCode: 200, Body: toJsonString(fakeAddonSpecsResult{})},
-			AddonSpecsResult{},
+			&SimpleResponse{StatusCode: 200, Body: `{"results": {}}`},
+			AddonSpecsResult{Data: make(map[string]string)},
 		),
 	)
 
@@ -130,18 +132,6 @@ var _ = Describe("TestClient", func() {
 		Entry("500 for provision failed", &SimpleResponse{StatusCode: 500}, AddonSpecs{}, HaveOccurred()),
 	)
 })
-
-type fakeAddonSpecsResult struct {
-	Data []addonSpecsData `json:"results,omitempty"`
-}
-
-type addonSpecsData struct {
-	Name             string `json:"name"`
-	Value            string `json:"value"`
-	RecommendedValue string `json:"recommended_value"`
-	DisplayName      string `json:"display_name"`
-	Description      string `json:"description"`
-}
 
 func toJsonString(v interface{}) string {
 	b, _ := json.Marshal(v)

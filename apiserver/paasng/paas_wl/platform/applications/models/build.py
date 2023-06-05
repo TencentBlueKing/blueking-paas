@@ -30,7 +30,11 @@ class Build(UuidAuditedModel):
     app = models.ForeignKey('App', on_delete=models.CASCADE)
 
     # Slug path
-    slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push")
+    slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push", null=True)
+    image = models.TextField(
+        help_text="镜像地址, 形如 {registry}/{platform_namespace}/{app_code}/{module}/{env}:{tag}", null=True
+    )
+
     source_type = models.CharField(max_length=128, null=True)
     branch = models.CharField(max_length=128, null=True, help_text="readable version, such as trunk/master")
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
@@ -39,7 +43,7 @@ class Build(UuidAuditedModel):
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
 
-    artifact_deleted = models.BooleanField(default=False, help_text="slug是否已被清理")
+    artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
 
     class Meta:
         get_latest_by = 'created'
@@ -77,7 +81,7 @@ class BuildProcess(UuidAuditedModel):
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey('App', null=True, on_delete=models.CASCADE)
-    image = models.CharField(max_length=256, null=True)
+    image = models.CharField(max_length=512, null=True, help_text="builder image")
     buildpacks = JSONCharField(max_length=4096, null=True)
 
     source_tar_path = models.CharField(max_length=2048)

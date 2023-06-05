@@ -124,7 +124,11 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
     @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
-        serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
+        if request.method == "GET":
+            # 该接口首次注册到网关时是 GET 协议, 因此需要保留对 GET 的兼容
+            serializer = serializers.ListBkPluginLogsSLZ(data=request.query_params)
+        else:
+            serializer = serializers.ListBkPluginLogsSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 

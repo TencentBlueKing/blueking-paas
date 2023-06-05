@@ -54,11 +54,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
             return ApplicationReleaseMgr.from_deployment_id(self.deployment.id).start()
 
         with self.procedure('更新应用配置'):
-            update_image_runtime_config(
-                self.engine_app,
-                self.deployment.version_info,
-                image_pull_policy=self.deployment.advanced_options.image_pull_policy,
-            )
+            update_image_runtime_config(deployment=self.deployment)
 
         with self.procedure('初始化指令执行环境'):
             extra_envs = get_env_variables(self.engine_app.env, deployment=self.deployment)

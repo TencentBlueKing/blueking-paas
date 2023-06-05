@@ -69,3 +69,8 @@ class DeployHookType(str, StructuredEnum):
         if value == "pre_release_hook":
             return cls.PRE_RELEASE_HOOK
         return super()._missing_(value)
+
+
+class BuildPackType(str, StructuredEnum):
+    GIT = EnumField("git", label="git")
+    TAR = EnumField("tar", label="tar")

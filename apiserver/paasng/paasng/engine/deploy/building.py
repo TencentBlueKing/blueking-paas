@@ -410,19 +410,15 @@ def start_buildpacks_build(
 
     # get slugbuilder and buildpacks from engine_app
     build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())
-    runtime_info = RuntimeImageInfo(env.get_engine_app(), version_info=version)
+    runtime_info = RuntimeImageInfo(env.get_engine_app())
     # 注入构建环境所需环境变量
     extra_envs = {**extra_envs, **build_info.environments}
 
     # Use the default image when it's None, which means no images are bound to the app
     builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 
-    if build_info.use_cnb:
-        app_image_repository = generate_image_repository(env.get_engine_app())
-        app_image = runtime_info.image
-    else:
-        app_image_repository = generate_image_repository(env.get_engine_app())
-        app_image = runtime_info.image
+    app_image_repository = generate_image_repository(env.get_engine_app())
+    app_image = runtime_info.generate_image(version_info=version)
     # Create the Build object and start a background build task
     build_process = BuildProcess.objects.create(
         # TODO: Set the correct owner value
@@ -467,7 +463,7 @@ def start_docker_build(
 
     builder_image = settings.KANIKO_IMAGE
     app_image_repository = generate_image_repository(env.get_engine_app())
-    app_image = RuntimeImageInfo(env.get_engine_app(), version_info=version).image
+    app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(version_info=version)
     # 注入构建环境所需环境变量
     extra_envs = {
         "DOCKERFILE_PATH": get_dockerfile_path(env.module),

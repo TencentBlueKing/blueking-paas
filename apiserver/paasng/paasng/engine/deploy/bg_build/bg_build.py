@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict
 from uuid import UUID
 
 from blue_krill.redis_tools.messaging import StreamChannel
@@ -108,7 +108,7 @@ class BuildProcessExecutor(DeployStep):
         self.wl_app: 'WlApp' = bp.app
         self._builder_name = generate_builder_name(self.wl_app)
 
-    def execute(self, metadata: Optional[Dict] = None):
+    def execute(self, metadata: Dict):
         """Execute the build process"""
         try:
             with self.procedure("准备构建环境"):
@@ -218,17 +218,17 @@ class BuildProcessExecutor(DeployStep):
         logger.debug('SlugBuilder created: %s', slug_builder_name)
         return slug_builder_name
 
-    def create_and_bind_build_instance(self, metadata: Optional[Dict] = None) -> Build:
+    def create_and_bind_build_instance(self, metadata: Dict) -> Build:
         """Create the Build instance and bind it to self.BuildProcess instance
 
         :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
         """
         procfile = {}
-        if metadata and 'procfile' in metadata:
+        if 'procfile' in metadata:
             procfile = metadata['procfile']
-        image = None
-        if metadata and 'image' in metadata:
-            image = metadata['image']
+        if 'image' not in metadata:
+            raise KeyError("'image' is required")
+        image = metadata['image']
 
         # starting create build
         build_instance = Build.objects.create(

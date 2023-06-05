@@ -26,6 +26,7 @@ from django.conf import settings
 from paas_wl.platform.applications.models.build import Build
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.kube_res.base import Schedule
+from paasng.platform.modules.models import BuildConfig
 
 if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
@@ -43,7 +44,7 @@ class SlugbuilderInfo:
     """表示与模块相关的构建环境信息"""
 
     module: 'Module'
-    slugbuilder: 'AppSlugBuilder'
+    slugbuilder: Optional['AppSlugBuilder']
     buildpacks: List['AppBuildPack']
     # builder + buildpacks 的环境变量
     environments: Dict
@@ -132,10 +133,14 @@ class SlugBuilderTemplate:
 
 
 def get_dockerfile_path(module: "Module") -> str:
-    # TODO: 调整成使用 BuildConfig 模型的字段
-    return "Dockerfile"
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    return cfg.dockerfile_path or "Dockerfile"
 
 
 def get_build_args(module: "Module") -> str:
-    # TODO: 调整成使用 BuildConfig 模型的字段
+    cfg = BuildConfig.objects.get_or_create_by_module(module)
+    build_args = cfg.docker_build_args
+    if build_args:
+        # 避免 value 有 "," 导致字符分割是异常, 将内容进行 base64 编码
+        return ",".join([base64.b64encode(f"{k}={v}".encode()).decode() for k, v in build_args.items()])
     return ""

@@ -22,7 +22,7 @@ from celery import shared_task
 from django.utils.translation import gettext as _
 
 from paasng.dev_resources.servicehub.manager import mixed_service_mgr
-from paasng.engine.configurations.image import ImageCredentialManager
+from paasng.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo
 from paasng.engine.constants import JobStatus
 from paasng.engine.deploy.release import start_release_step
 from paasng.engine.models import DeployPhaseTypes
@@ -74,7 +74,9 @@ class ImageReleaseMgr(DeployStep):
             processes = get_processes(deployment=self.deployment)
             build_id = self.deployment.advanced_options.build_id
             if not build_id:
+                runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                 build_id = self.engine_client.create_build(
+                    image=runtime_info.generate_image(self.version_info),
                     procfile={p.name: p.command for p in processes.values()},
                     extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
                 )

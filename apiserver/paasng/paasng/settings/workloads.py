@@ -208,22 +208,22 @@ DEFAULT_PROC_SPEC_PLANS = {
     "Starter": {
         'max_replicas': 5,
         'limits': {'cpu': '4096m', 'memory': '1024Mi'},
-        'requests': {'cpu': '100m', 'memory': '64Mi'},
+        'requests': {'cpu': '100m', 'memory': '256Mi'},
     },
     "4C1G5R": {
         'max_replicas': 5,
         'limits': {'cpu': '4096m', 'memory': '1024Mi'},
-        'requests': {'cpu': '100m', 'memory': '64Mi'},
+        'requests': {'cpu': '100m', 'memory': '256Mi'},
     },
     "4C2G5R": {
         'max_replicas': 5,
         'limits': {'cpu': '4096m', 'memory': '2048Mi'},
-        'requests': {'cpu': '100m', 'memory': '64Mi'},
+        'requests': {'cpu': '100m', 'memory': '896Mi'},
     },
     "4C4G5R": {
         'max_replicas': 5,
         'limits': {'cpu': '4096m', 'memory': '4096Mi'},
-        'requests': {'cpu': '100m', 'memory': '64Mi'},
+        'requests': {'cpu': '100m', 'memory': '2048Mi'},
     },
 }
 

@@ -23,4 +23,7 @@ module.exports = {
     $: true,
     BACKEND_URL: true,
   },
+  rules: {
+    // 'linebreak-style': ['error', 'windows'], // 回车符使用windows风格（CRLF），默认是LF:使用mac风格
+  },
 };

@@ -34,7 +34,7 @@ urlpatterns = [
     ),
     url(
         'sys/api/bk_plugins/(?P<code>[^/]+)/logs/$',
-        views.SysBkPluginLogsViewset.as_view({'get': 'list'}),
+        views.SysBkPluginLogsViewset.as_view({'get': 'list', 'post': 'list'}),
         name='sys.api.bk_plugins.logs.list',
     ),
     url(

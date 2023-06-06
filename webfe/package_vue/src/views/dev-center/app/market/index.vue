@@ -10,7 +10,7 @@
       class="app-container overview-middle"
     >
       <section v-show="!isDataLoading">
-        <bk-tab
+        <!-- <bk-tab
           class="mt5"
           :active.sync="active"
           type="unborder-card"
@@ -25,21 +25,21 @@
             name="baseInfo"
             :label="$t('修改市场信息')"
           />
-        </bk-tab>
+        </bk-tab> -->
 
         <paas-content-loader
           :is-loading="infoTabLoading || visitTabLoading"
           :placeholder="loaderPlaceholder"
           :height="785"
         >
-          <template v-if="active === 'visitInfo'">
+          <template>
             <market-info
               :key="comKey"
               class="mt25"
               @data-ready="handleDataReady"
             />
           </template>
-          <template v-else>
+          <template>
             <market-manager
               :key="comKey"
               class="mt25"

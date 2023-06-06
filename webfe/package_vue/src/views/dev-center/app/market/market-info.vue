@@ -1,16 +1,46 @@
 <template>
   <section v-show="!isDataLoading">
-    <div class="ps-action-header mb20 mt5">
-      <div :class="['icon-wrapper', { 'active': appMarketConfig.enabled }]">
+    <div class="ps-action-header mb20 mt5 mark-info">
+      <!-- <div :class="['icon-wrapper', { 'active': appMarketConfig.enabled }]">
         <span :class="['paasng-icon', { 'paasng-lock': !appMarketConfig.enabled, 'paasng-unlock': appMarketConfig.enabled }]" />
-      </div>
-      <div class="title">
-        <strong class="mr10">{{ appMarketConfig.enabled ? $t('已发布到应用市场') : $t('未发布到应用市场') }}</strong>
+      </div> -->
+      <div class="release-info flex-row align-items-center">
+        <strong class="release-info-title">{{ $t('发布状态') }}</strong>
+        <div class="release-info-status">{{ appMarketConfig.enabled ? $t('已发布') : $t('未发布') }}</div>
         <bk-switcher
           v-model="appMarketConfig.enabled"
           :disabled="isDisabled"
           @change="handlerSwitch"
         />
+        <bk-alert v-if="fillInfo" type="warning" class="release-info-alert" :title="$t(fillInfo.message)"></bk-alert>
+        <bk-alert v-else-if="deployInfo" type="error" class="release-info-alert">
+          <div slot="title">
+            {{ $t(deployInfo.message) }}
+            <bk-button
+              theme="primary"
+              class="pl10"
+              text
+              @click.native.stop
+              @click="handleEditCondition(deployInfo)"
+            >
+            {{ $t('去部署生产环境') }}
+            </bk-button>
+          </div>
+        </bk-alert>
+        <bk-alert v-else-if="appMarketConfig.enabled" class="release-info-alert" type="success">
+          <div slot="title">
+            <p>
+              {{ $t('应用已成功发布到蓝鲸应用市场') }}
+              <section
+                v-if="marketAddress"
+                class="visit-link"
+                @click="visitAppMarket"
+              >
+                {{ $t('立即访问') }}
+              </section>
+            </p>
+          </div>
+        </bk-alert>
       </div>
       <p class="tip">
         {{ $t('发布到应用市场后，用户将可以通过蓝鲸应用市场搜索访问你的应用') }}
@@ -55,21 +85,7 @@
         </section>
       </div>
     </template>
-    <template v-else-if="appMarketConfig.enabled">
-      <div :class="['ps-tip-block', 'is-success']">
-        <section class="content">
-          <p>
-            {{ $t('应用已成功发布到蓝鲸应用市场') }}
-            <section
-              v-if="marketAddress"
-              class="visit-link"
-              @click="visitAppMarket"
-            >
-              {{ $t('立即访问') }}
-            </section>
-          </p>
-        </section>
-      </div>
+    <template>
     </template>
 
     <span class="ps-span" />
@@ -316,7 +332,7 @@
                 currentAddress: {},
                 visitTabLoading: false,
                 infoTabLoading: false,
-                marketAddress: null
+                marketAddress: null,
             };
         },
         computed: {
@@ -344,6 +360,12 @@
             },
             isCloudApp () {
                 return this.curAppInfo.application.type === 'cloud_native';
+            },
+            fillInfo () {  //未完善基本信息
+              return this.appPreparations.failed_conditions.find(e => e.action_name === 'fill_product_info')
+            },
+            deployInfo () { //未部署
+              return this.appPreparations.failed_conditions.find(e => e.action_name === 'deploy_prod_env')
             }
         },
         inject: ['changeTab'],

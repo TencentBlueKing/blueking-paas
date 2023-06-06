@@ -95,3 +95,35 @@
         opacity: 0;
     }
 }
+
+.mark-info{
+    .release-info{
+        &-title{
+            color: #313238;
+            font-weight: 700;
+        }
+        &-status{
+            width: 52px;
+            height: 22px;
+            line-height: 22px;
+            background: #F0F1F5;
+            border-radius: 2px;
+            font-size: 12px;
+            text-align: center;
+            margin: 0 18px 0 24px;
+            color: #63656E;
+        }
+        &-alert{
+            margin-left: 24px;
+            flex: 1;
+            /deep/ .bk-alert-wraper{
+                padding: 7px 10px;
+                align-items: center;
+            }
+            /deep/ .bk-button-text{
+                font-size: 12px;
+                height: auto;
+            }
+        }
+    }
+}

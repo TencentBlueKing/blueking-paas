@@ -1,9 +1,6 @@
 <template>
   <section v-show="!isDataLoading">
-    <div class="ps-action-header mb20 mt5 mark-info">
-      <!-- <div :class="['icon-wrapper', { 'active': appMarketConfig.enabled }]">
-        <span :class="['paasng-icon', { 'paasng-lock': !appMarketConfig.enabled, 'paasng-unlock': appMarketConfig.enabled }]" />
-      </div> -->
+    <div class="ps-action-header mark-info">
       <div class="release-info flex-row align-items-center">
         <strong class="release-info-title">{{ $t('发布状态') }}</strong>
         <div class="release-info-status">{{ appMarketConfig.enabled ? $t('已发布') : $t('未发布') }}</div>
@@ -27,6 +24,20 @@
             </bk-button>
           </div>
         </bk-alert>
+        <bk-alert v-else-if="confirmRequiredWhenPublish && !appMarketConfig.enabled && !isSureRisk" class="release-info-alert" type="error">
+          <div slot="title">
+            <p>
+              {{ $t('无法发布到应用市场') }}
+              {{ $t('当前应用主模块创建时未使用蓝鲸开发框架初始化') }}
+              <section
+                class="visit-link"
+                @click="viewRisk"
+              >
+                {{ $t('查看风险') }}
+              </section>
+            </p>
+          </div>
+        </bk-alert>
         <bk-alert v-else-if="appMarketConfig.enabled" class="release-info-alert" type="success">
           <div slot="title">
             <p>
@@ -42,103 +53,27 @@
           </div>
         </bk-alert>
       </div>
-      <p class="tip">
-        {{ $t('发布到应用市场后，用户将可以通过蓝鲸应用市场搜索访问你的应用') }}
-      </p>
     </div>
-    <template v-if="!appPreparations.all_conditions_matched">
-      <div :class="['ps-tip-block', 'is-danger']">
-        <p class="title mb10">
-          {{ $t('无法发布到应用市场') }}
-        </p>
-        <section class="content">
-          <p
-            v-for="(condition, index) of appPreparations.failed_conditions"
-            :key="index"
-          >
-            <span>{{ $t(condition.message) }}</span>
-            <a
-              href="javascript: void(0);"
-              class="ml10"
-              @click="handleEditCondition(condition)"
-            >
-              {{ condition.action_name === 'deploy_prod_env' ? $t('去部署生产环境') : $t('去编辑') }}
-            </a>
-          </p>
-        </section>
-      </div>
-    </template>
-    <template v-else-if="confirmRequiredWhenPublish && !appMarketConfig.enabled && !isSureRisk">
-      <div :class="['ps-tip-block', 'is-danger']">
-        <p class="title mb10">
-          {{ $t('无法发布到应用市场') }}
-        </p>
-        <section class="content">
-          <p class="mb10">
-            {{ $t('当前应用主模块创建时未使用蓝鲸开发框架初始化') }}
-            <a
-              href="javascript: void(0);"
-              class="view-risk"
-              @click="viewRisk"
-            > {{ $t('查看风险') }} </a>
-          </p>
-        </section>
-      </div>
-    </template>
-    <template>
-    </template>
-
-    <span class="ps-span" />
 
     <template v-if="engineAbled">
-      <bk-form
-        v-if="!confirmRequiredWhenPublish || isSureRisk || appMarketConfig.enabled"
-        ref="visitInfoForm"
-        :key="appMarketConfig.source_url_type"
-        :label-width="130"
-        :class="['pt10 pb10']"
-        style="position: relative; margin-top: -10px;"
-        :model="appMarketConfig"
-      >
-        <bk-form-item
-          :label="$t('访问地址类型：')"
-        >
-          <bk-radio-group v-model="avaliableAddressValue">
-            <template v-for="(item, index) in avaliableAddress">
-              <div
-                :key="index"
-                class="moudle-url"
-              >
-                <bk-radio
-                  :key="index"
-                  :class="{ 'reset-mt': index !== 0 }"
-                  :value="item.value"
-                  :disabled="!appPreparations.all_conditions_matched"
-                  style="line-height: 32px;"
-                >
-                  <!-- <span v-if="item.type !== 2" class="addressDetail">{{item.address}}</span> -->
-                  <span>{{ typeMap[item.type] }}</span>
-                </bk-radio>
-                <p
-                  v-if="item.address"
-                  class="url"
-                >
-                  {{ item.address }}
-                </p>
-              </div>
-            </template>
-          </bk-radio-group>
-        </bk-form-item>
+      <div v-if="!confirmRequiredWhenPublish || isSureRisk || appMarketConfig.enabled" 
+        class="address-info mt15 flex-row align-items-center">
+        <strong class="address-info-title">{{ $t('访问地址') }}</strong>
+        <div class="address-info-url">
+          <div v-for="(item, index) in avaliableAddress" :key="index" :class="avaliableAddress.length > 1 ? 'pt5' : ''">
+            {{ item.address }}
+          </div>
+        </div>
         <bk-button
-          v-if="avaliableAddress.length > 1"
-          style="margin: 20px 0 0 130px;"
+        class="address-info-btn"
           theme="primary"
+          text
           :disabled="isSwitchDisabled"
           @click="openSwitchDialog"
         >
           {{ $t('更改访问地址') }}
         </bk-button>
-      </bk-form>
+      </div>
     </template>
     <template v-else>
       <bk-form

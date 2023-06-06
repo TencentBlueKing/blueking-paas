@@ -35,14 +35,12 @@
           <template>
             <market-info
               :key="comKey"
-              class="mt25"
               @data-ready="handleDataReady"
             />
           </template>
           <template>
             <market-manager
               :key="comKey"
-              class="mt25"
               @data-ready="handleDataReady"
             />
           </template>

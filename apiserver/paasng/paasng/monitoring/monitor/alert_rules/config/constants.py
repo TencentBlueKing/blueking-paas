@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
@@ -25,39 +26,39 @@ RUN_ENVS = AppEnvironment.get_values()
 
 RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get('service_name', 'rabbitmq')
 
-DEFAULT_RULE_CONFIGS = {
-    'module_scoped': {
-        'high_cpu_usage': {
-            'display_name': _('CPU 使用率过高'),
-            'metric_label_names': ['namespace', 'bcs_cluster_id'],
-            'threshold_expr': '>= 0.8',  # 使用率 80%
-        },
-        'high_mem_usage': {
-            'display_name': _('内存使用率过高'),
-            'metric_label_names': ['namespace', 'bcs_cluster_id'],
-            'threshold_expr': '>= 0.95',  # 使用率 95%
-        },
-        'pod_restart': {
-            'display_name': _('异常重启'),
-            'metric_label_names': ['namespace', 'bcs_cluster_id'],
-            'threshold_expr': '>= 1',  # 出现至少 1 次
-        },
-        'oom_killed': {
-            'display_name': _('OOMKilled 退出'),
-            'metric_label_names': ['namespace', 'bcs_cluster_id'],
-            'threshold_expr': '>= 1',  # 出现至少 1 次
-        },
-    }
-}
 
-# 开启 rabbitmq 监控
-if settings.RABBITMQ_MONITOR_CONF.get('enabled', False):
-    DEFAULT_RULE_CONFIGS['module_scoped'].update(
-        {
-            'high_rabbitmq_queue_messages': {
-                'display_name': _('队列消息数过多'),
-                'metric_label_names': ['vhost'],
-                'threshold_expr': '>= 2000',  # 超过 2000 条
-            },
-        }
-    )
+class AlertCode(str, StructuredEnum):
+    HIGH_CPU_USAGE = 'high_cpu_usage'
+    HIGH_MEM_USAGE = 'high_mem_usage'
+    POD_RESTART = 'pod_restart'
+    OOM_KILLED = 'oom_killed'
+    HIGH_RABBITMQ_QUEUE_MESSAGES = 'high_rabbitmq_queue_messages'
+
+
+DEFAULT_RULE_CONFIGS = {
+    AlertCode.HIGH_CPU_USAGE.value: {
+        'display_name': _('CPU 使用率过高'),
+        'metric_label_names': ['namespace', 'bcs_cluster_id'],
+        'threshold_expr': '>= 0.8',  # 使用率 80%
+    },
+    AlertCode.HIGH_MEM_USAGE.value: {
+        'display_name': _('内存使用率过高'),
+        'metric_label_names': ['namespace', 'bcs_cluster_id'],
+        'threshold_expr': '>= 0.95',  # 使用率 95%
+    },
+    AlertCode.POD_RESTART.value: {
+        'display_name': _('异常重启'),
+        'metric_label_names': ['namespace', 'bcs_cluster_id'],
+        'threshold_expr': '>= 1',  # 出现至少 1 次
+    },
+    AlertCode.OOM_KILLED.value: {
+        'display_name': _('OOMKilled 退出'),
+        'metric_label_names': ['namespace', 'bcs_cluster_id'],
+        'threshold_expr': '>= 1',  # 出现至少 1 次
+    },
+    AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value: {
+        'display_name': _('队列消息数过多'),
+        'metric_label_names': ['vhost'],
+        'threshold_expr': '>= 2000',  # 超过 2000 条
+    },
+}

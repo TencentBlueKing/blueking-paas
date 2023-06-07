@@ -213,11 +213,8 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         """列举支持的告警规则"""
         supported_alerts = []
 
-        for _, alert_config in DEFAULT_RULE_CONFIGS.items():
-            for alert_code in alert_config:
-                supported_alerts.append(
-                    {'alert_code': alert_code, 'display_name': alert_config[alert_code]['display_name']}
-                )
+        for alert_code, alert_config in DEFAULT_RULE_CONFIGS.items():
+            supported_alerts.append({'alert_code': alert_code, 'display_name': alert_config['display_name']})
 
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
         return Response(serializer.data)

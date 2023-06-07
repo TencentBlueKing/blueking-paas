@@ -17,20 +17,66 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 import cattrs
-from attrs import define, field
+from attrs import define, field, validators
+from django.conf import settings
 from typing_extensions import Protocol
 
+from paas_wl.platform.applications.constants import WlAppType
 from paasng.monitoring.monitor.exceptions import BKMonitorNotSupportedError
 from paasng.monitoring.monitor.models import AppAlertRule
 from paasng.platform.applications.models import Application
 
-from .constants import DEFAULT_RULE_CONFIGS
+from .constants import DEFAULT_RULE_CONFIGS, RUN_ENVS, AlertCode
 from .metric_label import get_metric_labels
 
 logger = logging.getLogger(__name__)
+
+
+class SupportedAlertCodes(NamedTuple):
+    """
+    应用支持的告警码
+    """
+
+    app_scoped_codes: List[str]
+    module_scoped_codes: List[str]
+
+
+# 普通应用支持的告警码
+_default_supported_alert_codes = SupportedAlertCodes(
+    app_scoped_codes=[],
+    module_scoped_codes=[
+        AlertCode.HIGH_CPU_USAGE.value,
+        AlertCode.HIGH_MEM_USAGE.value,
+        AlertCode.OOM_KILLED.value,
+        AlertCode.POD_RESTART.value,
+    ],
+)
+
+# 云原生应用支持的告警码. high_cpu_usage 等告警策略划分到 app_scoped, 不细化到 module_scoped
+_cnative_supported_alert_codes = SupportedAlertCodes(
+    app_scoped_codes=[
+        AlertCode.HIGH_CPU_USAGE.value,
+        AlertCode.HIGH_MEM_USAGE.value,
+        AlertCode.OOM_KILLED.value,
+        AlertCode.POD_RESTART.value,
+    ],
+    module_scoped_codes=[],
+)
+
+# 普通应用支持的告警码
+if settings.RABBITMQ_MONITOR_CONF.get('enabled', False):
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
+
+
+def get_supported_alert_codes(app_type: str) -> SupportedAlertCodes:
+    """根据 app 类型返回支持的告警码"""
+    if app_type == WlAppType.CLOUD_NATIVE.value:
+        return _cnative_supported_alert_codes
+    return _default_supported_alert_codes
 
 
 class RuleConfig(Protocol):
@@ -75,7 +121,7 @@ class AppScopedRuleConfig:
 
     alert_code: str
     app_code: str
-    run_env: str
+    run_env: str = field(validator=validators.in_(RUN_ENVS))
     enabled: bool = True
     threshold_expr: str
     receivers: List[str]
@@ -86,7 +132,7 @@ class AppScopedRuleConfig:
     def __attrs_post_init__(self):
         self.alert_rule_name = f'{self.app_code}-{self.run_env}-{self.alert_code}'
 
-        display_name = DEFAULT_RULE_CONFIGS['app_scoped'][self.alert_code]['display_name']
+        display_name = DEFAULT_RULE_CONFIGS[self.alert_code]['display_name']
         if not self.alert_rule_display_name:
             self.alert_rule_display_name = f"[{self.app_code}:{self.run_env}] {display_name}"
 
@@ -143,7 +189,7 @@ class ModuleScopedRuleConfig(AppScopedRuleConfig):
     def __attrs_post_init__(self):
         self.alert_rule_name = f'{self.app_code}-{self.module_name}-{self.run_env}-{self.alert_code}'
 
-        r_configs = DEFAULT_RULE_CONFIGS['module_scoped'][self.alert_code]
+        r_configs = DEFAULT_RULE_CONFIGS[self.alert_code]
         if not self.alert_rule_display_name:
             self.alert_rule_display_name = (
                 f"[{self.app_code}:{self.module_name}:{self.run_env}] {r_configs['display_name']}"

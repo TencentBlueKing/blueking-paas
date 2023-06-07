@@ -65,7 +65,7 @@ func (i AppBasicInfo) String() string {
 |                                           Modules                                                   |
 +-----------------------------------------------------------------------------------------------------+
 {{- range $idx, $mod := .Modules }}
-|   {{ $idx }}   | Name     | {{ pad $mod.Name 80 ' ' }} |
+|   {{ $idx | add 1 }}   | Name     | {{ pad $mod.Name 80 ' ' }} |
 {{- if and $mod.RepoType $mod.RepoURL }}
 +       +---------------------------------------------------------------------------------------------+
 |       | RepoType | {{ pad $mod.RepoType 12 ' ' }} | RepoUrl | {{ pad $mod.RepoURL 55 ' ' }} |

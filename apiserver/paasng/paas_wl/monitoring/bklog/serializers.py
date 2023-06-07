@@ -54,9 +54,9 @@ class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
             "path": obj.paths,
             "filters": asdict(obj.filters) if obj.filters else None,
             "extMeta": obj.ext_meta,
-            "logConfigType": obj.config_type,
+            "logConfigType": obj.config_type.value,
         }
-        return {"metadata": metadata, "spec": spec}
+        return {"metadata": metadata, "spec": spec, "apiVersion": self.get_apiversion(), "kind": "BkLogConfig"}
 
 
 class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig"]):
@@ -72,7 +72,7 @@ class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig"]):
             data_id=spec.dataId,
             encoding=spec.encoding,
             paths=spec.path,
-            filters=cattrs.structure(spec.filters, List[LogFilterCondition]),
+            filters=cattrs.structure(spec.filters, List[LogFilterCondition]) if hasattr(spec, "filters") else [],
             ext_meta=spec.extMeta,
             config_type=spec.logConfigType,
             workload_type=spec.workloadType,

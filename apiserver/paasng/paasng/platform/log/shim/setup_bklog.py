@@ -76,7 +76,7 @@ def build_python_json_collector_config():
         ],
         log_type="json",
         etl_type=ETLType.JSON,
-        time_field="json.asctime",
+        time_field="asctime",
         # time_format for python logging library
         # ref: https://docs.python.org/3/library/logging.html#logging.Formatter.formatTime
         time_format="yyyy-MM-dd HH:mm:ss,SSS",
@@ -164,7 +164,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
 
 
 def update_or_create_custom_collector_config(
-    env: ModuleEnvironment, collector_config: AppLogCollectorConfig
+    env: ModuleEnvironment, collector_config: AppLogCollectorConfig, skip_update: bool = False
 ) -> AppLogCollectorConfig:
     """调用日志平台的接口, 创建或更新自定义采集项"""
     module: Module = env.module
@@ -173,7 +173,8 @@ def update_or_create_custom_collector_config(
     try:
         obj = CustomCollectorConfigModel.objects.get(module=module, name_en=custom_collector_config.name_en)
         obj.log_paths = collector_config.log_paths
-        obj.save(update_fields=["log_paths", "updated"])
+        obj.log_type = collector_config.log_type
+        obj.save(update_fields=["log_paths", "log_type", "updated"])
         custom_collector_config.id = obj.collector_config_id
         custom_collector_config.index_set_id = obj.index_set_id
         custom_collector_config.bk_data_id = obj.bk_data_id
@@ -184,7 +185,8 @@ def update_or_create_custom_collector_config(
     client = make_bk_log_client()
     with ctx:
         if custom_collector_config.id:
-            client.update_custom_collector_config(custom_collector_config)
+            if not skip_update:
+                client.update_custom_collector_config(custom_collector_config)
         else:
             custom_collector_config = client.create_custom_collector_config(
                 bk_biz_id=BKLogConfigProvider().bk_biz_id, config=custom_collector_config
@@ -197,6 +199,7 @@ def update_or_create_custom_collector_config(
                     "index_set_id": custom_collector_config.index_set_id,
                     "bk_data_id": custom_collector_config.bk_data_id,
                     "log_paths": collector_config.log_paths,
+                    "log_type": collector_config.log_type,
                 },
             )
     collector_config.collector_config = custom_collector_config
@@ -209,8 +212,8 @@ def update_or_create_es_search_config(env: ModuleEnvironment, collector_config: 
     # 与 ELK 方案共用 ES 存储, 需要预先在日志平台配置
     host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
     search_params = ElasticSearchParams(
-        # 日志平台的索引规则: ${name_en}-*
-        indexPattern=collector_config.collector_config.name_en + "-*",
+        # 日志平台的索引规则: ${biz_id}_bklog_${name_en}_*
+        indexPattern=f"{BKLogConfigProvider().bk_biz_id}_bklog_{collector_config.collector_config.name_en}_*",
         # time 是日志平台默认的时间字段
         timeField="time",
         timeFormat="timestamp[ns]",
@@ -250,8 +253,8 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     stdout_config = AppLogCollectorConfig(log_type="stdout", etl_type=ETLType.TEXT)
 
     # 创建 json/stdout 的自定义采集项
-    json_config = update_or_create_custom_collector_config(env, json_config)
-    stdout_config = update_or_create_custom_collector_config(env, stdout_config)
+    json_config = update_or_create_custom_collector_config(env, json_config, skip_update=True)
+    stdout_config = update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
     # 绑定日志查询的配置
     update_or_create_es_search_config(env, json_config)
     update_or_create_es_search_config(env, stdout_config)

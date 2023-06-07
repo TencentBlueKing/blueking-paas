@@ -75,7 +75,7 @@ class TestBkLogClient:
                     'retention': 14,
                     'es_shards': 3,
                     'storage_replies': 1,
-                    'allocation_min_days': 14,
+                    'allocation_min_days': 0,
                 },
             ),
             # 测试 JSON 类型配置
@@ -98,6 +98,7 @@ class TestBkLogClient:
                                 option={"time_zone": 8, "time_format": "yyyy-MM-dd HH:mm:ss"},
                             ),
                         ],
+                        params=ETLParams(retain_original_text=False),
                     ),
                 ),
                 {
@@ -113,7 +114,7 @@ class TestBkLogClient:
                         {
                             'field_index': 1,
                             'field_name': 'custom_1',
-                            'field_type': 'int',
+                            'field_type': FieldType.INT,
                             'alias_name': None,
                             'description': '自定义字段说明1',
                             'is_delete': False,
@@ -126,7 +127,7 @@ class TestBkLogClient:
                         {
                             'field_index': 1,
                             'field_name': 'time',
-                            'field_type': 'string',
+                            'field_type': FieldType.STRING,
                             'alias_name': None,
                             'description': '时间字段',
                             'is_delete': False,
@@ -209,7 +210,7 @@ class TestBkLogClient:
                     'retention': 14,
                     'es_shards': 3,
                     'storage_replies': 1,
-                    'allocation_min_days': 14,
+                    'allocation_min_days': 0,
                 },
             ),
             # 测试 JSON 类型配置
@@ -232,6 +233,7 @@ class TestBkLogClient:
                                 option={"time_zone": 8, "time_format": "yyyy-MM-dd HH:mm:ss"},
                             ),
                         ],
+                        params=ETLParams(retain_original_text=False),
                     ),
                 ),
                 {
@@ -245,7 +247,7 @@ class TestBkLogClient:
                         {
                             'field_index': 1,
                             'field_name': 'custom_1',
-                            'field_type': 'int',
+                            'field_type': FieldType.INT,
                             'alias_name': None,
                             'description': '自定义字段说明1',
                             'is_delete': False,
@@ -258,7 +260,7 @@ class TestBkLogClient:
                         {
                             'field_index': 1,
                             'field_name': 'time',
-                            'field_type': 'string',
+                            'field_type': FieldType.STRING,
                             'alias_name': None,
                             'description': '时间字段',
                             'is_delete': False,

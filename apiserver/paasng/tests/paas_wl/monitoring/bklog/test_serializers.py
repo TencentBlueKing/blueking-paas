@@ -43,6 +43,8 @@ def gvk_config():
 @pytest.fixture
 def bklog_manifest(wl_app) -> Dict[str, Any]:
     return {
+        "apiVersion": "bk.tencent.com/v1alpha1",
+        "kind": "BkLogConfig",
         "metadata": {
             "name": "test",
             "namespace": wl_app.namespace,

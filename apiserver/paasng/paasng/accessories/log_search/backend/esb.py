@@ -32,7 +32,7 @@ class Group(OperationGroup):
         Operation,
         name="databus_custom_create",
         method="POST",
-        path="/v2/bk_log/databus_custom_create/",
+        path="/api/c/compapi/v2/bk_log/databus_custom_create/",
     )
 
     # 更新自定义上报
@@ -40,7 +40,7 @@ class Group(OperationGroup):
         Operation,
         name="databus_custom_update",
         method="POST",
-        path="/v2/bk_log/{collector_config_id}/databus_custom_update/",
+        path="/api/c/compapi/v2/bk_log/{collector_config_id}/databus_custom_update/",
     )
 
 

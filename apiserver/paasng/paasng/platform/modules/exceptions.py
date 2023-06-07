@@ -22,5 +22,17 @@ class BindError(Exception):
     """绑定错误"""
 
 
+class BPNotFound(Exception):
+    """base exception for bp"""
+
+
+class BuildPackStackNotFound(BPNotFound):
+    """Error when a BuildPack Stack is not found"""
+
+
+class BuildPacksNotFound(BPNotFound):
+    """Error when some BuildPacks are not found"""
+
+
 class ModuleInitializationError(Exception):
     """Error when initializing module"""

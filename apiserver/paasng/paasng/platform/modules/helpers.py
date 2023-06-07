@@ -79,7 +79,7 @@ class ModuleRuntimeBinder:
 
     @transaction.atomic
     def bind_bp_stack(self, bp_stack_name: str, ordered_bp_ids: List[int]):
-        """绑定 buildpack stack - 即构建和运行的镜像"""
+        """绑定 buildpack stack - 即构建和运行的镜像、以及构建工具"""
         module = self.module
         try:
             slugbuilder = AppSlugBuilder.objects.filter_available(module=module).get(name=bp_stack_name)

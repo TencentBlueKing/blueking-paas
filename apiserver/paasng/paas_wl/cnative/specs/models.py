@@ -33,7 +33,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
 
 from .constants import DEFAULT_PROCESS_NAME, DeployStatus
-from .v1alpha1.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
+from .crd.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
 
 logger = logging.getLogger(__name__)
 

@@ -18,24 +18,29 @@ to the current version of the project delivered to anyone in the future.
 """
 import pytest
 
-from paas_wl.cnative.specs.constants import DEFAULT_PROC_CPU, DEFAULT_PROC_MEM
+from paas_wl.cnative.specs.constants import LEGACY_PROC_RES_ANNO_KEY, ApiVersion, ResQuotaPlan
 from paas_wl.cnative.specs.models import create_app_resource
-from paas_wl.cnative.specs.procs import CNativeProcSpec, parse_proc_specs
-from paasng.engine.constants import AppEnvName
+from paas_wl.cnative.specs.procs.quota import ResourceQuotaReader
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestParseProcSpecs:
-    def test_default(self, bk_stag_wl_app):
+class TestResourceQuotaReader:
+    def test_v1alpha1(self, bk_stag_wl_app):
         res = create_app_resource(bk_stag_wl_app.name, 'busybox')
-        assert parse_proc_specs(res, AppEnvName.STAG) == [
-            CNativeProcSpec('web', 1, 'start', DEFAULT_PROC_CPU, DEFAULT_PROC_MEM)
-        ]
+        res.apiVersion = ApiVersion.V1ALPHA1
+        res.spec.processes[0].cpu = "200m"
+        res.spec.processes[0].memory = "128Mi"
+        assert ResourceQuotaReader(res).read_all() == {'web': {'cpu': '200m', 'memory': '128Mi'}}
 
-    def test_stopped(self, bk_stag_wl_app):
+    def test_v1alpha2_legacy(self, bk_stag_wl_app):
         res = create_app_resource(bk_stag_wl_app.name, 'busybox')
-        res.spec.processes[0].replicas = 0
-        assert parse_proc_specs(res, AppEnvName.STAG) == [
-            CNativeProcSpec('web', 0, 'stop', DEFAULT_PROC_CPU, DEFAULT_PROC_MEM)
-        ]
+        res.apiVersion = ApiVersion.V1ALPHA2
+        res.metadata.annotations[LEGACY_PROC_RES_ANNO_KEY] = '{"web": {"cpu": "300m", "memory": "512Mi"}}'
+        assert ResourceQuotaReader(res).read_all() == {'web': {'cpu': '300m', 'memory': '512Mi'}}
+
+    def test_v1alpha2_quota_plan(self, bk_stag_wl_app):
+        res = create_app_resource(bk_stag_wl_app.name, 'busybox')
+        res.apiVersion = ApiVersion.V1ALPHA2
+        res.spec.processes[0].resQuotaPlan = ResQuotaPlan.P_2C2G
+        assert ResourceQuotaReader(res).read_all() == {'web': {'cpu': '2000m', 'memory': '2048Mi'}}

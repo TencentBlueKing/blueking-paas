@@ -34,25 +34,28 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 def test_create_app_resource():
     obj = create_app_resource('foo-app', 'nginx:latest')
     want = {
-        'apiVersion': 'paas.bk.tencent.com/v1alpha1',
+        'apiVersion': 'paas.bk.tencent.com/v1alpha2',
         'kind': 'BkApp',
         'metadata': {'name': 'foo-app', 'annotations': {}, 'generation': 0},
         'spec': {
+            'build': None,
             'processes': [
                 {
                     'name': 'web',
-                    'image': 'nginx:latest',
                     'replicas': 1,
                     'command': [],
                     'args': [],
                     'targetPort': None,
+                    'resQuotaPlan': None,
+                    'autoscaling': None,
                     'cpu': '500m',
                     'memory': '256Mi',
+                    'image': 'nginx:latest',
                     'imagePullPolicy': 'IfNotPresent',
-                    'autoscaling': None,
                 }
             ],
             'hooks': None,
+            'addons': [],
             'envOverlay': None,
             'configuration': {'env': []},
         },

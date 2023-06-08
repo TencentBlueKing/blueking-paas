@@ -22,8 +22,8 @@ import arrow
 import pytest
 
 from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource, BkAppStatus, MetaV1Condition
 from paas_wl.cnative.specs.events import Event
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, BkAppStatus, MetaV1Condition
 from tests.paas_wl.cnative.specs.utils import create_cnative_deploy
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

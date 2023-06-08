@@ -35,6 +35,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.cnative.specs.addresses import get_exposed_url
 from paas_wl.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY, DeployStatus
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.cnative.specs.events import list_events
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, to_error_string, update_app_resource
 from paas_wl.cnative.specs.procs.differ import get_online_replicas_diff
@@ -48,7 +49,6 @@ from paas_wl.cnative.specs.serializers import (
     MresStatusSLZ,
     QueryDeploysSerializer,
 )
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource
 from paas_wl.utils.error_codes import error_codes
 from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class

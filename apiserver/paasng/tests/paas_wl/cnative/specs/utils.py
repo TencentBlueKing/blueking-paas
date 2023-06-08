@@ -21,8 +21,8 @@ from typing import List, Literal
 from bkpaas_auth.models import User
 
 from paas_wl.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
+from paas_wl.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.cnative.specs.models import AppModelDeploy, AppModelResource, create_app_resource
-from paas_wl.cnative.specs.v1alpha1.bk_app import BkAppResource, MetaV1Condition
 from paasng.platform.applications.models import ModuleEnvironment
 
 

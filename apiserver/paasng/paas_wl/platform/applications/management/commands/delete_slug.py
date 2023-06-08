@@ -76,7 +76,7 @@ class Command(BaseCommand):
 
     def handle(self, match_pattern, max_reserved_num_per_env, dry_run, *args, **options):
         # Build 对象存储构建后的 slug 包, 倒序查询
-        build_query_set = Build.objects.select_related("app").order_by("-created")
+        build_query_set = Build.objects.exclude(slug_path=None).select_related("app").order_by("-created")
         bucket_dict: Dict[str, AppBucket] = defaultdict(AppBucket)
         deleted_count = 0
         deleted_size = 0

@@ -24,7 +24,7 @@
         }
         .right {
             padding: 0 10px;
-            width: calc(100% - 240px);
+            flex: 1;
         }
     }
 </style>

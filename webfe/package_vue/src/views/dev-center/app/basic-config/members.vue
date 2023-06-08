@@ -10,11 +10,11 @@
     </div>
 
     <paas-content-loader
-      class="app-container middle"
+      class="app-container middle role-container"
       :is-loading="loading"
       placeholder="roles-loading"
     >
-      <div class="header mt10">
+      <div class="header">
         <bk-button
           v-if="enableToAddRole"
           theme="primary"
@@ -698,6 +698,11 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+    .role-container{
+      background: #fff;
+      margin-top: 16px;
+      padding: 16px 24px;
+    }
     .content-wrapper {
         margin-top: 16px;
     }

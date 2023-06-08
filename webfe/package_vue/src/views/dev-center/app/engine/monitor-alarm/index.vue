@@ -34,38 +34,40 @@
   </div>
 </template>
 <script>
-    import appBaseMixin from '@/mixins/app-base-mixin';
-    import appTopBar from '@/components/paas-app-bar';
-    import AlarmRecord from './alarm-record';
-    export default {
-        name: '',
-        components: {
-            appTopBar,
-            AlarmRecord
-        },
-        mixins: [appBaseMixin],
-        data () {
-            return {
-                isLoading: true
-            };
-        },
-        watch: {
-            '$route' () {
-                this.isLoading = true;
-            }
-        },
-        methods: {
-            handleHelp () {
-                window.open(this.GLOBAL.DOC.MONITOR_INTRO);
-            },
-            handleDataReady () {
-                this.isLoading = false;
-            }
-        }
+import appBaseMixin from '@/mixins/app-base-mixin';
+import appTopBar from '@/components/paas-app-bar';
+import AlarmRecord from './alarm-record';
+export default {
+  name: '',
+  components: {
+    appTopBar,
+    AlarmRecord,
+  },
+  mixins: [appBaseMixin],
+  data() {
+    return {
+      isLoading: true,
     };
+  },
+  watch: {
+    '$route'() {
+      this.isLoading = true;
+    },
+  },
+  methods: {
+    handleHelp() {
+      window.open(this.GLOBAL.DOC.MONITOR_INTRO);
+    },
+    handleDataReady() {
+      this.isLoading = false;
+    },
+  },
+};
 </script>
 <style lang="scss" scoped>
     .alarm-middle {
-        margin-top: 20px;
+        margin-top: 16px;
+        background: #fff;
+        padding: 16px 24px
     }
 </style>

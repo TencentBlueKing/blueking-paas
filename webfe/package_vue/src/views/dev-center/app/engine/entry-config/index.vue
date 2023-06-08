@@ -22,6 +22,7 @@
         :can-create="canCreateModule"
         :cur-module="curAppModule"
         :module-list="curAppModuleList"
+        class="entry-bar"
       />
       <paas-content-loader
         :is-loading="isLoading"
@@ -62,7 +63,7 @@
         :is-loading="isLoading"
         placeholder="entry-loading"
         :offset-top="20"
-        class="app-container middle"
+        class="app-container middle ps-entry-container"
       >
         <domain-config
           class="mb35"
@@ -117,11 +118,30 @@
         }
     };
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
 .right-main{
     .domain-tab-cls {
         min-height: auto;
         margin: auto;
+        padding-top: 0px !important;
+        background: #fff;
+        /deep/ .bk-tab-section {
+            padding: 0 !important;
+        }
+    }
+    .controller{
+      margin: 16px 24px 0 24px;
+      background: #fff;
+      .entry-bar{
+        /deep/ .bar-container{
+          border: none !important;
+        }
+      }
+    }
+    .ps-entry-container{
+      background: #fff;
+      margin: 16px 24px 0 24px;
+      padding: 16px 24px;
     }
 }
 </style>

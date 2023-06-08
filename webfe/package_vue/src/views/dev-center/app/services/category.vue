@@ -11,9 +11,9 @@
       :is-loading="loading"
       placeholder="data-store-loading"
       :offset-top="30"
-      class="app-container middle"
+      class="app-container ps-category middle"
     >
-      <div class="app-container fadeIn">
+      <div class="fadeIn">
         <section v-show="!loading">
           <div class="middle bnone">
             <h4> {{ $t('已启用的服务') }} </h4>
@@ -302,6 +302,11 @@
 </script>
 
 <style lang="scss" scoped>
+    .ps-category{
+      background: #fff;
+      padding: 10px 24px;
+      margin-top: 14px;
+    }
     .multiNotes {
         p {
             line-height: 42px;

@@ -8,7 +8,7 @@
     />
 
     <paas-content-loader
-      class="app-container middle"
+      class="app-container middle code-container"
       :is-loading="isLoading"
       placeholder="code-review-loading"
       :offset-top="30"
@@ -245,8 +245,10 @@
 </script>
 
 <style lang="scss" scoped>
-    .app-container {
-        padding-top: 11px;
+    .code-container{
+      background: #fff;
+      padding-top:0px;
+      margin-top: 16px;
     }
     .warn-icon {
         font-size: 40px;
@@ -259,6 +261,7 @@
     }
     .hlep-docu {
         margin-top: 20px;
+        padding: 0 24px;
         .label {
             color: #55545a;
             font-weight: 600;

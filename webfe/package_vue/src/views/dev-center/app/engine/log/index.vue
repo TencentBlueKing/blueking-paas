@@ -25,7 +25,7 @@
         >
           <template slot="setting">
             <a
-              class="f12"
+              class="f12 pr20"
               :href="GLOBAL.DOC.LOG_QUERY_USER"
               target="_blank"
             > {{ $t('如何查询应用日志') }} </a>
@@ -127,8 +127,13 @@
     };
 </script>
 
-<style scoped>
-    .log-container {
-        margin-bottom: 0;
-    }
+<style scoped lang="scss">
+.log-middle{
+  background: #fff;
+  padding-top: 0px;
+  margin-top: 16px;
+  .log-container {
+      margin-bottom: 0;
+  }
+}
 </style>

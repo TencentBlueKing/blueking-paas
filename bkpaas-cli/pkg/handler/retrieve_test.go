@@ -23,12 +23,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
+	"github.com/TencentBlueKing/blueking-paas/client/pkg/config"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/handler"
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
 var _ = Describe("TestRetrieve", func() {
 	BeforeEach(func() {
+		config.LoadMockedConfig()
 		apiresources.DefaultRequester = &apiresources.MockedRequester{}
 	})
 

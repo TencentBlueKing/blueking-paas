@@ -24,9 +24,12 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
+from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
+from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
+from moby_distribution.registry.utils import parse_image
 
 # NOTE: Import kube resource related modules from paas_wl
-from paas_wl.platform.applications.models.build import BuildProcess
+from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.platform.applications.models.managers.app_configvar import AppConfigVarManager
 from paas_wl.release_controller.models import ContainerRuntimeSpec
 from paas_wl.resources.utils.app import get_schedule_config
@@ -56,14 +59,14 @@ def generate_slug_path(bp: BuildProcess) -> str:
     return f'{app.region}/home/{slug_name}/push'
 
 
-def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dict[str, str]:
+def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
     """generate all env vars needed for building"""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
     app: 'WlApp' = bp.app
     env_vars: Dict[str, str] = {}
 
-    if metadata and metadata.get("use_dockerfile"):
+    if metadata.get("use_dockerfile"):
         # build application form Dockerfile
         image_repository = metadata['image_repository']
         output_image = metadata['image']
@@ -75,7 +78,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Optional[Dict]) -> Dic
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
             DOCKER_CONFIG_JSON=b64encode(json.dumps(build_dockerconfig(ImageCredentials.load_from_app(app)))),
         )
-    elif metadata and metadata.get("use_cnb"):
+    elif metadata.get("use_cnb"):
         # build application as image
         image_repository = metadata['image_repository']
         output_image = metadata['image']
@@ -190,3 +193,19 @@ def get_envs_from_pypi_url(index_url: str) -> Dict[str, str]:
     """
     parsed = urllib.parse.urlparse(index_url)
     return {'PIP_INDEX_URL': index_url, 'PIP_INDEX_HOST': parsed.netloc}
+
+
+def update_image_id(build: Build):
+    """update ImageID field"""
+    image = build.image
+    registry_client = DockerRegistryV2Client.from_api_endpoint(
+        APIEndpoint(url=settings.APP_DOCKER_REGISTRY_HOST),
+        username=settings.APP_DOCKER_REGISTRY_USERNAME,
+        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+    )
+    o = parse_image(image)
+    manifest: ManifestSchema2 = ManifestRef(repo=o.name, reference=o.tag, client=registry_client).get(
+        media_type=ManifestSchema2.content_type()
+    )
+    build.image_id = manifest.config.digest
+    build.save(update_fields=["image_id", "updated"])

@@ -25,6 +25,8 @@ from celery import shared_task
 from django.conf import settings
 from django.utils.encoding import force_text
 
+from paas_wl.platform.applications.constants import ArtifactType
+
 # NOTE: The background building process depends on the paas_wl package.
 from paas_wl.platform.applications.models.build import Build, BuildProcess
 from paas_wl.resources.base.exceptions import PodNotSucceededError, ReadTargetStatusTimeout, ResourceDuplicate
@@ -38,6 +40,7 @@ from paasng.engine.deploy.bg_build.utils import (
     generate_launcher_env_vars,
     generate_slug_path,
     prepare_slugbuilder_template,
+    update_image_id,
 )
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.deployment import Deployment
@@ -229,6 +232,9 @@ class BuildProcessExecutor(DeployStep):
         if 'image' not in metadata:
             raise KeyError("'image' is required")
         image = metadata['image']
+        artifact_type = ArtifactType.SLUG
+        if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
+            artifact_type = ArtifactType.IMAGE
 
         # starting create build
         build_instance = Build.objects.create(
@@ -240,12 +246,15 @@ class BuildProcessExecutor(DeployStep):
             revision=self.bp.revision,
             procfile=procfile,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
+            artifact_type=artifact_type,
         )
 
         # retrieve bp object again, flush the status
         self.bp.build = build_instance
         self.bp.status = BuildStatus.SUCCESSFUL.value
         self.bp.save(update_fields=["build", "status"])
+        if artifact_type == ArtifactType.IMAGE:
+            self.try_update_image_id(build_instance)
         return build_instance
 
     def clean_slugbuilder(self):
@@ -254,3 +263,9 @@ class BuildProcessExecutor(DeployStep):
         except Exception as e:
             # cleaning should not influenced main process
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)
+
+    def try_update_image_id(self, build: Build):
+        try:
+            update_image_id(build)
+        except Exception:
+            logger.exception("failed to update image_id field")

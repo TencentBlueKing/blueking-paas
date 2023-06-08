@@ -591,7 +591,7 @@ class OfflineViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def get_offline_result(self, request, code, module_name, uuid):
         """
         查询下线任务结果
-        - /api/bkapps/applications/{code})/offline_operations/{uuid}/result/
+        - /api/bkapps/applications/{code})/off line_operations/{uuid}/result/
         - path param: code, app名
         - path param: uuid, 部署任务的uuid(即deployment_id)
         """

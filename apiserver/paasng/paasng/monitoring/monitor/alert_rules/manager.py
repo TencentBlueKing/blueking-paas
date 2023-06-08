@@ -96,7 +96,7 @@ class AlertRuleManager:
         self.refresh_rules()
 
     def refresh_rules(self):
-        """向 bkmonitor 刷新 app 的告警规则(从已存在的 AppAlertRule queryset 读取后刷新)
+        """刷新 app 的告警规则(从已存在的 AppAlertRule queryset 读取后刷新)
 
         使用场景:
         - app 删除 module 后, 刷新告警规则
@@ -108,7 +108,7 @@ class AlertRuleManager:
 
     def _get_refreshable_app_scoped_rules(self, run_env: str) -> List[RuleConfig]:
         """获取待刷新的 app scoped 告警规则"""
-        rule_qs = AppAlertRule.objects.filter(application=self.application, environment=run_env, module=None)
+        rule_qs = AppAlertRule.objects.filter_app_scoped(self.application, run_env)
         rule_configs = self.config_generator.gen_rule_configs_from_qs(rule_qs)
         existed_alert_codes = {c.alert_code for c in rule_configs}
 
@@ -119,7 +119,7 @@ class AlertRuleManager:
 
     def _get_refreshable_module_scoped_rules(self, module_name: str, run_env: str) -> List[RuleConfig]:
         """获取待刷新的 module scoped 告警规则"""
-        rule_qs = AppAlertRule.objects.filter(application=self.application, environment=run_env).exclude(module=None)
+        rule_qs = AppAlertRule.objects.filter_module_scoped(self.application, run_env)
         rule_configs = self.config_generator.gen_rule_configs_from_qs(rule_qs)
         existed_alert_codes = {c.alert_code for c in rule_configs if getattr(c, 'module_name', None) == module_name}
 
@@ -154,8 +154,9 @@ class AlertRuleManager:
 
     def _apply_rule_configs(self, rule_configs: List[RuleConfig]):
         """通过 MonitorAsCode 方式下发告警规则到 bkmonitor"""
-        client = AsCodeClient(self.app_code, rule_configs=rule_configs, default_receivers=self.default_receivers)
-        client.apply_rule_configs()
+        if rule_configs:
+            client = AsCodeClient(self.app_code, rule_configs=rule_configs, default_receivers=self.default_receivers)
+            client.apply_rule_configs()
 
     def _save_rule_configs(self, rule_configs: List[RuleConfig]):
         """配置录入 AppAlertRule Model"""

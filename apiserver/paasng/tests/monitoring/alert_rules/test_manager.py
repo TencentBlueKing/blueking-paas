@@ -40,10 +40,10 @@ class TestAlertRuleManager:
     def test_refresh_rules_by_module(self, bk_app, wl_namespaces):
         manager = AlertRuleManager(bk_app)
         manager.refresh_rules_by_module(bk_app.get_default_module().name, 'stag')
-        assert AppAlertRule.objects.filter(application=bk_app, module=None).count() == len(
+        assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
             get_supported_alert_codes(bk_app.type).app_scoped_codes
         )
-        assert AppAlertRule.objects.filter(application=bk_app).exclude(module=None).count() == len(
+        assert AppAlertRule.objects.filter_module_scoped(bk_app).count() == len(
             get_supported_alert_codes(bk_app.type).module_scoped_codes
         )
         assert (
@@ -54,10 +54,10 @@ class TestAlertRuleManager:
     def test_refresh_rules_by_module_with_rule_obj(self, bk_app, wl_namespaces, cpu_usage_alert_rule_obj):
         manager = AlertRuleManager(bk_app)
         manager.refresh_rules_by_module(bk_app.get_default_module().name, 'stag')
-        assert AppAlertRule.objects.filter(application=bk_app, module=None).count() == len(
+        assert AppAlertRule.objects.filter_app_scoped(bk_app).count() == len(
             get_supported_alert_codes(bk_app.type).app_scoped_codes
         )
-        assert AppAlertRule.objects.filter(application=bk_app).exclude(module=None).count() == len(
+        assert AppAlertRule.objects.filter_module_scoped(bk_app).count() == len(
             get_supported_alert_codes(bk_app.type).module_scoped_codes
         )
         # 与 test_refresh_rules_by_module 不同, 这里测试 AlertRuleManager.refresh_rules_by_module 能够保留原 DB 中的配置值

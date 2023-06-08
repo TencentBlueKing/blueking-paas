@@ -16,9 +16,26 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from typing import Optional
+
 from django.db import models
 
+from paasng.platform.applications.models import Application
 from paasng.utils.models import AuditedModel
+
+
+class AppAlertRuleManager(models.Manager):
+    def filter_app_scoped(self, app: Application, run_env: Optional[str] = None):
+        qs = self.filter(application=app, module=None)
+        if run_env:
+            return qs.filter(environment=run_env)
+        return qs
+
+    def filter_module_scoped(self, app: Application, run_env: Optional[str] = None):
+        qs = self.filter(application=app).exclude(module=None)
+        if run_env:
+            return qs.filter(environment=run_env)
+        return qs
 
 
 class AppAlertRule(AuditedModel):
@@ -36,6 +53,7 @@ class AppAlertRule(AuditedModel):
     module = models.ForeignKey(
         'modules.Module', on_delete=models.CASCADE, db_constraint=False, related_name='alert_rules', null=True
     )
+    objects = AppAlertRuleManager()
 
     def __str__(self):
         return f'{self.display_name}-{self.alert_code}'

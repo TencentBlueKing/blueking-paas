@@ -1326,9 +1326,7 @@ export default {
         .paas-module-item {
             margin-top: 16px;
             border: solid 1px #e6e9ea;
-            .bk-collapse-item-header{
-                background: #F5F7FA !important;
-            }
+            background: #fff;
             .icon-angle-right{
                 display: none;
             }

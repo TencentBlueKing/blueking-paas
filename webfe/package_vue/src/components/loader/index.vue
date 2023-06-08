@@ -253,6 +253,8 @@
       bottom: 0;
       z-index: 100;
       transition: opacity ease 0.5s;
+      padding: 0 24px;
+      margin-top: 24px;
 
       &.hide {
         z-index: -1;

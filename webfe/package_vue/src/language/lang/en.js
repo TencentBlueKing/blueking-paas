@@ -2158,5 +2158,5 @@ export default {
   当: 'when',
   扩容上限: 'Expansion limit',
   缩容下限: 'Shrink limit',
-  请输入用户: 'Please enter user'
+  请输入用户: 'Please enter user',
 };

@@ -5,7 +5,8 @@
         v-if="category.children && category.children.length"
         :key="categoryIndex"
         :class="{
-          'on': category.isActived && !category.isExpanded
+          'on': category.isActived && !category.isExpanded,
+          'expanded': category.isExpanded
         }"
       >
         <a
@@ -57,7 +58,7 @@
   </ul>
 </template>
 
-<script> import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import _ from 'lodash';
 
 export default {
@@ -580,8 +581,11 @@ export default {
         margin-top: 1px;
 
         > li {
-            width: 100%;
+            width: 239px;
             position: relative;
+            &.expanded {
+                background: #f5f7fa;
+            }
 
             &.on {
                 .overview-text {
@@ -605,11 +609,12 @@ export default {
 
             &:hover {
                 .overview-text {
-                    color: #3A84FF;
+                    color: #63656E;
                 }
                 .app-nav-icon {
-                    color: #3A84FF;
+                    color: #63656E;
                 }
+                background: #f5f7fa;
             }
         }
     }
@@ -631,7 +636,7 @@ export default {
         width: 100%;
         position: relative;
         overflow: hidden;
-
+        background: rgb(245, 247, 250);
         > a {
             width: 240px;
             display: block;

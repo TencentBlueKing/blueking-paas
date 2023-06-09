@@ -941,8 +941,9 @@ export default {
 <style lang="scss" scoped>
     .event-analy-container{
         background: #fff;
-        margin-top: 16px;
+        margin: 16px auto 30px;
         padding: 1px 24px;
+        width: calc(100% - 50px);
     }
     .content-header {
         position: relative;

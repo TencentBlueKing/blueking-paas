@@ -321,7 +321,7 @@
   </div>
 </template>
 
-<script> import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import overviewTopInfo from './comps/overview-top-info';
@@ -336,7 +336,7 @@ import dynamicState from './comps/dynamic-state';
 import { cloneDeep } from 'lodash';
 
 const timeMap = {
-  '1d': '24h',
+  '1d' : '24h',
   '3d': '72h',
   '7d': '168h',
 };
@@ -926,7 +926,7 @@ export default {
         });
       } finally {
         setTimeout(() => {
-          this.loading = false;
+          // this.loading = false;
           // 云原生应用不需要对应图表数据
           this.getPrcessData();
         }, 300);

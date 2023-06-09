@@ -131,7 +131,8 @@
 .log-middle{
   background: #fff;
   padding-top: 0px;
-  margin-top: 16px;
+  margin: 16px auto 30px;
+  width: calc(100% - 48px);
   .log-container {
       margin-bottom: 0;
   }

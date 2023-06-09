@@ -700,7 +700,8 @@ export default {
 <style lang="scss" scoped>
     .role-container{
       background: #fff;
-      margin-top: 16px;
+      width: calc(100% - 48px);
+      margin: 16px auto 30px;
       padding: 16px 24px;
     }
     .content-wrapper {

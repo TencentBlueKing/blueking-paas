@@ -11,8 +11,9 @@
 <style lang="scss" scoped>
     .paasng-api-layout {
         position: relative;
-        display: flex;
-        justify-content: flex-start;
+        width: 100%;
+        // display: flex;
+        // justify-content: flex-start;
         .left {
             position: relative;
             padding: 10px 0;
@@ -21,10 +22,13 @@
             width: 240px;
             background: #fff;
             border: 1px solid #dfe0e5;
+            display: inline-block;
         }
         .right {
             padding: 0 10px;
-            flex: 1;
+            display: inline-block;
+            width: calc(100% - 260px);
+            vertical-align: top;
         }
     }
 </style>

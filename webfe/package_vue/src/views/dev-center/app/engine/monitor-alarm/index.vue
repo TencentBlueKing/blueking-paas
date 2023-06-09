@@ -66,7 +66,8 @@ export default {
 </script>
 <style lang="scss" scoped>
     .alarm-middle {
-        margin-top: 16px;
+        margin: 16px auto 30px;
+        width: calc(100% - 48px);
         background: #fff;
         padding: 16px 24px
     }

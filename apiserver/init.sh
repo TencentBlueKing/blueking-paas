@@ -173,14 +173,14 @@ ensure-golang-buildpack() {
     buildpack_name="$6"
     
     # golang
-    go_buildpack_version=v153
+    go_buildpack_version=v168
     python manage.py manage_buildpack \
     --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Golang" \
     --display_name_en "Golang" \
-    --description_zh_cn "默认 Go 版本为1.12，支持 GoModules/Vendor 环境" \
-    --description_en "Default Go version is 1.12 and supports GoModules/Vendor environment" \
+    --description_zh_cn "默认 Go 版本为1.12.17，最大支持版本1.19.1" \
+    --description_en "Default Go Version: 1.12.17, Highest supported version: 1.19.1" \
     --tag "${go_buildpack_version}" \
     --language Go \
     --type tar \

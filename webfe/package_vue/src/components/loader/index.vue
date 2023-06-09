@@ -168,8 +168,8 @@
             return {
                 localLoading: this.isLoading,
                 isLoaderShow: this.isLoading,
-                baseWidth: 680,
-                contentWidth: 680,
+                baseWidth: 1180,
+                contentWidth: 1180,
                 curPlaceholder: '',
                 isPlugin: false
             };
@@ -211,29 +211,39 @@
         methods: {
             initContentWidth () {
                 const winWidth = window.innerWidth;
-                console.log('winWidth', winWidth)
-                this.baseWidth = 980;
-                this.contentWidth = 980;
-                if (winWidth < 1180) {
-                    this.baseWidth = 980;
+                // this.baseWidth = 1180;
+                // this.contentWidth = 1180;
+                // if (winWidth < 1180) {
+                //     this.baseWidth = 980;
+                //     this.contentWidth = 980;
+                //     console.log('11111111')
+                // } else if (winWidth < 1680) {
+                //     this.baseWidth = 1080;
+                //     this.contentWidth = 1080;
+                //     console.log('2222222')
+                // } else if (winWidth < 1920) {
+                //     this.baseWidth = 1180;
+                //     this.contentWidth = 1180;
+                //     console.log('33333333')
+                // } else if (winWidth < 2450) {
+                //     this.baseWidth = 1420;  //1420
+                //     this.contentWidth = 1680;
+                //     console.log('444444')
+                // } else {
+                //     this.baseWidth = 1920;
+                //     this.contentWidth = 1920;
+                //     console.log('65555')
+                // }
+
+                if (winWidth < 1440) {
                     this.contentWidth = 980;
-                    console.log('11111111')
                 } else if (winWidth < 1680) {
-                    this.baseWidth = 1080;
                     this.contentWidth = 1080;
-                    console.log('2222222')
                 } else if (winWidth < 1920) {
-                    this.baseWidth = 1180;
                     this.contentWidth = 1180;
-                    console.log('33333333')
-                } else if (winWidth < 2450) {
-                    this.baseWidth = 1680;
-                    this.contentWidth = 1680;
-                    console.log('444444')
                 } else {
-                    this.baseWidth = 1920;
-                    this.contentWidth = 1920;
-                    console.log('65555')
+                  this.baseWidth = 1440;
+                    this.contentWidth = 1440;
                 }
             }
         }

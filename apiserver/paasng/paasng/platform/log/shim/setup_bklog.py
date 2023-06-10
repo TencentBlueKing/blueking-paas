@@ -178,7 +178,7 @@ def to_custom_collector_config(
 
 def update_or_create_custom_collector_config(
     env: ModuleEnvironment, collector_config: AppLogCollectorConfig, skip_update: bool = False
-):
+) -> CustomCollectorConfig:
     """调用日志平台的接口, 创建或更新自定义采集项"""
     module: Module = env.module
     custom_collector_config, db_obj = to_custom_collector_config(module, collector_config)
@@ -206,7 +206,7 @@ def update_or_create_custom_collector_config(
                     "log_type": collector_config.log_type,
                 },
             )
-    collector_config.collector_config = custom_collector_config
+    return custom_collector_config
 
 
 def update_or_create_es_search_config(env: ModuleEnvironment, collector_config: AppLogCollectorConfig):
@@ -256,8 +256,8 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     stdout_config = AppLogCollectorConfig(log_type="stdout", etl_type=ETLType.TEXT)
 
     # 创建 json/stdout 的自定义采集项
-    update_or_create_custom_collector_config(env, json_config, skip_update=True)
-    update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
+    json_config.collector_config = update_or_create_custom_collector_config(env, json_config, skip_update=True)
+    stdout_config.collector_config = update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
     # 绑定日志查询的配置
     update_or_create_es_search_config(env, json_config)
     update_or_create_es_search_config(env, stdout_config)

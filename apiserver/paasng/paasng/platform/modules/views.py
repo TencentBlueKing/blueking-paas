@@ -403,7 +403,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             build_config.docker_build_args = data["docker_build_args"]
             build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
         else:
-            raise error_codes.CANNOT_MODIFY_ITEM
+            raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
         return Response()
 
     @swagger_auto_schema(response_serializer=ModuleRuntimeSLZ(many=True))

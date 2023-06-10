@@ -153,6 +153,7 @@ class ErrorCodes:
 
     # 平台升级提醒
     ACTION_NOT_AVAILABLE = ErrorCode(_('因该功能正在升级改造，操作暂不可用。'), status_code=503)
+    MODIFY_UNSUPPORTED = ErrorCode(_("暂不支持修改该配置"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

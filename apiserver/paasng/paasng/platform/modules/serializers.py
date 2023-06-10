@@ -17,7 +17,7 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 import string
-from typing import Dict
+from typing import Dict, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
@@ -217,8 +217,10 @@ class ImageTagOptionsSLZ(serializers.Serializer):
     with_build_time = serializers.BooleanField(help_text="镜像 Tag 是否带有构建时间")
     with_commit_id = serializers.BooleanField(help_text="镜像 Tag 是否带有提交ID(hash)")
 
-    def validate_prefix(self, prefix: str):
+    def validate_prefix(self, prefix: Optional[str]):
         charset = {*string.digits, *string.ascii_letters}
+        if prefix is None:
+            return None
         if prefix.startswith(".") or prefix.startswith("-"):
             raise ValidationError("Tag can not startswith '.' or '-'")
         if forbidden_chars := set(prefix) - charset:
@@ -245,19 +247,15 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
 
     def validate(self, attrs):
         build_method = RuntimeType(attrs["build_method"])
-        errors = {}
+        missed_params = []
         if build_method == RuntimeType.BUILDPACK:
-            if not attrs.get("buildpacks"):
-                errors["buildpacks"] = _('This field is required.')
-            if not attrs.get("bp_stack_name"):
-                errors["bp_stack_name"] = _('This field is required.')
-        if build_method == RuntimeType.DOCKERFILE:
-            if not attrs.get("dockerfile_path"):
-                errors["dockerfile_path"] = _('This field is required.')
-            if not attrs.get("docker_build_args"):
-                errors["docker_build_args"] = _('This field is required.')
-        if errors:
-            raise ValidationError(errors, code="required")
+            missed_params = [k for k in ['buildpacks', 'bp_stack_name'] if not attrs.get(k)]
+        elif build_method == RuntimeType.DOCKERFILE:
+            missed_params = [k for k in ['dockerfile_path', 'docker_build_args'] if not attrs.get(k)]
+        if missed_params:
+            raise ValidationError(
+                detail={param: _('This field is required.') for param in missed_params}, code="required"
+            )
         return attrs
 
 

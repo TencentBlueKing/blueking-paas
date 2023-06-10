@@ -40,7 +40,6 @@ from paasng.engine.deploy.bg_build.utils import (
     generate_launcher_env_vars,
     generate_slug_path,
     prepare_slugbuilder_template,
-    update_image_id,
 )
 from paasng.engine.exceptions import DeployInterruptionFailed
 from paasng.engine.models.deployment import Deployment
@@ -253,8 +252,6 @@ class BuildProcessExecutor(DeployStep):
         self.bp.build = build_instance
         self.bp.status = BuildStatus.SUCCESSFUL.value
         self.bp.save(update_fields=["build", "status"])
-        if artifact_type == ArtifactType.IMAGE:
-            self.try_update_image_id(build_instance)
         return build_instance
 
     def clean_slugbuilder(self):
@@ -263,9 +260,3 @@ class BuildProcessExecutor(DeployStep):
         except Exception as e:
             # cleaning should not influenced main process
             logger.warning("清理应用 %s 的 slug builder 失败, 原因: %s", self.wl_app.name, e)
-
-    def try_update_image_id(self, build: Build):
-        try:
-            update_image_id(build)
-        except Exception:
-            logger.exception("failed to update image_id field")

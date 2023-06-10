@@ -31,11 +31,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='build',
-            name='image_id',
-            field=models.CharField(help_text='镜像摘要(例如, sha256:xxx)', max_length=128, null=True),
-        ),
-        migrations.AddField(
-            model_name='build',
             name='artifact_type',
             field=models.CharField(default=paas_wl.platform.applications.constants.ArtifactType['SLUG'],
                                    help_text='构建产物类型', max_length=16),

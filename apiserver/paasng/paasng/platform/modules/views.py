@@ -253,10 +253,14 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         results = []
 
         runtime_labels = get_image_labels_by_module(module)
-        _, available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        if available_slugrunners.count() == 0:
+            available_slugrunners = AppSlugRunner.objects.filter_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
-        _, available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        if available_slugbuilders.count() == 0:
+            available_slugbuilders = AppSlugBuilder.objects.filter_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
         for slugbuilder in available_slugbuilders:
             name = slugbuilder.name
@@ -403,17 +407,21 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response()
 
     @swagger_auto_schema(response_serializer=ModuleRuntimeSLZ(many=True))
-    def list_available_bp_runtime(self, request, code, module_name):
+    def list_available_bp_runtimes(self, request, code, module_name):
         """获取一个模块可用的运行环境"""
         application = self.get_application()
         module = application.get_module(module_name)
 
         results = []
         runtime_labels = get_image_labels_by_module(module)
-        _, available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        if available_slugrunners.count() == 0:
+            available_slugrunners = AppSlugRunner.objects.filter_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
-        _, available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        if available_slugbuilders.count() == 0:
+            available_slugbuilders = AppSlugBuilder.objects.filter_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
         for slugbuilder in available_slugbuilders:
             name = slugbuilder.name

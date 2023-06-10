@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='build',
             name='image',
-            field=models.TextField(default='', help_text='运行 Build 的镜像地址, 对于构件类型为 image 的 Build 该值同时也是构建产物', null=True),
+            field=models.TextField(default='', help_text='运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物', null=True),
             preserve_default=False,
         ),
         migrations.AlterField(

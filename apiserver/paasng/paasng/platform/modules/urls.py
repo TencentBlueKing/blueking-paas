@@ -61,8 +61,8 @@ urlpatterns = [
         name="api.modules.build_config",
     ),
     url(
-        make_app_pattern("/bp_runtime/list/$", include_envs=False),
-        views.ModuleBuildConfigViewSet.as_view({'get': 'list_available_bp_runtime'}),
+        make_app_pattern("/bp_runtimes/$", include_envs=False),
+        views.ModuleBuildConfigViewSet.as_view({'get': 'list_available_bp_runtimes'}),
         name='api.modules.bp_runtime.available_list',
     ),
     # DeployConfig

@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -36,24 +36,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class RuntimeResourceManager(models.Manager):
-    def filter_by_full_image(self, module: 'Module', full_image: str) -> List['AppImage']:
-        """通过镜像全名查找 DB 记录"""
-        targets = []
-        for i in self.filter_available(module):
-            if i.full_image == full_image:
-                targets.append(i)
-        return targets
-
+class BuildPackManager(models.Manager):
     def filter_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
         """查询模块可用的镜像
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)
+        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        filters = []
 
-        """
-
-        # 已被绑定至该模块的镜像
-        filters = [models.Q(modules__id=module.id)]
+        # 关联已被绑定至该模块的镜像
+        try:
+            filters.append(models.Q(related_build_configs__pk=module.build_config.pk))
+        except ObjectDoesNotExist:
+            logger.debug("module %s 未初始化 BuildConfig", module)
 
         # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
         if contain_hidden:
@@ -62,68 +56,12 @@ class RuntimeResourceManager(models.Manager):
             filters.append(models.Q(is_hidden=False, region=module.region))
 
         qs = self.get_queryset().filter(reduce(operator.or_, filters))
-
         # Q: 为什么需要调用 distinct ?
-        # A: 因为 models.Q(modules__id=module.id) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
+        # A: 因为 models.Q(related_build_configs=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
     def get_by_natural_key(self, region, name):
         return self.get(region=region, name=name)
-
-
-class SlugManager(RuntimeResourceManager):
-    def filter_by_label(
-        self, module: 'Module', labels: Dict[str, str], contain_hidden: bool = False
-    ) -> Tuple[bool, models.QuerySet]:
-        """根据label查询可用的镜像，目前是:
-        - smart_app: 能且只能给（Python + Smart）应用使用
-          - label: {'language': 'Python', 'category': 'smart_app'}
-        - region-legacy: 给从 PaaS2.0 迁移过来的应用使用
-          - label: {'category': 'legacy_app'}
-        - other_image: 给上述情况外的其他应用使用
-          - label: {}
-
-        :return: is_matched, available_runtimes
-        """
-        query_sets = self.filter_available(module, contain_hidden)
-        selected_ids = []
-        # 根据 labels 匹配镜像
-        for obj in query_sets:
-            if set(labels.items()).issubset(obj.labels.items()):
-                selected_ids.append(obj.id)
-        if selected_ids:
-            return True, query_sets.filter(id__in=selected_ids)
-
-        # 没有匹配到，则返回所有镜像
-        return False, query_sets
-
-    def select_runtime(self, module: 'Module', labels: dict, contain_hidden: bool = False) -> "AppImage":
-        matched, available_runtimes = self.filter_by_label(module, labels, contain_hidden)
-        # 根据label匹配到的，则直接返回最新创建的一个
-        if matched:
-            return available_runtimes.latest("created")
-
-        if available_runtimes.filter(is_default=True).exists():
-            return available_runtimes.filter(is_default=True).latest("updated")
-
-        # 没有匹配到，则使用 settings 中的配置的默认镜像
-        region = module.region
-        try:
-            image = settings.DEFAULT_RUNTIME_IMAGES[region]
-        except KeyError:
-            image = list(settings.DEFAULT_RUNTIME_IMAGES.values())[0]
-            logger.warning('Unable to get default image for region: %s, will use %s by default', region, image)
-
-        try:
-            default_runtime = available_runtimes.filter(name=image).latest("created")
-        except self.model.DoesNotExist:
-            # 找不到则使用 app engine 默认配置的镜像
-            logger.warning("skip runtime binding because default image is not found")
-            raise ObjectDoesNotExist
-        return default_runtime
-
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
 
 
 class AppBuildPack(TimestampedModel):
@@ -145,7 +83,7 @@ class AppBuildPack(TimestampedModel):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="buildpacks")
 
-    objects = RuntimeResourceManager()
+    objects = BuildPackManager()
 
     def natural_key(self):
         return (self.region, self.name)
@@ -162,6 +100,92 @@ class AppBuildPack(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.region}:{self.name}[{self.pk}]"
+
+
+class BuildPackStackManager(models.Manager):
+    def filter_available(self, module: 'Module', contain_hidden: bool = False) -> models.QuerySet:
+        """查询模块可用的镜像
+
+        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        filters = []
+
+        # 关联已被绑定至该模块的镜像
+        try:
+            filters.append(models.Q(buildconfig__pk=module.build_config.pk))
+        except ObjectDoesNotExist:
+            logger.debug("module %s 未初始化 BuildConfig", module)
+
+        # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
+        if contain_hidden:
+            filters.append(models.Q(region=module.region))
+        else:
+            filters.append(models.Q(is_hidden=False, region=module.region))
+
+        qs = self.get_queryset().filter(reduce(operator.or_, filters))
+        # Q: 为什么需要调用 distinct ?
+        # A: 因为 models.Q(buildconfig__pk=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
+        return qs.distinct()
+
+    def filter_by_full_image(self, module: 'Module', full_image: str) -> List['AppImage']:
+        """通过镜像全名查找 DB 记录"""
+        targets = []
+        for i in self.filter_available(module):
+            if i.full_image == full_image:
+                targets.append(i)
+        return targets
+
+    def filter_by_label(
+        self, module: 'Module', labels: Dict[str, str], contain_hidden: bool = False
+    ) -> models.QuerySet:
+        """根据label查询可用的镜像，目前是:
+        - smart_app: 能且只能给（Python + Smart）应用使用
+          - label: {'language': 'Python', 'category': 'smart_app'}
+        - region-legacy: 给从 PaaS2.0 迁移过来的应用使用
+          - label: {'category': 'legacy_app'}
+        - other_image: 给上述情况外的其他应用使用
+          - label: {}
+
+        :return: available_runtimes
+        """
+        query_sets = self.filter_available(module, contain_hidden)
+        selected_ids = []
+        # 根据 labels 匹配镜像
+        for obj in query_sets:
+            if set(labels.items()).issubset(obj.labels.items()):
+                selected_ids.append(obj.id)
+        if selected_ids:
+            return query_sets.filter(id__in=selected_ids)
+        # 没有匹配到
+        return query_sets.none()
+
+    def select_runtime(self, module: 'Module', labels: dict, contain_hidden: bool = False) -> "AppImage":
+        available_runtimes = self.filter_by_label(module, labels, contain_hidden)
+        # 根据label匹配到的，则直接返回最新创建的一个
+        if available_runtimes.exists():
+            return available_runtimes.latest("created")
+
+        available_runtimes = self.filter_available(module=module, contain_hidden=contain_hidden)
+        if available_runtimes.filter(is_default=True).exists():
+            return available_runtimes.filter(is_default=True).latest("updated")
+
+        # 没有匹配到，则使用 settings 中的配置的默认镜像
+        region = module.region
+        try:
+            image = settings.DEFAULT_RUNTIME_IMAGES[region]
+        except KeyError:
+            image = list(settings.DEFAULT_RUNTIME_IMAGES.values())[0]
+            logger.warning('Unable to get default image for region: %s, will use %s by default', region, image)
+
+        try:
+            default_runtime = available_runtimes.filter(name=image).latest("created")
+        except self.model.DoesNotExist:
+            # 找不到则使用 app engine 默认配置的镜像
+            logger.warning("skip runtime binding because default image is not found")
+            raise ObjectDoesNotExist
+        return default_runtime
+
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
 
 
 class AppImage(TimestampedModel):
@@ -212,7 +236,7 @@ class AppSlugRunner(AppImage):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="slugrunners")
 
-    objects = SlugManager()
+    objects = BuildPackStackManager()
 
 
 class AppSlugBuilder(AppImage):
@@ -223,7 +247,7 @@ class AppSlugBuilder(AppImage):
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField('modules.Module', related_name="slugbuilders")
 
-    objects = SlugManager()
+    objects = BuildPackStackManager()
 
     def get_buildpack_choices(self, module: 'Module', *args, **kwargs) -> List[AppBuildPack]:
         """查询模块可用的 BuildPacks

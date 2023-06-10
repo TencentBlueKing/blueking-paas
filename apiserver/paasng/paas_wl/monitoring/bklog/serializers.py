@@ -56,7 +56,12 @@ class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
             "extMeta": obj.ext_meta,
             "logConfigType": obj.config_type.value,
         }
-        return {"metadata": metadata, "spec": spec, "apiVersion": self.get_apiversion(), "kind": "BkLogConfig"}
+        return {
+            "metadata": metadata,
+            "spec": spec,
+            "apiVersion": self.get_apiversion(),
+            "kind": obj.Meta.kres_class.kind,
+        }
 
 
 class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig"]):

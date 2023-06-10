@@ -18,8 +18,8 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-from django.conf import settings
-
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.utils import get_cluster_by_app
 from paas_wl.monitoring.bklog.constants import BkLogConfigType
 from paas_wl.monitoring.bklog.entities import BkAppLogConfig, bklog_config_kmodel
 from paas_wl.platform.applications.models import WlApp
@@ -44,7 +44,8 @@ def build_bklog_config_crd(wl_app: WlApp, custom_collector_config: CustomCollect
 
 
 def make_bk_log_controller(wl_app: WlApp):
-    if not settings.ENABLE_BK_LOG:
+    cluster = get_cluster_by_app(wl_app)
+    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
         logger.warning("BkLog is not ready, skip apply BkLogConfig")
         return NullController()
     else:
@@ -64,12 +65,12 @@ class AppLogConfigController:
         for collector_config in self.db_collector_configs:
             bklog_config = build_bklog_config_crd(self.wl_app, collector_config)
             try:
-                existed = bklog_config_kmodel.get(app=bklog_config.app, name=bklog_config.name)
+                existed_config = bklog_config_kmodel.get(app=bklog_config.app, name=bklog_config.name)
             except AppEntityNotFound:
                 bklog_config_kmodel.save(bklog_config)
                 continue
 
-            if existed != bklog_config:
+            if existed_config != bklog_config:
                 # DynamicClient 默认使用 strategic-merge-patch, CRD 不支持, 因此需要使用 merge-patch
                 bklog_config_kmodel.update(
                     bklog_config, update_method='patch', content_type="application/merge-patch+json"

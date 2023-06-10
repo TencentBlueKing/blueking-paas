@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import datetime
 import logging
-from contextlib import nullcontext
+from typing import Optional, Tuple
 
 import cattr
 from django.conf import settings
@@ -103,7 +103,9 @@ def build_custom_collector_config_name(module: Module, type: str) -> str:
     return f"bkapp__{app_code}__{module_name}__{type}".replace("-", "_")
 
 
-def to_custom_collector_config(module: Module, collector_config: AppLogCollectorConfig) -> CustomCollectorConfig:
+def to_custom_collector_config(
+    module: Module, collector_config: AppLogCollectorConfig
+) -> Tuple[CustomCollectorConfig, Optional[CustomCollectorConfigModel]]:
     """Transform AppLogCollectorConfig to CustomCollectorConfig"""
 
     if collector_config.etl_type == ETLType.TEXT:
@@ -153,7 +155,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         raise NotImplementedError
 
     name = build_custom_collector_config_name(module, type=collector_config.log_type)
-    return CustomCollectorConfig(
+    cfg = CustomCollectorConfig(
         name_en=name,
         name_zh_cn=name,
         etl_config=etl_config,
@@ -161,33 +163,35 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
             storage_cluster_id=BKLogConfigProvider().storage_cluster_id,
         ),
     )
+    # fill persistence fields from db
+    try:
+        db_obj = CustomCollectorConfigModel.objects.get(module=module, name_en=cfg.name_en)
+    except CustomCollectorConfigModel.DoesNotExist:
+        logger.debug("CustomCollectorConfig dones not exits, skip fill persistence fields")
+        return cfg, None
+
+    cfg.id = db_obj.collector_config_id
+    cfg.index_set_id = db_obj.index_set_id
+    cfg.bk_data_id = db_obj.bk_data_id
+    return cfg, db_obj
 
 
 def update_or_create_custom_collector_config(
     env: ModuleEnvironment, collector_config: AppLogCollectorConfig, skip_update: bool = False
-) -> AppLogCollectorConfig:
+):
     """调用日志平台的接口, 创建或更新自定义采集项"""
     module: Module = env.module
-    custom_collector_config = to_custom_collector_config(module, collector_config)
-    ctx = nullcontext()
-    try:
-        obj = CustomCollectorConfigModel.objects.get(module=module, name_en=custom_collector_config.name_en)
-        obj.log_paths = collector_config.log_paths
-        obj.log_type = collector_config.log_type
-        obj.save(update_fields=["log_paths", "log_type", "updated"])
-        custom_collector_config.id = obj.collector_config_id
-        custom_collector_config.index_set_id = obj.index_set_id
-        custom_collector_config.bk_data_id = obj.bk_data_id
-    except CustomCollectorConfigModel.DoesNotExist:
-        ctx = atomic()
-        logger.debug("CustomCollectorConfig dones not exits, will create now")
-
+    custom_collector_config, db_obj = to_custom_collector_config(module, collector_config)
     client = make_bk_log_client()
-    with ctx:
-        if custom_collector_config.id:
+    with atomic():
+        if db_obj is not None:
             if not skip_update:
                 client.update_custom_collector_config(custom_collector_config)
+                db_obj.log_paths = collector_config.log_paths
+                db_obj.log_type = collector_config.log_type
+                db_obj.save(update_fields=["log_paths", "log_type", "updated"])
         else:
+            # create_custom_collector_config will fill `id`, `index_set_id`, `bk_data_id` fields
             custom_collector_config = client.create_custom_collector_config(
                 bk_biz_id=BKLogConfigProvider().bk_biz_id, config=custom_collector_config
             )
@@ -203,7 +207,6 @@ def update_or_create_custom_collector_config(
                 },
             )
     collector_config.collector_config = custom_collector_config
-    return collector_config
 
 
 def update_or_create_es_search_config(env: ModuleEnvironment, collector_config: AppLogCollectorConfig):
@@ -253,8 +256,8 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     stdout_config = AppLogCollectorConfig(log_type="stdout", etl_type=ETLType.TEXT)
 
     # 创建 json/stdout 的自定义采集项
-    json_config = update_or_create_custom_collector_config(env, json_config, skip_update=True)
-    stdout_config = update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
+    update_or_create_custom_collector_config(env, json_config, skip_update=True)
+    update_or_create_custom_collector_config(env, stdout_config, skip_update=True)
     # 绑定日志查询的配置
     update_or_create_es_search_config(env, json_config)
     update_or_create_es_search_config(env, stdout_config)

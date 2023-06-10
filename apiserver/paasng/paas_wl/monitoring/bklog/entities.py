@@ -69,14 +69,14 @@ class BkAppLogConfigManager(AppEntityManager[BkAppLogConfig]):
 
     def delete(self, res: BkAppLogConfig, non_grace_period: bool = False):
         namespace = res.app.namespace
-        secret_name = res.name
+        config_name = res.name
 
         try:
-            existed = self.get(app=res.app, name=secret_name)
+            existed_one = self.get(app=res.app, name=config_name)
         except AppEntityNotFound:
-            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, secret_name)
+            logger.info("BkLogConfig<%s/%s> does not exist, will skip delete", namespace, config_name)
             return
-        return super().delete(existed, non_grace_period)
+        return super().delete(existed_one, non_grace_period)
 
 
 bklog_config_kmodel = BkAppLogConfigManager()

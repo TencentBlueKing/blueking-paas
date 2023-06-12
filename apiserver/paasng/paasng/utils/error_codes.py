@@ -75,6 +75,8 @@ class ErrorCodes:
     PACKAGE_ALREADY_EXISTS = ErrorCode(_('源码包已存在'), code_num=4312009)
     MISSING_VERSION_INFO = ErrorCode(_('缺失版本信息'), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_('对象存储服务异常'), code_num=4312011)
+    # 部署配置
+    BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
     QUERY_LOG_FAILED = ErrorCode(_('查询日志失败'))
     QUERY_REQUEST_ERROR = ErrorCode(_('查询日志失败，请检查查询条件'))
@@ -151,6 +153,7 @@ class ErrorCodes:
 
     # 平台升级提醒
     ACTION_NOT_AVAILABLE = ErrorCode(_('因该功能正在升级改造，操作暂不可用。'), status_code=503)
+    MODIFY_UNSUPPORTED = ErrorCode(_("暂不支持修改该配置"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

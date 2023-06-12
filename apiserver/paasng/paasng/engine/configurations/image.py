@@ -37,11 +37,11 @@ if TYPE_CHECKING:
     from paasng.engine.models import EngineApp
 
 
-def generate_image_repository(app: 'EngineApp') -> str:
-    """Get the image repository for storing contaienr image"""
-    env = app.env
+def generate_image_repository(module: Module) -> str:
+    """Get the image repository for storing container image"""
+    application = module.application
     system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
-    app_part = f"{env.application.code}/{env.module.name}/{env.environment}"
+    app_part = f"{application.code}/{module.name}"
     return f"{system_prefix}/{app_part}"
 
 
@@ -115,7 +115,7 @@ class RuntimeImageInfo:
             reference = version_info.revision
             return f"{repo_url}:{reference}"
         elif self.type == RuntimeType.DOCKERFILE:
-            app_image_repository = generate_image_repository(self.engine_app)
+            app_image_repository = generate_image_repository(self.module)
             app_image_tag = generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
@@ -127,7 +127,7 @@ class RuntimeImageInfo:
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
             return (
-                generate_image_repository(self.engine_app)
+                generate_image_repository(self.module)
                 + ":"
                 + generate_image_tag(module=self.module, version=version_info)
             )

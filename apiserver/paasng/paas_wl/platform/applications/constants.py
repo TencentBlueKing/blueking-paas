@@ -27,3 +27,11 @@ class WlAppType(str, StructuredEnum):
     # 云原生架构应用：完全基于 YAML 模型的应用，当前作为一个独立应用类型存在，但未来它也许会成为所有应用
     # （比如基于 buildpack 的“普通应用”）统一底层架构。到那时，再来考虑如何处置这个类型吧
     CLOUD_NATIVE = EnumField('cloud_native')
+
+
+class ArtifactType(str, StructuredEnum):
+    """type of build artifact"""
+
+    SLUG = EnumField('slug')
+    IMAGE = EnumField('image')
+    NONE = EnumField('none')

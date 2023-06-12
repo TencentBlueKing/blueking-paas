@@ -303,7 +303,6 @@
               return this.appPreparations.failed_conditions.find(e => e.action_name === 'deploy_prod_env')
             }
         },
-        inject: ['changeTab'],
         watch: {
             '$route' () {
                 this.init();
@@ -427,7 +426,6 @@
 
                     // 未完善应用基本信息
                     case 'fill_product_info':
-                        this.changeTab('baseInfo');
                         break;
 
                     // 应用未在生产环境成功部署

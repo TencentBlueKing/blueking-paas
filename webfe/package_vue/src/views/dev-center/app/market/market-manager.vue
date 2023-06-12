@@ -1,388 +1,393 @@
 <template>
-  <section v-show="!isDataLoading" class="market-manager">
-    <div
-      v-if="isSmartApp"
-      class="info mb15"
-    >
-      {{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}
-    </div>
-    <div class="base-info mb24">
-      <strong class="base-info-title"> {{ $t('基本信息-title') }} </strong>
-      <div class="logo-uploader flex-row align-items-center">
-        <img class="logo" :src="baseInfo.logo || '/static/images/default_logo.png'">
-        <div class="base-info-name">
-          <div class="flex-row align-items-center">
-            {{ baseInfo.name || '--' }}
-            <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div>
-            <router-link :to="{ name: 'appBaseInfo' }">
-              {{ $t('点击修改基本信息') }}
-            </router-link>
+  <paas-content-loader
+    :is-loading="isDataLoading"
+    placeholder="market-visit-loading"
+  >
+    <section v-show="!isDataLoading" class="market-manager">
+      <div
+        v-if="isSmartApp"
+        class="info mb15"
+      >
+        {{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}
+      </div>
+      <div class="base-info mb24">
+        <strong class="base-info-title"> {{ $t('基本信息-title') }} </strong>
+        <div class="logo-uploader flex-row align-items-center">
+          <img class="logo" :src="baseInfo.logo || '/static/images/default_logo.png'">
+          <div class="base-info-name">
+            <div class="flex-row align-items-center">
+              {{ baseInfo.name || '--' }}
+              <div class="base-info-region">{{ baseInfo.region_name || '--' }}</div>
+              <router-link :to="{ name: 'appBaseInfo' }">
+                {{ $t('点击修改基本信息') }}
+              </router-link>
+            </div>
+            <div> {{ $t('创建时间：') }} {{ baseInfo.updated || '--' }}</div>
           </div>
-          <div> {{ $t('创建时间：') }} {{ baseInfo.updated || '--' }}</div>
         </div>
       </div>
-    </div>
-    <div class="market-info mb25">
-      <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
-      <div v-if="!isSaveMarketInfo">
-        <bk-form
-          class="market-info-container"
-          ref="baseInfoForm"
-          style="width: 890px;"
-          :label-width="120"
-          :model="baseInfo"
-        >
-          <bk-form-item
-            :label="$t('应用分类：')"
-            :required="!isSmartApp"
-            :rules="baseInfoRules.appArrange"
-            :icon-offset="380"
-            :property="'parentTag'"
+      <div class="market-info mb25">
+        <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
+        <div v-if="!isSaveMarketInfo">
+          <bk-form
+            class="market-info-container"
+            ref="baseInfoForm"
+            style="width: 890px;"
+            :label-width="120"
+            :model="baseInfo"
           >
-            <template v-if="isSmartApp">
-              <p>{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
-            </template>
-            <template v-else>
-              <bk-select
-                v-model="baseInfo.parentTag"
-                class="mr20"
-                style="width: 365px; display: inline-block;"
-                :placeholder="$t('请选择')"
-                :clearable="false"
-                :popover-min-width="200"
-                :searchable="true"
-                @selected="handleTagSelect"
-              >
-                <bk-option
-                  v-for="(option, index) in parentTagList"
-                  :id="option.id"
-                  :key="`${option.text}-${index}`"
-                  :name="option.text"
-                />
-              </bk-select>
-              <bk-select
-                v-if="childTagList.length"
-                v-model="baseInfo.childTag"
-                style="width: 365px; display: inline-block;"
-                :placeholder="$t('请选择')"
-                :clearable="false"
-                :popover-min-width="200"
-                :searchable="true"
-              >
-                <bk-option
-                  v-for="(option, index) in childTagList"
-                  :id="option.id"
-                  :key="`${option.text}-${index}`"
-                  :name="option.text"
-                />
-              </bk-select>
-            </template>
-          </bk-form-item>
-
-          <bk-form-item
-            :label="$t('应用简介：')"
-            :required="!isSmartApp"
-            :property="'introduction'"
-            :rules="baseInfoRules.introduction"
-          >
-            <p v-if="isSmartApp">
-              {{ baseInfo.introduction || '--' }}
-            </p>
-            <bk-input
-              v-else
-              v-model="baseInfo.introduction"
-              type="text"
-              :maxlength="100"
-            />
-          </bk-form-item>
-          <bk-form-item
-            v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
-            :label="$t('应用联系人：')"
-            :required="!isSmartApp"
-            :property="'contactArr'"
-            :rules="baseInfoRules.contact"
-          >
-            <p v-if="isSmartApp">
-              {{ baseInfo.contactArr.join('; ') || '--' }}
-            </p>
-            <user v-model="baseInfo.contactArr" />
-          </bk-form-item>
-
-          <bk-form-item
-            v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
-            :label="$t('所属业务：')"
-          >
-            <bk-tag-input
-              v-model="baseInfo.related_corp_products"
-              :placeholder="$t('请输入关键字，按Enter结束')"
-              :save-key="'id'"
-              :search-key="'display_name'"
-              :setting-key="'id'"
-              :display-key="'display_name'"
-              :list="businessList"
-            />
-          </bk-form-item>
-
-          <bk-form-item
-            v-if="!isSmartApp"
-            :label="$t('详细描述：')"
-            :property="'name'"
-          >
-            <bk-input
-              v-model="baseInfo.description"
-              type="textarea"
-              :maxlength="100"
-            />
-          </bk-form-item>
-
-          <bk-form-item
-            v-if="curAppInfo.feature.MARKET_VISIBILITY"
-            :label="$t('可见范围：')"
-            :property="'name'"
-          >
-            <section>
-              <bk-button @click="handleOpenMemberDialog">
-                {{ $t('选择组织/人员') }}
-              </bk-button>
-              <span
-                v-if="!users.length && !departments.length"
-                style="font-size: 12px; color: #c4c6cc; margin-left: 5px;"
-              >
-                <i class="paasng-icon paasng-info-circle" />
-                {{ $t('默认为全局可见') }}
-              </span>
-            </section>
-            <p
-              v-if="GLOBAL.CONFIG.MARKET_TIPS"
-              class="tip"
+            <bk-form-item
+              :label="$t('应用分类：')"
+              :required="!isSmartApp"
+              :rules="baseInfoRules.appArrange"
+              :icon-offset="380"
+              :property="'parentTag'"
             >
-              {{ $t('仅影响') }} <a
-                :href="platFormConfig.LINK.APP_MARKET"
-                target="_blank"
-              > {{ GLOBAL.CONFIG.MARKET_TIPS }} </a> {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。') }}
-            </p>
-            <render-member-item
-              v-if="users.length > 0"
-              :data="users"
-              @on-delete="handleDeleteUser"
-            />
-            <render-member-item
-              v-if="departments.length > 0"
-              :data="departments"
-              type="department"
-              @on-delete="handleDeleteDepartment"
-            />
-          </bk-form-item>
-        </bk-form>
+              <template v-if="isSmartApp">
+                <p>{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
+              </template>
+              <template v-else>
+                <bk-select
+                  v-model="baseInfo.parentTag"
+                  class="mr20"
+                  style="width: 365px; display: inline-block;"
+                  :placeholder="$t('请选择')"
+                  :clearable="false"
+                  :popover-min-width="200"
+                  :searchable="true"
+                  @selected="handleTagSelect"
+                >
+                  <bk-option
+                    v-for="(option, index) in parentTagList"
+                    :id="option.id"
+                    :key="`${option.text}-${index}`"
+                    :name="option.text"
+                  />
+                </bk-select>
+                <bk-select
+                  v-if="childTagList.length"
+                  v-model="baseInfo.childTag"
+                  style="width: 365px; display: inline-block;"
+                  :placeholder="$t('请选择')"
+                  :clearable="false"
+                  :popover-min-width="200"
+                  :searchable="true"
+                >
+                  <bk-option
+                    v-for="(option, index) in childTagList"
+                    :id="option.id"
+                    :key="`${option.text}-${index}`"
+                    :name="option.text"
+                  />
+                </bk-select>
+              </template>
+            </bk-form-item>
 
-        <bk-form
-          ref="baseWinForm"
-          class="market-info-container"
-          :label-width="120"
-          style="width: 890px;"
-          :model="baseInfo"
-        >
-          <bk-form-item
-            :label="$t('打开方式：')"
-            :required="true"
-          >
-            <div class="bk-button-group bk-button-group-cls">
-              <bk-button
-                :class="baseInfo.open_mode === 'desktop' ? 'is-selected' : ''"
-                @click="changeDesktop"
-              >
-                {{ $t('桌面') }}
-              </bk-button>
-              <bk-button
-                :class="baseInfo.open_mode === 'new_tab' ? 'is-selected' : ''"
-                @click="changeNewtab"
-              >
-                {{ $t('新标签页') }}
-              </bk-button>
-            </div>
-          </bk-form-item>
-
-          <bk-form-item
-            v-if="baseInfo.open_mode === 'desktop'"
-            :label="$t('窗口大小：')"
-            :required="true"
-          >
-            <bk-input
-              v-model="baseInfo.width"
-              type="number"
-              style="width: 200px;line-height: 1;"
-              class="fl mr10"
-              :placeholder="$t('输入')"
-              :min="0"
-              :show-controls="false"
+            <bk-form-item
+              :label="$t('应用简介：')"
+              :required="!isSmartApp"
+              :property="'introduction'"
+              :rules="baseInfoRules.introduction"
             >
-              <template slot="prepend">
-                <div class="group-text">
-                  {{ $t('宽') }}
-                </div>
-              </template>
-              <template slot="append">
-                <div class="group-text">
-                  px
-                </div>
-              </template>
-            </bk-input>
-
-            <bk-input
-              v-model="baseInfo.height"
-              type="number"
-              style="width: 200px;line-height: 1;"
-              :placeholder="$t('输入')"
-              :min="0"
-              :show-controls="false"
-            >
-              <template slot="prepend">
-                <div class="group-text">
-                  {{ $t('高') }}
-                </div>
-              </template>
-              <template slot="append">
-                <div class="group-text">
-                  px
-                </div>
-              </template>
-            </bk-input>
-            <p class="tip mt5">
-              {{ $t('应用在蓝鲸桌面打开时的窗口大小，建议选择1200px*600px') }}
-            </p>
-          </bk-form-item>
-
-          <bk-form-item
-            v-if="baseInfo.open_mode === 'desktop'"
-            :label="$t('拉伸窗口：')"
-            :required="true"
-          >
-            <bk-select
-              v-model="baseInfo.resizableKey"
-              style="width: 411px;"
-              :clearable="false"
-            >
-              <bk-option
-                v-for="option in winResizeList"
-                :id="option.id"
-                :key="option.id"
-                :name="option.name"
+              <p v-if="isSmartApp">
+                {{ baseInfo.introduction || '--' }}
+              </p>
+              <bk-input
+                v-else
+                v-model="baseInfo.introduction"
+                type="text"
+                :maxlength="100"
               />
-            </bk-select>
-          </bk-form-item>
-        </bk-form>
-
-        <bk-form
-          :label-width="130"
-          style="width: 860px;"
-          class="mt20"
-        >
-          <bk-form-item class="mb20">
-            <bk-button
-              theme="primary"
-              class="mr10 market-info-btn"
-              :title="$t('保存')"
-              :loading="isInfoSaving"
-              @click.stop.prevent="submitMarketInfo"
+            </bk-form-item>
+            <bk-form-item
+              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              :label="$t('应用联系人：')"
+              :required="!isSmartApp"
+              :property="'contactArr'"
+              :rules="baseInfoRules.contact"
             >
-              {{ $t('保存') }}
-            </bk-button>
+              <p v-if="isSmartApp">
+                {{ baseInfo.contactArr.join('; ') || '--' }}
+              </p>
+              <user v-model="baseInfo.contactArr" />
+            </bk-form-item>
 
-            <bk-button
-              theme="primary"
-              outline
-              class="ml10 market-info-btn"
-              :title="$t('取消')"
-              @click="isSaveMarketInfo=true"
+            <bk-form-item
+              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              :label="$t('所属业务：')"
             >
-              {{ $t('取消') }}
-            </bk-button>
-          </bk-form-item>
-        </bk-form>
-      </div>
-      <div v-else class="flex-row justify-content-between">
-        <bk-form
-          class="market-detail-container"
-          ref="baseInfoForm"
-          style="width: 890px;"
-          :label-width="120"
-          :model="baseInfo"
-          form-type="inline"
-        >
-          <bk-form-item
-            :label="$t('应用分类：')"
-            :rules="baseInfoRules.appArrange"
-            :icon-offset="380"
-          >
-            <p>{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
-          </bk-form-item>
-          <bk-form-item
-            v-if="!isSmartApp"
-            :label="$t('打开方式：')"
-          >
-            <p>{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('应用简介：')"
-            :rules="baseInfoRules.appArrange"
-            :icon-offset="380"
-          >
-            <p>{{ baseInfo.introduction || '--' }}</p>
-          </bk-form-item>
-          <bk-form-item
-            v-if="baseInfo.open_mode === 'desktop'"
-            :label="$t('窗口大小：')"
-          >
-            <p>{{ $t('宽') }}{{ baseInfo.width }}， {{ $t('高') }}{{ baseInfo.height }}</p>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('应用联系人：')"
-            v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
-            :rules="baseInfoRules.appArrange"
-            :icon-offset="380"
-          >
-            <p>{{ baseInfo.contactArr.join('; ') || '--' }}</p>
-          </bk-form-item>
-          <bk-form-item
-            v-if="baseInfo.open_mode === 'desktop'"
-            :label="$t('拉伸窗口：')"
-          >
-            <p>{{ baseInfo.resizableKey === 'able' ? $t('允许') : $t('不允许') }}</p>
-          </bk-form-item>
-          <bk-form-item
-            v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
-            :label="$t('所属业务：')"
-          >
-            <p>{{ baseInfo.related_corp_products || '--' }}</p>
-          </bk-form-item>
-          <bk-form-item
-            v-if="!isSmartApp"
-            :label="$t('详细描述：')"
-          >
-            <p>{{ baseInfo.description || '--' }}</p>
-          </bk-form-item>
-        </bk-form>
-        <bk-button
-          theme="primary"
-          outline
-          class="mr10  market-info-btn"
-          :title="$t('编辑')"
-          @click="isSaveMarketInfo=false"
-        >
-          {{ $t('编辑') }}
-        </bk-button>
-      </div>
-    </div>
+              <bk-tag-input
+                v-model="baseInfo.related_corp_products"
+                :placeholder="$t('请输入关键字，按Enter结束')"
+                :save-key="'id'"
+                :search-key="'display_name'"
+                :setting-key="'id'"
+                :display-key="'display_name'"
+                :list="businessList"
+              />
+            </bk-form-item>
 
-    <user-selector-dialog
-      v-if="curAppInfo.feature.MARKET_VISIBILITY"
-      :show.sync="isShow"
-      :users="users"
-      :departments="departments"
-      :api-host="apiHost"
-      @sumbit="handleSubmit"
-    />
-  </section>
+            <bk-form-item
+              v-if="!isSmartApp"
+              :label="$t('详细描述：')"
+              :property="'name'"
+            >
+              <bk-input
+                v-model="baseInfo.description"
+                type="textarea"
+                :maxlength="100"
+              />
+            </bk-form-item>
+
+            <bk-form-item
+              v-if="curAppInfo.feature.MARKET_VISIBILITY"
+              :label="$t('可见范围：')"
+              :property="'name'"
+            >
+              <section>
+                <bk-button @click="handleOpenMemberDialog">
+                  {{ $t('选择组织/人员') }}
+                </bk-button>
+                <span
+                  v-if="!users.length && !departments.length"
+                  style="font-size: 12px; color: #c4c6cc; margin-left: 5px;"
+                >
+                  <i class="paasng-icon paasng-info-circle" />
+                  {{ $t('默认为全局可见') }}
+                </span>
+              </section>
+              <p
+                v-if="GLOBAL.CONFIG.MARKET_TIPS"
+                class="tip"
+              >
+                {{ $t('仅影响') }} <a
+                  :href="platFormConfig.LINK.APP_MARKET"
+                  target="_blank"
+                > {{ GLOBAL.CONFIG.MARKET_TIPS }} </a> {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。') }}
+              </p>
+              <render-member-item
+                v-if="users.length > 0"
+                :data="users"
+                @on-delete="handleDeleteUser"
+              />
+              <render-member-item
+                v-if="departments.length > 0"
+                :data="departments"
+                type="department"
+                @on-delete="handleDeleteDepartment"
+              />
+            </bk-form-item>
+          </bk-form>
+
+          <bk-form
+            ref="baseWinForm"
+            class="market-info-container"
+            :label-width="120"
+            style="width: 890px;"
+            :model="baseInfo"
+          >
+            <bk-form-item
+              :label="$t('打开方式：')"
+              :required="true"
+            >
+              <div class="bk-button-group bk-button-group-cls">
+                <bk-button
+                  :class="baseInfo.open_mode === 'desktop' ? 'is-selected' : ''"
+                  @click="changeDesktop"
+                >
+                  {{ $t('桌面') }}
+                </bk-button>
+                <bk-button
+                  :class="baseInfo.open_mode === 'new_tab' ? 'is-selected' : ''"
+                  @click="changeNewtab"
+                >
+                  {{ $t('新标签页') }}
+                </bk-button>
+              </div>
+            </bk-form-item>
+
+            <bk-form-item
+              v-if="baseInfo.open_mode === 'desktop'"
+              :label="$t('窗口大小：')"
+              :required="true"
+            >
+              <bk-input
+                v-model="baseInfo.width"
+                type="number"
+                style="width: 200px;line-height: 1;"
+                class="fl mr10"
+                :placeholder="$t('输入')"
+                :min="0"
+                :show-controls="false"
+              >
+                <template slot="prepend">
+                  <div class="group-text">
+                    {{ $t('宽') }}
+                  </div>
+                </template>
+                <template slot="append">
+                  <div class="group-text">
+                    px
+                  </div>
+                </template>
+              </bk-input>
+
+              <bk-input
+                v-model="baseInfo.height"
+                type="number"
+                style="width: 200px;line-height: 1;"
+                :placeholder="$t('输入')"
+                :min="0"
+                :show-controls="false"
+              >
+                <template slot="prepend">
+                  <div class="group-text">
+                    {{ $t('高') }}
+                  </div>
+                </template>
+                <template slot="append">
+                  <div class="group-text">
+                    px
+                  </div>
+                </template>
+              </bk-input>
+              <p class="tip mt5">
+                {{ $t('应用在蓝鲸桌面打开时的窗口大小，建议选择1200px*600px') }}
+              </p>
+            </bk-form-item>
+
+            <bk-form-item
+              v-if="baseInfo.open_mode === 'desktop'"
+              :label="$t('拉伸窗口：')"
+              :required="true"
+            >
+              <bk-select
+                v-model="baseInfo.resizableKey"
+                style="width: 411px;"
+                :clearable="false"
+              >
+                <bk-option
+                  v-for="option in winResizeList"
+                  :id="option.id"
+                  :key="option.id"
+                  :name="option.name"
+                />
+              </bk-select>
+            </bk-form-item>
+          </bk-form>
+
+          <bk-form
+            :label-width="130"
+            style="width: 860px;"
+            class="mt20"
+          >
+            <bk-form-item class="mb20">
+              <bk-button
+                theme="primary"
+                class="mr10 market-info-btn"
+                :title="$t('保存')"
+                :loading="isInfoSaving"
+                @click.stop.prevent="submitMarketInfo"
+              >
+                {{ $t('保存') }}
+              </bk-button>
+
+              <bk-button
+                theme="primary"
+                outline
+                class="ml10 market-info-btn"
+                :title="$t('取消')"
+                @click="isSaveMarketInfo=true"
+              >
+                {{ $t('取消') }}
+              </bk-button>
+            </bk-form-item>
+          </bk-form>
+        </div>
+        <div v-else class="flex-row justify-content-between">
+          <bk-form
+            class="market-detail-container"
+            ref="baseInfoForm"
+            style="width: 890px;"
+            :label-width="120"
+            :model="baseInfo"
+            form-type="inline"
+          >
+            <bk-form-item
+              :label="$t('应用分类：')"
+              :rules="baseInfoRules.appArrange"
+              :icon-offset="380"
+            >
+              <p>{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="!isSmartApp"
+              :label="$t('打开方式：')"
+            >
+              <p>{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('应用简介：')"
+              :rules="baseInfoRules.appArrange"
+              :icon-offset="380"
+            >
+              <p>{{ baseInfo.introduction || '--' }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="baseInfo.open_mode === 'desktop'"
+              :label="$t('窗口大小：')"
+            >
+              <p>{{ $t('宽') }}{{ baseInfo.width }}， {{ $t('高') }}{{ baseInfo.height }}</p>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('应用联系人：')"
+              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              :rules="baseInfoRules.appArrange"
+              :icon-offset="380"
+            >
+              <p>{{ baseInfo.contactArr.join('; ') || '--' }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="baseInfo.open_mode === 'desktop'"
+              :label="$t('拉伸窗口：')"
+            >
+              <p>{{ baseInfo.resizableKey === 'able' ? $t('允许') : $t('不允许') }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
+              :label="$t('所属业务：')"
+            >
+              <p>{{ baseInfo.related_corp_products || '--' }}</p>
+            </bk-form-item>
+            <bk-form-item
+              v-if="!isSmartApp"
+              :label="$t('详细描述：')"
+            >
+              <p>{{ baseInfo.description || '--' }}</p>
+            </bk-form-item>
+          </bk-form>
+          <bk-button
+            theme="primary"
+            outline
+            class="mr10  market-info-btn"
+            :title="$t('编辑')"
+            @click="isSaveMarketInfo=false"
+          >
+            {{ $t('编辑') }}
+          </bk-button>
+        </div>
+      </div>
+
+      <user-selector-dialog
+        v-if="curAppInfo.feature.MARKET_VISIBILITY"
+        :show.sync="isShow"
+        :users="users"
+        :departments="departments"
+        :api-host="apiHost"
+        @sumbit="handleSubmit"
+      />
+    </section>
+  </paas-content-loader>
 </template>
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin.js';
@@ -530,7 +535,7 @@ export default {
       this.getTags();
     },
 
-    handleTagSelect(parentTag, data) {
+    handleTagSelect(parentTag) {
       this.$nextTick(() => {
         if (this.parentTagSet[parentTag].subList.length) {
           this.baseInfo.childTag = this.parentTagSet[parentTag].subList[0].id;

@@ -17,26 +17,20 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+from django.conf import settings
 
-class LogQueryError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
-
-
-class UnknownEngineAppNameError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
+from paas_wl.cluster.constants import ClusterFeatureFlag
+from paas_wl.cluster.shim import EnvClusterService
+from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.log.constants import LogCollectorType
+from paasng.platform.log.shim.setup_bklog import setup_default_bk_log_model
+from paasng.platform.log.shim.setup_elk import setup_saas_elk_model
 
 
-class LogLineInfoBrokenError(Exception):
-    """日志行关键信息缺失异常"""
-
-    def __init__(self, lacking_key: str):
-        self.message = f"log line lacking key info: {lacking_key}"
-        super().__init__(self.message)
-
-
-class NoIndexError(Exception):
-    """无可用 index"""
+def setup_env_log_model(env: ModuleEnvironment):
+    cluster = EnvClusterService(env).get_cluster()
+    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+        return setup_default_bk_log_model(env)
+    if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
+        raise ValueError("ELK is not supported")
+    return setup_saas_elk_model(env)

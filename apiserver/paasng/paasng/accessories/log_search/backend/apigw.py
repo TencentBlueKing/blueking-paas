@@ -16,27 +16,30 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-class LogQueryError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
+class Group(OperationGroup):
+    # 创建自定义上报
+    databus_custom_create = bind_property(
+        Operation,
+        name="databus_custom_create",
+        method="POST",
+        path="/databus_custom_create/",
+    )
+
+    # 更新自定义上报
+    databus_custom_update = bind_property(
+        Operation,
+        name="databus_custom_update",
+        method="POST",
+        path="/{collector_config_id}/databus_custom_update/",
+    )
 
 
-class UnknownEngineAppNameError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
+class Client(APIGatewayClient):
+    """bk-log日志平台 API"""
 
+    _api_name = "log-search"
 
-class LogLineInfoBrokenError(Exception):
-    """日志行关键信息缺失异常"""
-
-    def __init__(self, lacking_key: str):
-        self.message = f"log line lacking key info: {lacking_key}"
-        super().__init__(self.message)
-
-
-class NoIndexError(Exception):
-    """无可用 index"""
+    api = bind_property(Group, name="api")

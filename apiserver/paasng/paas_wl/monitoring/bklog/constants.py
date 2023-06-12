@@ -16,27 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from blue_krill.data_types.enum import EnumField, StructuredEnum
 
 
-class LogQueryError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
-
-
-class UnknownEngineAppNameError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
-
-
-class LogLineInfoBrokenError(Exception):
-    """日志行关键信息缺失异常"""
-
-    def __init__(self, lacking_key: str):
-        self.message = f"log line lacking key info: {lacking_key}"
-        super().__init__(self.message)
-
-
-class NoIndexError(Exception):
-    """无可用 index"""
+class BkLogConfigType(str, StructuredEnum):
+    STD_LOG = EnumField("std_log_config", label="标准输出日志")
+    CONTAINER_LOG = EnumField("container_log_config", label="容器日志")
+    NODE_LOG = EnumField("node_log_config", label="节点日志")

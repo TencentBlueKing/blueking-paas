@@ -18,25 +18,25 @@ to the current version of the project delivered to anyone in the future.
 """
 
 
-class LogQueryError(Exception):
-    def __init__(self, message):
-        super().__init__()
+class BkLogGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk_log's
+    API Gateway resource. It's a wrapper class of API SDK's original exceptions
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
         self.message = message
 
 
-class UnknownEngineAppNameError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
+class BkLogApiError(BkLogGatewayServiceError):
+    """When calling the bk_log api, bk_log returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """
 
 
-class LogLineInfoBrokenError(Exception):
-    """日志行关键信息缺失异常"""
-
-    def __init__(self, lacking_key: str):
-        self.message = f"log line lacking key info: {lacking_key}"
-        super().__init__(self.message)
+class BkLogSpaceDoesNotExist(BkLogApiError):
+    """The namespace applied to bk_log does not exist"""
 
 
-class NoIndexError(Exception):
-    """无可用 index"""
+class CollectorConfigNotPersisted(Exception):
+    """Collector config is not persisted"""

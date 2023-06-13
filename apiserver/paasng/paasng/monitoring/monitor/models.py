@@ -31,8 +31,12 @@ class AppAlertRuleManager(models.Manager):
             return qs.filter(environment=run_env)
         return qs
 
-    def filter_module_scoped(self, app: Application, run_env: Optional[str] = None):
-        qs = self.filter(application=app).exclude(module=None)
+    def filter_module_scoped(self, app: Application, run_env: Optional[str] = None, module_name: Optional[str] = None):
+        if module_name:
+            qs = self.filter(application=app, module__name=module_name)
+        else:
+            qs = self.filter(application=app).exclude(module=None)
+
         if run_env:
             return qs.filter(environment=run_env)
         return qs

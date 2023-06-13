@@ -119,9 +119,9 @@ class AlertRuleManager:
 
     def _get_refreshable_module_scoped_rules(self, module_name: str, run_env: str) -> List[RuleConfig]:
         """获取待刷新的 module scoped 告警规则"""
-        rule_qs = AppAlertRule.objects.filter_module_scoped(self.application, run_env)
+        rule_qs = AppAlertRule.objects.filter_module_scoped(self.application, run_env, module_name)
         rule_configs = self.config_generator.gen_rule_configs_from_qs(rule_qs)
-        existed_alert_codes = {c.alert_code for c in rule_configs if getattr(c, 'module_name', None) == module_name}
+        existed_alert_codes = {c.alert_code for c in rule_configs}
 
         if new_alert_codes := set(self.supported_alerts.module_scoped_codes) - existed_alert_codes:
             rule_configs.extend(
@@ -133,21 +133,15 @@ class AlertRuleManager:
     def _need_refresh(self, module_name: str, run_env: str) -> bool:
         """根据 AppAlertRule 表中的记录, 确定是否需要刷新告警规则"""
         expected_alert_codes = self.supported_alerts.app_scoped_codes
-        if AppAlertRule.objects.filter(
-            application=self.application, environment=run_env, module=None, alert_code__in=expected_alert_codes
+        if AppAlertRule.objects.filter_app_scoped(self.application, run_env).filter(
+            alert_code__in=expected_alert_codes
         ).count() != len(expected_alert_codes):
             return True
 
         expected_alert_codes = self.supported_alerts.module_scoped_codes
-        if (
-            AppAlertRule.objects.filter(
-                application=self.application,
-                environment=run_env,
-                module__name=module_name,
-                alert_code__in=expected_alert_codes,
-            ).count()
-            != len(expected_alert_codes)
-        ):
+        if AppAlertRule.objects.filter_module_scoped(self.application, run_env, module_name).filter(
+            alert_code__in=expected_alert_codes
+        ).count() != len(expected_alert_codes):
             return True
 
         return False

@@ -29,7 +29,7 @@ from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_prod_env_root_domains
-from paasng.publish.entrance.exposer import get_deployed_status, update_exposed_url_type_to_subdomain
+from paasng.publish.entrance.exposer import env_is_deployed, update_exposed_url_type_to_subdomain
 from paasng.publish.entrance.preallocated import get_preallocated_urls
 from paasng.publish.entrance.serializers import (
     ApplicationAvailableEntranceSLZ,
@@ -40,6 +40,7 @@ from paasng.publish.entrance.serializers import (
     UpdateExposedURLTypeSLZ,
 )
 from paasng.publish.market.utils import ModuleEnvAvailableAddressHelper
+from paasng.utils.views import permission_classes as perm_classes
 
 
 class ExposedURLTypeViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -73,9 +74,8 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
 
     @swagger_auto_schema(responses={'200': ApplicationAvailableEntranceSLZ()}, tags=["访问入口"])
     def list_module_default_entrances(self, request, code, module_name):
-        """查看模块的默认的所有访问入口(由平台提供的)，无论是否运行"""
+        """(快速访问)查看模块的默认的所有访问入口(由平台提供的)，无论是否运行"""
         module = self.get_module_via_path()
-        deployed_status = get_deployed_status(module)
 
         def get_plain_entrance():
             # 默认 stag 在 prod 之前创建
@@ -83,7 +83,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
                 yield from [
                     dict(
                         env=env.environment,
-                        is_running=deployed_status.get(env.environment, False),
+                        is_running=env_is_deployed(env),
                         address=entrance.address,
                     )
                     for entrance in get_preallocated_urls(env)
@@ -101,7 +101,27 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
             )
         )
 
-    @swagger_auto_schema(responses={'200': ApplicationDefaultEntranceSLZ(many=True)}, tags=["访问入口"])
+    @swagger_auto_schema(responses={'200': ApplicationCustomDomainEntranceSLZ(many=True)}, tags=["访问入口"])
+    def list_custom_domain_entrance(self, request, code):
+        """(快速访问)查看应用所有的独立域名访问入口"""
+        application = self.get_application()
+        results = []
+        for module in application.modules.all():
+            results.extend(
+                [
+                    {
+                        "env": env.environment,
+                        "module": module,
+                        "addresses": ModuleEnvAvailableAddressHelper(env).domain_addresses,
+                    }
+                    for env in module.envs.all()
+                    if env.is_running()
+                ]
+            )
+        return Response(ApplicationCustomDomainEntranceSLZ(results, many=True).data)
+
+    # [Deprecated] use `api.entrance.all_entrances` instead
+    @swagger_auto_schema(responses={'200': ApplicationDefaultEntranceSLZ(many=True)}, tags=["访问入口"], deprecated=True)
     def list_default_entrance(self, request, code):
         """查看应用所有模块的默认的访问入口(由平台提供的)"""
         application = self.get_application()
@@ -109,42 +129,23 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
         for module in application.modules.all():
             results.extend(
                 [
-                    dict(
-                        env=env.environment,
-                        module=module,
-                        address=ModuleEnvAvailableAddressHelper(env).default_access_entrance,
-                    )
+                    {
+                        "env": env.environment,
+                        "module": module,
+                        "address": ModuleEnvAvailableAddressHelper(env).default_access_entrance,
+                    }
                     for env in module.envs.all()
                     if env.is_running()
                 ]
             )
         return Response(ApplicationDefaultEntranceSLZ(results, many=True).data)
 
-    @swagger_auto_schema(responses={'200': ApplicationCustomDomainEntranceSLZ(many=True)}, tags=["访问入口"])
-    def list_custom_domain_entrance(self, request, code):
-        """查看应用所有的独立域名访问入口"""
-        application = self.get_application()
-        results = []
-        for module in application.modules.all():
-            results.extend(
-                [
-                    dict(
-                        env=env.environment,
-                        module=module,
-                        addresses=ModuleEnvAvailableAddressHelper(env).domain_addresses,
-                    )
-                    for env in module.envs.all()
-                    if env.is_running()
-                ]
-            )
-        return Response(ApplicationCustomDomainEntranceSLZ(results, many=True).data)
-
 
 class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(responses={'200': RootDoaminSLZ()}, tags=["访问入口"])
-    def get(self, request, code, module_name):
+    def list_root_domains(self, request, code, module_name):
         """
         查看模块所属集群的子域名根域名和当前模块的偏好的根域名
         NOTE: 已确认偏好根域名设置仅影响生产环境访问，因此只取生产环境可用的根域名
@@ -171,11 +172,8 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             ).data
         )
 
-
-class ModulePreferredRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    def update(self, request, code, module_name):
+    @perm_classes(permission_classes=[application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
+    def update_preferred_root_domain(self, request, code, module_name):
         """
         更新模块的偏好根域
         NOTE: 已确认偏好根域名设置仅影响生产环境访问，因此只取生产环境可用的根域名

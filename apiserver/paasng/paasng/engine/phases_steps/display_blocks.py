@@ -157,24 +157,6 @@ class AccessInfo(DisplayBlock):
         return {cls.name: dict(address=info.address, type=info.provider_type)}
 
 
-class CustomDomainInfo(DisplayBlock):
-    """展示独立域名信息"""
-
-    name = "custom_domain_info"
-
-    @classmethod
-    def get_detail(cls, engine_app: 'EngineApp') -> dict:
-        from paasng.publish.entrance.exposer import list_custom_addresses
-
-        domains = list_custom_addresses(engine_app.env)
-        if not domains:
-            return {}
-
-        return {
-            cls.name: [dict(env=engine_app.env.environment, domain=d.to_exposed_url().url.hostname) for d in domains]
-        }
-
-
 def get_display_blocks_by_type(phase_type: DeployPhaseTypes) -> List[Type[DisplayBlock]]:
     """Get display blocks by deploy phase type
 
@@ -186,7 +168,6 @@ def get_display_blocks_by_type(phase_type: DeployPhaseTypes) -> List[Type[Displa
         DeployPhaseTypes.BUILD: [RuntimeInfo, BuildHelpDocs],
         DeployPhaseTypes.RELEASE: [
             AccessInfo,
-            CustomDomainInfo,
             ReleaseHelpDocs,
         ],
     }

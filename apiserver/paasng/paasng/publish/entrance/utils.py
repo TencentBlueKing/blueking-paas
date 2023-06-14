@@ -16,53 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from dataclasses import dataclass
-from typing import NamedTuple, Optional
-from urllib.parse import urlparse
+from typing import Optional
 
-from paas_wl.cluster.models import PortMap
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.region.models import get_region
-
-default_port_map = PortMap()
-
-
-def to_dns_safe(s: str) -> str:
-    """Transform some string to dns safe"""
-    return s.replace('_', '--').lower()
-
-
-@dataclass
-class URL:
-    protocol: str
-    hostname: str
-    port: int
-    path: str
-    query: str = ''
-
-    def as_address(self):
-        query = f"?{self.query}" if self.query else ''
-        if default_port_map.get_port_num(self.protocol) == self.port:
-            return f"{self.protocol}://{self.hostname}{self.path}{query}"
-        else:
-            return f"{self.protocol}://{self.hostname}:{self.port}{self.path}{query}"
-
-    @classmethod
-    def from_address(cls, address: str) -> 'URL':
-        parsed = urlparse(address)
-        protocol = parsed.scheme or 'http'
-        port = parsed.port or default_port_map.get_port_num(protocol)
-        assert parsed.hostname
-        return URL(protocol=protocol, hostname=parsed.hostname, port=port, path=parsed.path, query=parsed.query)
-
-
-class EnvExposedURL(NamedTuple):
-    url: URL
-    provider_type: str
-
-    @property
-    def address(self) -> str:
-        return self.url.as_address()
 
 
 def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:

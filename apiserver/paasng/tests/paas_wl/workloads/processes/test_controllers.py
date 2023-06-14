@@ -80,8 +80,18 @@ class TestController:
         create_release(bk_stag_env, bk_user, failed=False)
         assert env_is_running(bk_stag_env) is True
 
+        # Simulate case when stag environment was offline
+        bk_stag_env.is_offlined = True
+        bk_stag_env.save()
+        assert env_is_running(bk_stag_env) is False
+
     def test_cnative_app_env_is_running(self, bk_cnative_app, bk_stag_env, bk_user):
         assert env_is_running(bk_stag_env) is False
 
         create_cnative_deploy(bk_stag_env, bk_user)
         assert env_is_running(bk_stag_env) is True
+
+        # Simulate case when stag environment was offline
+        bk_stag_env.is_offlined = True
+        bk_stag_env.save()
+        assert env_is_running(bk_stag_env) is False

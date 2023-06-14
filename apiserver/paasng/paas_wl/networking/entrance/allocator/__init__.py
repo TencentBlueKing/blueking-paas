@@ -16,24 +16,3 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-import logging
-
-from django.dispatch import receiver
-
-from paasng.platform.applications.signals import application_default_module_switch
-
-from .exposer import refresh_module_domains, refresh_module_subpaths
-
-logger = logging.getLogger(__name__)
-
-
-@receiver(application_default_module_switch)
-def sync_default_entrances_for_module_switching(sender, application, new_module, old_module, **kwargs):
-    """sync module's default domains and subpaths after switching default module"""
-    for module in [old_module, new_module]:
-        try:
-            logger.info(f"Refreshing domains and subpaths for {application.code}/{module.name}...")
-            refresh_module_domains(module)
-            refresh_module_subpaths(module)
-        except Exception:
-            logger.exception(f'Error syncing domains and subpaths for {application.code}/{module.name}')

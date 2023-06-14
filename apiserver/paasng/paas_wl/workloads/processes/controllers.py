@@ -323,7 +323,7 @@ def env_is_running(env: ModuleEnvironment) -> bool:
     :return: Whether current env is running
     """
     if env.application.type == ApplicationType.CLOUD_NATIVE:
-        return AppModelDeploy.objects.any_successful(env)
+        return AppModelDeploy.objects.any_successful(env) and not env.is_offlined
     else:
         wl_app = env.wl_app
-        return Release.objects.any_successful(wl_app)
+        return Release.objects.any_successful(wl_app) and not env.is_offlined

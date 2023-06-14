@@ -728,6 +728,8 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    # Deprecated: use `api.app_domains.configs` instead
+    # 访问入口功能重构下, 下线该接口
     @swagger_auto_schema(tags=['访问入口'], responses={200: CustomDomainsConfigSLZ(many=True)})
     def retrieve(self, request, code):
         """查看独立域名相关配置信息，比如前端负载均衡 IP 地址等"""

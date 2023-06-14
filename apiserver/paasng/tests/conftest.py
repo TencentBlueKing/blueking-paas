@@ -51,16 +51,22 @@ from paasng.platform.core.storages.utils import SADBManager
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
-from paasng.publish.entrance.exposer import ModuleLiveAddrs
 from paasng.publish.sync_market.handlers import before_finishing_application_creation, register_app_core_data
 from paasng.publish.sync_market.managers import AppManger
 from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.engine.setup_utils import create_fake_deployment
+from tests.publish.utils import ModuleLiveAddrs
 from tests.utils import mock
-from tests.utils.helpers import configure_regions, create_pending_wl_apps, generate_random_string
-
-from .utils.auth import create_user
-from .utils.helpers import _mock_wl_services_in_creation, create_app, create_cnative_app, initialize_module
+from tests.utils.auth import create_user
+from tests.utils.helpers import (
+    _mock_wl_services_in_creation,
+    configure_regions,
+    create_app,
+    create_cnative_app,
+    create_pending_wl_apps,
+    generate_random_string,
+    initialize_module,
+)
 
 logger = logging.getLogger(__file__)
 

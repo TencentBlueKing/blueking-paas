@@ -22,7 +22,7 @@ from typing import List
 from blue_krill.data_types.enum import StructuredEnum
 from django.conf import settings
 
-from paas_wl.cnative.specs.v1alpha1.bk_app import EnvVar
+from paas_wl.cnative.specs.crd.bk_app import EnvVar
 from paasng.engine.configurations.config_var import get_builtin_env_variables
 from paasng.platform.applications.models import ModuleEnvironment
 

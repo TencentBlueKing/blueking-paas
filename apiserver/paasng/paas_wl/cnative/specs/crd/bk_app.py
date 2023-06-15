@@ -26,7 +26,7 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, validator
 
 from paas_wl.cnative.specs.apis import ObjectMetadata
-from paas_wl.cnative.specs.constants import ApiVersion, MResPhaseType
+from paas_wl.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
 from paas_wl.release_controller.constants import ImagePullPolicy
 
 # Default resource limitations for each process
@@ -57,15 +57,21 @@ class BkAppProcess(BaseModel):
     """Process resource"""
 
     name: str
-    image: str = Field(..., min_length=1)
     replicas: int = 1
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
     targetPort: Optional[int] = None
-    cpu: str = DEFAULT_PROC_CPU
-    memory: str = DEFAULT_PROC_MEM
-    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
+
+    # Deprecated: use resQuotaPlan instead in v1alpha2
+    cpu: str = DEFAULT_PROC_CPU
+    # Deprecated: use resQuotaPlan instead in v1alpha2
+    memory: str = DEFAULT_PROC_MEM
+    # Deprecated: use spec.build.image instead in v1alpha2
+    image: str = Field(..., min_length=1)
+    # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
+    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
 
 
 class Hook(BaseModel):
@@ -126,11 +132,38 @@ class EnvOverlay(BaseModel):
     autoscaling: Optional[List[AutoscalingOverlay]] = None
 
 
+class BkAppBuildConfig(BaseModel):
+    """BuildConfig for BkApp"""
+
+    image: str
+    imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
+    imageCredentialsName: Optional[str] = None
+    dockerfile: Optional[str] = None
+    buildTarget: Optional[str] = None
+    args: Optional[Dict[str, str]] = None
+
+
+class BkAppAddonSpec(BaseModel):
+    """AddonSpec for BkApp"""
+
+    name: str
+    value: str
+
+
+class BkAppAddon(BaseModel):
+    """Addon for BkApp"""
+
+    name: str
+    specs: List[BkAppAddonSpec] = Field(default_factory=list)
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
+    build: Optional[BkAppBuildConfig] = None
     processes: List[BkAppProcess] = Field(default_factory=list)
     hooks: Optional[BkAppHooks] = None
+    addons: List[BkAppAddon] = Field(default_factory=list)
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
     envOverlay: Optional[EnvOverlay] = None
 
@@ -147,10 +180,10 @@ class BkAppStatus(BaseModel):
 class BkAppResource(BaseModel):
     """Blueking Application resource"""
 
-    apiVersion: str = ApiVersion.V1ALPHA1.value
+    apiVersion: str = ApiVersion.V1ALPHA2.value
+    kind: Literal['BkApp'] = 'BkApp'
     metadata: ObjectMetadata
     spec: BkAppSpec
-    kind: Literal['BkApp'] = 'BkApp'
     status: BkAppStatus = Field(default_factory=BkAppStatus)
 
     @validator('apiVersion')
@@ -158,8 +191,8 @@ class BkAppResource(BaseModel):
         """ApiVersion can not be used for "Literal" validation directly, so we define a
         custom validator instead.
         """
-        if v != ApiVersion.V1ALPHA1:
-            raise ValueError(f'{v} is not valid, use {ApiVersion.V1ALPHA1}')
+        if v not in [ApiVersion.V1ALPHA2, ApiVersion.V1ALPHA1]:
+            raise ValueError(f'{v} is not valid, use {ApiVersion.V1ALPHA2} or {ApiVersion.V1ALPHA1}')
         return v
 
     def to_deployable(self) -> Dict:

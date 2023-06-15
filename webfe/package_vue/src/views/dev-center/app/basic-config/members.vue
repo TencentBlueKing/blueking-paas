@@ -154,6 +154,7 @@
               <user
                 v-model="personnelSelectorList"
                 :placeholder="$t('请输入用户')"
+                :empty-text="$t('无匹配人员')"
               />
               <!-- <bk-member-selector
                                 @change="updateValue"

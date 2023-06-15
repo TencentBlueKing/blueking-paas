@@ -42,7 +42,7 @@ export default {
   '蓝鲸 SVN 服务': 'BlueKing SVN Service',
   '（蓝鲸平台提供的源码托管服务）': '(Source code hosting service provided by BlueKing)',
   管理员: 'Administrator',
-  开发者: 'Developers',
+  开发者: 'Developer',
   运营者: 'Operator',
   应用开发: 'Application',
   上线审核: 'Online review',
@@ -2159,4 +2159,5 @@ export default {
   扩容上限: 'Expansion limit',
   缩容下限: 'Shrink limit',
   请输入用户: 'Please enter user',
+  无匹配人员: 'No match',
 };

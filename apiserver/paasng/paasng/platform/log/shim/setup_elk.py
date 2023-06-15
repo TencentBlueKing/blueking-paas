@@ -20,12 +20,10 @@ import logging
 
 import cattr
 from django.conf import settings
-from django.db.utils import IntegrityError
+from django.db import IntegrityError
 
-from paas_wl.cluster.constants import ClusterFeatureFlag
-from paas_wl.cluster.shim import EnvClusterService
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER, LogCollectorType
+from paasng.platform.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.platform.log.models import (
     ElasticSearchConfig,
     ElasticSearchHost,
@@ -34,7 +32,6 @@ from paasng.platform.log.models import (
 )
 
 logger = logging.getLogger(__name__)
-
 ELK_STDOUT_COLLECTOR_CONFIG_ID = "elk-stdout"
 ELK_STRUCTURED_COLLECTOR_CONFIG_ID = "elk-structured"
 ELK_INGRESS_COLLECTOR_CONFIG_ID = "elk-ingress"
@@ -128,23 +125,3 @@ def setup_saas_elk_model(env: ModuleEnvironment):
         )
     except IntegrityError:
         logger.info("unique constraint conflict in the database when creating ProcessLogQueryConfig, can be ignored.")
-
-
-def setup_default_bk_log_model(env: ModuleEnvironment):
-    """初始化蓝鲸日志平台采集方案的数据库模型"""
-    raise NotImplementedError
-
-    # TODO: 完成内置采集项的初始化
-    # 1. python 语言的程序使用独特的采集项, 以 json.asctime 作为时间字段
-    # 2. 其他语言共用另一份采集项配置
-    # 3. 所有应用的标准输出共用一份采集项配置
-    # 4. 所有应用的访问日志共用一份采集项配置
-
-
-def setup_env_log_model(env: ModuleEnvironment):
-    cluster = EnvClusterService(env).get_cluster()
-    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
-        return setup_default_bk_log_model(env)
-    if settings.LOG_COLLECTOR_TYPE != LogCollectorType.ELK:
-        raise ValueError("ELK is not supported")
-    return setup_saas_elk_model(env)

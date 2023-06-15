@@ -126,5 +126,5 @@ class DeployTaskRunner:
             and self.deployment.version_info.version_type == "image"
         ):
             return False
-        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布
-        return self.deployment.advanced_options.build_id is None
+        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布, 则无需构建
+        return not bool(self.deployment.advanced_options.build_id)

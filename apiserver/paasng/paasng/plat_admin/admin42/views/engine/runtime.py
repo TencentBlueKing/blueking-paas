@@ -20,7 +20,6 @@ import logging
 
 from django.db import transaction
 from django.http.response import Http404
-from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
@@ -32,6 +31,7 @@ from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.serializers.runtime import AppBuildPackSLZ, AppSlugBuilderSLZ, AppSlugRunnerSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.platform.modules.serializers import ModuleRuntimeBindSLZ
@@ -119,19 +119,11 @@ class RuntimeManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz = ModuleRuntimeBindSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        image = slz.validated_data["image"]
+        bp_stack_name = slz.validated_data["image"]
         buildpack_ids = slz.validated_data["buildpacks_id"]
-        slugbuilder = get_object_or_404(AppSlugBuilder.objects.filter_available(module), name=image)
-        slugrunner = get_object_or_404(AppSlugRunner.objects.filter_available(module), name=image)
-
-        buildpacks = slugbuilder.get_buildpack_choices(module, id__in=buildpack_ids)
-
-        if len(buildpack_ids) != len(buildpacks):
-            logger.error("some buildpack is missing, expect %s but got %d", buildpack_ids, buildpacks)
+        try:
+            binder = ModuleRuntimeBinder(module)
+            binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+        except BPNotFound:
             raise Http404("some buildpack is missing")
-
-        binder = ModuleRuntimeBinder(module)
-        binder.clear_runtime()
-        binder.bind_image(slugrunner, slugbuilder)
-        binder.bind_buildpacks(buildpacks, buildpack_ids)
         return Response(status=HTTP_204_NO_CONTENT)

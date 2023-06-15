@@ -182,8 +182,14 @@ const (
 	// ResQuotaPlan2C2G means 2 cpu & 2Gi memory
 	ResQuotaPlan2C2G ResQuotaPlan = "2C2G"
 
+	// ResQuotaPlan4C1G means 4 cpu & 1Gi memory
+	ResQuotaPlan4C1G ResQuotaPlan = "4C1G"
+
 	// ResQuotaPlan4C2G means 4 cpu & 2Gi memory
 	ResQuotaPlan4C2G ResQuotaPlan = "4C2G"
+
+	// ResQuotaPlan4C4G means 4 cpu & 4Gi memory
+	ResQuotaPlan4C4G ResQuotaPlan = "4C4G"
 )
 
 // AutoscalingSpec is bkapp autoscaling config

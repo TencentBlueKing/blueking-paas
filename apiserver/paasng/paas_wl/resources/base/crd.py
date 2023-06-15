@@ -45,3 +45,9 @@ class Egress(BaseKresource):
     """CRD: Egress, support fixed egress ip, provided by bcs"""
 
     kind = 'Egress'
+
+
+class BKLogConfig(BaseKresource):
+    """CRD: BkLogConfig is the Schema for the bklogconfigs API"""
+
+    kind = "BkLogConfig"

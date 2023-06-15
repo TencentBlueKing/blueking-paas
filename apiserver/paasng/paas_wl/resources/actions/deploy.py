@@ -24,6 +24,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.monitoring.app_monitor.managers import make_bk_monitor_controller
+from paas_wl.monitoring.bklog.managers import make_bk_log_controller
 from paas_wl.resources.actions.exceptions import BuildMissingError, ReleaseMissingError
 from paas_wl.resources.base.exceptions import KubeException
 from paas_wl.resources.utils.app import get_scheduler_client_by_app
@@ -70,6 +71,7 @@ class AppDeploy:
             raise
         finally:
             self.recycle_resource()
+        self.ensure_bk_log_if_need()
         self.ensure_bk_minitor_if_need()
 
     def recycle_resource(self):
@@ -96,6 +98,14 @@ class AppDeploy:
             make_bk_monitor_controller(self.app).create_or_patch()
         except (KubeException, ResourceNotFoundError):
             logger.exception("An error occur when creating ServiceMonitor")
+
+    def ensure_bk_log_if_need(self):
+        """如果集群支持且应用声明了 BkLogConfig, 则尝试下发日志采集配置"""
+        try:
+            # 下发 BkLogConfig
+            make_bk_log_controller(self.app).create_or_patch()
+        except (KubeException, ResourceNotFoundError):
+            logger.exception("An error occur when creating BkLogConfig")
 
 
 @dataclass

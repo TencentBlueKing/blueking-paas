@@ -43,6 +43,7 @@ from paas_wl.monitoring.metrics.exceptions import (
 )
 from paas_wl.monitoring.metrics.shim import list_app_proc_all_metrics, list_app_proc_metrics
 from paas_wl.monitoring.metrics.utils import MetricSmartTimeRange
+from paas_wl.platform.applications.models import Build
 from paas_wl.platform.system_api.serializers import InstanceMetricsResultSerializer, ResourceMetricsResultSerializer
 from paas_wl.release_controller.api import get_latest_build_id
 from paasng.accessories.iam.helpers import fetch_user_roles
@@ -402,6 +403,11 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_DEPLOY_ONGOING_EXISTS
+
+        if build_id := params["advanced_options"].get("build_id"):
+            wl_app = self.get_wl_app_via_path()
+            if not Build.objects.filter(pk=build_id, app=wl_app).exists():
+                raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在"))
 
         manifest = params.get("manifest")
         deployment = None

@@ -369,7 +369,7 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId
      */
   getCloudAppYaml ({ commit, state }, { appCode, moduleId }, config = {}) {
-    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/mres/`;
+    const url = `${BACKEND_URL}/svc_workloads/api/cnative/specs/applications/${appCode}/modules/${moduleId}/mres/`;
     return http.get(url, config);
   },
 

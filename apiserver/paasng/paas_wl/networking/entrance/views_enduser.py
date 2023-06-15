@@ -31,7 +31,9 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paas_wl.cluster.shim import EnvClusterService
 from paas_wl.networking.entrance import serializers as slzs
-from paas_wl.networking.entrance.addrs import EnvAddresses
+from paas_wl.networking.entrance.addrs import URL, Address, EnvAddresses
+from paas_wl.networking.entrance.allocator.domains import SubDomainAllocator
+from paas_wl.networking.entrance.allocator.subpaths import SubPathAllocator
 from paas_wl.networking.entrance.constants import AddressType
 from paas_wl.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.networking.ingress.config import get_custom_domain_config
@@ -42,6 +44,8 @@ from paasng.accessories.iam.permissions.resources.application import AppAction
 from paasng.accounts.permissions.application import application_perm_class
 from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.views import ApplicationCodeInPathMixin
+from paasng.platform.modules.constants import ExposedURLType
+from paasng.platform.region.models import get_region
 from paasng.publish.market.constant import ProductSourceUrlType
 from paasng.publish.market.models import MarketConfig
 from paasng.publish.market.protections import ModulePublishPreparer
@@ -172,7 +176,7 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
         results = []
         for module in application.modules.all():
             for env in module.envs.all():
-                addresses = EnvAddresses(env).get()
+                addresses = EnvAddresses(env).get(only_running=False)
                 for address in addresses:
                     results.append(
                         {
@@ -184,20 +188,55 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
                     )
         return Response(data=slzs.ModuleEnvAddressSLZ(results, many=True).data)
 
-    @swagger_auto_schema
-    def list_module_all_entrances(self, request, code, module_name):
-        """查看应用指定模块的访问入口
+    @swagger_auto_schema(response_serializer=slzs.AvailableEntranceSLZ(many=True), tags=["访问入口"])
+    def list_module_available_entrances(self, request, code, module_name):
+        """查看将 module_name 模块作为默认访问模块时可选的入口
 
         - 平台内置短地址
         - 独立域名
         """
-        raise NotImplementedError
+        application = self.get_application()
+        module = application.get_module(module_name)
+        prod_env = module.get_envs("prod")
+        ingress_config = EnvClusterService(prod_env).get_cluster().ingress_config
+        region = get_region(application.region)
+        default_entrance: Address
+        if region.entrance_config.exposed_url_type == ExposedURLType.SUBDOMAIN:
+            domain = SubDomainAllocator(code, ingress_config.port_map).for_default_module_prod_env(
+                ingress_config.app_root_domains[-1]
+            )
+            default_entrance = Address(
+                type=AddressType.SUBDOMAIN,
+                url=domain.as_url().as_address(),
+            )
+        elif region.entrance_config.exposed_url_type == ExposedURLType.SUBPATH:
+            subpath = SubPathAllocator(code, ingress_config.port_map).for_default_module_prod_env(
+                ingress_config.app_root_domains[-1]
+            )
+            default_entrance = Address(
+                type=AddressType.SUBPATH,
+                url=subpath.as_url().as_address(),
+            )
+        else:
+            raise NotImplementedError
+        custom_domains_qs = Domain.objects.filter(environment_id=prod_env.id)
+        custom_domains = []
+        for d in custom_domains_qs:
+            port = ingress_config.port_map.get_port_num(d.protocol)
+            custom_domains.append(
+                Address(
+                    type=AddressType.CUSTOM,
+                    url=URL(d.protocol, hostname=d.name, port=port, path=d.path_prefix).as_address(),
+                    id=d.id,
+                )
+            )
+        return Response(data=slzs.AvailableEntranceSLZ([default_entrance, *custom_domains], many=True).data)
 
     @atomic
     @perm_classes([application_perm_class(AppAction.MANAGE_MODULE)], policy='merge')
     @swagger_auto_schema(request_body=slzs.SwitchDefaultEntranceSLZ, tags=["访问入口"])
     def set_default_entrance(self, request, code):
-        """设置某个模块为主模块"""
+        """设置某个模块为默认访问模块"""
         slz = slzs.SwitchDefaultEntranceSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data

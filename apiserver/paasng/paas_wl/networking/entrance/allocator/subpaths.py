@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Subpaths management"""
 from dataclasses import dataclass, field
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.conf import settings
@@ -71,67 +71,6 @@ class Subpath:
     @staticmethod
     def sort_by_type(subpath: 'Subpath'):
         return subpath.type
-
-
-class PreSubpaths(NamedTuple):
-    """Preallocated subpaths, include both environments"""
-
-    stag: Subpath
-    prod: Subpath
-
-
-def get_preallocated_paths_by_env(env: ModuleEnvironment) -> List[Subpath]:
-    """Get all pre-allocated subpaths for a environment which may has not been
-    deployed yet. Results length is equal to length of configured subpath domains.
-    """
-    app = env.application
-    module = env.module
-    cluster = EnvClusterService(env).get_cluster()
-    ingress_config = cluster.ingress_config
-
-    # Iterate configured subpath domains, get subpaths
-    allocator = SubPathAllocator(app.code, ingress_config.port_map)
-    results: List[Subpath] = []
-    for domain_cfg in ingress_config.sub_path_domains:
-        if not env.module.is_default:
-            results.append(allocator.for_universal(domain_cfg, module.name, env.environment))
-        else:
-            if env.environment == AppEnvName.STAG.value:
-                results.append(allocator.for_default_module(domain_cfg, 'stag'))
-            else:
-                results.append(allocator.for_default_module_prod_env(domain_cfg))
-    return results
-
-
-def get_preallocated_path(
-    app_code: str, ingress_config: IngressConfig, module_name: Optional[str] = None
-) -> Optional[PreSubpaths]:
-    """Get the preallocated subpath for a application which was not released yet.
-
-    if `module_name` was not given, the result will always use the main module.
-
-    :param ingress_config: The ingress config dict
-    :param module_name: Name of module, optional
-    :returns: when cluster's sub-path was not configured, return None
-    """
-    if not ingress_config.sub_path_domains:
-        return None
-
-    allocator = SubPathAllocator(app_code, ingress_config.port_map)
-    domain_cfg = ingress_config.default_sub_path_domain
-    if not module_name:
-        # No module name was given, return shorten address which pointed to application's "default" module
-        # automatically.
-        return PreSubpaths(
-            stag=allocator.for_default_module(domain_cfg, 'stag'),
-            prod=allocator.for_default_module_prod_env(domain_cfg),
-        )
-    else:
-        # Generate address which always include module name
-        return PreSubpaths(
-            stag=allocator.for_universal(domain_cfg, module_name, 'stag'),
-            prod=allocator.for_universal(domain_cfg, module_name, 'prod'),
-        )
 
 
 class ModuleEnvSubpaths:

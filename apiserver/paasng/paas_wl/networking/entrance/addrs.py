@@ -108,11 +108,11 @@ class EnvAddresses:
         self.wl_app = WlApp.objects.get(pk=self.env.engine_app_id)
         self.ingress_cfg = get_cluster_by_app(self.wl_app).ingress_config
 
-    def get(self) -> List[Address]:
+    def get(self, only_running: bool = True) -> List[Address]:
         """Get available addresses, sorted by: (subdomain, subpath, custom)"""
         from paas_wl.workloads.processes.controllers import env_is_running
 
-        if not env_is_running(self.env):
+        if only_running and not env_is_running(self.env):
             return []
         return self._sort(self._get_subdomain()) + self._sort(self._get_subpath()) + self._sort(self._get_custom())
 

@@ -118,8 +118,8 @@ def validate_domain_payload(
 
 
 # Custom Domain(end-user) serializers end
-class AvailableAddressSLZ(serializers.Serializer):
-    id = serializers.IntegerField(help_text="记录 ID", required=False)
+class AvailableEntranceSLZ(serializers.Serializer):
+    id = serializers.IntegerField(help_text="记录 ID, 只有独立域名地址有效", required=False, allow_null=True)
     url = serializers.URLField(required=True)
     type = serializers.ChoiceField(
         choices=AddressType.get_choices(),
@@ -133,7 +133,7 @@ class ModuleEnvAddressSLZ(serializers.Serializer):
 
     module = serializers.CharField(help_text="模块名")
     env = serializers.CharField(help_text="环境名")
-    address = AvailableAddressSLZ(help_text="访问地址", allow_null=True)
+    address = AvailableEntranceSLZ(help_text="访问地址", allow_null=True)
     is_running = serializers.BooleanField(help_text="该环境是否正在运行", default=True)
 
 
@@ -145,4 +145,4 @@ class CustomDomainsConfigSLZ(serializers.Serializer):
 
 class SwitchDefaultEntranceSLZ(serializers.Serializer):
     module = serializers.CharField(help_text="切换模块名")
-    address = AvailableAddressSLZ(help_text="访问地址")
+    address = AvailableEntranceSLZ(help_text="访问地址")

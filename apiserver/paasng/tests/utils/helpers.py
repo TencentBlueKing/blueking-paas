@@ -420,6 +420,8 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
                 region, name, type_ = args
+                if WlApp.objects.filter(name=name).exists():
+                    continue
                 wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
                 latest_config = wl_app.latest_config
                 latest_config.cluster = cluster_name

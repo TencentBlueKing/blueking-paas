@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 """Domain management"""
 from dataclasses import dataclass, field
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
@@ -67,64 +67,6 @@ class Domain:
     @staticmethod
     def sort_by_type(domain: 'Domain'):
         return domain.type
-
-
-class PreDomains(NamedTuple):
-    """Preallocated domains, include both environments"""
-
-    stag: Domain
-    prod: Domain
-
-
-def get_preallocated_domains_by_env(env: ModuleEnvironment) -> List[Domain]:
-    """Get all pre-allocated domains for a environment which may has not been
-    deployed yet. Results length is equal to length of configured root domains.
-    """
-    app = env.application
-    module = env.module
-    cluster = EnvClusterService(env).get_cluster()
-    ingress_config = cluster.ingress_config
-
-    # Iterate configured root domains, get domains
-    allocator = SubDomainAllocator(app.code, ingress_config.port_map)
-    results: List[Domain] = []
-    for domain_cfg in ingress_config.app_root_domains:
-        if not env.module.is_default:
-            results.append(allocator.for_universal(domain_cfg, module.name, env.environment))
-        else:
-            if env.environment == AppEnvName.STAG.value:
-                results.append(allocator.for_default_module(domain_cfg, 'stag'))
-            else:
-                results.append(allocator.for_default_module_prod_env(domain_cfg))
-    return results
-
-
-def get_preallocated_domain(
-    app_code: str, ingress_config: IngressConfig, module_name: Optional[str] = None
-) -> Optional[PreDomains]:
-    """Get the preallocated domain for a application which was not released yet.
-
-    if `module_name` was not given, the result will always use the main module.
-
-    :param ingress_config: The ingress config dict
-    :param module_name: Name of module, optional
-    :returns: when sub domain was not configured, return None
-    """
-    if not ingress_config.app_root_domains:
-        return None
-
-    allocator = SubDomainAllocator(app_code, ingress_config.port_map)
-    domain_cfg = ingress_config.default_root_domain
-    if not module_name:
-        return PreDomains(
-            stag=allocator.for_default_module(domain_cfg, 'stag'),
-            prod=allocator.for_default_module_prod_env(domain_cfg),
-        )
-    else:
-        return PreDomains(
-            stag=allocator.for_universal(domain_cfg, module_name, 'stag'),
-            prod=allocator.for_universal(domain_cfg, module_name, 'prod'),
-        )
 
 
 class ModuleEnvDomains:

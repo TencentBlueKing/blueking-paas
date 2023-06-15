@@ -196,7 +196,9 @@ class PublishViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 class MarketAvailableAddressViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_APP_MARKET)]
+    schema = None
 
+    # [deprecated] use `api.applications.entrances.all_module_entrances` instead
     @swagger_auto_schema(responses={200: serializers.AvailableAddressSLZ(many=True)}, tags=["应用市场"])
     def list(self, request, code):
         """获取当前应用支持的访问地址列表"""

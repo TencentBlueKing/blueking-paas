@@ -727,6 +727,7 @@ class ProcessResourceMetricsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin
 
 class CustomDomainsConfigViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    schema = None
 
     # Deprecated: use `api.app_domains.configs` instead
     # 访问入口功能重构下, 下线该接口

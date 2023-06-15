@@ -120,7 +120,7 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
             )
         return Response(ApplicationCustomDomainEntranceSLZ(results, many=True).data)
 
-    # [Deprecated] use `api.entrance.all_entrances` instead
+    # [Deprecated] use `api.applications.entrance.all_entrances` instead
     @swagger_auto_schema(responses={'200': ApplicationDefaultEntranceSLZ(many=True)}, tags=["访问入口"], deprecated=True)
     def list_default_entrance(self, request, code):
         """查看应用所有模块的默认的访问入口(由平台提供的)"""

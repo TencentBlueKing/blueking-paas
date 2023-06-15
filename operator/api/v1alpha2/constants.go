@@ -123,7 +123,9 @@ var AllowedResQuotaPlans = []ResQuotaPlan{
 	ResQuotaPlan1C512M,
 	ResQuotaPlan2C1G,
 	ResQuotaPlan2C2G,
+	ResQuotaPlan4C1G,
 	ResQuotaPlan4C2G,
+	ResQuotaPlan4C4G,
 }
 
 // AllowedImagePullPolicies 允许使用的镜像拉取策略

@@ -22,7 +22,7 @@ from . import views_enduser
 
 urlpatterns = [
     re_path(
-        r'applications/(?P<code>[^/]+)/mres/$',
+        make_app_pattern_with_applications_prefix(r'/mres/$', include_envs=False),
         views_enduser.MresViewSet.as_view({'get': 'retrieve', 'put': 'update'}),
         name='api.mres',
     ),

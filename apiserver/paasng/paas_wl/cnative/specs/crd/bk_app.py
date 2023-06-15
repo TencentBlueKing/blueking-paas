@@ -69,7 +69,7 @@ class BkAppProcess(BaseModel):
     # Deprecated: use resQuotaPlan instead in v1alpha2
     memory: str = DEFAULT_PROC_MEM
     # Deprecated: use spec.build.image instead in v1alpha2
-    image: str = Field(..., min_length=1)
+    image: Optional[str] = None
     # Deprecated: use spec.build.imagePullPolicy instead in v1alpha2
     imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
 
@@ -135,7 +135,8 @@ class EnvOverlay(BaseModel):
 class BkAppBuildConfig(BaseModel):
     """BuildConfig for BkApp"""
 
-    image: str
+    # 兼容使用注解支持多镜像的场景（v1alpha1 遗留功能）
+    image: Optional[str] = None
     imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT
     imageCredentialsName: Optional[str] = None
     dockerfile: Optional[str] = None

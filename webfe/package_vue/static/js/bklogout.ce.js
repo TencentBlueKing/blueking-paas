@@ -16,10 +16,10 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-var bk_logout = {
-    logout: function (f, b) {}
-}
+const bk_logout = {
+  logout(f, b) {},
+};
 
 export {
-    bk_logout
-}
+  bk_logout,
+};

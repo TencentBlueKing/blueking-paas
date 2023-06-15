@@ -65,18 +65,20 @@ class MresViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: AppModelResourceSerializer})
-    def retrieve(self, request, code):
+    def retrieve(self, request, code, module_name):
         """查看应用模型资源的当前值"""
         application = self.get_application()
-        model_resource = get_object_or_404(AppModelResource, application_id=application.id)
+        module = self.get_module_via_path()
+        model_resource = get_object_or_404(AppModelResource, application_id=application.id, module_id=module.id)
         return Response(AppModelResourceSerializer(model_resource).data)
 
     @swagger_auto_schema(responses={200: AppModelResourceSerializer})
-    def update(self, request, code):
+    def update(self, request, code, module_name):
         """完整更新应用模型资源，需提供所有字段"""
         application = self.get_application()
-        update_app_resource(application, request.data)
-        model_resource = AppModelResource.objects.get(application_id=application.id)
+        module = self.get_module_via_path()
+        update_app_resource(application, module, request.data)
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         return Response(AppModelResourceSerializer(model_resource).data)
 
 
@@ -128,6 +130,7 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         TODO 这里目前先包含配置更新的逻辑（manifest + update_app_resource），预期应该是保存与部署分离
         """
         application = self.get_application()
+        module = self.get_module_via_path()
         env = self.get_env_via_path()
 
         serializer = CreateDeploySerializer(data=request.data)
@@ -137,10 +140,10 @@ class MresDeploymentsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # will be validated in `update_app_resource` function.
         # TODO: 当 manifest 提供时，检查 manifest 是否有变化
         if manifest := serializer.validated_data.get("manifest"):
-            update_app_resource(application, manifest)
+            update_app_resource(application, module, manifest)
 
         # Get current module resource object
-        model_resource = AppModelResource.objects.get(application_id=application.id)
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         # TODO: Allow use other revisions
         revision = model_resource.revision
 

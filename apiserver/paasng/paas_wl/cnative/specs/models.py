@@ -31,6 +31,7 @@ from paas_wl.utils.models import BkUserField, TimestampedModel
 from paasng.engine.constants import AppEnvName
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ModuleName
+from paasng.platform.modules.models import Module
 
 from .constants import DEFAULT_PROCESS_NAME, DeployStatus
 from .crd.bk_app import BkAppProcess, BkAppResource, BkAppSpec, ObjectMetadata
@@ -41,9 +42,9 @@ logger = logging.getLogger(__name__)
 class AppModelResourceManager(models.Manager):
     """A custom manager for `AppModelResource`, provides useful utility functions"""
 
-    def get_json(self, application: Application) -> Dict:
+    def get_json(self, application: Application, module: Module) -> Dict:
         """Get the JSON value of app model resource by application"""
-        return AppModelResource.objects.get(application_id=application.id).revision.json_value
+        return AppModelResource.objects.get(application_id=application.id, module_id=module.id).revision.json_value
 
     def create_from_resource(self, region: str, application_id: str, module_id: str, resource: 'BkAppResource'):
         """Create a model resource object from `BkAppResource` object
@@ -212,7 +213,7 @@ def create_app_resource(
     return obj
 
 
-def update_app_resource(app: Application, payload: Dict):
+def update_app_resource(app: Application, module: Module, payload: Dict):
     """Update application's resource
 
     :param payload: application model resource JSON
@@ -231,7 +232,7 @@ def update_app_resource(app: Application, payload: Dict):
     try:
         # Only the default module is supported currently, so `module_id` is ignored in query
         # conditions.
-        model_resource = AppModelResource.objects.get(application_id=app.id)
+        model_resource = AppModelResource.objects.get(application_id=app.id, module_id=module.id)
     except AppModelResource.DoesNotExist:
         raise ValueError(f'{app.id} not initialized')
 

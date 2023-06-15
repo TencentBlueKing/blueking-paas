@@ -63,9 +63,9 @@ def initialize_deployment(
 
     bkapp_revision_id = None
     if manifest and application.type == ApplicationType.CLOUD_NATIVE:
-        update_app_resource(application, manifest)
+        update_app_resource(application, module, manifest)
         # Get current module resource object
-        model_resource = AppModelResource.objects.get(application_id=application.id)
+        model_resource = AppModelResource.objects.get(application_id=application.id, module_id=module.id)
         # TODO: Allow use other revisions
         bkapp_revision_id = model_resource.revision.id
 
@@ -126,5 +126,5 @@ class DeployTaskRunner:
             and self.deployment.version_info.version_type == "image"
         ):
             return False
-        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布
-        return self.deployment.advanced_options.build_id is None
+        # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布, 则无需构建
+        return not bool(self.deployment.advanced_options.build_id)

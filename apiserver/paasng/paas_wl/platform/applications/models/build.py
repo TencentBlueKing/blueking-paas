@@ -20,6 +20,7 @@ from django.db import models
 from django.utils import timezone
 from jsonfield import JSONCharField, JSONField
 
+from paas_wl.platform.applications.constants import ArtifactType
 from paas_wl.platform.applications.models import UuidAuditedModel
 from paas_wl.utils.constants import BuildStatus, make_enum_choices
 from paas_wl.utils.models import validate_procfile
@@ -31,9 +32,7 @@ class Build(UuidAuditedModel):
 
     # Slug path
     slug_path = models.TextField(help_text="slug path 形如 {region}/home/{name}:{branch}:{revision}/push", null=True)
-    image = models.TextField(
-        help_text="镜像地址, 形如 {registry}/{platform_namespace}/{app_code}/{module}/{env}:{tag}", null=True
-    )
+    image = models.TextField(help_text="运行 Build 的镜像地址. 如果构件类型为 image，该值即构建产物", null=True)
 
     source_type = models.CharField(max_length=128, null=True)
     branch = models.CharField(max_length=128, null=True, help_text="readable version, such as trunk/master")
@@ -43,6 +42,7 @@ class Build(UuidAuditedModel):
     procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
 
+    artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
 
     class Meta:

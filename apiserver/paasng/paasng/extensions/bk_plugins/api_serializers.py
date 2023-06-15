@@ -31,7 +31,7 @@ class PluginTemplateSLZ(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
     language = serializers.CharField()
-    applicableLanguage = serializers.CharField(allow_null=True)
+    applicable_language = serializers.CharField(allow_null=True)
     repository = serializers.CharField()
 
 

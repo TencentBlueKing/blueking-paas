@@ -21,7 +21,6 @@ import logging
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -39,6 +38,7 @@ from paasng.accounts.models import AccountFeatureFlag
 from paasng.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.dev_resources.templates.constants import TemplateType
 from paasng.dev_resources.templates.models import Template
+from paasng.engine.configurations.image import generate_image_repository
 from paasng.engine.constants import RuntimeType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
@@ -46,14 +46,16 @@ from paasng.platform.applications.signals import application_default_module_swit
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.applications.utils import delete_module
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
+from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.helpers import ModuleRuntimeBinder, ModuleRuntimeManager, get_image_labels_by_module
 from paasng.platform.modules.manager import init_module_in_view
-from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, Module
+from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
     CreateModuleSLZ,
     ListModulesSLZ,
     MinimalModuleSLZ,
+    ModuleBuildConfigSLZ,
     ModuleDeployConfigSLZ,
     ModuleDeployHookSLZ,
     ModuleDeployProcfileSLZ,
@@ -240,6 +242,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    # Deprecated: using ModuleBuildConfigViewSet
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def list_available(self, request, code, module_name):
@@ -250,10 +253,14 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         results = []
 
         runtime_labels = get_image_labels_by_module(module)
-        _, available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        if available_slugrunners.count() == 0:
+            available_slugrunners = AppSlugRunner.objects.filter_available(module)
         slugrunners = {i.name: i for i in available_slugrunners}
 
-        _, available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        if available_slugbuilders.count() == 0:
+            available_slugbuilders = AppSlugBuilder.objects.filter_available(module)
         available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
         for slugbuilder in available_slugbuilders:
             name = slugbuilder.name
@@ -298,39 +305,33 @@ class ModuleRuntimeViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = ModuleRuntimeBindSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        image = slz.validated_data["image"]
+        bp_stack_name = slz.validated_data["image"]
         buildpack_ids = slz.validated_data["buildpacks_id"]
-        slugbuilder = get_object_or_404(AppSlugBuilder.objects.filter_available(module), name=image)
-        slugrunner = get_object_or_404(AppSlugRunner.objects.filter_available(module), name=image)
-
-        buildpacks = slugbuilder.get_buildpack_choices(module, id__in=buildpack_ids)
-
-        if len(buildpack_ids) != len(buildpacks):
-            logger.error("some buildpack is missing, expect %s but got %d", buildpack_ids, buildpacks)
-            raise Http404("some buildpack is missing")
 
         binder = ModuleRuntimeBinder(module)
-        binder.clear_runtime()
-        binder.bind_image(slugrunner, slugbuilder)
-        binder.bind_buildpacks(buildpacks, buildpack_ids)
+        try:
+            binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+        except BPNotFound:
+            raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
 
+        cfg = BuildConfig.objects.get_or_create_by_module(module)
         return Response(
             data={
-                "image": image,
-                "slugbuilder_id": slugbuilder.pk,
-                "slugrunner_id": slugrunner.pk,
-                "buildpack_id": slz.validated_data.get("buildpack_id"),
+                "image": bp_stack_name,
+                "slugbuilder_id": cfg.buildpack_builder_id,
+                "slugrunner_id": cfg.buildpack_runner_id,
                 "buildpacks_id": buildpack_ids,
             }
         )
 
 
 class ModuleRuntimeOverviewView(views.APIView, ApplicationCodeInPathMixin):
+    # Deprecated: using ModuleBuildConfigViewSet
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(response_serializer=ModuleRuntimeOverviewSLZ)
     def get(self, request, code, module_name):
-        """获取当前模块的运行时概览信息()"""
+        """获取当前模块的运行时概览信息"""
         module = self.get_module_via_path()
 
         runtime_manager = ModuleRuntimeManager(module)
@@ -342,6 +343,97 @@ class ModuleRuntimeOverviewView(views.APIView, ApplicationCodeInPathMixin):
                 context=dict(slugbuilder=slugbuilder, module=module, user=request.user),
             ).data
         )
+
+
+class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(response_serializer=ModuleBuildConfigSLZ)
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的构建配置"""
+        module = self.get_module_via_path()
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+
+        info = {
+            "image_repository": generate_image_repository(module),
+            "build_method": build_config.build_method,
+            "tag_options": build_config.tag_options,
+        }
+        if build_config.build_method == RuntimeType.BUILDPACK:
+            runtime_manager = ModuleRuntimeManager(module)
+            slugbuilder = runtime_manager.get_slug_builder(raise_exception=False)
+            buildpacks = runtime_manager.list_buildpacks()
+            info.update(
+                bp_stack_name=getattr(slugbuilder, "name", None),
+                buildpacks=buildpacks,
+            )
+        else:
+            info.update(
+                dockerfile_path=build_config.dockerfile_path,
+                docker_build_args=build_config.docker_build_args,
+            )
+        return Response(data=ModuleBuildConfigSLZ(info).data)
+
+    @swagger_auto_schema(request_body=ModuleBuildConfigSLZ)
+    def modify(self, request, code, module_name):
+        """修改当前模块的构建配置"""
+        slz = ModuleBuildConfigSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        module = self.get_module_via_path()
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+
+        build_method = data["build_method"]
+        if build_method == RuntimeType.BUILDPACK:
+            bp_stack_name = data["bp_stack_name"]
+            buildpack_ids = [item["id"] for item in data["buildpacks"]]
+
+            binder = ModuleRuntimeBinder(module)
+            try:
+                binder.bind_bp_stack(bp_stack_name, buildpack_ids)
+            except BPNotFound:
+                raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
+
+            build_config.build_method = build_method
+            build_config.save(update_fields=["build_method", "updated"])
+        elif build_method == RuntimeType.DOCKERFILE:
+            build_config.build_method = build_method
+            build_config.dockerfile_path = data["dockerfile_path"]
+            build_config.docker_build_args = data["docker_build_args"]
+            build_config.save(update_fields=["build_method", "dockerfile_path", "docker_build_args", "updated"])
+        else:
+            raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
+        return Response()
+
+    @swagger_auto_schema(response_serializer=ModuleRuntimeSLZ(many=True))
+    def list_available_bp_runtimes(self, request, code, module_name):
+        """获取一个模块可用的运行环境"""
+        application = self.get_application()
+        module = application.get_module(module_name)
+
+        results = []
+        runtime_labels = get_image_labels_by_module(module)
+        available_slugrunners = AppSlugRunner.objects.filter_by_label(module, runtime_labels)
+        if available_slugrunners.count() == 0:
+            available_slugrunners = AppSlugRunner.objects.filter_available(module)
+        slugrunners = {i.name: i for i in available_slugrunners}
+
+        available_slugbuilders = AppSlugBuilder.objects.filter_by_label(module, runtime_labels)
+        if available_slugbuilders.count() == 0:
+            available_slugbuilders = AppSlugBuilder.objects.filter_available(module)
+        available_slugbuilders = available_slugbuilders.filter(name__in=slugrunners.keys())
+        for slugbuilder in available_slugbuilders:
+            name = slugbuilder.name
+            results.append(
+                {
+                    "image": name,
+                    "slugbuilder": slugbuilder,
+                    "slugrunner": slugrunners.get(name),
+                    "buildpacks": slugbuilder.get_buildpack_choices(module),
+                }
+            )
+        return Response(data=ModuleRuntimeSLZ(results, many=True).data)
 
 
 class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

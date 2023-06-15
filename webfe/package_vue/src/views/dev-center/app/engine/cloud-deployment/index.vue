@@ -204,7 +204,8 @@
             async init () {
                 try {
                     const res = await this.$store.dispatch('deploy/getCloudAppYaml', {
-                        appCode: this.appCode
+                        appCode: this.appCode,
+                        moduleId: this.curModuleId,
                     });
                     this.cloudAppData = res.manifest;
                     this.$store.commit('cloudApi/updateCloudAppData', this.cloudAppData);

@@ -19,6 +19,7 @@ to the current version of the project delivered to anyone in the future.
 import json
 import logging
 import re
+from functools import wraps
 from typing import TYPE_CHECKING, ClassVar, List, Optional, Tuple, Type
 
 import cattr
@@ -43,6 +44,7 @@ from paasng.platform.log import serializers
 from paasng.platform.log.client import instantiate_log_client
 from paasng.platform.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
 from paasng.platform.log.dsl import SearchRequestSchema
+from paasng.platform.log.exceptions import NoIndexError
 from paasng.platform.log.filters import EnvFilter, ModuleFilter
 from paasng.platform.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.platform.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
@@ -55,6 +57,17 @@ from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.es_log.time_range import SmartTimeRange
 
 logger = logging.getLogger(__name__)
+
+
+def transform_noindex_error(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except NoIndexError:
+            raise error_codes.QUERY_LOG_FAILED.f(_("无可用日志索引, 请稍后重试"))
+
+    return wrapped
 
 
 class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
@@ -168,6 +181,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def query_logs(self, request, code, module_name, environment):
         """查询日志"""
         log_client, log_config = self.instantiate_log_client()
@@ -207,6 +221,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def query_logs_scroll(self, request, code, module_name, environment):
         """查询标准输出日志"""
         log_client, log_config = self.instantiate_log_client()
@@ -252,6 +267,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def aggregate_date_histogram(self, request, code, module_name, environment):
         """统计日志的日志数-事件直方图"""
         log_client, log_config = self.instantiate_log_client()
@@ -280,6 +296,7 @@ class LogAPIView(LogBaseAPIView):
         query_serializer=serializers.LogQueryParamsSLZ,
         request_body=serializers.LogQueryBodySLZ,
     )
+    @transform_noindex_error
     def aggregate_fields_filters(self, request, code, module_name, environment):
         """统计日志的字段分布"""
         log_client, log_config = self.instantiate_log_client()
@@ -306,7 +323,6 @@ class LogAPIView(LogBaseAPIView):
 
 
 class StdoutLogAPIView(LogAPIView):
-    # TODO: 支持根据 scroll id 查询
     line_model = StandardOutputLogLine
     log_type = LogType.STANDARD_OUTPUT
     logs_serializer_class = serializers.StandardOutputLogsSLZ

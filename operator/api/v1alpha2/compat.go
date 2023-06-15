@@ -114,8 +114,12 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan ResQuotaPlan) corev1.ResourceRe
 		cpuRaw, memRaw = "2000m", "1024Mi"
 	case ResQuotaPlan2C2G:
 		cpuRaw, memRaw = "2000m", "2048Mi"
+	case ResQuotaPlan4C1G:
+		cpuRaw, memRaw = "4000m", "1024Mi"
 	case ResQuotaPlan4C2G:
 		cpuRaw, memRaw = "4000m", "2048Mi"
+	case ResQuotaPlan4C4G:
+		cpuRaw, memRaw = "4000m", "4096Mi"
 	default:
 		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimits(), config.Global.GetProcDefaultMemLimits()
 	}

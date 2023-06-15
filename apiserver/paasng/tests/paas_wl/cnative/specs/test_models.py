@@ -103,37 +103,37 @@ def init_model_resource(bk_app, bk_module, resource_name):
 
 
 class TestUpdateAppResource:
-    def test_uninitialized(self, bk_app, spec_example, resource_name):
+    def test_uninitialized(self, bk_app, bk_module, spec_example, resource_name):
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
         with pytest.raises(ValueError):
-            update_app_resource(bk_app, payload)
+            update_app_resource(bk_app, bk_module, payload)
 
-    def test_change_envvars_wrong_format(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_envvars_wrong_format(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         spec_example['configuration']['env'] = [{'not_a_key': 'not_a_value'}]
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
         with pytest.raises(ValidationError):
-            update_app_resource(bk_app, payload)
+            update_app_resource(bk_app, bk_module, payload)
 
-    def test_change_kind(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_kind(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         payload = {'kind': 'NotAValidKind', 'metadata': {'name': resource_name}, 'spec': spec_example}
         with pytest.raises(ValidationError):
-            update_app_resource(bk_app, payload)
+            update_app_resource(bk_app, bk_module, payload)
 
-    def test_change_replicas(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_replicas(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         # Update "replicas" field of first process
         spec_example['processes'][0]['replicas'] = 2
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
-        update_app_resource(bk_app, payload)
-        assert AppModelResource.objects.get_json(bk_app)['spec']['processes'][0]['replicas'] == 2
+        update_app_resource(bk_app, bk_module, payload)
+        assert AppModelResource.objects.get_json(bk_app, bk_module)['spec']['processes'][0]['replicas'] == 2
 
-    def test_change_envvars_normal(self, bk_app, spec_example, resource_name, init_model_resource):
+    def test_change_envvars_normal(self, bk_app, bk_module, spec_example, resource_name, init_model_resource):
         spec_example['configuration']['env'] = [
             {'name': 'foo', 'value': 'foo-value'},
             {'name': 'bar', 'value': 'bar-value'},
         ]
         payload = {'kind': 'BkApp', 'metadata': {'name': resource_name}, 'spec': spec_example}
-        update_app_resource(bk_app, payload)
-        envs = AppModelResource.objects.get_json(bk_app)['spec']['configuration']['env']
+        update_app_resource(bk_app, bk_module, payload)
+        envs = AppModelResource.objects.get_json(bk_app, bk_module)['spec']['configuration']['env']
         assert len(envs) == 2
         assert envs[0]['name'] == 'foo'
 
